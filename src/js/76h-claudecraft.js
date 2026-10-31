@@ -5,13 +5,14 @@
 // gate in the town 61k-gate.js; the hands and feet are in 80-main.js. (v12.0: the gate's dialog - one hero goes - the
 // hero's portrait, health, magic and the clock, the satchel's hotbar with its counts and its window (I), the crack
 // that grows over a block being broken, and the glowing bundles left by a fall.)
-const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; }";
-const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos;\n"
+const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; attribute float sky; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; vSky = sky; }";
+const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; uniform float lamp; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky;\n"
   + "void main() { if (lines > 1.5) { vec2 q = floor(vUv * 16.0); float r = fract(sin(dot(q, vec2(12.9898, 78.233))) * 43758.5453); vec2 d = (q + 0.5) / 16.0 - 0.5; float arm = min(abs(d.x - d.y * 0.6), min(abs(d.y + d.x * 0.4), abs(d.x + d.y))); float reach = length(d) * 1.1 + r * 0.25; if (arm > 0.045 + r * 0.03 + (lines - 2.0) * 0.06 || reach > (lines - 2.0) * 0.75) discard; gl_FragColor = vec4(0.06, 0.05, 0.04, 0.8); return; } if (lines > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.85); return; } vec4 c = texture2D(atlas, vUv); if (c.a < 0.1) discard;\n"
-  + "  vec3 rgb = c.rgb * min(vShade, 1.0);\n"
+  + "  float carried = clamp(1.0 - vDist / lamp, 0.0, 1.0); carried = (1.0 - (1.0 - carried) * (1.0 - carried)) * 0.92; float lit = max(0.035, max(vSky, carried));\n"
+  + "  vec3 rgb = c.rgb * min(vShade, 1.0) * lit * mix(vec3(1.0), vec3(1.0, 0.86, 0.66), carried > vSky ? 0.8 : 0.0);\n"
   + "  if (vShade > 2.5) { float k = min(1.0, vShade - 2.5), p2 = 0.5 + 0.5 * sin(time * 4.0 + vPos.y * 7.0); rgb = mix(vec3(0.85, 0.62, 0.18), vec3(1.0, 0.94, 0.62), p2) * (0.55 + 0.45 * k); c.a = 0.95; }\n"
   + "  else if (vShade > 1.5) { float w = sin(vPos.x * 3.1 + vPos.y * 2.3 + time * 2.7) * 0.5 + 0.5, w2 = sin(vPos.y * 4.0 - time * 3.9 + vPos.z) * 0.5 + 0.5; float band = smoothstep(0.92, 1.0, sin(vPos.y * 6.0 - time * 2.2 + sin(vPos.x * 2.0 + vPos.z * 2.0) * 1.5)); rgb = mix(mix(vec3(0.40, 0.18, 0.80), vec3(0.30, 0.85, 0.82), w * 0.6), vec3(1.0, 0.92, 0.70), band * 0.8 + w2 * 0.12) * min(1.0, vShade - 1.0); c.a = 0.8; }\n"
-  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, fog, vShade > 1.5 ? f * 0.4 : f), c.a); }";
+  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, vShade > 1.5 ? fog : fog * vSky, vShade > 1.5 ? f * 0.4 : f), c.a); }";
 Object.assign(CM.UI.prototype, {
   // the gate's dialog: who steps through (the rest wait in the Keep-yard)
   openCraftGate() {
@@ -31,7 +32,7 @@ Object.assign(CM.UI.prototype, {
     if (this.ccPick === null || this.ccPick === undefined) { if (cr.satchel.slots[i]) this.ccPick = i; return; }
     cr.satchel.swap(this.ccPick, i); this.ccPick = null; try { CM.audio.play("cardplace", 0.3, 0, 1.1); } catch (er) { /* */ }
   },
-  ccTileOf(b) { const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; },
+  ccTileOf(b) { if (CM.CC.isItem(b)) { const t = CM.CC.TILE[CM.CC.ITEM_TILE[b]]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; } const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; },
   ccDrawSlot(p, atlas, s, x, y, size, lit, picked) {
     p.fillStyle = lit ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.35)"; p.fillRect(x, y, size, size);
     if (s) { const [tx, ty] = this.ccTileOf(s.b), m = Math.round(size * 0.14); p.globalAlpha = picked ? 0.4 : 1; p.drawImage(atlas, tx, ty, 16, 16, x + m, y + m, size - 2 * m, size - 2 * m); p.globalAlpha = 1;
@@ -62,13 +63,23 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("bedrock"); noisy(x, y, "#3A3A3A", 40);
     [x, y] = at("basalt"); noisy(x, y, "#2E2C38", 8); p.fillStyle = "#C8A040"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillStyle = "#B070FF"; for (const [rx, ry] of [[7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [5, 5], [6, 6], [8, 6], [9, 5], [5, 10], [9, 10]]) p.fillRect(x + rx, y + ry, 1, 1);   // (dark basalt, gold-edged, a carved rune glowing in it: the Keep-yard gate's own)
     [x, y] = at("gate"); noisy(x, y, "#8050D0", 24, 210); p.fillStyle = "rgba(120,240,230,0.6)"; for (let k = 0; k < 16; k += 4) p.fillRect(x, y + k, 16, 1);
+    for (const [ore, col] of [["copper", "#D07A40"], ["iron", "#C8A890"], ["silver", "#E8ECF8"], ["gold", "#F0C838"], ["stariron", "#7A9AF0"], ["charstone", "#1A1A1A"]]) {   // (v12.1: ore in the stone)
+      [x, y] = at(ore === "charstone" ? "charstone" : `ore_${ore}`); noisy(x, y, "#7F7F7F", 18); const r2 = new CM.Random(ore.length * 31 + 5);
+      for (let k = 0; k < 6; k++) { const ox = r2.int(1, 12), oy = r2.int(1, 12); p.fillStyle = col; p.fillRect(x + ox, y + oy, 3, 2); p.fillRect(x + ox + 1, y + oy - 1, 1, 4); p.fillStyle = "rgba(255,255,255,0.35)"; if (ore !== "charstone") p.fillRect(x + ox, y + oy, 1, 1); }
+      if (ore === "stariron") { p.fillStyle = "#FFFFFF"; for (const [sx, sy] of [[4, 4], [11, 9], [7, 13]]) p.fillRect(x + sx, y + sy, 1, 1); }
+    }
+    for (const [it, col, dark] of [["copper", "#D07A40", "#7A3A18"], ["iron", "#B8A090", "#5A4A40"], ["silver", "#E8ECF8", "#8A90A0"], ["gold", "#F0C838", "#9A7010"], ["stariron", "#8AA4F8", "#2A3A80"], ["charcoal", "#303030", "#101010"]]) {   // (the things in the satchel)
+      [x, y] = at(`item_${it}`); p.fillStyle = dark; p.beginPath(); p.moveTo(x + 3, y + 10); p.lineTo(x + 5, y + 4); p.lineTo(x + 10, y + 2); p.lineTo(x + 14, y + 6); p.lineTo(x + 13, y + 12); p.lineTo(x + 7, y + 14); p.closePath(); p.fill();
+      p.fillStyle = col; p.beginPath(); p.moveTo(x + 5, y + 9); p.lineTo(x + 6, y + 5); p.lineTo(x + 10, y + 4); p.lineTo(x + 12, y + 7); p.lineTo(x + 11, y + 11); p.lineTo(x + 7, y + 12); p.closePath(); p.fill();
+      p.fillStyle = "rgba(255,255,255,0.55)"; p.fillRect(x + 7, y + 5, 2, 1); p.fillRect(x + 6, y + 6, 1, 1);
+    }
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
     let c = this.$("#craftcanvas"); if (!c) { c = document.createElement("canvas"); c.id = "craftcanvas"; this.$("#view").appendChild(c); }
     const gl = this.ccGl = c.getContext("webgl", { antialias: false }) || c.getContext("experimental-webgl"); if (!gl) return false;
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-    const prog = this.ccProg = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FRAG)); gl.bindAttribLocation(prog, 0, "pos"); gl.bindAttribLocation(prog, 1, "uv"); gl.bindAttribLocation(prog, 2, "shade"); gl.linkProgram(prog);
+    const prog = this.ccProg = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FRAG)); gl.bindAttribLocation(prog, 0, "pos"); gl.bindAttribLocation(prog, 1, "uv"); gl.bindAttribLocation(prog, 2, "shade"); gl.bindAttribLocation(prog, 3, "sky"); gl.linkProgram(prog);
     const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.ccAtlas()); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this.ccTex = tex; this.ccChunks = new Map(); this.ccLine = gl.createBuffer();
     const pcx = Math.floor(this.game.craft.walker.pos[0] / CM.CC.CHUNK), pcz = Math.floor(this.game.craft.walker.pos[2] / CM.CC.CHUNK);
@@ -80,8 +91,8 @@ Object.assign(CM.UI.prototype, {
   ccBuild(cx, cz) {
     const gl = this.ccGl, [op, wa] = this.game.craft.world.meshChunk(cx, cz), key = `${cx},${cz}`; let ch = this.ccChunks.get(key);
     if (!ch) { ch = { op: gl.createBuffer(), wa: gl.createBuffer() }; this.ccChunks.set(key, ch); }
-    gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 6;
-    gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 6;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 7;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 7;
   },
   ccDirtyAt(x, z) { const C = CM.CC.CHUNK; for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const cx = Math.floor((x + dx) / C), cz = Math.floor((z + dz) / C); if (cx >= 0 && cz >= 0 && cx < CM.CC.CHUNKS && cz < CM.CC.CHUNKS) this.ccDirty.add(`${cx},${cz}`); } },
   ccMvp(w, aspect) {
@@ -99,24 +110,24 @@ Object.assign(CM.UI.prototype, {
     gl.viewport(0, 0, c.width, c.height); gl.clearColor(0.53, 0.71, 0.96, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     const P = this.ccProg; gl.useProgram(P); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.ccTex);
     const U = (n) => gl.getUniformLocation(P, n);
-    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000);
-    const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 24, 20); gl.drawArrays(mode, 0, n); };
+    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000); gl.uniform1f(U("lamp"), g.craftLight());
+    const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2, 3]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 28, 20); gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 28, 24); gl.drawArrays(mode, 0, n); };
     for (const ch of this.ccChunks.values()) draw(ch.op, ch.nOp);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     for (const ch of this.ccChunks.values()) draw(ch.wa, ch.nWa);
     gl.depthMask(true);
     const hit = cr.target && cr.target[0];
     if (hit) { const [x, y, z] = hit, e = 0.003, C = [[x - e, y - e, z - e], [x + 1 + e, y - e, z - e], [x + 1 + e, y - e, z + 1 + e], [x - e, y - e, z + 1 + e], [x - e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z + 1 + e], [x - e, y + 1 + e, z + 1 + e]], out = [];
-      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, ...C[b], 0, 0, 1);
+      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, 1, ...C[b], 0, 0, 1, 1);
       gl.uniform1f(U("lines"), 1); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccLine); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccLine, 24, gl.LINES); }
     if (hit && cr.dig && cr.dig.key === hit.join(",") && cr.dig.need < Infinity) {          // (the crack, growing with the dig)
       const [x, y, z] = hit, e2 = 0.004, out = [];
-      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1);
-      if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 6); }
+      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1, 1);
+      if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 7); }
     if (cr.bundles.length) {                                                   // (the bundles: small glowing blocks, bobbing)
       const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / 4], out = [], s2 = 0.6;
-      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / 4, 2.5 + sh); }
-      if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 6); }
+      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / 4, 2.5 + sh, 1); }
+      if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 7); }
     gl.disable(gl.BLEND);
     this.ccHud(cr, now);
   },
@@ -134,12 +145,13 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i < 9; i++) this.ccDrawSlot(p, atlas, S[i], x0 + i * sw, y0, sw, i === w.slot, false);
     p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText(S[w.slot] ? `${CM.CC.NAMES[S[w.slot].b]} (${S[w.slot].n})` : "(empty - break something)", W / 2, y0 - 12);
     // the hero: portrait, health and magic, and the hour
-    const hero = cr.hero, px = 10, py = 10; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portraitDrawn(hero.cls, 56); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
-    p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
+    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portraitDrawn(hero.cls, 56); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
+    p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, g2.craftLoad() ? 80 : 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
     const bar = (y, v, m, col, label) => { p.fillStyle = "#202020"; p.fillRect(px + 62, y, 160, 12); p.fillStyle = col; p.fillRect(px + 62, y, 160 * Math.max(0, Math.min(1, m ? v / m : 0)), 12); p.font = "10px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(label, px + 66, y + 10); };
     p.font = "bold 12px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(`${hero.name} the ${hero.cls}`, px + 62, py + 10);
     bar(py + 16, hero.hp, hero.max, hero.hp < hero.max * 0.25 ? "#E04030" : "#C83030", `${Math.max(0, hero.hp)} / ${hero.max}`);
     if (hero.maxmp) bar(py + 31, hero.mp, hero.maxmp, "#3F7DE0", `${hero.mp} / ${hero.maxmp}`);
+    const load = g2.craftLoad(), cap = g2.craftCap(); if (load) { p.font = "11px Tahoma, sans-serif"; p.fillStyle = cr.walker.heavy ? "#FF9060" : "#E8D8B0"; p.fillText(`Ore and charcoal: ${load} of ${cap}${cr.walker.heavy ? " - heavy!" : ""}`, px + 62, py + 70); }
     let clock = ""; try { const m = CM.minuteOf(this.game), hh = Math.floor(m / 60), mm = m % 60; clock = `${hh}:${mm < 10 ? "0" : ""}${mm}, ${CM.hourWord(CM.hourOf(this.game))}`; } catch (er) { /* */ }
     p.font = "11px Tahoma, sans-serif"; p.fillText(clock, px + 62, py + 56);
     p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.textAlign = "right"; p.fillText(`XYZ ${w.pos[0].toFixed(0)} / ${w.pos[1].toFixed(0)} / ${w.pos[2].toFixed(0)}   broken ${cr.broken || 0}, placed ${cr.placed || 0}${cr.bundles.length ? `   bundles on the island: ${cr.bundles.length}` : ""}`, W - 8, 16);

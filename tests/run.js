@@ -4088,7 +4088,7 @@ test("Claudecraft through the Neather Gate: the island the seed's, with bedrock 
   assert.ok(a.blocks.every((v, i) => v === b.blocks[i]), "the seed's island"); assert.strictEqual(a.get(80, 0, 80), B.BEDROCK); assert.strictEqual(a.get(1, CC.SEA, 1), B.WATER, "the sea at the edge");
   let logs = 0; for (let i = 0; i < a.blocks.length; i++) if (a.blocks[i] === B.LOG) logs++; assert.ok(logs > 200, "trees");
   const g = a.gate; assert.strictEqual(a.get(g.x, g.y, g.z), B.BASALT); assert.strictEqual(a.get(g.x + 1, g.y + 2, g.z), B.GATE, "the gate's light in its frame");
-  const [op, wa] = a.meshChunk(5, 5); assert.ok(op.length > 0 && op.length % 36 === 0, "faces, six vertices of six floats each");
+  const [op, wa] = a.meshChunk(5, 5); assert.ok(op.length > 0 && op.length % 42 === 0, "faces, six vertices of seven floats each");
   const [hit] = a.raycast([80.5, CC.HEIGHT - 1, 80.5], [0, -1, 0], 80); assert.ok(hit && hit[1] === a.top(80, 80) || (hit && a.get(...hit) !== B.AIR), "the ray finds the ground");
   const w = new CC.Walker(a, [g.x + 1.5, g.y + 8, g.z + 3.5]); for (let k = 0; k < 180; k++) w.update(1 / 60, {}); assert.ok(w.onGround, "falls to the ground");
   const x0 = w.pos[0], z0 = w.pos[2]; for (let k = 0; k < 30; k++) w.update(1 / 60, { fwd: true }); assert.ok(Math.hypot(w.pos[0] - x0, w.pos[2] - z0) > 0.5, "walks");
@@ -4143,6 +4143,47 @@ test("Claudecraft (v12.0): the satchel stacks to 64 in 27 slots; breaking takes 
   assert.strictEqual(g.craftFetch(), 0, "not from the gate"); g.leaveCraft(); assert.strictEqual(g.village.craft.bundles.length, 1, "kept with the village");
   g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.enterCraft(0); const c2 = g.craft; c2.walker.pos = [c2.bundles[0].x, c2.bundles[0].y, c2.bundles[0].z];
   assert.ok(g.craftFetch() >= 6); assert.strictEqual(c2.bundles.length, 0, "fetched"); assert.strictEqual(c2.satchel.count(B.PLANKS), 5);
+});
+
+test("Claudecraft (v12.1): caves under the hills (never under the sea), ore in veins by depth - copper high, star-iron in seams over the bedrock - and charstone; the island the seed's; the sky's light gone deep underground, and the light carried widened by a torch or lantern", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, a = new CC.World(99).generate(), b = new CC.World(99).generate(), S = CC.SIZE;
+  assert.ok(a.blocks.every((v, i) => v === b.blocks[i]), "the seed's island, caves and ore");
+  let cave = 0, wet = 0; const lo = {}, hi = {};
+  for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) { const h = a.heights[x][z]; for (let y = 1; y < h - 1; y++) { const v = a.get(x, y, z); if (v === B.AIR) { cave++; if (h <= CC.SEA + 1) wet++; } if (v >= 17 && v <= 22) { lo[v] = Math.min(lo[v] ?? 99, y); hi[v] = Math.max(hi[v] ?? 0, y); } } }
+  assert.ok(cave > 3000, `caves: ${cave}`); assert.strictEqual(wet, 0, "never under the sea");
+  for (const v of [17, 18, 19, 20, 21, 22]) assert.ok(hi[v] > 0, `ore ${v} found`);
+  assert.ok(hi[B.STARIRON_ORE] <= 3 && hi[B.GOLD_ORE] <= 10 && hi[B.SILVER_ORE] <= 16 && lo[B.COPPER_ORE] >= 10, "the deeper, the rarer");
+  let deep = null; for (let x = 20; x < S - 20 && !deep; x++) for (let z = 20; z < S - 20 && !deep; z++) if (a.heights[x][z] > CC.SEA + 10 && a.get(x, 5, z) === B.AIR) deep = [x, 5, z];
+  assert.ok(deep, "a cave deep down"); assert.strictEqual(a.skyAt(...deep), 0, "dark down there"); assert.strictEqual(a.skyAt(deep[0], CC.HEIGHT - 1, deep[2]), 1, "light up top");
+  const [op] = a.meshChunk(5, 5); assert.ok(op.length % 42 === 0);
+  const g = new CM.Game(); g.newGame("craft-l", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.light = null; assert.strictEqual(g.craftLight(), 4); g.light = { kind: "torch", left: 50 }; assert.strictEqual(g.craftLight(), 7); g.light = { kind: "lantern", left: 300 }; assert.strictEqual(g.craftLight(), 11);
+});
+
+test("Claudecraft (v12.1): ore breaks only with a pick from the bag that mines it, a point of wear a block, into the main game's own ore chunks (two from star-iron); charstone breaks by hand into charcoal; they are not for building, they are heavy, and out through the gate they go into the bag for the smelter", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-o", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  g.bag = g.bag.filter((it) => it.kind !== "pick" && it.kind !== "ore" && it.kind !== "charcoal"); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker;
+  for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  const x = Math.floor(w.pos[0]) + 2, z = Math.floor(w.pos[2]), y = cr.world.top(x, z) + 3, at = (v) => { cr.world.set(x, y, z, v); cr.target = [[x, y, z], null]; cr.dig = null; };
+  at(B.COPPER_ORE); assert.strictEqual(g.craftBreakTime(B.COPPER_ORE), Infinity, "bare hands"); assert.ok(!g.craftBreak()); for (let k = 0; k < 50; k++) g.craftDig(0.1, true); assert.strictEqual(cr.world.get(x, y, z), B.COPPER_ORE, "held, still there");
+  g.bag.push(CM.pick("copper")); const cp = g.bag[g.bag.length - 1], pts = cp.points;
+  assert.ok(g.craftBreakTime(B.COPPER_ORE) < Infinity); at(B.COPPER_ORE); assert.strictEqual(g.craftBreak(), B.COPPER_ORE); assert.strictEqual(cp.points, pts - 1, "a point of wear"); assert.strictEqual(cr.satchel.count(101), 1);
+  at(B.SILVER_ORE); assert.ok(!g.craftBreak(), "a copper pick will not take silver"); assert.strictEqual(cp.points, pts - 1);
+  cp.points = 0; at(B.COPPER_ORE); assert.ok(!g.craftBreak(), "a blunt pick"); cp.points = 5;
+  g.bag.push(CM.pick("steel")); const sp = g.bag[g.bag.length - 1]; assert.ok(g.craftBreakTime(B.IRON_ORE) < CC.HARDNESS[B.IRON_ORE] * CC.pickFactor("copper"), "a better pick is quicker");
+  at(B.STARIRON_ORE); assert.strictEqual(g.craftBreak(), B.STARIRON_ORE); assert.strictEqual(cr.satchel.count(105), 2, "two chunks from star-iron"); assert.strictEqual(sp.points, CM.PICKS.steel.points - 1);
+  at(B.GOLD_ORE); g.craftBreak(); at(B.CHARSTONE); assert.ok(g.craftBreakTime(B.CHARSTONE) < Infinity); assert.strictEqual(g.craftBreak(), B.CHARSTONE); assert.strictEqual(cr.satchel.count(106), 1, "charcoal");
+  // not for building
+  const slot = cr.satchel.slots.findIndex((s2) => s2 && s2.b === 101); cr.satchel.swap(slot, 0); w.slot = 0; cr.target = [[0, 0, 0], [x, y + 2, z]]; assert.ok(!g.craftPlace(), "ore is not a block");
+  // heavy: past twice what the hero carries
+  assert.ok(!w.heavy); cr.satchel.add(102, 60); g.craftHeavy(); assert.ok(g.craftLoad() > g.craftCap() && w.heavy, "heavy"); const p0 = w.pos[0]; w.yaw = 270; w.pos = [p0, w.pos[1], w.pos[2]];
+  cr.satchel.add(B.DIRT, 3);
+  // home: the chunks and charcoal into the bag as the main game's own; the blocks stay in the satchel
+  const before = g.bag.length, out = g.leaveCraft(); assert.strictEqual(out.home, 1 + 2 + 1 + 1 + 60);
+  const ores = g.bag.slice(before); assert.strictEqual(ores.length, 65); assert.ok(ores.filter((i) => i.kind === "ore" && i.ore === "iron").length === 60 && ores.some((i) => i.kind === "ore" && i.ore === "stariron") && ores.some((i) => i.kind === "charcoal"));
+  const c1 = ores.find((i) => i.ore === "copper"), c0 = CM.oreChunk("copper"); assert.ok(["name", "kind", "ore", "value", "power"].every((k) => c1[k] === c0[k]), "the main game's own chunk");
+  const K = g.village.craft.satchels[CM.craftKey(g.party[0])]; assert.ok(K.every((s2) => !s2 || s2.b < 100), "nothing heavy left in the satchel"); assert.ok(K.some((s2) => s2 && s2.b === B.DIRT), "the blocks kept");
+  assert.ok(g.bag.filter((i) => i.kind === "ore" && i.ore === "iron").length >= CM.SMELT_CHUNKS, "enough for the smelter");
 });
 
 (async () => {

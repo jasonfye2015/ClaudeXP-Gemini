@@ -7,20 +7,31 @@
 // The window draws it with its own WebGL (76h-claudecraft.js); 61k-gate.js has the gate in the town.
 const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
-CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16 };
+CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
+  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22 };
 const CB = CC.B;
-CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light" };
+CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
+  17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
 CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6 };
-CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK]);
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22]);
+// (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
+// main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
+CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
+CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true } };
+CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal" };
+CC.isItem = (b) => b > 100;
+CC.itemWeight = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.WEIGHTS.ore : CM.WEIGHTS.charcoal) : 0);
+CC.toHome = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.oreChunk(CC.ITEM[b].ore) : CM.charcoal()) : null);
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0 };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106 };
+CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
 // the hero's satchel: 27 slots of {b, n}, stacks of up to 64; the first nine are the hotbar
@@ -43,9 +54,11 @@ CC.Satchel = class {
   toJSON() { return this.slots.map((s) => (s ? { b: s.b, n: s.n } : null)); }
 };
 CC.ATLAS = 8;                                                              // (the atlas: 8 x 4 tiles of 16 x 16)
-CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17 };
+CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17, ore_copper: 18, ore_iron: 19, ore_silver: 20, ore_gold: 21, ore_stariron: 22, charstone: 23,
+  item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
-  9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"] };
+  9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
+  17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -59,12 +72,19 @@ CC.FACE_DEFS = [
 CC.hash = (seed, x, z) => { let n = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(seed, 2147483647)) >>> 0; n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0; return ((n ^ (n >>> 16)) & 0xFFFF) / 65535; };
 CC.noise = (seed, x, z, scale) => { const fx = x / scale, fz = z / scale, x0 = Math.floor(fx), z0 = Math.floor(fz), sm = (t) => t * t * (3 - 2 * t), tx = sm(fx - x0), tz = sm(fz - z0), a = CC.hash(seed, x0, z0), b = CC.hash(seed, x0 + 1, z0), c = CC.hash(seed, x0, z0 + 1), d = CC.hash(seed, x0 + 1, z0 + 1); return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz; };
 
+CC.hash3 = (seed, x, y, z) => CC.hash(seed + Math.imul(y, 1013904223), x, z);
+CC.noise3 = (seed, x, y, z, scale) => { const fy = y / scale, y0 = Math.floor(fy), t = fy - y0, ty = t * t * (3 - 2 * t), a = CC.noise(seed + Math.imul(y0, 7919), x, z, scale), b = CC.noise(seed + Math.imul(y0 + 1, 7919), x, z, scale); return a + (b - a) * ty; };
+// (v12.1) the ore's depths: [block, veins, length, lowest y, highest y]
+CC.VEINS = [[22, 240, 7, 14, 46], [17, 260, 6, 10, 40], [18, 190, 5, 5, 28], [19, 110, 4, 3, 16], [20, 70, 4, 2, 10], [21, 45, 3, 1, 3]];
 CC.World = class {
-  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; }
+  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; this.roof = new Uint8Array(CC.SIZE * CC.SIZE); }
+  // the highest block that keeps out the sky in a column (leaves, glass and water let it through)
+  roofAt(x, z) { for (let y = CC.HEIGHT - 1; y > 0; y--) { const b = this.get(x, y, z); if (CC.SOLID.has(b) && b !== CB.LEAVES && b !== CB.GLASS) return y; } return 0; }
+  skyAt(x, y, z) { if (x < 0 || z < 0 || x >= CC.SIZE || z >= CC.SIZE) return 1; const d = this.roof[z * CC.SIZE + x] - y; return d < 0 ? 1 : Math.max(0, 1 - (d + 1) * 0.3); }
   index(x, y, z) { return (y * CC.SIZE + z) * CC.SIZE + x; }
   inside(x, y, z) { return x >= 0 && x < CC.SIZE && y >= 0 && y < CC.HEIGHT && z >= 0 && z < CC.SIZE; }
   get(x, y, z) { if (x < 0 || x >= CC.SIZE || z < 0 || z >= CC.SIZE || y < 0) return y < 0 ? CB.BEDROCK : CB.AIR; if (y >= CC.HEIGHT) return CB.AIR; return this.blocks[(y * CC.SIZE + z) * CC.SIZE + x]; }
-  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) this.edits[`${x},${y},${z}`] = b; return true; }
+  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) { this.edits[`${x},${y},${z}`] = b; this.roof[z * CC.SIZE + x] = this.roofAt(x, z); } return true; }
   generate() {
     const s = this.seed, R = new CM.Random(s), S = CC.SIZE, H = CC.HEIGHT, bl = this.blocks;
     for (let x = 0; x < S; x++) { this.heights.push(new Array(S).fill(0)); for (let z = 0; z < S; z++) {
@@ -75,6 +95,7 @@ CC.World = class {
       for (let y = 0; y <= h; y++) bl[(y * S + z) * S + x] = y === 0 ? CB.BEDROCK : y < h - 3 ? CB.STONE : h <= CC.SEA + 1 ? (h >= CC.SEA - 3 ? CB.SAND : CB.GRAVEL) : y === h ? (h > 44 ? CB.SNOW : CB.GRASS) : CB.DIRT;
       for (let y = h + 1; y <= CC.SEA; y++) bl[(y * S + z) * S + x] = CB.WATER;
     } }
+    this.carve(); this.veins(R);
     for (let k = 0; k < Math.floor((S * S) / 70); k++) {                    // trees
       const x = R.int(3, S - 4), z = R.int(3, S - 4), h = this.heights[x][z]; if (this.get(x, h, z) !== CB.GRASS) continue;
       const trunk = R.int(4, 6); for (let y = h + 1; y <= h + trunk; y++) this.set(x, y, z, CB.LOG, false);
@@ -84,7 +105,35 @@ CC.World = class {
     }
     this.gate = this.buildGate();
     for (const [k, b] of Object.entries(this.edits)) { const [x, y, z] = k.split(",").map(Number); this.set(x, y, z, b, false); }
+    for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) this.roof[z * S + x] = this.roofAt(x, z);
     return this;
+  }
+  // (v12.1) caves: where two noises are both near their middle a winding tunnel; deep down, where a third is high, a
+  // cavern. Only under land well above the sea (never through the sea floor), now and then opening on a hillside.
+  carve() {
+    const s = this.seed, S = CC.SIZE, bl = this.blocks, layers = new Map();
+    const layer = (sd, y0, scale) => { let C = layers.get(sd); if (!C) { C = []; layers.set(sd, C); } let L = C[y0]; if (!L) { L = C[y0] = new Float32Array(S * S); const ls = sd + Math.imul(y0, 7919), n = Math.ceil(S / scale) + 2, lat = new Float32Array(n * n); for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) lat[i * n + j] = CC.hash(ls, i, j);   // (CC.noise's own sums, its lattice hashed once)
+      const sm = (t) => t * t * (3 - 2 * t); for (let x = 0; x < S; x++) { const fx = x / scale, x0 = Math.floor(fx), tx = sm(fx - x0); for (let z = 0; z < S; z++) { const fz = z / scale, z0 = Math.floor(fz), tz = sm(fz - z0), a = lat[x0 * n + z0], b = lat[(x0 + 1) * n + z0], c = lat[x0 * n + z0 + 1], d = lat[(x0 + 1) * n + z0 + 1]; L[x * S + z] = (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz; } } } return L; };
+    const n3 = (sd, x, y, z, scale) => { const fy = y / scale, y0 = Math.floor(fy), t = fy - y0, ty = t * t * (3 - 2 * t), a = layer(sd, y0, scale)[x * S + z], b = layer(sd, y0 + 1, scale)[x * S + z]; return a + (b - a) * ty; };   // (CC.noise3, its layers made once)
+    for (let x = 1; x < S - 1; x++) for (let z = 1; z < S - 1; z++) {
+      const h = this.heights[x][z]; if (h <= CC.SEA + 3) continue;
+      let ok = true; for (const [dx, dz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const xx = x + dx, zz = z + dz; if (xx < 0 || zz < 0 || xx >= S || zz >= S || this.heights[xx][zz] <= CC.SEA + 1) ok = false; } if (!ok) continue;
+      const mouth = CC.noise(s + 13, x, z, 30);
+      for (let y = 2; y <= h - 1; y++) {
+        const roof = h - y; if (roof < 4 && mouth < 0.62) continue;   // (the roof kept, but for the odd cave mouth)
+        const a = n3(s + 10, x, y * 1.7, z, 18); let cut = false;
+        if (Math.abs(a - 0.5) < 0.04) { const b = n3(s + 11, x, y * 1.7, z, 18); cut = Math.abs(b - 0.5) < 0.05; }
+        if (!cut && y < 22) cut = n3(s + 12, x, y * 2.2, z, 22) > 0.74 + (22 - y) * 0.002;
+        if (cut) bl[(y * S + z) * S + x] = CB.AIR;
+      }
+    }
+  }
+  // (v12.1) ore in veins by depth (the deeper, the rarer), and charstone near the top - in the stone only
+  veins(R) {
+    for (const [b, n, len, lo, hi] of CC.VEINS) for (let k = 0; k < n; k++) {
+      let x = R.int(2, CC.SIZE - 3), y = R.int(lo, hi), z = R.int(2, CC.SIZE - 3);
+      for (let i = 0; i < len; i++) { if (this.get(x, y, z) === CB.STONE) this.blocks[this.index(x, y, z)] = b; const d = R.int(0, 5); if (d === 0) x++; else if (d === 1) x--; else if (d === 2) z++; else if (d === 3) z--; else if (d === 4 && y < hi) y++; else if (y > lo) y--; }
+    }
   }
   // the gate home: a frame of basalt, four wide and five high, its light inside, on level ground near the spawn
   buildGate() {
@@ -106,7 +155,7 @@ CC.World = class {
     return [c + 0.5, CC.HEIGHT - 2, c + 0.5];
   }
   top(x, z) { for (let y = CC.HEIGHT - 1; y >= 0; y--) if (this.get(x, y, z) !== CB.AIR) return y; return 0; }
-  // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade per vertex)
+  // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade, sky per vertex)
   meshChunk(cx, cz) {
     const S = CC.SIZE, bl = this.blocks, ts = 1 / CC.ATLAS, rows = 4, tsv = 1 / rows, op = [], wa = [], x0 = cx * CC.CHUNK, z0 = cz * CC.CHUNK;
     const tiles = {}; for (const [b, [t, sd, bt]] of Object.entries(CC.FACES)) tiles[b] = [CC.TILE[t], CC.TILE[bt], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd]];
@@ -117,8 +166,8 @@ CC.World = class {
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
-        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv;
-        for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade);   // (shade 2: the gate's light, which the shader moves)
+        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? 1 : this.skyAt(x + nx, y + ny, z + nz);
+        for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade, sky);   // (shade 2: the gate's light, which the shader moves)
       });
     } }
     return [new Float32Array(op), new Float32Array(wa)];
@@ -150,7 +199,7 @@ CC.Walker = class {
     this.t += dt; const yr = (this.yaw * Math.PI) / 180, fwd = [-Math.sin(yr), -Math.cos(yr)], right = [Math.cos(yr), -Math.sin(yr)];
     let mx = 0, mz = 0; if (k.fwd) { mx += fwd[0]; mz += fwd[1]; } if (k.back) { mx -= fwd[0]; mz -= fwd[1]; } if (k.right) { mx += right[0]; mz += right[1]; } if (k.left) { mx -= right[0]; mz -= right[1]; }
     const n = Math.hypot(mx, mz), water = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.5), Math.floor(this.pos[2])) === CB.WATER;
-    let speed = this.flying ? CC.FLY : k.sprint ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55;
+    let speed = this.flying ? CC.FLY : k.sprint && !this.heavy ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55; if (this.heavy) speed *= 0.55;
     this.vel[0] = n ? (mx / n) * speed : 0; this.vel[2] = n ? (mz / n) * speed : 0;
     if (this.flying) { this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
     else { this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }

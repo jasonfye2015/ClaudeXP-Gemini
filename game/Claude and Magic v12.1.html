@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v12.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v12.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -716,7 +716,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "12.0", built: "2026-10-31" };
+const CM = window.CM = { version: "12.1", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -11752,6 +11752,10 @@ Object.assign(CM.Game.prototype, {
 //   - a long fall hurts, against the hero's own health; a fall that kills wakes them by the island's gate with a
 //     tenth of their health, and the satchel's contents are left in a glowing bundle where they fell, kept until fetched;
 //   - the island and every change made to it are kept with the village; the gate's light is the way home.
+// (v12.1) Under the hills, caves, dark but for the light the party carries; ore in the stone by depth that only a pick
+// from the bag that mines it can break (a point of wear a block), dropping the main game's own ore chunks, and
+// charstone that drops charcoal. Both are heavy: past what the hero can carry they slow down. Out through the gate,
+// the ore and charcoal go into the party's bag, for the Smith's smelter.
 CM.PORTAL_YARD.gate = [37, 20];                                            // the Neather Gate, on the yard's east side
 CM.CRAFT_EDITS_MAX = 20000;
 CM.craftKey = (h) => `${h.name}:${h.cls}`;
@@ -11771,20 +11775,33 @@ Object.assign(CM.Game.prototype, {
     this.craft = { heroIndex: i, hero: h, world, walker, satchel, target: [null, null], dig: null, broken: 0, placed: 0, says: [], since: 0, bundles: K.bundles };
     this.craftSay(`${h.name} steps out onto a green island under a blue sky.`);
     this.say(`${h.name} steps into the Neather Gate's violet light, and is gone; the others wait in the Keep-yard.`);
-    this.setMode("craft"); this.emit("craft", this.craft);
+    this.craftHeavy(); this.setMode("craft"); this.emit("craft", this.craft);
     return "";
   },
   craftKeep() { const cr = this.craft; if (!cr) return; const K = this.craftStore(), w = cr.walker, key = CM.craftKey(cr.hero); K.edits = cr.world.edits; K.places[key] = { pos: w.pos.slice(), yaw: w.yaw, pitch: w.pitch }; K.satchels[key] = cr.satchel.toJSON(); K.bundles = cr.bundles; this.saveVillage && this.saveVillage(); },
   // the pick from home: its grade quickens stone (and, in phase 1, sets which ore can be had)
   craftPick() { const picks = (this.bag || []).filter((it) => it.kind === "pick" && CM.PICKS[it.pick] && (it.points || 0) > 0); const order = Object.keys(CM.PICKS || {}); return picks.sort((a, b) => order.indexOf(b.pick) - order.indexOf(a.pick))[0] || null; },
-  craftBreakTime(b) { const base = CM.CC.HARDNESS[b] || 1, pick = this.craftPick(), stony = CM.CC.STONY.has(b); return stony && pick ? base * CM.CC.pickFactor(pick.pick) : base; },
+  craftBreakTime(b) {
+    const base = CM.CC.HARDNESS[b] || 1, ore = CM.CC.ORE_OF[b];
+    if (ore) { const i = CM.bestPick(this.bag || [], ore); return i < 0 ? Infinity : base * CM.CC.pickFactor(this.bag[i].pick); }
+    const pick = this.craftPick(); return CM.CC.STONY.has(b) && pick ? base * CM.CC.pickFactor(pick.pick) : base;
+  },
+  // why an ore will not break: no pick, a blunt one, or one that will not bite it
+  craftOreWhy(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
+  // the light the hero carries into the dark: the party's lantern, glow stone or torch (a little of their own without)
+  craftLight() { const l = this.light; if (!l) return 4; if (l.kind === "lantern" && (l.left || 0) > 0) return 11; if (l.kind === "glow") return 9; if (l.kind === "torch" && (l.left || 0) > 0) return 7; return 4; },
+  // the satchel's load (ore and charcoal: what is heavy at home is heavy here) against what one hero carries
+  craftLoad() { const cr = this.craft; return cr ? cr.satchel.slots.reduce((t, s) => t + (s ? CM.CC.itemWeight(s.b) * s.n : 0), 0) : 0; },
+  craftCap() { const cr = this.craft; return cr ? CM.carryCap([cr.hero]) * 2 : 0; },
+  craftHeavy() { const cr = this.craft; if (!cr) return false; const was = cr.walker.heavy; cr.walker.heavy = this.craftLoad() > this.craftCap(); if (cr.walker.heavy && !was) this.craftSay("The satchel drags: too much ore to carry quickly. Home through the gate with it."); return cr.walker.heavy; },
   // held on a block: the crack grows; at its end the block breaks into the satchel
   craftDig(dt, holding) {
     const cr = this.craft; if (!cr) return null; const hit = cr.target[0];
     if (!holding || !hit) { cr.dig = null; return null; }
     const key = hit.join(","), b = cr.world.get(...hit);
     if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : "The gate's stone will not break."); } return null; }
-    if (!cr.dig || cr.dig.key !== key) cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) };
+    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); }
+    if (cr.dig.need === Infinity) return null;
     cr.dig.t += dt;
     if (cr.dig.t >= cr.dig.need) { cr.dig = null; return this.craftBreak(); }
     return null;
@@ -11793,16 +11810,23 @@ Object.assign(CM.Game.prototype, {
   craftBreak() {
     const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
     const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) return false;
+    const ore = CM.CC.ORE_OF[b], pi = ore ? CM.bestPick(this.bag || [], ore) : -1; if (ore && pi < 0) { this.craftSay(this.craftOreWhy(ore)); return false; }
     if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { this.craftSay("The island has had enough changes for now."); return false; }
     cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1;
     const drop = CM.CC.DROPS[b] === undefined ? b : CM.CC.DROPS[b];
-    if (drop && !cr.satchel.add(drop)) this.craftSay("The satchel is full: it falls at your feet and is lost.");
+    if (drop && !cr.satchel.add(drop, CM.CC.DROP_COUNT[b] || 1)) this.craftSay("The satchel is full: it falls at your feet and is lost.");
+    if (ore) {                                                               // (a point off the pick, as a swing in the shaft's caves)
+      const pick = this.bag[pi]; pick.points = Math.max(0, (pick.points || 0) - 1); cr.ore = (cr.ore || 0) + (CM.CC.DROP_COUNT[b] || 1);
+      this.craftSay(`${CM.CC.NAMES[drop]}${CM.CC.DROP_COUNT[b] ? ` x${CM.CC.DROP_COUNT[b]}` : ""} - the ${pick.name} has ${pick.points} point${pick.points === 1 ? "" : "s"} left.`);
+    }
+    this.craftHeavy();
     return b;
   },
   // a block placed from the hotbar's slot (the satchel's first row), not where the hero stands
   craftPlace() {
     const cr = this.craft, prev = cr && cr.target[1], w = cr && cr.walker; if (!prev) return false;
     const slot = cr.satchel.slots[w.slot]; if (!slot) { this.craftSay("Nothing in that slot: break something first."); return false; }
+    if (CM.CC.isItem(slot.b)) { this.craftSay(`${CM.CC.NAMES[slot.b]} is for the forge at home, not for building.`); return false; }
     const [x, y, z] = prev, p = w.pos; if (x + 1 > p[0] - 0.3 && x < p[0] + 0.3 && z + 1 > p[2] - 0.3 && z < p[2] + 0.3 && y + 1 > p[1] && y < p[1] + 1.8) return false;   // (not inside the walker)
     if (cr.world.get(x, y, z) === CM.CC.B.GATE) return false;
     cr.world.set(x, y, z, slot.b); cr.satchel.take(w.slot); cr.placed += 1; return true;
@@ -11827,6 +11851,7 @@ Object.assign(CM.Game.prototype, {
       B.items = B.items.filter((s) => { let left = s.n; while (left > 0 && cr.satchel.add(s.b)) { left--; got++; } s.n = left; return left > 0; });
       if (!B.items.length) cr.bundles.splice(cr.bundles.indexOf(B), 1);
     }
+    if (got) this.craftHeavy();
     if (got) this.craftSay(`Picked up the bundle: ${got} blocks back in the satchel.`);
     return got;
   },
@@ -11835,8 +11860,11 @@ Object.assign(CM.Game.prototype, {
     const cr = this.craft; if (!cr) return null;
     this.craftKeep(); const K = this.craftStore(), g = cr.world.gate; if (cr.walker.inGate()) { K.places[CM.craftKey(cr.hero)] = { pos: [g.x + 1.5, g.y, g.z + 2.5], yaw: 180, pitch: -8 }; this.saveVillage && this.saveVillage(); }   // (out through the gate: next time, in front of it)
     this.tally.craftBroken = (this.tally.craftBroken || 0) + cr.broken; this.tally.craftPlaced = (this.tally.craftPlaced || 0) + cr.placed;
-    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.`);
-    const out = { broken: cr.broken, placed: cr.placed };
+    const home = [], counts = {};                                            // (ore and charcoal out of the satchel, into the bag)
+    cr.satchel.slots.forEach((s, i) => { if (!s || !CM.CC.isItem(s.b)) return; for (let k = 0; k < s.n; k++) home.push(CM.CC.toHome(s.b)); counts[s.b] = (counts[s.b] || 0) + s.n; cr.satchel.slots[i] = null; });
+    if (home.length) { this.gain(home, "claudecraft"); this.tally.craftOre = (this.tally.craftOre || 0) + home.length; K.satchels[CM.craftKey(cr.hero)] = cr.satchel.toJSON(); this.saveVillage && this.saveVillage(); }
+    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.${home.length ? ` Into the bag: ${Object.entries(counts).map(([b, n]) => `${n} ${CM.CC.NAMES[b].toLowerCase()}${n > 1 && b !== "106" ? "s" : ""}`).join(", ")}.` : ""}`);
+    const out = { broken: cr.broken, placed: cr.placed, home: home.length };
     this.craft = null; if (typeof document !== "undefined" && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     this.setMode("explore"); this.floor.pos = [CM.PORTAL_YARD.gate[0] - 1, CM.PORTAL_YARD.gate[1]]; this.floor.facing = 1;
     this.saveRun(); this.emit("floor", this.floor);
@@ -18829,20 +18857,31 @@ CM.brArms = (h) => { const bow = h.weapon && h.weapon.props && h.weapon.props.bo
 // The window draws it with its own WebGL (76h-claudecraft.js); 61k-gate.js has the gate in the town.
 const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
-CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16 };
+CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
+  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22 };
 const CB = CC.B;
-CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light" };
+CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
+  17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
 CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6 };
-CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK]);
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22]);
+// (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
+// main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
+CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
+CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true } };
+CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal" };
+CC.isItem = (b) => b > 100;
+CC.itemWeight = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.WEIGHTS.ore : CM.WEIGHTS.charcoal) : 0);
+CC.toHome = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.oreChunk(CC.ITEM[b].ore) : CM.charcoal()) : null);
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0 };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106 };
+CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
 // the hero's satchel: 27 slots of {b, n}, stacks of up to 64; the first nine are the hotbar
@@ -18865,9 +18904,11 @@ CC.Satchel = class {
   toJSON() { return this.slots.map((s) => (s ? { b: s.b, n: s.n } : null)); }
 };
 CC.ATLAS = 8;                                                              // (the atlas: 8 x 4 tiles of 16 x 16)
-CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17 };
+CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17, ore_copper: 18, ore_iron: 19, ore_silver: 20, ore_gold: 21, ore_stariron: 22, charstone: 23,
+  item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
-  9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"] };
+  9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
+  17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -18881,12 +18922,19 @@ CC.FACE_DEFS = [
 CC.hash = (seed, x, z) => { let n = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(seed, 2147483647)) >>> 0; n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0; return ((n ^ (n >>> 16)) & 0xFFFF) / 65535; };
 CC.noise = (seed, x, z, scale) => { const fx = x / scale, fz = z / scale, x0 = Math.floor(fx), z0 = Math.floor(fz), sm = (t) => t * t * (3 - 2 * t), tx = sm(fx - x0), tz = sm(fz - z0), a = CC.hash(seed, x0, z0), b = CC.hash(seed, x0 + 1, z0), c = CC.hash(seed, x0, z0 + 1), d = CC.hash(seed, x0 + 1, z0 + 1); return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz; };
 
+CC.hash3 = (seed, x, y, z) => CC.hash(seed + Math.imul(y, 1013904223), x, z);
+CC.noise3 = (seed, x, y, z, scale) => { const fy = y / scale, y0 = Math.floor(fy), t = fy - y0, ty = t * t * (3 - 2 * t), a = CC.noise(seed + Math.imul(y0, 7919), x, z, scale), b = CC.noise(seed + Math.imul(y0 + 1, 7919), x, z, scale); return a + (b - a) * ty; };
+// (v12.1) the ore's depths: [block, veins, length, lowest y, highest y]
+CC.VEINS = [[22, 240, 7, 14, 46], [17, 260, 6, 10, 40], [18, 190, 5, 5, 28], [19, 110, 4, 3, 16], [20, 70, 4, 2, 10], [21, 45, 3, 1, 3]];
 CC.World = class {
-  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; }
+  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; this.roof = new Uint8Array(CC.SIZE * CC.SIZE); }
+  // the highest block that keeps out the sky in a column (leaves, glass and water let it through)
+  roofAt(x, z) { for (let y = CC.HEIGHT - 1; y > 0; y--) { const b = this.get(x, y, z); if (CC.SOLID.has(b) && b !== CB.LEAVES && b !== CB.GLASS) return y; } return 0; }
+  skyAt(x, y, z) { if (x < 0 || z < 0 || x >= CC.SIZE || z >= CC.SIZE) return 1; const d = this.roof[z * CC.SIZE + x] - y; return d < 0 ? 1 : Math.max(0, 1 - (d + 1) * 0.3); }
   index(x, y, z) { return (y * CC.SIZE + z) * CC.SIZE + x; }
   inside(x, y, z) { return x >= 0 && x < CC.SIZE && y >= 0 && y < CC.HEIGHT && z >= 0 && z < CC.SIZE; }
   get(x, y, z) { if (x < 0 || x >= CC.SIZE || z < 0 || z >= CC.SIZE || y < 0) return y < 0 ? CB.BEDROCK : CB.AIR; if (y >= CC.HEIGHT) return CB.AIR; return this.blocks[(y * CC.SIZE + z) * CC.SIZE + x]; }
-  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) this.edits[`${x},${y},${z}`] = b; return true; }
+  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) { this.edits[`${x},${y},${z}`] = b; this.roof[z * CC.SIZE + x] = this.roofAt(x, z); } return true; }
   generate() {
     const s = this.seed, R = new CM.Random(s), S = CC.SIZE, H = CC.HEIGHT, bl = this.blocks;
     for (let x = 0; x < S; x++) { this.heights.push(new Array(S).fill(0)); for (let z = 0; z < S; z++) {
@@ -18897,6 +18945,7 @@ CC.World = class {
       for (let y = 0; y <= h; y++) bl[(y * S + z) * S + x] = y === 0 ? CB.BEDROCK : y < h - 3 ? CB.STONE : h <= CC.SEA + 1 ? (h >= CC.SEA - 3 ? CB.SAND : CB.GRAVEL) : y === h ? (h > 44 ? CB.SNOW : CB.GRASS) : CB.DIRT;
       for (let y = h + 1; y <= CC.SEA; y++) bl[(y * S + z) * S + x] = CB.WATER;
     } }
+    this.carve(); this.veins(R);
     for (let k = 0; k < Math.floor((S * S) / 70); k++) {                    // trees
       const x = R.int(3, S - 4), z = R.int(3, S - 4), h = this.heights[x][z]; if (this.get(x, h, z) !== CB.GRASS) continue;
       const trunk = R.int(4, 6); for (let y = h + 1; y <= h + trunk; y++) this.set(x, y, z, CB.LOG, false);
@@ -18906,7 +18955,35 @@ CC.World = class {
     }
     this.gate = this.buildGate();
     for (const [k, b] of Object.entries(this.edits)) { const [x, y, z] = k.split(",").map(Number); this.set(x, y, z, b, false); }
+    for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) this.roof[z * S + x] = this.roofAt(x, z);
     return this;
+  }
+  // (v12.1) caves: where two noises are both near their middle a winding tunnel; deep down, where a third is high, a
+  // cavern. Only under land well above the sea (never through the sea floor), now and then opening on a hillside.
+  carve() {
+    const s = this.seed, S = CC.SIZE, bl = this.blocks, layers = new Map();
+    const layer = (sd, y0, scale) => { let C = layers.get(sd); if (!C) { C = []; layers.set(sd, C); } let L = C[y0]; if (!L) { L = C[y0] = new Float32Array(S * S); const ls = sd + Math.imul(y0, 7919), n = Math.ceil(S / scale) + 2, lat = new Float32Array(n * n); for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) lat[i * n + j] = CC.hash(ls, i, j);   // (CC.noise's own sums, its lattice hashed once)
+      const sm = (t) => t * t * (3 - 2 * t); for (let x = 0; x < S; x++) { const fx = x / scale, x0 = Math.floor(fx), tx = sm(fx - x0); for (let z = 0; z < S; z++) { const fz = z / scale, z0 = Math.floor(fz), tz = sm(fz - z0), a = lat[x0 * n + z0], b = lat[(x0 + 1) * n + z0], c = lat[x0 * n + z0 + 1], d = lat[(x0 + 1) * n + z0 + 1]; L[x * S + z] = (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz; } } } return L; };
+    const n3 = (sd, x, y, z, scale) => { const fy = y / scale, y0 = Math.floor(fy), t = fy - y0, ty = t * t * (3 - 2 * t), a = layer(sd, y0, scale)[x * S + z], b = layer(sd, y0 + 1, scale)[x * S + z]; return a + (b - a) * ty; };   // (CC.noise3, its layers made once)
+    for (let x = 1; x < S - 1; x++) for (let z = 1; z < S - 1; z++) {
+      const h = this.heights[x][z]; if (h <= CC.SEA + 3) continue;
+      let ok = true; for (const [dx, dz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const xx = x + dx, zz = z + dz; if (xx < 0 || zz < 0 || xx >= S || zz >= S || this.heights[xx][zz] <= CC.SEA + 1) ok = false; } if (!ok) continue;
+      const mouth = CC.noise(s + 13, x, z, 30);
+      for (let y = 2; y <= h - 1; y++) {
+        const roof = h - y; if (roof < 4 && mouth < 0.62) continue;   // (the roof kept, but for the odd cave mouth)
+        const a = n3(s + 10, x, y * 1.7, z, 18); let cut = false;
+        if (Math.abs(a - 0.5) < 0.04) { const b = n3(s + 11, x, y * 1.7, z, 18); cut = Math.abs(b - 0.5) < 0.05; }
+        if (!cut && y < 22) cut = n3(s + 12, x, y * 2.2, z, 22) > 0.74 + (22 - y) * 0.002;
+        if (cut) bl[(y * S + z) * S + x] = CB.AIR;
+      }
+    }
+  }
+  // (v12.1) ore in veins by depth (the deeper, the rarer), and charstone near the top - in the stone only
+  veins(R) {
+    for (const [b, n, len, lo, hi] of CC.VEINS) for (let k = 0; k < n; k++) {
+      let x = R.int(2, CC.SIZE - 3), y = R.int(lo, hi), z = R.int(2, CC.SIZE - 3);
+      for (let i = 0; i < len; i++) { if (this.get(x, y, z) === CB.STONE) this.blocks[this.index(x, y, z)] = b; const d = R.int(0, 5); if (d === 0) x++; else if (d === 1) x--; else if (d === 2) z++; else if (d === 3) z--; else if (d === 4 && y < hi) y++; else if (y > lo) y--; }
+    }
   }
   // the gate home: a frame of basalt, four wide and five high, its light inside, on level ground near the spawn
   buildGate() {
@@ -18928,7 +19005,7 @@ CC.World = class {
     return [c + 0.5, CC.HEIGHT - 2, c + 0.5];
   }
   top(x, z) { for (let y = CC.HEIGHT - 1; y >= 0; y--) if (this.get(x, y, z) !== CB.AIR) return y; return 0; }
-  // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade per vertex)
+  // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade, sky per vertex)
   meshChunk(cx, cz) {
     const S = CC.SIZE, bl = this.blocks, ts = 1 / CC.ATLAS, rows = 4, tsv = 1 / rows, op = [], wa = [], x0 = cx * CC.CHUNK, z0 = cz * CC.CHUNK;
     const tiles = {}; for (const [b, [t, sd, bt]] of Object.entries(CC.FACES)) tiles[b] = [CC.TILE[t], CC.TILE[bt], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd]];
@@ -18939,8 +19016,8 @@ CC.World = class {
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
-        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv;
-        for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade);   // (shade 2: the gate's light, which the shader moves)
+        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? 1 : this.skyAt(x + nx, y + ny, z + nz);
+        for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade, sky);   // (shade 2: the gate's light, which the shader moves)
       });
     } }
     return [new Float32Array(op), new Float32Array(wa)];
@@ -18972,7 +19049,7 @@ CC.Walker = class {
     this.t += dt; const yr = (this.yaw * Math.PI) / 180, fwd = [-Math.sin(yr), -Math.cos(yr)], right = [Math.cos(yr), -Math.sin(yr)];
     let mx = 0, mz = 0; if (k.fwd) { mx += fwd[0]; mz += fwd[1]; } if (k.back) { mx -= fwd[0]; mz -= fwd[1]; } if (k.right) { mx += right[0]; mz += right[1]; } if (k.left) { mx -= right[0]; mz -= right[1]; }
     const n = Math.hypot(mx, mz), water = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.5), Math.floor(this.pos[2])) === CB.WATER;
-    let speed = this.flying ? CC.FLY : k.sprint ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55;
+    let speed = this.flying ? CC.FLY : k.sprint && !this.heavy ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55; if (this.heavy) speed *= 0.55;
     this.vel[0] = n ? (mx / n) * speed : 0; this.vel[2] = n ? (mz / n) * speed : 0;
     if (this.flying) { this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
     else { this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }
@@ -24074,13 +24151,14 @@ Object.assign(CM.UI.prototype, {
 // gate in the town 61k-gate.js; the hands and feet are in 80-main.js. (v12.0: the gate's dialog - one hero goes - the
 // hero's portrait, health, magic and the clock, the satchel's hotbar with its counts and its window (I), the crack
 // that grows over a block being broken, and the glowing bundles left by a fall.)
-const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; }";
-const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos;\n"
+const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; attribute float sky; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; vSky = sky; }";
+const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; uniform float lamp; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky;\n"
   + "void main() { if (lines > 1.5) { vec2 q = floor(vUv * 16.0); float r = fract(sin(dot(q, vec2(12.9898, 78.233))) * 43758.5453); vec2 d = (q + 0.5) / 16.0 - 0.5; float arm = min(abs(d.x - d.y * 0.6), min(abs(d.y + d.x * 0.4), abs(d.x + d.y))); float reach = length(d) * 1.1 + r * 0.25; if (arm > 0.045 + r * 0.03 + (lines - 2.0) * 0.06 || reach > (lines - 2.0) * 0.75) discard; gl_FragColor = vec4(0.06, 0.05, 0.04, 0.8); return; } if (lines > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.85); return; } vec4 c = texture2D(atlas, vUv); if (c.a < 0.1) discard;\n"
-  + "  vec3 rgb = c.rgb * min(vShade, 1.0);\n"
+  + "  float carried = clamp(1.0 - vDist / lamp, 0.0, 1.0); carried = (1.0 - (1.0 - carried) * (1.0 - carried)) * 0.92; float lit = max(0.035, max(vSky, carried));\n"
+  + "  vec3 rgb = c.rgb * min(vShade, 1.0) * lit * mix(vec3(1.0), vec3(1.0, 0.86, 0.66), carried > vSky ? 0.8 : 0.0);\n"
   + "  if (vShade > 2.5) { float k = min(1.0, vShade - 2.5), p2 = 0.5 + 0.5 * sin(time * 4.0 + vPos.y * 7.0); rgb = mix(vec3(0.85, 0.62, 0.18), vec3(1.0, 0.94, 0.62), p2) * (0.55 + 0.45 * k); c.a = 0.95; }\n"
   + "  else if (vShade > 1.5) { float w = sin(vPos.x * 3.1 + vPos.y * 2.3 + time * 2.7) * 0.5 + 0.5, w2 = sin(vPos.y * 4.0 - time * 3.9 + vPos.z) * 0.5 + 0.5; float band = smoothstep(0.92, 1.0, sin(vPos.y * 6.0 - time * 2.2 + sin(vPos.x * 2.0 + vPos.z * 2.0) * 1.5)); rgb = mix(mix(vec3(0.40, 0.18, 0.80), vec3(0.30, 0.85, 0.82), w * 0.6), vec3(1.0, 0.92, 0.70), band * 0.8 + w2 * 0.12) * min(1.0, vShade - 1.0); c.a = 0.8; }\n"
-  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, fog, vShade > 1.5 ? f * 0.4 : f), c.a); }";
+  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, vShade > 1.5 ? fog : fog * vSky, vShade > 1.5 ? f * 0.4 : f), c.a); }";
 Object.assign(CM.UI.prototype, {
   // the gate's dialog: who steps through (the rest wait in the Keep-yard)
   openCraftGate() {
@@ -24100,7 +24178,7 @@ Object.assign(CM.UI.prototype, {
     if (this.ccPick === null || this.ccPick === undefined) { if (cr.satchel.slots[i]) this.ccPick = i; return; }
     cr.satchel.swap(this.ccPick, i); this.ccPick = null; try { CM.audio.play("cardplace", 0.3, 0, 1.1); } catch (er) { /* */ }
   },
-  ccTileOf(b) { const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; },
+  ccTileOf(b) { if (CM.CC.isItem(b)) { const t = CM.CC.TILE[CM.CC.ITEM_TILE[b]]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; } const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; },
   ccDrawSlot(p, atlas, s, x, y, size, lit, picked) {
     p.fillStyle = lit ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.35)"; p.fillRect(x, y, size, size);
     if (s) { const [tx, ty] = this.ccTileOf(s.b), m = Math.round(size * 0.14); p.globalAlpha = picked ? 0.4 : 1; p.drawImage(atlas, tx, ty, 16, 16, x + m, y + m, size - 2 * m, size - 2 * m); p.globalAlpha = 1;
@@ -24131,13 +24209,23 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("bedrock"); noisy(x, y, "#3A3A3A", 40);
     [x, y] = at("basalt"); noisy(x, y, "#2E2C38", 8); p.fillStyle = "#C8A040"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillStyle = "#B070FF"; for (const [rx, ry] of [[7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [5, 5], [6, 6], [8, 6], [9, 5], [5, 10], [9, 10]]) p.fillRect(x + rx, y + ry, 1, 1);   // (dark basalt, gold-edged, a carved rune glowing in it: the Keep-yard gate's own)
     [x, y] = at("gate"); noisy(x, y, "#8050D0", 24, 210); p.fillStyle = "rgba(120,240,230,0.6)"; for (let k = 0; k < 16; k += 4) p.fillRect(x, y + k, 16, 1);
+    for (const [ore, col] of [["copper", "#D07A40"], ["iron", "#C8A890"], ["silver", "#E8ECF8"], ["gold", "#F0C838"], ["stariron", "#7A9AF0"], ["charstone", "#1A1A1A"]]) {   // (v12.1: ore in the stone)
+      [x, y] = at(ore === "charstone" ? "charstone" : `ore_${ore}`); noisy(x, y, "#7F7F7F", 18); const r2 = new CM.Random(ore.length * 31 + 5);
+      for (let k = 0; k < 6; k++) { const ox = r2.int(1, 12), oy = r2.int(1, 12); p.fillStyle = col; p.fillRect(x + ox, y + oy, 3, 2); p.fillRect(x + ox + 1, y + oy - 1, 1, 4); p.fillStyle = "rgba(255,255,255,0.35)"; if (ore !== "charstone") p.fillRect(x + ox, y + oy, 1, 1); }
+      if (ore === "stariron") { p.fillStyle = "#FFFFFF"; for (const [sx, sy] of [[4, 4], [11, 9], [7, 13]]) p.fillRect(x + sx, y + sy, 1, 1); }
+    }
+    for (const [it, col, dark] of [["copper", "#D07A40", "#7A3A18"], ["iron", "#B8A090", "#5A4A40"], ["silver", "#E8ECF8", "#8A90A0"], ["gold", "#F0C838", "#9A7010"], ["stariron", "#8AA4F8", "#2A3A80"], ["charcoal", "#303030", "#101010"]]) {   // (the things in the satchel)
+      [x, y] = at(`item_${it}`); p.fillStyle = dark; p.beginPath(); p.moveTo(x + 3, y + 10); p.lineTo(x + 5, y + 4); p.lineTo(x + 10, y + 2); p.lineTo(x + 14, y + 6); p.lineTo(x + 13, y + 12); p.lineTo(x + 7, y + 14); p.closePath(); p.fill();
+      p.fillStyle = col; p.beginPath(); p.moveTo(x + 5, y + 9); p.lineTo(x + 6, y + 5); p.lineTo(x + 10, y + 4); p.lineTo(x + 12, y + 7); p.lineTo(x + 11, y + 11); p.lineTo(x + 7, y + 12); p.closePath(); p.fill();
+      p.fillStyle = "rgba(255,255,255,0.55)"; p.fillRect(x + 7, y + 5, 2, 1); p.fillRect(x + 6, y + 6, 1, 1);
+    }
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
     let c = this.$("#craftcanvas"); if (!c) { c = document.createElement("canvas"); c.id = "craftcanvas"; this.$("#view").appendChild(c); }
     const gl = this.ccGl = c.getContext("webgl", { antialias: false }) || c.getContext("experimental-webgl"); if (!gl) return false;
     const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
-    const prog = this.ccProg = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FRAG)); gl.bindAttribLocation(prog, 0, "pos"); gl.bindAttribLocation(prog, 1, "uv"); gl.bindAttribLocation(prog, 2, "shade"); gl.linkProgram(prog);
+    const prog = this.ccProg = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FRAG)); gl.bindAttribLocation(prog, 0, "pos"); gl.bindAttribLocation(prog, 1, "uv"); gl.bindAttribLocation(prog, 2, "shade"); gl.bindAttribLocation(prog, 3, "sky"); gl.linkProgram(prog);
     const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.ccAtlas()); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     this.ccTex = tex; this.ccChunks = new Map(); this.ccLine = gl.createBuffer();
     const pcx = Math.floor(this.game.craft.walker.pos[0] / CM.CC.CHUNK), pcz = Math.floor(this.game.craft.walker.pos[2] / CM.CC.CHUNK);
@@ -24149,8 +24237,8 @@ Object.assign(CM.UI.prototype, {
   ccBuild(cx, cz) {
     const gl = this.ccGl, [op, wa] = this.game.craft.world.meshChunk(cx, cz), key = `${cx},${cz}`; let ch = this.ccChunks.get(key);
     if (!ch) { ch = { op: gl.createBuffer(), wa: gl.createBuffer() }; this.ccChunks.set(key, ch); }
-    gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 6;
-    gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 6;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 7;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 7;
   },
   ccDirtyAt(x, z) { const C = CM.CC.CHUNK; for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const cx = Math.floor((x + dx) / C), cz = Math.floor((z + dz) / C); if (cx >= 0 && cz >= 0 && cx < CM.CC.CHUNKS && cz < CM.CC.CHUNKS) this.ccDirty.add(`${cx},${cz}`); } },
   ccMvp(w, aspect) {
@@ -24168,24 +24256,24 @@ Object.assign(CM.UI.prototype, {
     gl.viewport(0, 0, c.width, c.height); gl.clearColor(0.53, 0.71, 0.96, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     const P = this.ccProg; gl.useProgram(P); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.ccTex);
     const U = (n) => gl.getUniformLocation(P, n);
-    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000);
-    const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 24, 20); gl.drawArrays(mode, 0, n); };
+    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000); gl.uniform1f(U("lamp"), g.craftLight());
+    const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2, 3]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 28, 20); gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 28, 24); gl.drawArrays(mode, 0, n); };
     for (const ch of this.ccChunks.values()) draw(ch.op, ch.nOp);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     for (const ch of this.ccChunks.values()) draw(ch.wa, ch.nWa);
     gl.depthMask(true);
     const hit = cr.target && cr.target[0];
     if (hit) { const [x, y, z] = hit, e = 0.003, C = [[x - e, y - e, z - e], [x + 1 + e, y - e, z - e], [x + 1 + e, y - e, z + 1 + e], [x - e, y - e, z + 1 + e], [x - e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z + 1 + e], [x - e, y + 1 + e, z + 1 + e]], out = [];
-      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, ...C[b], 0, 0, 1);
+      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, 1, ...C[b], 0, 0, 1, 1);
       gl.uniform1f(U("lines"), 1); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccLine); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccLine, 24, gl.LINES); }
     if (hit && cr.dig && cr.dig.key === hit.join(",") && cr.dig.need < Infinity) {          // (the crack, growing with the dig)
       const [x, y, z] = hit, e2 = 0.004, out = [];
-      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1);
-      if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 6); }
+      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1, 1);
+      if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 7); }
     if (cr.bundles.length) {                                                   // (the bundles: small glowing blocks, bobbing)
       const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / 4], out = [], s2 = 0.6;
-      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / 4, 2.5 + sh); }
-      if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 6); }
+      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / 4, 2.5 + sh, 1); }
+      if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 7); }
     gl.disable(gl.BLEND);
     this.ccHud(cr, now);
   },
@@ -24203,12 +24291,13 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i < 9; i++) this.ccDrawSlot(p, atlas, S[i], x0 + i * sw, y0, sw, i === w.slot, false);
     p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText(S[w.slot] ? `${CM.CC.NAMES[S[w.slot].b]} (${S[w.slot].n})` : "(empty - break something)", W / 2, y0 - 12);
     // the hero: portrait, health and magic, and the hour
-    const hero = cr.hero, px = 10, py = 10; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portraitDrawn(hero.cls, 56); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
-    p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
+    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portraitDrawn(hero.cls, 56); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
+    p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, g2.craftLoad() ? 80 : 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
     const bar = (y, v, m, col, label) => { p.fillStyle = "#202020"; p.fillRect(px + 62, y, 160, 12); p.fillStyle = col; p.fillRect(px + 62, y, 160 * Math.max(0, Math.min(1, m ? v / m : 0)), 12); p.font = "10px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(label, px + 66, y + 10); };
     p.font = "bold 12px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(`${hero.name} the ${hero.cls}`, px + 62, py + 10);
     bar(py + 16, hero.hp, hero.max, hero.hp < hero.max * 0.25 ? "#E04030" : "#C83030", `${Math.max(0, hero.hp)} / ${hero.max}`);
     if (hero.maxmp) bar(py + 31, hero.mp, hero.maxmp, "#3F7DE0", `${hero.mp} / ${hero.maxmp}`);
+    const load = g2.craftLoad(), cap = g2.craftCap(); if (load) { p.font = "11px Tahoma, sans-serif"; p.fillStyle = cr.walker.heavy ? "#FF9060" : "#E8D8B0"; p.fillText(`Ore and charcoal: ${load} of ${cap}${cr.walker.heavy ? " - heavy!" : ""}`, px + 62, py + 70); }
     let clock = ""; try { const m = CM.minuteOf(this.game), hh = Math.floor(m / 60), mm = m % 60; clock = `${hh}:${mm < 10 ? "0" : ""}${mm}, ${CM.hourWord(CM.hourOf(this.game))}`; } catch (er) { /* */ }
     p.font = "11px Tahoma, sans-serif"; p.fillText(clock, px + 62, py + 56);
     p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.textAlign = "right"; p.fillText(`XYZ ${w.pos[0].toFixed(0)} / ${w.pos[1].toFixed(0)} / ${w.pos[2].toFixed(0)}   broken ${cr.broken || 0}, placed ${cr.placed || 0}${cr.bundles.length ? `   bundles on the island: ${cr.bundles.length}` : ""}`, W - 8, 16);

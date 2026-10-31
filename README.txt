@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 1, v12.1: ore, caves, and the pick from home
+  Under the island's hills now wind caves, with a few large caverns deep down (never under the sea, now and then
+  opening on a hillside). Underground it is dark but for the light the party carries: a little of the hero's own, more
+  with a torch, most with a lantern. In the stone are veins of ore by depth - copper high, iron below, silver deeper,
+  gold deep, star-iron in seams just over the bedrock - and charstone near the top. Ore breaks only with a pick from
+  the bag that mines it (CM.PICKS: a copper pick takes copper and iron, an iron pick silver too, steel all of them), a
+  point of wear a block; a better pick breaks stone and ore faster. Ore drops the main game's own ore chunks (two from
+  star-iron) and charstone drops charcoal, both heavy: past twice what the hero can carry, they slow down. Out through
+  the gate the chunks and charcoal go into the party's bag, ready for the Smith's smelter (three chunks and a charcoal
+  make a bar).
+
 Claudecraft made a place (the nineteenth big update, UPGRADE_PLAN_13.md) - phase 0, v12.0: one hero and a satchel
   The Neather Gate now asks who steps through: one hero goes, the rest wait in the Keep-yard. On the island the HUD
   shows their portrait, health, magic and the game's clock. Breaking a block takes time - hold the left button and a
