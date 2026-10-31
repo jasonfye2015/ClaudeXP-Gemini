@@ -187,6 +187,7 @@ CM.RELIC_POWERS = {
   "Ember Mail": { id: "reforge", name: "Reforge on the spot", where: "both", what: "the wearer's weapon takes an edge for the floor (+2)" },
   "Patriarch's Reliquary": { id: "unlock", name: "The key that is not", where: "floor", what: "the nearest locked door on the floor opens" },
   "First Root": { id: "regrow", name: "Regrow", where: "both", what: "a fallen hero rises, to one health" },
+  "The Bell's Tongue": { id: "ring", name: "Ring it", where: "fight", what: "it rings like the bell it came from: every foe that can be shaken loses its next turn, and the weak run" },
 };
 CM.powerOf = (item) => (item && !item.unknown ? CM.RELIC_POWERS[CM.baseIdOf(item)] || null : null);
 // twenty small strange things, one passive oddity each (most through props the rules already read)

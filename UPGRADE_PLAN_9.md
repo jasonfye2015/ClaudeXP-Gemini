@@ -274,7 +274,20 @@ followers and errands, 5 without.
   thing is on its floor for its seed and nowhere else; an errand done pays once; the tavern refuses after a death;
   Automatic hires and takes.
 
-## Phase 6 - The Undercroft: a second way down - v9.9 (content; large)
+## Phase 6 - The Undercroft: a second way down - v9.9 (content; large) - DONE
+
+As built (`64c-undercroft.js`): floors -2, -3 and -4, made by generator 2 from keys of their own (no floor of the
+shaft moves), with their own theme (the Flooded Vaults' photographs and the Drowned Town's tiles in their own colours),
+five kinds (Drowned Townsfolk, Eel, Marsh Light - it runs from the party - Cellar Spider, and a Bell-Ringer leading a
+pack a floor as a shrieking champion) with Crawl tiles, the lairs of Phase 1, standing water, and a carving a floor
+that tells what the town forgot (a codex chapter of its own, "The lower town"). The stair down is in the third cave,
+hidden until a lit party stands within two squares of it. The tenth guardian, the Bell-Founder's Boy, keeps the
+bell-yard: his bell wakes every lair and sinks the party's heart every third turn; on the Night of Bells he is a fifth
+weaker; his relic is the Bell's Tongue (it shrieks on its first blow of a fight, wakes the floor and sends the weak
+running; its power, Ring it, staggers every foe that can be shaken). The black door opens once he has fallen and a
+party has been to floor six, onto floor six of the shaft, and a flooded stair on floor six leads back down to it. The
+librarian's errand was not tied to it (the errands were written in Phase 5 before the Undercroft existed); the sim does
+not take the route (Automatic has no reason to go into a cave with a light lit only to find a stair).
 
 - **Where**: the third cave in the Wood (the one the seed puts deepest) has, past its ore, a stair of old stone
   that the party finds only with a light (Phase 1's light reach: it is dark) - **the Undercroft**, the lower town

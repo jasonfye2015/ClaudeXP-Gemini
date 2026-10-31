@@ -588,6 +588,7 @@ CM.LORE_ENDLESS = Object.values(CM.LORE_TEXT).filter((l) => l.chapter === "endle
 CM.loreKey = function (text) {
   if (typeof text === "string" && text.startsWith("ga:")) text = "g:" + text.slice(3);   // (a lair's carving, after its guardian is gone: the same line, in the past tense)
   if (typeof text === "string" && text.startsWith("g:")) return CM.LORE_TEXT[`guardian.${text.slice(2)}`] ? `guardian.${text.slice(2)}` : null;
+  if (typeof text === "string" && text.startsWith("u:")) return `undercroft.${Number(text.slice(2)) + 1}`;   // (the Undercroft's walls)
   if (typeof text === "string" && text.startsWith("e:")) return `endless.${(Number(text.slice(2)) % CM.LORE_ENDLESS.length) + 1}`;
   if (typeof text === "number" && text >= 0) return CM.LORE_KEYS[Math.min(text, CM.LORE_KEYS.length - 1)];
   if (typeof text === "number") return `odd.${Math.min(-text, CM.LORE_EXTRA.length)}`;

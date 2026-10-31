@@ -439,7 +439,7 @@ CM.Game = class {
 
   // how: "down" (by the stairs, arriving at the top), "up" (arriving at the ladder), "fall" (through the floor at `at`)
   enterFloor(number, how = "down", at = null) {
-    if (number < 1) this.lightOut = false;                               // (above ground: nothing to creep past)
+    if (!CM.isDeep(number)) this.lightOut = false;                       // (above ground: nothing to creep past)
     const fresh = !this.floors[number] && !this.deltas[number];
     const fl = this.floorAt(number);
     if (fl !== this.floor) { this.leaveFloor(); this.stock = null; this.recruits = null; if (this.floor && number % 1 === 0 && this.floor.number % 1 === 0) this.clock = (this.clock || 0) + CM.CLOCK.stair * Math.max(1, Math.abs(number - this.floor.number)); if (this.farmDawns && this.village) this.farmDawns(); }   // (a merchant's table and a tavern's bench belong to where they are; a stair is an hour)
@@ -487,6 +487,7 @@ CM.Game = class {
     if (number === -1) this.refreshWood();
     if (this.followerOnFloor) this.followerOnFloor(number, fresh);       // (the follower: 64b-people.js)
     if (this.layErrand && number >= 1) this.layErrand(fl);              // (an errand's thing, on its floor)
+    if (this.layUndercroftBack) this.layUndercroftBack(fl);             // (the flooded stair down to the bell-yard, once its door is open)
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
@@ -511,7 +512,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : number === -1 ? `${CM.WOOD_THEME.name}: ${CM.hourWord(CM.hourOf(this))} under the trees.` : number < 0 ? "A cave under the Wood: roots in the roof, and the first bands' kinds in the dark." : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
+    else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : number === -1 ? `${CM.WOOD_THEME.name}: ${CM.hourWord(CM.hourOf(this))} under the trees.` : CM.isUndercroft(number) ? `${CM.UNDERCROFT_NAMES[-number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-number - 2].slice(1)}: standing water, and old streets under the hill.` : number < 0 ? "A cave under the Wood: roots in the roof, and the first bands' kinds in the dark." : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
     if (fresh && number === CM.LAST_FLOOR + 1) this.say("The stair goes on below the palace, cut by no mason. The air is wet and old. The Deep begins here, and the carvings above never spoke of it.");

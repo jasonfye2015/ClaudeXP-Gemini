@@ -68,7 +68,8 @@ Object.assign(CM.Game.prototype, {
       return false;
     }
     fl.pos = [x, y];
-    if (fl.number >= 1) this.makeNoise(this.stepNoise());              // (the step's noise: 61b-lairs.js)
+    if (CM.isDeep(fl.number)) this.makeNoise(this.stepNoise());
+    if (fl.cave === 2) this.findUndercroft();                             // (the old stair, found by a light)              // (the step's noise: 61b-lairs.js)
     this.clock = (this.clock || 0) + 1;                                  // (a step is a minute)
     this.sound("step");
     this.burn();
@@ -140,7 +141,8 @@ Object.assign(CM.Game.prototype, {
           farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
+          caveexit: "The way out of the cave. (Space to climb out)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
+          ucdoor: "A door of black oak in the bell-yard's wall. (Space)", ucback: "A flooded stair going down, and a black door at the bottom of it: the Undercroft. (Space)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
           cross: "The market cross, on its three steps: the Square's oldest stone. (Space to read what is cut in it)",
           villager: thing.type === "villager" ? `${(CM.TOWNSFOLK[thing.who % CM.TOWNSFOLK.length] || {}).who || "someone"}. (Space to pass the time of day)` : "" }[thing.type]);
@@ -296,7 +298,7 @@ Object.assign(CM.Game.prototype, {
     return f;
   },
 
-  hasLight() { return (Boolean(this.light.kind) && !(this.lightOut && this.floor && this.floor.number >= 1)) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
+  hasLight() { return (Boolean(this.light.kind) && !(this.lightOut && this.floor && CM.isDeep(this.floor.number))) || this.spellLight > 0 || Boolean(this.floor && this.floor.number === -1 && !CM.isNight(this)); },   // (the Wood by day is lit by the sky)
 
   // what the party can see goes on the automap: around them, and along the corridor they face - by torchlight
   look() {
@@ -338,7 +340,8 @@ Object.assign(CM.Game.prototype, {
     { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
       if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
       if (t0 && t0.type === "postern") { this.postern(); return; }
-      if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (an errand's thing: 64b-people.js)
+      if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
+      if (t0 && ["ucstair", "ucdown", "ucup", "ucdoor", "ucback"].includes(t0.type) && !t0.hidden) { this.undercroftWay(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (the Undercroft: 64c-undercroft.js)   // (an errand's thing: 64b-people.js)
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {

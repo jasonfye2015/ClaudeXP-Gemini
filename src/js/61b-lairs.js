@@ -41,7 +41,7 @@ CM.makeChampion = function (t, id) {
 // the lairs, laid over a fresh floor: three packs in five asleep, a sleeper drawn into the nearest dead end within
 // three squares (if one is free and not by the stair); a quarter of the packs below CM.CHAMPION_FROM led by a champion
 CM.makeLairs = function (fl, seed) {
-  if (!fl || !(fl.number >= 1) || !fl.things) return fl;
+  if (!fl || !CM.isDeep(fl.number) || !fl.things) return fl;
   const start = fl.pos || [1, 1], open = (x, y) => CM.isOpen(fl, x, y), fromStart = CM.distances(fl.grid, start, open);
   const deadEnd = (x, y) => CM.openNeighbours(fl, x, y).length === 1;
   for (const k of Object.keys(fl.things).sort()) {
@@ -86,7 +86,7 @@ Object.assign(CM.Game.prototype, {
   // the reach of the party's light, in squares: what a sleeper down a straight corridor sees of it
   lightReach() {
     const fl = this.floor;
-    if (!fl || fl.number < 1 || this.inDark()) return 0;
+    if (!fl || !CM.isDeep(fl.number) || this.inDark()) return 0;
     if (this.spellLight > 0) return CM.LIGHT_REACH.spell;
     if (this.lightOut) return 0;
     const l = this.light || {};
@@ -120,7 +120,7 @@ Object.assign(CM.Game.prototype, {
   },
   // the torch: doused to creep past what sleeps, or lit again (below ground only; nothing to douse, nothing done)
   douse() {
-    if (this.mode !== "explore" || !this.floor || this.floor.number < 1) return false;
+    if (this.mode !== "explore" || !this.floor || !CM.isDeep(this.floor.number)) return false;
     if (!this.lightOut && !(this.light && this.light.kind)) { this.say("There is no light to douse."); return false; }
     this.logAct("douse");
     this.lightOut = !this.lightOut;
@@ -139,7 +139,7 @@ Object.assign(CM.Game.prototype, {
   // the monsters' turn, first: the light and the noise reach the sleepers; then the noise dies away
   wakeSleepers() {
     const fl = this.floor;
-    if (!fl || fl.number < 1) return;
+    if (!fl || !CM.isDeep(fl.number)) return;
     const reach = this.lightReach(), noise = this.noiseLevel || 0, heard = noise ? CM.noiseDistances(fl, fl.pos) : null;
     let byLight = 0, byNoise = 0;
     for (const k of Object.keys(fl.things).sort()) {

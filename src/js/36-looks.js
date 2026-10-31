@@ -58,7 +58,7 @@ CM.art.pixelate = function (canvas, cells = 32) {
 
 // ---- the Pixel theme: a depth's whole set from the atlas -------------------------------------------------------------
 CM.art.buildPixel = function (theme) {
-  const t = `t${Math.max(0, CM.THEMES.indexOf(theme))}`, S = ART_SIZE, layers = [], index = {};
+  const t = theme.pixel || `t${Math.max(0, CM.THEMES.indexOf(theme))}`, S = ART_SIZE, layers = [], index = {};
   const add = (name, canvas) => { index[name] = layers.length; layers.push(canvas); };
   const tiled = (key, n = 2, darken = 0) => {                                 // the stone: a tile repeated n x n across the face
     const c = artCanvas(S), p = c.getContext("2d");

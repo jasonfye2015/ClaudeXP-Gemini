@@ -2026,7 +2026,7 @@ test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors
 
 test("living items: a relic's power once a floor, a trinket's oddity, a weapon's marks and its name kept through save, vault and a later party, an heirloom's third bearer", () => {
   const CM = load();
-  assert.strictEqual(Object.keys(CM.TRINKETS).length, 20); assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 9); assert.ok(CM.SLOTS.includes("trinket"));
+  assert.strictEqual(Object.keys(CM.TRINKETS).length, 20); assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 10);   // (the tenth: the Undercroft's, v9.9) assert.ok(CM.SLOTS.includes("trinket"));
   for (const id of Object.keys(CM.GUARDIANS)) if (CM.GUARDIANS[id].relic) assert.ok(CM.powerOf(CM.relic(id)), `${id}'s relic has a power`);
   assert.ok(CM.powerOf(CM.makeUnique("firstroot")) && CM.powerOf(CM.makeUnique("firstroot")).id === "regrow");
   const game = new CM.Game(); game.newGame("living-1", fixedParty(CM));
@@ -3525,6 +3525,43 @@ test("errands: six givers, three at a time, one each a season; a fetch errand's 
   const b = new CM.Game(); b.newGame("errand-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); b.village.errands = { taken: {}, done: {} }; b.gold = 400; b.mode = "explore";
   const auto = new CM.Autopilot(b, { warp: true, sync: true }); auto.people(b.floor);
   assert.ok(Object.keys(b.errands().taken).length >= 1, "Automatic takes the errands on its way"); assert.ok(b.follower, "and takes on a follower");
+});
+
+test("the Undercroft: an old stair in the third cave, found only by a light; three floors of its own kinds and carvings; the Bell-Founder's Boy and his bell in the bell-yard; a door to the Flooded Vaults that opens once he has fallen and a party has been to floor six; the Catacombs untouched on the way", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("uc-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const cave = CM.caveNumber(2); g.enterFloor(cave, "down");
+  const sk = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "ucstair"); assert.ok(sk, "a stair in the third cave"); assert.ok(g.floor.things[sk].hidden, "hidden");
+  assert.ok(!Object.values(CM.makeFloor(CM.caveNumber(1), "uc-1", 2).things).some((t) => t.type === "ucstair"), "only in the third");
+  const [sx, sy] = sk.split(",").map(Number), near = CM.distances(g.floor.grid, [sx, sy], (x, y) => CM.isOpen(g.floor, x, y)), by = [...near.entries()].find(([, d]) => d === 1)[0].split(",").map(Number);
+  g.floor.pos = by; g.lightOut = true; g.findUndercroft(); assert.ok(g.floor.things[sk].hidden, "the dark hides it");
+  g.lightOut = false; g.light = { kind: "torch", left: 300 }; assert.ok(g.findUndercroft() && !g.floor.things[sk].hidden, "a light finds it");
+  g.floor.pos = [sx, sy]; g.use(); assert.strictEqual(g.floor.number, -2, "down into the Undercroft"); assert.strictEqual(CM.themeFor(-2), CM.UNDERCROFT_THEME);
+  for (const n of CM.UNDERCROFT_FLOORS) {
+    const fl = CM.makeFloor(n, "uc-1", 2); assert.strictEqual(JSON.stringify(fl.things), JSON.stringify(CM.makeFloor(n, "uc-1", 2).things), "the seed's");
+    assert.ok(Object.values(fl.things).some((t) => t.type === "ucup"), `${n}: a way up`);
+    for (const t of Object.values(fl.things)) if (t.type === "monsters") for (const m of t.group) assert.ok((CM.monsterKind(m.kind || m.name) || {}).undercroft, `${n}: its own kinds (${m.name})`);
+    assert.ok(Object.values(fl.things).some((t) => t.type === "monsters" && t.champion === "shrieking" && t.group.some((m) => m.kind === "Bell-Ringer")), `${n}: a Bell-Ringer leads a pack`);
+    const carving = Object.values(fl.features).find((f) => f.type === "carving"); if (carving) { assert.strictEqual(carving.text, `u:${-n - 2}`); assert.ok(CM.loreText(carving.text, "uc-1").includes(CM.UNDERCROFT_LORE[-n - 2].slice(0, 12))); }
+  }
+  assert.ok(Object.values(CM.makeFloor(-2, "uc-1", 2).things).some((t) => t.type === "ucdown") && Object.values(CM.makeFloor(-3, "uc-1", 2).things).some((t) => t.type === "ucdown"));
+  const yard = CM.makeFloor(-4, "uc-1", 2), boy = Object.values(yard.things).find((t) => t.type === "guardian");
+  assert.ok(boy && boy.group[0].guardian === "bell", "the tenth guardian"); assert.ok(Object.values(yard.things).some((t) => t.type === "ucdoor"), "and the door");
+  for (const m of CM.MONSTERS) if (m.undercroft) assert.ok(!CM.monsterGroup(5, new CM.Random(1)).some((x) => x.kind === m.name), "not among the shaft's bands");
+  // down, through the yard: the door shut until he falls and floor six is known
+  g.enterFloor(-4, "rope", Object.keys(g.floorAt(-4).things).find((k) => g.floorAt(-4).things[k].type === "ucdoor").split(",").map(Number));
+  const dk = `${g.floor.pos[0]},${g.floor.pos[1]}`; g.village.undercroftDoor = false; g.tally.guardians = [];
+  g.use(); assert.strictEqual(g.floor.number, -4, "shut while he keeps it");
+  g.tally.guardians = ["bell"]; g.trail = [[1, 0]]; g.use(); assert.strictEqual(g.floor.number, -4, "shut to a party that hasn't been to floor six");
+  g.trail.push([6, 900]); g.use(); assert.strictEqual(g.floor.number, 6, "into the Flooded Vaults"); assert.ok(g.village.undercroftDoor, "kept open");
+  const back = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "ucback"); assert.ok(back, "a flooded stair back down");
+  g.floor.pos = back.split(",").map(Number); g.use(); assert.strictEqual(g.floor.number, -4); assert.strictEqual(`${g.floor.pos[0]},${g.floor.pos[1]}`, dk, "at the black door");
+  for (const n of [1, 2, 3, 4, 5]) assert.ok(!g.floors[n] && !g.deltas[n], `floor ${n} untouched`);
+  // the bell wakes the floor; the dungeon's own rules hold in the Undercroft
+  const b = new CM.Game(); b.newGame("uc-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); b.enterFloor(-4, "down"); b.mode = "explore";
+  const fl4 = b.floor; fl4.things["1,1"] = { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Eel"), 9, new CM.Random(3))], asleep: true };
+  const G = CM.guardianMonster("bell", 9); b.foes = [G]; b.startCombat(`${fl4.pos[0]},${fl4.pos[1]}`, { group: [G] }); G.turns = 0; b.guardianAct(G);
+  assert.ok(!fl4.things["1,1"].asleep, "the bell wakes every lair"); assert.ok(CM.isDeep(-3) && !CM.isDeep(-1) && !CM.isDeep(0)); assert.ok(CM.powerOf(Object.assign(CM.relic("bell"), { unknown: false })), "the Bell's Tongue has a power");
 });
 
 (async () => {
