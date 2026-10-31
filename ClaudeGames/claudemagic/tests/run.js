@@ -4852,6 +4852,30 @@ test("the Gloomwing Swarm: thirty-two swoop in and settle in formation; two bolt
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("the Hexmarch: fifty-five march side to side and step down at a wall, quicker as they thin; one bolt at a time; points by rank; the wards stop hexes and crumble; a hex costs a life; reaching the floor ends it; each level pays gold every play, every third level a card only the first time", () => {
+  const CM = load(), HX = CM.HX, L = new HX.Level(1, 3); assert.strictEqual(L.foes.length, 55); L.hexT = 1e9; L.cometT = 1e9;
+  const x0 = L.foes[0].x, y0 = L.foes[0].y; L.update(0.7); assert.ok(L.foes[0].x > x0 && L.foes[0].y === y0, "a step along");
+  for (let k = 0; k < 60 * 30 && L.foes[0].y === y0; k++) L.tick(HX.step); assert.strictEqual(L.foes[0].y, y0 + 1); assert.strictEqual(L.dir, -1, "down and back");
+  const slow = (0.05 + 0.75) / L.mul; L.foes.slice(0, 50).forEach((f) => { f.dead = true; }); L.marchT = 0; L.tick(HX.step); assert.ok(L.marchT < slow / 3, "quicker when thinned");
+  // one bolt at a time; a kill scores its rank
+  const M = new HX.Level(1, 4); M.hexT = 1e9; M.cometT = 1e9; M.marchT = 1e9; M.input(0, true); M.tick(HX.step); const b = M.bolt; M.input(0, false); M.input(0, true); M.tick(HX.step); assert.strictEqual(M.bolt, b, "still the one bolt");
+  M.wards = []; const imp = M.foes.find((f) => f.kind === "imp"); M.bolt = { x: imp.x, y: imp.y + 0.3 }; M.foes.filter((f) => f !== imp && Math.abs(f.x - imp.x) < 1).forEach((f) => { f.dead = true; }); M.tick(HX.step); assert.ok(imp.dead); assert.strictEqual(M.score, 30);
+  // wards
+  const N = new HX.Level(1, 5); N.hexT = 1e9; N.marchT = 1e9; N.cometT = 1e9; const w = N.wards[5], hp0 = N.wards.reduce((t, q) => t + q.hp, 0); N.hexes.push({ x: w.x, y: w.y - 1, kind: 0, t: 0 }); for (let k = 0; k < 10; k++) N.tick(HX.step); assert.strictEqual(N.hexes.length, 0); assert.strictEqual(N.wards.reduce((t, q) => t + q.hp, 0), hp0 - 1, "chipped");
+  // a hex on the cannon; then the floor
+  N.wards = []; N.hexes.push({ x: N.p.x, y: HX.gunY - 1, kind: 0, t: 0 }); for (let k = 0; k < 10; k++) N.tick(HX.step); assert.strictEqual(N.lives, 2);
+  const O = new HX.Level(1, 6); O.hexT = 1e9; O.foes.forEach((f) => { f.y += 23; }); O.marchT = 0; O.dir = 1; O.foes.forEach((f) => { f.x += 3.5; }); O.tick(HX.step); assert.strictEqual(O.lives, 0); for (let k = 0; k < 120; k++) O.tick(HX.step); assert.strictEqual(O.stage, "over");
+  // the house's side
+  const g = new CM.Game(); g.newGame("hx-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.hxStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 6; n++) { const Lv = g.hxLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.hxCheck(); assert.strictEqual(out.pay, Math.round(100 * HX.pay(n))); if (out.card) { cards++; assert.strictEqual(n % 3, 0); } }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "levels 3 and 6, the first time only"); assert.strictEqual(g.gold - gold0, [1, 2, 3, 4, 5, 6].reduce((t, n) => t + Math.round(100 * HX.pay(n)), 0));
+    g.hxLevel().stage = "over"; assert.ok(g.hxCheck().over); assert.strictEqual(g.hxLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

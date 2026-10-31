@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Hexmarch (v14.1)
+
+The cellars under the Joker run further than the house admits, and the far wall of the old shooting range is thin.
+Every night the hexlings come through it in ranks, marching as if to a drum nobody else can hear. The house keeps a
+rune-cannon behind four warding stones it took from a ruined chapel, and pays by the rank to anyone who will hold the
+range until morning.
+
 ## The Gloomwing Swarm (v14.0)
 
 The Joker's lights draw things out of the night sky the way a lamp draws moths, and the Gloomwings are the worst of
