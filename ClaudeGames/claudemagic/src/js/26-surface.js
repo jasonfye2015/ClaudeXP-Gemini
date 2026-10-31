@@ -16,6 +16,9 @@ CM.SOLID = {
   cabin: { face: "solid:logs", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs" },        // Leshy's cabin (61f-cabin.js): logs all round
   cabindoor: { face: "solid:cabindoor", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs", door: true },
   magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
+  crag: { face: "solid:crag", h: 1.9, top: "ground:grass" },                     // Claudeita's crag in the Wood (61g-cavemouth.js), and its mouth
+  cavemouth: { face: "solid:cavemouth", h: 1.9, top: "ground:grass" },
+  cragtall: { face: "solid:crag", h: 2.7, top: "ground:grass" }, craglow: { face: "solid:crag", h: 1.15, top: "ground:grass" },   // (the crag rises behind its mouth, and falls away at its ends)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -71,7 +74,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", crag: "#5A5650", cragtall: "#5A5650", craglow: "#5A5650", cavemouth: "#1A1410", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand

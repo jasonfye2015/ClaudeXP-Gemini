@@ -140,6 +140,16 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Claudeita's cave (v11.3)
+
+The crag south of the fields was always there; the mouth in it was not. The farm's people say it opened the winter the
+river froze, and that the warm air has come out of it ever since. Under it the ground is not the shaft's ground: it
+moves. Sand pours, water finds its level, fire walks along roots, and the rock itself can be blown away and does not
+grow back. The College's mages knew of it and called it Claudeita, after nobody; they went down with wands, because a
+staff is no good where the floor may be gone in a breath. Five things live at the bottoms of its five depths, and the
+last, the Unmaker, is not a creature at all but the hole's own will to undo whatever comes into it. The cave has no part
+in the city's story either. It keeps what it is given, and gives it back only to those who climb out.
+
 ## The Mage Tower (v10.1 to v11.0)
 
 The tower in the Wood is older than the shaft and has nothing to do with the king. It was built by the College that

@@ -114,7 +114,9 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
-  game.on("cabin", () => ui.openCabin());                                // (Leshy's table: 76b-cabin.js)
+  game.on("cabin", () => ui.openCabin());
+  game.on("claudeita", () => ui.openClaudeita());                      // (Claudeita's cave: 76c-cave.js)
+  game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
@@ -453,7 +455,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
       else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
-      else if (thing.type === "magedoor") { /* the doors are the tower's own, in the mesh */ }
+      else if (thing.type === "magedoor" || thing.type === "claudeita") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -580,6 +582,14 @@ window.addEventListener("DOMContentLoaded", () => {
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
+    if (game.mode === "cave" && game.caveRun && !ui.dialogOpen()) {     // Claudeita's cave: real time (64i-claudeita.js)
+      const f = CAVE_KEYS[e.code], run = game.caveRun; if (f) { e.preventDefault(); caveIn[f] = true; return; }
+      if (/^Digit[1-4]$/.test(e.code)) { const n = Number(e.code.slice(-1)) - 1; if (n < run.player.wands.length) run.player.current = n; return; }
+      if (e.code === "KeyE" || e.code === K.use) { e.preventDefault(); run.interact(); return; }
+      if (e.code === "Tab") { e.preventDefault(); ui.caveEdit = !ui.caveEdit; ui.cavePick = null; return; }
+      if (e.code === "Escape" && ui.caveEdit) { e.preventDefault(); ui.caveEdit = false; return; }
       if (e.code !== "Escape") return;
     }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
@@ -716,7 +726,14 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; });
+  // ---- Claudeita's cave's hands and feet: the mouse on its canvas aims and casts, and works the wand editor ----
+  const caveXY = (e) => { const c = ui.$("#cavecanvas"), r = c.getBoundingClientRect(); return [(e.clientX - r.left) * (c.width / r.width), (e.clientY - r.top) * (c.height / r.height)]; };
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "cave" || !game.caveRun || !e.target.closest("#cavecanvas")) return; e.preventDefault(); const at = ui.caveMouse = caveXY(e); if (ui.caveEdit) ui.caveEditorClick(game.caveRun, at[0], at[1], e.button === 2); else if (e.button === 0) caveFire = true; });
+  window.addEventListener("mouseup", (e) => { if (e.button === 0) caveFire = false; });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "cave" && ui.$("#cavecanvas")) ui.caveMouse = caveXY(e); });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "cave") e.preventDefault(); });
+  view.addEventListener("wheel", (e) => { if (game.mode !== "cave" || !game.caveRun || ui.caveEdit) return; e.preventDefault(); const pl = game.caveRun.player; if (pl.wands.length) pl.current = (pl.current + (e.deltaY < 0 ? -1 : 1) + pl.wands.length) % pl.wands.length; }, { passive: false });
   view.addEventListener("mousedown", (e) => { if (game.mode !== "tower" || e.target.closest("button")) return; e.preventDefault(); if (document.pointerLockElement !== view && view.requestPointerLock) { try { view.requestPointerLock(); } catch (er) { /* not here */ } } if (e.button === 2) towerIn.spell = true; else towerIn.fire = true; });
   window.addEventListener("mouseup", (e) => { if (e.button === 2) towerIn.spell = false; else towerIn.fire = false; });
   view.addEventListener("contextmenu", (e) => { if (game.mode === "tower") e.preventDefault(); });
@@ -728,6 +745,40 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---- the Mage Tower's hands and feet (64e-towerrun.js): held keys, the mouse's turn ----
   const TOWER_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", KeyD: "right", KeyQ: "turnL", ArrowLeft: "turnL", KeyE_: "", ArrowRight: "turnR", Space: "fire", KeyF: "fire", KeyR: "spell", Digit2: "spell" };
   let towerIn = {}, towerMapT = 0;
+  const CAVE_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", KeyW: "jump", ArrowUp: "jump", Space: "jump" };
+  let caveIn = {}, caveFire = false, caveAcc = 0, caveSfx = {};
+  // a frame in Claudeita's cave: the run takes its steps by real time (30 a second, however often the frame comes), its
+  // events become sounds, the canvas is drawn; when it is over, a moment to read the end, and out
+  function caveFrame(now, dt) {
+    const run = game.caveRun; if (!run) return;
+    const still = ui.dialogOpen() || ui.caveEdit || ui.screen !== "play";
+    if (!still && !run.over) { caveAcc += dt; let n = 0; while (caveAcc >= CM.CV.TICK && n < 4) { run.step(caveIn, ui.caveAim(run), caveFire); caveAcc -= CM.CV.TICK; n++; } if (n === 4) caveAcc = 0; } else caveAcc = 0;
+    const sfx = (name, vol, gap = 0.06, rate = 1) => { if (now - (caveSfx[name] || 0) < gap * 1000) return; caveSfx[name] = now; try { CM.audio.play(name, vol, 0, rate); } catch (er) { /* quiet */ } };
+    for (const ev of run.events) {
+      if (ev.kind === "cast") sfx(ev.name === "Bomb" || ev.name === "Black Hole" ? "lever" : ev.name === "Digging Bolt" || ev.name === "Luminous Drill" ? "wanddig" : "zap", 0.22, 0.05, ev.name === "Spark Bolt" ? 1 : 0.8);
+      else if (ev.kind === "boom") sfx("wandboom", Math.min(0.7, 0.25 + ev.r / 30), 0.08);
+      else if (ev.kind === "zap") sfx("spell", 0.35, 0.1, 1.4);
+      else if (ev.kind === "splash") sfx("splash", 0.3, 0.1);
+      else if (ev.kind === "hit") sfx("hit", 0.18, 0.06);
+      else if (ev.kind === "kill") sfx(ev.boss ? "toll" : "monster", ev.boss ? 0.8 : 0.25, 0.08);
+      else if (ev.kind === "hurt") { sfx("hurt", 0.4, 0.15); ui.tint("rgba(200,30,20,0.3)", 200); }
+      else if (ev.kind === "gold") sfx("coin", 0.2, 0.05);
+      else if (ev.kind === "heart" || ev.kind === "fountain") sfx("heal", 0.5, 0.5);
+      else if (ev.kind === "take" || ev.kind === "buy") sfx("chest", 0.4, 0.2);
+      else if (ev.kind === "boss") sfx("elite", 0.7, 1);
+      else if (ev.kind === "blink") sfx("teleport", 0.5, 0.3);
+      else if (ev.kind === "foecast") sfx("miss", 0.15, 0.12);
+      else if (ev.kind === "biome") { sfx("wind", 0.4, 1); if (ev.b) game.say(`${game.caveRun.player.name} comes down into ${CM.CV_BIOMES[ev.b].name}.`); }
+      else if (ev.kind === "bossdown") { game.say(`${CM.CV_BOSSES[ev.b]} falls${ev.b < 4 ? ": the gate below it opens on a sanctuary - a fountain, a shop, and a rope up to the daylight" : ""}.`); ui.renderLog(); }
+      else if (ev.kind === "dead") sfx("death", 0.7, 1);
+      else if (ev.kind === "rope") sfx("stairs", 0.6, 1);
+    }
+    run.events.length = 0;
+    if (run.over && !run.endAt) { run.endAt = now + (run.over === "dead" ? 2600 : 2200); if (run.over === "won") sfx("victory", 0.8, 1); }
+    if (run.over && now >= run.endAt) { caveFire = false; caveIn = {}; game.leaveClaudeita(run.over); ui.refresh(); return; }
+    ui.drawCave(run);
+    if ((towerMapT += dt) > 0.5) { towerMapT = 0; ui.refresh(); }
+  }
   function towerFrame(now, dt) {                                        // a frame in the tower: the run steps, the view follows the hero
     const run = game.towerRun; if (!run) return;
     run.update(dt, towerIn); towerIn.look = 0;
@@ -774,6 +825,7 @@ window.addEventListener("DOMContentLoaded", () => {
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "tower") towerFrame(now, dt);
+      else if (game.mode === "cave") caveFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

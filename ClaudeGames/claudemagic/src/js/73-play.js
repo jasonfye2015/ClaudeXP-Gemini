@@ -6,6 +6,7 @@ Object.assign(CM.UI.prototype, {
   refresh() {
     const g = this.game;
     document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
+    document.body.classList.toggle("incave", g.mode === "cave");     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -27,6 +28,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.caveRun) { const pl = g.caveRun.player; this.$("#side .where").textContent = `Claudeita's cave - ${pl.y > CM.CV.SURFACE ? CM.CV_BIOMES[CM.cvBiomeAt(Math.floor(pl.y))].name : "the mouth"}, ${g.caveRun.depth()} m`; }
     if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
@@ -116,6 +118,12 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "cave") {                                             // Claudeita's cave: out, empty-handed
+      if (box.dataset.mode === "cave") return; box.dataset.mode = "cave"; box.innerHTML = "";
+      const b = document.createElement("button"); b.textContent = "Turn back (the cave's finds are lost)"; b.addEventListener("click", () => { if (g.caveRun && !g.caveRun.over) g.leaveClaudeita("left"); this.refresh(); }); box.appendChild(b);
+      const t = document.createElement("button"); t.textContent = "Wands (Tab)"; t.addEventListener("click", () => { this.caveEdit = !this.caveEdit; this.cavePick = null; }); box.appendChild(t);
       return;
     }
     const sets = {

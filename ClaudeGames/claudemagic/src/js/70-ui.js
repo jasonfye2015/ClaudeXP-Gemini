@@ -191,6 +191,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-claudeita"><div class="box"><h2>Claudeita's cave</h2><p class="lore">The mouth breathes warm air that smells of wet stone and smoke. Whoever goes in goes alone, with a wand: a caster, who knows what a wand is for.</p><div id="claudeita-who"></div><div class="small" id="claudeita-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-magetower"><div class="box"><h2>The Mage Tower</h2><p class="lore">The doors are taller than three men, and warm to the touch. Whoever goes in, goes in alone: a caster, or someone with a bow.</p><div id="magetower-who"></div><div class="small" id="magetower-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-cabin"><div class="box cabinbox"><div id="cabin-body"></div></div></div>
 <div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
