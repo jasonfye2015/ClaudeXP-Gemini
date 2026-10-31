@@ -1392,6 +1392,22 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The red portal: Claudeablo (the sixteenth big update - v11.6)
+  A red portal on the Keep-yard's north side leads to Haven, a village of thatch and timber under a dark cathedral:
+  the Timeline's Claudeablo, ported whole (src/js/64l-claudeablo.js; the window's side src/js/76f-claudeablo.js) and
+  drawn at an angle as it is there. Any one of the party steps through, as a warrior, rogue or sorcerer by their
+  calling, as strong as they are here the first time; that character is kept with the village, one for each hero.
+  Haven has its smith, witch, healer and elder, a waystone, and the way down: fifty levels from the Cathedral through
+  the Catacombs, the Caves, Hell and the Abyss to Vorthak the Undying in the Undying Sanctum, with loot white, blue and
+  gold, shrines, chests, barrels, bosses every ten levels and champions between. Left-click to walk, fight, take and
+  talk (hold to keep walking), right-click casts, Shift-click attacks on the spot, 1-4 the belt, I inventory,
+  C character, S spells, Tab map, Alt the names of things on the floor, HOME walks to the portal. Haven's own red
+  portal, south of the well, brings the hero home with a share of the experience, the gold found, and every piece of
+  gear in the pack as a thing of the party's own (what is worn, and the potions, scrolls and books, stay there for
+  next time). A death there wakes the hero in Haven with half the gold, as Claudeablo does. (The original game's
+  characters borrowed from another game's names have names of their own here: Vorthak the Undying, the Flesher,
+  Brannoc, Isolde, Tobin and Aldous.)
+
 The Gilded Joker (the fifteenth big update - v11.5)
   East of Temple Row, up Gilded Row from Shaft Lane, stands the richest house in Caer Duin: red plaster between gilt
   pilasters, tall arched windows lit gold, gilded doors under a fanlight, a copper roof, a sign of three cards. Inside,
