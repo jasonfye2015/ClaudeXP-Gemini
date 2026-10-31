@@ -8,11 +8,13 @@ Object.assign(CM.UI.prototype, {
   caSfx(name, vol = 0.4, rate = 1) { try { CM.audio.play(name, vol, 0, rate); } catch (e) { /* quiet */ } },
   caCard(c, o = {}) {
     const CA = CM.CA, stone = c.enh === "stone", tip = [stone ? "Stone Card" : `${CA.rankLabel(c.r)} of ${CA.NAME[c.s]}`, c.enh && !stone ? CA.ENHANCEMENTS[c.enh][0] + ": " + CA.ENHANCEMENTS[c.enh][1] : stone ? CA.ENHANCEMENTS.stone[1] : "", c.ed ? CA.EDITIONS[c.ed][0] + ": " + CA.EDITIONS[c.ed][1] : "", c.bonus ? `+${c.bonus} Chips` : ""].filter(Boolean).join("\n");
-    return `<div class="pc s${c.s}${c.enh ? " e-" + c.enh : ""}${c.ed ? " d-" + c.ed : ""}${o.cls ? " " + o.cls : ""}"${o.data ? " " + o.data : ""} title="${this.esc(tip)}">${stone ? `<span class="pr">🪨</span>` : `<span class="pr">${CA.rankLabel(c.r)}</span><span class="ps">${CA.SYMBOL[c.s]}</span><span class="pr2">${CA.rankLabel(c.r)}${CA.SYMBOL[c.s]}</span>`}</div>`;
+    const sym = CA.SYMBOL[c.s], court = { 11: "J", 12: "Q", 13: "K" }[c.r], mid = stone ? `<span class="pstone"></span>` : court ? `<span class="pcourt"><i>${court === "K" ? "♚" : court === "Q" ? "♛" : "⚔"}</i><b>${sym}</b></span>` : c.r === 14 ? `<span class="ps ace">${sym}</span>` : `<span class="pips n${Math.min(10, c.r)}">${`<i>${sym}</i>`.repeat(Math.min(10, c.r))}</span>`;
+    const enh = c.enh && !stone ? `<span class="ptag">${CA.ENHANCEMENTS[c.enh][0].replace(" Card", "")}</span>` : "";
+    return `<div class="pc s${c.s}${c.enh ? " e-" + c.enh : ""}${c.ed ? " d-" + c.ed : ""}${o.cls ? " " + o.cls : ""}" data-cid="${c.id}"${o.data ? " " + o.data : ""} title="${this.esc(tip)}">${stone ? mid : `<span class="pr">${CA.rankLabel(c.r)}<small>${sym}</small></span>${mid}<span class="pr2">${CA.rankLabel(c.r)}<small>${sym}</small></span>`}${enh}${c.bonus ? `<span class="pbonus">+${c.bonus}</span>` : ""}</div>`;
   },
   caJoker(run, j, i, o = {}) {
     const J = CM.CA.JOKERS[j.k], st = run.jokerStatus(j), off = run.rnd && run.rnd.disabled === j.id;
-    return `<div class="jk${j.ed ? " d-" + j.ed : ""}${this.caJ === i && !o.shop ? " sel" : ""}${off ? " off" : ""} r${J[1]}"${o.data ? " " + o.data : ` data-jk="${i}"`} title="${this.esc(`${j.k}${j.ed ? " (" + CM.CA.EDITIONS[j.ed][0] + ")" : ""}\n${J[3]}${st ? "\n" + st : ""}${off ? "\nDisabled by the Crimson Heart" : ""}`)}"><span class="je">${J[0]}</span><small>${this.esc(j.k)}</small>${o.price !== undefined ? `<em>$${o.price}</em>` : `<em>sell $${j.sell}</em>`}</div>`;
+    return `<div class="jk${j.ed ? " d-" + j.ed : ""}${this.caJ === i && !o.shop ? " sel" : ""}${off ? " off" : ""} r${J[1]}" data-jid="${j.id}"${o.data ? " " + o.data : ` data-jk="${i}"`} title="${this.esc(`${j.k}${j.ed ? " (" + CM.CA.EDITIONS[j.ed][0] + ")" : ""}\n${J[3]}${st ? "\n" + st : ""}${off ? "\nDisabled by the Crimson Heart" : ""}`)}"><span class="je">${J[0]}</span><small>${this.esc(j.k)}</small>${o.price !== undefined ? `<em>$${o.price}</em>` : `<em>sell $${j.sell}</em>`}</div>`;
   },
   caCons(c, i, o = {}) {
     const CA = CM.CA, T = c.type === "planet" ? ["🪐", 0, 0, `Levels up ${CA.PLANETS[c.k]}`] : CA.TAROTS[c.k];
@@ -36,11 +38,15 @@ Object.assign(CM.UI.prototype, {
       const r = run.rnd, sel = this.caSel.filter((i) => i < r.hand.length), cards = sel.map((i) => r.hand[i]), pv = run.preview(cards);
       box.innerHTML = `${head}${jokers}<div class="caround"><div class="cablind" style="--bc:${(run.bossInfo(r.boss) || ["#2E6DA4"])[0]}"><b>${this.esc(r.name)}</b>${r.boss ? `<small>${this.esc(run.bossInfo(r.boss)[3])}</small>` : ""}<div>Score at least <b>${CA.fmt(r.target)}</b></div><div class="score">Round score <b>${CA.fmt(r.score)}</b></div><div>Hands <b>${r.hands}</b> - Discards <b>${r.discards}</b></div><div class="small">Deck ${r.draw.length}/${run.deck.length}</div></div>
         <div class="catable"><div class="hname">${pv ? `${this.esc(pv[0])} <small>lvl ${pv[1]}</small>` : "Choose up to five cards"}</div><div class="cxm"><span class="ch">${pv ? pv[2] : 0}</span> X <span class="mu">${pv ? pv[3] : 0}</span></div><div class="carow played"></div></div></div>
-        <div class="carow hand">${r.hand.map((c, i) => this.caCard(c, { data: `data-h="${i}"`, cls: `${sel.includes(i) ? "sel" : ""}${run.debuffed(c) ? " deb" : ""}` })).join("")}</div>
+        <div class="cahandrow"><div class="capile cadiscard" title="Discarded this round: ${r.discard.length}">${r.discard.length ? `<span class="cback"></span><span class="cback"></span>` : ""}<em>${r.discard.length}</em></div><div class="carow hand">${r.hand.map((c, i) => this.caCard(c, { data: `data-h="${i}"`, cls: `${sel.includes(i) ? "sel" : ""}${run.debuffed(c) ? " deb" : ""}` })).join("")}</div><div class="capile cadeck" title="Left in the deck: ${r.draw.length}">${r.draw.length ? `<span class="cback"></span><span class="cback"></span><span class="cback"></span>` : ""}<em>${r.draw.length}</em></div></div>
         ${note}<div class="row cabar"><button class="primary" data-play ${sel.length && r.hands ? "" : "disabled"}>Play hand</button><button data-discard ${sel.length && r.discards ? "" : "disabled"}>Discard (${r.discards})</button><button data-sort="rank">Sort by rank</button><button data-sort="suit">Sort by suit</button>${this.caFoot(run, true)}</div>`;
       box.querySelectorAll("[data-h]").forEach((b) => b.addEventListener("click", () => { if (this.caBusy) return; const i = Number(b.dataset.h); if (this.caSel.includes(i)) this.caSel = this.caSel.filter((k) => k !== i); else if (this.caSel.length < 5) this.caSel.push(i); this.caSfx("card", 0.25, 1.2); this.renderCasino(); }));
       box.querySelector("[data-play]").addEventListener("click", () => this.caPlay(run));
-      box.querySelector("[data-discard]").addEventListener("click", () => { if (this.caBusy) return; if (run.discard(this.caSel)) { this.caSel = []; this.caSfx("cardplace", 0.35, 0.8); const out = g.casinoAfterHand(run, null); this.renderCasino(); this.caNews(out); } });
+      box.querySelector("[data-discard]").addEventListener("click", () => {   // (the chosen fly to the discard pile; then the new ones are dealt)
+        if (this.caBusy || !this.caSel.length || r.discards <= 0) return; this.caBusy = true; const pile = box.querySelector(".cadiscard").getBoundingClientRect(), chosen = this.caSel.map((i) => box.querySelector(`[data-h="${i}"]`)).filter(Boolean), t = CM.reducedMotion ? 60 : 380;
+        chosen.forEach((el, k) => { const b = el.getBoundingClientRect(); el.animate([{ transform: "translateY(-14px)", opacity: 1 }, { transform: `translate(${pile.left - b.left}px, ${pile.top - b.top + 6}px) rotate(${-25 - k * 9}deg) scale(0.62)`, opacity: 0.15 }], { duration: t, delay: k * 55, easing: "cubic-bezier(.5,0,.7,.4)", fill: "forwards" }); setTimeout(() => this.caSfx("card", 0.3, 0.8 + k * 0.08), k * 55); });
+        setTimeout(() => { this.caBusy = false; if (run.discard(this.caSel)) { this.caSel = []; this.caSfx("cardplace", 0.3, 0.8); const out = g.casinoAfterHand(run, null); this.renderCasino(); this.caNews(out); } }, t + chosen.length * 55);
+      });
       box.querySelectorAll("[data-sort]").forEach((b) => b.addEventListener("click", () => { run.sortHand(b.dataset.sort); this.caSel = []; this.renderCasino(); }));
     } else if (st === "cashout") {
       box.innerHTML = `${head}${jokers}<div class="cashout"><h3>${this.esc(run.cash[0][0])} beaten</h3>${run.cash.map(([l, v]) => `<div class="line"><span>${this.esc(l)}</span><b>$${v}</b></div>`).join("")}${run.notes.map((n) => `<div class="small">${this.esc(n)}</div>`).join("")}
@@ -70,19 +76,23 @@ Object.assign(CM.UI.prototype, {
     const sell = box.querySelector("[data-sell]"); if (sell) sell.addEventListener("click", () => { const j = run.sellJoker(Number(sell.dataset.sell)); this.caJ = null; this.caNote = `Sold ${j.k} for $${j.sell}.`; this.caSfx("coin", 0.4); g.casinoKeep(run); this.renderCasino(); });
     box.querySelectorAll("[data-cs]").forEach((b) => b.addEventListener("click", () => {
       if (this.caBusy) return; const i = Number(b.dataset.cs), c = run.consumables[i], sel = run.rnd ? this.caSel.map((k) => run.rnd.hand[k]).filter(Boolean) : [];
-      const [ok, msg] = run.useConsumable(i, sel); this.caNote = msg || (ok ? `${c.k} used.` : ""); if (ok) { this.caSel = []; this.caSfx(c.type === "planet" ? "spell" : "teleport", 0.45); if (run.rnd) run.sortHand(); } else this.caSfx("miss", 0.3);
+      this.caFlipIds = new Set(sel.map((cd) => cd.id)); const [ok, msg] = run.useConsumable(i, sel); this.caNote = msg || (ok ? `${c.k} used.` : ""); if (ok) { this.caSel = []; this.caSfx(c.type === "planet" ? "spell" : "teleport", 0.45); if (run.rnd) run.sortHand(); } else this.caSfx("miss", 0.3);
       g.casinoKeep(run); this.renderCasino();
     }));
     box.querySelectorAll("[data-leave]").forEach((b) => b.addEventListener("click", () => this.closeDialogs()));
+    this.caMotion(box, run);
     const fold = box.querySelector("[data-fold]"); if (fold) fold.addEventListener("click", () => { g.casinoQuit(); this.caNote = "You fold. The cards go back in the box."; this.renderCasino(); this.refresh(); });
   },
   caFoot(run, inline) { return `${inline ? "" : `<div class="row cafoot">`}<button data-leave title="The game stays on the table until you come back">Leave the table</button><button data-fold title="${run.wager ? "What the house has paid back is yours; the rest of the wager is lost" : "End this run"}">Fold</button>${inline ? "" : "</div>"}`; },
   // a hand played: the cards laid out, every step of the score shown and heard, then the round goes on
   caPlay(run) {
-    if (this.caBusy) return; const g = this.game, res = run.play(this.caSel); if (!res) return;
+    if (this.caBusy) return; const g = this.game, from = {}; for (const i of this.caSel) { const el = this.$(`#casino-body [data-h="${i}"]`); if (el) from[el.dataset.cid] = el.getBoundingClientRect(); }
+    const res = run.play(this.caSel); if (!res) return;
     this.caSel = []; this.caBusy = true; this.renderCasino();
     const box = this.$("#casino-body"), played = box.querySelector(".played"), ch = box.querySelector(".ch"), mu = box.querySelector(".mu"), hn = box.querySelector(".hname"), scoringIds = new Set(res.scoring);
-    played.innerHTML = run.rnd.played.map((c, i) => this.caCard(c, { cls: `${scoringIds.has(c.id) ? "scoring" : "dud"} dealt`, data: `data-p="${i}" style="animation-delay:${i * 0.06}s"` })).join("");
+    played.innerHTML = run.rnd.played.map((c, i) => this.caCard(c, { cls: scoringIds.has(c.id) ? "scoring" : "dud", data: `data-p="${i}"` })).join("");
+    played.querySelectorAll(".pc").forEach((el, i) => { const a = from[el.dataset.cid], b = el.getBoundingClientRect(); if (a) el.animate([{ transform: `translate(${a.left - b.left}px, ${a.top - b.top}px) rotate(${(i - 2) * 4}deg)` }, { transform: "translateY(-10px) scale(1.06)", offset: 0.7 }, { transform: "none" }], { duration: CM.reducedMotion ? 60 : 420, delay: i * 45, easing: "cubic-bezier(.2,.8,.3,1)", fill: "backwards" }); });   // (from the hand, up to the table)
+    setTimeout(() => played.querySelectorAll(".pc.dud").forEach((el) => el.animate([{ filter: "none" }, { filter: "grayscale(0.8) brightness(0.7)", transform: "translateY(8px)" }], { duration: 300, fill: "forwards" })), CM.reducedMotion ? 60 : 520);   // (the cards that do not score sink back)
     hn.innerHTML = `${this.esc(res.hand)} <small>lvl ${res.level}</small>`; ch.textContent = res.base[0]; mu.textContent = res.base[1];
     this.caSfx("cardplace", 0.5);
     const evs = res.events, gap = CM.reducedMotion ? 30 : evs.length > 40 ? 70 : 150;
@@ -101,6 +111,26 @@ Object.assign(CM.UI.prototype, {
       setTimeout(step, gap);
     };
     setTimeout(step, 450);
+  },
+  // the cards' motion between one drawing of the table and the next, each card (and each Joker) by its id: a card new
+  // to the hand is dealt from the deck pile, one that moved slides to its new place, one a Tarot changed turns over
+  // with a flash, a Joker new to the row springs in
+  caMotion(box, run) {
+    const last = this.caLast || new Map(), now = new Map(), quick = CM.reducedMotion, roundKey = run && run.rnd ? `${run.ante}:${run.roundNo}` : run && run.stage === "pack" ? "pack" : "";
+    if (roundKey !== this.caLastKey) last.clear(); this.caLastKey = roundKey;
+    const deck = box.querySelector(".cadeck"), dr = deck ? deck.getBoundingClientRect() : null, flips = this.caFlipIds || new Set(); this.caFlipIds = null;
+    let dealt = 0;
+    box.querySelectorAll(".hand .pc[data-cid]").forEach((el) => {
+      const id = el.dataset.cid, b = el.getBoundingClientRect(), was = last.get(id), sig = el.className.replace(/\b(sel|deb)\b/g, "") + el.textContent;
+      now.set(id, { left: b.left, top: b.top, sig });
+      if (!was) { const k = dealt++; if (dr) el.animate([{ transform: `translate(${dr.left - b.left}px, ${dr.top - b.top}px) rotateY(180deg) scale(0.8)`, opacity: 0.4 }, { transform: "translateY(-18px) rotateY(0deg)", opacity: 1, offset: 0.75 }, { transform: "none", opacity: 1 }], { duration: quick ? 60 : 460, delay: quick ? 0 : 120 + k * 70, easing: "cubic-bezier(.2,.75,.3,1)", fill: "backwards" }); if (dr) setTimeout(() => this.caSfx("card", 0.22, 1 + k * 0.05), quick ? 0 : 120 + k * 70); }
+      else if (flips.has(Number(id)) || was.sig !== sig) { el.animate([{ transform: "rotateY(0deg) scale(1)" }, { transform: "rotateY(90deg) scale(1.15)", filter: "brightness(2.2)" }, { transform: "rotateY(0deg) scale(1.08)", filter: "brightness(1.5)" }, { transform: "none", filter: "none" }], { duration: quick ? 60 : 650, easing: "ease-in-out" }); const burst = document.createElement("div"); burst.className = "caburst"; el.appendChild(burst); setTimeout(() => burst.remove(), 800); }
+      else if (Math.abs(was.left - b.left) > 2 || Math.abs(was.top - b.top) > 2) el.animate([{ transform: `translate(${was.left - b.left}px, ${was.top - b.top}px)` }, { transform: "none" }], { duration: quick ? 40 : 260, easing: "cubic-bezier(.3,.7,.4,1)" });
+    });
+    this.caLast = now;
+    const jl = this.caLastJ || new Set(), jn = new Set();
+    box.querySelectorAll(".jokers .jk[data-jid]").forEach((el, k) => { jn.add(el.dataset.jid); if (this.caLastJ && !jl.has(el.dataset.jid)) el.animate([{ transform: "translateY(60px) scale(0.3) rotate(-20deg)", opacity: 0 }, { transform: "translateY(-8px) scale(1.15) rotate(4deg)", opacity: 1, offset: 0.7 }, { transform: "none" }], { duration: quick ? 60 : 520, delay: k * 30, easing: "cubic-bezier(.2,.8,.3,1.3)", fill: "backwards" }); });
+    this.caLastJ = jn;
   },
   // the house's news after a round: what it paid, what is unlocked
   caNews(out) {

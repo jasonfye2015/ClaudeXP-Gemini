@@ -1431,6 +1431,15 @@ The Gilded Joker (the fifteenth big update - v11.5)
   six bosses, a Straight Flush, Ante 6, a won run). The book and any game left on the table are kept with the village.
   Every step of a hand's score is shown on its card or Joker as the chips and the mult count up, each with its sound.
 
+  The cards in motion (v11.8): a deck pile and a discard pile either side of the hand. Cards are dealt from the deck,
+  turning over as they fly into the hand; discarded cards spin away onto the discard pile and the new ones are dealt
+  in their place; played cards travel from the hand up to the table, and the ones that do not score sink back; a
+  sort slides every card to its new place; a card a Tarot changes turns edge-on in a flash of gold and back; a new
+  Joker springs into its row. The cards themselves are finer: pips for the numbers, a crowned court for J, Q and K,
+  a great suit for the ace, a stone for Stone Cards, a label for each enhancement, and each enhancement its own life -
+  Bonus and Mult cards glow, Glass and Gold catch the light, Steel is brushed, Wild cards shift colour, Lucky ones
+  twinkle - over the editions' foil, holographic and polychrome.
+
 The Fortress (the fourteenth big update - v11.4)
   UPGRADE_PLAN_12.md says what it does. North of Leshy's clearing stands a black keep with four corner towers and two
   great arched doors of dark wood bound in iron; a third portal in the portal yard goes there, and one by the doors
