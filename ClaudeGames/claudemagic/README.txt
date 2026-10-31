@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Runestep Pyramid (the thirty-fifth big update - v14.5)
+  A hopping game on the Gilded Joker's floor (src/js/64zl-runestep.js; 76zb-runestep.js): a pyramid of twenty-eight
+  rune-cubes seen from the corner, and a glimmerkin hopping diagonally to light every cube's top - one hop each on
+  levels 1-2, two from 3, and from 6 a hop on a finished cube turns it back. Ember-balls roll down; a violet egg hatches
+  at the bottom into the Sigil Serpent, who hops after you; the Smudge (from 3) undoes cubes unless caught; a frost orb
+  freezes them all. Wind-wisps off the sides carry you to the top, and a serpent close behind follows you off the edge.
+  Three lives, one more at 8,000. One stake a play: each level cleared pays gold, more each level, every play; and a
+  Claudescryption card the first time ever each third level is cleared (3 common, 6 and 9 a stronger common, rare from
+  12).
+
 Moatleap (the thirty-fourth big update - v14.4)
   A crossing game on the Gilded Joker's floor (src/js/64zk-moat.js; 76za-moat.js): a toad hops square by square across
   five lanes of market road - handcarts, hay wagons, galloping riders, ox-trains - to the verge, then across five

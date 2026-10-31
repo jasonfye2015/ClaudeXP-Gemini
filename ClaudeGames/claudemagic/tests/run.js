@@ -4959,6 +4959,35 @@ test("Moatleap: the toad hops a square at a time and scores for new rows; the ro
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("Runestep Pyramid: hops light cubes (one step, then two, then toggling); off the side is a fall, onto a wisp a ride to the top that lures a close serpent; the egg hatches at the bottom and the serpent closes in; an ember costs a life; the Smudge undoes cubes and can be caught; a frost orb freezes them; every cube lit clears the level; each level pays gold every play, every third level a card only the first time", () => {
+  const CM = load(), RP = CM.RP, quiet = (L) => { L.spawnT = 1e9; L.eggT = 1e9; }, go = (L, d) => { L.input(d); for (let k = 0; k < 40; k++) L.tick(RP.step); };
+  const L = new RP.Level(1, 3); quiet(L); go(L, "dr"); assert.deepStrictEqual([L.p.r, L.p.c], [1, 1]); assert.ok(L.done(1, 1)); assert.strictEqual(L.score, 25); go(L, "ul"); assert.ok(L.done(0, 0));
+  const L2 = new RP.Level(3, 3); quiet(L2); go(L2, "dl"); assert.strictEqual(L2.tiles[1][0], 1); assert.ok(!L2.done(1, 0)); go(L2, "ur"); go(L2, "dl"); assert.ok(L2.done(1, 0));
+  const L6 = new RP.Level(6, 3); quiet(L6); L6.tiles[1][0] = 2; go(L6, "dl"); assert.ok(!L6.done(1, 0), "turned back");
+  // a fall; a wisp
+  const F = new RP.Level(1, 4); quiet(F); F.wisps = []; go(F, "ur"); for (let k = 0; k < 200; k++) F.tick(RP.step); assert.strictEqual(F.lives, 2);
+  const W = new RP.Level(1, 5); quiet(W); W.wisps = [{ r: 2, side: -1, used: false }]; W.p.r = 3; W.p.c = 0; W.foes.push({ kind: "serpent", r: 4, c: 1, fr: 4, fc: 1, hopT: 0.6, t: 0.6 }); go(W, "ul"); assert.ok(W.p.ride, "riding"); for (let k = 0; k < 200; k++) W.tick(RP.step); assert.deepStrictEqual([W.p.r, W.p.c], [0, 0]); assert.strictEqual(W.lives, 3); assert.ok(W.score >= RP.SCORE.serpentLured, "the serpent followed");
+  // the egg hatches; the serpent closes in
+  const E = new RP.Level(1, 6); quiet(E); E.foes.push({ kind: "egg", r: 5, c: 2, fr: 4, fc: 2, hopT: 0.01, t: 0 }); E.p.r = 0; E.p.c = 0; for (let k = 0; k < 120 && !E.foes.some((f) => f.kind === "serpent"); k++) E.tick(RP.step); const S = E.foes.find((f) => f.kind === "serpent"); assert.ok(S); const d0 = RP.dist([S.r, S.c], [0, 0]); for (let k = 0; k < 90; k++) E.tick(RP.step); assert.ok(RP.dist([S.r, S.c], [0, 0]) < d0);
+  // an ember
+  const B = new RP.Level(1, 7); quiet(B); B.p.r = 2; B.p.c = 1; B.foes.push({ kind: "ember", r: 2, c: 1, fr: 1, fc: 1, hopT: 0.1, t: 0 }); B.tick(RP.step); assert.strictEqual(B.lives, 2);
+  // the Smudge, the frost orb
+  const M = new RP.Level(3, 8); quiet(M); M.tiles[3][1] = 2; M.foes.push({ kind: "smudge", r: 2, c: 1, fr: 1, fc: 1, hopT: 0.01, t: 0 }); M.rnd.chance = () => true; M.tick(RP.step); M.tick(RP.step); assert.strictEqual(M.tiles[3][1], 1, "undone");
+  M.p.r = 3; M.p.c = 1; M.foes[0].hopT = 0.1; M.tick(RP.step); assert.strictEqual(M.foes.length, 0); assert.ok(M.score >= RP.SCORE.smudge);
+  M.foes.push({ kind: "frost", r: 3, c: 1, fr: 2, fc: 1, hopT: 0.1, t: 0 }); M.tick(RP.step); assert.ok(M.frozen > 0);
+  // clearing
+  const C = new RP.Level(1, 9); quiet(C); C.tiles = C.tiles.map((row) => row.map(() => 1)); C.tiles[1][1] = 0; go(C, "dr"); assert.strictEqual(C.stage, "clear");
+  // the house's side
+  const g = new CM.Game(); g.newGame("rp-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.rpStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 6; n++) { const Lv = g.rpLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.rpCheck(); assert.strictEqual(out.pay, Math.round(100 * RP.pay(n))); if (out.card) { cards++; assert.strictEqual(n % 3, 0); } }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "levels 3 and 6, the first time only"); assert.strictEqual(g.gold - gold0, [1, 2, 3, 4, 5, 6].reduce((t, n) => t + Math.round(100 * RP.pay(n)), 0));
+    g.rpLevel().stage = "over"; assert.ok(g.rpCheck().over); assert.strictEqual(g.rpLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
