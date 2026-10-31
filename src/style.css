@@ -223,6 +223,18 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #side .temper.low { color: #E0A060; }
 #side .follower { font: 12px var(--serif); color: #C8B890; text-align: center; }
 #side .follower:empty { display: none; }
+#towerhud { display: none; position: absolute; inset: 0; pointer-events: none; z-index: 4; font: 13px var(--serif); color: #E8DCB8; text-shadow: 0 1px 2px #000; }
+body.intower #towerhud { display: block; } body.intower #view .sky, body.intower #view .compass, body.intower #view .hint { display: none; }
+#towerhud .cross { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid rgba(220,200,255,0.75); border-radius: 50%; box-shadow: 0 0 6px rgba(160,120,255,0.8); }
+#towerhud .cross::after { content: ''; position: absolute; left: 6px; top: 6px; width: 2px; height: 2px; background: #fff; }
+#towerhud .tname { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-weight: bold; color: #C8B0FF; }
+#towerhud .tbars { position: absolute; left: 12px; bottom: 12px; width: 240px; display: flex; flex-direction: column; gap: 4px; }
+#towerhud .thp, #towerhud .tmp { position: relative; height: 16px; background: rgba(0,0,0,0.6); border: 1px solid #6A5A8A; border-radius: 3px; overflow: hidden; }
+#towerhud .thp i, #towerhud .tmp i, #towerhud .tboss i { position: absolute; left: 0; top: 0; bottom: 0; background: #C83A3A; } #towerhud .tmp i { background: #3A5AD8; }
+#towerhud .thp span, #towerhud .tmp span { position: relative; font: bold 11px Tahoma, sans-serif; padding-left: 6px; }
+#towerhud .tboss { position: absolute; top: 30px; left: 25%; right: 25%; height: 14px; background: rgba(0,0,0,0.6); border: 1px solid #C8A040; border-radius: 3px; overflow: hidden; }
+#towerhud .tboss b { position: relative; z-index: 1; display: block; text-align: center; font-size: 11px; line-height: 14px; color: #FFE8A0; } #towerhud .tboss i { background: #A02AC8; }
+#towerhud .thelp { position: absolute; right: 10px; bottom: 10px; font-size: 11px; color: #A898C8; max-width: 45%; text-align: right; }
 .slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }

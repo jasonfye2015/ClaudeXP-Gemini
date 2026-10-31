@@ -43,6 +43,16 @@ Object.assign(CM.UI.prototype, {
     slot.title = `The moon: ${CM.MOON_NAMES[D.phase]}, day ${D.moonDay} of ${CM.CLOCK.moon}${CM.MOON_DOES[D.phase] ? ` - ${CM.MOON_DOES[D.phase]}` : ""}`;
     el.dataset.phase = D.phase; el.dataset.sky = D.sky;
   },
+  // the Mage Tower's HUD, drawn each frame while inside
+  drawTowerHud(run) {
+    const el = this.$("#towerhud"); if (!el) return; const h = run.hero, A = run.arms;
+    el.querySelector(".tname").textContent = `${CM.towerFloorName(run.n)} - ${h.name} the ${h.cls}`;
+    const bar = (sel, v, m) => { const b = el.querySelector(sel); b.style.display = m ? "" : "none"; if (!m) return; b.querySelector("i").style.width = `${Math.max(0, Math.min(100, (v / m) * 100))}%`; b.querySelector("span").textContent = `${Math.max(0, Math.ceil(v))} / ${m}`; };
+    bar(".thp", h.hp, h.max); bar(".tmp", h.mp || 0, A.arrows ? 0 : h.maxmp);
+    el.querySelector(".tarrows").textContent = A.arrows ? `Arrows: ${run.arrows}` : `${A.word}: ${A.cost} magic`;
+    const boss = run.bossInSight ? run.bossInSight() : null, bb = el.querySelector(".tboss"); bb.style.display = boss ? "" : "none";
+    if (boss) { bb.querySelector("b").textContent = boss.name; bb.querySelector("i").style.width = `${Math.max(0, (boss.m.hp / boss.m.max) * 100)}%`; }
+  },
   // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
   openMageTower() {
     const g = this.game, box = this.$("#magetower-who"), note = this.$("#magetower-note");

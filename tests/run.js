@@ -3623,6 +3623,33 @@ test("the Mage Tower's floors: forty of them, the seed's; large rooms and wide h
   assert.ok(CM.towerDepth(1) <= 2 && CM.towerDepth(40) >= 45, "the first floors low, the last deep");
 });
 
+test("inside the Mage Tower: one hero in real time - a fixed step, moving and sliding along walls, a bolt that flies and strikes the first thing, magic spent and coming back, arrows counted, pickups; the same inputs give the same run; out again with what was won", () => {
+  const CM = load();
+  const make = () => { const g = new CM.Game(); g.newGame("run-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); g.mode = "explore"; return g; };
+  const g = make(), mage = g.party.findIndex((h) => h.cls === "Mage"), knight = g.party.findIndex((h) => h.cls === "Knight");
+  assert.ok(g.enterMageTower(knight), "a Knight may not go in"); assert.strictEqual(g.enterMageTower(mage), ""); assert.strictEqual(g.mode, "tower");
+  const r = g.towerRun; assert.strictEqual(r.n, 1); assert.strictEqual(r.arms, CM.TOWER_ARMS.Mage);
+  const x0 = r.x, z0 = r.z; r.update(0.25, { fwd: true }); assert.ok(Math.hypot(r.x - x0, r.z - z0) > 0.7, "it walks (a frame of a quarter second at most)");
+  for (let i = 0; i < 300; i++) r.update(1 / 30, { fwd: true }); assert.ok(r.free(r.x, r.z), "never into a wall"); assert.ok(!r.solidAt(r.x, r.z));
+  const y0 = r.yaw; r.update(0.2, { turnR: true }); assert.ok(r.yaw > y0, "it turns"); r.update(1 / 60, { look: 0.3 }); 
+  // a bolt toward a monster in a clear line strikes it; toward a wall, it stops
+  const o = r.mons[0]; r.x = o.x; r.z = o.z + 3; while (!r.free(r.x, r.z) || !r.clear(r.x, r.z, o.x, o.z)) { r.x = o.x + (Math.random() - 0.5) * 4; r.z = o.z + (Math.random() - 0.5) * 4; }
+  r.yaw = Math.atan2(o.x - r.x, -(o.z - r.z)); const hp = o.m.hp; o.m.hp = o.m.max = 9999; r.update(1 / 60, { fire: true }); assert.strictEqual(r.bolts.length, 1);
+  for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.m.hp < 9999, "the bolt strikes"); assert.ok(hp > 0);
+  o.m.hp = 1; r.cool = 0; r.update(1 / 60, { fire: true }); for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.fellAt !== null && r.kills === 1 && r.xp >= o.m.xp, "it falls, and is counted");
+  const mp = r.hero.mp = r.hero.maxmp; r.spellCool = 0; r.update(1 / 60, { spell: true }); assert.strictEqual(r.hero.mp, mp - r.arms.cost, "the great spell costs magic");
+  r.hero.mp = 0; for (let i = 0; i < 12; i++) r.update(0.25, {}); assert.ok(r.hero.mp > 0, "magic comes back");
+  r.items.push({ x: Math.floor(r.x), y: Math.floor(r.z), kind: "draught", taken: false }); r.hero.hp = 1; r.update(1 / 60, {}); assert.ok(r.hero.hp > 1, "a draught, taken");
+  // an archer counts arrows
+  const a = make(), ri = 1; a.party[ri].cls = "Ranger"; a.party[ri].weapon = { name: "Short Bow", kind: "weapon", power: 4, props: { bow: true } }; assert.strictEqual(a.enterMageTower(ri), "");
+  const ar = a.towerRun; assert.ok(ar.arms.arrows); const n0 = ar.arrows; ar.update(1 / 60, { fire: true }); assert.strictEqual(ar.arrows, n0 - 1); ar.arrows = 0; ar.cool = 0; ar.update(1 / 60, { fire: true }); assert.strictEqual(ar.bolts.filter((b) => b.from === "hero").length <= 1, true, "no arrows, no shot");
+  // the same inputs, the same run
+  const play = () => { const p = make(); p.enterMageTower(mage); const q = p.towerRun; for (let i = 0; i < 240; i++) q.update(1 / 30, { fwd: i % 50 < 30, turnR: i % 70 > 55, fire: i % 9 === 0 }); return [q.x.toFixed(5), q.z.toFixed(5), q.yaw.toFixed(5), q.kills, q.bolts.length].join(); };
+  assert.strictEqual(play(), play());
+  // out again: what was won is the party's, and the view goes back to the Wood
+  const gold = g.gold, xp = g.party[mage].xp; g.leaveMageTower("left"); assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.floor.number, -1); assert.ok(g.gold >= gold && g.party[mage].xp >= xp + 1, "the kills are the party's"); assert.ok(!g.towerRun);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

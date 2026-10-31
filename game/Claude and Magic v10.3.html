@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v10.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v10.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -236,6 +236,18 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #side .temper.low { color: #E0A060; }
 #side .follower { font: 12px var(--serif); color: #C8B890; text-align: center; }
 #side .follower:empty { display: none; }
+#towerhud { display: none; position: absolute; inset: 0; pointer-events: none; z-index: 4; font: 13px var(--serif); color: #E8DCB8; text-shadow: 0 1px 2px #000; }
+body.intower #towerhud { display: block; } body.intower #view .sky, body.intower #view .compass, body.intower #view .hint { display: none; }
+#towerhud .cross { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 2px solid rgba(220,200,255,0.75); border-radius: 50%; box-shadow: 0 0 6px rgba(160,120,255,0.8); }
+#towerhud .cross::after { content: ''; position: absolute; left: 6px; top: 6px; width: 2px; height: 2px; background: #fff; }
+#towerhud .tname { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-weight: bold; color: #C8B0FF; }
+#towerhud .tbars { position: absolute; left: 12px; bottom: 12px; width: 240px; display: flex; flex-direction: column; gap: 4px; }
+#towerhud .thp, #towerhud .tmp { position: relative; height: 16px; background: rgba(0,0,0,0.6); border: 1px solid #6A5A8A; border-radius: 3px; overflow: hidden; }
+#towerhud .thp i, #towerhud .tmp i, #towerhud .tboss i { position: absolute; left: 0; top: 0; bottom: 0; background: #C83A3A; } #towerhud .tmp i { background: #3A5AD8; }
+#towerhud .thp span, #towerhud .tmp span { position: relative; font: bold 11px Tahoma, sans-serif; padding-left: 6px; }
+#towerhud .tboss { position: absolute; top: 30px; left: 25%; right: 25%; height: 14px; background: rgba(0,0,0,0.6); border: 1px solid #C8A040; border-radius: 3px; overflow: hidden; }
+#towerhud .tboss b { position: relative; z-index: 1; display: block; text-align: center; font-size: 11px; line-height: 14px; color: #FFE8A0; } #towerhud .tboss i { background: #A02AC8; }
+#towerhud .thelp { position: absolute; right: 10px; bottom: 10px; font-size: 11px; color: #A898C8; max-width: 45%; text-align: right; }
 .slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
@@ -527,7 +539,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "10.2", built: "2026-10-31" };
+const CM = window.CM = { version: "10.3", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9176,7 +9188,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0, follower: this.follower || null, tavernBarred: Boolean(this.tavernBarred) };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0, follower: this.follower || null, tavernBarred: Boolean(this.tavernBarred), tower: this.tower || null };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -9204,7 +9216,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
-    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred);   // (a follower, and a tavern that won't hire after one died)
+    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -9262,7 +9274,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -14900,6 +14912,235 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64e-towerrun.js ----
+"use strict";
+// The Mage Tower inside (the twelfth update, phase 2): one hero, in real time. CM.TowerRun keeps a floor of the tower
+// and steps it on a fixed clock (CM.TR.step), so the same inputs at the same steps give the same run, and the Node tests
+// drive it as the frame loop does. Nothing here touches the turn-by-turn rules: the hero's health, magic and arrows
+// are spent here; experience, gold and things are counted and given to the party when the hero comes out.
+//
+//   run.update(dt, input)   input: { fwd, back, left, right, turnL, turnR, fire, spell, look (radians, used once) }
+//   run.sprites(now)        the billboards for the renderer
+//   run.events              what happened this frame, for the window's sounds and sparks (emptied by the window)
+//
+// Positions are in squares (x east, z south), the facing a yaw as the renderer's: 0 looks north (-z).
+CM.TR = {
+  step: 1 / 60, speed: 3.3, back: 0.7, strafe: 0.85, turn: 2.6, radius: 0.24, eye: 0.5,
+  bolt: 9, arrow: 12, boltLife: 2.2, fireCd: 0.38, arrowCd: 0.55, spellCd: 1.2,
+  regen: 0.4, arrowsStart: 40, quiver: 10, monRadius: 0.32,
+};
+// each calling's bolt and great spell: { bolt: the layer and the stat its power follows; spell: what the right hand does }
+CM.TOWER_ARMS = {
+  Mage: { bolt: "fx:spark", stat: "int", spell: "fireball", cost: 6, word: "Fireball" },
+  Necromancer: { bolt: "fx:shard", stat: "int", spell: "drain", cost: 5, word: "Drain" },
+  Druid: { bolt: "fx:leaf", stat: "wis", spell: "thorns", cost: 5, word: "Thorns" },
+  Cleric: { bolt: "fx:spark", stat: "wis", spell: "smite", cost: 5, word: "Smite" },
+  Bard: { bolt: "fx:spark", stat: "wis", spell: "song", cost: 5, word: "Lullaby" },
+  Artificer: { bolt: "fx:fire", stat: "int", spell: "volley", cost: 5, word: "Firework" },
+  archer: { bolt: "fx:arrow", stat: "dex", spell: "volley", cost: 3, word: "Volley", arrows: true },
+};
+CM.towerArms = (h) => (CM.TOWER_CASTERS.includes(h.cls) && !(h.weapon && h.weapon.props && h.weapon.props.bow) ? CM.TOWER_ARMS[h.cls] : CM.TOWER_ARMS.archer);
+
+CM.TowerRun = class {
+  constructor(game, heroIndex, n) {
+    this.game = game; this.heroIndex = heroIndex; this.hero = game.party[heroIndex]; this.n = n;
+    this.fl = CM.makeTowerFloor(n, game.seed);
+    this.x = this.fl.start[0] + 0.5; this.z = this.fl.start[1] + 0.5; this.yaw = 0;
+    this.arms = CM.towerArms(this.hero);
+    this.arrows = this.arms.arrows ? CM.TR.arrowsStart : 0;
+    this.t = 0; this.acc = 0; this.cool = 0; this.spellCool = 0; this.regenT = 0; this.bolts = []; this.events = [];
+    this.xp = 0; this.gold = 0; this.loot = []; this.kills = 0; this.over = null; this.ids = 0;
+    this.items = this.fl.items.map((it) => Object.assign({ taken: false }, it));
+    const depth = CM.towerDepth(n), level = Math.max(1, Math.round(CM.monsterLevel(depth) * 0.85)), rnd = new CM.Random(CM.hashSeed(`${game.seed}:towerrun:${n}`));
+    this.level = level;
+    this.mons = this.fl.spawns.map((s) => this.makeMon(s.kind, s.x + 0.5, s.y + 0.5, level, rnd));
+    if (this.addBoss) this.addBoss(rnd);                                 // (the floor's boss: phase 3)
+  }
+  makeMon(kind, x, z, level, rnd, extra) {
+    const K = CM.monsterKind(kind) || CM.monsterKind("Goblin"), m = CM.makeMonster(K, level, rnd);
+    return Object.assign({ id: ++this.ids, m, kind: K.name, x, z, home: [x, z], yaw: rnd.next() * Math.PI * 2, state: "idle", cd: 0, seen: false, fellAt: null, hitAt: null, lungeAt: null }, extra || {});
+  }
+  // ---- the grid ----
+  solidAt(x, z) { const g = this.fl.grid, cx = Math.floor(x), cz = Math.floor(z); return !g[cz] || g[cz][cx] !== 0; }
+  free(x, z, r = CM.TR.radius) { return !this.solidAt(x - r, z - r) && !this.solidAt(x + r, z - r) && !this.solidAt(x - r, z + r) && !this.solidAt(x + r, z + r); }
+  // a clear line between two points (no wall square on it): the eyes' and the bolts' rule
+  clear(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.2); for (let i = 1; i < n; i++) { const k = i / n; if (this.solidAt(x0 + (x1 - x0) * k, z0 + (z1 - z0) * k)) return false; } return true; }
+  living() { return this.mons.filter((o) => o.m.hp > 0); }
+  // the way to a point, square by square: the yaw from (x, z) toward the next square on the shortest walk (the monsters'
+  // chase, and the balance bot's); null when it is there or there is no way. The walk's map is kept per target square.
+  toward(x, z, tx, tz) {
+    const key = `${Math.floor(tx)},${Math.floor(tz)}`, g = this.fl.grid;
+    this.ways = this.ways || new Map();
+    if (!this.ways.has(key)) { if (this.ways.size > 64) this.ways.clear(); this.ways.set(key, CM.distances(g, [Math.floor(tx), Math.floor(tz)], (cx, cz) => g[cz] && g[cz][cx] === 0)); }
+    const d = this.ways.get(key), cx = Math.floor(x), cz = Math.floor(z), here = d.get(`${cx},${cz}`);
+    if (here === undefined) return null;
+    if (here <= 1 || this.clear(x, z, tx, tz) && Math.hypot(tx - x, tz - z) < 3) return Math.atan2(tx - x, -(tz - z));
+    let best = null; for (const [dx, dz] of CM.DIRS) { const n = d.get(`${cx + dx},${cz + dz}`); if (n !== undefined && n < here && (!best || n < best.n)) best = { n, x: cx + dx + 0.5, z: cz + dz + 0.5 }; }
+    return best ? Math.atan2(best.x - x, -(best.z - z)) : null;
+  }
+  // ---- the clock ----
+  update(dt, input = {}) {
+    if (this.over) return;
+    this.acc += Math.min(dt, 0.25);
+    let first = true;
+    while (this.acc >= CM.TR.step && !this.over) { this.acc -= CM.TR.step; this.step(CM.TR.step, input, first); first = false; }
+  }
+  step(dt, inp, first) {
+    const T = CM.TR, h = this.hero;
+    this.t += dt;
+    // turning: the keys, and the mouse once a frame
+    this.yaw += ((inp.turnR ? 1 : 0) - (inp.turnL ? 1 : 0)) * T.turn * dt + (first ? inp.look || 0 : 0);
+    // moving: forward, back, sidestep; sliding along walls, never through a monster
+    const fx = Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = Math.sin(this.yaw);
+    const f = (inp.fwd ? 1 : 0) - (inp.back ? T.back : 0), s = (inp.right ? T.strafe : 0) - (inp.left ? T.strafe : 0);
+    let vx = (fx * f + rx * s) * T.speed * dt, vz = (fz * f + rz * s) * T.speed * dt;
+    const len = Math.hypot(vx, vz), most = T.speed * dt; if (len > most) { vx *= most / len; vz *= most / len; }
+    const blocked = (x, z) => !this.free(x, z) || this.living().some((o) => Math.hypot(o.x - x, o.z - z) < T.radius + T.monRadius);
+    if (vx && !blocked(this.x + vx, this.z)) this.x += vx;
+    if (vz && !blocked(this.x, this.z + vz)) this.z += vz;
+    // the hands: the bolt, the great spell
+    this.cool = Math.max(0, this.cool - dt); this.spellCool = Math.max(0, this.spellCool - dt);
+    if (inp.fire && this.cool <= 0) this.fire();
+    if (inp.spell && this.spellCool <= 0) this.cast();
+    // magic comes back, slowly
+    this.regenT += dt; if (this.regenT >= 1) { this.regenT -= 1; if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.max(1, Math.round(h.maxmp * 0.04 * (1 + (this.regenBonus || 0))))); }
+    this.stepBolts(dt);
+    if (this.monsterStep) this.monsterStep(dt);                           // (the monsters' minds: phase 3)
+    this.pickUp();
+    this.lookT = (this.lookT || 0) + dt; if (this.lookT >= 0.2) { this.lookT = 0; this.see(); }
+    if (h.hp <= 0 && !this.over) { this.over = "fell"; this.events.push({ kind: "fell" }); }
+  }
+  // the bolt's (or the arrow's) power: the hero's level and their calling's stat, or the bow
+  power() {
+    const h = this.hero, g = this.game, A = this.arms, st = g.stat(h, A.stat);
+    if (A.arrows) return (h.weapon ? h.weapon.power : 2) + Math.max(0, CM.mod(st));
+    return 3 + Math.floor(h.level * 0.9) + Math.max(0, CM.mod(st) * 2);
+  }
+  shoot(yaw, o = {}) {
+    const A = this.arms, sp = A.arrows ? CM.TR.arrow : CM.TR.bolt;
+    this.bolts.push(Object.assign({ x: this.x + Math.sin(yaw) * 0.3, z: this.z - Math.cos(yaw) * 0.3, vx: Math.sin(yaw) * sp, vz: -Math.cos(yaw) * sp, life: CM.TR.boltLife, from: "hero", layer: A.bolt, power: this.power(), mult: 1 }, o));
+  }
+  fire() {
+    const A = this.arms;
+    if (A.arrows) { if (this.arrows <= 0) { this.cool = 0.5; this.events.push({ kind: "empty" }); return; } this.arrows -= 1; }
+    this.shoot(this.yaw); this.cool = A.arrows ? CM.TR.arrowCd : CM.TR.fireCd; this.events.push({ kind: "shoot", arrow: Boolean(A.arrows) });
+  }
+  // the great spell: dear in magic (or three arrows), on its own cooldown
+  cast() {
+    const A = this.arms, h = this.hero;
+    if (A.arrows) { if (this.arrows < 3) return; this.arrows -= 3; }
+    else { if ((h.mp || 0) < A.cost) { this.events.push({ kind: "nomagic" }); this.spellCool = 0.4; return; } h.mp -= A.cost; }
+    this.spellCool = CM.TR.spellCd; this.events.push({ kind: "spell", spell: A.spell });
+    if (A.spell === "fireball") this.shoot(this.yaw, { layer: "fx:fire", burst: 1.7, mult: 1.8, size: 0.4 });
+    else if (A.spell === "smite") this.shoot(this.yaw, { layer: "fx:spark", mult: 3, size: 0.35 });
+    else if (A.spell === "drain") this.shoot(this.yaw, { layer: "fx:shard", mult: 1.6, drain: 0.5 });
+    else if (A.spell === "thorns" || A.spell === "volley") for (const d of [-0.18, 0, 0.18]) this.shoot(this.yaw + d, { mult: 1.1 });
+    else if (A.spell === "song") { for (const o of this.living()) if (Math.hypot(o.x - this.x, o.z - this.z) < 5 && this.clear(this.x, this.z, o.x, o.z) && !o.boss) o.stunned = 2.5; this.events.push({ kind: "song" }); }
+  }
+  stepBolts(dt) {
+    for (const b of this.bolts) {
+      b.life -= dt;
+      for (let k = 0; k < 4 && b.life > 0; k++) {
+        b.x += b.vx * dt / 4; b.z += b.vz * dt / 4;
+        if (this.solidAt(b.x, b.z)) { b.life = 0; this.events.push({ kind: "wall", at: [b.x - b.vx * dt / 4, 0.5, b.z - b.vz * dt / 4], layer: b.layer }); if (b.burst) this.burst(b); break; }
+        if (b.from === "hero") { const o = this.living().find((q) => Math.hypot(q.x - b.x, q.z - b.z) < CM.TR.monRadius + 0.06); if (o) { b.life = 0; if (b.burst) this.burst(b); else this.strike(o, b); break; } }
+        else if (this.boltHitsHero) { if (this.boltHitsHero(b)) break; }
+      }
+    }
+    this.bolts = this.bolts.filter((b) => b.life > 0);
+  }
+  burst(b) { for (const o of this.living()) if (Math.hypot(o.x - b.x, o.z - b.z) < b.burst) this.strike(o, b); this.events.push({ kind: "burst", at: [b.x, 0.5, b.z] }); }
+  // a bolt lands: the rules' own sum of a blow, the monster flinches, and falls
+  strike(o, b) {
+    const g = this.game, h = this.hero, eff = g.effective(h);
+    let dmg = Math.ceil(g.damage(Math.ceil(eff.atk * 0.6), b.power, o.m.df) * (b.mult || 1));
+    if (o.ward > 0) { o.ward -= 1; dmg = Math.ceil(dmg / 2); }
+    o.m.hp -= dmg; o.hitAt = this.t; o.seen = true;
+    if (b.drain) h.hp = Math.min(h.max, h.hp + Math.ceil(dmg * b.drain));
+    this.events.push({ kind: "hit", at: [o.x, 0.5, o.z], amount: dmg, mon: o });
+    if (o.m.hp <= 0) this.fall(o);
+  }
+  fall(o) {
+    o.fellAt = this.t; this.kills += 1; this.xp += o.m.xp; this.gold += o.m.gold;
+    this.events.push({ kind: "die", at: [o.x, 0.5, o.z], mon: o });
+    if (this.onFall) this.onFall(o);
+  }
+  // the automap: what the hero has seen (within six squares, in a clear line), and where the hero stands
+  see() {
+    const fl = this.fl, seen = this.seenSet || (this.seenSet = new Set((fl.seen || []).map(([x, y]) => `${x},${y}`))), cx = Math.floor(this.x), cz = Math.floor(this.z);
+    for (let dz = -6; dz <= 6; dz++) for (let dx = -6; dx <= 6; dx++) { const x = cx + dx, z = cz + dz, k = `${x},${z}`; if (seen.has(k) || !fl.grid[z] || fl.grid[z][x] === undefined) continue; if (this.clear(this.x, this.z, x + 0.5, z + 0.5) || fl.grid[z][x] !== 0 && this.clear(this.x, this.z, x + 0.5 - Math.sign(dx) * 0.6, z + 0.5 - Math.sign(dz) * 0.6)) { seen.add(k); fl.seen.push([x, z]); } }
+    fl.pos = [cx, cz]; fl.facing = ((Math.round(this.yaw / (Math.PI / 2)) % 4) + 4) % 4;
+  }
+  // quivers and draughts lying about: walked over, taken
+  pickUp() {
+    for (const it of this.items) {
+      if (it.taken || Math.hypot(it.x + 0.5 - this.x, it.y + 0.5 - this.z) > 0.55) continue;
+      if (it.kind === "quiver" && !this.arms.arrows) continue;            // (a caster leaves the arrows)
+      it.taken = true; const h = this.hero;
+      if (it.kind === "quiver") this.arrows += CM.TR.quiver;
+      else { h.hp = Math.min(h.max, h.hp + Math.ceil(h.max * 0.35)); if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.ceil(h.maxmp * 0.35)); }
+      this.events.push({ kind: "pickup", item: it.kind });
+    }
+  }
+  // ---- what the renderer draws ----
+  sprites(now) {
+    const out = [], cell = (x, z) => ({ x: Math.floor(x), y: Math.floor(z), dx: x - Math.floor(x) - 0.5, dz: z - Math.floor(z) - 0.5 });
+    for (const o of this.mons) {
+      if (o.fellAt !== null && this.t - o.fellAt > 0.75) continue;
+      const M = CM.motion({ now: this.t * 1000, phase: o.id * 1.7, hitAt: o.hitAt === null ? undefined : o.hitAt * 1000, lungeAt: o.lungeAt === null ? undefined : o.lungeAt * 1000, fellAt: o.fellAt === null ? undefined : o.fellAt * 1000, sway: Boolean(o.king), reduced: CM.reducedMotion });
+      const S = o.scale || 1, ax = Math.sin(this.yaw), az = -Math.cos(this.yaw), away = M.back - M.forward;
+      const c = cell(o.x + ax * away, o.z + az * away);
+      if (o.aura) out.push(Object.assign({}, cell(o.x, o.z), { layer: "shadow", flat: true, w: 1.2 * S, alpha: 0.9, glow: 0 }));
+      out.push(Object.assign(c, { layer: `monster:${o.kind}`, w: 0.85 * S, h: 0.85 * S * M.scaleY, tilt: M.tilt, skew: M.skew, alpha: M.alpha * (o.blink ? 0.4 : 1), flash: Math.max(M.flash, o.aura ? 0.18 + 0.1 * Math.sin(now / 250) : 0), shade: o.aura ? 1.25 : 1, lift: o.lift || 0 }));
+    }
+    for (const b of this.bolts) out.push(Object.assign(cell(b.x, b.z), { layer: b.layer, w: b.size || 0.22, h: b.size || 0.22, lift: 0.4, glow: 2, alpha: 1 }));
+    for (const it of this.items) if (!it.taken) out.push({ x: it.x, y: it.y, layer: it.kind === "quiver" ? "fx:arrow" : "fx:holy", w: 0.45, h: 0.45, lift: 0.1, glow: 0.6 + 0.3 * Math.sin(now / 300 + it.x) });
+    if (this.fl.ladder) out.push({ x: this.fl.ladder[0], y: this.fl.ladder[1], layer: "hatch", flat: true, w: 0.9, glow: this.ladderOpen && this.ladderOpen() ? 0.6 : 0 });
+    return out;
+  }
+  // the view's lights: the hero's own glow, and the bolts in flight
+  lights() {
+    const out = [{ x: this.x, y: 0.6, z: this.z, reach: 4.2, colour: [0.55, 0.45, 0.85], flicker: false }];
+    for (const b of this.bolts.slice(0, 8)) out.push({ x: b.x, y: 0.45, z: b.z, reach: 2.2, colour: b.from === "hero" ? (b.layer === "fx:fire" ? [1, 0.5, 0.2] : [0.7, 0.55, 1]) : [1, 0.3, 0.3], flicker: false });
+    return out;
+  }
+};
+
+Object.assign(CM.Game.prototype, {
+  // in at the doors: the floor after the last cleared, the hero alone (the others wait at the foot)
+  enterMageTower(i) {
+    const h = this.party[i], why = CM.towerWhyNot(h);
+    if (why) return why;
+    if (this.mode !== "explore" || !this.floor || this.floor.number !== -1) return "The doors are in the Wood.";
+    this.tower = this.tower || { cleared: 0, best: 0 };
+    const n = Math.min(CM.TOWER_FLOORS, (this.tower.cleared || 0) + 1);
+    this.logAct("enterMageTower", i);
+    this.towerRun = new CM.TowerRun(this, i, n);
+    this.say(`${h.name} goes in alone, and the doors close. ${CM.towerFloorName(n)}.`);
+    this.setMode("tower");
+    this.emit("towerfloor", this.towerRun);
+    return "";
+  },
+  // out of the tower: what was won is the party's; a floor not finished is not counted
+  leaveMageTower(how = "left") {
+    const run = this.towerRun;
+    if (!run) return false;
+    const h = run.hero;
+    if (how === "fell") h.hp = 1;
+    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
+    if (run.gold) this.gold += run.gold;
+    if (run.loot.length) this.gain(run.loot, "tower");
+    this.say(how === "fell" ? `The tower puts ${h.name} out of its doors, barely breathing: the floor is lost.` : how === "cleared" ? `${h.name} comes out of the tower: floor ${run.n} cleared.` : `${h.name} comes back out of the doors.`);
+    if (run.xp || run.gold) this.say(`From the tower: ${run.xp} experience and ${run.gold} gold.`);
+    this.towerRun = null;
+    this.setMode("explore");
+    this.floor.pos = CM.MAGE_DOOR.slice(); this.floor.facing = 2;
+    this.saveRun();
+    this.emit("floor", this.floor);
+    return true;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -16319,7 +16560,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div id="towerhud"><div class="cross"></div><div class="tname"></div><div class="tboss"><b></b><i></i></div><div class="tbars"><div class="thp"><i></i><span></span></div><div class="tmp"><i></i><span></span></div><div class="tarrows"></div></div><div class="thelp">W A S D move - mouse or arrows turn - click or Space shoots - right-click or R the great spell - E at the ladder - Esc the menu</div></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="follower"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
@@ -17740,6 +17981,7 @@ Object.assign(CM.UI.prototype, {
   // (the dial in the view's corner: drawSky, in 73b-clock.js)
   refresh() {
     const g = this.game;
+    document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -17760,6 +18002,7 @@ Object.assign(CM.UI.prototype, {
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
+    if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
     if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
@@ -17844,6 +18087,7 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, box = this.$("#actions");
     if (g.mode === "combat") { this.renderCombat(); return; }
     box.classList.remove("combat");
+    if (g.mode === "tower") { if (box.dataset.mode === "tower") return; box.dataset.mode = "tower"; box.innerHTML = ""; const b = document.createElement("button"); b.textContent = "Leave the tower (this floor is lost)"; b.addEventListener("click", () => { g.leaveMageTower("left"); this.refresh(); }); box.appendChild(b); return; }
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
@@ -17920,7 +18164,7 @@ Object.assign(CM.UI.prototype, {
   },
 
   drawAutomap(canvas) {
-    const fl = this.game.floor;
+    const fl = this.game.towerRun ? this.game.towerRun.fl : this.game.floor;   // (in the Mage Tower: its floor)
     if (!fl) return;
     const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size;
     p.fillStyle = "#E8DCC0";                                              // graph paper
@@ -18155,6 +18399,16 @@ Object.assign(CM.UI.prototype, {
     const slot = el.querySelector(".moonslot"); slot.innerHTML = this.moonFace(D.phase, 10, D.phase === 4 ? "full" : D.phase === 0 ? "new" : "");
     slot.title = `The moon: ${CM.MOON_NAMES[D.phase]}, day ${D.moonDay} of ${CM.CLOCK.moon}${CM.MOON_DOES[D.phase] ? ` - ${CM.MOON_DOES[D.phase]}` : ""}`;
     el.dataset.phase = D.phase; el.dataset.sky = D.sky;
+  },
+  // the Mage Tower's HUD, drawn each frame while inside
+  drawTowerHud(run) {
+    const el = this.$("#towerhud"); if (!el) return; const h = run.hero, A = run.arms;
+    el.querySelector(".tname").textContent = `${CM.towerFloorName(run.n)} - ${h.name} the ${h.cls}`;
+    const bar = (sel, v, m) => { const b = el.querySelector(sel); b.style.display = m ? "" : "none"; if (!m) return; b.querySelector("i").style.width = `${Math.max(0, Math.min(100, (v / m) * 100))}%`; b.querySelector("span").textContent = `${Math.max(0, Math.ceil(v))} / ${m}`; };
+    bar(".thp", h.hp, h.max); bar(".tmp", h.mp || 0, A.arrows ? 0 : h.maxmp);
+    el.querySelector(".tarrows").textContent = A.arrows ? `Arrows: ${run.arrows}` : `${A.word}: ${A.cost} magic`;
+    const boss = run.bossInSight ? run.bossInSight() : null, bb = el.querySelector(".tboss"); bb.style.display = boss ? "" : "none";
+    if (boss) { bb.querySelector("b").textContent = boss.name; bb.querySelector("i").style.width = `${Math.max(0, (boss.m.hp / boss.m.max) * 100)}%`; }
   },
   // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
   openMageTower() {
@@ -18868,7 +19122,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
-  game.on("magetower", () => ui.openMageTower());                       // (the tower's doors: who goes in)
+  game.on("magetower", () => ui.openMageTower());
+  game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
   game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
@@ -19328,6 +19583,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.mode === "tower" && game.towerRun && !ui.dialogOpen()) {   // the Mage Tower: real time (64e-towerrun.js)
+      const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
+      if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
     if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
     if (game.autoOn() && !ui.dialogOpen() && e.code !== K.autoPlay && (MOVES[e.code] || [K.use, K.explore, K.fight, K.auto, K.item, K.defend, K.run].includes(e.code))) { game.autoPlay(false); ui.refresh(); }   // (the reins: a move or a fight key takes them back)
@@ -19462,11 +19722,41 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => held.delete(e.code));
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; });
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "tower" || e.target.closest("button")) return; e.preventDefault(); if (document.pointerLockElement !== view && view.requestPointerLock) { try { view.requestPointerLock(); } catch (er) { /* not here */ } } if (e.button === 2) towerIn.spell = true; else towerIn.fire = true; });
+  window.addEventListener("mouseup", (e) => { if (e.button === 2) towerIn.spell = false; else towerIn.fire = false; });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "tower") e.preventDefault(); });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "tower" && document.pointerLockElement === view) towerIn.look = (towerIn.look || 0) + e.movementX * 0.0028; });
   window.addEventListener("blur", () => held.clear());
   window.addEventListener("beforeunload", () => { if (game.dirty) game.saveRun(); });
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
+  // ---- the Mage Tower's hands and feet (64e-towerrun.js): held keys, the mouse's turn ----
+  const TOWER_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", KeyD: "right", KeyQ: "turnL", ArrowLeft: "turnL", KeyE_: "", ArrowRight: "turnR", Space: "fire", KeyF: "fire", KeyR: "spell", Digit2: "spell" };
+  let towerIn = {}, towerMapT = 0;
+  function towerFrame(now, dt) {                                        // a frame in the tower: the run steps, the view follows the hero
+    const run = game.towerRun; if (!run) return;
+    run.update(dt, towerIn); towerIn.look = 0;
+    for (const ev of run.events) {
+      if (ev.kind === "hit") { fxs.burst({ at: ev.at, n: 7, size: 0.06, speed: 1.2, up: 1 }); CM.audio.bark(ev.mon.kind, "hit"); }
+      else if (ev.kind === "die") { fxs.burst({ at: ev.at, layer: "fx:spark", n: 16, size: 0.07, speed: 1.6, up: 1.6 }); CM.audio.bark(ev.mon.kind, "die"); }
+      else if (ev.kind === "wall") fxs.burst({ at: ev.at, layer: ev.layer, n: 4, size: 0.05, speed: 0.8, up: 0.6 });
+      else if (ev.kind === "burst") { fxs.ring({ at: [ev.at[0], 0, ev.at[2]], to: 1.7 }); renderer.shake(0.3); try { CM.audio.play("slam", 0.4); } catch (er) { /* */ } }
+      else if (ev.kind === "shoot") { try { CM.audio.play(ev.arrow ? "miss" : "spell", 0.25); } catch (er) { /* */ } }
+      else if (ev.kind === "spell") { try { CM.audio.play("spell", 0.5); } catch (er) { /* */ } }
+      else if (ev.kind === "hurt") { ui.tint("rgba(200,30,20,0.35)", 250); renderer.shake(0.25); }
+      else if (ev.kind === "pickup") { try { CM.audio.play("coin", 0.4); } catch (er) { /* */ } }
+      else if (ev.kind === "fell") { setTimeout(() => { if (game.towerRun === run) { game.leaveMageTower("fell"); ui.refresh(); } }, 900); }
+    }
+    run.events.length = 0;
+    renderer.eye = [run.x, 0.5, run.z]; renderer.yaw = run.yaw; renderer.move = renderer.turn = null; renderer.bob = 0;
+    renderer.light = 1; renderer.sky = null; renderer.lights = run.lights();
+    stepAir(0);
+    renderer.setSprites(run.sprites(now).concat(fxs.sprites(now)));
+    renderer.frame(dt);
+    ui.drawTowerHud(run);
+    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); }
+  }
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
   // what a frame costs: frames and the time spent in this function (the JavaScript's share), since CM.perf.reset();
@@ -19481,7 +19771,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold) autoScale(dt);
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
-      if (game.mode === "title") {
+      if (game.mode === "tower") towerFrame(now, dt);
+      else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;
         renderer.setSprites([]);
