@@ -787,3 +787,12 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .pitroom .pitshop { position: absolute; right: 18px; top: 70px; width: 300px; padding: 12px; border-radius: 10px; background: rgba(16,10,6,0.94); border: 2px solid #C8A040; color: #F0E0B0; box-shadow: 0 8px 18px rgba(0,0,0,0.8); }
 .pitroom .pitshop h4 { margin: 0 0 6px; color: #FFE070; } .pitroom .pitshop .offer { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(200,160,64,0.3); } .pitroom .pitshop .offer small { grid-column: 1; opacity: 0.85; } .pitroom .pitshop .offer button { grid-row: 1 / span 2; grid-column: 2; }
 .cgtable.pitroom { overflow: visible; } .pitroom .pithud.bar { overflow: visible; min-height: 34px; background: none; margin-bottom: 6px; }
+
+/* Runestack (76o-runestack.js) */
+.runestack .rswrap { display: flex; gap: 14px; align-items: flex-start; } .runestack .rscanvas { width: 280px; height: 560px; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7), inset 0 0 0 2px #C8A040; outline: none; }
+.runestack .rsmid { width: 110px; } .runestack .rsnext { width: 96px; height: 230px; border-radius: 6px; border: 3px solid #3A2A18; display: block; margin: 4px 0 10px; } .runestack .rsinfo { line-height: 1.8; font-size: 13px; } .runestack .rsinfo b { color: #FFE070; }
+.runestack .rsladder { max-height: 300px; overflow-y: auto; } .runestack .rung i.got { color: #70E070; } .runestack .rung i.better { color: #80D0FF; } .runestack .rung i.rare { color: #F0A0FF; }
+
+/* The Gilded Cascade (76p-cascade.js) */
+.cascade .cswrap { display: flex; gap: 16px; align-items: flex-start; } .cascade .cscanvas { width: 470px; height: 504px; border-radius: 12px; border: 5px solid #6A4A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); cursor: crosshair; }
+.cascade .cside { flex: 1; min-width: 260px; } .cascade .cscup { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -800,6 +800,15 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .pitroom .pitshop { position: absolute; right: 18px; top: 70px; width: 300px; padding: 12px; border-radius: 10px; background: rgba(16,10,6,0.94); border: 2px solid #C8A040; color: #F0E0B0; box-shadow: 0 8px 18px rgba(0,0,0,0.8); }
 .pitroom .pitshop h4 { margin: 0 0 6px; color: #FFE070; } .pitroom .pitshop .offer { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(200,160,64,0.3); } .pitroom .pitshop .offer small { grid-column: 1; opacity: 0.85; } .pitroom .pitshop .offer button { grid-row: 1 / span 2; grid-column: 2; }
 .cgtable.pitroom { overflow: visible; } .pitroom .pithud.bar { overflow: visible; min-height: 34px; background: none; margin-bottom: 6px; }
+
+/* Runestack (76o-runestack.js) */
+.runestack .rswrap { display: flex; gap: 14px; align-items: flex-start; } .runestack .rscanvas { width: 280px; height: 560px; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7), inset 0 0 0 2px #C8A040; outline: none; }
+.runestack .rsmid { width: 110px; } .runestack .rsnext { width: 96px; height: 230px; border-radius: 6px; border: 3px solid #3A2A18; display: block; margin: 4px 0 10px; } .runestack .rsinfo { line-height: 1.8; font-size: 13px; } .runestack .rsinfo b { color: #FFE070; }
+.runestack .rsladder { max-height: 300px; overflow-y: auto; } .runestack .rung i.got { color: #70E070; } .runestack .rung i.better { color: #80D0FF; } .runestack .rung i.rare { color: #F0A0FF; }
+
+/* The Gilded Cascade (76p-cascade.js) */
+.cascade .cswrap { display: flex; gap: 16px; align-items: flex-start; } .cascade .cscanvas { width: 470px; height: 504px; border-radius: 12px; border: 5px solid #6A4A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); cursor: crosshair; }
+.cascade .cside { flex: 1; min-width: 260px; } .cascade .cscup { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -809,7 +818,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.4", built: "2026-10-31" };
+const CM = window.CM = { version: "13.5", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20422,6 +20431,177 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64y-runestack.js ----
+"use strict";
+// Runestack (the twenty-fifth big update - v13.5): a game of skill on the Gilded Joker's floor. Rune-stones of seven
+// shapes fall into a well ten wide and twenty deep; turn them and set them down so that rows fill, and a full row is cut
+// away. Every ten rows the level rises and the stones fall faster. One stake a play: each level cleared pays gold back,
+// more for each (a fifth of the stake and a tenth more every level - level three cleared and the stake is back), every
+// play; and a Claudescryption card for each level the first time it is ever cleared - a common card for levels one to
+// four, one of the stronger commons for five to nine, a rare one from ten on. Stones come in bags of seven from the
+// seed, so a play is the same for the same hands. The window is 76o-runestack.js.
+CM.RS = {
+  W: 10, H: 20, rowsPerLevel: 10, lockDelay: 0.5, lockResets: 15, clearTime: 0.32, SCORE: [0, 100, 300, 500, 800],
+  pay: (n) => 0.2 + 0.1 * n, cardKind: (n) => (n >= 10 ? "rare" : n >= 5 ? "better" : "common"),
+  SHAPES: { I: [[0, 1], [1, 1], [2, 1], [3, 1]], O: [[1, 0], [2, 0], [1, 1], [2, 1]], T: [[1, 0], [0, 1], [1, 1], [2, 1]], S: [[1, 0], [2, 0], [0, 1], [1, 1]], Z: [[0, 0], [1, 0], [1, 1], [2, 1]], J: [[0, 0], [0, 1], [1, 1], [2, 1]], L: [[2, 0], [0, 1], [1, 1], [2, 1]] },
+  COLOUR: { I: "#48C8C0", O: "#E0B030", T: "#9A50D0", S: "#50B040", Z: "#D04040", J: "#4070D0", L: "#E07A28" },
+};
+const RS = CM.RS;
+// the stronger half of the commons, by power, health and sigils
+CM.CARD_BETTER = (CM.CARD_COMMONS || []).slice().sort((a, b) => { const v = (n) => { const C = CM.CARDS[n]; return C[3] * 2 + C[4] + C[5].length * 2; }; return v(b) - v(a); }).slice(0, Math.max(1, Math.ceil((CM.CARD_COMMONS || []).length / 2)));
+RS.fallTime = (level) => Math.max(0.03, Math.pow(0.8 - (level - 1) * 0.007, level - 1));
+RS.Well = class {
+  constructor(seed) {
+    this.rnd = new CM.Random(seed); this.grid = Array.from({ length: RS.H }, () => Array(RS.W).fill(null)); this.bag = []; this.next = [this.pull(), this.pull(), this.pull()];
+    this.score = 0; this.lines = 0; this.level = 1; this.stage = "play"; this.events = []; this.fallT = 0; this.lockT = 0; this.resets = 0; this.clearing = null; this.pieces = 0; this.spawn();
+  }
+  pull() { if (!this.bag.length) { this.bag = Object.keys(RS.SHAPES); for (let i = this.bag.length - 1; i > 0; i--) { const j = this.rnd.int(0, i); [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]]; } } return this.bag.shift(); }
+  // a shape's cells at a turn (0-3), about its own box
+  cells(k, rot) { const box = k === "I" ? 4 : k === "O" ? 4 : 3; let c = RS.SHAPES[k].map(([x, y]) => [x, y]); if (k === "O") return c; for (let r = 0; r < ((rot % 4) + 4) % 4; r++) c = c.map(([x, y]) => [box - 1 - y, x]); return c; }
+  fits(k, rot, px, py) { for (const [x, y] of this.cells(k, rot)) { const gx = px + x, gy = py + y; if (gx < 0 || gx >= RS.W || gy >= RS.H) return false; if (gy >= 0 && this.grid[gy][gx]) return false; } return true; }
+  spawn() { const k = this.next.shift(); this.next.push(this.pull()); this.cur = { k, rot: 0, x: k === "O" ? 3 : 3, y: -1 }; this.lockT = 0; this.resets = 0; this.pieces += 1; if (!this.fits(k, 0, this.cur.x, this.cur.y)) { this.stage = "over"; this.events.push({ kind: "over" }); } }
+  grounded() { const c = this.cur; return !this.fits(c.k, c.rot, c.x, c.y + 1); }
+  touch() { if (this.grounded() && this.resets < RS.lockResets) { this.lockT = 0; this.resets += 1; } }
+  move(dx) { if (this.stage !== "play" || this.clearing) return false; const c = this.cur; if (!this.fits(c.k, c.rot, c.x + dx, c.y)) return false; c.x += dx; this.touch(); this.events.push({ kind: "move" }); return true; }
+  rotate(dir = 1) {
+    if (this.stage !== "play" || this.clearing) return false; const c = this.cur, r = c.rot + dir;
+    for (const [kx, ky] of [[0, 0], [-1, 0], [1, 0], [0, -1], [-2, 0], [2, 0], [-1, -1], [1, -1]]) if (this.fits(c.k, r, c.x + kx, c.y + ky)) { c.x += kx; c.y += ky; c.rot = ((r % 4) + 4) % 4; this.touch(); this.events.push({ kind: "turn" }); return true; }
+    return false;
+  }
+  soft() { if (this.stage !== "play" || this.clearing) return false; const c = this.cur; if (this.fits(c.k, c.rot, c.x, c.y + 1)) { c.y += 1; this.score += 1; this.fallT = 0; return true; } return false; }
+  hard() { if (this.stage !== "play" || this.clearing) return 0; let n = 0; while (this.soft()) n++; this.score += n; this.events.push({ kind: "slam", n }); this.lock(); return n; }
+  ghost() { const c = this.cur; let y = c.y; while (this.fits(c.k, c.rot, c.x, y + 1)) y++; return y; }
+  lock() {
+    const c = this.cur; let above = false; for (const [x, y] of this.cells(c.k, c.rot)) { if (c.y + y < 0) above = true; else this.grid[c.y + y][c.x + x] = c.k; }
+    this.events.push({ kind: "lock" }); if (above) { this.stage = "over"; this.events.push({ kind: "over" }); return; }
+    const full = []; for (let y = 0; y < RS.H; y++) if (this.grid[y].every(Boolean)) full.push(y);
+    if (full.length) { this.clearing = { rows: full, t: RS.clearTime }; this.events.push({ kind: "clear", rows: full.slice() }); } else this.spawn();
+  }
+  // the clock: the stone falls, sits a moment on the ground, locks; rows are cut after a moment's flash
+  update(dt) {
+    if (this.stage !== "play") return;
+    if (this.clearing) { this.clearing.t -= dt; if (this.clearing.t > 0) return; const rows = this.clearing.rows; this.clearing = null; this.grid = this.grid.filter((_, y) => !rows.includes(y)); while (this.grid.length < RS.H) this.grid.unshift(Array(RS.W).fill(null));
+      const was = this.level; this.lines += rows.length; this.score += RS.SCORE[rows.length] * was; this.level = 1 + Math.floor(this.lines / RS.rowsPerLevel); if (this.level > was) this.events.push({ kind: "level", from: was, to: this.level }); this.spawn(); return; }
+    if (this.grounded()) { this.lockT += dt; if (this.lockT >= RS.lockDelay) this.lock(); return; }
+    this.fallT += dt; const ft = RS.fallTime(this.level); while (this.fallT >= ft && !this.grounded()) { this.fallT -= ft; this.cur.y += 1; }
+  }
+};
+Object.assign(CM.Game.prototype, {
+  rsState() { return this.cgStore().rs || null; },
+  rsClaimed() { const F = this.cgStore(); F.rsCards = F.rsCards || {}; return F.rsCards; },
+  rsWell() { const S = this.rsState(); if (!S || S.stage !== "play") return null; if (!this.rsLive || this.rsLive.key !== S.seed) { S.stage = "done"; S.last = S.last || { lines: 0, level: 1, score: 0, won: S.won, cards: S.cards.slice(), lostTrack: true }; this.saveCasino && this.saveCasino(); return null; } return this.rsLive; },   // (a play left when the window closed is over: what it won is kept)
+  rsStart(bet) {
+    const S0 = this.rsState(); if (S0 && S0.stage === "play" && this.rsLive && this.rsLive.key === S0.seed) return { error: "A stack is falling." };
+    const why = this.cgStake("runestack", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.rs = { stage: "play", bet: Math.floor(bet), seed: `${this.seed}:runestack:${F.n}`, paidLevel: 0, won: 0, cards: [] }; this.rsLive = new RS.Well(CM.hashSeed(F.rs.seed)); this.rsLive.key = F.rs.seed;
+    this.saveCasino && this.saveCasino(); return F.rs;
+  },
+  // after the well's clock: each level cleared paid (and its card, the first time ever); the end when the well fills
+  rsCheck() {
+    const S = this.rsState(), W = this.rsLive; if (!S || !W || S.stage !== "play") return [];
+    const out = [];
+    while (S.paidLevel < W.level - 1) {
+      const n = ++S.paidLevel, pay = Math.round(S.bet * RS.pay(n)), C = this.rsClaimed(); let card = null;
+      if (!C[n]) { const kind = RS.cardKind(n), R = new CM.Random(CM.hashSeed(`${this.seed}:runestack:card:${n}`));
+        if (kind === "better") { const pool = CM.CARD_BETTER; card = pool[R.int(0, pool.length - 1)]; this.addCard(card, `Runestack, level ${n} cleared!`); this.cgStore().cards.push(card); this.tally.casinoCards = (this.tally.casinoCards || 0) + 1; }
+        else card = this.cgCard(kind === "rare", `Runestack, level ${n} cleared!`, R);
+        C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("runestack", pay); S.won += pay; out.push({ level: n, pay, card, kind: card ? RS.cardKind(n) : null });
+    }
+    if (W.stage === "over") { S.stage = "done"; S.last = { lines: W.lines, level: W.level, score: W.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rsBest = Math.max(F.rsBest || 0, W.score); this.rsLive = null; out.push({ over: true }); }
+    if (out.length) { this.saveCasino && this.saveCasino(); this.emit("change"); }
+    return out;
+  },
+  rsQuit() { const W = this.rsLive; if (!W) return null; W.stage = "over"; return this.rsCheck(); },
+});
+
+// ---- 64z-cascade.js ----
+"use strict";
+// The Gilded Cascade (the twenty-fifth big update - v13.5): a coin pusher on the Gilded Joker's floor. A brass shelf
+// strewn with coins, a pusher that slides back and forth across its back, and side gutters near the front. Buy a cup
+// of coins with gold (a coin is worth its cup's price), drop them where you like behind the shelf's edge; the pusher
+// shoves the bed forward, and what goes over the front edge drops into your tray - what slips into a gutter is the
+// house's. Now and then a prize is set on the bed with a coin: a gold nugget (ten coins), a Claudescryption card token,
+// or a sealed item token (a real piece of gear by the party's depth); push it off the front and it is yours. The bed
+// is kept between visits. Coins move only when pushed (shove by shove, the pusher's face and the coins against each
+// other), so a play is the same for the same drops. The window is 76p-cascade.js.
+CM.CS = {
+  W: 300, D: 360, R: 11, faceMin: 70, faceMax: 150, period: 3.2, gutterFrom: 300, gutter: 20, step: 1 / 60, iters: 6,
+  CUPS: [[20, 1], [20, 5], [20, 25]], NUGGET: 10, ODDS: { nugget: 1 / 250, card: 1 / 150, item: 1 / 250 }, startCoins: 125, maxDiscs: 240,
+};
+const CS = CM.CS;
+CS.Bed = class {
+  constructor(seed, saved) {
+    this.rnd = new CM.Random(seed); this.t = 0; this.discs = []; this.events = []; this.ids = 0;
+    if (saved && saved.discs) { this.t = saved.t || 0; for (const d of saved.discs) this.discs.push({ id: ++this.ids, x: d[0], y: d[1], v: d[2], k: d[3] || "coin", it: d[4] }); }
+    else { for (let i = 0; i < CS.startCoins; i++) this.discs.push({ id: ++this.ids, x: CS.R + this.rnd.next() * (CS.W - 2 * CS.R), y: CS.faceMax + CS.R + this.rnd.next() * (CS.D - CS.faceMax - 3 * CS.R), v: 1, k: "coin" }); for (let k = 0; k < 12; k++) this.settle(); this.discs = this.discs.filter((d) => d.y < CS.D - CS.R && d.x > 0 && d.x < CS.W); }
+  }
+  face(t = this.t) { return CS.faceMin + (CS.faceMax - CS.faceMin) * (0.5 - 0.5 * Math.cos((t / CS.period) * Math.PI * 2)); }
+  // a coin dropped at x: it lands just in front of the pusher's face; a prize may come down with it
+  drop(x, v) {
+    const f = this.face(), R = CS.R; x = Math.max(R, Math.min(CS.W - R, x));
+    const d = { id: ++this.ids, x: x + (this.rnd.next() - 0.5) * 6, y: f + R + 2 + this.rnd.next() * 24, v, k: "coin" }; this.discs.push(d); this.events.push({ kind: "drop", d }); this.dirty = true;
+    const r = this.rnd.next(), O = CS.ODDS; let prize = null;
+    if (r < O.item) prize = "item"; else if (r < O.item + O.card) prize = "card"; else if (r < O.item + O.card + O.nugget) prize = "nugget";
+    if (prize) { const p = { id: ++this.ids, x: R + this.rnd.next() * (CS.W - 2 * R), y: f + R + 4 + this.rnd.next() * 40, v: prize === "nugget" ? v * CS.NUGGET : 0, k: prize }; this.discs.push(p); this.events.push({ kind: "prize", d: p }); }
+    while (this.discs.length > CS.maxDiscs) { const i = this.discs.findIndex((q) => q.k === "coin"); this.discs.splice(i, 1); }
+    return d;
+  }
+  // a little time: the pusher moves; what it touches is shoved; the coins push each other apart; the edges take what is over them
+  update(dt) {
+    const out = []; for (let s = 0; s < dt / CS.step - 1e-9; s++) out.push(...this.tick(CS.step)); return out;
+  }
+  tick(dt) {
+    const f0 = this.face(); this.t += dt; const f = this.face(), R = CS.R, D = CS.discs;
+    let touched = this.dirty; this.dirty = false; if (f > f0) for (const d of this.discs) if (d.y - R < f) { d.y = f + R; touched = true; }
+    if (touched) this.settle();
+    const off = []; this.discs = this.discs.filter((d) => { if (d.y > CS.D) { off.push({ d, where: "front" }); return false; } if (d.x < 0 || d.x > CS.W) { off.push({ d, where: "gutter" }); return false; } return true; });
+    for (const o of off) this.events.push({ kind: o.where, d: o.d });
+    void D; return off;
+  }
+  // the coins pushed apart; never back into the pusher, never through the side walls behind the gutters (a grid of
+  // cells, integer keys; it stops early once nothing overlaps)
+  settle() {
+    const R = CS.R, f = this.face(), L = this.discs, n = L.length, cell = 2 * R, R4 = 4 * R * R, GW = 40;
+    for (let it = 0; it < CS.iters; it++) {
+      const grid = new Map(); for (let i = 0; i < n; i++) { const d = L[i], k = (Math.floor(d.x / cell) + 4) + (Math.floor(d.y / cell) + 4) * GW; const c = grid.get(k); if (c) c.push(i); else grid.set(k, [i]); }
+      let moved = false;
+      for (let i = 0; i < n; i++) { const a = L[i], cx = Math.floor(a.x / cell) + 4, cy = Math.floor(a.y / cell) + 4;
+        for (let gy = cy - 1; gy <= cy + 1; gy++) for (let gx = cx - 1; gx <= cx + 1; gx++) { const c = grid.get(gx + gy * GW); if (!c) continue;
+          for (let q = 0; q < c.length; q++) { const j = c[q]; if (j <= i) continue; const b = L[j], dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy; if (d2 >= R4) continue; moved = true; const d = Math.sqrt(d2) || 0.01, push = (2 * R - d) / 2, nx = d2 ? dx / d : 1, ny = d2 ? dy / d : 0;
+            const aBack = a.y - ny * push < f + R, bBack = b.y + ny * push < f + R, ka = bBack ? 2 : aBack ? 0 : 1, kb = aBack ? 2 : bBack ? 0 : 1;
+            a.x -= nx * push * ka; a.y -= ny * push * ka; b.x += nx * push * kb; b.y += ny * push * kb; } } }
+      for (const d of L) { if (d.y < f + R) d.y = f + R; if (d.y < CS.gutterFrom) d.x = Math.max(R, Math.min(CS.W - R, d.x)); else { const gx = CS.gutter; if (d.x < -gx) d.x = -gx; if (d.x > CS.W + gx) d.x = CS.W + gx; } }
+      if (!moved) break;
+    }
+  }
+  toJSON() { return { t: Math.round(this.t * 100) / 100, discs: this.discs.map((d) => [Math.round(d.x * 10) / 10, Math.round(d.y * 10) / 10, d.v, d.k === "coin" ? 0 : d.k, d.it]) }; }
+};
+Object.assign(CM.Game.prototype, {
+  csStore() { const F = this.cgStore(); F.cs = F.cs || { coins: [], won: 0, n: 0 }; return F.cs; },
+  csBed() { const S = this.csStore(); if (!this.csLive) { this.csLive = new CS.Bed(CM.hashSeed(`${this.seed}:cascade:${S.n}`), S.bed); } return this.csLive; },
+  csKeep() { const S = this.csStore(); if (this.csLive) S.bed = this.csLive.toJSON(); this.saveCasino && this.saveCasino(); },
+  // a cup of coins bought: twenty at its price each
+  csBuy(cup) { const C = CS.CUPS[cup]; if (!C) return { error: "No such cup." }; const why = this.cgStake("cascade", C[0] * C[1]); if (why) return { error: why }; const S = this.csStore(); for (let i = 0; i < C[0]; i++) S.coins.push(C[1]); S.coins.sort((a, b) => a - b); this.csKeep(); return { n: C[0], v: C[1] }; },
+  csDrop(x, v) {
+    const S = this.csStore(); let i = v === undefined ? S.coins.length - 1 : S.coins.lastIndexOf(v); if (i < 0) return null; const val = S.coins.splice(i, 1)[0], B = this.csBed();
+    B.rnd = new CM.Random(CM.hashSeed(`${this.seed}:cascade:drop:${S.n++}`)); return B.drop(x, val);
+  },
+  // what came over the front edge: coins and nuggets to gold, a card token to a card, an item token to a thing
+  csCollect(off) {
+    let gold = 0; const got = [];
+    for (const o of off) { if (o.where !== "front") continue; const d = o.d;
+      if (d.k === "coin" || d.k === "nugget") gold += d.v;
+      else if (d.k === "card") { const R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:card:${d.id}:${this.csStore().n}`)), card = this.cgCard(R.chance(0.2), "The Gilded Cascade drops a card token!", R); if (card) got.push({ card }); }
+      else if (d.k === "item") { const depth = Math.max(2, Math.min(CM.BOTTOM || 50, (this.trail || []).reduce((m, x) => Math.max(m, x[0] || 0), 0) || 5)), R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:item:${d.id}:${this.csStore().n}`)); let it = CM.makeItem(depth, R); if (R.chance(0.4) && CM.affix) it = CM.affix(it, depth, R) || it; this.gain([it], "casino"); got.push({ item: it }); } }
+    if (gold) { this.cgPay("cascade", gold); this.csStore().won += gold; }
+    if (gold || got.length) { this.csKeep(); this.emit("change"); }
+    return { gold, got };
+  },
+  // coins left in the cup when the party goes: sold back at their price
+  csCashCup() { const S = this.csStore(), v = S.coins.reduce((t, c) => t + c, 0); if (!v) return 0; S.coins = []; this.gold += v; const F = this.cgStore(); F.wagered.cascade = Math.max(0, (F.wagered.cascade || 0) - v); this.csKeep(); this.emit("change"); return v; },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -26378,7 +26558,7 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
     // after a move: the events played out, then the dealer's turns a beat apart, then the end of the round
     hwAfter() {
       const g = this.game, D = g.hwDuel(); if (!D) return; this.hwBusy = true; const ev = D.events.splice(0); let delay = 0;
-      for (const e of ev) { setTimeout(() => this.hwShow(e), delay); delay += e.kind === "fire" ? 900 : e.kind === "load" ? 1400 : 600; }
+      for (const e of ev) { setTimeout(() => this.hwShow(e), delay); delay += e.kind === "fire" ? 1900 : e.kind === "load" ? 1400 : 600; }
       setTimeout(() => {
         this.hwBusy = false;
         if (D.stage !== "play") { const r = g.hwSettle(); this.cgNote = r.won ? (g.hwState().stage === "done" ? `The last round! ${r.pot} gold.` : `Round ${r.round} won: the pot is ${r.pot} gold. Collect, or play on.`) : `Your last candle is out. ${r.lost ? `The pot of ${r.lost} is lost.` : "The stake is the house's."}`; if (r.won) { this.cgSfx("victory", 0.55); if (r.card) this.cgSfx("cardwin", 0.5); } else this.cgSfx("cardlose", 0.5); this.renderCasino(); return; }
@@ -26388,15 +26568,16 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
       this.renderCasino();
     },
     hwShow(e) {
-      const now = performance.now(); (this.hwFx = this.hwFx || []).push(Object.assign({ at: now }, e));
-      if (e.kind === "fire") { this.cgSfx("hinge", 0.3, 1.5); setTimeout(() => { if (e.live) { this.cgSfx("zap", 0.7); this.cgSfx(e.at === "you" ? "hurt" : "fallen", 0.5); } else this.cgSfx("miss", 0.45, 0.7); }, 420); }
+      const now = performance.now(); (this.hwFx = this.hwFx || []).push(Object.assign({}, e, { t0: now }));
+      if (e.kind === "fire") { this.cgSfx("hinge", 0.3, 1.5); setTimeout(() => this.cgSfx("spell", 0.25, 1.6), 320);
+        setTimeout(() => { if (e.live) { this.cgSfx("wandboom", 0.8); this.cgSfx("zap", 0.6, 0.8); setTimeout(() => this.cgSfx(e.at === "you" ? "hurt" : "fallen", 0.55), 150); } else { this.cgSfx("miss", 0.45, 0.6); [0, 70, 150, 260].forEach((d, k) => setTimeout(() => this.cgSfx("card", 0.18, 2.4 - k * 0.3), d)); } }, 600); }
       else if (e.kind === "charm") this.cgSfx(e.c === "glass" ? "card" : e.c === "tallow" ? "heal" : e.c === "cord" ? "chain" : e.c === "whet" ? "grind" : "cardplace", 0.45);
       else if (e.kind === "load") this.cgSfx("chain", 0.4); else if (e.kind === "bound") this.cgSfx("chain", 0.3, 0.8);
       if (e.kind === "charm" && e.who === "dealer") this.cgNote = `The dealer uses ${CM.HW.CHARMS[e.c][0].toLowerCase()}${e.c === "unload" ? ` - ${e.seen ? "a live hex" : "a dud"} falls out` : ""}.`;
       if (e.kind === "fire" && e.who === "dealer") this.cgNote = `The dealer points the wand at ${e.at === "dealer" ? "itself" : "you"}...`;
     },
     hwFrame(now) {
-      const g = this.game, D = g.hwDuel(), cv = this.hwCanvas, p = cv.getContext("2d"), W = 620, H = 420, fx = (this.hwFx || []).filter((f) => now - f.at < 2000); this.hwFx = fx;
+      const g = this.game, D = g.hwDuel(), cv = this.hwCanvas, p = cv.getContext("2d"), W = 620, H = 420, fx = (this.hwFx || []).filter((f) => now - f.t0 < 2000); this.hwFx = fx;
       const bg = p.createRadialGradient(W / 2, 120, 20, W / 2, 200, 420); bg.addColorStop(0, "#3A2A1C"); bg.addColorStop(1, "#050404"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
       p.fillStyle = "#FFE6A0"; p.beginPath(); p.moveTo(W / 2 - 30, 0); p.lineTo(W / 2 + 30, 0); p.lineTo(W / 2 + 14, 30); p.lineTo(W / 2 - 14, 30); p.fill(); p.fillStyle = "rgba(255,230,160,0.06)"; p.beginPath(); p.moveTo(W / 2 - 14, 30); p.lineTo(W / 2 + 14, 30); p.lineTo(W - 40, H); p.lineTo(40, H); p.fill();
       // the dealer
@@ -26412,16 +26593,48 @@ CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
       // the dealer's charms, face down; the loaded charges shown, then turned over
       for (let i = 0; i < D.dealer.charms.length; i++) { p.fillStyle = "#6A1A2A"; p.fillRect(W / 2 + 110 + i * 18, 262, 14, 20); p.strokeStyle = "#C8A040"; p.strokeRect(W / 2 + 110 + i * 18 + 0.5, 262.5, 13, 19); }
       const load = [...fx].reverse().find((f) => f.kind === "load"), lastFire = [...fx].reverse().find((f) => f.kind === "fire");
-      if (load && now - load.at < 1400 && !(lastFire && lastFire.at > load.at)) { const n = load.live + load.dud; for (let i = 0; i < n; i++) { const x = W / 2 - (n - 1) * 14 + i * 28, live = i < load.live; p.fillStyle = live ? "#C82020" : "#8A8A8A"; p.beginPath(); p.arc(x, 300, 10, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#000"; p.stroke(); } p.fillStyle = "#FFF"; p.font = "bold 14px Georgia, serif"; p.textAlign = "center"; p.fillText(`${load.live} live, ${load.dud} dud`, W / 2, 335); p.textAlign = "left"; }
-      else { p.fillStyle = "#E0D8C0"; p.font = "12px Georgia, serif"; p.textAlign = "center"; p.fillText(`${D.charges.length} in the wand - ${D.liveLeft} live, ${D.dudLeft} dud${D.known !== null ? ` - the next is ${D.known ? "LIVE" : "a dud"}` : ""}${D.whet ? " - whetted" : ""}`, W / 2, 352); p.textAlign = "left"; }
-      // the wand: lying between you, or swung to its mark
-      const shot = [...fx].reverse().find((f) => f.kind === "fire"), k = shot ? Math.min(1, (now - shot.at) / 400) : 0, aimUp = shot && shot.at === "dealer";
-      const rest = -0.15, ang = shot ? rest + (aimUp ? -1.45 : 1.45) * Math.min(1, k * 1.4) * (now - shot.at < 1400 ? 1 : Math.max(0, 1 - (now - shot.at - 1400) / 400)) : rest;
-      p.save(); p.translate(W / 2, 300); p.rotate(ang); p.fillStyle = "#1A1210"; p.fillRect(-70, -4, 140, 8); p.fillStyle = "#C8A040"; p.fillRect(-70, -5, 14, 10); p.fillStyle = "#A060FF"; p.beginPath(); p.arc(70, 0, 5, 0, Math.PI * 2); p.fill(); p.restore();
-      if (shot && now - shot.at > 400 && now - shot.at < 900) { const t = (now - shot.at - 400) / 500, ty = aimUp ? 130 : 395; if (shot.live) { p.strokeStyle = `rgba(255,${80 + 100 * (1 - t)},60,${1 - t})`; p.lineWidth = 4; p.beginPath(); p.moveTo(W / 2, 300); for (let s = 1; s <= 6; s++) p.lineTo(W / 2 + (Math.random() - 0.5) * 40, 300 + ((ty - 300) * s) / 6); p.stroke(); p.fillStyle = `rgba(255,60,40,${0.35 * (1 - t)})`; p.fillRect(0, 0, W, H); }
-        else { p.fillStyle = `rgba(180,180,180,${0.6 * (1 - t)})`; for (let s = 0; s < 6; s++) { p.beginPath(); p.arc(W / 2 + Math.cos(s) * 30 * t + (aimUp ? 0 : 0), 300 + (aimUp ? -1 : 1) * 60 * t + Math.sin(s * 2) * 10, 8 + 10 * t, 0, Math.PI * 2); p.fill(); } } }
-      if (shot && shot.live && now - shot.at > 800 && now - shot.at < 1800) { const t = (now - shot.at - 800) / 1000, y0 = shot.at === "dealer" ? 210 : 360; p.fillStyle = `rgba(120,120,120,${0.5 * (1 - t)})`; for (let s = 0; s < 4; s++) { p.beginPath(); p.arc(W / 2 + Math.sin(now / 200 + s) * 20, y0 - t * 60 - s * 8, 6 + s * 2, 0, Math.PI * 2); p.fill(); } }
-      p.fillStyle = D.turn === "you" ? "#FFE070" : "#C8B8A0"; p.font = "bold 15px Georgia, serif"; p.textAlign = "center"; p.fillText(D.stage !== "play" ? (D.stage === "won" ? "The dealer's last candle goes out." : "Your last candle goes out.") : D.turn === "you" ? "Your turn" : "The dealer's turn", W / 2, 24 + 380 * 0 + 380); p.textAlign = "left";
+      if (load && now - load.t0 < 1400 && !(lastFire && lastFire.t0 > load.t0)) { const n = load.live + load.dud; for (let i = 0; i < n; i++) { const x = W / 2 - (n - 1) * 14 + i * 28, live = i < load.live; p.fillStyle = live ? "#C82020" : "#8A8A8A"; p.beginPath(); p.arc(x, 300, 10, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#000"; p.stroke(); } p.fillStyle = "#FFF"; p.font = "bold 14px Georgia, serif"; p.textAlign = "center"; p.fillText(`${load.live} live, ${load.dud} dud`, W / 2, 335); p.textAlign = "left"; }
+      else if (!fx.some((f) => f.kind === "fire" && now - f.t0 < 1900)) { p.fillStyle = "#E0D8C0"; p.font = "12px Georgia, serif"; p.textAlign = "center"; p.fillText(`${D.charges.length} in the wand - ${D.liveLeft} live, ${D.dudLeft} dud${D.known !== null ? ` - the next is ${D.known ? "LIVE" : "a dud"}` : ""}${D.whet ? " - whetted" : ""}`, W / 2, 352); p.textAlign = "left"; }
+      // (v13.5) the wand: it rises from the table into the shooter's hand, turns on its mark and draws closer, the tip
+      // gathering light; then a blast - a white flash, a bolt, rings and sparks, the room shaking - or a fizzle: the tip
+      // sputters, a few sparks drop and a curl of grey smoke goes up; then it is laid down again
+      const shot = [...fx].reverse().find((f) => f.kind === "fire"), T0 = shot ? now - shot.t0 : 9999, REL = 600;
+      const face = { dealer: [W / 2, 128], you: [W / 2 + 10, 450] }, hand = { dealer: [W / 2 - 50, 228], you: [W / 2 + 80, 335] }, rest = [W / 2, 300];
+      let base = rest, tipDir = [-Math.cos(0.15), -Math.sin(0.15)], len = 140, lift = 0;
+      if (shot && T0 < 1900) {
+        const H = hand[shot.who], Tg = face[shot.at], self = shot.who === shot.at, go = Math.min(1, T0 / 450), back = T0 > 1450 ? Math.min(1, (T0 - 1450) / 450) : 0, e = (x) => x * x * (3 - 2 * x), m = e(go) * (1 - e(back));
+        const near = [H[0] + (Tg[0] - H[0]) * (self ? 0.12 : 0.28), H[1] + (Tg[1] - H[1]) * (self ? 0.12 : 0.28)];
+        base = [rest[0] + (near[0] - rest[0]) * m, rest[1] + (near[1] - rest[1]) * m];
+        const dx = Tg[0] - near[0], dy = Tg[1] - near[1], n = Math.hypot(dx, dy) || 1, aim = [dx / n, dy / n];
+        tipDir = [tipDir[0] + (aim[0] - tipDir[0]) * m, tipDir[1] + (aim[1] - tipDir[1]) * m]; const tn = Math.hypot(...tipDir) || 1; tipDir = [tipDir[0] / tn, tipDir[1] / tn];
+        len = 140 - (self && shot.who === "you" ? 70 : self ? 30 : 10) * m; lift = m;
+        if (T0 > 450 && T0 < REL) { base = [base[0] + (Math.random() - 0.5) * 3, base[1] + (Math.random() - 0.5) * 3]; }
+        if (T0 >= REL && T0 < REL + 180 && shot.live) { base = [base[0] - tipDir[0] * 14 * (1 - (T0 - REL) / 180), base[1] - tipDir[1] * 14 * (1 - (T0 - REL) / 180)]; }   // (the kick)
+      }
+      const tip = [base[0] + tipDir[0] * len / 2, base[1] + tipDir[1] * len / 2], butt = [base[0] - tipDir[0] * len / 2, base[1] - tipDir[1] * len / 2];
+      if (lift) { p.fillStyle = `rgba(0,0,0,${0.35 * (1 - lift)})`; p.beginPath(); p.ellipse(rest[0], rest[1] + 6, 70, 8, 0, 0, Math.PI * 2); p.fill(); }
+      p.lineCap = "round"; p.strokeStyle = "#0E0A08"; p.lineWidth = 10 + lift * 2; p.beginPath(); p.moveTo(...butt); p.lineTo(...tip); p.stroke(); p.strokeStyle = "#3A2A20"; p.lineWidth = 3; p.beginPath(); p.moveTo(butt[0] + tipDir[1] * 2, butt[1] - tipDir[0] * 2); p.lineTo(tip[0] + tipDir[1] * 2, tip[1] - tipDir[0] * 2); p.stroke();
+      p.strokeStyle = "#C8A040"; p.lineWidth = 12 + lift * 2; p.beginPath(); p.moveTo(...butt); p.lineTo(butt[0] + tipDir[0] * 16, butt[1] + tipDir[1] * 16); p.stroke(); p.lineCap = "butt";
+      const charge = shot && T0 > 300 && T0 < REL ? (T0 - 300) / (REL - 300) : 0, glowR = 5 + charge * 9 + Math.sin(now / 120) * 1.2;
+      p.save(); p.shadowColor = shot && shot.live && charge ? "#FF5030" : "#A060FF"; p.shadowBlur = 10 + charge * 26; p.fillStyle = charge ? `rgb(255,${Math.round(200 - charge * 120)},${Math.round(255 - charge * 200)})` : "#A060FF"; p.beginPath(); p.arc(tip[0], tip[1], glowR, 0, Math.PI * 2); p.fill(); p.restore();
+      if (shot && T0 >= REL && T0 < REL + 900) {
+        const t = (T0 - REL) / 900, Tg = face[shot.at];
+        if (shot.live) {
+          if (T0 < REL + 90) { p.fillStyle = `rgba(255,250,235,${0.85 * (1 - (T0 - REL) / 90)})`; p.fillRect(0, 0, W, H); }
+          if (t < 0.45) { const k2 = t / 0.45; for (const [col, wdt] of [["rgba(255,90,40,0.85)", 9], ["rgba(255,240,200,1)", 3]]) { p.strokeStyle = col; p.lineWidth = wdt * (1 - k2 * 0.6); p.beginPath(); p.moveTo(...tip); const segs = 8; for (let k = 1; k <= segs; k++) { const f = k / segs, j2 = k === segs ? 0 : (Math.sin(now / 13 + k * 7.3) * 16) * (1 - f * 0.4); p.lineTo(tip[0] + (Tg[0] - tip[0]) * f - tipDir[1] * j2, tip[1] + (Tg[1] - tip[1]) * f + tipDir[0] * j2); } p.stroke(); } }
+          for (let r = 0; r < 3; r++) { const rt = t - r * 0.12; if (rt <= 0) continue; p.strokeStyle = `rgba(255,${120 + r * 50},60,${Math.max(0, 0.8 - rt)})`; p.lineWidth = 4 - r; p.beginPath(); p.arc(Tg[0], Tg[1] - (shot.at === "you" ? 110 : 0), rt * 170, 0, Math.PI * 2); p.stroke(); }
+          for (let k = 0; k < 26; k++) { const a = k * 2.399 + shot.at.length, sp = 120 + (k * 37) % 160, r = sp * t, cy = Tg[1] - (shot.at === "you" ? 110 : 0); p.fillStyle = k % 3 ? `rgba(255,${150 + (k * 13) % 100},60,${1 - t})` : `rgba(255,255,220,${1 - t})`; p.fillRect(Tg[0] + Math.cos(a) * r, cy + Math.sin(a) * r + t * t * 60, 3, 3); }
+          p.fillStyle = `rgba(255,40,20,${0.28 * (1 - t)})`; p.fillRect(0, 0, W, H);
+        } else {
+          for (let k = 0; k < 9; k++) { const kt = t * 1.6 - k * 0.06; if (kt <= 0 || kt > 1) continue; const a = -Math.PI / 2 + Math.sin(k * 5.1) * 1.2; p.fillStyle = `rgba(255,${200 - k * 10},120,${1 - kt})`; p.fillRect(tip[0] + Math.cos(a) * 18 * kt, tip[1] + Math.sin(a) * 10 * kt + kt * kt * 40, 2, 2); }
+          if (t < 0.35 && Math.floor(now / 45) % 2) { p.fillStyle = "rgba(255,230,180,0.9)"; p.beginPath(); p.arc(tip[0], tip[1], 4, 0, Math.PI * 2); p.fill(); }
+          for (let k = 0; k < 7; k++) { const kt = t - k * 0.06; if (kt <= 0) continue; p.fillStyle = `rgba(150,150,150,${0.45 * (1 - kt)})`; p.beginPath(); p.arc(tip[0] + Math.sin(kt * 6 + k) * 10 * kt, tip[1] - kt * 70 - k * 4, 5 + kt * 14, 0, Math.PI * 2); p.fill(); }
+          if (t < 0.7) { p.save(); p.globalAlpha = 1 - t / 0.7; p.fillStyle = "#D8D0C0"; p.font = "italic bold 18px Georgia, serif"; p.textAlign = "center"; p.fillText("fzzt...", tip[0] + 40, tip[1] - 20 - t * 20); p.restore(); }
+        }
+      }
+      { const sh = shot && shot.live && T0 >= REL && T0 < REL + 350 ? (1 - (T0 - REL) / 350) * 7 : 0; cv.style.transform = sh ? `translate(${(Math.random() - 0.5) * sh}px, ${(Math.random() - 0.5) * sh}px)` : ""; }
+      if (shot && shot.live && now - shot.t0 > 800 && now - shot.t0 < 1800) { const t = (now - shot.t0 - 800) / 1000, y0 = shot.at === "dealer" ? 210 : 360; p.fillStyle = `rgba(120,120,120,${0.5 * (1 - t)})`; for (let s = 0; s < 4; s++) { p.beginPath(); p.arc(W / 2 + Math.sin(now / 200 + s) * 20, y0 - t * 60 - s * 8, 6 + s * 2, 0, Math.PI * 2); p.fill(); } }
+      if (T0 < 1900) { cv.style.cursor = "wait"; } else cv.style.cursor = ""; if (T0 >= 1900) { p.fillStyle = D.turn === "you" ? "#FFE070" : "#C8B8A0"; p.font = "bold 15px Georgia, serif"; p.textAlign = "center"; p.fillText(D.stage !== "play" ? (D.stage === "won" ? "The dealer's last candle goes out." : "Your last candle goes out.") : D.turn === "you" ? "Your turn" : "The dealer's turn", W / 2, 24 + 380 * 0 + 380); p.textAlign = "left"; }
       p.fillStyle = "#C8B8A0"; p.font = "12px Georgia, serif"; p.fillText(`Round ${D.round}`, 12, 20);
     },
   });
@@ -26630,6 +26843,185 @@ const PIT_FS = "precision mediump float; uniform sampler2D tex; uniform vec3 bul
       quad(scr, [-0.5, 0.82, -1.499], [0.5, 0.82, -1.499], [0.5, 1.45, -1.499], [-0.5, 1.45, -1.499], 1.95); gl.bindTexture(gl.TEXTURE_2D, this.pitScreenTex); gl.bindBuffer(gl.ARRAY_BUFFER, this.pitDyn); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(scr), gl.DYNAMIC_DRAW); draw(this.pitDyn, 6);
       const brd = []; quad(brd, [-1.599, 1.45, 0.3], [-1.599, 1.45, -0.4], [-1.599, 2.15, -0.4], [-1.599, 2.15, 0.3], 0.95); gl.bindTexture(gl.TEXTURE_2D, this.pitBoardTex); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(brd), gl.DYNAMIC_DRAW); draw(this.pitDyn, 6);
       if (this.pitFalling) { const k = Math.min(1, (now - this.pitFalling) / 1500); cv.style.filter = `brightness(${1 - k})`; } else cv.style.filter = "";
+    },
+  });
+}
+
+// ---- 76o-runestack.js ----
+"use strict";
+// Runestack, the window's side (the twenty-fifth big update): the well on a canvas, its stones cut and bevelled with a
+// rune on each, a ghost where the falling one will land, rows that flash white and burst into chips when cut, the well
+// shaking a little at a slam, a banner when the level rises (with its gold and its card); beside it the next three
+// stones, the score, the lines, and the ladder of what each level pays (the cards already won marked). Arrow keys or
+// W A S D move, Up / X turn (Z the other way), Space drops, P pauses. The rules are 64y-runestack.js.
+CM.CG_TABLES.push(["runestack", "Runestack"]);
+{ const floor0 = CM.UI.prototype.renderFloor, CELL = 28;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "runestack") return this.cgRunestack(box); return floor0.call(this, box); },
+    cgRunestack(box) {
+      const g = this.game, RS = CM.RS, S = g.rsState(), W = g.rsWell(), live = !!W, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), C = g.rsClaimed(), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(12, (W ? W.level : 1) + 4), rows = []; for (let n = 1; n <= top; n++) rows.push(`<div class="rung${W && W.level === n ? " now" : ""}${W && W.level > n ? " done" : ""}"><span>Level ${n}</span><b>${Math.round(bet * RS.pay(n))}</b><i class="${C[n] ? "got" : RS.cardKind(n)}" title="${C[n] ? "card already won" : `a ${RS.cardKind(n)} card, the first time`}">${C[n] ? "✓" : RS.cardKind(n) === "rare" ? "★" : RS.cardKind(n) === "better" ? "◆" : "♦"}</i></div>`);
+      box.innerHTML = `<div class="cgtable runestack dash"><h3>Runestack</h3><div class="rswrap"><canvas class="rscanvas" width="${RS.W * CELL}" height="${RS.H * CELL}" tabindex="0"></canvas>
+        <div class="rsmid"><div class="lbl">Next</div><canvas class="rsnext" width="96" height="230"></canvas><div class="rsinfo"><div>Score <b class="rssc">${W ? W.score : 0}</b></div><div>Lines <b class="rsln">${W ? W.lines : 0}</b></div><div>Level <b class="rslv">${W ? W.level : "-"}</b></div><div>Won <b class="rswon">${S && (live || last) ? S.won : 0}</b> gold</div><div class="small">Best score ${g.cgStore().rsBest || 0}</div></div></div>
+        <div class="dashside"><p class="lore">A tall glass case of black water by the wall, and rune-stones that sink through it of their own accord. "Fill a row and the water takes it," says the attendant. "Ten rows, and they come faster."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-rspause>${this.rsPaused ? "Go on" : "Pause"}</button><button data-rsquit>Stop here</button>` : `<button class="primary" data-rsstart>Drop the first stone (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Arrows or W A S D to move, Up or X to turn (Z the other way), Down to sink faster, Space to drop, P to pause. Each level cleared pays gold, every play; each level's card comes once, the first time it is cleared: ♦ common (1-4), ◆ a stronger one (5-9), ★ rare (10 on).</div>${this.cgStats("runestack")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-rsstart]")) q("[data-rsstart]").addEventListener("click", () => { const r = g.rsStart(bet); this.cgNote = r.error || ""; this.rsFx = { rows: null, parts: [], banner: null, shake: 0 }; this.rsPaused = false; this.cgSfx(r.error ? "miss" : "chain", 0.45); this.renderCasino(); const cv = this.$("#casino-body .rscanvas"); if (cv) cv.focus(); });
+      if (q("[data-rspause]")) q("[data-rspause]").addEventListener("click", () => { this.rsPaused = !this.rsPaused; this.renderCasino(); });
+      if (q("[data-rsquit]")) q("[data-rsquit]").addEventListener("click", () => { const out = g.rsQuit(); this.rsAfter(out || []); });
+      this.rsCanvas = q(".rscanvas"); this.rsNextC = q(".rsnext");
+      if (!this.rsKeys) { this.rsKeys = (e) => { if (this.cgView !== "runestack" || !this.dialogOpen()) return; const Wl = this.game.rsWell(); if (!Wl) return; const k = e.code;
+        const act = { ArrowLeft: () => Wl.move(-1), KeyA: () => Wl.move(-1), ArrowRight: () => Wl.move(1), KeyD: () => Wl.move(1), ArrowDown: () => Wl.soft(), KeyS: () => Wl.soft(), ArrowUp: () => Wl.rotate(1), KeyW: () => Wl.rotate(1), KeyX: () => Wl.rotate(1), KeyZ: () => Wl.rotate(-1), Space: () => Wl.hard(), KeyP: () => { this.rsPaused = !this.rsPaused; this.renderCasino(); } }[k];
+        if (!act) return; e.preventDefault(); e.stopPropagation(); if (this.rsPaused && k !== "KeyP") return; act(); };
+        window.addEventListener("keydown", this.rsKeys, true); }
+      if (!this.rsLoop) { let prev = performance.now(); const loop = (now) => { if (!this.rsCanvas || !this.rsCanvas.isConnected || this.cgView !== "runestack") { this.rsLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.rsFrame(dt, now); this.rsLoop = requestAnimationFrame(loop); }; this.rsLoop = requestAnimationFrame(loop); }
+    },
+    // the rules' news, shown and heard
+    rsAfter(out) {
+      const RS = CM.RS; for (const o of out) {
+        if (o.over) { const S = this.game.rsState(), L = S.last; this.cgNote = `The well is full. ${L.lines} lines, level ${L.level}: ${S.won} gold back${L.cards.length ? `, and ${L.cards.length} card${L.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.rsPaused = false; this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), Math.min(30, 6 + L.level * 2)); return; }
+        (this.rsFx = this.rsFx || { parts: [] }).banner = { at: performance.now(), level: o.level + 1, pay: o.pay, card: o.card, kind: o.kind };
+        this.cgSfx("victory", 0.5); this.cgSfx("coin", 0.5); if (o.card) setTimeout(() => this.cgSfx("cardwin", 0.55), 300);
+        this.cgNote = `Level ${o.level} cleared: ${o.pay} gold${o.card ? `, and a ${o.kind === "better" ? "stronger " : o.kind === "rare" ? "rare " : ""}card - ${o.card}` : ""}.`; const n = this.$("#casino-body .cgnote"); if (n) n.textContent = this.cgNote;
+        const rs = this.$("#casino-body .rsladder"); if (rs) { const W = this.game.rsWell(); this.renderCasino(); void W; }
+        void RS;
+      }
+    },
+    rsFrame(dt, now) {
+      const g = this.game, RS = CM.RS, W = g.rsWell(), cv = this.rsCanvas, p = cv.getContext("2d"), fx = this.rsFx = this.rsFx || { parts: [] };
+      if (W && !this.rsPaused) { W.update(dt); for (const e of W.events.splice(0)) this.rsEvent(e, W, now); const out = g.rsCheck(); if (out.length) this.rsAfter(out); }
+      // the well: black water, faint grid
+      const bg = p.createLinearGradient(0, 0, 0, RS.H * CELL); bg.addColorStop(0, "#0C1418"); bg.addColorStop(1, "#04080A"); p.fillStyle = bg; p.fillRect(0, 0, cv.width, cv.height);
+      p.strokeStyle = "rgba(90,140,160,0.08)"; for (let x = 1; x < RS.W; x++) { p.beginPath(); p.moveTo(x * CELL + 0.5, 0); p.lineTo(x * CELL + 0.5, RS.H * CELL); p.stroke(); } for (let y = 1; y < RS.H; y++) { p.beginPath(); p.moveTo(0, y * CELL + 0.5); p.lineTo(RS.W * CELL, y * CELL + 0.5); p.stroke(); }
+      if (!W) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; const S = g.rsState(); p.fillText(S && S.stage === "done" ? "The well is full" : "Runestack", cv.width / 2, cv.height / 2); p.textAlign = "left"; this.rsDrawNext(null); return; }
+      const sh = fx.shake > 0 ? (fx.shake -= dt, fx.shake * 18) : 0; p.save(); p.translate(0, sh > 0 ? Math.sin(now / 20) * sh : 0);
+      for (let y = 0; y < RS.H; y++) for (let x = 0; x < RS.W; x++) { const k = W.grid[y][x]; if (k) this.rsStone(p, x, y, k, 1, W.clearing && W.clearing.rows.includes(y) ? 1 - W.clearing.t / RS.clearTime : 0); }
+      if (W.clearing) for (const y of W.clearing.rows) { const t = 1 - W.clearing.t / RS.clearTime; p.fillStyle = `rgba(255,250,230,${0.85 * Math.sin(t * Math.PI)})`; p.fillRect(0, y * CELL, RS.W * CELL, CELL); }
+      if (!W.clearing && W.stage === "play") { const c = W.cur, gy = W.ghost(); for (const [x, y] of W.cells(c.k, c.rot)) if (gy + y >= 0) { p.strokeStyle = CM.RS.COLOUR[c.k]; p.globalAlpha = 0.45; p.lineWidth = 2; p.strokeRect((c.x + x) * CELL + 2.5, (gy + y) * CELL + 2.5, CELL - 5, CELL - 5); p.globalAlpha = 1; }
+        const land = W.grounded() ? Math.min(1, W.lockT / RS.lockDelay) : 0; for (const [x, y] of W.cells(c.k, c.rot)) if (c.y + y >= 0) this.rsStone(p, c.x + x, c.y + y, c.k, 1, 0, land); }
+      fx.parts = fx.parts.filter((q) => (q.life -= dt) > 0); for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 500 * dt; p.globalAlpha = Math.min(1, q.life * 2); p.fillStyle = q.c; p.fillRect(q.x, q.y, 3, 3); } p.globalAlpha = 1;
+      p.restore();
+      if (fx.banner && now - fx.banner.at < 2600) { const t = (now - fx.banner.at) / 2600, B = fx.banner, a = t < 0.15 ? t / 0.15 : t > 0.8 ? (1 - t) / 0.2 : 1; p.save(); p.globalAlpha = a; p.fillStyle = "rgba(0,0,0,0.65)"; p.fillRect(0, 210, cv.width, 120); p.fillStyle = "#FFE070"; p.font = "bold 30px Georgia, serif"; p.textAlign = "center"; p.fillText(`Level ${B.level}!`, cv.width / 2, 252); p.font = "15px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(`+${B.pay} gold`, cv.width / 2, 280); if (B.card) { p.fillStyle = B.kind === "rare" ? "#F0A0FF" : B.kind === "better" ? "#A0E0FF" : "#E8D8B0"; p.fillText(`${CM.CARDS[B.card] ? CM.CARDS[B.card][0] : ""} ${B.card}`, cv.width / 2, 306); } p.restore(); }
+      if (this.rsPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+      const side = cv.closest(".rswrap"); if (side) { const s2 = (c, v) => { const e = side.querySelector(c); if (e && e.textContent !== String(v)) e.textContent = v; }; s2(".rssc", W.score); s2(".rsln", W.lines); s2(".rslv", W.level); s2(".rswon", g.rsState().won); }
+      this.rsDrawNext(W);
+    },
+    rsEvent(e, W, now) {
+      const fx = this.rsFx, RS = CM.RS;
+      if (e.kind === "move") this.cgSfx("step", 0.12, 1.9); else if (e.kind === "turn") this.cgSfx("card", 0.2, 1.6); else if (e.kind === "lock") this.cgSfx("cardplace", 0.3, 0.8);
+      else if (e.kind === "slam") { this.cgSfx("bump", 0.4, 0.9); fx.shake = 0.12; }
+      else if (e.kind === "clear") { const n = e.rows.length; this.cgSfx(n >= 4 ? "victory" : "shatter", 0.45 + n * 0.05, 0.9 + n * 0.1); if (n >= 4) fx.shake = 0.3;
+        for (const y of e.rows) for (let x = 0; x < RS.W; x++) { const k = W.grid[y][x]; for (let s = 0; s < 3; s++) fx.parts.push({ x: x * CELL + 14, y: y * CELL + 14, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 260, life: 0.7 + Math.random() * 0.4, c: s ? RS.COLOUR[k] || "#FFF" : "#FFF6D0" }); } }
+      else if (e.kind === "over") this.cgSfx("fall", 0.5);
+      void now;
+    },
+    // a stone: cut face, a bevel, a rune; brighter as it sets, whiter as its row is cut
+    rsStone(p, x, y, k, a, white = 0, setting = 0) {
+      const col = CM.RS.COLOUR[k], X = x * CELL, Y = y * CELL;
+      p.fillStyle = col; p.fillRect(X + 1, Y + 1, CELL - 2, CELL - 2);
+      p.fillStyle = "rgba(255,255,255,0.35)"; p.fillRect(X + 1, Y + 1, CELL - 2, 4); p.fillRect(X + 1, Y + 1, 4, CELL - 2); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(X + 1, Y + CELL - 5, CELL - 2, 4); p.fillRect(X + CELL - 5, Y + 1, 4, CELL - 2);
+      p.strokeStyle = "rgba(0,0,0,0.45)"; p.lineWidth = 1.6; p.beginPath(); const rune = "IOTSZJL".indexOf(k); const m = X + CELL / 2, n = Y + CELL / 2;
+      if (rune % 3 === 0) { p.moveTo(m, n - 6); p.lineTo(m, n + 6); p.moveTo(m, n - 6); p.lineTo(m + 5, n - 2); } else if (rune % 3 === 1) { p.moveTo(m - 5, n - 5); p.lineTo(m + 5, n + 5); p.moveTo(m + 5, n - 5); p.lineTo(m - 5, n + 5); } else { p.moveTo(m - 5, n + 5); p.lineTo(m, n - 6); p.lineTo(m + 5, n + 5); }
+      p.stroke();
+      if (setting) { p.fillStyle = `rgba(255,255,255,${0.25 * setting})`; p.fillRect(X + 1, Y + 1, CELL - 2, CELL - 2); }
+      if (white) { p.fillStyle = `rgba(255,255,240,${white})`; p.fillRect(X + 1, Y + 1, CELL - 2, CELL - 2); }
+      void a;
+    },
+    rsDrawNext(W) {
+      const cv = this.rsNextC; if (!cv) return; const p = cv.getContext("2d"); p.fillStyle = "#0C1418"; p.fillRect(0, 0, cv.width, cv.height); if (!W) return;
+      W.next.forEach((k, i) => { const cells = W.cells(k, 0), s = i ? 16 : 22, minx = Math.min(...cells.map((c) => c[0])), maxx = Math.max(...cells.map((c) => c[0])), miny = Math.min(...cells.map((c) => c[1])), maxy = Math.max(...cells.map((c) => c[1])), ox = 48 - ((maxx - minx + 1) * s) / 2 - minx * s, oy = (i ? 90 + (i - 1) * 70 : 18) + 26 - ((maxy - miny + 1) * s) / 2 - miny * s;
+        for (const [x, y] of cells) { p.fillStyle = CM.RS.COLOUR[k]; p.fillRect(ox + x * s + 1, oy + y * s + 1, s - 2, s - 2); p.fillStyle = "rgba(255,255,255,0.3)"; p.fillRect(ox + x * s + 1, oy + y * s + 1, s - 2, 3); } });
+    },
+  });
+}
+
+// ---- 76p-cascade.js ----
+"use strict";
+// The Gilded Cascade, the window's side (the twenty-fifth big update): the machine on a canvas, in perspective - a
+// marquee of chasing lamps, the brass pusher sliding across the back, the shelf of coins (each a gold disc with its
+// rim and shine, a nugget a lump, a card token a little glowing card, an item token a sealed purple box), glass sides,
+// dark gutters, and the tray below where what falls over the edge tumbles in and rings. Click over the shelf to drop a
+// coin there (the chute follows the mouse), or hold the button to keep dropping. The rules are 64z-cascade.js.
+CM.CG_TABLES.push(["cascade", "The Gilded Cascade"]);
+{ const floor0 = CM.UI.prototype.renderFloor, VW = 560, VH = 600, TOP = 96;
+  const proj = (x, y) => { const CS = CM.CS, s = 0.72 + 0.28 * (y / CS.D), w = 1.45 * s; return [VW / 2 + (x - CS.W / 2) * w, TOP + y * 1.18, w]; };
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "cascade") return this.cgCascade(box); return floor0.call(this, box); },
+    cgCascade(box) {
+      const g = this.game, CS = CM.CS, S = g.csStore(), cup = {}; for (const v of S.coins) cup[v] = (cup[v] || 0) + 1;
+      const vals = Object.keys(cup).map(Number).sort((a, b) => a - b); if (!vals.includes(this.csVal)) this.csVal = vals[vals.length - 1];
+      box.innerHTML = `<div class="cgtable cascade"><h3>The Gilded Cascade</h3><div class="cswrap"><canvas class="cscanvas" width="${VW}" height="${VH}"></canvas><div class="cside">
+        <p class="lore">A tall cabinet of glass and brass, its lamps chasing round the top. Behind the glass a shelf heaped with coins, and a pusher that never stops. "Drop them in," says the attendant. "What goes over the edge is yours."</p>
+        <div class="list-title">Buy a cup of twenty coins</div><div class="row">${CS.CUPS.map(([n, v], i) => `<button data-cscup="${i}" ${n * v > g.gold ? "disabled" : ""}>${n} at ${v} gold <small>(${n * v})</small></button>`).join("")}</div>
+        <div class="list-title">In your cup</div><div class="cscup">${vals.length ? vals.map((v) => `<button data-csv="${v}" class="${this.csVal === v ? "primary" : ""}"><b>${cup[v]}</b> × ${v}g</button>`).join("") : "<small>Empty - buy a cup.</small>"}</div>
+        <div class="cgnote">${this.cgNote || ""}</div><div class="cswins">${(this.csWins || []).slice(-3).map((w) => w.card ? this.cgCardWon(w.card) : w.item ? `<div class="cgprize"><span class="em">📦</span><div><b>${this.esc(w.item.name)}</b><small>Into the bag</small></div></div>` : "").join("")}</div>
+        <div class="row">${vals.length ? `<button data-cscash>Cash in the cup</button>` : ""}<button data-leave>Leave</button></div>
+        <div class="small">Click over the shelf to drop a coin where you choose; hold to keep dropping. Coins pushed over the front edge are paid at their worth; those that slip into the side gutters are the house's. Now and then a prize comes down with a coin - a nugget worth ten, a card token or a sealed item - push it over the edge to win it. The shelf is kept as you leave it. About nine in ten of what goes in comes back over the edge, more with the prizes and a good eye for where to drop.</div>${this.cgStats("cascade")}</div></div></div>`;
+      const q = (s2) => box.querySelector(s2); q("[data-leave]").addEventListener("click", () => { g.csKeep(); this.closeDialogs(); });
+      box.querySelectorAll("[data-cscup]").forEach((b) => b.addEventListener("click", () => { const r = g.csBuy(Number(b.dataset.cscup)); this.cgNote = r.error || `Twenty ${r.v}-gold coins clatter into your cup.`; if (!r.error) { this.csVal = r.v; this.cgSfx("coin", 0.6); setTimeout(() => this.cgSfx("coin", 0.4, 1.2), 90); } this.renderCasino(); }));
+      box.querySelectorAll("[data-csv]").forEach((b) => b.addEventListener("click", () => { this.csVal = Number(b.dataset.csv); this.renderCasino(); }));
+      if (q("[data-cscash]")) q("[data-cscash]").addEventListener("click", () => { const v = g.csCashCup(); this.cgNote = `The cup is cashed in: ${v} gold.`; this.cgSfx("coin", 0.5); this.renderCasino(); });
+      const cv = q(".cscanvas"); this.csCanvas = cv; this.csFx = this.csFx || { falls: [], drops: [] };
+      const toBed = (e) => { const r = cv.getBoundingClientRect(), sx = ((e.clientX - r.left) * VW) / r.width, [, , w] = proj(0, CS.faceMax); return CS.W / 2 + (sx - VW / 2) / w; };
+      cv.addEventListener("mousemove", (e) => { this.csAim = toBed(e); });
+      cv.addEventListener("mousedown", (e) => { this.csAim = toBed(e); this.csHold = true; this.csHoldT = 0; this.csDropOne(); });
+      cv.addEventListener("mouseup", () => { this.csHold = false; }); cv.addEventListener("mouseleave", () => { this.csHold = false; this.csAim = null; });
+      if (!this.csLoop) { let prev = performance.now(), keepT = 0; const loop = (now) => { if (!this.csCanvas || !this.csCanvas.isConnected || this.cgView !== "cascade") { this.csLoop = null; this.game.csKeep(); return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.csFrame(dt, now); if ((keepT += dt) > 5) { keepT = 0; this.game.csKeep(); } this.csLoop = requestAnimationFrame(loop); }; this.csLoop = requestAnimationFrame(loop); }
+    },
+    csDropOne() {
+      const g = this.game, S = g.csStore(); if (!S.coins.length) { this.cgNote = "Your cup is empty: buy a cup of coins."; const n = this.$("#casino-body .cgnote"); if (n) n.textContent = this.cgNote; this.cgSfx("miss", 0.3); this.csHold = false; return; }
+      const v = S.coins.includes(this.csVal) ? this.csVal : S.coins[S.coins.length - 1], x = this.csAim === null || this.csAim === undefined ? CM.CS.W / 2 : this.csAim, d = g.csDrop(x, v); if (!d) return;
+      this.csFx.drops.push({ id: d.id, at: performance.now() }); this.cgSfx("card", 0.25, 1.8 + Math.random() * 0.3); setTimeout(() => this.cgSfx("coin", 0.25, 0.8 + Math.random() * 0.3), 220);
+      const left = S.coins.filter((c) => c === v).length; const b = this.$(`#casino-body [data-csv="${v}"] b`); if (b) b.textContent = left; if (!left) setTimeout(() => this.renderCasino(), 300);
+    },
+    csFrame(dt, now) {
+      const g = this.game, CS = CM.CS, B = g.csBed(), cv = this.csCanvas, p = cv.getContext("2d"), fx = this.csFx;
+      if (this.csHold) { this.csHoldT += dt; if (this.csHoldT > 0.28) { this.csHoldT = 0; this.csDropOne(); } }
+      const off = B.update(dt); B.events.length = 0;
+      if (off.length) { const won = g.csCollect(off); for (const o of off) fx.falls.push({ d: o.d, where: o.where, at: now, x: o.d.x, y: o.d.y });
+        if (won.gold) { this.cgSfx("coin", 0.5, 0.9 + Math.random() * 0.4); const n = this.$("#casino-body .cggold"); if (n) n.textContent = `${g.gold} gold`; }
+        if (off.some((o) => o.where === "gutter")) this.cgSfx("step", 0.2, 0.6);
+        if (won.got.length) { this.csWins = (this.csWins || []).concat(won.got); this.cgSfx("victory", 0.55); this.cgSfx("cardwin", 0.5); this.cgNote = won.got.map((w) => w.card ? `A card token over the edge: ${w.card}!` : `A sealed box over the edge: ${w.item.name}!`).join(" "); setTimeout(() => this.renderCasino(), 60); }
+        if (off.some((o) => o.where === "front" && o.d.k === "nugget")) this.cgSfx("victory", 0.45); }
+      // the cabinet
+      p.fillStyle = "#1A0E0A"; p.fillRect(0, 0, VW, VH); const back = p.createLinearGradient(0, TOP, 0, TOP + CS.D * 1.18); back.addColorStop(0, "#2A1A2E"); back.addColorStop(1, "#4A2E1A"); p.fillStyle = back;
+      const [lx0, ly0] = proj(0, 0), [rx0] = proj(CS.W, 0), [lx1, ly1] = proj(0, CS.D), [rx1] = proj(CS.W, CS.D); p.beginPath(); p.moveTo(lx0, ly0); p.lineTo(rx0, ly0); p.lineTo(rx1, ly1); p.lineTo(lx1, ly1); p.closePath(); p.fill();
+      p.strokeStyle = "rgba(200,160,64,0.25)"; for (let y = 40; y < CS.D; y += 40) { const [a, b] = proj(0, y), [c2] = proj(CS.W, y); p.beginPath(); p.moveTo(a, b); p.lineTo(c2, b); p.stroke(); }
+      // gutters
+      const [gl0, gy0] = proj(0, CS.gutterFrom), [gr0] = proj(CS.W, CS.gutterFrom); p.fillStyle = "#050303"; p.beginPath(); p.moveTo(gl0 - 26, gy0); p.lineTo(gl0, gy0); p.lineTo(lx1, ly1); p.lineTo(lx1 - 30, ly1); p.fill(); p.beginPath(); p.moveTo(gr0, gy0); p.lineTo(gr0 + 26, gy0); p.lineTo(rx1 + 30, ly1); p.lineTo(rx1, ly1); p.fill();
+      // the tray
+      p.fillStyle = "#3A2410"; p.fillRect(lx1 - 20, ly1 + 8, rx1 - lx1 + 40, VH - ly1 - 14); p.fillStyle = "#C8A040"; p.fillRect(lx1 - 20, ly1 + 4, rx1 - lx1 + 40, 6); p.fillStyle = "#E8D090"; p.font = "bold 13px Georgia, serif"; p.textAlign = "center"; p.fillText(`Won here: ${g.csStore().won} gold`, VW / 2, VH - 16); p.textAlign = "left";
+      // the pusher
+      const f = B.face(), [pl, py] = proj(0, f), [pr] = proj(CS.W, f), [bl, by] = proj(0, 0), [br] = proj(CS.W, 0);
+      const brass = p.createLinearGradient(0, by, 0, py); brass.addColorStop(0, "#5A4018"); brass.addColorStop(1, "#C8A040"); p.fillStyle = brass; p.beginPath(); p.moveTo(bl, by); p.lineTo(br, by); p.lineTo(pr, py); p.lineTo(pl, py); p.closePath(); p.fill();
+      p.fillStyle = "#8A6420"; p.fillRect(pl, py - 2, pr - pl, 10); p.strokeStyle = "rgba(255,240,180,0.6)"; p.beginPath(); p.moveTo(pl, py - 2); p.lineTo(pr, py - 2); p.stroke();
+      // the discs, back to front; a dropped one falls into its place
+      const L = B.discs.slice().sort((a, b) => a.y - b.y);
+      for (const d of L) { const dr = fx.drops.find((q) => q.id === d.id), k = dr ? Math.min(1, (now - dr.at) / 260) : 1, [sx, sy, w] = proj(d.x, d.y); this.csDisc(p, d, sx, sy - (1 - k) * 90, w, now); }
+      fx.drops = fx.drops.filter((q) => now - q.at < 300);
+      // over the edge: tumbling into the tray, or away down a gutter
+      fx.falls = fx.falls.filter((o) => now - o.at < 600); for (const o of fx.falls) { const t = (now - o.at) / 600, [sx, sy, w] = proj(Math.max(-20, Math.min(CS.W + 20, o.x)), Math.min(CS.D, o.y)); p.globalAlpha = 1 - t; this.csDisc(p, o.d, sx + (o.where === "gutter" ? (o.x < 0 ? -1 : 1) * 30 * t : 0), sy + t * t * 80, w * (1 - 0.3 * t), now); p.globalAlpha = 1; }
+      // glass and frame
+      p.fillStyle = "rgba(180,220,255,0.05)"; p.fillRect(lx1 - 40, TOP - 10, rx1 - lx1 + 80, ly1 - TOP + 10); p.strokeStyle = "#C8A040"; p.lineWidth = 6; p.beginPath(); p.moveTo(lx0 - 8, ly0 - 10); p.lineTo(lx1 - 34, ly1); p.moveTo(rx0 + 8, ly0 - 10); p.lineTo(rx1 + 34, ly1); p.stroke(); p.lineWidth = 1;
+      // the marquee and its chasing lamps
+      p.fillStyle = "#4A0E14"; p.fillRect(20, 10, VW - 40, 64); p.strokeStyle = "#E0B040"; p.lineWidth = 3; p.strokeRect(20, 10, VW - 40, 64); p.lineWidth = 1; p.fillStyle = "#FFE080"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("THE GILDED CASCADE", VW / 2, 52); p.textAlign = "left";
+      for (let k = 0; k < 28; k++) { const on = (Math.floor(now / 110) + k) % 4 === 0; p.fillStyle = on ? "#FFF0A0" : "#7A5A20"; const x = 26 + k * ((VW - 52) / 27); p.beginPath(); p.arc(x, 16, 3.5, 0, Math.PI * 2); p.arc(x, 68, 3.5, 0, Math.PI * 2); p.fill(); }
+      // the chute, over where the mouse is
+      if (this.csAim !== null && this.csAim !== undefined) { const ax = Math.max(CS.R, Math.min(CS.W - CS.R, this.csAim)), [cx2] = proj(ax, f); p.fillStyle = "rgba(255,230,140,0.25)"; p.fillRect(cx2 - 2, TOP - 14, 4, py - TOP + 10); p.fillStyle = "#C8A040"; p.fillRect(cx2 - 14, TOP - 20, 28, 10); }
+    },
+    csDisc(p, d, x, y, w, now) {
+      const r = CM.CS.R * w, ry = r * 0.55;
+      p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(x + 2, y + 3, r, ry, 0, 0, Math.PI * 2); p.fill();
+      if (d.k === "card") { p.save(); p.shadowColor = "#A0E0FF"; p.shadowBlur = 10 + 4 * Math.sin(now / 200); p.fillStyle = "#F4ECD8"; p.fillRect(x - r * 0.7, y - r * 1.1, r * 1.4, r * 1.6); p.restore(); p.strokeStyle = "#6A4A20"; p.strokeRect(x - r * 0.7, y - r * 1.1, r * 1.4, r * 1.6); p.font = `${Math.round(r)}px serif`; p.textAlign = "center"; p.fillText("🂠", x, y + r * 0.2); p.textAlign = "left"; return; }
+      if (d.k === "item") { p.save(); p.shadowColor = "#D080FF"; p.shadowBlur = 10 + 4 * Math.sin(now / 230); p.fillStyle = "#6A2A9A"; p.fillRect(x - r * 0.9, y - r * 1.0, r * 1.8, r * 1.4); p.restore(); p.fillStyle = "#E0B040"; p.fillRect(x - 2, y - r * 1.0, 4, r * 1.4); p.fillRect(x - r * 0.9, y - r * 0.4, r * 1.8, 3); return; }
+      const nug = d.k === "nugget", gr = p.createLinearGradient(x - r, y - ry, x + r, y + ry); gr.addColorStop(0, nug ? "#FFF0A0" : "#FFE890"); gr.addColorStop(0.5, nug ? "#E0A020" : "#D8A830"); gr.addColorStop(1, "#7A5410");
+      p.fillStyle = "#6A4A10"; p.beginPath(); p.ellipse(x, y + 2, r, ry, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = gr; p.beginPath();
+      if (nug) { for (let k = 0; k < 9; k++) { const a = (k / 9) * Math.PI * 2, rr = 1.15 + 0.15 * Math.sin(k * 3.3); p.lineTo(x + Math.cos(a) * r * rr, y + Math.sin(a) * ry * rr * 1.2); } p.closePath(); } else p.ellipse(x, y, r, ry, 0, 0, Math.PI * 2);
+      p.fill(); if (!nug) { p.strokeStyle = "rgba(120,80,10,0.8)"; p.beginPath(); p.ellipse(x, y, r * 0.7, ry * 0.7, 0, 0, Math.PI * 2); p.stroke(); if (d.v >= 25) { p.fillStyle = "rgba(160,40,40,0.75)"; p.beginPath(); p.ellipse(x, y, r * 0.35, ry * 0.35, 0, 0, Math.PI * 2); p.fill(); } else if (d.v >= 5) { p.fillStyle = "rgba(220,230,240,0.7)"; p.beginPath(); p.ellipse(x, y, r * 0.35, ry * 0.35, 0, 0, Math.PI * 2); p.fill(); } }
+      p.fillStyle = "rgba(255,255,255,0.55)"; p.beginPath(); p.ellipse(x - r * 0.35, y - ry * 0.35, r * 0.25, ry * 0.18, -0.3, 0, Math.PI * 2); p.fill();
     },
   });
 }
