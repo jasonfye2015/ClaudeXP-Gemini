@@ -117,7 +117,10 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("cabin", () => ui.openCabin());
   game.on("claudeita", () => ui.openClaudeita());
   game.on("fortress", () => ui.openFortress());
-  game.on("claudeablo", () => ui.openClaudeablo());                    // (the red portal: 76f-claudeablo.js)
+  game.on("claudeablo", () => ui.openClaudeablo());
+  game.on("pipe", () => ui.openBrosPipe());                             // (Super Claude Bros: 76g-claudebros.js)
+  game.on("bros", (run) => { brosIn = {}; ui.brosStart(run); ui.refresh(); });
+  game.on("brosLevel", (run) => { ui.brosStart(run); try { CM.audio.play("victory", 0.4); } catch (er) { /* */ } });                    // (the red portal: 76f-claudeablo.js)
   game.on("ablo", () => { ui.abloStart(); ui.refresh(); });                         // (the Fortress: 76d-fortress.js)
   game.on("fortfloor", () => { fortIn = {}; ui.fortBg = null; ui.refresh(); });                      // (Claudeita's cave: 76c-cave.js)
   game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
@@ -458,6 +461,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
+      else if (thing.type === "pipe") out.push({ x, y, layer: "solid:pipe", w: 0.95, h: 1.05 });   // (the pipe in the Square: 61j-pipe.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
       else if (thing.type === "magedoor" || thing.type === "claudeita" || thing.type === "fortress") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
@@ -586,6 +590,10 @@ window.addEventListener("DOMContentLoaded", () => {
       const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
+    if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros
+      const f = BROS_KEYS[e.code]; if (f) { e.preventDefault(); brosIn[f] = true; return; }
       if (e.code !== "Escape") return;
     }
     if (game.mode === "ablo" && game.abloWorld && !ui.dialogOpen()) {   // Claudeablo (76f-claudeablo.js has its keys)
@@ -740,7 +748,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; const b2 = BROS_KEYS[e.code]; if (b2) brosIn[b2] = false; });
+  view.addEventListener("mousedown", (e) => { if (game.mode === "bros" && e.target.closest("#broscanvas")) { e.preventDefault(); brosIn.attack = true; } });
+  window.addEventListener("mouseup", () => { if (game.mode === "bros") brosIn.attack = false; });
   // ---- Claudeablo's mouse: on its canvas, every click is the game's ----
   view.addEventListener("mousedown", (e) => { if (game.mode !== "ablo" || !e.target.closest("#ablocanvas")) return; e.preventDefault(); ui.abMouseDown(e, caveXY2(e, "#ablocanvas")); });
   window.addEventListener("mouseup", (e) => { if (e.button === 0) ui.abLeft = false; });
@@ -775,6 +785,27 @@ window.addEventListener("DOMContentLoaded", () => {
   let caveIn = {}, caveFire = false, caveAcc = 0, caveSfx = {};
   const FORT_KEYS = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "attack", KeyJ: "attack", KeyF: "attack" };
   let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0, abloT = 0;
+  const BROS_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", KeyW: "jump", ArrowUp: "jump", ShiftLeft: "run", ShiftRight: "run", KeyJ: "attack", KeyF: "attack", KeyK: "attack" };
+  let brosIn = {}, brosT = 0;
+  // a frame down the pipe: the run steps, its events are sounds; a banner reached goes on to the next level after a
+  // moment, a fall comes back up the pipe after one
+  function brosFrame(now, dt) {
+    const run = game.brosRun; if (!run) return;
+    if (!ui.dialogOpen() && ui.screen === "play" && now - (ui.brCardAt || 0) > 1200) run.update(dt, brosIn);
+    const sfx = (name, vol, gap = 0.05, rate = 1) => { if (now - (caveSfx[name] || 0) < gap * 1000) return; caveSfx[name] = now; try { CM.audio.play(name, vol, 0, rate); } catch (er) { /* quiet */ } };
+    for (const ev of run.events) {
+      if (ev.kind === "jump") sfx("zap", 0.18, 0.08, 0.6); else if (ev.kind === "coin" || ev.kind === "crate") sfx("coin", 0.3, 0.04, 1.3); else if (ev.kind === "stomp") sfx("cardhit", 0.45, 0.08);
+      else if (ev.kind === "swing") sfx("miss", 0.25, 0.1); else if (ev.kind === "shoot") sfx(ev.shot === "bolt" ? "spell" : "miss", 0.25, 0.1, 1.3); else if (ev.kind === "hit") sfx("hit", 0.35, 0.06);
+      else if (ev.kind === "kill") sfx(ev.boss ? "toll" : "card", ev.boss ? 0.8 : 0.4, 0.06); else if (ev.kind === "hurt") { sfx("hurt", 0.4, 0.2); ui.tint("rgba(200,30,20,0.25)", 150); }
+      else if (ev.kind === "bump") sfx("bump", 0.3, 0.1); else if (ev.kind === "draught") sfx("heal", 0.45, 0.2); else if (ev.kind === "pole") sfx("cardwin", 0.7, 1); else if (ev.kind === "dead") sfx("death", 0.6, 1);
+      else if (ev.kind === "charge" || ev.kind === "leap") sfx("elite", 0.4, 0.5); else if (ev.kind === "foeshot") sfx("miss", 0.15, 0.1); else if (ev.kind === "bossdown") sfx("victory", 0.7, 1);
+    }
+    run.events.length = 0;
+    if ((run.cleared || run.over) && !run.endAt) run.endAt = now + (run.over ? 2400 : 2000);
+    if (run.endAt && now >= run.endAt) { brosIn = {}; if (run.over) game.leaveBros("dead"); else game.brosNext(); ui.refresh(); return; }
+    ui.drawBros(run, now);
+    if ((brosT += dt) > 0.5) { brosT = 0; ui.refresh(); }
+  }
   // a frame in Claudeablo: the world runs (not while a dialog is up), the held button keeps walking, its events become
   // sounds; a townsperson spoken to opens their counter; Haven's red portal brings the hero home
   function abloFrame(now, dt) {
@@ -913,6 +944,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (game.mode === "cave") caveFrame(now, dt);
       else if (game.mode === "fortress") fortFrame(now, dt);
       else if (game.mode === "ablo") abloFrame(now, dt);
+      else if (game.mode === "bros") brosFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

@@ -8,7 +8,8 @@ Object.assign(CM.UI.prototype, {
     document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
     document.body.classList.toggle("incave", g.mode === "cave");
     document.body.classList.toggle("infort", g.mode === "fortress");
-    document.body.classList.toggle("inablo", g.mode === "ablo");      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
+    document.body.classList.toggle("inablo", g.mode === "ablo");
+    document.body.classList.toggle("inbros", g.mode === "bros");      // (Super Claude Bros: its canvas over the view, 76g-claudebros.js)      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -30,6 +31,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.brosRun) this.$("#side .where").textContent = `Down the pipe - World ${g.brosRun.L.id}, ${g.brosRun.L.name}`;
     if (g.abloWorld) this.$("#side .where").textContent = g.abloWorld.depth ? `Haven's cathedral - ${CM.AB.THEME_NAMES[g.abloWorld.level.theme]}, level ${g.abloWorld.depth}` : "Haven, through the red portal";
     if (g.fortRun) this.$("#side .where").textContent = CM.fortFloorName(g.fortRun.n);
     if (g.caveRun) { const pl = g.caveRun.player; this.$("#side .where").textContent = `Claudeita's cave - ${pl.y > CM.CV.SURFACE ? CM.CV_BIOMES[CM.cvBiomeAt(Math.floor(pl.y))].name : "the mouth"}, ${g.caveRun.depth()} m`; }
@@ -122,6 +124,11 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "bros") {                                             // Super Claude Bros: out, with the coins and the experience
+      if (box.dataset.mode === "bros") return; box.dataset.mode = "bros"; box.innerHTML = "";
+      const b = document.createElement("button"); b.textContent = "Climb back up the pipe (keep the coins and experience)"; b.addEventListener("click", () => { if (g.brosRun && !g.brosRun.over) g.leaveBros("left"); this.refresh(); }); box.appendChild(b);
       return;
     }
     if (g.mode === "ablo") {                                             // Claudeablo: the way home is Haven's red portal
