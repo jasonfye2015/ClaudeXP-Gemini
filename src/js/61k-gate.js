@@ -131,10 +131,11 @@ Object.assign(CM.Game.prototype, {
     const cr = this.craft; if (!cr || dmg <= 0) return false; const h = cr.hero;
     h.hp -= Math.max(1, Math.round(dmg));
     if (h.hp > 0) { this.craftSay(`${why}: -${Math.round(dmg)}`); return false; }
-    const items = cr.satchel.empty(), w = cr.walker, g = cr.world.gate;
-    if (items.length) cr.bundles.push({ x: Math.floor(w.pos[0]) + 0.5, y: Math.floor(w.pos[1]) + 0.2, z: Math.floor(w.pos[2]) + 0.5, items, hero: CM.craftKey(h) });
+    const items = cr.satchel.empty(), w = cr.walker, g = cr.world.gate, L = cr.life, gold = L ? L.gold : 0, loot = L ? L.loot.splice(0) : [];   // (the island's gold and things go in the bundle too)
+    if (L) { L.gold = 0; L.mobs = []; L.shots = []; }
+    if (items.length || gold || loot.length) cr.bundles.push({ x: Math.floor(w.pos[0]) + 0.5, y: Math.floor(w.pos[1]) + 0.2, z: Math.floor(w.pos[2]) + 0.5, items, gold, loot, hero: CM.craftKey(h) });
     h.hp = Math.max(1, Math.round(h.max * 0.1)); w.pos = [g.x + 1.5, g.y, g.z + 2.5]; w.vel = [0, 0, 0]; w.yaw = 180; w.pitch = -8; w.fallFrom = null;
-    this.craftSay(`${h.name} wakes by the gate, barely standing.${items.length ? " What they carried lies in a bundle where they fell." : ""}`);
+    this.craftSay(`${h.name} wakes by the gate, barely standing.${items.length || gold || loot.length ? " What they carried lies in a bundle where they fell." : ""}`);
     this.tally.craftFalls = (this.tally.craftFalls || 0) + 1;
     this.craftKeep(); return true;
   },
@@ -144,6 +145,7 @@ Object.assign(CM.Game.prototype, {
     for (const B of cr.bundles.slice()) {
       if (Math.abs(B.x - p[0]) > 1 || Math.abs(B.z - p[2]) > 1 || Math.abs(B.y - p[1]) > 2) continue;
       B.items = B.items.filter((s) => { if (CM.CC.TOOLS[s.b]) { if (cr.satchel.put(s)) { got++; return false; } return true; } let left = s.n; while (left > 0 && cr.satchel.add(s.b)) { left--; got++; } s.n = left; return left > 0; });
+      if (B.gold || (B.loot && B.loot.length)) { const L = this.craftLife(); L.gold += B.gold || 0; L.loot.push(...(B.loot || [])); got += (B.loot || []).length + (B.gold ? 1 : 0); B.gold = 0; B.loot = []; }
       if (!B.items.length) cr.bundles.splice(cr.bundles.indexOf(B), 1);
     }
     if (got) this.craftHeavy();
@@ -157,9 +159,10 @@ Object.assign(CM.Game.prototype, {
     this.tally.craftBroken = (this.tally.craftBroken || 0) + cr.broken; this.tally.craftPlaced = (this.tally.craftPlaced || 0) + cr.placed;
     const home = [], counts = {};                                            // (ore and charcoal out of the satchel, into the bag)
     cr.satchel.slots.forEach((s, i) => { if (!s || !CM.CC.goesHome(s.b)) return; for (let k = 0; k < s.n; k++) home.push(CM.CC.toHome(s.b)); counts[s.b] = (counts[s.b] || 0) + s.n; cr.satchel.slots[i] = null; });
+    const L = cr.life, gold = L ? L.gold : 0, loot = L ? L.loot : []; if (gold) { this.gold += gold; this.tally.craftGold = (this.tally.craftGold || 0) + gold; } if (loot.length) this.gain(loot, "claudecraft");
     if (home.length) { this.gain(home, "claudecraft"); this.tally.craftOre = (this.tally.craftOre || 0) + home.length; K.satchels[CM.craftKey(cr.hero)] = cr.satchel.toJSON(); this.saveVillage && this.saveVillage(); }
-    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.${home.length ? ` Into the bag: ${Object.entries(counts).map(([b, n]) => `${n} ${CM.CC.NAMES[b].toLowerCase()}${n > 1 && b !== "106" ? "s" : ""}`).join(", ")}.` : ""}`);
-    const out = { broken: cr.broken, placed: cr.placed, home: home.length };
+    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.${gold ? ` ${gold} gold.` : ""}${loot.length ? ` Found: ${loot.map((t) => t.name).join(", ")}.` : ""}${L && L.xp ? ` ${cr.hero.name} earned ${L.xp} experience there.` : ""}${home.length ? ` Into the bag: ${Object.entries(counts).map(([b, n]) => `${n} ${CM.CC.NAMES[b].toLowerCase()}${n > 1 && b !== "106" ? "s" : ""}`).join(", ")}.` : ""}`);
+    const out = { broken: cr.broken, placed: cr.placed, home: home.length, gold, loot: loot.length, xp: L ? L.xp : 0, kills: L ? L.kills : 0 };
     this.craft = null; if (typeof document !== "undefined" && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     this.setMode("explore"); this.floor.pos = [CM.PORTAL_YARD.gate[0] - 1, CM.PORTAL_YARD.gate[1]]; this.floor.facing = 1;
     this.saveRun(); this.emit("floor", this.floor);

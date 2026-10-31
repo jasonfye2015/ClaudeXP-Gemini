@@ -4240,6 +4240,52 @@ test("Claudecraft (v12.2): a torch lights the dark round it (and its light is go
   g.craftChestMove(key, "chest", g.craftChest(key).slots.findIndex(Boolean)); cr.target = [[cx, cy, lz], null]; assert.strictEqual(g.craftBreak(), B.CHEST, "broken when empty"); assert.ok(!g.village.craft.chests[key]);
 });
 
+test("Claudecraft (v12.3): the island keeps the game's clock, a minute a second; by day wildlife on the grass, at night monsters - only in the dark, away from torches and the hero's light - by depth and the nights counted; the sky's light falls at night but a torch's does not", () => {
+  const CM = load(), CC = CM.CC, CL = CM.CL, B = CC.B, g = new CM.Game(); g.newGame("craft-n", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker, W = cr.world; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  const c0 = g.clock || 0; g.craftTick(0.5); g.craftTick(0.5); g.craftTick(1); assert.strictEqual(g.clock - c0, 2 * CL.minute, "a minute a second, in whole minutes");
+  const noon = () => { g.clock = 6 * 60 + (CM.CLOCK.day * 3); }, midnight = () => { g.clock = 18 * 60 + CM.CLOCK.day * 3; };
+  noon(); assert.strictEqual(CL.daylight(g), 1); midnight(); assert.ok(CL.daylight(g) < 0.2);
+  // where something may come: the dark only
+  let spot = null; for (let x = 20; x < CC.SIZE - 20 && !spot; x++) for (let z = 20; z < CC.SIZE - 20 && !spot; z++) { const t = W.top(x, z); if (W.get(x, t, z) === B.GRASS && Math.hypot(x - w.pos[0], z - w.pos[2]) > 20 && W.skyAt(x, t + 1, z) === 1) spot = [x + 0.5, t + 1, z + 0.5]; }
+  noon(); assert.ok(!g.craftSpawnOk(...spot), "not in daylight"); midnight(); assert.ok(g.craftSpawnOk(...spot), "at night");
+  W.set(Math.floor(spot[0]) + 2, spot[1], Math.floor(spot[2]), B.TORCH); assert.ok(!g.craftSpawnOk(...spot), "not by a torch"); W.set(Math.floor(spot[0]) + 2, spot[1], Math.floor(spot[2]), B.AIR);
+  const keep = w.pos.slice(); w.pos = [spot[0] + 3, spot[1], spot[2]]; assert.ok(!g.craftSpawnOk(...spot), "not in the hero's own light"); w.pos = keep;
+  // spawning: wildlife by day, monsters by night, by the band's levels
+  const L = g.craftLife(); noon(); for (let k = 0; k < 200 && L.mobs.length < 4; k++) g.craftSpawn(); assert.ok(L.mobs.length && L.mobs.every((o) => o.wild && CL.WILD.includes(o.kind)), "wildlife by day");
+  L.mobs = []; midnight(); g.craftStore().nights = 2; for (let k = 0; k < 400 && L.mobs.length < 5; k++) g.craftSpawn();
+  assert.ok(L.mobs.length >= 3, `monsters at night: ${L.mobs.length}`); for (const o of L.mobs) { assert.ok(!o.wild && o.hostile); const band = CL.band(W, Math.floor(o.w.pos[0]), Math.floor(o.w.pos[1]), Math.floor(o.w.pos[2])); assert.ok((band === "top" ? CL.TOP : band === "cave" ? CL.CAVE : CL.DEEP).includes(o.kind), `${o.kind} in the ${band}`); assert.ok(o.level >= CL.BANDS[band][0] && o.level <= CL.BANDS[band][1]); assert.ok(g.craftDarkAt(...o.w.pos) <= 0.3, "in the dark"); }
+  // night falls: counted
+  const n0 = g.craftStore().nights; noon(); L.night = false; midnight(); g.craftTick(0.01); assert.strictEqual(g.craftStore().nights, n0 + 1);
+  // a torch's light is not dimmed by the night; the sky's is
+  assert.strictEqual(CC.packLight(1, 0), 240); assert.strictEqual(CC.packLight(0, 1), 15); assert.strictEqual(CC.packLight(0.5, 0.2), 8 * 16 + 3);
+});
+
+test("Claudecraft (v12.3): a blow at a creature in reach uses the main game's sums (an island sword adds, and wears); a kill pays a third of its experience at once, gold from a Kobold, meat from a deer; a deer flees; a monster's blow hurts the hero; a caster's bolt flies and strikes; a fall leaves the gold and finds in the bundle; home with them", () => {
+  const CM = load(), CC = CM.CC, CL = CM.CL, B = CC.B, g = new CM.Game(); g.newGame("craft-f", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker, h = cr.hero, L = g.craftLife(); for (let k = 0; k < 60; k++) w.update(1 / 60, {}); g.clock = 6 * 60 + CM.CLOCK.day * 2;
+  const ahead = (kind, dist = 1.6) => { w.pitch = -20; const d = w.look(), o = g.craftMakeMob(kind, w.pos[0] + d[0] * dist, w.pos[1], w.pos[2] + d[2] * dist, 3); L.mobs.push(o); return o; };
+  // a blow
+  const k1 = ahead("Kobold"); const hp0 = k1.m.hp; L.swingT = 0; assert.ok(g.craftAttack(false) === k1, "struck"); assert.ok(k1.m.hp < hp0); assert.ok(g.craftAttack(false) === null, "not again so soon");
+  cr.satchel.add(126); const sw = cr.satchel.slots.findIndex((s2) => s2 && s2.b === 126), uses = cr.satchel.slots[sw].d; L.swingT = 0; k1.push = null; k1.w.pos = [w.pos[0] + w.look()[0] * 1.6, w.pos[1], w.pos[2] + w.look()[2] * 1.6]; g.craftAttack(false); assert.strictEqual(cr.satchel.slots[sw].d, uses - 1, "the sword wears");
+  const xp0 = h.xp, xpKind = k1.m.xp; k1.m.hp = 1; L.swingT = 0; k1.w.pos = [w.pos[0] + w.look()[0] * 1.6, w.pos[1], w.pos[2] + w.look()[2] * 1.6]; g.craftAttack(false);
+  assert.ok(k1.fellAt !== null, "fallen"); assert.ok(h.xp - xp0 === Math.max(1, Math.round(xpKind * CL.xpShare)) || h.level > 1, "a third of its experience"); assert.ok(L.gold > 0, "a Kobold's gold");
+  // a deer: flees, and gives meat
+  const deer = ahead("Deer", 3); const d0 = Math.hypot(deer.w.pos[0] - w.pos[0], deer.w.pos[2] - w.pos[2]); for (let k = 0; k < 60; k++) g.craftStepMob(deer, 1 / 30); assert.ok(Math.hypot(deer.w.pos[0] - w.pos[0], deer.w.pos[2] - w.pos[2]) > d0 + 1, "the deer runs");
+  g.craftFell(deer); assert.strictEqual(cr.satchel.count(108), 1, "venison");
+  // a monster's blow
+  const sk = ahead("Skeleton", 1.0); sk.cd = 0; const before = h.hp; g.craftStepMob(sk, 0.02); assert.ok(h.hp < before, "hurt by its blow");
+  // a caster's bolt
+  g.leaveCraft(); const mi = g.party.findIndex((x) => CM.brArms(x).ranged); assert.ok(mi >= 0); g.floor.pos = CM.PORTAL_YARD.gate.slice(); assert.strictEqual(g.enterCraft(mi), "");
+  const c2 = g.craft, L2 = g.craftLife(), w2 = c2.walker; for (let k = 0; k < 60; k++) w2.update(1 / 60, {}); w2.pitch = 0; const d = w2.look(); const rat = g.craftMakeMob("Giant Rat", w2.pos[0] + d[0] * 5, w2.pos[1], w2.pos[2] + d[2] * 5, 1); rat.m.hp = rat.m.max = 999; L2.mobs.push(rat);
+  assert.strictEqual(g.craftAttack(true), "shot"); for (let k = 0; k < 30; k++) for (const s2 of L2.shots) g.craftStepShot(s2, 1 / 30); assert.ok(rat.m.hp < 999, "the bolt struck");
+  // a fall: the gold and the finds in the bundle, and back again
+  L2.gold = 40; L2.loot.push(CM.makeItem(5, new CM.Random(3))); for (let k = 0; k < 20; k++) w2.update(1 / 60, {}); w2.pos = [w2.pos[0] + 10, c2.world.top(Math.floor(w2.pos[0] + 10), Math.floor(w2.pos[2])) + 1, w2.pos[2]];
+  const at = w2.pos.slice(); assert.ok(g.craftHurt(c2.hero.max * 3, "A fall")); assert.strictEqual(L2.gold, 0); assert.strictEqual(L2.loot.length, 0); const Bn = c2.bundles[c2.bundles.length - 1]; assert.strictEqual(Bn.gold, 40); assert.strictEqual(Bn.loot.length, 1);
+  w2.pos = [Bn.x, Bn.y, Bn.z]; g.craftFetch(); assert.strictEqual(L2.gold, 40); assert.strictEqual(L2.loot.length, 1); void at;
+  const gold0 = g.gold, bag0 = g.bag.length, out = g.leaveCraft(); assert.strictEqual(g.gold - gold0, 40, "the island's gold"); assert.ok(g.bag.length >= bag0 + 1, "the find in the bag"); assert.strictEqual(out.gold, 40);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

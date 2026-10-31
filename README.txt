@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 3, v12.3: day, night, and the island's creatures
+  The island keeps the game's own clock while a hero is there, a minute a second: day, a gold dusk, night (dark but
+  for a little moonlight), dawn; the sun and moon cross the sky. A torch's light is not dimmed by the night. By day deer
+  and boar graze the grass (meat for the cook; a boar struck turns on you). In the dark - at night up top, at any hour
+  in the caves, and never by a torch or in the hero's own light - the game's own monsters come, in their own pictures:
+  Giant Rats and Kobolds up top, Skeletons and Goblins in the caves, Wraiths and Gargoyles in the deep, their level by
+  the depth and the nights counted. Fight in real time: the left button strikes what is in reach (the hero's weapon by
+  the main game's sums, an island sword adding), F shoots with a bow or a caster's bolt. Every kill pays a third of its
+  experience at once; Kobolds and Goblins drop gold; now and then a thing. A fall leaves the gold and finds in the
+  bundle with the satchel; out through the gate they come home, with the meat.
+
 Claudecraft phase 2, v12.2: crafting
   Crafting, from the satchel's window (I): by hand, at a workbench or at a kiln within reach (a right click on one opens
   it). Planks and poles from wood; a workbench; torches (a pole and charcoal) that light the dark round them; at the
