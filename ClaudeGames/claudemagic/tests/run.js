@@ -3809,6 +3809,18 @@ test("Claudescryption cards found: about one chest in twenty-two, a champion one
   assert.ok((c.tally.cardsFound || 0) > before, `a chest gave a card (after ${opened})`);
 });
 
+test("Leshy's table moves and sounds: each card sound cooked, each played at the table; the board's cards dealt, slid, fallen, lunging and struck; the bell's every step shown", () => {
+  const src = (f) => fs.readFileSync(path.join(ROOT, "src", f), "utf8"), audio = src("js/50-audio.js"), ui = src("js/76b-cabin.js"), css = src("style.css");
+  for (const n of ["card", "cardplace", "cardhit", "carddeath", "sacrifice", "bones", "scale", "tablebell", "cardwin", "cardlose"]) {
+    assert.ok(audio.includes(`      ${n}: () =>`), `the ${n} sound`); assert.ok(ui.includes(`"${n}"`), `played at the table: ${n}`);
+  }
+  for (const k of ["dealt", "placed", "queued", "moved", "drawn", "dying", "lunge-up", "lunge-down", "struck"]) assert.ok(css.includes(`.ccard.${k} {`), `the ${k} card moves`);
+  for (const k of ["hit", "face", "advance", "leshy_turn", "trick", "your_turn"]) assert.ok(ui.includes(`"${k}"`), `the ${k} step shown`);
+  const CM = load(), B = new CM.CardBattle(["Wolf", "Stoat", "Sparrow"].map((n) => CM.cardSpec(n)), 0, 0, null, 5), kinds = new Set();
+  for (let t = 0; t < 8 && !B.over; t++) { if (B.canDraw()) B.draw("squirrel"); const i = B.hand.findIndex((c) => c.name === "Squirrel"), e = [0, 1, 2, 3].find((l) => !B.you[l]); if (i >= 0 && e !== undefined) B.play(i, e); for (const ev of B.ringBell()) { kinds.add(ev.kind); if (ev.kind === "hit" || ev.kind === "face") assert.ok(ev.side && ev.lane >= 0 && ev.t >= 0 && ev.power > 0, "a blow says who, where and how hard"); } }
+  assert.ok(kinds.has("leshy_turn") && (kinds.has("hit") || kinds.has("face")), "the bell's steps");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

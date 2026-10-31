@@ -127,6 +127,17 @@ CM.audio = {
       roar_undead: () => this._mix(...[0, 0.08, 0.16, 0.26, 0.4].map((d) => this._after(d, N(0.05, 0.3, 0.9, 43 + Math.floor(d * 100)))), this._sweep(300, 200, 0.6, "sine", 0.04)),
       lich: () => this._mix(T([[55, 1.2]], "sine", 0.22), T([[82.4, 1.2]], "sine", 0.1), this._after(0.3, N(0.9, 0.08, 0.95, 47)), this._after(0.6, this._sweep(400, 180, 0.6, "sine", 0.05))),
       miss: () => this._mix(this._sweep(1200, 300, 0.12, "sine", 0.06), N(0.12, 0.15, 0.5, 61)),
+      // Leshy's table (76b-cabin.js): paper and wood and a little bell
+      card: () => this._mix(N(0.07, 0.22, 0.85, 111), this._after(0.02, N(0.05, 0.12, 0.6, 113))),                                   // (a card drawn: a flick of paper)
+      cardplace: () => this._mix(N(0.05, 0.18, 0.7, 115), this._after(0.04, this._sweep(160, 90, 0.08, "sine", 0.22))),               // (laid on the table: a slap and a knock)
+      cardhit: () => this._mix(this._sweep(220, 70, 0.14, "sine", 0.32), N(0.08, 0.2, 0.3, 117)),                                     // (a blow)
+      carddeath: () => this._mix(N(0.28, 0.2, 0.92, 119), this._after(0.05, this._sweep(300, 120, 0.25, "triangle", 0.06))),          // (crumpled away)
+      sacrifice: () => this._mix(this._sweep(1800, 900, 0.09, "sawtooth", 0.05), this._after(0.06, N(0.12, 0.16, 0.5, 121))),         // (the knife)
+      bones: () => this._mix(...[0, 0.05, 0.11, 0.18].map((d, i) => this._after(d, T([[900 + i * 170, 0.025]], "square", 0.06)))),     // (a rattle of bones)
+      scale: () => this._mix(T([[520, 0.05]], "triangle", 0.14), this._after(0.12, T([[390, 0.07]], "triangle", 0.12))),              // (the scale tips: tick, tock)
+      tablebell: () => this._mix(T([[1320, 0.9]], "sine", 0.16), T([[1980, 0.6]], "sine", 0.06), T([[2640, 0.35]], "sine", 0.03)),      // (the bell on the table)
+      cardwin: () => T([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], "triangle", 0.12),
+      cardlose: () => T([[392, 0.18], [330, 0.18], [262, 0.45]], "triangle", 0.11),
       snore: () => this._mix(N(0.7, 0.16, 0.92, 83), this._sweep(70, 55, 0.7, "sine", 0.06)),                                       // (a sleeper, near: phase 7)
       hinge: () => this._mix(this._sweep(520, 300, 0.32, "sawtooth", 0.03), this._sweep(610, 380, 0.28, "square", 0.015)),         // (a door swinging)
       chain: () => this._mix(...[0, 0.07, 0.14, 0.21, 0.28, 0.35, 0.42].map((d, i) => this._after(d, T([[900 + (i % 3) * 140, 0.03]], "square", 0.07))), this._after(0.5, T([[70, 0.2]], "square", 0.12))),   // (a portcullis)

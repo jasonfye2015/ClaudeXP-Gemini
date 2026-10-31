@@ -1405,6 +1405,15 @@ Leshy's cabin: Claudescryption in the Wood (v11.1)
   one chest in twenty-two, on a champion one time in four and a tower boss one in three; every guardian, the Lich King
   and the tower's tenth floors give a rare one. Beating Leshy and the Moon is an achievement.
 
+  The table moves (v11.2): Leshy's eyes glint between two flickering candles, and the board shows what happens.
+  A card drawn slides in from the pile, a card laid is dealt into its lane from your hand, Leshy's cards drop onto
+  his row and his waiting cards flip up behind it, a card moving from the back row slides forward, and the dead
+  redden and fall away. When the bell rings each step comes a beat apart: the attacker lunges at the lane it
+  strikes, the creature struck shakes and its damage rises off it in red, a blow to a player rises off the scale,
+  and the scale's beam tips toward whoever is winning. Banners say whose turn it is and when a mask plays a trick.
+  Each has its sound, made in code: cards drawn and laid, a sacrifice's knife and its bones, the blows, a death,
+  the bell, the scale, a win and a loss. Reduced motion shortens the beats and the movements.
+
 The Mage Tower (the twelfth big update - v10.1 to v11.0)
   UPGRADE_PLAN_10.md says what each phase does.
   The portal yard and the tower (v10.1): in the Keep-yard by the shaft, a portal yard - a lit portal to the Mage Tower,
