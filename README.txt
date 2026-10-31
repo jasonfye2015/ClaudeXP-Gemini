@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Hexmarch (the thirty-first big update - v14.1)
+  A shooter in the Gilded Joker's cellar range (src/js/64zh-hexmarch.js; 76x-hexmarch.js): fifty-five hexlings in five
+  ranks - Grubs, Wisps and Imps - march from side to side and step down at each wall, quicker as they thin, dropping
+  hexes. A rune-cannon behind four warding stones fires one bolt at a time; both sides chip the stones away. A comet
+  crosses the top for a mystery score. If the march reaches the floor the game is over. Each level starts lower and
+  shoots back harder. Three lives, one more at 1,500. One stake a play: each level cleared pays gold, more each level,
+  every play; and a Claudescryption card the first time ever each third level is cleared (3 common, 6 and 9 a stronger
+  common, rare from 12).
+
 The Gloomwing Swarm (the thirtieth big update - v14.0)
   A shooter on the Gilded Joker's roof (src/js/64zg-swarm.js; 76w-swarm.js): a lantern-skiff slides along the bottom
   of the night sky firing mana bolts (two in the air at once) while thirty-two Gloomwings swoop in on curving paths and
