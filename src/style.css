@@ -744,3 +744,21 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* jacks or better */
 .poker .paytable.vp { float: right; margin: 0 0 8px 12px; } .vphand { margin: 18px 0 6px; clear: none; } .vpslot { display: flex; flex-direction: column; align-items: center; cursor: pointer; }
 .vpslot .tag { height: 18px; margin-top: 4px; font-weight: bold; color: #F0D070; font-size: 12px; } .vpslot.held .pc { outline: 3px solid #F0D070; transform: translateY(-8px); }
+
+/* The arcade (76j-casinoarcade.js): Runefall's board and its side; Lantern Lane Dash's cabinet */
+.runefall .rfwrap { display: flex; gap: 16px; align-items: flex-start; } .runefall .rfcanvas { width: 450px; height: 540px; border-radius: 8px; border: 4px solid #6A4A20; box-shadow: 0 6px 16px rgba(0,0,0,0.6); cursor: crosshair; background: #1A1418; }
+.runefall .rfside { flex: 1; min-width: 260px; } .runefall .rfinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.6; }
+.runefall .rfinfo .mul { color: #FFE070; font-weight: bold; } .runefall .rfinfo .fire { color: #FF9050; font-weight: bold; }
+.rfladder tr.now td { background: rgba(240,208,112,0.3); color: #FFF; font-weight: bold; } .rfladder tr.done td { opacity: 0.55; text-decoration: line-through; }
+.dash .dashwrap { display: flex; gap: 18px; align-items: flex-start; }
+.dash .cabinet { padding: 12px 14px 14px; border-radius: 18px 18px 8px 8px; background: linear-gradient(#3A2A5A, #1A1028); border: 3px solid #C8A040; box-shadow: 0 8px 18px rgba(0,0,0,0.7), inset 0 0 18px rgba(0,0,0,0.6); }
+.dash .marquee { text-align: center; font: bold 18px monospace; letter-spacing: 3px; color: #FFE070; text-shadow: 0 0 8px #FF9030, 0 0 2px #FFF; margin-bottom: 8px; animation: cgmarq 1.6s ease-in-out infinite; }
+@keyframes cgmarq { 50% { text-shadow: 0 0 16px #FF6020, 0 0 4px #FFF; } }
+.dash .leds { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 8px; font: 11px monospace; color: #A0A0A0; } .dash .leds b { display: inline-block; min-width: 34px; padding: 1px 4px; background: #100808; color: #FF4030; font: bold 13px monospace; text-shadow: 0 0 6px #FF2010; border-radius: 3px; text-align: right; }
+.dash .crt { position: relative; width: 288px; height: 416px; border-radius: 12px; overflow: hidden; border: 6px solid #0A0A0A; box-shadow: inset 0 0 30px rgba(0,0,0,0.9); }
+.dash .dashcanvas { width: 288px; height: 416px; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.dash .scan { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.45)); }
+.dash .pad { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 10px; } .dash .pad button { width: 42px; height: 30px; font-size: 16px; margin: 0 2px; background: #2A1A3A; color: #F0D070; border: 2px solid #C8A040; border-radius: 8px; }
+.dash .dashside { flex: 1; min-width: 260px; } .dash .ladder { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.dash .rung { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; border-radius: 4px; background: rgba(0,0,0,0.35); font: 13px monospace; } .dash .rung b { color: #FFE070; } .dash .rung i { color: #F0A0FF; font-style: normal; }
+.dash .rung.now { background: rgba(255,80,40,0.35); outline: 2px solid #FF6040; } .dash .rung.done { background: rgba(80,200,80,0.25); }
