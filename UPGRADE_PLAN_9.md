@@ -193,7 +193,18 @@ litter. The free camera now sees from its own eye, which the shader needs to tel
   scatter has no flowers; the ice is where the water was; the land's mesh is the same count in every season (the
   change is in the textures and the uniforms, never the geometry).
 
-## Phase 4 - The wall-walk, the gate towers and the east postern - v9.7 (content and graphics; medium to large)
+## Phase 4 - The wall-walk, the gate towers and the east postern - v9.7 (content and graphics; medium to large) - DONE (the towers' fallback)
+
+As built (`61c-tower.js`): the plan's own fallback for height. The ring wall steps round the hill in diagonals and
+runs into the hedges by the gate and the Temple's back, so it is not a walk a party can take a square at a time without
+rebuilding the town's wall; that waits for a later update. What shipped: the two towers that flank the West Gate,
+drawn as octagons of stone with a merlon on each face (a `tower` kind: the town's grid and fingerprint are as they
+were); a stair at each one's foot inside the wall; up it (six minutes) the party stands among the merlons with the
+town below, turns to look, and hears the watchman's word on tomorrow's weather; any step, Space or a walk brings it
+down; the top is never saved. At sunset from the top: an achievement. The east postern stands in the Keep-yard's
+north-east corner, shut until the party has been to floor five (in this run or any - kept in the village store), and
+opens onto a cliff path cut along the foot of the cliffs to the fields (laid after everything else on the land, so no
+seed's land moved); both ends are on the Where to? list once it is open, and the path is safe at night.
 
 - **Height for the first time**: a surface floor gets `fl.height` {key: 0 | 1.3} for cells on the wall-walk;
   the renderer's eye stands at the cell's height plus the eye height, the mesh lays the walk's floor at 1.3 (the

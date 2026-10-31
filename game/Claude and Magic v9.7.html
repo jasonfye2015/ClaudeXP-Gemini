@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -525,7 +525,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.6", built: "2026-10-30" };
+const CM = window.CM = { version: "9.7", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1439,6 +1439,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
   champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
   beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
   bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
@@ -4455,6 +4456,9 @@ CM.makeTown = function (seed) {
   const lane = [];                                                        // (on the side streets, not in the way between the door and the shaft)
   for (const name of ["Temple Row", "Smiths' Lane", "Gate Lane"]) for (const [x0, y0, x1, y1] of CM.TOWN_STREETS[name]) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!things[key(x, y)] && !lane.some((c) => c[0] === x && c[1] === y)) lane.push([x, y]);
   for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[key(lane[k][0], lane[k][1])] && guard++ < lane.length) k = (k + 1) % lane.length; things[key(lane[k][0], lane[k][1])] = { type: "villager", who: i }; }
+  for (const [tx, ty] of CM.TOWN_TOWERS || []) kinds[key(tx, ty)] = "tower";   // the gate towers, their stairs at their feet, and the postern (61c-tower.js)
+  for (const k of Object.keys(CM.TOWER_STAIRS || {})) if (!things[k]) things[k] = { type: "towerstair" };
+  if (CM.TOWN_POSTERN && !things[key(...CM.TOWN_POSTERN)]) things[key(...CM.TOWN_POSTERN)] = { type: "postern" };
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   const [sx0, sy0, sx1, sy1] = CM.TOWN_SQUARE, [yx0, yy0, yx1, yy1] = CM.TOWN_YARD;
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, decor: [], special: "town", solidDefault: "tree", kinds, ground,
@@ -4557,6 +4561,7 @@ CM.makeWood = function (seed) {
     [[first[0], first[1] - 2], "THE FIRST GLADE: safe at any hour. The paths beyond are the Wood's own; the hermit's hut, the ruined shrine, the charcoal burner and the cave mouths lie along them, somewhere."]]) {
     if (grid[at[1]] && grid[at[1]][at[0]] === 0 && !things[key(...at)] && !features[key(...at)]) things[key(...at)] = { type: "signpost", text };
   }
+  { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
@@ -4576,6 +4581,7 @@ CM.woodPlace = function (fl, x, y) {
   if (fl.ford && x === fl.ford[0] && y === fl.ford[1]) return "the ford";
   if (fl.bridge && x === fl.bridge[0] && y === fl.bridge[1]) return "the bridge";
   if (CM.LAND_ROAD.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) return "the road";
+  if (CM.POSTERN_PATH && x === CM.POSTERN_PATH[0] && y >= CM.POSTERN_PATH[1] && y <= CM.POSTERN_PATH[3]) return "the cliff path";
   const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
   if (room) return room.name;
   return x < CM.riverX(y) ? "the Deep Wood" : "the river's bank";
@@ -4591,8 +4597,9 @@ CM.wayPlaces = function (game) {
   if (fl.number === 0) {
     for (const id of ["home", "tavern", "merchant", "smith", "garden", "library", "temple", "guildhall", "chronicler"]) add(CM.TOWN_PLOTS[id].name, ...CM.TOWN_AT[id], true);
     add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
+    add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
   } else {
-    add("The West Gate", ...CM.WOOD_GATE, true);
+    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true);
     const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
     if (farm) add("The farm", ...farm.split(",").map(Number), true);
     add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
@@ -4600,7 +4607,7 @@ CM.wayPlaces = function (game) {
   }
   return out;
 };
-CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end
@@ -5029,6 +5036,7 @@ CM.SOLID = {
   shop: { face: "solid:shop", h: 1.6, roof: "solid:roof" },                       // a door, and the board over it
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
+  tower: { face: "solid:townwall", h: 2.3, tower: true },                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -5084,7 +5092,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -5189,7 +5197,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], L(`ground:${g}`), kind === "tree" ? 0.6 : 0.85); covered.add(key);
         if (kind === "tree") trees.add(key);
       } else if (K.top && index[K.top] !== undefined) { if (!tops.has(key)) { tops.add(key); quad([x, K.h, y + 1], [x + 1, K.h, y + 1], [x + 1, K.h, y], [x, K.h, y], index[K.top], 0.95); } covered.add(key); }
-      else if (K.roof) covered.add(key);                                       // (a house's square is under its roof)
+      else if (K.roof || K.tower) covered.add(key);                            // (a house's square is under its roof; a tower's under its top)
       continue;
     }
     covered.add(`${x},${y}`);
@@ -5207,7 +5215,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const nx = x + dx, ny = y + dy;
       if (!solid(nx, ny)) return;
       const K = kindOf(nx, ny), key = `${nx},${ny}`;
-      if (K.roof) return;                                                             // (a building: walled and roofed below, every face)
+      if (K.roof || K.tower) return;                                                  // (a building or a tower: walled and roofed below, every face)
       if (K.tree) {                                                                   // the trees: this one, and the rank behind it
         trees.add(key);
         if (solid(nx + dx, ny + dy) && kindOf(nx + dx, ny + dy).tree) trees.add(`${nx + dx},${ny + dy}`);
@@ -5227,7 +5235,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
-  let buildings = 0, chimneys = 0, litWindows = 0;
+  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0;
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofL = L("solid:roof");
@@ -5287,6 +5295,25 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gable, shade);
         }
       }
+    }
+    for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
+      if (tkind !== "tower") continue;
+      const [tx, ty] = tk.split(",").map(Number), cx = tx + 0.5, cz = ty + 0.5, T = CM.TOWER, H = T.h, R = T.r, top = L("solid:townwall:top");
+      const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
+      for (let i = 0; i < 8; i++) {
+        const [ax, az] = at(i, R), [bx, bz] = at(i + 1, R), shade = 0.78 + 0.22 * Math.abs(Math.cos((Math.PI / 4) * i + Math.PI / 4));
+        for (const [y0, y1] of [[0, H / 2], [H / 2, H]]) poly([[ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]], [[0, 1], [0.5, 1], [0.5, 0], [0, 0]], stone, shade);
+        poly([[cx, H, cz], [ax, H, az], [bx, H, bz]], [[0.5, 0.5], [0, 0], [1, 0]], top, 0.9);   // (the top, a fan)
+        const m = 0.2, [mx0, mz0] = [ax + (bx - ax) * m, az + (bz - az) * m], [mx1, mz1] = [ax + (bx - ax) * (1 - m), az + (bz - az) * (1 - m)], k = (R - 0.1) / R;   // a merlon on this face
+        const [ix0, iz0, ix1, iz1] = [cx + (mx0 - cx) * k, cz + (mz0 - cz) * k, cx + (mx1 - cx) * k, cz + (mz1 - cz) * k], Y = H + T.merlon;
+        poly([[mx0, H, mz0], [mx1, H, mz1], [mx1, Y, mz1], [mx0, Y, mz0]], [[0, 1], [0.3, 1], [0.3, 0.7], [0, 0.7]], stone, shade);
+        poly([[ix1, H, iz1], [ix0, H, iz0], [ix0, Y, iz0], [ix1, Y, iz1]], [[0, 1], [0.3, 1], [0.3, 0.7], [0, 0.7]], stone, shade * 0.85);
+        poly([[mx0, Y, mz0], [mx1, Y, mz1], [ix1, Y, iz1], [ix0, Y, iz0]], [[0, 0.1], [0.3, 0.1], [0.3, 0], [0, 0]], top, 0.95);
+        poly([[ix0, H, iz0], [mx0, H, mz0], [mx0, Y, mz0], [ix0, Y, iz0]], [[0, 1], [0.1, 1], [0.1, 0.7], [0, 0.7]], stone, shade * 0.8);
+        poly([[mx1, H, mz1], [ix1, H, iz1], [ix1, Y, iz1], [mx1, Y, mz1]], [[0, 1], [0.1, 1], [0.1, 0.7], [0, 0.7]], stone, shade * 0.8);
+        walls++;
+      }
+      towers++;
     }
     for (const C of CM.chimneysOf(fl)) {                                               // the chimneys: a stack of stone, and a cap
       const r = C.w / 2, x0 = C.x - r, x1 = C.x + r, z0 = C.z - r, z1 = C.z + r, uv = [[0, 1], [0.3, 1], [0.3, 0.3], [0, 0.3]];
@@ -5376,7 +5403,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 27-props.js ----
@@ -8091,7 +8118,8 @@ CM.Renderer = class {
     if (this.shakeT < 0.01) this.shakeT = 0;
     this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
-    const eye = [this.eye[0] + right[0] * jx + fwd[0] * pk, this.eye[1] + this.bob + jy, this.eye[2] + right[2] * jx + fwd[2] * pk];
+    const E = this.perch ? [this.perch.x + 0.5, this.perch.h + EYE_HEIGHT, this.perch.y + 0.5] : this.eye;   // (on a gate tower's top: 61c-tower.js)
+    const eye = [E[0] + right[0] * jx + fwd[0] * pk, E[1] + this.bob + jy, E[2] + right[2] * jx + fwd[2] * pk];
     if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
     if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
     const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
@@ -9347,6 +9375,7 @@ Object.assign(CM.Game.prototype, {
   move(rel) {
     if (this.mode !== "explore") return false;
     this.logAct("move", rel);
+    if (this.perch) { this.climbDown(); return false; }               // (on a tower's top: a step is the stair down)
     const fl = this.floor;
     const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
     const x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = keyOf(x, y);
@@ -9659,6 +9688,10 @@ Object.assign(CM.Game.prototype, {
   use() {
     if (this.mode !== "explore") return;
     this.logAct("use");
+    if (this.perch) { this.climbDown(); return; }
+    { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
+      if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
+      if (t0 && t0.type === "postern") { this.postern(); return; } }
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -10184,6 +10217,7 @@ Object.assign(CM.Game.prototype, {
     return best;
   },
   travelTo(x, y, explore = false) {
+    if (this.perch) this.climbDown();
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
     this.logAct("travelTo", x, y, explore ? 1 : 0);
@@ -10593,6 +10627,59 @@ Object.assign(CM.Game.prototype, {
     }
     if (byLight || byNoise) { this.dirty = true; this.tally.woken = (this.tally.woken || 0) + byLight + byNoise; this.say(byLight ? "Down the corridor, something lifts its head into your light." : "Somewhere close, something wakes at the noise."); }
     this.noiseLevel = Math.floor(noise * CM.LAIR.noiseDecay);
+  },
+});
+
+// ---- 61c-tower.js ----
+"use strict";
+// The gate towers, their lookout, and the east postern (the eleventh update, phase 4). The ring wall steps round the
+// hill in diagonals and runs into hedges and the Temple, so it is not a walk a party can take square by square; the
+// plan's own fallback is taken: the two towers that flank the West Gate are climbed by a stair at their foot, and the
+// party stands on the top among the merlons, with the town below and the watchman's word on tomorrow's weather. The
+// postern is a small door in the Keep-yard's north-east corner, opening (once the party has been down to the fifth
+// floor, in this run or any) onto a path cut along the foot of the cliffs to the fields: the short way from the shaft to
+// the land.
+CM.TOWER = { h: 2.3, r: 0.62, merlon: 0.32, climbMinutes: 6 };
+CM.TOWN_TOWERS = [[3, 18], [2, 20]];                                     // flanking the West Gate
+CM.TOWER_STAIRS = { "4,18": [3, 18], "3,20": [2, 20] };                  // the stair at each tower's foot, inside the wall -> its tower
+CM.TOWN_POSTERN = [37, 18];                                              // the Keep-yard's north-east corner
+CM.POSTERN_LAND = [57, 13];                                              // the door in the cliff, on the land
+CM.POSTERN_PATH = [57, 13, 57, 19];                                      // the cliff path, down to the fields
+CM.POSTERN_FROM = 5;                                                     // the floor a party must have reached
+CM.TOMORROW_WORDS = { clear: "Fair, and the same after.", rain: "Rain, out of the west. Bring a hood.", mist: "Mist on the low ground in the morning.", wind: "Wind. The beasts won't smell you coming.", snow: "Snow. Look at that sky." };
+CM.posternOpen = (game) => Boolean(game && ((game.village && game.village.posternOpen) || Math.max(0, ...(game.trail || []).map((t) => t[0] || 0)) >= CM.POSTERN_FROM));
+
+Object.assign(CM.Game.prototype, {
+  // up the tower stair: the party stands on the top (this.perch, never saved: a run loads at the stair's foot)
+  climbTower(k) {
+    const tower = CM.TOWER_STAIRS[k];
+    if (!tower || this.perch || !this.floor || this.floor.number !== 0) return false;
+    this.perch = { tower: tower.slice(), from: k };
+    this.clock = (this.clock || 0) + CM.TOWER.climbMinutes;
+    const ahead = CM.comingWeather(this, 2)[1], D = CM.dialOf(this);
+    this.sound("step");
+    this.say(`Up the tower stair, round and round, and out among the merlons: the town below, the wall running off round the hill, the trees beyond it. The watchman nods. "Tomorrow? ${CM.TOMORROW_WORDS[ahead.weather] || CM.TOMORROW_WORDS.clear}"`);
+    if (!D.night && D.dusk - D.hour <= 1.5) { this.say("The sun goes down over the Wood, and the whole town is gold for a moment."); this.achieve("tower"); }
+    this.emit("change");
+    return true;
+  },
+  climbDown() {
+    if (!this.perch) return false;
+    this.perch = null;
+    this.clock = (this.clock || 0) + CM.TOWER.climbMinutes;
+    this.say("Down the tower stair to the street.");
+    this.emit("change");
+    return true;
+  },
+  // the postern: from the Keep-yard to the cliff path, and back; shut until the party has been down to the fifth floor
+  postern() {
+    const fl = this.floor;
+    if (!CM.posternOpen(this)) { this.sound("bump"); this.say(`A small iron door in the yard's wall, the postern. The guild keeps it shut for those who haven't been down past the ${CM.ordinal ? CM.ordinal(CM.POSTERN_FROM) : "fifth"} floor.`); return false; }
+    if (this.village && !this.village.posternOpen) { this.village.posternOpen = true; if (this.saveVillage) this.saveVillage(); this.say("The guild's man unbars the postern for you: \"You've been down far enough to be trusted with it.\""); }
+    this.sound("door");
+    if (fl.number === 0) { this.enterFloor(-1, "rope", CM.POSTERN_LAND.slice()); this.say("Through the postern and down the cliff path, the hill's side on your right, the fields below."); }
+    else { this.enterFloor(0, "rope", CM.TOWN_POSTERN.slice()); this.say("Up the cliff path and in at the postern: the Keep-yard, and the shaft."); }
+    return true;
   },
 });
 
@@ -18393,6 +18480,8 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
+      else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "signpost") out.push({ x, y, layer: "signpost", w: 0.55, h: 0.95 });
       else if (thing.type === "cross") out.push({ x, y, layer: "cross", w: 0.55, h: 0.75 });
@@ -18689,6 +18778,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again

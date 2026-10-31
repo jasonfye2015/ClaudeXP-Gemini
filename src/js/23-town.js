@@ -100,6 +100,9 @@ CM.makeTown = function (seed) {
   const lane = [];                                                        // (on the side streets, not in the way between the door and the shaft)
   for (const name of ["Temple Row", "Smiths' Lane", "Gate Lane"]) for (const [x0, y0, x1, y1] of CM.TOWN_STREETS[name]) for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!things[key(x, y)] && !lane.some((c) => c[0] === x && c[1] === y)) lane.push([x, y]);
   for (let i = 0; i < 3; i++) { let k = CM.hashSeed(`${seed}:folk:${i}`) % lane.length, guard = 0; while (things[key(lane[k][0], lane[k][1])] && guard++ < lane.length) k = (k + 1) % lane.length; things[key(lane[k][0], lane[k][1])] = { type: "villager", who: i }; }
+  for (const [tx, ty] of CM.TOWN_TOWERS || []) kinds[key(tx, ty)] = "tower";   // the gate towers, their stairs at their feet, and the postern (61c-tower.js)
+  for (const k of Object.keys(CM.TOWER_STAIRS || {})) if (!things[k]) things[k] = { type: "towerstair" };
+  if (CM.TOWN_POSTERN && !things[key(...CM.TOWN_POSTERN)]) things[key(...CM.TOWN_POSTERN)] = { type: "postern" };
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   const [sx0, sy0, sx1, sy1] = CM.TOWN_SQUARE, [yx0, yy0, yx1, yy1] = CM.TOWN_YARD;
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, decor: [], special: "town", solidDefault: "tree", kinds, ground,

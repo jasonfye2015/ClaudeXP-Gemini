@@ -20,6 +20,7 @@ Object.assign(CM.Game.prototype, {
   move(rel) {
     if (this.mode !== "explore") return false;
     this.logAct("move", rel);
+    if (this.perch) { this.climbDown(); return false; }               // (on a tower's top: a step is the stair down)
     const fl = this.floor;
     const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4];
     const x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = keyOf(x, y);
@@ -332,6 +333,10 @@ Object.assign(CM.Game.prototype, {
   use() {
     if (this.mode !== "explore") return;
     this.logAct("use");
+    if (this.perch) { this.climbDown(); return; }
+    { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
+      if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
+      if (t0 && t0.type === "postern") { this.postern(); return; } }
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -857,6 +862,7 @@ Object.assign(CM.Game.prototype, {
     return best;
   },
   travelTo(x, y, explore = false) {
+    if (this.perch) this.climbDown();
     if (this.mode !== "explore" || !this.floor) return false;
     if (x === this.floor.pos[0] && y === this.floor.pos[1]) return false;
     this.logAct("travelTo", x, y, explore ? 1 : 0);
