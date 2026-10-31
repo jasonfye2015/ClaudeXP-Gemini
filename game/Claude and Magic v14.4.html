@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v14.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v14.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -853,6 +853,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .hexmarch .hxcanvas { width: 448px; height: 540px; border-radius: 6px; border: 6px solid #2A2030; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 .shatterpane .pncanvas { width: 442px; height: 572px; border-radius: 6px; border: 6px solid #3A2C20; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; cursor: none; }
 .starstone .sdcanvas { width: 480px; height: 388px; border-radius: 6px; border: 6px solid #241C34; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.moatleap .mqcanvas { width: 480px; height: 444px; border-radius: 6px; border: 6px solid #2A3A24; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 </style>
 </head>
 <body>
@@ -862,7 +863,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "14.3", built: "2026-10-31" };
+const CM = window.CM = { version: "14.4", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -21738,6 +21739,110 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64zk-moat.js ----
+"use strict";
+// Moatleap (the thirty-fourth big update - v14.4): a crossing game on the Gilded Joker's floor. A toad starts on the
+// near bank and hops, one square at a time, across five lanes of market road - handcarts, hay wagons, galloping riders
+// and long ox-trains - to the grass verge, then across five lanes of castle moat on drifting logs and lily-turtles
+// (some of which dive under for a moment) to the five lily-bays under the castle wall. Fill all five for the next
+// level. Each toad has thirty seconds. A firefly sometimes settles in an empty bay for a bonus; from level 3 a pike
+// lurks in one now and then. Carried off the edge, drowned, run down, out of time or into the wall: a life gone. Three
+// lives (one more at 10,000). One stake a play: each level cleared pays gold, more each level, every play; and a
+// Claudescryption card the first time ever each third level is cleared (3 common, 6 and 9 a stronger common, rare
+// from 12). The same inputs give the same game. The window: 76za-moat.js.
+CM.MQ = {
+  W: 15, H: 13, step: 1 / 120, lives: 3, extra: 10000, time: 30, hop: 0.13, BAYS: [1, 4, 7, 10, 13], VERGE: 6, START: 12,
+  // lanes from the top of the moat down to the near side of the road: [kind, length, count, speed, direction]
+  RIVER: [["log", 3, 3, 1.4, 1], ["turtle", 2, 4, 1.7, -1], ["log", 4, 2, 2.2, 1], ["log", 2, 3, 1.2, 1], ["turtle", 3, 3, 1.5, -1]],
+  ROAD: [["ox", 3, 2, 1.1, -1], ["rider", 1, 2, 3.4, 1], ["wagon", 2, 3, 1.6, -1], ["cart", 1, 3, 1.3, 1], ["cart", 1, 3, 1.0, -1]],
+  dive: { period: 6, under: 1.3, warn: 1.0 },
+  SCORE: { step: 10, home: 50, perSec: 10, fly: 200, level: 1000 },
+  cardEvery: 3, pay: (n) => 0.06 + 0.04 * n,
+};
+const MQ = CM.MQ;
+MQ.Level = class {
+  constructor(n, seed, keep) {
+    const R = this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: MQ.lives, extraGiven: false });
+    this.mul = 1 + Math.min(0.9, (n - 1) * 0.09); this.span = MQ.W + 5; this.bays = MQ.BAYS.map(() => false); this.fly = null; this.flyT = 6; this.pike = null; this.pikeT = 9;
+    // each lane's things, spread round its loop with a little jitter
+    this.lanes = []; const mk = (row, [kind, len, count, sp, dir], k) => { const c = Math.min(count + (n >= 4 && kind !== "log" && kind !== "turtle" ? 1 : 0), Math.floor(this.span / (len + 1.5))), gap = this.span / c, off = R.next() * gap;
+      this.lanes.push({ row, kind, len: kind === "log" && n >= 6 ? Math.max(2, len - 1) : len, dir, speed: sp * this.mul * (kind === "rider" ? 1 : 1), things: Array.from({ length: c }, (_, i) => ({ x: off + i * gap + (R.next() - 0.5) * gap * 0.25, dives: kind === "turtle" && n >= 2 && (i % 2 === 0 || n >= 5), phase: R.next() * MQ.dive.period })) }); };
+    MQ.RIVER.forEach((L, i) => mk(1 + i, L, i)); MQ.ROAD.forEach((L, i) => mk(MQ.VERGE + 1 + i, L, i)); this.spawn();
+  }
+  spawn() { this.toad = { x: Math.floor(MQ.W / 2), y: MQ.START, face: "up", hopT: 0, dead: 0, best: MQ.START, time: MQ.time }; }
+  lane(y) { return this.lanes.find((l) => l.row === y); }
+  // a thing's left edge on screen (things wrap round a loop a little wider than the screen)
+  left(l, th) { return ((th.x % this.span) + this.span) % this.span - 2.5; }
+  under(th) { if (!th.dives) return false; const p = (this.t + th.phase) % MQ.dive.period; return p > MQ.dive.period - MQ.dive.under; }
+  sinking(th) { if (!th.dives) return false; const p = (this.t + th.phase) % MQ.dive.period; return p > MQ.dive.period - MQ.dive.under - MQ.dive.warn && !this.under(th); }
+  input(dir) { if (dir) this.want = dir; }
+  hop(dir) {
+    const T = this.toad; if (T.dead || T.hopT > 0) return; T.face = dir; const [dx, dy] = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[dir];
+    const nx = T.x + dx, ny = T.y + dy; if (ny > MQ.START || nx < -0.4 || nx > MQ.W - 0.6) return;
+    T.x = nx; T.y = ny; T.hopT = MQ.hop; if (ny > MQ.VERGE || ny === MQ.VERGE) T.x = Math.round(T.x); this.events.push({ kind: "hop" });
+    if (ny < T.best) { T.best = ny; this.score += MQ.SCORE.step; }
+    if (ny === 0) this.reachTop();
+  }
+  reachTop() {
+    const T = this.toad, k = MQ.BAYS.findIndex((b) => Math.abs(T.x - b) < 0.5);
+    if (k < 0) return this.lose("wall"); if (this.bays[k]) return this.lose("full"); if (this.pike && this.pike.bay === k) return this.lose("pike");
+    this.bays[k] = true; let pts = MQ.SCORE.home + Math.floor(T.time) * MQ.SCORE.perSec; if (this.fly && this.fly.bay === k) { pts += MQ.SCORE.fly; this.fly = null; this.events.push({ kind: "fly" }); }
+    this.score += pts; this.events.push({ kind: "home", bay: k, pts });
+    if (this.bays.every(Boolean)) { this.score += MQ.SCORE.level; this.stage = "clear"; this.events.push({ kind: "clear" }); return; }
+    this.spawn();
+  }
+  lose(why) { const T = this.toad; if (T.dead) return; T.dead = 1.6; T.why = why; this.lives -= 1; this.events.push({ kind: "die", why, x: T.x, y: T.y }); }
+  tick(dt) {
+    if (this.stage !== "play") return; this.t += dt; const T = this.toad;
+    for (const l of this.lanes) for (const th of l.things) th.x += l.dir * l.speed * dt;
+    // the firefly and the pike visit empty bays
+    if (this.fly) { if ((this.fly.t -= dt) <= 0 || this.bays[this.fly.bay]) this.fly = null; } else if ((this.flyT -= dt) <= 0) { const free = this.bays.map((b, i) => (b ? -1 : i)).filter((i) => i >= 0 && !(this.pike && this.pike.bay === i)); if (free.length) this.fly = { bay: this.rnd.pick(free), t: 5 }; this.flyT = 8 + this.rnd.next() * 6; }
+    if (this.pike) { if ((this.pike.t -= dt) <= 0) this.pike = null; } else if (this.n >= 3 && (this.pikeT -= dt) <= 0) { const free = this.bays.map((b, i) => (b ? -1 : i)).filter((i) => i >= 0 && !(this.fly && this.fly.bay === i)); if (free.length > 1) { this.pike = { bay: this.rnd.pick(free), t: 4 }; this.events.push({ kind: "pike" }); } this.pikeT = Math.max(4, 11 - this.n * 0.5) + this.rnd.next() * 4; }
+    if (T.dead) { T.dead -= dt; if (T.dead <= 0) { if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } this.spawn(); } return; }
+    if (T.hopT > 0) T.hopT -= dt; if (this.want) { this.hop(this.want); this.want = null; } if (T.dead || this.stage !== "play") return;
+    T.time -= dt; if (T.time <= 0) return this.lose("time");
+    const l = this.lane(T.y);
+    if (l && T.y < MQ.VERGE) { // the moat: on something, or in the water
+      const on = l.things.find((th) => { const a = this.left(l, th); return T.x > a - 0.35 && T.x < a + l.len - 0.65 && !this.under(th); });
+      if (!on) { if (T.hopT <= 0) return this.lose("water"); } else { T.x += l.dir * l.speed * dt; if (T.x < -0.5 || T.x > MQ.W - 0.5) return this.lose("edge"); }
+    } else if (l) { // the road
+      for (const th of l.things) { const a = this.left(l, th); if (T.x + 0.35 > a && T.x - 0.35 < a + l.len - 0.1) return this.lose("road"); }
+    }
+    if (!this.extraGiven && this.score >= MQ.extra) { this.extraGiven = true; this.lives += 1; this.events.push({ kind: "extra" }); }
+  }
+  update(dt) { for (let s = 0; s < dt / MQ.step - 1e-9; s++) this.tick(MQ.step); }
+};
+Object.assign(CM.Game.prototype, {
+  mqState() { return this.cgStore().mq || null; },
+  mqClaimed() { const F = this.cgStore(); F.mqCards = F.mqCards || {}; return F.mqCards; },
+  mqLevel() {
+    const S = this.mqState(); if (!S || S.stage !== "play") return null;
+    if (!this.mqLive || this.mqLive.key !== `${S.seed}:${S.n}`) {
+      if (this.mqLive && this.mqLive.key && this.mqLive.key.startsWith(`${S.seed}:`)) { const L = this.mqLive; this.mqLive = new MQ.Level(S.n, CM.hashSeed(`${S.seed}:${S.n}`), { score: L.score, lives: L.lives, extraGiven: L.extraGiven }); this.mqLive.key = `${S.seed}:${S.n}`; }
+      else { S.stage = "done"; S.last = S.last || { level: S.n, won: S.won, cards: [], lost: true }; this.saveCasino && this.saveCasino(); return null; }
+    }
+    return this.mqLive;
+  },
+  mqStart(bet) {
+    const S0 = this.mqState(); if (S0 && S0.stage === "play" && this.mqLive && this.mqLive.key && this.mqLive.key.startsWith(`${S0.seed}:`)) return { error: "A game is on." };
+    const why = this.cgStake("moatleap", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.mq = { stage: "play", n: 1, bet: Math.floor(bet), seed: `${this.seed}:moatleap:${F.n}`, won: 0, cards: [] };
+    this.mqLive = new MQ.Level(1, CM.hashSeed(`${F.mq.seed}:1`)); this.mqLive.key = `${F.mq.seed}:1`; this.saveCasino && this.saveCasino(); return F.mq;
+  },
+  // a level cleared: its gold (every play), and each third level a card the first time ever; on to the next
+  mqCheck() {
+    const S = this.mqState(), L = this.mqLive; if (!S || !L || S.stage !== "play") return null;
+    if (L.stage === "clear") {
+      const n = S.n, pay = Math.round(S.bet * MQ.pay(n)), C = this.mqClaimed(); let card = null;
+      if (n % MQ.cardEvery === 0 && !C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `Moatleap, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:moatleap:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("moatleap", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.mqLevel(); return { cleared: n, pay, card };
+    }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mqBest = Math.max(F.mqBest || 0, L.score); this.mqLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    return null;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -28982,6 +29087,101 @@ CM.CG_TABLES.push(["starstone", "Starstone Drift"]);
       p.save(); p.translate(X, Y); p.fillStyle = "rgba(200,240,220,0.35)"; p.beginPath(); p.arc(0, -r * 0.2, r * 1.5, Math.PI, 0); for (let k = 0; k <= 6; k++) p.lineTo(r * 1.5 - (k * r * 3) / 6, r * 0.8 + (k % 2 ? 4 : 0) + Math.sin(now / 120 + k) * 2); p.closePath(); p.fill();
       p.fillStyle = "#4A3A20"; p.fillRect(-r * 0.6, -r * 0.9, r * 1.2, r * 0.25); p.fillStyle = "#F0D070"; p.shadowColor = "#F0D070"; p.shadowBlur = 12; p.fillRect(-r * 0.45, -r * 0.6, r * 0.9, r * 1.1); p.shadowBlur = 0; p.fillStyle = "#4A3A20"; p.fillRect(-r * 0.6, r * 0.45, r * 1.2, r * 0.25);
       p.fillStyle = "#203040"; p.fillRect(-r * 0.25, -r * 0.2, r * 0.15, r * 0.2); p.fillRect(r * 0.1, -r * 0.2, r * 0.15, r * 0.2); p.restore();
+    },
+  });
+}
+
+// ---- 76za-moat.js ----
+"use strict";
+// Moatleap, the window's side (the thirty-fourth big update): the crossing on a canvas - the castle wall along the top
+// with its five lily-bays (a toad sitting in each one filled, a firefly's glow or a pike's jaws in an empty one), the
+// moat with its ripples, logs with their rings and lily-turtles (sinking ones going pale, then gone under), the grass
+// verge, the cobbled market road with handcarts, hay wagons, galloping riders and ox-trains, the near bank; the toad
+// with its hop and a splash or a squash; the score, the lives, the level and the time left. Arrows or W A S D to hop,
+// P to pause. The rules are 64zk-moat.js.
+CM.CG_TABLES.push(["moatleap", "Moatleap"]);
+{ const floor0 = CM.UI.prototype.renderFloor, C = 32, TOP = 28;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "moatleap") return this.cgMoat(box); return floor0.call(this, box); },
+    cgMoat(box) {
+      const g = this.game, MQ = CM.MQ, S = g.mqState(), L = g.mqLevel(), live = !!L, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.mqClaimed(), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(15, (S && live ? S.n : 1) + 4), rows = []; for (let n = 1; n <= top; n++) { const card = n % MQ.cardEvery === 0, tier = CM.cardTierFor(n); rows.push(`<div class="rung${live && S.n === n ? " now" : ""}${live && S.n > n ? " done" : ""}"><span>Level ${n}</span><b>${Math.round(bet * MQ.pay(n))}</b><i class="${!card ? "" : Cl[n] ? "got" : tier}" title="${!card ? "" : Cl[n] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${!card ? "" : Cl[n] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`); }
+      box.innerHTML = `<div class="cgtable moatleap runestack dash"><h3>Moatleap</h3><div class="rswrap"><canvas class="mqcanvas" width="${MQ.W * C}" height="${MQ.H * C + TOP}" tabindex="0"></canvas>
+        <div class="dashside"><p class="lore">Out past the Joker's back gate runs the market road, and past that the old castle's moat. The house keeps toads, and wagers on them. "Five bays under the wall," says the attendant. "Get a toad into every one. Mind the wagons, and the turtles - some of them dive."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-mqpause>${this.mqPaused ? "Go on" : "Pause"}</button>` : `<button class="primary" data-mqstart>To the road (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Arrows or W A S D to hop one square; P to pause. Across the road without being run down; across the moat only on logs and lily-turtles (those going pale are about to dive - from level 2), and don't ride off the edge. Into an empty bay - not the wall, not a full bay, not a pike's jaws (from level 3). Thirty seconds a toad. 10 a step forward, 50 a toad home and 10 for each second left, 200 for a firefly, 1,000 for all five bays. Three lives, one more at 10,000. Each level cleared pays gold, more each, every play; every third level gives a card the first time ever (♦ level 3, ◆ 6 and 9, ★ from 12). Best score ${g.cgStore().mqBest || 0}.</div>${this.cgStats("moatleap")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-mqstart]")) q("[data-mqstart]").addEventListener("click", () => { const r = g.mqStart(bet); this.cgNote = r.error || "Level 1. Hop to it!"; this.mqFx = { parts: [], pts: [], banner: { at: performance.now(), text: "LEVEL 1" } }; this.mqPaused = false; this.cgSfx(r.error ? "miss" : "door", 0.45); this.renderCasino(); const cv = this.$("#casino-body .mqcanvas"); if (cv) cv.focus(); });
+      if (q("[data-mqpause]")) q("[data-mqpause]").addEventListener("click", () => { this.mqPaused = !this.mqPaused; this.renderCasino(); });
+      this.mqCanvas = q(".mqcanvas");
+      if (!this.mqKeys) {
+        this.mqKeys = (e) => { if (this.cgView !== "moatleap" || !this.dialogOpen() || !this.game.mqLevel()) return; if (e.code === "KeyP") { e.preventDefault(); this.mqPaused = !this.mqPaused; this.renderCasino(); return; }
+          const d = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right" }[e.code]; if (!d) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && !this.mqPaused) this.game.mqLevel().input(d); };
+        window.addEventListener("keydown", this.mqKeys, true); }
+      if (!this.mqLoop) { let prev = performance.now(); const loop = (now) => { if (!this.mqCanvas || !this.mqCanvas.isConnected || this.cgView !== "moatleap") { this.mqLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.mqFrame(dt, now); this.mqLoop = requestAnimationFrame(loop); }; this.mqLoop = requestAnimationFrame(loop); }
+    },
+    mqFrame(dt, now) {
+      const g = this.game, MQ = CM.MQ, L = g.mqLevel(), cv = this.mqCanvas, p = cv.getContext("2d"), fx = this.mqFx = this.mqFx || { parts: [], pts: [] };
+      if (L && !this.mqPaused) { L.update(dt); for (const e of L.events.splice(0)) this.mqEvent(e, now, L); const out = g.mqCheck();
+        if (out && out.cleared) { fx.banner = { at: now, text: `LEVEL ${out.cleared + 1}`, sub: `Level ${out.cleared} cleared: +${out.pay} gold${out.card ? ` - ${out.card}` : ""}` }; this.cgSfx("victory", 0.5); if (out.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 300); this.cgNote = `Level ${out.cleared} cleared: ${out.pay} gold${out.card ? `, and a card - ${out.card}` : ""}.`; this.renderCasino(); return; }
+        if (out && out.over) { const S = g.mqState(); this.cgNote = `The last toad croaks on level ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
+      const Lv = L || this.mqLastDrawn; if (L) this.mqLastDrawn = L;
+      p.fillStyle = "#101810"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "MOATLEAP", 8, 19);
+      if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.mqToad(p, cv.width - 14 - k * 18, 14, "up", 0.45, 0); }
+      p.save(); p.translate(0, TOP); const W = cv.width;
+      // the ground: wall, moat, verge, road, bank
+      p.fillStyle = "#5A5048"; p.fillRect(0, 0, W, C); for (let x = 0; x < W; x += 16) { p.fillStyle = (x / 16) % 2 ? "#4A4038" : "#6A6058"; p.fillRect(x, 2, 15, 12); p.fillRect(x + 8, 16, 15, 12); }
+      p.fillStyle = "#1E4A78"; p.fillRect(0, C, W, 5 * C); p.strokeStyle = "rgba(160,210,255,0.25)"; for (let k = 0; k < 24; k++) { const x = (k * 71 + now / 30) % W, y = C + ((k * 37) % (5 * C)); p.beginPath(); p.moveTo(x, y); p.quadraticCurveTo(x + 6, y - 3, x + 12, y); p.stroke(); }
+      p.fillStyle = "#3A7A30"; p.fillRect(0, MQ.VERGE * C, W, C); p.fillStyle = "#4A8A3A"; for (let x = 4; x < W; x += 11) p.fillRect(x, MQ.VERGE * C + 4 + (x % 3) * 6, 2, 6);
+      p.fillStyle = "#3A3632"; p.fillRect(0, (MQ.VERGE + 1) * C, W, 5 * C); p.fillStyle = "#4A4640"; for (let r = 0; r < 5; r++) for (let x = (r % 2) * 10; x < W; x += 20) p.fillRect(x + 1, (MQ.VERGE + 1 + r) * C + 6, 16, 8); p.fillStyle = "rgba(240,220,160,0.35)"; for (let r = 1; r < 5; r++) for (let x = 6; x < W; x += 30) p.fillRect(x, (MQ.VERGE + 1 + r) * C - 1, 14, 2);
+      p.fillStyle = "#3A7A30"; p.fillRect(0, MQ.START * C, W, C);
+      if (!Lv) { p.restore(); p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("Moatleap", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
+      // the bays
+      MQ.BAYS.forEach((b, k) => { const X = b * C, Y = 0; p.fillStyle = "#1E4A78"; p.fillRect(X + 2, Y + 4, C - 4, C - 4); p.fillStyle = "#3A8A3A"; p.beginPath(); p.arc(X + C / 2, Y + C / 2 + 2, 11, 0.3, Math.PI * 2 - 0.3); p.lineTo(X + C / 2, Y + C / 2 + 2); p.fill();
+        if (Lv.bays[k]) this.mqToad(p, X + C / 2, Y + C / 2 + 2, "down", 0.8, 0);
+        else if (Lv.fly && Lv.fly.bay === k) { p.save(); p.shadowColor = "#F0F080"; p.shadowBlur = 14; p.fillStyle = "#F8F8A0"; p.beginPath(); p.arc(X + C / 2 + Math.sin(now / 150) * 4, Y + C / 2, 3, 0, Math.PI * 2); p.fill(); p.restore(); }
+        else if (Lv.pike && Lv.pike.bay === k) { p.fillStyle = "#5A6A4A"; p.beginPath(); p.moveTo(X + 4, Y + C / 2); p.lineTo(X + C - 6, Y + 8); p.lineTo(X + C - 6, Y + C - 4); p.closePath(); p.fill(); p.fillStyle = "#F0F0E0"; for (let k2 = 0; k2 < 4; k2++) p.fillRect(X + 10 + k2 * 4, Y + C / 2 - 2 + (k2 % 2) * 2, 2, 3); p.fillStyle = "#F0D040"; p.fillRect(X + C - 12, Y + 12, 3, 3); } });
+      // the lanes' things
+      for (const l of Lv.lanes) for (const th of l.things) { const a = Lv.left(l, th), X = a * C, Y = l.row * C;
+        if (l.kind === "log") { p.fillStyle = "#7A5230"; p.fillRect(X + 2, Y + 6, l.len * C - 4, C - 12); p.fillStyle = "#9A6A40"; p.fillRect(X + 2, Y + 7, l.len * C - 4, 3); p.fillStyle = "#C09060"; p.beginPath(); p.ellipse(X + 4, Y + C / 2, 3, (C - 12) / 2, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#7A5230"; p.beginPath(); p.ellipse(X + 4, Y + C / 2, 1.5, 4, 0, 0, Math.PI * 2); p.stroke(); }
+        else if (l.kind === "turtle") { if (Lv.under(th)) { p.strokeStyle = "rgba(160,210,255,0.5)"; for (let k = 0; k < l.len; k++) { p.beginPath(); p.arc(X + k * C + C / 2, Y + C / 2, 6 + (now / 60) % 6, 0, Math.PI * 2); p.stroke(); } continue; }
+          const sink = Lv.sinking(th); for (let k = 0; k < l.len; k++) { const cx = X + k * C + C / 2, cy = Y + C / 2; p.globalAlpha = sink ? 0.45 + 0.25 * Math.sin(now / 60) : 1; p.fillStyle = "#3A6A30"; p.beginPath(); p.arc(cx + l.dir * 10, cy, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = sink ? "#7AAA70" : "#4A8A3A"; p.beginPath(); p.ellipse(cx, cy, 11, 10, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#2A5A20"; p.beginPath(); p.moveTo(cx - 6, cy); p.lineTo(cx + 6, cy); p.moveTo(cx, cy - 6); p.lineTo(cx, cy + 6); p.stroke(); p.fillStyle = "#F07090"; p.beginPath(); p.arc(cx - 3, cy - 3, 2.5, 0, Math.PI * 2); p.fill(); p.globalAlpha = 1; } }
+        else this.mqCart(p, l.kind, X, Y, l.len, l.dir, now); }
+      // the toad
+      const T = Lv.toad; if (!T.dead) { const hopK = T.hopT > 0 ? Math.sin((1 - T.hopT / MQ.hop) * Math.PI) : 0, [dx, dy] = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[T.face], back = T.hopT > 0 ? T.hopT / MQ.hop : 0; this.mqToad(p, (T.x + dx * back) * C + C / 2, (T.y + dy * back) * C + C / 2 - hopK * 6, T.face, 1 + hopK * 0.2, hopK); }
+      else if (T.why) { const X = T.x * C + C / 2, Y = T.y * C + C / 2; if (T.why === "water" || T.why === "edge") { p.strokeStyle = "rgba(200,230,255,0.8)"; p.beginPath(); p.arc(X, Y, 14 * (1.6 - T.dead), 0, Math.PI * 2); p.stroke(); } else { p.fillStyle = "#4A8A3A"; p.beginPath(); p.ellipse(X, Y, 14, 5, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFE070"; p.font = "bold 16px Georgia"; p.fillText("✶", X - 6, Y - 8); } }
+      // time left
+      const tl = Math.max(0, T.time / MQ.time); p.fillStyle = "#101810"; p.fillRect(0, MQ.START * C + C - 5, W, 5); p.fillStyle = tl < 0.25 ? "#F05040" : "#F0D060"; p.fillRect(0, MQ.START * C + C - 5, W * tl, 5);
+      fx.parts = fx.parts.filter((q) => (q.life -= dt) > 0); for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; p.globalAlpha = Math.min(1, q.life * 2); p.fillStyle = q.c; p.fillRect(q.x - 1.5, q.y - 1.5, 3, 3); } p.globalAlpha = 1;
+      fx.pts = fx.pts.filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = "#FFF0B0"; p.font = "bold 12px monospace"; p.fillText(String(q.n), q.x - 10, q.y - (now - q.at) / 40); } p.globalAlpha = 1;
+      p.restore();
+      if (fx.banner && now - fx.banner.at < 2600) { const B = fx.banner, t = (now - B.at) / 2600; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : 1; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, TOP + MQ.VERGE * C - 22, cv.width, 76); p.fillStyle = "#E0FFC0"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText(B.text, cv.width / 2, TOP + MQ.VERGE * C + 40); if (B.sub) { p.font = "14px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(B.sub, cv.width / 2, TOP + MQ.VERGE * C); } p.textAlign = "left"; p.globalAlpha = 1; }
+      if (this.mqPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+    },
+    mqEvent(e, now, L) {
+      const fx = this.mqFx, MQ = CM.MQ;
+      if (e.kind === "hop") this.cgSfx("step", 0.25, 1.6);
+      else if (e.kind === "home") { this.cgSfx("coin", 0.5); fx.pts.push({ x: MQ.BAYS[e.bay] * C + 10, y: C, n: e.pts, at: now }); }
+      else if (e.kind === "fly") this.cgSfx("cardwin", 0.35); else if (e.kind === "pike") this.cgSfx("monster", 0.25, 1.2); else if (e.kind === "extra") this.cgSfx("cardwin", 0.4);
+      else if (e.kind === "die") { const X = e.x * C + C / 2, Y = e.y * C + C / 2, wet = e.why === "water" || e.why === "edge"; this.cgSfx(wet ? "splash" : e.why === "time" ? "miss" : "hurt", 0.55); for (let k = 0; k < 14; k++) fx.parts.push({ x: X, y: Y, vx: (Math.random() - 0.5) * 140, vy: -Math.random() * 160, life: 0.6, c: wet ? (k % 2 ? "#A0D0FF" : "#FFFFFF") : (k % 2 ? "#4A8A3A" : "#F0E060") }); }
+    },
+    // the toad: a squat green body, golden eyes, legs tucked (spread mid-hop), turned the way it faces
+    mqToad(p, X, Y, face, s, spread) {
+      p.save(); p.translate(X, Y); p.rotate({ up: 0, right: Math.PI / 2, down: Math.PI, left: -Math.PI / 2 }[face]); p.scale(s, s);
+      p.fillStyle = "#2E6A2A"; const lg = 4 + spread * 5; p.fillRect(-11, 2, 5, lg); p.fillRect(6, 2, 5, lg); p.fillRect(-10, -8 - spread * 3, 4, 5); p.fillRect(6, -8 - spread * 3, 4, 5);
+      p.fillStyle = "#5AAA40"; p.beginPath(); p.ellipse(0, 0, 9, 10, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#7ACA58"; p.beginPath(); p.ellipse(0, 2, 5, 5, 0, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#F0D040"; p.beginPath(); p.arc(-4, -7, 3, 0, Math.PI * 2); p.arc(4, -7, 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#101010"; p.fillRect(-5, -8, 2, 2); p.fillRect(3, -8, 2, 2); p.restore();
+    },
+    // the road's traffic: handcarts, hay wagons, galloping riders, ox-trains
+    mqCart(p, kind, X, Y, len, dir, now) {
+      const w = len * C, cy = Y + C / 2; p.save(); p.translate(X + w / 2, cy); p.scale(dir, 1); const x0 = -w / 2;
+      if (kind === "cart") { p.fillStyle = "#8A5A2A"; p.fillRect(x0 + 4, -8, w - 10, 12); p.fillStyle = "#C08040"; p.fillRect(x0 + 6, -10, w - 14, 4); p.fillStyle = "#3A2A1A"; p.beginPath(); p.arc(x0 + 10, 6, 4, 0, Math.PI * 2); p.arc(x0 + w - 10, 6, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A4A2A"; p.fillRect(x0 + w - 6, -2, 6, 2); }
+      else if (kind === "wagon") { p.fillStyle = "#6A4A2A"; p.fillRect(x0 + 4, -6, w - 14, 12); p.fillStyle = "#E0C060"; p.beginPath(); p.ellipse(x0 + w / 2 - 4, -8, w / 2 - 8, 8, 0, Math.PI, 0); p.fill(); p.fillStyle = "#3A2A1A"; for (const k of [0.2, 0.75]) { p.beginPath(); p.arc(x0 + w * k, 8, 5, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#8A6A4A"; p.fillRect(x0 + w - 12, -4, 10, 8); }
+      else if (kind === "rider") { const g = Math.sin(now / 50) * 3; p.fillStyle = "#6A3A1A"; p.fillRect(x0 + 4, -6, w - 8, 9); p.fillRect(x0 + w - 8, -12, 6, 8); p.fillStyle = "#4A2A10"; p.fillRect(x0 + 6, 3, 3, 7 + g); p.fillRect(x0 + w - 10, 3, 3, 7 - g); p.fillStyle = "#A03030"; p.fillRect(x0 + 10, -15, 7, 10); p.fillStyle = "#F0C8A0"; p.fillRect(x0 + 11, -20, 5, 5); }
+      else { for (let k = 0; k < len; k++) { const ox = x0 + k * C; if (k === len - 1) { p.fillStyle = "#8A7A6A"; p.fillRect(ox + 4, -8, C - 10, 14); p.fillStyle = "#E0D8C8"; p.fillRect(ox + C - 8, -10, 3, 4); p.fillRect(ox + C - 8, 4, 3, 4); } else { p.fillStyle = "#7A5A3A"; p.fillRect(ox + 2, -10, C - 4, 18); p.fillStyle = "#5A3A1A"; p.fillRect(ox + 2, -10, C - 4, 3); p.fillStyle = "#3A2A1A"; p.beginPath(); p.arc(ox + C / 2, 9, 4, 0, Math.PI * 2); p.fill(); } } }
+      p.restore();
     },
   });
 }

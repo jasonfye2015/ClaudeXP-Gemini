@@ -4930,6 +4930,35 @@ test("Starstone Drift: stones start clear of the ship; the edges fold; thrust ca
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("Moatleap: the toad hops a square at a time and scores for new rows; the road runs it down; the moat drowns it off a log and carries it on one; turtles dive from level 2; a bay fills once, the wall and a pike kill; thirty seconds a toad; five bays clear the level; each level pays gold every play, every third level a card only the first time", () => {
+  const CM = load(), MQ = CM.MQ, L = new MQ.Level(1, 3); L.lanes.forEach((l) => { l.things = []; }); const T = L.toad;
+  L.input("up"); L.tick(MQ.step); assert.strictEqual(T.y, MQ.START - 1); assert.strictEqual(L.score, 10); for (let k = 0; k < 30; k++) L.tick(MQ.step); L.input("down"); L.tick(MQ.step); for (let k = 0; k < 30; k++) L.tick(MQ.step); L.input("up"); L.tick(MQ.step); assert.strictEqual(L.score, 10, "no score for a row again");
+  // the road
+  const R = new MQ.Level(1, 4), rl = R.lane(MQ.START - 1); R.lanes.forEach((l) => { if (l !== rl) l.things = []; }); rl.things = [{ x: R.toad.x + 2.5, dives: false, phase: 0 }]; rl.speed = 0; R.input("up"); R.tick(MQ.step); assert.strictEqual(R.lives, 2, "run down");
+  // the moat: in the water, then on a log and carried
+  const M = new MQ.Level(1, 5); M.lanes.forEach((l) => { l.things = []; }); Object.assign(M.toad, { y: MQ.VERGE, x: 7 }); M.input("up"); M.tick(MQ.step); for (let k = 0; k < 40; k++) M.tick(MQ.step); assert.strictEqual(M.lives, 2, "drowned");
+  const N = new MQ.Level(1, 6), nl = N.lane(MQ.VERGE - 1); N.lanes.forEach((l) => { if (l !== nl) l.things = []; }); nl.things = [{ x: 7 + 2.5 - 1, dives: false, phase: 0 }]; Object.assign(N.toad, { y: MQ.VERGE, x: 7 }); N.input("up"); N.tick(MQ.step); const x0 = N.toad.x; for (let k = 0; k < 60; k++) N.tick(MQ.step); assert.strictEqual(N.lives, 3); assert.ok(Math.abs(N.toad.x - x0 - nl.dir * nl.speed * 60 * MQ.step) < 0.05, "carried");
+  // turtles: none dive on level 1, some from 2
+  assert.ok(!new MQ.Level(1, 7).lanes.some((l) => l.things.some((t) => t.dives))); assert.ok(new MQ.Level(2, 7).lanes.some((l) => l.things.some((t) => t.dives)));
+  // bays
+  const B = new MQ.Level(3, 8); B.lanes.forEach((l) => { l.things = []; }); B.pike = null; B.pikeT = 1e9; B.fly = { bay: 0, t: 99 }; Object.assign(B.toad, { y: 1, x: MQ.BAYS[0] }); B.hop("up"); assert.ok(B.bays[0]); assert.ok(B.score >= MQ.SCORE.home + MQ.SCORE.fly);
+  Object.assign(B.toad, { y: 1, x: MQ.BAYS[0], hopT: 0 }); B.hop("up"); assert.strictEqual(B.lives, 2, "a full bay"); B.toad.dead = 0; Object.assign(B.toad, { y: 1, x: 2.5, hopT: 0 }); B.hop("up"); assert.strictEqual(B.lives, 1, "the wall");
+  B.toad.dead = 0; B.pike = { bay: 1, t: 9 }; Object.assign(B.toad, { y: 1, x: MQ.BAYS[1], hopT: 0 }); B.hop("up"); assert.strictEqual(B.lives, 0, "the pike");
+  // time
+  const Ti = new MQ.Level(1, 9); Ti.lanes.forEach((l) => { l.things = []; }); Ti.update(MQ.time + 0.1); assert.strictEqual(Ti.lives, 2);
+  // five bays
+  const F = new MQ.Level(1, 10); F.bays = [true, true, true, true, false]; Object.assign(F.toad, { y: 1, x: MQ.BAYS[4] }); F.hop("up"); assert.strictEqual(F.stage, "clear");
+  // the house's side
+  const g = new CM.Game(); g.newGame("mq-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.mqStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 6; n++) { const Lv = g.mqLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.mqCheck(); assert.strictEqual(out.pay, Math.round(100 * MQ.pay(n))); if (out.card) { cards++; assert.strictEqual(n % 3, 0); } }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "levels 3 and 6, the first time only"); assert.strictEqual(g.gold - gold0, [1, 2, 3, 4, 5, 6].reduce((t, n) => t + Math.round(100 * MQ.pay(n)), 0));
+    g.mqLevel().stage = "over"; assert.ok(g.mqCheck().over); assert.strictEqual(g.mqLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Moatleap (v14.4)
+
+The old castle across the market road has stood empty for a lifetime, but its moat has not: lily-turtles nest in it,
+the logs from the sawmill upstream drift through it, and a pike the size of a rowing boat lives under the wall. The
+house keeps toads and takes wagers on them crossing - road, moat and all - into the five lily-bays where the castle's
+drains once ran.
+
 ## Starstone Drift (v14.3)
 
 The scrying glass in the back room was meant to show the stars. Whoever ground it ground it wrong, and it shows a
