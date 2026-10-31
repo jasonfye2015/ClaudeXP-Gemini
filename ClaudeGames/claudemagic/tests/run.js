@@ -4793,6 +4793,37 @@ test("Mana-Mine: the same seed lays out the same mine; the miner digs; the tethe
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("the Glimmer Maze: the maze is closed and joined up; the slime steers, eats motes and wraps through the tunnel; a rune scares the haunts and the slime eats them for 200, 400; a scared haunt goes home as eyes and comes out again; a touch costs a life, three end it; every level cleared pays gold each play, its card only the first time", () => {
+  const CM = load(), GZ = CM.GZ;
+  assert.strictEqual(GZ.MAP.length, GZ.H); GZ.MAP.forEach((r) => assert.strictEqual(r.length, GZ.W));
+  const L0 = new GZ.Level(1, 1), open = []; for (let y = 0; y < GZ.H; y++) for (let x = 0; x < GZ.W; x++) if (L0.motes[y][x]) open.push(`${x},${y}`);
+  const seen = new Set([open[0]]), q = [open[0].split(",").map(Number)]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of Object.values(GZ.DIRS)) { const nx = (x + dx + GZ.W) % GZ.W, ny = y + dy; if (!L0.wall(nx, ny) && !seen.has(`${nx},${ny}`)) { seen.add(`${nx},${ny}`); q.push([nx, ny]); } } }
+  assert.ok(open.every((k) => seen.has(k)), "every mote can be reached"); assert.strictEqual(L0.left, open.length);
+  // steering and eating (the haunts kept home)
+  const L = new GZ.Level(1, 2), quiet = () => L.haunts.forEach((h) => { h.state = "home"; }); quiet(); L.idle = -1e9; L.dotsSince = -1e9;
+  const s0 = L.score; L.input("left"); L.update(1); assert.ok(L.p.fx < 9 && L.eaten >= 4 && L.score > s0);
+  // the tunnel: put the slime in the tunnel row heading left
+  Object.assign(L.p, { x: 2, y: GZ.TUNNEL, fx: 2, fy: GZ.TUNNEL, dir: "left", want: "left" }); L.update(1); assert.ok(L.p.fx > GZ.W / 2, "came out the other side");
+  // a rune: haunts scared; eat two of them
+  const L2 = new GZ.Level(1, 3); L2.idle = -1e9; L2.dotsSince = -1e9; L2.haunts.forEach((h) => { h.state = "home"; }); const [a1, a2] = L2.haunts; Object.assign(L2.p, { x: 2, y: 15, fx: 2, fy: 15, dir: "left", want: "left" });
+  L2.update(0.25); assert.ok(L2.fright > 0, "rune eaten"); for (const h of [a1, a2]) { h.state = "out"; h.scared = 1; Object.assign(h, { x: 1, y: 14 - (h === a2 ? 1 : 0), fx: 1, fy: 14 - (h === a2 ? 1 : 0), dir: "down" }); }
+  const sc = L2.score; L2.input("up"); L2.update(0.5); assert.strictEqual(a1.state === "out", false); assert.ok(L2.score - sc >= 600 && L2.score - sc < 700, "200 then 400");
+  for (let k = 0; k < 600 && !(a1.state === "out"); k++) L2.tick(GZ.step); assert.strictEqual(a1.state, "out", "home and out again"); assert.ok(!a1.scared);
+  // lives
+  const L3 = new GZ.Level(1, 4), E = L3.haunts[0]; Object.assign(E, { fx: L3.p.fx, fy: L3.p.fy }); L3.tick(GZ.step); assert.strictEqual(L3.lives, 2); L3.lives = 0; L3.p.dead = 0.01; L3.tick(GZ.step); assert.strictEqual(L3.stage, "over");
+  // clearing
+  const L4 = new GZ.Level(1, 5); L4.motes = L4.motes.map((r) => r.map(() => 0)); L4.motes[15][8] = 1; L4.left = 1; L4.haunts.forEach((h) => { h.state = "home"; }); L4.idle = -1e9; L4.update(0.5); assert.strictEqual(L4.stage, "clear");
+  // the house's side
+  const g = new CM.Game(); g.newGame("gz-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.gzStart(100).error); const gold0 = g.gold;
+    for (let n = 1; n <= 2; n++) { const Lv = g.gzLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.gzCheck(); assert.strictEqual(out.cleared, n); assert.strictEqual(out.pay, Math.round(100 * GZ.pay(n))); assert.strictEqual(!!out.card, play === 0, "a card only the first time"); }
+    assert.strictEqual(g.gold - gold0, Math.round(100 * GZ.pay(1)) + Math.round(100 * GZ.pay(2)));
+    g.gzLevel().stage = "over"; assert.ok(g.gzCheck().over); assert.strictEqual(g.gzState().stage, "done"); assert.strictEqual(g.gzLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

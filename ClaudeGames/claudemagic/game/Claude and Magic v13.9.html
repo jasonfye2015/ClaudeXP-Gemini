@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -848,6 +848,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .shelter .shroom { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid #C8A040; } .shelter .shstaff { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; } .shelter .shstaff span { padding: 2px 6px; border-radius: 8px; background: rgba(240,208,112,0.15); } .shelter .shstaff button { padding: 0 5px; margin-left: 3px; }
 .shelter .shbuild, .shelter .shidle { display: flex; flex-wrap: wrap; gap: 4px; } .shelter .shbuild button, .shelter .shidle button { font-size: 12px; padding: 3px 7px; }
 .manamine .mmcanvas { width: 448px; height: 540px; image-rendering: pixelated; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.glimmer .gzcanvas { width: 456px; height: 532px; border-radius: 6px; border: 6px solid #2A3A20; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 </style>
 </head>
 <body>
@@ -857,7 +858,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.8", built: "2026-10-31" };
+const CM = window.CM = { version: "13.9", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -21080,6 +21081,170 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64zf-glimmer.js ----
+"use strict";
+// The Glimmer Maze (the twenty-ninth big update - v13.9): a maze-chase on the Gilded Joker's floor. A glimmerslime eats
+// its way round a hedge maze full of glimmer motes; four Lantern Haunts hunt it, each its own way - Ember straight at it,
+// Bramble at where it is going, Frost from the far side of Ember, Moth close then shy. Now and then the haunts drift off
+// to their own corners. The four Hex Runes turn them pale and slow for a while: then the slime can eat them (200, 400,
+// 800, 1600) and they go back to the lantern-house as a pair of eyes. A tunnel through each side. A lucky chip shows twice
+// a level. Clear every mote for the next level - quicker haunts, shorter runes. Three lives (one more at 10,000). One
+// stake a play: each level cleared pays gold, more each level, every play; and a Claudescryption card for each level the
+// first time it is ever cleared (common to four, a stronger common to nine, rare from ten). The window: 76v-glimmer.js.
+CM.GZ = {
+  MAP: [
+    "###################",
+    "#........#........#",
+    "#o##.###.#.###.##o#",
+    "#.................#",
+    "#.##.#.#####.#.##.#",
+    "#....#...#...#....#",
+    "####.### # ###.####",
+    "XXX#.#       #.#XXX",
+    "####.# ##-## #.####",
+    "    .  #   #  .    ",
+    "####.# ##### #.####",
+    "XXX#.#       #.#XXX",
+    "####.# ##### #.####",
+    "#........#........#",
+    "#.##.###.#.###.##.#",
+    "#o.#.....P.....#.o#",
+    "##.#.#.#####.#.#.##",
+    "#....#...#...#....#",
+    "#.######.#.######.#",
+    "#.................#",
+    "###################",
+  ],
+  W: 19, H: 21, TUNNEL: 9, OUT: [9, 7], HOME: [9, 9], CHIP: [9, 11], step: 1 / 60, lives: 3, extra: 10000,
+  speed: 5.4, haunt: 4.4, scared: 3.0, eyes: 11, tunnelSpeed: 2.6,
+  MODES: [["scatter", 9], ["chase", 15], ["scatter", 8], ["chase", 18], ["scatter", 6], ["chase", 1e9]],
+  fright: (n) => Math.max(1.5, 8 - 0.6 * (n - 1)), release: [0, 8, 30, 60], idleRelease: 5,
+  pay: (n) => 0.15 + 0.1 * n, SCORE: { mote: 10, rune: 50, eat: [200, 400, 800, 1600], chip: [100, 300, 500, 700, 1000, 2000, 3000, 5000] },
+  HAUNTS: [{ name: "Ember", color: "#F05030", corner: [17, -2] }, { name: "Bramble", color: "#60D060", corner: [1, -2] }, { name: "Frost", color: "#60C8F0", corner: [18, 22] }, { name: "Moth", color: "#F0B040", corner: [0, 22] }],
+  DIRS: { up: [0, -1], left: [-1, 0], down: [0, 1], right: [1, 0] }, BACK: { up: "down", down: "up", left: "right", right: "left" },
+};
+const GZ = CM.GZ;
+GZ.Level = class {
+  constructor(n, seed, keep) {
+    this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: GZ.lives, extraGiven: false });
+    this.motes = GZ.MAP.map((row) => [...row].map((c) => (c === "." ? 1 : c === "o" ? 2 : 0))); this.left = this.motes.flat().filter(Boolean).length; this.eaten = 0; this.chip = null;
+    this.mul = 1 + Math.min(0.35, (n - 1) * 0.05); this.spawn();
+  }
+  spawn() {
+    let px = 9, py = 15; GZ.MAP.forEach((row, y) => { if (row.includes("P")) { px = row.indexOf("P"); py = y; } });
+    this.p = { x: px, y: py, fx: px, fy: py, dir: "left", want: "left", dead: 0, mouth: 0 };
+    this.haunts = GZ.HAUNTS.map((H, i) => { const [x, y] = i === 0 ? GZ.OUT : [GZ.HOME[0] + (i - 2), GZ.HOME[1]]; return { i, name: H.name, x, y, fx: x, fy: y, dir: i === 0 ? "left" : "up", state: i === 0 ? "out" : "home", scared: 0, flip: false }; });
+    this.modeI = 0; this.modeT = GZ.MODES[0][1]; this.fright = 0; this.chain = 0; this.idle = 0; this.dotsSince = 0; this.freshLife = this.eaten > 0;
+  }
+  mode() { return GZ.MODES[this.modeI][0]; }
+  wall(x, y) { if (y === GZ.TUNNEL && (x < 0 || x >= GZ.W)) return false; if (x < 0 || x >= GZ.W || y < 0 || y >= GZ.H) return true; const c = GZ.MAP[y][x]; return c === "#" || c === "X" || c === "-"; }
+  input(dir) { if (dir) this.p.want = dir; }
+  centred(e) { return Math.abs(e.fx - e.x) < 1e-6 && Math.abs(e.fy - e.y) < 1e-6; }
+  // one walker's step: at a cell's middle choose; then slide toward the next cell, through the tunnel at the sides
+  walk(e, sp, choose) {
+    let left = sp;
+    for (let guard = 0; guard < 4 && left > 1e-9; guard++) {
+      if (this.centred(e)) {
+        if (e.x < 0) e.x = e.fx = GZ.W; else if (e.x >= GZ.W) e.x = e.fx = -1;
+        const d = choose(e); if (!d) return; e.dir = d; const [dx, dy] = GZ.DIRS[d]; e.x += dx; e.y += dy;
+      }
+      const dist = Math.abs(e.x - e.fx) + Math.abs(e.y - e.fy); if (dist <= left + 1e-9) { e.fx = e.x; e.fy = e.y; left -= dist; } else { if (Math.abs(e.x - e.fx) > 1e-9) e.fx += Math.sign(e.x - e.fx) * left; else e.fy += Math.sign(e.y - e.fy) * left; left = 0; }
+    }
+  }
+  stepSlime(dt) {
+    const P = this.p; if (P.dead) return;
+    if (P.want === GZ.BACK[P.dir] && !this.centred(P)) { const [bx, by] = GZ.DIRS[P.want]; P.x += bx; P.y += by; P.dir = P.want; }
+    const sp = (P.y === GZ.TUNNEL && (P.x < 1 || P.x > GZ.W - 2) ? 0.8 : 1) * GZ.speed * Math.min(1.15, this.mul) * dt;
+    this.walk(P, sp, (e) => { for (const d of [e.want, e.dir]) { const [dx, dy] = GZ.DIRS[d]; if (!this.wall(e.x + dx, e.y + dy)) return d; } return null; });
+    P.mouth += dt * 12;
+    const cx = Math.round(P.fx), cy = Math.round(P.fy);
+    if (Math.abs(P.fx - cx) + Math.abs(P.fy - cy) < 0.3 && cx >= 0 && cx < GZ.W && this.motes[cy][cx]) {
+      const k = this.motes[cy][cx]; this.motes[cy][cx] = 0; this.left -= 1; this.eaten += 1; this.dotsSince += 1; this.idle = 0; this.score += k === 2 ? GZ.SCORE.rune : GZ.SCORE.mote; this.events.push({ kind: k === 2 ? "rune" : "mote", x: cx, y: cy });
+      if (k === 2) { this.fright = GZ.fright(this.n); this.chain = 0; for (const h of this.haunts) if (h.state === "out") { h.scared = 1; h.flip = true; } }
+      if ((this.eaten === 60 || this.eaten === 140) && !this.chip) { this.chip = { t: 9.5, pts: GZ.SCORE.chip[Math.min(7, this.n - 1)] }; this.events.push({ kind: "chip" }); }
+      if (!this.left) { this.stage = "clear"; this.events.push({ kind: "clear" }); }
+    }
+    if (this.chip && Math.abs(P.fx - GZ.CHIP[0]) + Math.abs(P.fy - GZ.CHIP[1]) < 0.5) { this.score += this.chip.pts; this.events.push({ kind: "chipeat", pts: this.chip.pts }); this.chip = null; }
+  }
+  // where each haunt aims
+  target(h) {
+    const P = this.p, [dx, dy] = GZ.DIRS[P.dir];
+    if (this.mode() === "scatter") return GZ.HAUNTS[h.i].corner;
+    if (h.i === 0) return [P.x, P.y];
+    if (h.i === 1) return [P.x + dx * 4, P.y + dy * 4];
+    if (h.i === 2) { const E = this.haunts[0]; return [(P.x + dx * 2) * 2 - E.x, (P.y + dy * 2) * 2 - E.y]; }
+    return Math.hypot(h.x - P.x, h.y - P.y) > 8 ? [P.x, P.y] : GZ.HAUNTS[3].corner;
+  }
+  // the way home for a pair of eyes: steps to the lantern-house door from every cell
+  homeDist() { if (GZ.homeD) return GZ.homeD; const D = new Map([[`${GZ.OUT[0]},${GZ.OUT[1]}`, 0]]), q = [GZ.OUT]; while (q.length) { const [x, y] = q.shift(), d = D.get(`${x},${y}`); for (const [dx, dy] of Object.values(GZ.DIRS)) { let nx = x + dx; const ny = y + dy; if (this.wall(nx, ny)) continue; if (nx < -1) nx = GZ.W; if (nx > GZ.W) nx = -1; if (!D.has(`${nx},${ny}`)) { D.set(`${nx},${ny}`, d + 1); q.push([nx, ny]); } } } return (GZ.homeD = D); }
+  stepHaunt(h, dt) {
+    if (h.state === "home") { h.fy = GZ.HOME[1] + Math.sin(this.t * 6 + h.i) * 0.2; return; }
+    if (h.state === "leaving") { const sp = GZ.haunt * 0.5 * dt, [ox, oy] = GZ.OUT; if (Math.abs(h.fx - ox) > 1e-6) h.fx += Math.sign(ox - h.fx) * Math.min(sp, Math.abs(ox - h.fx)); else if (Math.abs(h.fy - GZ.HOME[1]) > 1e-6 && h.fy > GZ.HOME[1]) h.fy = GZ.HOME[1]; else { h.fy -= Math.min(sp, h.fy - oy); if (h.fy <= oy + 1e-6) { h.fx = h.x = ox; h.fy = h.y = oy; h.state = "out"; h.dir = "left"; h.scared = 0; } } return; }
+    if (h.state === "eyes" && this.centred(h) && h.x === GZ.OUT[0] && h.y === GZ.OUT[1]) h.state = "entering";
+    if (h.state === "entering") { h.fy += Math.min(GZ.eyes * dt, GZ.HOME[1] - h.fy); if (h.fy >= GZ.HOME[1] - 1e-6) { h.x = GZ.HOME[0]; h.y = GZ.HOME[1]; h.state = "leaving"; } return; }
+    const inTunnel = h.y === GZ.TUNNEL && (h.x < 2 || h.x > GZ.W - 3), base = h.state === "eyes" ? GZ.eyes : inTunnel ? GZ.tunnelSpeed : h.scared ? GZ.scared : GZ.haunt * this.mul;
+    this.walk(h, base * dt, (e) => {
+      if (e.state === "eyes") { const D = this.homeDist(); let best = null, bd = Infinity; for (const [d, [dx, dy]] of Object.entries(GZ.DIRS)) { const v = D.get(`${e.x + dx},${e.y + dy}`); if (v !== undefined && v < bd) { bd = v; best = d; } } return best; }
+      if (e.flip) { e.flip = false; const [dx, dy] = GZ.DIRS[GZ.BACK[e.dir]]; if (!this.wall(e.x + dx, e.y + dy)) return GZ.BACK[e.dir]; }
+      const opts = Object.keys(GZ.DIRS).filter((d) => { const [dx, dy] = GZ.DIRS[d]; return d !== GZ.BACK[e.dir] && !this.wall(e.x + dx, e.y + dy); });
+      if (!opts.length) return GZ.BACK[e.dir];
+      if (e.scared && e.state === "out") return this.rnd.pick(opts);
+      const [tx, ty] = e.state === "eyes" ? GZ.OUT : this.target(e); let best = null, bd = Infinity;
+      for (const d of opts) { const [dx, dy] = GZ.DIRS[d], dd = (e.x + dx - tx) ** 2 + (e.y + dy - ty) ** 2; if (dd < bd) { bd = dd; best = d; } } return best;
+    });
+  }
+  lose() { const P = this.p; if (P.dead) return; P.dead = 1.8; this.lives -= 1; this.events.push({ kind: "die" }); }
+  update(dt) { for (let s = 0; s < dt / GZ.step - 1e-9; s++) this.tick(GZ.step); }
+  tick(dt) {
+    if (this.stage !== "play") return; this.t += dt; const P = this.p;
+    if (P.dead) { P.dead -= dt; if (P.dead <= 0) { if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else { this.spawn(); this.events.push({ kind: "respawn" }); } } return; }
+    if (this.fright > 0) { this.fright -= dt; if (this.fright <= 0) for (const h of this.haunts) h.scared = 0; }
+    else { this.modeT -= dt; if (this.modeT <= 0 && this.modeI < GZ.MODES.length - 1) { this.modeI += 1; this.modeT = GZ.MODES[this.modeI][1]; for (const h of this.haunts) if (h.state === "out") h.flip = true; } }
+    // the lantern-house lets them out by motes eaten, or after a while without one
+    this.idle += dt; const waiting = this.haunts.find((h) => h.state === "home");
+    if (waiting && (this.dotsSince >= (this.freshLife ? 8 * waiting.i : GZ.release[waiting.i]) || this.idle > GZ.idleRelease)) { waiting.state = "leaving"; this.idle = 0; this.dotsSince = 0; }
+    this.stepSlime(dt); if (this.stage !== "play") return;
+    for (const h of this.haunts) this.stepHaunt(h, dt);
+    if (this.chip) { this.chip.t -= dt; if (this.chip.t <= 0) this.chip = null; }
+    for (const h of this.haunts) {
+      if (h.state !== "out" || Math.abs(h.fx - P.fx) + Math.abs(h.fy - P.fy) > 0.7) continue;
+      if (h.scared) { const pts = GZ.SCORE.eat[Math.min(3, this.chain++)]; this.score += pts; h.state = "eyes"; h.scared = 0; h.x = Math.round(h.fx); h.y = Math.round(h.fy); h.fx = h.x; h.fy = h.y; this.events.push({ kind: "eat", h, pts }); }
+      else { this.lose(); break; }
+    }
+    if (!this.extraGiven && this.score >= GZ.extra) { this.extraGiven = true; this.lives += 1; this.events.push({ kind: "extra" }); }
+  }
+};
+Object.assign(CM.Game.prototype, {
+  gzState() { return this.cgStore().gz || null; },
+  gzClaimed() { const F = this.cgStore(); F.gzCards = F.gzCards || {}; return F.gzCards; },
+  gzLevel() {
+    const S = this.gzState(); if (!S || S.stage !== "play") return null;
+    if (!this.gzLive || this.gzLive.key !== `${S.seed}:${S.n}`) {
+      if (this.gzLive && this.gzLive.key && this.gzLive.key.startsWith(`${S.seed}:`)) { const keep = { score: this.gzLive.score, lives: this.gzLive.lives, extraGiven: this.gzLive.extraGiven }; this.gzLive = new GZ.Level(S.n, CM.hashSeed(`${S.seed}:${S.n}`), keep); this.gzLive.key = `${S.seed}:${S.n}`; }
+      else { S.stage = "done"; S.last = S.last || { level: S.n, won: S.won, cards: [], lost: true }; this.saveCasino && this.saveCasino(); return null; }
+    }
+    return this.gzLive;
+  },
+  gzStart(bet) {
+    const S0 = this.gzState(); if (S0 && S0.stage === "play" && this.gzLive && this.gzLive.key && this.gzLive.key.startsWith(`${S0.seed}:`)) return { error: "A game is on." };
+    const why = this.cgStake("glimmer", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.gz = { stage: "play", n: 1, bet: Math.floor(bet), seed: `${this.seed}:glimmer:${F.n}`, won: 0, cards: [] };
+    this.gzLive = new GZ.Level(1, CM.hashSeed(`${F.gz.seed}:1`)); this.gzLive.key = `${F.gz.seed}:1`; this.saveCasino && this.saveCasino(); return F.gz;
+  },
+  // a level cleared: its gold (every play), its card (the first time ever); on to the next. The game over: done.
+  gzCheck() {
+    const S = this.gzState(), L = this.gzLive; if (!S || !L || S.stage !== "play") return null;
+    if (L.stage === "clear") {
+      const n = S.n, pay = Math.round(S.bet * GZ.pay(n)), C = this.gzClaimed(); let card = null;
+      if (!C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `The Glimmer Maze, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:glimmer:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("glimmer", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.gzLevel(); return { cleared: n, pay, card };
+    }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.gzBest = Math.max(F.gzBest || 0, L.score); this.gzLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    return null;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -27892,6 +28057,95 @@ CM.CG_TABLES.push(["manamine", "Mana-Mine"]);
       else { p.fillStyle = m.swell ? "#90E070" : "#4A9A3A"; p.beginPath(); p.ellipse(0, 2, 13, 9, 0, 0, Math.PI * 2); p.fill(); p.fillRect(-16, 2, 6, 4); p.fillStyle = "#F08030"; for (const k of [-6, 0, 6]) p.fillRect(k - 1, -8, 3, 4); p.fillStyle = "#3A7A2A"; p.fillRect(-9, 9, 4, 4); p.fillRect(5, 9, 4, 4); p.fillStyle = "#FFE060"; p.fillRect(6, -2, 4, 4); p.fillStyle = "#101010"; p.fillRect(8, -1, 2, 2);
         if (m.warnT > 0) { p.fillStyle = `rgba(255,${120 + 100 * Math.sin(now / 40)},40,0.9)`; p.beginPath(); p.arc(14, 2, 4 + 3 * Math.sin(now / 40), 0, Math.PI * 2); p.fill(); } }
       p.restore();
+    },
+  });
+}
+
+// ---- 76v-glimmer.js ----
+"use strict";
+// The Glimmer Maze, the window's side (the twenty-ninth big update): the hedge maze on a canvas - dark hedges with a
+// lit edge, gold motes, the Hex Runes pulsing, the lantern-house and its door; the glimmerslime (its mouth toward where
+// it goes, melting when caught), the four Lantern Haunts (a lantern's body with its flame's colour, a ragged hem, eyes
+// that look the way they go; pale and wobbling when the runes scare them, blinking white as that wears off, only eyes on
+// the way home), the lucky chip, the points; the score, the lives and the level at the top. Arrows or W A S D to steer
+// (a turn can be given early), P to pause. The rules are 64zf-glimmer.js.
+CM.CG_TABLES.push(["glimmer", "The Glimmer Maze"]);
+{ const floor0 = CM.UI.prototype.renderFloor, C = 24, TOP = 28;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "glimmer") return this.cgGlimmer(box); return floor0.call(this, box); },
+    cgGlimmer(box) {
+      const g = this.game, GZ = CM.GZ, S = g.gzState(), L = g.gzLevel(), live = !!L, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.gzClaimed(), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(12, (S && live ? S.n : 1) + 4), rows = []; for (let n = 1; n <= top; n++) { const tier = CM.cardTierFor(n); rows.push(`<div class="rung${live && S.n === n ? " now" : ""}${live && S.n > n ? " done" : ""}"><span>Level ${n}</span><b>${Math.round(bet * GZ.pay(n))}</b><i class="${Cl[n] ? "got" : tier}" title="${Cl[n] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${Cl[n] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`); }
+      box.innerHTML = `<div class="cgtable glimmer runestack dash"><h3>The Glimmer Maze</h3><div class="rswrap"><canvas class="gzcanvas" width="${GZ.W * C}" height="${GZ.H * C + TOP}" tabindex="0"></canvas>
+        <div class="dashside"><p class="lore">A hedge maze grown in the Joker's back garden, strung with glimmer motes. "Eat them all," says the attendant, handing you the reins of a hungry glimmerslime. "The lanterns don't like that. The runes in the corners - the lanterns like those even less."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-gzpause>${this.gzPaused ? "Go on" : "Pause"}</button>` : `<button class="primary" data-gzstart>Into the maze (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Arrows or W A S D to steer - press a turn early and the slime takes it at the next corner; P to pause. Ember hunts you straight, Bramble heads where you are going, Frost comes from the far side, Moth closes in and then shies off; now and then they all drift to their corners. A Hex Rune makes them pale and slow - eat them then (200, 400, 800, 1600). The tunnels at the sides wrap round. A lucky chip shows under the lantern-house twice a level. Three lives, one more at 10,000. Each level cleared pays gold, more each, every play; its card comes the first time ever (♦ common 1-4, ◆ a stronger common 5-9, ★ rare from 10). Best score ${g.cgStore().gzBest || 0}.</div>${this.cgStats("glimmer")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-gzstart]")) q("[data-gzstart]").addEventListener("click", () => { const r = g.gzStart(bet); this.cgNote = r.error || "Level 1. Eat!"; this.gzFx = { pts: [] }; this.gzPaused = false; this.cgSfx(r.error ? "miss" : "door", 0.45); this.renderCasino(); const cv = this.$("#casino-body .gzcanvas"); if (cv) cv.focus(); });
+      if (q("[data-gzpause]")) q("[data-gzpause]").addEventListener("click", () => { this.gzPaused = !this.gzPaused; this.renderCasino(); });
+      this.gzCanvas = q(".gzcanvas");
+      if (!this.gzKeys) { const map = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right" };
+        this.gzKeys = (e) => { if (this.cgView !== "glimmer" || !this.dialogOpen() || !this.game.gzLevel()) return; if (e.code === "KeyP") { e.preventDefault(); this.gzPaused = !this.gzPaused; this.renderCasino(); return; } const d = map[e.code]; if (d) { e.preventDefault(); e.stopPropagation(); if (!this.gzPaused) this.game.gzLevel().input(d); } };
+        window.addEventListener("keydown", this.gzKeys, true); }
+      if (!this.gzLoop) { let prev = performance.now(); const loop = (now) => { if (!this.gzCanvas || !this.gzCanvas.isConnected || this.cgView !== "glimmer") { this.gzLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.gzFrame(dt, now); this.gzLoop = requestAnimationFrame(loop); }; this.gzLoop = requestAnimationFrame(loop); }
+    },
+    gzFrame(dt, now) {
+      const g = this.game, GZ = CM.GZ, L = g.gzLevel(), cv = this.gzCanvas, p = cv.getContext("2d"), fx = this.gzFx = this.gzFx || { pts: [] };
+      if (L && !this.gzPaused) { L.update(dt); for (const e of L.events.splice(0)) this.gzEvent(e, now); const out = g.gzCheck();
+        if (out && out.cleared) { fx.banner = { at: now, level: out.cleared, pay: out.pay, card: out.card }; this.cgSfx("victory", 0.55); if (out.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 300); this.cgNote = `Level ${out.cleared} cleared: ${out.pay} gold${out.card ? `, and a card - ${out.card}` : ""}.`; this.renderCasino(); return; }
+        if (out && out.over) { const S = g.gzState(); this.cgNote = `The last glimmer fades on level ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
+      const Lv = L || this.gzLastDrawn; if (L) this.gzLastDrawn = L;
+      p.fillStyle = "#08100C"; p.fillRect(0, 0, cv.width, cv.height);
+      p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "THE GLIMMER MAZE", 8, 19); if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Lv.lives; k++) this.gzSlime(p, cv.width - 16 - k * 22, 14, "left", 0.42, 0.6, 0); }
+      p.save(); p.translate(0, TOP);
+      // the hedges: a dark body, a lit edge where it meets a path
+      for (let y = 0; y < GZ.H; y++) for (let x = 0; x < GZ.W; x++) { const c = GZ.MAP[y][x], X = x * C, Y = y * C;
+        if (c === "#") { p.fillStyle = "#1C4A2A"; p.fillRect(X, Y, C, C); p.fillStyle = "#3A8A4A"; const open = (dx, dy) => { const ch = (GZ.MAP[y + dy] || "")[x + dx]; return ch !== undefined && ch !== "#" && ch !== "X"; };
+          if (open(0, -1)) p.fillRect(X, Y, C, 3); if (open(0, 1)) p.fillRect(X, Y + C - 3, C, 3); if (open(-1, 0)) p.fillRect(X, Y, 3, C); if (open(1, 0)) p.fillRect(X + C - 3, Y, 3, C);
+          p.fillStyle = "rgba(120,200,120,0.18)"; if ((x * 7 + y * 13) % 5 === 0) p.fillRect(X + 8, Y + 9, 3, 3); }
+        else if (c === "-") { p.fillStyle = "#F0A0C0"; p.fillRect(X, Y + C / 2 - 2, C, 4); }
+        if (Lv && Lv.motes[y][x] === 1) { p.fillStyle = "#FFE48A"; p.fillRect(X + C / 2 - 2, Y + C / 2 - 2, 4, 4); }
+        else if (Lv && Lv.motes[y][x] === 2) { const k = 0.6 + 0.4 * Math.sin(now / 160); p.save(); p.shadowColor = "#C080FF"; p.shadowBlur = 10 * k; p.fillStyle = `rgba(200,140,255,${0.6 + 0.4 * k})`; p.beginPath(); p.moveTo(X + C / 2, Y + 3); p.lineTo(X + C - 4, Y + C / 2); p.lineTo(X + C / 2, Y + C - 3); p.lineTo(X + 4, Y + C / 2); p.closePath(); p.fill(); p.fillStyle = "#FFF"; p.fillRect(X + C / 2 - 1, Y + C / 2 - 4, 2, 8); p.restore(); } }
+      if (!Lv) { p.restore(); p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("The Glimmer Maze", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
+      if (Lv.chip) { const X = GZ.CHIP[0] * C + C / 2, Y = GZ.CHIP[1] * C + C / 2; p.fillStyle = "#C02030"; p.beginPath(); p.arc(X, Y, 9, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#FFF"; p.lineWidth = 2; p.setLineDash([3, 3]); p.beginPath(); p.arc(X, Y, 7, now / 400, now / 400 + Math.PI * 2); p.stroke(); p.setLineDash([]); p.fillStyle = "#FFE070"; p.beginPath(); p.arc(X, Y, 3, 0, Math.PI * 2); p.fill(); p.lineWidth = 1; }
+      const P = Lv.p; this.gzSlime(p, P.fx * C + C / 2, P.fy * C + C / 2, P.dir, 1, Math.abs(Math.sin(P.mouth)) * 0.9, P.dead ? 1 - P.dead / 1.8 : 0);
+      for (const h of Lv.haunts) this.gzHaunt(p, h, Lv, now);
+      fx.pts = (fx.pts || []).filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = "#A0F0FF"; p.font = "bold 12px monospace"; p.fillText(String(q.n), q.x, q.y - (now - q.at) / 40); } p.globalAlpha = 1;
+      p.restore();
+      if (fx.banner && now - fx.banner.at < 2400) { const B = fx.banner, t = (now - B.at) / 2400; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : 1; p.fillStyle = "rgba(0,0,0,0.7)"; p.fillRect(0, cv.height / 2 - 50, cv.width, 100); p.fillStyle = "#FFE070"; p.font = "bold 28px Georgia, serif"; p.textAlign = "center"; p.fillText(`Level ${B.level} cleared!`, cv.width / 2, cv.height / 2 - 10); p.font = "15px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(`+${B.pay} gold${B.card ? ` - ${B.card}` : ""}`, cv.width / 2, cv.height / 2 + 20); p.textAlign = "left"; p.globalAlpha = 1; }
+      if (this.gzPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+    },
+    gzEvent(e, now) {
+      const fx = this.gzFx;
+      if (e.kind === "mote") { this.gzTick = (this.gzTick || 0) + 1; if (this.gzTick % 2) this.cgSfx("coin", 0.1, 1.6 + (this.gzTick % 4) * 0.08); }
+      else if (e.kind === "rune") this.cgSfx("spell", 0.5);
+      else if (e.kind === "eat") { this.cgSfx("shatter", 0.45, 1.3); fx.pts.push({ x: e.h.fx * C, y: e.h.fy * C + C / 2, n: e.pts, at: now }); }
+      else if (e.kind === "chip") this.cgSfx("tablebell", 0.35); else if (e.kind === "chipeat") { this.cgSfx("coin", 0.6); fx.pts.push({ x: CM.GZ.CHIP[0] * C - 6, y: CM.GZ.CHIP[1] * C + C / 2, n: e.pts, at: now }); }
+      else if (e.kind === "die") this.cgSfx("hurt", 0.6); else if (e.kind === "extra") this.cgSfx("cardwin", 0.4); else if (e.kind === "clear") this.cgSfx("tablebell", 0.5);
+    },
+    // the glimmerslime: a teal blob with a shine, two eyes, a mouth that opens toward where it goes; melts when caught
+    gzSlime(p, X, Y, dir, s, open, melt) {
+      const ang = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[dir] || 0, r = 10 * s, m = open * 0.6;
+      p.save(); p.translate(X, Y); p.scale(1 + melt * 0.6, 1 - melt * 0.8); p.translate(0, melt * 8 * s);
+      const gr = p.createRadialGradient(-3 * s, -3 * s, 1, 0, 0, r); gr.addColorStop(0, "#C0FFF0"); gr.addColorStop(1, "#30B8A0"); p.fillStyle = gr;
+      p.beginPath(); p.moveTo(0, 0); p.arc(0, 0, r, ang + m, ang + Math.PI * 2 - m); p.closePath(); p.fill();
+      if (!melt) { const ex = Math.cos(ang - 1.2) * r * 0.45, ey = Math.sin(ang - 1.2) * r * 0.45; p.fillStyle = "#103028"; p.fillRect(ex - 1.5 * s, ey - 1.5 * s, 3 * s, 3 * s); }
+      p.restore();
+    },
+    // a Lantern Haunt: a lantern's glow for a body with a ragged hem; pale when scared, only eyes on the way home
+    gzHaunt(p, h, Lv, now) {
+      const GZ = CM.GZ, X = h.fx * C + C / 2, Y = h.fy * C + C / 2, look = GZ.DIRS[h.dir] || [0, 0];
+      const eyes = () => { for (const ex of [-4, 4]) { p.fillStyle = "#FFF"; p.beginPath(); p.ellipse(X + ex, Y - 2, 3.2, 4, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2030A0"; p.beginPath(); p.arc(X + ex + look[0] * 1.6, Y - 2 + look[1] * 2, 1.8, 0, Math.PI * 2); p.fill(); } };
+      if (h.state === "eyes" || h.state === "entering") return eyes();
+      const scared = h.scared && Lv.fright > 0, blink = scared && Lv.fright < 2 && Math.floor(now / 180) % 2, col = scared ? (blink ? "#F0F0FF" : "#5060E0") : GZ.HAUNTS[h.i].color;
+      p.save(); p.shadowColor = col; p.shadowBlur = scared ? 4 : 12; p.fillStyle = col;
+      p.beginPath(); p.moveTo(X - 10, Y + 10); p.lineTo(X - 10, Y - 2); p.quadraticCurveTo(X - 10, Y - 11, X, Y - 11); p.quadraticCurveTo(X + 10, Y - 11, X + 10, Y - 2); p.lineTo(X + 10, Y + 10);
+      const w = Math.floor(now / 120) % 2; for (let k = 0; k < 4; k++) { p.lineTo(X + 10 - k * 5 - 2.5, (k + w) % 2 ? Y + 6 : Y + 10); p.lineTo(X + 10 - (k + 1) * 5, Y + 10); }
+      p.closePath(); p.fill(); p.restore();
+      if (!scared) { p.fillStyle = "rgba(255,255,220,0.45)"; p.fillRect(X - 6, Y + 3, 12, 2); p.fillStyle = "#3A2A10"; p.fillRect(X - 3, Y - 14, 6, 3); eyes(); }
+      else { p.fillStyle = blink ? "#E04040" : "#FFE0C0"; p.fillRect(X - 4, Y - 4, 3, 3); p.fillRect(X + 1, Y - 4, 3, 3); p.strokeStyle = p.fillStyle; p.beginPath(); for (let k = 0; k <= 4; k++) p.lineTo(X - 6 + k * 3, Y + 3 + (k % 2 ? -2 : 0)); p.stroke(); }
     },
   });
 }

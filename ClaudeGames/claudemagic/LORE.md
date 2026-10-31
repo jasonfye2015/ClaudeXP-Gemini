@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Glimmer Maze (v13.9)
+
+The Joker's back garden was a hedge maze long before it was a casino's, and the lanterns hung along its paths have
+never liked being left alone in the dark. The house strings it with glimmer motes every night and lets a glimmerslime
+loose to eat them; the lanterns come off their hooks to chase it. The runes in the four corners were cut by whoever
+planted the hedges, and the lanterns still remember why.
+
 ## Mana-Mine (v13.8)
 
 Behind the Joker's bar is a trapdoor, and under it a ladder into a mine the house calls "lively". The Mudlings that live
