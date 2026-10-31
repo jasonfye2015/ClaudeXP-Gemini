@@ -1392,6 +1392,25 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudeita's cave (the thirteenth big update - v11.3)
+  UPGRADE_PLAN_11.md says what it does. South of the fields, up a path from them, a crag of grey rock has a low dark
+  mouth with a forge-glow far down in it; the second plinth in the portal yard by the shaft is lit for it, and a portal
+  by the crag goes back. One caster goes in alone (Mage, Necromancer, Druid, Cleric, Bard or Artificer) and the game
+  becomes the Timeline's Claudeita, ported whole (src/js/64i-claudeita.js; the window's side src/js/76c-cave.js): a
+  side-on world of falling sand, flowing water, lava and acid, and fire, made a few rows at a time as you descend; five
+  biomes (the Mines, the Frozen Depths, the Fungal Caverns, the Magma Vault, the Hollow Heart), each ending in a boss's
+  arena - Gravelmaw, Rimecaller, Mother Spore, the Cinder Colossus, the Unmaker - and, under the first four, a sanctuary
+  with a fountain and a shop. Wands are rows of spells cast in order (projectiles, modifiers, multicasts); the
+  Apprentice's Wand and the Miner's Rod are given at the mouth, more are found deeper, and Tab is the wand editor.
+  A D move, W or Space jump (held: levitate), the mouse aims and casts, 1-4 or the wheel change wands, E takes or buys.
+  The hero's health in the cave follows theirs; their level and wisdom or intellect add to the spells' damage.
+  Dying puts the hero back with the party at the mouth with a tenth of their health, and the run's gold, things and
+  wands are lost. Undoing the Unmaker - or climbing a sanctuary's rope back to the daylight, which is the Wood's own
+  addition - keeps them all: the gold, a thing of the party's own from every boss, and the wands and spells, which go
+  to the rack at the mouth (up to two of them may be taken in on a later run, and come back whatever happens).
+  Experience is always kept. Turning back from the actions panel keeps only the experience. The Unmaker's fall is an
+  achievement. Sounds made in code for the wands' bolts, blasts, digging and splashes.
+
 Leshy's cabin: Claudescryption in the Wood (v11.1)
   In a clearing between the river and the fields, up a path from the road, stands a log cabin with smoke from its
   chimney and a candle in its window; the second portal in the portal yard by the shaft goes there, and one by its door

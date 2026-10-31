@@ -138,6 +138,10 @@ CM.audio = {
       tablebell: () => this._mix(T([[1320, 0.9]], "sine", 0.16), T([[1980, 0.6]], "sine", 0.06), T([[2640, 0.35]], "sine", 0.03)),      // (the bell on the table)
       cardwin: () => T([[523, 0.12], [659, 0.12], [784, 0.12], [1047, 0.35]], "triangle", 0.12),
       cardlose: () => T([[392, 0.18], [330, 0.18], [262, 0.45]], "triangle", 0.11),
+      zap: () => this._mix(this._sweep(2400, 900, 0.07, "square", 0.05), N(0.03, 0.06, 0.9, 123)),                                   // (Claudeita's cave: a wand's bolt)
+      wanddig: () => this._mix(N(0.06, 0.16, 0.35, 125), this._sweep(300, 180, 0.05, "square", 0.04)),                                // (a digging bolt in the earth)
+      wandboom: () => this._mix(N(0.5, 0.6, 0.2, 127), this._sweep(110, 30, 0.6, "sine", 0.45), this._after(0.08, N(0.6, 0.25, 0.08, 129))),   // (a blast that takes the rock with it)
+      splash: () => this._mix(N(0.22, 0.2, 0.6, 131), this._after(0.05, N(0.18, 0.1, 0.8, 133))),                                     // (water, or acid, thrown)
       snore: () => this._mix(N(0.7, 0.16, 0.92, 83), this._sweep(70, 55, 0.7, "sine", 0.06)),                                       // (a sleeper, near: phase 7)
       hinge: () => this._mix(this._sweep(520, 300, 0.32, "sawtooth", 0.03), this._sweep(610, 380, 0.28, "square", 0.015)),         // (a door swinging)
       chain: () => this._mix(...[0, 0.07, 0.14, 0.21, 0.28, 0.35, 0.42].map((d, i) => this._after(d, T([[900 + (i % 3) * 140, 0.03]], "square", 0.07))), this._after(0.5, T([[70, 0.2]], "square", 0.12))),   // (a portcullis)

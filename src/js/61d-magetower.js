@@ -49,7 +49,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
-  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = P.cabin && p === P.cabin ? { type: "portal", to: "cabin" } : { type: "plinth" };   // (the first plinth lit: to Leshy's cabin)
+  for (const p of P.plinths) { const was = fl.things[key(...p)], lit = P.cabin && p === P.cabin ? "cabin" : P.claudeita && p === P.claudeita ? "claudeita" : null; if (!was || (lit && was.type === "plinth")) fl.things[key(...p)] = lit ? { type: "portal", to: lit } : { type: "plinth" }; }   // (the plinths lit: Leshy's cabin, Claudeita's cave)   // (the first plinth lit: to Leshy's cabin)
   return fl;
 };
 
@@ -59,7 +59,8 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
     if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
-    if (t.to === "town") { this.enterFloor(0, "rope", (this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - CM.CABIN.portal[0]) + Math.abs(this.floor.pos[1] - CM.CABIN.portal[1]) <= 1 ? CM.PORTAL_YARD.cabin : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
+    if (t.to === "claudeita") { this.enterFloor(-1, "rope", CM.CLAUDEITA.front.slice()); this.floor.facing = 2; this.say("The portal leaves you among the trees south of the fields, before a crag of grey rock with a dark mouth in it. Warm air breathes out of the dark."); return true; }
+    if (t.to === "town") { const near = (q) => this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - q[0]) + Math.abs(this.floor.pos[1] - q[1]) <= 1; this.enterFloor(0, "rope", (near(CM.CABIN.portal) ? CM.PORTAL_YARD.cabin : CM.CLAUDEITA && near(CM.CLAUDEITA.portal) ? CM.PORTAL_YARD.claudeita : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
     return false;
   },
   // the tower's doors: the choice of who goes in (the dialog is the window's); the rules say who may

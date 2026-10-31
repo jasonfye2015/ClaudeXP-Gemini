@@ -853,6 +853,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  unmaker: { name: "Undone", what: "Undo the Unmaker at the bottom of Claudeita's cave", title: "the Wandwright" },
   moon: { name: "Beneath the Moon", what: "Beat Leshy at his own table, Moon and all", title: "the Card Master" },
   towerking: { name: "The Tower Falls Silent", what: "Defeat the King of the Tower", title: "Kingslayer of the Tower" },
   tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },

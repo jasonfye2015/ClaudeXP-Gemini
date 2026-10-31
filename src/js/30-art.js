@@ -1205,6 +1205,21 @@ CM.art.cliff = function (seed = 1) {
   p.fillStyle = "rgba(90,130,60,0.5)"; for (let i = 0; i < 8; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S * 0.3, 8 + rnd.next() * 10, 0, Math.PI * 2); p.fill(); }
   return c;
 };
+// Claudeita's crag: grey rock in ledges, moss on its brow; the mouth's face a low dark arch with a forge-glow far down
+CM.art.crag = function (mouth) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`crag:${mouth ? 2 : 1}`)), base = [104, 102, 98];
+  p.fillStyle = rgb(base, 0.65); p.fillRect(0, 0, S, S);
+  let y = 0; while (y < S) { const h = 14 + rnd.next() * 26; p.fillStyle = rgb(base, 0.7 + rnd.next() * 0.5); p.fillRect(0, y, S, h - 3); y += h; }
+  speckle(p, rnd, S, S, 2200, rgb(base, 0.5), 0.35, 3); for (let i = 0; i < 7; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 50 + rnd.next() * 80, rgb(base, 0.35, 0.8));
+  p.fillStyle = "rgba(80,120,56,0.55)"; for (let i = 0; i < 10; i++) { p.beginPath(); p.arc(rnd.next() * S, rnd.next() * S * 0.22, 8 + rnd.next() * 12, 0, Math.PI * 2); p.fill(); }
+  if (mouth) {
+    const g = p.createRadialGradient(S / 2, S * 0.92, 4, S / 2, S * 0.8, S * 0.42); g.addColorStop(0, "#F2862A"); g.addColorStop(0.25, "#7A2E10"); g.addColorStop(0.6, "#160C08"); g.addColorStop(1, "#060404");
+    p.fillStyle = "#2A2622"; p.beginPath(); p.moveTo(S * 0.16, S); p.lineTo(S * 0.18, S * 0.55); p.quadraticCurveTo(S / 2, S * 0.18, S * 0.82, S * 0.55); p.lineTo(S * 0.84, S); p.closePath(); p.fill();
+    p.fillStyle = g; p.beginPath(); p.moveTo(S * 0.22, S); p.lineTo(S * 0.24, S * 0.58); p.quadraticCurveTo(S / 2, S * 0.26, S * 0.76, S * 0.58); p.lineTo(S * 0.78, S); p.closePath(); p.fill();
+    p.fillStyle = "rgba(255,160,70,0.5)"; for (let i = 0; i < 14; i++) p.fillRect(S * 0.3 + rnd.next() * S * 0.4, S * 0.6 + rnd.next() * S * 0.38, 2, 2);   // (embers on the draught)
+  }
+  return c;
+};
 CM.art.roof = function (seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`roof:${seed}`)), base = [138, 78, 52];
   p.fillStyle = rgb(base, 0.6); p.fillRect(0, 0, S, S);
@@ -1362,6 +1377,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:hedge"] = use("solid.hedge", () => CM.art.hedge());
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
+  out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
   out.canopy = use("canopy", () => CM.art.canopy(1, CM.art.season || "summer"));

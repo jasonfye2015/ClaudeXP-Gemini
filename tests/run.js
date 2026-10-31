@@ -3586,7 +3586,7 @@ test("the Deep's ten more: two kinds for each of five bands, met in generator 2'
 test("the Mage Tower, from outside: a portal yard by the shaft with a lit portal and two dark plinths; the portal to the tower's front and back; the tower in its clearing, reachable and safe; who may go in", () => {
   const CM = load();
   const town = CM.makeTown("mt-1"), P = CM.PORTAL_YARD;
-  assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, p === P.cabin ? "portal" : "plinth");   // (the first plinth lit for the cabin, v11.1)
+  assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, p === P.cabin || p === P.claudeita ? "portal" : "plinth");   // (the plinths lit for the cabin, v11.1, and the cave, v11.3)
   assert.strictEqual(CM.townPlace(town, ...P.tower), "The Keep-yard", "in the Keep-yard, by the shaft");
   const land = CM.makeWood("mt-1");
   for (let y = CM.MAGE_TOWER.at[1] - 1; y <= CM.MAGE_TOWER.at[1] + 1; y++) for (let x = CM.MAGE_TOWER.at[0] - 1; x <= CM.MAGE_TOWER.at[0] + 1; x++) assert.strictEqual(CM.solidAt(land, x, y), "magetower");
@@ -3819,6 +3819,78 @@ test("Leshy's table moves and sounds: each card sound cooked, each played at the
   const CM = load(), B = new CM.CardBattle(["Wolf", "Stoat", "Sparrow"].map((n) => CM.cardSpec(n)), 0, 0, null, 5), kinds = new Set();
   for (let t = 0; t < 8 && !B.over; t++) { if (B.canDraw()) B.draw("squirrel"); const i = B.hand.findIndex((c) => c.name === "Squirrel"), e = [0, 1, 2, 3].find((l) => !B.you[l]); if (i >= 0 && e !== undefined) B.play(i, e); for (const ev of B.ringBell()) { kinds.add(ev.kind); if (ev.kind === "hit" || ev.kind === "face") assert.ok(ev.side && ev.lane >= 0 && ev.t >= 0 && ev.power > 0, "a blow says who, where and how hard"); } }
   assert.ok(kinds.has("leshy_turn") && (kinds.has("hit") || kinds.has("face")), "the bell's steps");
+});
+
+test("Claudeita's world, as the Timeline's game has it: the seed's rows; sand falls, water flows, lava and water make obsidian, acid eats, fire burns wood; bedrock holds; gold in a blast counted; each biome's arena walled in bedrock with a gate that opens, and a sanctuary under it with a fountain, a rope up and a shop", () => {
+  const CM = load(), M = CM.CVM, C = CM.CV;
+  const a = new CM.CaveWorld(7), b = new CM.CaveWorld(7); a.makeRows(1200); b.makeRows(1200);
+  assert.ok(a.cells.every((m, i) => m === b.cells[i]), "the seed's world"); assert.ok(a.spawns.length > 10 && a.items.length > 5, "creatures and finds");
+  const w = new CM.CaveWorld(3); w.makeRows(C.SURFACE + 10); const y = 20, x = 200;   // (the sky over the ledge: open air to play in)
+  for (let k = -4; k <= 4; k++) w.set(x + k, y + 10, M.ROCK, false);
+  w.set(x, y, M.SAND); for (let k = 0; k < 30; k++) w.step(); assert.strictEqual(w.get(x, y), M.AIR, "sand falls"); assert.ok([...Array(12).keys()].some((d) => w.get(x, y + d) === M.SAND), "and lands");
+  for (let k = 0; k < 6; k++) w.set(298 + k, 40, M.ROCK, false); w.set(299, 39, M.ROCK, false); w.set(302, 39, M.ROCK, false); w.set(300, 39, M.LAVA); w.set(301, 39, M.WATER); for (let k = 0; k < 4; k++) w.step(); assert.ok([w.get(300, 39), w.get(301, 39)].includes(M.OBSIDIAN), "lava and water: obsidian");
+  w.set(100, 30, M.WOOD, false); w.set(101, 30, M.WOOD, false); w.set(100, 29, M.FIRE); let burnt = false; for (let k = 0; k < 400 && !burnt; k++) { w.step(); burnt = w.get(100, 30) !== M.WOOD || w.get(101, 30) !== M.WOOD; } assert.ok(burnt, "fire takes the wood");
+  for (let k = 0; k < 5; k++) w.set(150 + k, 60, M.GOLD, false); assert.ok(w.carve(152, 60, 3) >= 4, "the gold in a blast is counted"); assert.strictEqual(w.get(1, 30), M.BEDROCK); w.carve(1, 30, 3); assert.strictEqual(w.get(1, 30), M.BEDROCK, "bedrock holds");
+  const deep = new CM.CaveWorld(11); deep.makeRows(C.H);
+  for (let k = 0; k < 5; k++) {
+    const [x0, y0, x1, y1] = CM.cvArena(k); assert.strictEqual(deep.get(x0 - 3, (y0 + y1) >> 1), M.BEDROCK, "the arena's wall"); assert.strictEqual(deep.get((x0 + x1) >> 1, (y0 + y1) >> 1), M.AIR, "and its hall");
+    const g = deep.gates[k]; assert.ok(g && g.length, "a gate"); deep.openGate(k); assert.ok(g.every(([gx, gy]) => deep.get(gx, gy) === M.AIR), "that opens");
+    const here = deep.items.filter((it) => it[3] === k && ["fountain", "rope"].includes(it[0]) || (it[3] === k && it[0].startsWith("shop_")));
+    if (k < 4) assert.strictEqual(here.map((it) => it[0]).sort().join(","), "fountain,rope,shop_spell,shop_spell,shop_spell,shop_wand,shop_wand", "the sanctuary's");
+    else assert.strictEqual(here.length, 0, "nothing under the Unmaker");
+  }
+});
+
+test("Claudeita's wands: a cast reads the slots in order - a modifier changes its cast, a multicast draws more, too little mana fizzles, the last slot recharges; a wand found is the seed's and shoots", () => {
+  const CM = load(), W = (slots, o) => new CM.Wand(Object.assign({ slots, mana_max: 200, charge: 0, delay: 0.1, recharge: 0.5, spread: 0 }, o));
+  const a = W(["Spark Bolt", "Spark Bolt", null]); assert.strictEqual(JSON.stringify(a.cast().map((s) => s[0])), '["Spark Bolt"]'); assert.ok(a.wait > 0 && !a.recharging);
+  a.tick(1); assert.strictEqual(a.cast().length, 1); assert.ok(a.recharging && a.wait >= 0.5, "the last slot: a recharge"); assert.strictEqual(a.cursor, 0);
+  const b = W(["Double Spell", "Damage Plus", "Spark Bolt", "Bomb"]), shots = b.cast(); assert.strictEqual(JSON.stringify(shots.map((s) => s[0])), '["Spark Bolt","Bomb"]'); assert.strictEqual(JSON.stringify(shots[0][1]), '["Damage Plus"]', "the modifier on the cast");
+  const sh = new CM.CaveShot("Spark Bolt", ["Damage Plus", "Heavy Shot"], 0, 0, 0, "player", 1); assert.ok(Math.abs(sh.dmg - ((4 + 10) * 1.6 + 5)) < 1e-9, "damage plus, then heavy");
+  const c = W(["Fireball"], { mana_max: 30 }); assert.strictEqual(c.cast().length, 0, "too little mana fizzles");
+  const r1 = CM.randomWand(2, new CM.Random(5)), r2 = CM.randomWand(2, new CM.Random(5)); assert.strictEqual(JSON.stringify(r1), JSON.stringify(r2), "the seed's wand"); assert.ok(r1.slots.some((n) => n && CM.WAND_SPELLS[n].kind === "proj"));
+  const st = CM.starterWands(); assert.strictEqual(st.map((w) => w.name).join("|"), "Apprentice's Wand|Miner's Rod"); assert.ok(st.every((w) => w.given), "the default wands");
+});
+
+test("Claudeita's cave, run: the same inputs give the same run; a creature killed pays experience and drops gold; the arena wakes its boss and its fall opens the gate on the sanctuary; the rope up ends the run 'out'; the Unmaker's fall wins it; a hurt to nothing is death; buying takes the gold", () => {
+  const CM = load(), C = CM.CV;
+  const go = () => { const r = new CM.CaveRun(99, { hpMax: 120 }); for (let i = 0; i < 400; i++) r.step({ right: i % 100 < 50, left: i % 100 >= 50, jump: i % 37 < 3 }, [r.player.x + 10, r.player.y + 30], i % 20 === 0); return r; };
+  const r1 = go(), r2 = go(); assert.deepStrictEqual([r1.player.x, r1.player.y, r1.player.hp, r1.world.changed], [r2.player.x, r2.player.y, r2.player.hp, r2.world.changed], "the seed's run");
+  const run = new CM.CaveRun(42, { hpMax: 500, hp: 500 }), e = run.enemies[0]; e.awake = true; const pk = run.pickups.length;
+  run.damage(e, 9999); assert.ok(run.xp >= CM.CV_XP.per(0) && !run.enemies.includes(e) && run.pickups.length > pk, "experience, and gold dropped");
+  const [x0, y0, x1, y1] = CM.cvArena(0); run.world.makeRows(y1 + 120); run.populate(); run.player.x = (x0 + x1) / 2; run.player.y = y1 - 2; run.step();
+  assert.ok(run.boss && run.boss.kind === "Gravelmaw", "the arena wakes its boss");
+  run.damage(run.boss, 1e6); assert.ok(run.bossesDown.has(0) && run.loot.length === 1, "a boss down, and a thing for the party"); assert.ok(run.world.gates[0].every(([gx, gy]) => run.world.get(gx, gy) === CM.CVM.AIR), "the gate opens");
+  run.world.makeRows(CM.cvSanctuary(0)[3] + 40); run.populate(); const rope = run.pickups.find((k) => k.kind === "rope"); assert.ok(rope, "a rope up in the sanctuary");
+  run.player.x = rope.x; run.player.y = rope.y; assert.strictEqual(run.interact(), "rope"); assert.strictEqual(run.over, "out");
+  const shop = new CM.CaveRun(42, { hpMax: 500 }); shop.world.makeRows(CM.cvSanctuary(0)[3] + 40); shop.populate(); const ware = shop.pickups.find((k) => k.kind === "wand" && k.price);
+  shop.player.wands.push(CM.randomWand(0, new CM.Random(1)), CM.randomWand(0, new CM.Random(2))); shop.player.gold = ware.price + 5; shop.player.x = ware.x; shop.player.y = ware.y;
+  assert.strictEqual(shop.interact(), "wand"); assert.strictEqual(shop.player.gold, 5, "bought with a full hand: the gold is taken");
+  const end = new CM.CaveRun(42, { hpMax: 500 }); end.damage(Object.assign(end.makeBoss(4, 100, 100), {}), 0); const U = end.makeBoss(4, 100, 100); end.enemies.push(U); end.damage(U, 1e6); assert.strictEqual(end.over, "won", "the Unmaker undone");
+  const die = new CM.CaveRun(42, { hpMax: 50 }); die.hurtPlayer(80); assert.strictEqual(die.over, "dead");
+});
+
+test("Claudeita's cave mouth: a crag in the Wood with its path from the fields and a portal home; the second plinth in the yard lit for it; casters only; death brings the hero back with a tenth of their health and nothing but the experience; the rope or a win keeps the gold, a thing per boss, and the wands and spells for the rack, from which two go in again", () => {
+  const CM = load(), land = CM.makeWood("cave-1"), C = CM.CLAUDEITA;
+  assert.strictEqual(CM.solidAt(land, ...C.mouth), "cavemouth"); assert.strictEqual(land.things[C.front.join(",")].type, "claudeita"); assert.strictEqual(land.things[C.portal.join(",")].to, "town");
+  assert.ok(CM.woodSafe(land, ...C.front), "a safe clearing");
+  const g = new CM.Game(); g.newGame("cave-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.cave = undefined;
+  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.claudeita.join(",")].to, "claudeita");
+  g.floor.pos = CM.PORTAL_YARD.claudeita.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.deepStrictEqual(g.floor.pos, C.front, "the portal to the cave's front");
+  assert.ok(g.pathTo(...CM.WOOD_GATE), "and a way on foot"); let asked = false; g.on("claudeita", () => { asked = true; }); g.use(); assert.ok(asked, "the mouth's dialog");
+  const knight = g.party.findIndex((h) => !CM.TOWER_CASTERS.includes(h.cls)), mage = g.party.findIndex((h) => CM.TOWER_CASTERS.includes(h.cls));
+  assert.ok(g.enterClaudeita(knight), "casters only"); assert.strictEqual(g.enterClaudeita(mage), ""); assert.strictEqual(g.mode, "cave");
+  const h = g.party[mage], gold0 = g.gold, bag0 = g.bag.length, xp0 = h.xp;
+  g.caveRun.player.gold = 300; g.caveRun.xp = 40; g.caveRun.loot.push({ boss: 0 }); g.caveRun.player.wands.push(CM.randomWand(1, new CM.Random(3))); g.caveRun.hurtPlayer(1e6);
+  const dead = g.leaveClaudeita(g.caveRun.over); assert.strictEqual(dead.how, "dead"); assert.strictEqual(g.mode, "explore"); assert.deepStrictEqual(g.floor.pos, C.front);
+  assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth of their health"); assert.strictEqual(g.gold, gold0); assert.strictEqual(g.bag.length, bag0); assert.strictEqual(g.caveStore().wands.length, 0, "nothing kept");
+  assert.ok(h.xp >= xp0 + 40 || h.level > 1, "but the experience");
+  h.hp = h.max; g.enterClaudeita(mage); const r = g.caveRun; r.player.gold = 250; r.loot.push({ boss: 0 }, { boss: 1 }); r.player.wands.push(CM.randomWand(1, new CM.Random(4))); r.player.spells.push("Bomb"); r.over = "out";
+  const out = g.leaveClaudeita("out"); assert.strictEqual(g.gold, gold0 + 250, "the gold"); assert.strictEqual(out.things.length, 2); assert.strictEqual(g.bag.length, bag0 + 2, "a thing per boss");
+  const K = g.caveStore(); assert.strictEqual(K.wands.length, 1, "the found wand to the rack (the given two stay behind)"); assert.ok(K.spells.includes("Bomb"));
+  g.enterClaudeita(mage, [0]); assert.strictEqual(g.caveRun.player.wands.length, 3); assert.ok(g.caveRun.player.wands[2].own, "a wand from the rack goes in");
+  g.caveRun.player.wands[2].slots[0] = "Fireball"; g.caveRun.hurtPlayer(1e6); g.leaveClaudeita("dead"); assert.strictEqual(K.wands.length, 1, "and comes back to the rack whatever happens");
+  g.enterClaudeita(mage); g.caveRun.player.gold = 99; const left = g.leaveClaudeita("left"); assert.strictEqual(left.gold, 0, "turned back: nothing kept");
 });
 
 (async () => {

@@ -598,3 +598,8 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 .ctop { display: flex; align-items: center; justify-content: center; gap: 14px; } .ctop .cscalebox { margin: 0; flex: none; } .ctop .clog { flex: 0 1 420px; text-align: left; min-height: 36px; }
 .cbattle .cleshy { height: 24px; } .cbattle .ctitle { margin: 0 0 2px; font-size: 18px; }
 .cboard .crow { margin: 1px 0; } .crow.queue { transform: none; } .crow.queue .ccard { width: 74px; height: 100px; } .crow.queue .ccard .cemo { font-size: 26px; line-height: 32px; }
+/* Claudeita's cave (76c-cave.js): its canvas over the view, and the rack at the mouth */
+#cavecanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; cursor: crosshair; image-rendering: pixelated; background: #000; }
+body.incave #cavecanvas { display: block; } body.incave #view .sky, body.incave #view .compass, body.incave #view .hint { display: none; }
+.crack { display: flex; flex-direction: column; gap: 3px; max-height: 180px; overflow-y: auto; margin: 4px 0; }
+.cwand { display: flex; align-items: center; gap: 6px; cursor: pointer; } .cwand .wdot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; } .cwand small { opacity: 0.75; }
