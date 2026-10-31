@@ -9,7 +9,8 @@ Object.assign(CM.UI.prototype, {
     document.body.classList.toggle("incave", g.mode === "cave");
     document.body.classList.toggle("infort", g.mode === "fortress");
     document.body.classList.toggle("inablo", g.mode === "ablo");
-    document.body.classList.toggle("inbros", g.mode === "bros");      // (Super Claude Bros: its canvas over the view, 76g-claudebros.js)      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
+    document.body.classList.toggle("inbros", g.mode === "bros");
+    document.body.classList.toggle("incraft", g.mode === "craft");    // (Claudecraft: its canvases over the view, 76h-claudecraft.js)      // (Super Claude Bros: its canvas over the view, 76g-claudebros.js)      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -31,6 +32,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.craft) this.$("#side .where").textContent = "Through the Neather Gate - Claudecraft";
     if (g.brosRun) this.$("#side .where").textContent = `Down the pipe - World ${g.brosRun.L.id}, ${g.brosRun.L.name}`;
     if (g.abloWorld) this.$("#side .where").textContent = g.abloWorld.depth ? `Haven's cathedral - ${CM.AB.THEME_NAMES[g.abloWorld.level.theme]}, level ${g.abloWorld.depth}` : "Haven, through the red portal";
     if (g.fortRun) this.$("#side .where").textContent = CM.fortFloorName(g.fortRun.n);
@@ -124,6 +126,11 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "craft") {                                            // Claudecraft: home by the gate, or from here
+      if (box.dataset.mode === "craft") return; box.dataset.mode = "craft"; box.innerHTML = "";
+      const b = document.createElement("button"); b.textContent = "Back through the Neather Gate (the island keeps your changes)"; b.addEventListener("click", () => { if (g.craft) g.leaveCraft(); this.refresh(); }); box.appendChild(b);
       return;
     }
     if (g.mode === "bros") {                                             // Super Claude Bros: out, with the coins and the experience

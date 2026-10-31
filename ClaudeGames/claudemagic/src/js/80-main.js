@@ -118,7 +118,8 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("claudeita", () => ui.openClaudeita());
   game.on("fortress", () => ui.openFortress());
   game.on("claudeablo", () => ui.openClaudeablo());
-  game.on("pipe", () => ui.openBrosPipe());                             // (Super Claude Bros: 76g-claudebros.js)
+  game.on("pipe", () => ui.openBrosPipe());
+  game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
   game.on("bros", (run) => { brosIn = {}; ui.brosStart(run); ui.refresh(); });
   game.on("brosLevel", (run) => { ui.brosStart(run); try { CM.audio.play("victory", 0.4); } catch (er) { /* */ } });                    // (the red portal: 76f-claudeablo.js)
   game.on("ablo", () => { ui.abloStart(); ui.refresh(); });                         // (the Fortress: 76d-fortress.js)
@@ -460,6 +461,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal" && thing.to === "claudecraft") out.push({ x, y, layer: "solid:neathergate", w: 1.0, h: 1.35, glow: 0.4 + 0.2 * Math.sin(now / 420) });   // (the Neather Gate: 61k-gate.js)
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "pipe") out.push({ x, y, layer: "solid:pipe", w: 0.95, h: 1.05 });   // (the pipe in the Square: 61j-pipe.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
@@ -591,6 +593,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
+    }
+    if (game.mode === "craft" && game.craft && !ui.dialogOpen()) {      // Claudecraft (76h-claudecraft.js draws it)
+      const f = CRAFT_KEYS[e.code], w = game.craft.walker; if (f) { e.preventDefault(); if (f === "jump" && !craftIn.jump) w.pressJump(); craftIn[f] = true; return; }
+      if (/^Digit[1-9]$/.test(e.code)) { w.slot = Number(e.code.slice(-1)) - 1; return; }
+      if (e.code !== "Escape") { e.preventDefault(); return; }
     }
     if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros
       const f = BROS_KEYS[e.code]; if (f) { e.preventDefault(); brosIn[f] = true; return; }
@@ -748,7 +755,17 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; const b2 = BROS_KEYS[e.code]; if (b2) brosIn[b2] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; const b2 = BROS_KEYS[e.code]; if (b2) brosIn[b2] = false; const c2 = CRAFT_KEYS[e.code]; if (c2) craftIn[c2] = false; });
+  // ---- Claudecraft's mouse: a click captures it; then it looks, the left button breaks, the right places, the wheel picks ----
+  view.addEventListener("mousedown", (e) => {
+    if (game.mode !== "craft" || !game.craft || !e.target.closest("#craftcanvas, #crafthud")) return; e.preventDefault(); const c = ui.$("#craftcanvas");
+    if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
+    if (e.button === 0) { const b = game.craftBreak(); if (b) { const hit = game.craft.target[0]; ui.ccDirtyAt(hit[0], hit[2]); try { CM.audio.play(b === CM.CC.B.LEAVES ? "step" : b === CM.CC.B.LOG || b === CM.CC.B.PLANKS ? "grind" : "bump", 0.45, 0, 0.9 + Math.random() * 0.3); } catch (er) { /* */ } } }
+    else if (e.button === 2) { if (game.craftPlace()) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2]); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
+  });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "craft" && game.craft && document.pointerLockElement === ui.$("#craftcanvas")) { const w = game.craft.walker; w.yaw -= e.movementX * 0.15; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.15)); } });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "craft") e.preventDefault(); });
+  view.addEventListener("wheel", (e) => { if (game.mode !== "craft" || !game.craft) return; e.preventDefault(); const w = game.craft.walker; w.slot = (w.slot + (e.deltaY > 0 ? 1 : -1) + CM.CC.HOTBAR.length) % CM.CC.HOTBAR.length; }, { passive: false });
   view.addEventListener("mousedown", (e) => { if (game.mode === "bros" && e.target.closest("#broscanvas")) { e.preventDefault(); brosIn.attack = true; } });
   window.addEventListener("mouseup", () => { if (game.mode === "bros") brosIn.attack = false; });
   // ---- Claudeablo's mouse: on its canvas, every click is the game's ----
@@ -787,6 +804,18 @@ window.addEventListener("DOMContentLoaded", () => {
   let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0, abloT = 0;
   const BROS_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", KeyW: "jump", ArrowUp: "jump", ShiftLeft: "run", ShiftRight: "run", KeyJ: "attack", KeyF: "attack", KeyK: "attack" };
   let brosIn = {}, brosT = 0;
+  const CRAFT_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", ShiftLeft: "sprint", ShiftRight: "sprint", KeyC: "down" };
+  let craftIn = {}, craftT = 0;
+  // a frame through the Neather Gate: the walker moves (not while a dialog is up), the block under the eye is found,
+  // the island drawn; the gate's light takes the party home; what was changed is kept every half minute
+  function craftFrame(now, dt) {
+    const cr = game.craft; if (!cr) return;
+    if (!ui.dialogOpen() && ui.screen === "play" && !ui.ccPending.length) { cr.walker.update(Math.min(0.05, dt), Object.assign({}, craftIn, { down: craftIn.down || (cr.walker.flying && craftIn.sprint) })); cr.target = cr.world.raycast(cr.walker.eye(), cr.walker.look()); }
+    if (cr.walker.inGate()) { try { CM.audio.play("teleport", 0.6); } catch (er) { /* */ } craftIn = {}; game.leaveCraft(); ui.refresh(); return; }
+    ui.drawCraft(now, dt);
+    if ((cr.since += dt) > 30) { cr.since = 0; game.craftKeep(); }
+    if ((craftT += dt) > 1) { craftT = 0; ui.refresh(); }
+  }
   // a frame down the pipe: the run steps, its events are sounds; a banner reached goes on to the next level after a
   // moment, a fall comes back up the pipe after one
   function brosFrame(now, dt) {
@@ -945,6 +974,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (game.mode === "fortress") fortFrame(now, dt);
       else if (game.mode === "ablo") abloFrame(now, dt);
       else if (game.mode === "bros") brosFrame(now, dt);
+      else if (game.mode === "craft") craftFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

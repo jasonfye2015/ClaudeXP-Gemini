@@ -49,6 +49,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
+  if (P.gate && (!fl.things[key(...P.gate)] || fl.things[key(...P.gate)].to !== "claudecraft")) fl.things[key(...P.gate)] = { type: "portal", to: "claudecraft" };   // (the Neather Gate: 61k-gate.js)
   if (P.ablo && (!fl.things[key(...P.ablo)] || fl.things[key(...P.ablo)].to !== "claudeablo")) fl.things[key(...P.ablo)] = { type: "portal", to: "claudeablo" };   // (the red portal: 61i-redportal.js)
   if (P.fortress && (!fl.things[key(...P.fortress)] || fl.things[key(...P.fortress)].type !== "portal")) fl.things[key(...P.fortress)] = { type: "portal", to: "fortress" };   // (the Fortress: 61h-fortress.js)
   for (const p of P.plinths) { const was = fl.things[key(...p)], lit = P.cabin && p === P.cabin ? "cabin" : P.claudeita && p === P.claudeita ? "claudeita" : null; if (!was || (lit && was.type === "plinth")) fl.things[key(...p)] = lit ? { type: "portal", to: lit } : { type: "plinth" }; }   // (the plinths lit: Leshy's cabin, Claudeita's cave)   // (the first plinth lit: to Leshy's cabin)
@@ -61,6 +62,7 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
     if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
+    if (t.to === "claudecraft") { const why = this.enterCraft(); if (why) this.say(why); return true; }   // (the whole party steps through)
     if (t.to === "claudeablo") { this.emit("claudeablo"); return true; }   // (who steps through: the window asks)
     if (t.to === "fortress") { this.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing of trampled earth. Over you the Fortress: black stone, four towers, and two great doors of dark wood."); return true; }
     if (t.to === "claudeita") { this.enterFloor(-1, "rope", CM.CLAUDEITA.front.slice()); this.floor.facing = 2; this.say("The portal leaves you among the trees south of the fields, before a crag of grey rock with a dark mouth in it. Warm air breathes out of the dark."); return true; }

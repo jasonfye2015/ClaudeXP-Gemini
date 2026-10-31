@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v11.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v11.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -702,6 +702,11 @@ body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros 
 @keyframes ca-burst { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pc, .pc::before, .jk::after { animation: none !important; } }
 .capile .cback { width: auto; height: auto; display: block; line-height: normal; }
+
+/* Claudecraft through the Neather Gate (76h-claudecraft.js): its GL canvas and its HUD over the view */
+#craftcanvas, #crafthud { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; }
+#crafthud { z-index: 7; pointer-events: none; } #craftcanvas { background: #86B6F5; cursor: crosshair; }
+body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incraft #view .sky, body.incraft #view .compass, body.incraft #view .hint { display: none; }
 </style>
 </head>
 <body>
@@ -711,7 +716,7 @@ body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros 
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "11.8", built: "2026-10-31" };
+const CM = window.CM = { version: "11.9", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -7200,6 +7205,19 @@ CM.art.cliff = function (seed = 1) {
 // the Gilded Joker: deep red plaster between gilt pilasters, tall arched windows lit gold, a band of gold under the eaves;
 // its door a pair of gilded doors under a fanlight with a lamp each side; its gable red with a gold sunburst; its roof copper
 // the pipe in the Square: a great bronze pipe standing up out of the cobbles, green with age, a dark mouth at its top
+// the Neather Gate: blocks of dark basalt in a frame, violet runes cut into them and glowing, and inside a slow violet
+// shimmer with motes in it
+CM.art.neatherGate = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("neathergate")), b = S / 6;
+  const g = p.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S * 0.4); g.addColorStop(0, "rgba(220,170,255,0.95)"); g.addColorStop(0.5, "rgba(130,60,220,0.85)"); g.addColorStop(1, "rgba(60,20,120,0.8)");
+  p.fillStyle = g; p.fillRect(b, b, S - 2 * b, S - b);
+  p.strokeStyle = "rgba(240,210,255,0.5)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { p.beginPath(); for (let k = 0; k <= 20; k++) { const y = b + (k / 20) * (S - b), x = S / 2 + Math.sin(k * 0.6 + i * 0.9) * (S * 0.22 - i * 3); if (k) p.lineTo(x, y); else p.moveTo(x, y); } p.stroke(); }
+  p.fillStyle = "#FFFFFF"; for (let i = 0; i < 30; i++) { p.globalAlpha = 0.3 + rnd.next() * 0.7; p.fillRect(b + rnd.next() * (S - 2 * b), b + rnd.next() * (S - b), 2, 2); } p.globalAlpha = 1;   // (motes)
+  const block = (x, y) => { p.fillStyle = "#1E1A24"; p.fillRect(x, y, b, b); p.fillStyle = "#2C2634"; p.fillRect(x + 2, y + 2, b - 4, b - 4); p.strokeStyle = "rgba(170,90,255,0.95)"; p.lineWidth = 2; p.beginPath(); const cx = x + b / 2, cy = y + b / 2, r = b * 0.25, k = rnd.int(0, 2);
+    if (k === 0) { p.moveTo(cx, cy - r); p.lineTo(cx, cy + r); p.moveTo(cx - r, cy); p.lineTo(cx + r * 0.6, cy - r * 0.6); } else if (k === 1) { p.arc(cx, cy, r, 0.3, 5.5); } else { p.moveTo(cx - r, cy + r); p.lineTo(cx, cy - r); p.lineTo(cx + r, cy + r); } p.stroke(); };
+  for (let i = 0; i < 6; i++) { block(i * b, 0); } for (let j = 1; j < 6; j++) { block(0, j * b); block(S - b, j * b); }
+  return c;
+};
 CM.art.pipe = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("pipe"));
   const body = p.createLinearGradient(S * 0.18, 0, S * 0.82, 0); body.addColorStop(0, "#5A4020"); body.addColorStop(0.35, "#C89A50"); body.addColorStop(0.6, "#A07838"); body.addColorStop(1, "#4A3418");
@@ -7421,7 +7439,7 @@ CM.art.surfaceLayers = function (pick) {
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
   out["solid:logs"] = use("solid.logs", () => CM.art.logs(false)); out["solid:cabindoor"] = use("solid.cabindoor", () => CM.art.logs(true));   // (Leshy's cabin: 61f-cabin.js)
   out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
-  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:pipe"] = use("solid.pipe", () => CM.art.pipe());   // (the pipe in the Square)
+  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:pipe"] = use("solid.pipe", () => CM.art.pipe()); out["solid:neathergate"] = use("solid.neathergate", () => CM.art.neatherGate());   // (the Neather Gate)   // (the pipe in the Square)
   out["solid:redportal"] = use("solid.redportal", () => { const src = CM.art.portal(), c = artCanvas(), p = c.getContext("2d"); p.filter = "hue-rotate(95deg) saturate(1.6)"; p.drawImage(src, 0, 0); return c; });   // (the red portal to Haven) out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
@@ -9526,7 +9544,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
-    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null; this.fort = d.fort || null; this.fortRun = null; this.abloWorld = null; this.brosRun = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
+    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null; this.fort = d.fort || null; this.fortRun = null; this.abloWorld = null; this.brosRun = null; this.craft = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -9584,7 +9602,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null; this.fort = null; this.fortRun = null; this.abloWorld = null; this.brosRun = null;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null; this.fort = null; this.fortRun = null; this.abloWorld = null; this.brosRun = null; this.craft = null;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -9910,7 +9928,7 @@ Object.assign(CM.Game.prototype, {
           farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : thing.to === "cabin" ? "A portal, its light the colour of candle flame. (Space: to Leshy's cabin in the Wood)" : thing.to === "claudeita" ? "A portal, its light the colour of embers. (Space: to Claudeita's cave in the Wood)" : thing.to === "fortress" ? "A portal, its light the grey of iron. (Space: to the Fortress in the Wood)" : thing.to === "claudeablo" ? "A red portal, turning slowly, and beyond it a village under a cathedral. (Space: to Haven)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
+          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : thing.to === "cabin" ? "A portal, its light the colour of candle flame. (Space: to Leshy's cabin in the Wood)" : thing.to === "claudeita" ? "A portal, its light the colour of embers. (Space: to Claudeita's cave in the Wood)" : thing.to === "fortress" ? "A portal, its light the grey of iron. (Space: to the Fortress in the Wood)" : thing.to === "claudeablo" ? "A red portal, turning slowly, and beyond it a village under a cathedral. (Space: to Haven)" : thing.to === "claudecraft" ? "The Neather Gate: dark basalt cut with violet runes, and inside it a slow violet shimmer. (Space: through it, all of you)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
           magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", cabin: "The cabin's door, and a candle behind the window. (Space: sit at Leshy's table)", claudeita: "The cave's mouth, low and dark, and a glow far down. One caster goes in. (Space)", pipe: "A great bronze pipe, green with age, wide enough to climb into. (Space)", fortress: "The Fortress doors, dark wood bound in iron, three men high. One fighter goes in. (Space)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
           ucdoor: "A door of black oak in the bell-yard's wall. (Space)", ucback: "A flooded stair going down, and a black door at the bottom of it: the Undercroft. (Space)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
@@ -11165,6 +11183,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
+  if (P.gate && (!fl.things[key(...P.gate)] || fl.things[key(...P.gate)].to !== "claudecraft")) fl.things[key(...P.gate)] = { type: "portal", to: "claudecraft" };   // (the Neather Gate: 61k-gate.js)
   if (P.ablo && (!fl.things[key(...P.ablo)] || fl.things[key(...P.ablo)].to !== "claudeablo")) fl.things[key(...P.ablo)] = { type: "portal", to: "claudeablo" };   // (the red portal: 61i-redportal.js)
   if (P.fortress && (!fl.things[key(...P.fortress)] || fl.things[key(...P.fortress)].type !== "portal")) fl.things[key(...P.fortress)] = { type: "portal", to: "fortress" };   // (the Fortress: 61h-fortress.js)
   for (const p of P.plinths) { const was = fl.things[key(...p)], lit = P.cabin && p === P.cabin ? "cabin" : P.claudeita && p === P.claudeita ? "claudeita" : null; if (!was || (lit && was.type === "plinth")) fl.things[key(...p)] = lit ? { type: "portal", to: lit } : { type: "plinth" }; }   // (the plinths lit: Leshy's cabin, Claudeita's cave)   // (the first plinth lit: to Leshy's cabin)
@@ -11177,6 +11196,7 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
     if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
+    if (t.to === "claudecraft") { const why = this.enterCraft(); if (why) this.say(why); return true; }   // (the whole party steps through)
     if (t.to === "claudeablo") { this.emit("claudeablo"); return true; }   // (who steps through: the window asks)
     if (t.to === "fortress") { this.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing of trampled earth. Over you the Fortress: black stone, four towers, and two great doors of dark wood."); return true; }
     if (t.to === "claudeita") { this.enterFloor(-1, "rope", CM.CLAUDEITA.front.slice()); this.floor.facing = 2; this.say("The portal leaves you among the trees south of the fields, before a crag of grey rock with a dark mouth in it. Warm air breathes out of the dark."); return true; }
@@ -11719,6 +11739,56 @@ Object.assign(CM.Game.prototype, {
     this.setMode("explore"); this.floor.pos = [CM.TOWN_PIPE[0] - 1, CM.TOWN_PIPE[1]]; this.floor.facing = 1;
     this.saveRun(); this.emit("floor", this.floor);
     return { how, gold, xp, coins: r.coins };
+  },
+});
+
+// ---- 61k-gate.js ----
+"use strict";
+// The Neather Gate (the eighteenth update): in the Keep-yard with the other portals, a gate of dark basalt with violet
+// runes cut in it and a shimmer of violet light inside. The party steps through into Claudecraft (64n-claudecraft.js),
+// for now a tech demo: walk the island, break blocks and trees, place blocks. The island and every change made to it
+// are kept with the village; the same gate stands on the island, and its light is the way home.
+CM.PORTAL_YARD.gate = [37, 20];                                            // the Neather Gate, on the yard's east side
+CM.CRAFT_EDITS_MAX = 20000;
+Object.assign(CM.Game.prototype, {
+  craftStore() { this.village = this.village || {}; const K = this.village.craft = this.village.craft || {}; K.seed = K.seed || (CM.hashSeed(`${this.seed}:claudecraft`) % 2147483000) + 1; K.edits = K.edits || {}; K.visits = K.visits || 0; return K; },
+  // through the gate: the island made from its seed and its edits, the party where they last stood (or by the gate)
+  enterCraft() {
+    if (this.mode !== "explore" || !this.floor || this.floor.number !== 0) return "The Neather Gate is in the Keep-yard.";
+    const K = this.craftStore(), world = new CM.CC.World(K.seed, K.edits).generate();
+    const g = world.gate, pos = K.pos && world.inside(Math.floor(K.pos[0]), 1, Math.floor(K.pos[2])) ? K.pos : [g.x + 1.5, g.y, g.z + 2.5];
+    const walker = new CM.CC.Walker(world, pos, K.pos ? K.yaw : 180, K.pos ? K.pitch : -8);
+    K.visits += 1; this.logAct && this.logAct("enterCraft");
+    this.craft = { world, walker, target: [null, null], broken: 0, placed: 0, says: [[performance.now ? performance.now() : 0, "The gate lets you out onto a green island under a blue sky."]], since: 0 };
+    this.say("The party steps into the Neather Gate's violet light, and the Keep-yard folds away.");
+    this.setMode("craft"); this.emit("craft", this.craft);
+    return "";
+  },
+  craftKeep() { const cr = this.craft; if (!cr) return; const K = this.craftStore(), w = cr.walker; K.edits = cr.world.edits; K.pos = w.pos.slice(); K.yaw = w.yaw; K.pitch = w.pitch; this.saveVillage && this.saveVillage(); },
+  // a block broken (not bedrock, not the gate) or placed (not where the party stands)
+  craftBreak() {
+    const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
+    const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) { cr.says.push([performance.now(), b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : "The gate's stone will not break."]); return false; }
+    if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { cr.says.push([performance.now(), "The island has had enough changes for now."]); return false; }
+    cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1; return b;
+  },
+  craftPlace() {
+    const cr = this.craft, prev = cr && cr.target[1], w = cr && cr.walker; if (!prev) return false;
+    const [x, y, z] = prev, p = w.pos; if (x + 1 > p[0] - 0.3 && x < p[0] + 0.3 && z + 1 > p[2] - 0.3 && z < p[2] + 0.3 && y + 1 > p[1] && y < p[1] + 1.8) return false;   // (not inside the walker)
+    if (cr.world.get(x, y, z) === CM.CC.B.GATE) return false;
+    cr.world.set(x, y, z, CM.CC.HOTBAR[w.slot]); cr.placed += 1; return true;
+  },
+  // home through the gate's light (or from the menu): the island kept, the party back in the Keep-yard
+  leaveCraft() {
+    const cr = this.craft; if (!cr) return null;
+    this.craftKeep(); const K = this.craftStore(), g = cr.world.gate; if (cr.walker.inGate()) { K.pos = [g.x + 1.5, g.y, g.z + 2.5]; K.yaw = 180; K.pitch = -8; this.saveVillage && this.saveVillage(); }   // (out through the gate: next time, in front of it)
+    this.tally.craftBroken = (this.tally.craftBroken || 0) + cr.broken; this.tally.craftPlaced = (this.tally.craftPlaced || 0) + cr.placed;
+    this.say(`The party steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.`);
+    const out = { broken: cr.broken, placed: cr.placed };
+    this.craft = null; if (typeof document !== "undefined" && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
+    this.setMode("explore"); this.floor.pos = [CM.PORTAL_YARD.gate[0] - 1, CM.PORTAL_YARD.gate[1]]; this.floor.facing = 1;
+    this.saveRun(); this.emit("floor", this.floor);
+    return out;
   },
 });
 
@@ -18697,6 +18767,147 @@ CM.BrosRun = class {
 // what the hero fights with here: a blade (the fighters), or a bolt (the casters), or arrows (a bow in hand)
 CM.brArms = (h) => { const bow = h.weapon && h.weapon.props && h.weapon.props.bow; if (bow) return { ranged: true, shot: "arrow" }; if ((CM.TOWER_CASTERS || []).includes(h.cls)) return { ranged: true, shot: "bolt" }; return { ranged: false, shot: null }; };
 
+// ---- 64n-claudecraft.js ----
+"use strict";
+// Claudecraft through the Neather Gate (the eighteenth update), for now a tech demo: the Timeline's Claudecraft
+// (ClaudeGames/claudecraft/world.py) ported - an island of 160 x 160 blocks, 64 high, made from the seed (value-noise
+// hills, beaches, a sea, stone under the dirt, bedrock, trees), meshed a chunk of 16 x 16 columns at a time into the
+// faces that can be seen, and a ray to the block under the eye. Changes are kept as edits over the made terrain, with
+// the village. Near the spawn stands a gate of basalt like the one in the Keep-yard, its light the way home.
+// The window draws it with its own WebGL (76h-claudecraft.js); 61k-gate.js has the gate in the town.
+const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
+CC.SIZE = CC.CHUNK * CC.CHUNKS;
+CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16 };
+const CB = CC.B;
+CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light" };
+CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
+CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15]);
+CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
+CC.ATLAS = 8;                                                              // (the atlas: 8 x 4 tiles of 16 x 16)
+CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17 };
+CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
+  9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"] };
+// the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
+CC.FACE_DEFS = [
+  [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
+  [[0, -1, 0], 0.5, [[0, 0, 0, 0, 0], [1, 0, 0, 1, 0], [1, 0, 1, 1, 1], [0, 0, 0, 0, 0], [1, 0, 1, 1, 1], [0, 0, 1, 0, 1]]],
+  [[1, 0, 0], 0.7, [[1, 0, 0, 1, 1], [1, 1, 0, 1, 0], [1, 1, 1, 0, 0], [1, 0, 0, 1, 1], [1, 1, 1, 0, 0], [1, 0, 1, 0, 1]]],
+  [[-1, 0, 0], 0.7, [[0, 0, 0, 0, 1], [0, 0, 1, 1, 1], [0, 1, 1, 1, 0], [0, 0, 0, 0, 1], [0, 1, 1, 1, 0], [0, 1, 0, 0, 0]]],
+  [[0, 0, 1], 0.85, [[0, 0, 1, 0, 1], [1, 0, 1, 1, 1], [1, 1, 1, 1, 0], [0, 0, 1, 0, 1], [1, 1, 1, 1, 0], [0, 1, 1, 0, 0]]],
+  [[0, 0, -1], 0.85, [[0, 0, 0, 1, 1], [0, 1, 0, 1, 0], [1, 1, 0, 0, 0], [0, 0, 0, 1, 1], [1, 1, 0, 0, 0], [1, 0, 0, 0, 1]]],
+];
+// value noise, as world.py has it
+CC.hash = (seed, x, z) => { let n = (Math.imul(x, 374761393) + Math.imul(z, 668265263) + Math.imul(seed, 2147483647)) >>> 0; n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0; return ((n ^ (n >>> 16)) & 0xFFFF) / 65535; };
+CC.noise = (seed, x, z, scale) => { const fx = x / scale, fz = z / scale, x0 = Math.floor(fx), z0 = Math.floor(fz), sm = (t) => t * t * (3 - 2 * t), tx = sm(fx - x0), tz = sm(fz - z0), a = CC.hash(seed, x0, z0), b = CC.hash(seed, x0 + 1, z0), c = CC.hash(seed, x0, z0 + 1), d = CC.hash(seed, x0 + 1, z0 + 1); return (a + (b - a) * tx) * (1 - tz) + (c + (d - c) * tx) * tz; };
+
+CC.World = class {
+  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; }
+  index(x, y, z) { return (y * CC.SIZE + z) * CC.SIZE + x; }
+  inside(x, y, z) { return x >= 0 && x < CC.SIZE && y >= 0 && y < CC.HEIGHT && z >= 0 && z < CC.SIZE; }
+  get(x, y, z) { if (x < 0 || x >= CC.SIZE || z < 0 || z >= CC.SIZE || y < 0) return y < 0 ? CB.BEDROCK : CB.AIR; if (y >= CC.HEIGHT) return CB.AIR; return this.blocks[(y * CC.SIZE + z) * CC.SIZE + x]; }
+  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) this.edits[`${x},${y},${z}`] = b; return true; }
+  generate() {
+    const s = this.seed, R = new CM.Random(s), S = CC.SIZE, H = CC.HEIGHT, bl = this.blocks;
+    for (let x = 0; x < S; x++) { this.heights.push(new Array(S).fill(0)); for (let z = 0; z < S; z++) {
+      const n = CC.noise(s, x, z, 48) * 0.6 + CC.noise(s + 1, x, z, 20) * 0.3 + CC.noise(s + 2, x, z, 8) * 0.1, mountain = CC.noise(s + 3, x, z, 64);
+      let h = Math.floor(14 + n * 22 + Math.max(0, mountain - 0.6) * 60); h = Math.max(2, Math.min(H - 8, h));
+      const edge = Math.min(x, z, S - 1 - x, S - 1 - z); if (edge < 12) h = Math.min(h, CC.SEA - 6 + Math.floor(edge / 2));   // (an island: down into the sea at its edges)
+      this.heights[x][z] = h;
+      for (let y = 0; y <= h; y++) bl[(y * S + z) * S + x] = y === 0 ? CB.BEDROCK : y < h - 3 ? CB.STONE : h <= CC.SEA + 1 ? (h >= CC.SEA - 3 ? CB.SAND : CB.GRAVEL) : y === h ? (h > 44 ? CB.SNOW : CB.GRASS) : CB.DIRT;
+      for (let y = h + 1; y <= CC.SEA; y++) bl[(y * S + z) * S + x] = CB.WATER;
+    } }
+    for (let k = 0; k < Math.floor((S * S) / 70); k++) {                    // trees
+      const x = R.int(3, S - 4), z = R.int(3, S - 4), h = this.heights[x][z]; if (this.get(x, h, z) !== CB.GRASS) continue;
+      const trunk = R.int(4, 6); for (let y = h + 1; y <= h + trunk; y++) this.set(x, y, z, CB.LOG, false);
+      const top = h + trunk;
+      for (let dy = -2; dy < 2; dy++) { const r = dy < 0 ? 2 : 1; for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) { if (Math.abs(dx) === r && Math.abs(dz) === r && (dy === 1 || R.next() < 0.5)) continue; if (this.get(x + dx, top + dy, z + dz) === CB.AIR) this.set(x + dx, top + dy, z + dz, CB.LEAVES, false); } }
+      this.set(x, top + 1, z, CB.LEAVES, false);
+    }
+    this.gate = this.buildGate();
+    for (const [k, b] of Object.entries(this.edits)) { const [x, y, z] = k.split(",").map(Number); this.set(x, y, z, b, false); }
+    return this;
+  }
+  // the gate home: a frame of basalt, four wide and five high, its light inside, on level ground near the spawn
+  buildGate() {
+    const [sx, , sz] = this.spawn(), gx = Math.floor(sx) + 3, gz = Math.floor(sz) - 1;
+    let base = 0; for (let dx = -1; dx <= 4; dx++) for (let dz = -1; dz <= 1; dz++) base = Math.max(base, this.topSolid(gx + dx, gz + dz));
+    for (let dx = -1; dx <= 4; dx++) for (let dz = -1; dz <= 1; dz++) { for (let y = this.topSolid(gx + dx, gz + dz) + 1; y <= base; y++) this.set(gx + dx, y, gz + dz, CB.COBBLE, false); for (let y = base + 1; y <= base + 6; y++) this.set(gx + dx, y, gz + dz, CB.AIR, false); }   // (a level step under it, room around it)
+    for (let dx = 0; dx < 4; dx++) for (let dy = 1; dy <= 5; dy++) { const frame = dx === 0 || dx === 3 || dy === 1 || dy === 5; this.set(gx + dx, base + dy, gz, frame ? CB.BASALT : CB.GATE, false); }
+    for (const dx of [-1, 4]) { this.set(gx + dx, base + 1, gz, CB.BASALT, false); this.set(gx + dx, base + 2, gz, CB.BASALT, false); }   // (two low buttresses either side, as the Keep-yard's gate has its footing)
+    this.set(gx + 1, base + 6, gz, CB.BASALT, false); this.set(gx + 2, base + 6, gz, CB.BASALT, false);   // (and a capstone over its middle)
+    return { x: gx, y: base + 1, z: gz };
+  }
+  topSolid(x, z) { for (let y = CC.HEIGHT - 1; y >= 0; y--) { const b = this.get(x, y, z); if (b !== CB.AIR && b !== CB.LEAVES && b !== CB.LOG) return y; } return 0; }
+  spawn() {
+    const S = CC.SIZE, c = S / 2;
+    for (let r = 0; r < S / 2; r++) for (let d = -r; d <= r; d++) for (const [cx, cz] of [[c + d, c - r], [c + d, c + r], [c - r, c + d], [c + r, c + d]]) {
+      if (cx < 0 || cz < 0 || cx >= S || cz >= S) continue; const h = this.top(cx, cz);
+      if (h > CC.SEA && this.get(cx, h, cz) !== CB.WATER && this.get(cx, h, cz) !== CB.LEAVES) return [cx + 0.5, h + 1.01, cz + 0.5];
+    }
+    return [c + 0.5, CC.HEIGHT - 2, c + 0.5];
+  }
+  top(x, z) { for (let y = CC.HEIGHT - 1; y >= 0; y--) if (this.get(x, y, z) !== CB.AIR) return y; return 0; }
+  // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade per vertex)
+  meshChunk(cx, cz) {
+    const S = CC.SIZE, bl = this.blocks, ts = 1 / CC.ATLAS, rows = 4, tsv = 1 / rows, op = [], wa = [], x0 = cx * CC.CHUNK, z0 = cz * CC.CHUNK;
+    const tiles = {}; for (const [b, [t, sd, bt]] of Object.entries(CC.FACES)) tiles[b] = [CC.TILE[t], CC.TILE[bt], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd]];
+    let top = 0; for (let x = x0; x < x0 + CC.CHUNK; x++) for (let z = z0; z < z0 + CC.CHUNK; z++) top = Math.max(top, this.top(x, z));
+    top = Math.min(CC.HEIGHT - 1, top + 1);
+    for (let y = 0; y <= top; y++) for (let z = z0; z < z0 + CC.CHUNK; z++) { const base = (y * S + z) * S; for (let x = x0; x < x0 + CC.CHUNK; x++) {
+      const b = bl[base + x]; if (b === CB.AIR) continue; const tl = tiles[b], out = b === CB.WATER || b === CB.GATE ? wa : op;
+      CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
+        const nb = this.get(x + nx, y + ny, z + nz);
+        if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
+        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv;
+        for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade);   // (shade 2: the gate's light, which the shader moves)
+      });
+    } }
+    return [new Float32Array(op), new Float32Array(wa)];
+  }
+  // the block under the eye, and the empty one before it (Amanatides and Woo)
+  raycast(o, d, reach = 6) {
+    let x = Math.floor(o[0]), y = Math.floor(o[1]), z = Math.floor(o[2]); const step = d.map((v) => (v > 0 ? 1 : -1)), tmax = [], tdel = [];
+    [x, y, z].forEach((cell, i) => { if (Math.abs(d[i]) < 1e-9) { tmax.push(Infinity); tdel.push(Infinity); } else { tmax.push((cell + (d[i] > 0 ? 1 : 0) - o[i]) / d[i]); tdel.push(Math.abs(1 / d[i])); } });
+    let prev = null, t = 0;
+    while (t <= reach) {
+      const b = this.get(x, y, z); if (b !== CB.AIR && b !== CB.WATER && b !== CB.GATE) return [[x, y, z], prev];
+      prev = [x, y, z]; const i = tmax[0] <= tmax[1] && tmax[0] <= tmax[2] ? 0 : tmax[1] <= tmax[2] ? 1 : 2; t = tmax[i]; tmax[i] += tdel[i];
+      if (i === 0) x += step[0]; else if (i === 1) y += step[1]; else z += step[2];
+    }
+    return [null, null];
+  }
+};
+
+// the walker: a body 0.6 wide and 1.8 tall moved through the blocks, walking, jumping, swimming, flying
+CC.EYE = 1.62; CC.WALK = 4.3; CC.SPRINT = 6.5; CC.FLY = 11; CC.GRAVITY = 28; CC.JUMP = 8.6;
+CC.Walker = class {
+  constructor(world, pos, yaw = 45, pitch = -10) { Object.assign(this, { world, pos: pos.slice(), vel: [0, 0, 0], yaw, pitch, onGround: false, flying: false, lastSpace: -9, t: 0, slot: 0 }); }
+  solidAt(x, y, z) { return CC.SOLID.has(this.world.get(Math.floor(x), Math.floor(y), Math.floor(z))); }
+  boxHits(px, py, pz) { const r = 0.3; for (const x of [px - r, px + r - 1e-4]) for (const z of [pz - r, pz + r - 1e-4]) for (const y of [py, py + 0.9, py + 1.79]) if (this.solidAt(x, y, z)) return true; return false; }
+  inGate() { const w = this.world; return [0.2, 1.0, 1.6].some((dy) => w.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + dy), Math.floor(this.pos[2])) === CB.GATE); }
+  look() { const y = (this.yaw * Math.PI) / 180, p = (this.pitch * Math.PI) / 180; return [-Math.sin(y) * Math.cos(p), Math.sin(p), -Math.cos(y) * Math.cos(p)]; }
+  eye() { return [this.pos[0], this.pos[1] + CC.EYE, this.pos[2]]; }
+  update(dt, k) {
+    this.t += dt; const yr = (this.yaw * Math.PI) / 180, fwd = [-Math.sin(yr), -Math.cos(yr)], right = [Math.cos(yr), -Math.sin(yr)];
+    let mx = 0, mz = 0; if (k.fwd) { mx += fwd[0]; mz += fwd[1]; } if (k.back) { mx -= fwd[0]; mz -= fwd[1]; } if (k.right) { mx += right[0]; mz += right[1]; } if (k.left) { mx -= right[0]; mz -= right[1]; }
+    const n = Math.hypot(mx, mz), water = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.5), Math.floor(this.pos[2])) === CB.WATER;
+    let speed = this.flying ? CC.FLY : k.sprint ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55;
+    this.vel[0] = n ? (mx / n) * speed : 0; this.vel[2] = n ? (mz / n) * speed : 0;
+    if (this.flying) { this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
+    else { this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }
+    for (let i = 0; i < 3; i++) {                                           // (an axis at a time: slide along walls)
+      const np = this.pos.slice(); np[i] += this.vel[i] * dt;
+      if (!this.boxHits(np[0], np[1], np[2])) this.pos = np;
+      else { if (i === 1) { if (this.vel[1] < 0) { this.onGround = true; if (this.flying) this.flying = false; } this.vel[1] = 0; } else this.vel[i] = 0; }
+    }
+    if (this.vel[1] !== 0) this.onGround = this.boxHits(this.pos[0], this.pos[1] - 0.05, this.pos[2]) && this.vel[1] <= 0;
+    if (this.pos[1] < -10) { const s = this.world.spawn(); this.pos = s.slice(); this.vel = [0, 0, 0]; }
+  }
+  // Space twice quickly: up into the air, or back down to walk
+  pressJump() { if (this.t - this.lastSpace < 0.3) { this.flying = !this.flying; this.vel[1] = 0; this.lastSpace = -9; } else this.lastSpace = this.t; }
+};
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -21547,7 +21758,8 @@ Object.assign(CM.UI.prototype, {
     document.body.classList.toggle("incave", g.mode === "cave");
     document.body.classList.toggle("infort", g.mode === "fortress");
     document.body.classList.toggle("inablo", g.mode === "ablo");
-    document.body.classList.toggle("inbros", g.mode === "bros");      // (Super Claude Bros: its canvas over the view, 76g-claudebros.js)      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
+    document.body.classList.toggle("inbros", g.mode === "bros");
+    document.body.classList.toggle("incraft", g.mode === "craft");    // (Claudecraft: its canvases over the view, 76h-claudecraft.js)      // (Super Claude Bros: its canvas over the view, 76g-claudebros.js)      // (Claudeablo: its canvas over the view, 76f-claudeablo.js)  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -21569,6 +21781,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.craft) this.$("#side .where").textContent = "Through the Neather Gate - Claudecraft";
     if (g.brosRun) this.$("#side .where").textContent = `Down the pipe - World ${g.brosRun.L.id}, ${g.brosRun.L.name}`;
     if (g.abloWorld) this.$("#side .where").textContent = g.abloWorld.depth ? `Haven's cathedral - ${CM.AB.THEME_NAMES[g.abloWorld.level.theme]}, level ${g.abloWorld.depth}` : "Haven, through the red portal";
     if (g.fortRun) this.$("#side .where").textContent = CM.fortFloorName(g.fortRun.n);
@@ -21662,6 +21875,11 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "craft") {                                            // Claudecraft: home by the gate, or from here
+      if (box.dataset.mode === "craft") return; box.dataset.mode = "craft"; box.innerHTML = "";
+      const b = document.createElement("button"); b.textContent = "Back through the Neather Gate (the island keeps your changes)"; b.addEventListener("click", () => { if (g.craft) g.leaveCraft(); this.refresh(); }); box.appendChild(b);
       return;
     }
     if (g.mode === "bros") {                                             // Super Claude Bros: out, with the coins and the experience
@@ -23762,6 +23980,110 @@ Object.assign(CM.UI.prototype, {
   },
 });
 
+// ---- 76h-claudecraft.js ----
+"use strict";
+// Claudecraft, the window's side (the eighteenth update): its own WebGL on a canvas laid over the view - the atlas of
+// block faces painted in code (and the basalt and the gate's light, which moves), each chunk one buffer of its faces,
+// fog, an outline round the block under the eye; the crosshair and the hotbar. The world is 64n-claudecraft.js, the
+// gate in the town 61k-gate.js; the hands and feet are in 80-main.js.
+const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; }";
+const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos;\n"
+  + "void main() { if (lines > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.85); return; } vec4 c = texture2D(atlas, vUv); if (c.a < 0.1) discard;\n"
+  + "  vec3 rgb = c.rgb * min(vShade, 1.0);\n"
+  + "  if (vShade > 1.5) { float w = sin(vPos.x * 3.1 + vPos.y * 2.3 + time * 2.7) * 0.5 + 0.5, w2 = sin(vPos.y * 4.0 - time * 3.9 + vPos.z) * 0.5 + 0.5; float band = smoothstep(0.92, 1.0, sin(vPos.y * 6.0 - time * 2.2 + sin(vPos.x * 2.0 + vPos.z * 2.0) * 1.5)); rgb = mix(mix(vec3(0.40, 0.18, 0.80), vec3(0.30, 0.85, 0.82), w * 0.6), vec3(1.0, 0.92, 0.70), band * 0.8 + w2 * 0.12); c.a = 0.8; }\n"
+  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, fog, vShade > 1.5 ? f * 0.4 : f), c.a); }";
+Object.assign(CM.UI.prototype, {
+  // the atlas, painted in code as world.py paints it (and two of our own: the basalt and the gate's light)
+  ccAtlas() {
+    if (this.ccAtlasC) return this.ccAtlasC;
+    const c = document.createElement("canvas"); c.width = 16 * CM.CC.ATLAS; c.height = 16 * 4; const p = c.getContext("2d"), R = new CM.Random(7), u = (a, b) => a + (b - a) * R.next();
+    const noisy = (ox, oy, hex, spread, alpha = 255) => { const n = parseInt(hex.slice(1), 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const k = u(-spread, spread), f = (v) => Math.max(0, Math.min(255, Math.round(v + k))); p.fillStyle = `rgba(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)},${alpha / 255})`; p.fillRect(ox + x, oy + y, 1, 1); } };
+    const at = (name) => { const i = CM.CC.TILE[name]; return [(i % CM.CC.ATLAS) * 16, Math.floor(i / CM.CC.ATLAS) * 16]; };
+    let [x, y] = at("grass_top"); noisy(x, y, "#5FA33A", 22);
+    [x, y] = at("dirt"); noisy(x, y, "#866043", 20);
+    [x, y] = at("grass_side"); noisy(x, y, "#866043", 20); for (let i = 0; i < 16; i++) { const d = 3 + R.int(0, 2); for (let j = 0; j < d; j++) { p.fillStyle = `rgb(${Math.round(95 * (1 - R.next() * 0.2))},${Math.round(163 * (1 - R.next() * 0.2))},58)`; p.fillRect(x + i, y + j, 1, 1); } }
+    [x, y] = at("stone"); noisy(x, y, "#7F7F7F", 18);
+    [x, y] = at("sand"); noisy(x, y, "#DBCF95", 12);
+    [x, y] = at("gravel"); noisy(x, y, "#8A8580", 30);
+    [x, y] = at("snow"); noisy(x, y, "#F2F6FA", 6);
+    [x, y] = at("log_side"); noisy(x, y, "#6B5233", 12); p.fillStyle = "#4E3B24"; for (const lx of [2, 6, 10, 13]) p.fillRect(x + lx, y, 1, 16);
+    [x, y] = at("log_top"); noisy(x, y, "#A68A5A", 10); p.strokeStyle = "#6B5233"; p.strokeRect(x + 0.5, y + 0.5, 15, 15); p.strokeRect(x + 3.5, y + 3.5, 9, 9);
+    [x, y] = at("leaves"); for (let j = 0; j < 16; j++) for (let i = 0; i < 16; i++) if (R.next() < 0.78) { const k = 0.9 + R.next() * 0.4; p.fillStyle = `rgb(${Math.round(62 / k)},${Math.round(122 / k)},${Math.round(38 / k)})`; p.fillRect(x + i, y + j, 1, 1); }
+    [x, y] = at("planks"); noisy(x, y, "#B08D57", 10); p.fillStyle = "#7E6238"; for (const ly of [3, 7, 11, 15]) p.fillRect(x, y + ly, 16, 1);
+    [x, y] = at("cobble"); noisy(x, y, "#7A7A7A", 26); p.strokeStyle = "#4F4F4F"; for (const [rx, ry, rw, rh] of [[0, 0, 7, 5], [8, 0, 7, 6], [0, 6, 5, 5], [6, 7, 9, 4], [0, 12, 9, 3], [10, 12, 5, 3]]) p.strokeRect(x + rx + 0.5, y + ry + 0.5, rw, rh);
+    [x, y] = at("water"); noisy(x, y, "#3459C9", 10, 170);
+    [x, y] = at("glass"); p.fillStyle = "rgba(200,230,255,0.16)"; p.fillRect(x, y, 16, 16); p.strokeStyle = "rgba(230,245,255,0.9)"; p.strokeRect(x + 0.5, y + 0.5, 15, 15); p.beginPath(); p.moveTo(x + 4, y + 4); p.lineTo(x + 7, y + 1); p.stroke();
+    [x, y] = at("brick"); noisy(x, y, "#9B4A3A", 10); p.fillStyle = "#C9BFB0"; for (const ly of [3, 7, 11, 15]) p.fillRect(x, y + ly, 16, 1); [0, 4, 8, 12].forEach((ly, row) => { for (const lx of row % 2 ? [3, 11] : [7, 15]) p.fillRect(x + lx, y + ly, 1, 3); });
+    [x, y] = at("bedrock"); noisy(x, y, "#3A3A3A", 40);
+    [x, y] = at("basalt"); noisy(x, y, "#2E2C38", 8); p.fillStyle = "#C8A040"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillStyle = "#B070FF"; for (const [rx, ry] of [[7, 3], [7, 4], [7, 5], [7, 6], [7, 7], [7, 8], [7, 9], [7, 10], [7, 11], [7, 12], [5, 5], [6, 6], [8, 6], [9, 5], [5, 10], [9, 10]]) p.fillRect(x + rx, y + ry, 1, 1);   // (dark basalt, gold-edged, a carved rune glowing in it: the Keep-yard gate's own)
+    [x, y] = at("gate"); noisy(x, y, "#8050D0", 24, 210); p.fillStyle = "rgba(120,240,230,0.6)"; for (let k = 0; k < 16; k += 4) p.fillRect(x, y + k, 16, 1);
+    this.ccAtlasC = c; return c;
+  },
+  ccStart(world) {
+    let c = this.$("#craftcanvas"); if (!c) { c = document.createElement("canvas"); c.id = "craftcanvas"; this.$("#view").appendChild(c); }
+    const gl = this.ccGl = c.getContext("webgl", { antialias: false }) || c.getContext("experimental-webgl"); if (!gl) return false;
+    const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); return s; };
+    const prog = this.ccProg = gl.createProgram(); gl.attachShader(prog, sh(gl.VERTEX_SHADER, CC_VERT)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, CC_FRAG)); gl.bindAttribLocation(prog, 0, "pos"); gl.bindAttribLocation(prog, 1, "uv"); gl.bindAttribLocation(prog, 2, "shade"); gl.linkProgram(prog);
+    const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this.ccAtlas()); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.ccTex = tex; this.ccChunks = new Map(); this.ccLine = gl.createBuffer();
+    const pcx = Math.floor(this.game.craft.walker.pos[0] / CM.CC.CHUNK), pcz = Math.floor(this.game.craft.walker.pos[2] / CM.CC.CHUNK);
+    this.ccPending = []; for (let cx = 0; cx < CM.CC.CHUNKS; cx++) for (let cz = 0; cz < CM.CC.CHUNKS; cz++) this.ccPending.push([cx, cz]);
+    this.ccPending.sort((a, b) => (a[0] - pcx) ** 2 + (a[1] - pcz) ** 2 - ((b[0] - pcx) ** 2 + (b[1] - pcz) ** 2));
+    this.ccDirty = new Set(); this.ccSlot = 0;
+    return true;
+  },
+  ccBuild(cx, cz) {
+    const gl = this.ccGl, [op, wa] = this.game.craft.world.meshChunk(cx, cz), key = `${cx},${cz}`; let ch = this.ccChunks.get(key);
+    if (!ch) { ch = { op: gl.createBuffer(), wa: gl.createBuffer() }; this.ccChunks.set(key, ch); }
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 6;
+    gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 6;
+  },
+  ccDirtyAt(x, z) { const C = CM.CC.CHUNK; for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const cx = Math.floor((x + dx) / C), cz = Math.floor((z + dz) / C); if (cx >= 0 && cz >= 0 && cx < CM.CC.CHUNKS && cz < CM.CC.CHUNKS) this.ccDirty.add(`${cx},${cz}`); } },
+  ccMvp(w, aspect) {
+    const f = 1 / Math.tan((70 * Math.PI) / 360), n = 0.05, fa = 200, P = [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, (2 * fa * n) / (n - fa), 0];
+    const mul = (a, b) => { const o = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) o[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k]; return o; };
+    const rx = (d) => { const a = (d * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]; }, ry = (d) => { const a = (d * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]; };
+    const e = w.eye(), T = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -e[0], -e[1], -e[2], 1];
+    return mul(P, mul(rx(-w.pitch), mul(ry(-w.yaw), T)));
+  },
+  drawCraft(now, dt) {
+    const g = this.game, cr = g.craft, w = cr.walker, c = this.$("#craftcanvas"), gl = this.ccGl; if (!gl) return;
+    const r = c.getBoundingClientRect(); if (c.width !== Math.round(r.width) || c.height !== Math.round(r.height)) { c.width = Math.max(320, Math.round(r.width)); c.height = Math.max(200, Math.round(r.height)); }
+    const t0 = performance.now(); while (this.ccPending.length && performance.now() - t0 < 12) this.ccBuild(...this.ccPending.shift());   // (the island built a few chunks a frame)
+    for (const k of this.ccDirty) this.ccBuild(...k.split(",").map(Number)); this.ccDirty.clear();
+    gl.viewport(0, 0, c.width, c.height); gl.clearColor(0.53, 0.71, 0.96, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+    const P = this.ccProg; gl.useProgram(P); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.ccTex);
+    const U = (n) => gl.getUniformLocation(P, n);
+    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000);
+    const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 24, 20); gl.drawArrays(mode, 0, n); };
+    for (const ch of this.ccChunks.values()) draw(ch.op, ch.nOp);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    for (const ch of this.ccChunks.values()) draw(ch.wa, ch.nWa);
+    gl.depthMask(true);
+    const hit = cr.target && cr.target[0];
+    if (hit) { const [x, y, z] = hit, e = 0.003, C = [[x - e, y - e, z - e], [x + 1 + e, y - e, z - e], [x + 1 + e, y - e, z + 1 + e], [x - e, y - e, z + 1 + e], [x - e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z + 1 + e], [x - e, y + 1 + e, z + 1 + e]], out = [];
+      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, ...C[b], 0, 0, 1);
+      gl.uniform1f(U("lines"), 1); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccLine); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccLine, 24, gl.LINES); }
+    gl.disable(gl.BLEND);
+    this.ccHud(cr, now);
+  },
+  // the HUD on a 2D canvas over the GL one: the crosshair, the hotbar, where you stand, a word of help
+  ccHud(cr, now) {
+    let h = this.$("#crafthud"); if (!h) { h = document.createElement("canvas"); h.id = "crafthud"; this.$("#view").appendChild(h); }
+    const r = h.getBoundingClientRect(); if (h.width !== Math.round(r.width) || h.height !== Math.round(r.height)) { h.width = Math.round(r.width); h.height = Math.round(r.height); }
+    const p = h.getContext("2d"), W = h.width, H = h.height, w = cr.walker, atlas = this.ccAtlas(); p.clearRect(0, 0, W, H); p.imageSmoothingEnabled = false;
+    if (this.ccPending.length) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, W, H); p.fillStyle = "#FFF"; p.font = "bold 18px Tahoma, sans-serif"; p.textAlign = "center"; p.fillText("Building the island", W / 2, H / 2 - 20); p.fillStyle = "#404040"; p.fillRect(W / 2 - 150, H / 2, 300, 8); p.fillStyle = "#7FD46A"; p.fillRect(W / 2 - 150, H / 2, 300 * (1 - this.ccPending.length / 100), 8); p.textAlign = "left"; return; }
+    p.strokeStyle = "rgba(255,255,255,0.86)"; p.lineWidth = 2; p.beginPath(); p.moveTo(W / 2 - 9, H / 2); p.lineTo(W / 2 + 9, H / 2); p.moveTo(W / 2, H / 2 - 9); p.lineTo(W / 2, H / 2 + 9); p.stroke();
+    const sw = 44, x0 = W / 2 - (sw * CM.CC.HOTBAR.length) / 2, y0 = H - sw - 10; p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(x0 - 4, y0 - 4, sw * CM.CC.HOTBAR.length + 8, sw + 8);
+    CM.CC.HOTBAR.forEach((b, i) => { const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; p.drawImage(atlas, (t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16, 16, 16, x0 + i * sw + 6, y0 + 6, 32, 32); p.strokeStyle = i === w.slot ? "#FFF" : "#808080"; p.lineWidth = i === w.slot ? 3 : 1; p.strokeRect(x0 + i * sw + 1, y0 + 1, sw - 2, sw - 2); });
+    p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText(CM.CC.NAMES[CM.CC.HOTBAR[w.slot]], W / 2, y0 - 12);
+    p.textAlign = "left"; p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.fillText(`Claudecraft   XYZ ${w.pos[0].toFixed(1)} / ${w.pos[1].toFixed(1)} / ${w.pos[2].toFixed(1)}${w.flying ? "   (flying)" : ""}   broken ${cr.broken || 0}, placed ${cr.placed || 0}`, 8, 16);
+    p.fillText("WASD walk - mouse look (click to capture) - Space jump (twice: fly) - Shift sprint (down, flying) - left click break - right click place - 1-9 or the wheel - walk into the gate's light to go home", 8, 32);
+    if (document.pointerLockElement !== this.$("#craftcanvas")) { p.font = "bold 15px Tahoma, sans-serif"; p.textAlign = "center"; p.fillText("Click to play", W / 2, H / 2 + 34); p.textAlign = "left"; }
+    for (const [t, msg] of cr.says || []) if (now - t < 4000) { p.font = "bold 14px Tahoma, sans-serif"; p.textAlign = "center"; p.fillStyle = `rgba(255,240,200,${Math.min(1, (4000 - (now - t)) / 800)})`; p.fillText(msg, W / 2, H * 0.25); p.textAlign = "left"; }
+  },
+});
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -23963,7 +24285,8 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("claudeita", () => ui.openClaudeita());
   game.on("fortress", () => ui.openFortress());
   game.on("claudeablo", () => ui.openClaudeablo());
-  game.on("pipe", () => ui.openBrosPipe());                             // (Super Claude Bros: 76g-claudebros.js)
+  game.on("pipe", () => ui.openBrosPipe());
+  game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
   game.on("bros", (run) => { brosIn = {}; ui.brosStart(run); ui.refresh(); });
   game.on("brosLevel", (run) => { ui.brosStart(run); try { CM.audio.play("victory", 0.4); } catch (er) { /* */ } });                    // (the red portal: 76f-claudeablo.js)
   game.on("ablo", () => { ui.abloStart(); ui.refresh(); });                         // (the Fortress: 76d-fortress.js)
@@ -24305,6 +24628,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal" && thing.to === "claudecraft") out.push({ x, y, layer: "solid:neathergate", w: 1.0, h: 1.35, glow: 0.4 + 0.2 * Math.sin(now / 420) });   // (the Neather Gate: 61k-gate.js)
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "pipe") out.push({ x, y, layer: "solid:pipe", w: 0.95, h: 1.05 });   // (the pipe in the Square: 61j-pipe.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
@@ -24436,6 +24760,11 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
+    }
+    if (game.mode === "craft" && game.craft && !ui.dialogOpen()) {      // Claudecraft (76h-claudecraft.js draws it)
+      const f = CRAFT_KEYS[e.code], w = game.craft.walker; if (f) { e.preventDefault(); if (f === "jump" && !craftIn.jump) w.pressJump(); craftIn[f] = true; return; }
+      if (/^Digit[1-9]$/.test(e.code)) { w.slot = Number(e.code.slice(-1)) - 1; return; }
+      if (e.code !== "Escape") { e.preventDefault(); return; }
     }
     if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros
       const f = BROS_KEYS[e.code]; if (f) { e.preventDefault(); brosIn[f] = true; return; }
@@ -24593,7 +24922,17 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; const b2 = BROS_KEYS[e.code]; if (b2) brosIn[b2] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; const b2 = BROS_KEYS[e.code]; if (b2) brosIn[b2] = false; const c2 = CRAFT_KEYS[e.code]; if (c2) craftIn[c2] = false; });
+  // ---- Claudecraft's mouse: a click captures it; then it looks, the left button breaks, the right places, the wheel picks ----
+  view.addEventListener("mousedown", (e) => {
+    if (game.mode !== "craft" || !game.craft || !e.target.closest("#craftcanvas, #crafthud")) return; e.preventDefault(); const c = ui.$("#craftcanvas");
+    if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
+    if (e.button === 0) { const b = game.craftBreak(); if (b) { const hit = game.craft.target[0]; ui.ccDirtyAt(hit[0], hit[2]); try { CM.audio.play(b === CM.CC.B.LEAVES ? "step" : b === CM.CC.B.LOG || b === CM.CC.B.PLANKS ? "grind" : "bump", 0.45, 0, 0.9 + Math.random() * 0.3); } catch (er) { /* */ } } }
+    else if (e.button === 2) { if (game.craftPlace()) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2]); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
+  });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "craft" && game.craft && document.pointerLockElement === ui.$("#craftcanvas")) { const w = game.craft.walker; w.yaw -= e.movementX * 0.15; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.15)); } });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "craft") e.preventDefault(); });
+  view.addEventListener("wheel", (e) => { if (game.mode !== "craft" || !game.craft) return; e.preventDefault(); const w = game.craft.walker; w.slot = (w.slot + (e.deltaY > 0 ? 1 : -1) + CM.CC.HOTBAR.length) % CM.CC.HOTBAR.length; }, { passive: false });
   view.addEventListener("mousedown", (e) => { if (game.mode === "bros" && e.target.closest("#broscanvas")) { e.preventDefault(); brosIn.attack = true; } });
   window.addEventListener("mouseup", () => { if (game.mode === "bros") brosIn.attack = false; });
   // ---- Claudeablo's mouse: on its canvas, every click is the game's ----
@@ -24632,6 +24971,18 @@ window.addEventListener("DOMContentLoaded", () => {
   let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0, abloT = 0;
   const BROS_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", KeyW: "jump", ArrowUp: "jump", ShiftLeft: "run", ShiftRight: "run", KeyJ: "attack", KeyF: "attack", KeyK: "attack" };
   let brosIn = {}, brosT = 0;
+  const CRAFT_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", ShiftLeft: "sprint", ShiftRight: "sprint", KeyC: "down" };
+  let craftIn = {}, craftT = 0;
+  // a frame through the Neather Gate: the walker moves (not while a dialog is up), the block under the eye is found,
+  // the island drawn; the gate's light takes the party home; what was changed is kept every half minute
+  function craftFrame(now, dt) {
+    const cr = game.craft; if (!cr) return;
+    if (!ui.dialogOpen() && ui.screen === "play" && !ui.ccPending.length) { cr.walker.update(Math.min(0.05, dt), Object.assign({}, craftIn, { down: craftIn.down || (cr.walker.flying && craftIn.sprint) })); cr.target = cr.world.raycast(cr.walker.eye(), cr.walker.look()); }
+    if (cr.walker.inGate()) { try { CM.audio.play("teleport", 0.6); } catch (er) { /* */ } craftIn = {}; game.leaveCraft(); ui.refresh(); return; }
+    ui.drawCraft(now, dt);
+    if ((cr.since += dt) > 30) { cr.since = 0; game.craftKeep(); }
+    if ((craftT += dt) > 1) { craftT = 0; ui.refresh(); }
+  }
   // a frame down the pipe: the run steps, its events are sounds; a banner reached goes on to the next level after a
   // moment, a fall comes back up the pipe after one
   function brosFrame(now, dt) {
@@ -24790,6 +25141,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (game.mode === "fortress") fortFrame(now, dt);
       else if (game.mode === "ablo") abloFrame(now, dt);
       else if (game.mode === "bros") brosFrame(now, dt);
+      else if (game.mode === "craft") craftFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;

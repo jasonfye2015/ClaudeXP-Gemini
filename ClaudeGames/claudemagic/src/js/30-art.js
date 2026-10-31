@@ -1211,6 +1211,19 @@ CM.art.cliff = function (seed = 1) {
 // the Gilded Joker: deep red plaster between gilt pilasters, tall arched windows lit gold, a band of gold under the eaves;
 // its door a pair of gilded doors under a fanlight with a lamp each side; its gable red with a gold sunburst; its roof copper
 // the pipe in the Square: a great bronze pipe standing up out of the cobbles, green with age, a dark mouth at its top
+// the Neather Gate: blocks of dark basalt in a frame, violet runes cut into them and glowing, and inside a slow violet
+// shimmer with motes in it
+CM.art.neatherGate = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("neathergate")), b = S / 6;
+  const g = p.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S * 0.4); g.addColorStop(0, "rgba(220,170,255,0.95)"); g.addColorStop(0.5, "rgba(130,60,220,0.85)"); g.addColorStop(1, "rgba(60,20,120,0.8)");
+  p.fillStyle = g; p.fillRect(b, b, S - 2 * b, S - b);
+  p.strokeStyle = "rgba(240,210,255,0.5)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { p.beginPath(); for (let k = 0; k <= 20; k++) { const y = b + (k / 20) * (S - b), x = S / 2 + Math.sin(k * 0.6 + i * 0.9) * (S * 0.22 - i * 3); if (k) p.lineTo(x, y); else p.moveTo(x, y); } p.stroke(); }
+  p.fillStyle = "#FFFFFF"; for (let i = 0; i < 30; i++) { p.globalAlpha = 0.3 + rnd.next() * 0.7; p.fillRect(b + rnd.next() * (S - 2 * b), b + rnd.next() * (S - b), 2, 2); } p.globalAlpha = 1;   // (motes)
+  const block = (x, y) => { p.fillStyle = "#1E1A24"; p.fillRect(x, y, b, b); p.fillStyle = "#2C2634"; p.fillRect(x + 2, y + 2, b - 4, b - 4); p.strokeStyle = "rgba(170,90,255,0.95)"; p.lineWidth = 2; p.beginPath(); const cx = x + b / 2, cy = y + b / 2, r = b * 0.25, k = rnd.int(0, 2);
+    if (k === 0) { p.moveTo(cx, cy - r); p.lineTo(cx, cy + r); p.moveTo(cx - r, cy); p.lineTo(cx + r * 0.6, cy - r * 0.6); } else if (k === 1) { p.arc(cx, cy, r, 0.3, 5.5); } else { p.moveTo(cx - r, cy + r); p.lineTo(cx, cy - r); p.lineTo(cx + r, cy + r); } p.stroke(); };
+  for (let i = 0; i < 6; i++) { block(i * b, 0); } for (let j = 1; j < 6; j++) { block(0, j * b); block(S - b, j * b); }
+  return c;
+};
 CM.art.pipe = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("pipe"));
   const body = p.createLinearGradient(S * 0.18, 0, S * 0.82, 0); body.addColorStop(0, "#5A4020"); body.addColorStop(0.35, "#C89A50"); body.addColorStop(0.6, "#A07838"); body.addColorStop(1, "#4A3418");
@@ -1432,7 +1445,7 @@ CM.art.surfaceLayers = function (pick) {
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
   out["solid:logs"] = use("solid.logs", () => CM.art.logs(false)); out["solid:cabindoor"] = use("solid.cabindoor", () => CM.art.logs(true));   // (Leshy's cabin: 61f-cabin.js)
   out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
-  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:pipe"] = use("solid.pipe", () => CM.art.pipe());   // (the pipe in the Square)
+  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:pipe"] = use("solid.pipe", () => CM.art.pipe()); out["solid:neathergate"] = use("solid.neathergate", () => CM.art.neatherGate());   // (the Neather Gate)   // (the pipe in the Square)
   out["solid:redportal"] = use("solid.redportal", () => { const src = CM.art.portal(), c = artCanvas(), p = c.getContext("2d"); p.filter = "hue-rotate(95deg) saturate(1.6)"; p.drawImage(src, 0, 0); return c; });   // (the red portal to Haven) out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));

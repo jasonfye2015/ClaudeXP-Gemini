@@ -689,3 +689,8 @@ body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros 
 @keyframes ca-burst { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pc, .pc::before, .jk::after { animation: none !important; } }
 .capile .cback { width: auto; height: auto; display: block; line-height: normal; }
+
+/* Claudecraft through the Neather Gate (76h-claudecraft.js): its GL canvas and its HUD over the view */
+#craftcanvas, #crafthud { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; }
+#crafthud { z-index: 7; pointer-events: none; } #craftcanvas { background: #86B6F5; cursor: crosshair; }
+body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incraft #view .sky, body.incraft #view .compass, body.incraft #view .hint { display: none; }
