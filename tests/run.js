@@ -5011,6 +5011,31 @@ test("the Wishing Claw: each machine keeps a stocked pit clear of the chute; a t
   M.pit.length = 3; assert.ok(g.cwMachine("copper").pit.length >= CW.restock);
 });
 
+test("Wyrmhold Pinball: the plunger sends the ball up the lane and round into the table; a flipper strikes a ball up; bumpers kick and score; the R U N E S bank raises the multiplier; slaying the dragon starts a multiball; a ball lost early is saved once; the kickback fires; three balls and it is over; every mark pays gold each game, its card only the first time", () => {
+  const CM = load(), PB = CM.PB;
+  const G = new PB.Game(1); for (let k = 0; k < 120; k++) { G.input(false, false, true); G.tick(PB.step * 5); } G.input(false, false, false); G.tick(PB.step); assert.ok(G.balls[0].vy < -30, "fired"); G.update(1.2); assert.ok(!G.balls[0].inLane && G.balls[0].x < 17, "out of the lane and into the table");
+  // a flipper sends a resting ball up
+  const F = new PB.Game(2); F.balls = [{ x: 7.2, y: 31.0, vx: 0, vy: 0, inLane: false, hold: 0 }]; F.update(0.15); F.input(true, false, false); F.update(0.06); assert.ok(F.balls[0].vy < -10, "struck");
+  // a bumper kicks and scores
+  const B = new PB.Game(3), c = B.T.circles.find((q) => q.kind === "bumper"); B.balls = [{ x: c.x, y: c.y - c.r - PB.r - 0.05, vx: 0, vy: 6, inLane: false, hold: 0 }]; B.update(0.05); assert.ok(B.score >= PB.PTS.bumper); assert.ok(Math.hypot(B.balls[0].vx, B.balls[0].vy) > 10);
+  // the bank
+  const N = new PB.Game(4); N.targets = [false, false, false, false, true]; const t = N.T.segs.find((q) => q.kind === "target" && q.id === 4); N.balls = [{ x: (t.a[0] + t.b[0]) / 2, y: t.a[1] + 0.6, vx: 0, vy: -12, inLane: false, hold: 0 }]; N.update(0.05); assert.strictEqual(N.mult, 2); assert.ok(N.targets.every(Boolean), "the bank stands again");
+  // the dragon: slain, two more balls
+  const D = new PB.Game(5); D.dragon.hp = 1; D.balls = [{ x: 9.45, y: 9.0, vx: 0, vy: -12, inLane: false, hold: 0 }]; D.update(0.05); assert.strictEqual(D.dragon.slain, 1); assert.strictEqual(D.balls.length, 3); assert.ok(D.score >= PB.PTS.dragon);
+  // ball save, once; the kickback
+  const S = new PB.Game(6); S.saveT = 3; S.balls = [{ x: 9.45, y: 36.98, vx: 0, vy: 5, inLane: false, hold: 0 }]; S.update(0.05); assert.strictEqual(S.ballNo, 1); assert.ok(S.saveUsed); S.balls[0].vy = -30; S.balls[0].inLane = true; S.balls[0].y = 34.1; S.launch(); assert.strictEqual(S.saveT, 0, "no second save");
+  const KB = new PB.Game(7); KB.balls = [{ x: 1.15, y: 30.8, vx: 0, vy: 8, inLane: false, hold: 0 }]; KB.update(0.02); assert.ok(KB.balls[0].vy < -20 && !KB.kickback);
+  // three balls
+  const O = new PB.Game(8); for (let k = 0; k < 3; k++) { O.saveT = 0; O.extra = 0; O.balls = [{ x: 9.45, y: 36.98, vx: 0, vy: 5, inLane: false, hold: 0 }]; O.update(0.02); } assert.strictEqual(O.stage, "over");
+  // the house's side
+  const g = new CM.Game(); g.newGame("pb-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.pbStart(100).error); const gold0 = g.gold, Gm = g.pbGame(); Gm.add(16000); const out = g.pbCheck(); assert.strictEqual(out.marks.length, 3); assert.strictEqual(g.gold - gold0, [1, 2, 3].reduce((t2, i) => t2 + Math.round(100 * PB.pay(i)), 0)); assert.strictEqual(out.marks.filter((m) => m.card).length, play === 0 ? 3 : 0, "cards once");
+    Gm.stage = "over"; assert.ok(g.pbCheck().over); assert.strictEqual(g.pbGame(), null);
+  }
+  assert.strictEqual(owned(), o0 + 3);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

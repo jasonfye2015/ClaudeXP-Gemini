@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v14.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v14.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -862,6 +862,10 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .claw .cwicon { width: 26px; height: 26px; }
 .claw .cwprize { margin: 6px 0; padding: 6px 10px; border: 1px solid rgba(255,224,112,0.4); border-radius: 6px; background: rgba(0,0,0,0.3); font-weight: bold; }
 .claw .cwhold { min-width: 200px; user-select: none; }
+.pinball .pbcol { display: flex; flex-direction: column; gap: 6px; }
+.pinball .pbcanvas { width: 320px; height: 606px; border-radius: 10px; border: 8px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.pinball .pbbtns { justify-content: space-between; }
+.pinball .pbbtns button { user-select: none; }
 </style>
 </head>
 <body>
@@ -871,7 +875,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "14.6", built: "2026-10-31" };
+const CM = window.CM = { version: "14.7", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22070,6 +22074,137 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64zn-pinball.js ----
+"use strict";
+// Wyrmhold Pinball (the thirty-seventh big update - v14.7): a pinball table on the Gilded Joker's floor, painted with
+// the dungeon. A launch lane on the right (hold to draw the plunger back, let go to fire); a curved top; three rune
+// bumpers that kick; two slingshots over the inlanes; a bank of five drop targets (R U N E S) that raise the bonus
+// multiplier when all are down; three stars to roll over (all three lit doubles the bumpers for the ball and lights
+// the kickback again - the kickback in the left outlane, lit for each new ball, fires a draining ball back up); the Hoard
+// Hole, a saucer that holds the ball, pays and kicks it out; and the dragon at the top, who takes hits until slain -
+// and then two more balls come down for a multiball, and every second dragon gives an extra ball. A ball lost in its
+// first seconds is given back. Three balls. One stake a game: every mark the score passes pays gold, more for each
+// mark, every game; and a Claudescryption card the first time ever each mark is passed (common to the fourth, a
+// stronger common to the ninth, rare from the tenth). The physics are plain: a ball, segments, circles and two
+// flippers, stepped finely. The window: 76zd-pinball.js.
+CM.PB = {
+  W: 20, H: 36, step: 1 / 600, g: 26, r: 0.42, e: 0.45, maxV: 48, balls: 3, save: 6,
+  flip: { len: 3.6, rBase: 0.5, rTip: 0.24, upSpeed: 30, downSpeed: 16 },
+  MARKS: [3000, 8000, 15000, 25000, 40000, 60000, 90000, 130000, 180000, 250000, 350000, 500000],
+  pay: (i) => 0.1 + 0.06 * i,
+  PTS: { bumper: 100, sling: 10, target: 500, bank: 5000, star: 250, stars: 2000, hoard: 5000, dragonHit: 1000, dragon: 25000, lane: 50 },
+};
+const PB = CM.PB;
+// the table, built once: walls (segments), round things (circles), things to roll over (sensors) and the flippers
+PB.table = () => {
+  const segs = [], circles = [], sensors = [], S = (a, b, o = {}) => segs.push({ a, b, e: PB.e, ...o }), mirror = (p) => [18.9 - p[0], p[1]];
+  // the curved top
+  const cx = 10, cy = 10, R = 9.5; let prev = [cx - R, cy]; for (let k = 1; k <= 18; k++) { const a = Math.PI + (Math.PI * k) / 18, p = [cx + R * Math.cos(a), cy + R * Math.sin(a)]; S(prev, p); prev = p; }
+  S([0.5, 10], [0.5, 36.5]); S([1.8, 26.9], [5.2, 30.48]); S([1.8, 26.9], [1.8, 29.5]);       // the left wall, the outlane beside it, and the inlane's guide to the flipper
+  S([19.5, 10], [19.5, 34.6]); S([18.4, 34.6], [18.4, 12.4]); S([18.4, 34.6], [19.5, 34.6], { kind: "plunger" });   // the lane
+  S([18.4, 12.4], [19.5, 11.0], { oneWay: [-0.79, -0.62] });                                  // the lane's gate: the ball goes up and out, not back down
+  S([18.4, 12.4], [18.4, 34.6]); S([17.1, 26.9], [13.7, 30.48]); S([17.1, 26.9], [17.1, 29.5]); // the right side, its outlane and guide
+  S([0.5, 11.2], [2.6, 15.6], { kind: "rubber", e: 0.6 });                                    // the deflector that turns the orbit into the table
+  // the slingshots: a kicking face toward the middle, and their backs
+  for (const m of [(p) => p, mirror]) { const A = m([2.0, 22.8]), B = m([2.0, 26.0]), C = m([4.3, 27.6]); S(A, C, { kind: "sling", kick: 9 }); S(A, B); S(B, C); }
+  // the drop targets, R U N E S, across the left-middle
+  for (let k = 0; k < 5; k++) S([1.7 + k * 0.95, 18.6], [2.45 + k * 0.95, 18.6], { kind: "target", id: k });
+  circles.push({ x: 9.45, y: 6.6, r: 1.45, kind: "dragon", kick: 7 });
+  for (const [x, y] of [[6.1, 11.4], [12.8, 11.4], [9.45, 14.9]]) circles.push({ x, y, r: 1.0, kind: "bumper", kick: 14 });
+  circles.push({ x: 1.8, y: 26.65, r: 0.3, kind: "post" }, { x: 17.1, y: 26.65, r: 0.3, kind: "post" });
+  sensors.push({ x: 15.6, y: 18.6, r: 0.62, kind: "hoard" }, { x: 1.15, y: 31.5, r: 0.7, kind: "kickback" });
+  for (const [x, y] of [[3.4, 13.4], [15.5, 13.4], [9.45, 21.5]]) sensors.push({ x, y, r: 0.55, kind: "star", id: sensors.filter((s) => s.kind === "star").length });
+  for (const s of segs) { const dx = s.b[0] - s.a[0], dy = s.b[1] - s.a[1], L = Math.hypot(dx, dy); s.len = L; s.d = [dx / L, dy / L]; }
+  const flippers = [{ side: "left", px: 5.6, py: 31.0, rest: 0.52, up: -0.44 }, { side: "right", px: 13.3, py: 31.0, rest: Math.PI - 0.52, up: Math.PI + 0.44 }];
+  return { segs, circles, sensors, flippers };
+};
+PB.Game = class {
+  constructor(seed) {
+    this.rnd = new CM.Random(seed); this.T = PB.table(); this.t = 0; this.events = []; this.stage = "play"; this.score = 0; this.ballNo = 1; this.extra = 0; this.mult = 1;
+    this.targets = [true, true, true, true, true]; this.stars = [false, false, false]; this.dragon = { hp: 4, level: 1, slain: 0 }; this.marks = 0; this.bumperX = 1;
+    this.flips = this.T.flippers.map((f) => ({ ...f, a: f.rest, w: 0, held: false })); this.balls = []; this.pull = 0; this.pulling = false; this.serve();
+  }
+  serve(again) { this.balls = [{ x: 18.95, y: 34.6 - PB.r - 0.01, vx: 0, vy: 0, inLane: true, hold: 0 }]; this.saveT = 0; this.saveUsed = !!again; this.kickback = true; this.ballBonus = 0; this.stars = [false, false, false]; this.bumperX = 1; }
+  input(left, right, plunger) { this.flips[0].held = !!left; this.flips[1].held = !!right; if (plunger) { this.pulling = true; } else if (this.pulling) { this.pulling = false; this.launch(); } }
+  launch() { const b = this.balls.find((q) => q.inLane && Math.abs(q.vy) < 0.5 && q.y > 32); if (b) { b.vy = -(16 + 30 * this.pull); this.saveT = this.saveUsed ? 0 : PB.save; this.events.push({ kind: "launch", pull: this.pull }); } this.pull = 0; }
+  // a flipper's segment and its thickness at a point along it
+  flipSeg(f) { const L = PB.flip.len; return { a: [f.px, f.py], b: [f.px + Math.cos(f.a) * L, f.py + Math.sin(f.a) * L] }; }
+  collideSeg(b, a, c, rad, e, surf) {
+    const dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy, t = Math.max(0, Math.min(1, ((b.x - a[0]) * dx + (b.y - a[1]) * dy) / L2)), px = a[0] + dx * t, py = a[1] + dy * t;
+    let nx = b.x - px, ny = b.y - py; const d = Math.hypot(nx, ny), R = PB.r + (typeof rad === "function" ? rad(t) : rad); if (d >= R || d < 1e-9) return null; nx /= d; ny /= d;
+    b.x += nx * (R - d); b.y += ny * (R - d); const [sx, sy] = surf ? surf(px, py) : [0, 0], rvx = b.vx - sx, rvy = b.vy - sy, vn = rvx * nx + rvy * ny;
+    if (vn < 0) { b.vx = sx + rvx - (1 + e) * vn * nx; b.vy = sy + rvy - (1 + e) * vn * ny; } return { nx, ny, vn, t };
+  }
+  stepBall(b, dt) {
+    if (b.hold > 0) { b.hold -= dt; if (b.hold <= 0) { b.vx = -9 + this.rnd.next() * 3; b.vy = 5 + this.rnd.next() * 2; b.y += 0.9; this.events.push({ kind: "kickout" }); } return; }
+    b.vy += PB.g * dt; const sp = Math.hypot(b.vx, b.vy); if (sp > PB.maxV) { b.vx *= PB.maxV / sp; b.vy *= PB.maxV / sp; } b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.inLane && b.y < 12) b.inLane = false; if (!b.inLane && b.x > 18.4 && b.y > 12.5) b.inLane = true;
+    for (const s of this.T.segs) {
+      if (s.kind === "target" && !this.targets[s.id]) continue; if (s.kind === "plunger" && this.pulling && b.inLane) { /* the plunger drawn back: the ball rests lower */ }
+      if (s.oneWay && b.vx * s.oneWay[0] + b.vy * s.oneWay[1] > 0) continue;
+      const h = this.collideSeg(b, s.a, s.b, 0, s.e); if (!h) continue;
+      if (s.kind === "sling" && h.vn < -3) { b.vx += h.nx * s.kick; b.vy += h.ny * s.kick; this.add(PB.PTS.sling); this.events.push({ kind: "sling", x: s.a[0] }); }
+      else if (s.kind === "target" && h.vn < -2) { this.targets[s.id] = false; this.add(PB.PTS.target); this.events.push({ kind: "target", id: s.id }); if (this.targets.every((x) => !x)) { this.add(PB.PTS.bank * this.mult); this.mult = Math.min(6, this.mult + 1); this.targets = [true, true, true, true, true]; this.events.push({ kind: "bank", mult: this.mult }); } }
+      else if (h.vn < -6) this.events.push({ kind: "wall", v: -h.vn });
+    }
+    for (const c of this.T.circles) {
+      let nx = b.x - c.x, ny = b.y - c.y; const d = Math.hypot(nx, ny), R = PB.r + c.r; if (d >= R || d < 1e-9) continue; nx /= d; ny /= d; b.x = c.x + nx * R; b.y = c.y + ny * R; const vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) { b.vx -= (1 + PB.e) * vn * nx; b.vy -= (1 + PB.e) * vn * ny; }
+      if (c.kick && vn < -1) { const out = b.vx * nx + b.vy * ny; if (out < c.kick) { b.vx += nx * (c.kick - out); b.vy += ny * (c.kick - out); } }
+      if (c.kind === "bumper" && vn < -1) { this.add(PB.PTS.bumper * this.bumperX); this.ballBonus += 10; this.events.push({ kind: "bumper", x: c.x, y: c.y }); }
+      else if (c.kind === "dragon" && vn < -2) this.hitDragon();
+    }
+    // the flippers: thick at the pivot, thin at the tip, moving
+    for (const f of this.flips) { const { a, b: tip } = this.flipSeg(f), w = f.w; this.collideSeg(b, a, tip, (t) => PB.flip.rBase + (PB.flip.rTip - PB.flip.rBase) * t, 0.3, (px, py) => [-w * (py - f.py), w * (px - f.px)]); }
+    for (const s of this.T.sensors) { const d = Math.hypot(b.x - s.x, b.y - s.y); if (d > s.r) { if (s.kind === "star") b["in" + s.id] = false; continue; }
+      if (s.kind === "kickback" && this.kickback && b.vy > 0) { this.kickback = false; b.vy = -30; b.vx = 0.6; this.events.push({ kind: "kickback" }); }
+      if (s.kind === "hoard" && !b.hold && Math.hypot(b.vx, b.vy) < 30) { b.x = s.x; b.y = s.y; b.vx = b.vy = 0; b.hold = 1.0; this.add(PB.PTS.hoard); this.events.push({ kind: "hoard" }); }
+      if (s.kind === "star" && !b["in" + s.id]) { b["in" + s.id] = true; this.add(PB.PTS.star); if (!this.stars[s.id]) { this.stars[s.id] = true; this.events.push({ kind: "star", id: s.id }); if (this.stars.every(Boolean)) { this.add(PB.PTS.stars); this.bumperX = 2; this.kickback = true; this.events.push({ kind: "stars" }); } } } }
+  }
+  hitDragon() {
+    const D = this.dragon; D.hp -= 1; this.add(PB.PTS.dragonHit); this.events.push({ kind: "dragonhit", hp: D.hp });
+    if (D.hp <= 0) { D.slain += 1; this.add(PB.PTS.dragon * D.level); this.ballBonus += 2000 * D.level; this.events.push({ kind: "dragon", level: D.level }); D.level += 1; D.hp = 3 + D.level; if (D.slain % 2 === 0) { this.extra += 1; this.events.push({ kind: "extraball" }); }
+      for (let k = 0; k < 2; k++) this.balls.push({ x: 9.45 + (k ? 3 : -3), y: 2.5, vx: (k ? 4 : -4) + this.rnd.next(), vy: 2, inLane: false, hold: 0 }); this.events.push({ kind: "multiball" }); }
+  }
+  add(n) { this.score += n; while (this.marks < PB.MARKS.length && this.score >= PB.MARKS[this.marks]) { this.marks += 1; this.events.push({ kind: "mark", i: this.marks }); } }
+  tick(dt) {
+    if (this.stage !== "play") return; this.t += dt; if (this.saveT > 0) this.saveT -= dt;
+    if (this.pulling) this.pull = Math.min(1, this.pull + dt / 1.1);
+    for (const f of this.flips) { const target = f.held ? f.up : f.rest, sp = (f.held ? PB.flip.upSpeed : PB.flip.downSpeed) * dt, d = target - f.a, m = Math.max(-sp, Math.min(sp, d)); if (f.held && !f.was) this.events.push({ kind: "flip", side: f.side }); f.was = f.held; f.a += m; f.w = m / dt; }
+    for (const b of this.balls) this.stepBall(b, dt);
+    const lost = this.balls.filter((b) => b.y > PB.H + 1); if (!lost.length) return; this.lastLostX = lost[0].x;
+    this.balls = this.balls.filter((b) => b.y <= PB.H + 1);
+    if (this.balls.length) return;  // a ball of a multiball gone; play on
+    if (this.saveT > 0) { const keep = this.ballBonus; this.serve(true); this.ballBonus = keep; this.events.push({ kind: "saved" }); return; }
+    const bonus = this.ballBonus * this.mult; this.add(bonus); this.events.push({ kind: "drain", bonus, mult: this.mult });
+    if (this.extra > 0) { this.extra -= 1; this.events.push({ kind: "shootagain" }); this.serve(); return; }
+    if (this.ballNo >= PB.balls) { this.stage = "over"; this.events.push({ kind: "over" }); return; }
+    this.ballNo += 1; this.mult = 1; this.serve();
+  }
+  update(dt) { for (let s = 0; s < dt / PB.step - 1e-9; s++) this.tick(PB.step); }
+};
+Object.assign(CM.Game.prototype, {
+  pbState() { return this.cgStore().pb || null; },
+  pbClaimed() { const F = this.cgStore(); F.pbCards = F.pbCards || {}; return F.pbCards; },
+  pbGame() { const S = this.pbState(); if (!S || S.stage !== "play") return null; if (!this.pbLive || this.pbLive.key !== S.seed) { S.stage = "done"; S.last = S.last || { score: 0, won: S.won, cards: S.cards || [], lost: true }; this.saveCasino && this.saveCasino(); return null; } return this.pbLive; },
+  pbStart(bet) {
+    if (this.pbGame()) return { error: "A game is on." };
+    const why = this.cgStake("pinball", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.pb = { stage: "play", bet: Math.floor(bet), seed: `${this.seed}:pinball:${F.n}`, won: 0, paid: 0, cards: [] };
+    this.pbLive = new PB.Game(CM.hashSeed(F.pb.seed)); this.pbLive.key = F.pb.seed; this.saveCasino && this.saveCasino(); return F.pb;
+  },
+  // each mark passed: its gold (every game), its card (the first time ever); the game's end
+  pbCheck() {
+    const S = this.pbState(), G = this.pbLive; if (!S || !G || S.stage !== "play") return null; const out = { marks: [] };
+    while ((S.paid || 0) < G.marks) { const i = (S.paid || 0) + 1, pay = Math.round(S.bet * PB.pay(i)), C = this.pbClaimed(); let card = null;
+      if (!C[i]) { card = this.cgTierCard(CM.cardTierFor(i), `Wyrmhold Pinball: ${PB.MARKS[i - 1].toLocaleString("en")} points!`, new CM.Random(CM.hashSeed(`${this.seed}:pinball:card:${i}`))); C[i] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("pinball", pay); S.won += pay; S.paid = i; out.marks.push({ i, pay, card }); }
+    if (G.stage === "over") { S.stage = "done"; S.last = { score: G.score, won: S.won, cards: S.cards.slice(), marks: G.marks }; const F = this.cgStore(); F.pbBest = Math.max(F.pbBest || 0, G.score); this.pbLive = null; out.over = true; }
+    if (out.marks.length || out.over) { this.saveCasino && this.saveCasino(); this.emit("change"); }
+    return out.marks.length || out.over ? out : null;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -29615,6 +29750,96 @@ CM.CG_TABLES.push(["claw", "The Wishing Claw"]);
       else if (k === "shield") { p.fillStyle = "#3A5AA0"; p.beginPath(); p.moveTo(-14, -14); p.lineTo(14, -14); p.lineTo(14, 0); p.quadraticCurveTo(14, 12, 0, 18); p.quadraticCurveTo(-14, 12, -14, 0); p.closePath(); p.fill(); p.strokeStyle = "#C0C8D8"; p.lineWidth = 2; p.stroke(); p.lineWidth = 1; p.fillStyle = "#F0C040"; p.fillRect(-2, -10, 4, 22); p.fillRect(-10, -2, 20, 4); }
       else if (k === "helm") { p.fillStyle = "#A0A8B8"; p.beginPath(); p.arc(0, 2, 14, Math.PI, 0); p.lineTo(14, 8); p.lineTo(-14, 8); p.closePath(); p.fill(); p.fillStyle = "#3A3A48"; p.fillRect(-9, 0, 18, 3); p.fillStyle = "#C03030"; p.beginPath(); p.moveTo(0, -12); p.quadraticCurveTo(10, -20, 14, -12); p.lineTo(2, -10); p.closePath(); p.fill(); }
       p.restore();
+    },
+  });
+}
+
+// ---- 76zd-pinball.js ----
+"use strict";
+// Wyrmhold Pinball, the window's side (the thirty-seventh big update): the table on a canvas - a painted playfield of
+// dungeon flagstones with a dragon's shadow, metal rails, red rubber slingshots that flash when they kick, the R U N E S
+// targets (lit letters standing, dark slots when down), rune bumpers that flare, the three stars, the Hoard Hole's
+// golden glow, the kickback's arrow, the dragon with its eyes and the pips of its strength, the flippers, the plunger
+// and its spring, the ball with its shine; the score, the ball, the multiplier and the marks passed. Z or Left Shift
+// (or the left arrow) for the left flipper, / or Right Shift (or the right arrow) for the right; hold Space (or down) to
+// draw the plunger and let go to fire. The buttons under the table do the same with the mouse. The rules are
+// 64zn-pinball.js.
+CM.CG_TABLES.push(["pinball", "Wyrmhold Pinball"]);
+{ const floor0 = CM.UI.prototype.renderFloor, K = 16, TOP = 30;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "pinball") return this.cgPinball(box); return floor0.call(this, box); },
+    cgPinball(box) {
+      const g = this.game, PB = CM.PB, S = g.pbState(), G = g.pbGame(), live = !!G, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.pbClaimed(), last = S && S.stage === "done" ? S.last : null, passed = live ? G.marks : 0;
+      const rows = PB.MARKS.map((m, k) => { const i = k + 1, tier = CM.cardTierFor(i); return `<div class="rung${live && passed === k ? " now" : ""}${live && passed > k ? " done" : ""}"><span>${m.toLocaleString("en")}</span><b>${Math.round(bet * PB.pay(i))}</b><i class="${Cl[i] ? "got" : tier}" title="${Cl[i] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${Cl[i] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`; });
+      box.innerHTML = `<div class="cgtable pinball runestack dash"><h3>Wyrmhold Pinball</h3><div class="rswrap"><div class="pbcol"><canvas class="pbcanvas" width="${PB.W * K}" height="${PB.H * K + TOP}" tabindex="0"></canvas>
+        <div class="row pbbtns"><button data-pbflip="0">◀ Flip</button><button data-pbplunge>Plunger (hold)</button><button data-pbflip="1">Flip ▶</button></div></div>
+        <div class="dashside"><p class="lore">In the corner of the Joker stands a pinball table painted with the dungeon itself - its flagstones, its runes, and at the top a dragon who does not like being hit. "Three balls," says the attendant. "The house pays at every mark you pass."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? "" : `<button class="primary" data-pbstart>Insert ${bet} gold</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Left flipper: Z, Left Shift or ←. Right flipper: /, Right Shift or →. Hold Space (or ↓) to draw the plunger back, let go to fire. Rune bumpers 100 (200 with all three stars lit), slingshots 10, R U N E S targets 500 each and 5,000 times the multiplier for the bank (and the multiplier goes up), stars 250, the Hoard Hole 5,000, each hit on the dragon 1,000 and 25,000 times its level to slay it - which starts a three-ball multiball, and every second dragon gives an extra ball. The kickback in the left outlane is lit for each ball and by all three stars. A ball lost in its first seconds is given back once. At the end of a ball its bonus is paid times the multiplier. Every mark the score passes pays gold, every game; the first time ever, a card (♦ to the 4th mark, ◆ to the 9th, ★ beyond). Best score ${(g.cgStore().pbBest || 0).toLocaleString("en")}.</div>${this.cgStats("pinball")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-pbstart]")) q("[data-pbstart]").addEventListener("click", () => { const r = g.pbStart(bet); this.cgNote = r.error || "Hold Space to draw the plunger…"; this.pbFx = { flash: {}, pts: [] }; this.cgSfx(r.error ? "miss" : "coin", 0.45); this.renderCasino(); const cv = this.$("#casino-body .pbcanvas"); if (cv) cv.focus(); });
+      this.pbHeld = this.pbHeld || { l: false, r: false, p: false };
+      box.querySelectorAll("[data-pbflip]").forEach((b) => { const k = b.dataset.pbflip === "0" ? "l" : "r", set = (v) => { this.pbHeld[k] = v; }; b.addEventListener("mousedown", () => set(true)); b.addEventListener("mouseup", () => set(false)); b.addEventListener("mouseleave", () => set(false)); b.addEventListener("touchstart", (e) => { e.preventDefault(); set(true); }); b.addEventListener("touchend", () => set(false)); });
+      const pl = q("[data-pbplunge]"); if (pl) { const set = (v) => { this.pbHeld.p = v; }; pl.addEventListener("mousedown", () => set(true)); pl.addEventListener("mouseup", () => set(false)); pl.addEventListener("mouseleave", () => set(false)); pl.addEventListener("touchstart", (e) => { e.preventDefault(); set(true); }); pl.addEventListener("touchend", () => set(false)); }
+      this.pbCanvas = q(".pbcanvas");
+      if (!this.pbKeys) { this.pbKeys = (e) => { if (this.cgView !== "pinball" || !this.dialogOpen() || !this.game.pbGame()) return; const k = { KeyZ: "l", ShiftLeft: "l", ArrowLeft: "l", Slash: "r", ShiftRight: "r", ArrowRight: "r", Space: "p", ArrowDown: "p" }[e.code]; if (!k) return; e.preventDefault(); e.stopPropagation(); this.pbHeld[k] = e.type === "keydown"; }; window.addEventListener("keydown", this.pbKeys, true); window.addEventListener("keyup", this.pbKeys, true); }
+      if (!this.pbLoop) { let prev = performance.now(); const loop = (now) => { if (!this.pbCanvas || !this.pbCanvas.isConnected || this.cgView !== "pinball") { this.pbLoop = null; return; } const dt = Math.min(0.04, (now - prev) / 1000); prev = now; this.pbFrame(dt, now); this.pbLoop = requestAnimationFrame(loop); }; this.pbLoop = requestAnimationFrame(loop); }
+    },
+    pbFrame(dt, now) {
+      const g = this.game, PB = CM.PB, G = g.pbGame(), cv = this.pbCanvas, p = cv.getContext("2d"), fx = this.pbFx = this.pbFx || { flash: {}, pts: [] }, H = this.pbHeld || {};
+      if (G) { G.input(H.l, H.r, H.p); G.update(dt); for (const e of G.events.splice(0)) this.pbEvent(e, now, G); const out = g.pbCheck();
+        if (out) { if (out.marks.length) { const m = out.marks[out.marks.length - 1]; this.cgNote = `${PB.MARKS[m.i - 1].toLocaleString("en")} points: +${out.marks.reduce((t, x) => t + x.pay, 0)} gold${out.marks.some((x) => x.card) ? ` and a card - ${out.marks.filter((x) => x.card).map((x) => x.card).join(", ")}` : ""}!`; this.cgSfx("coin", 0.5); if (out.marks.some((x) => x.card)) this.cgSfx("cardwin", 0.5); }
+          if (out.over) { const S = g.pbState(); this.cgNote = `Game over: ${S.last.score.toLocaleString("en")} points, ${S.last.marks} mark${S.last.marks === 1 ? "" : "s"} passed, ${S.won} gold back.`; this.cgSfx("tablebell", 0.5); this.pbLast = G; }
+          this.renderCasino(); return; } }
+      const Gd = G || this.pbLast; const T = Gd ? Gd.T : PB.table(), X = (x) => x * K, Y = (y) => y * K + TOP;
+      // the playfield
+      const wood = p.createLinearGradient(0, TOP, 0, cv.height); wood.addColorStop(0, "#2A1E30"); wood.addColorStop(1, "#1A1420"); p.fillStyle = wood; p.fillRect(0, 0, cv.width, cv.height);
+      p.strokeStyle = "rgba(255,255,255,0.05)"; for (let y = 0; y < PB.H; y += 2) for (let x = (y / 2) % 2; x < PB.W; x += 2) p.strokeRect(X(x), Y(y), 2 * K, 2 * K);
+      p.save(); p.globalAlpha = 0.12; p.fillStyle = "#60C060"; p.beginPath(); p.moveTo(X(9.45), Y(9)); p.quadraticCurveTo(X(2), Y(14), X(4), Y(22)); p.quadraticCurveTo(X(9.45), Y(17), X(14.9), Y(22)); p.quadraticCurveTo(X(16.9), Y(14), X(9.45), Y(9)); p.fill(); p.restore();
+      p.fillStyle = "#0E0A14"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 13px monospace"; p.fillText(Gd ? Gd.score.toLocaleString("en") : "WYRMHOLD", 8, 20);
+      if (Gd) { p.fillStyle = "#C0B0E0"; p.font = "11px monospace"; p.fillText(`BALL ${Gd.ballNo}/${PB.balls}${Gd.extra ? " +" + Gd.extra : ""}  x${Gd.mult}`, cv.width - 128, 20); }
+      // lane arrows and the kickback light
+      if (Gd) { p.fillStyle = Gd.kickback ? "#FFB040" : "rgba(255,176,64,0.2)"; p.beginPath(); p.moveTo(X(1.15), Y(29.4)); p.lineTo(X(1.5), Y(30.2)); p.lineTo(X(0.8), Y(30.2)); p.closePath(); p.fill(); }
+      // walls
+      for (const s of T.segs) { if (s.kind === "target") continue; const sling = s.kind === "sling", rub = s.kind === "rubber"; p.strokeStyle = sling || rub ? (fx.flash["sling" + s.a[0]] > now ? "#FFFFFF" : "#D04040") : s.kind === "plunger" ? "transparent" : "#B8C0CC"; p.lineWidth = sling || rub ? 4 : 3; if (s.oneWay) { p.strokeStyle = "#8A8070"; p.lineWidth = 2; } p.beginPath(); p.moveTo(X(s.a[0]), Y(s.a[1])); p.lineTo(X(s.b[0]), Y(s.b[1])); p.stroke(); }
+      p.lineWidth = 1;
+      // the targets
+      for (const s of T.segs) if (s.kind === "target") { const up = !Gd || Gd.targets[s.id], x0 = X(s.a[0]), x1 = X(s.b[0]), y = Y(s.a[1]); p.fillStyle = up ? "#F0C040" : "#3A2A20"; p.fillRect(x0, y - 7, x1 - x0, 8); if (up) { p.fillStyle = "#3A2010"; p.font = "bold 8px monospace"; p.textAlign = "center"; p.fillText("RUNES"[s.id], (x0 + x1) / 2, y); p.textAlign = "left"; } }
+      // sensors: stars, the hoard
+      for (const s of T.sensors) { const x = X(s.x), y = Y(s.y);
+        if (s.kind === "star") { const lit = Gd && Gd.stars[s.id]; p.fillStyle = lit ? "#FFF080" : "rgba(255,240,128,0.25)"; p.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + (k * Math.PI) / 5, rr = k % 2 ? 4 : 9; p.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } p.closePath(); p.fill(); }
+        else if (s.kind === "hoard") { const gl = p.createRadialGradient(x, y, 2, x, y, 18); gl.addColorStop(0, "#000"); gl.addColorStop(0.5, "#2A1A08"); gl.addColorStop(1, "rgba(240,192,64,0)"); p.fillStyle = gl; p.beginPath(); p.arc(x, y, 18, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0C040"; p.font = "8px monospace"; p.fillText("HOARD", x - 13, y + 22); } }
+      // round things
+      for (const c of T.circles) { const x = X(c.x), y = Y(c.y), r = c.r * K, hot = fx.flash["c" + c.x + c.y] > now;
+        if (c.kind === "bumper") { p.fillStyle = hot ? "#FFFFFF" : "#6040C0"; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); p.strokeStyle = hot ? "#FFF080" : "#C0A0FF"; p.lineWidth = 3; p.stroke(); p.lineWidth = 1; p.fillStyle = hot ? "#6040C0" : "#E0D0FF"; p.font = "bold 12px Georgia"; p.textAlign = "center"; p.fillText("ᚱ", x, y + 4); p.textAlign = "left"; }
+        else if (c.kind === "dragon") { p.fillStyle = hot ? "#C0FFC0" : "#3A8A3A"; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2A6A2A"; p.beginPath(); p.moveTo(x - r * 0.8, y - r * 0.5); p.lineTo(x - r * 1.2, y - r * 1.3); p.lineTo(x - r * 0.3, y - r * 0.8); p.moveTo(x + r * 0.8, y - r * 0.5); p.lineTo(x + r * 1.2, y - r * 1.3); p.lineTo(x + r * 0.3, y - r * 0.8); p.fill(); p.fillStyle = "#FFD040"; p.beginPath(); p.ellipse(x - 7, y - 3, 4, 3, 0, 0, Math.PI * 2); p.ellipse(x + 7, y - 3, 4, 3, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#101010"; p.fillRect(x - 8, y - 5, 2, 4); p.fillRect(x + 6, y - 5, 2, 4);
+          if (Gd) { const D = Gd.dragon, full = 3 + D.level; for (let k = 0; k < full; k++) { p.fillStyle = k < D.hp ? "#F05040" : "rgba(240,80,64,0.2)"; p.fillRect(x - full * 3 + k * 6, y + r + 4, 4, 4); } p.fillStyle = "#C0F0C0"; p.font = "9px monospace"; p.fillText(`LV ${D.level}`, x - 12, y + r + 18); } }
+        else { p.fillStyle = "#B8C0CC"; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); } }
+      // flippers
+      const flips = Gd ? Gd.flips : T.flippers.map((f) => ({ ...f, a: f.rest }));
+      for (const f of flips) { const L = PB.flip.len, x0 = X(f.px), y0 = Y(f.py), x1 = X(f.px + Math.cos(f.a) * L), y1 = Y(f.py + Math.sin(f.a) * L), r0 = PB.flip.rBase * K, r1 = PB.flip.rTip * K, nx = -(y1 - y0) / (L * K), ny = (x1 - x0) / (L * K);
+        p.fillStyle = "#F0E8E0"; p.beginPath(); p.moveTo(x0 + nx * r0, y0 + ny * r0); p.lineTo(x1 + nx * r1, y1 + ny * r1); p.arc(x1, y1, r1, Math.atan2(ny, nx), Math.atan2(ny, nx) + Math.PI); p.lineTo(x0 - nx * r0, y0 - ny * r0); p.arc(x0, y0, r0, Math.atan2(-ny, -nx), Math.atan2(-ny, -nx) + Math.PI); p.closePath(); p.fill(); p.strokeStyle = "#C03030"; p.lineWidth = 2; p.stroke(); p.lineWidth = 1; p.fillStyle = "#808890"; p.beginPath(); p.arc(x0, y0, 3, 0, Math.PI * 2); p.fill(); }
+      // the plunger
+      const pull = Gd ? Gd.pull : 0, pt = Y(34.6) + pull * 14; p.strokeStyle = "#A0A0A8"; p.lineWidth = 2; p.beginPath(); for (let k = 0; k <= 10; k++) p.lineTo(X(18.95) + (k % 2 ? 6 : -6), pt + 2 + (k * (cv.height - pt - 4)) / 10); p.stroke(); p.lineWidth = 1; p.fillStyle = "#C03030"; p.fillRect(X(18.5), pt, X(19.4) - X(18.5), 5);
+      // balls
+      if (Gd) for (const b of Gd.balls) { const x = X(b.x), y = Y(b.y), r = PB.r * K, gr = p.createRadialGradient(x - r * 0.4, y - r * 0.4, 1, x, y, r); gr.addColorStop(0, "#FFFFFF"); gr.addColorStop(0.4, "#C8D0D8"); gr.addColorStop(1, "#5A6068"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); }
+      fx.pts = fx.pts.filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = q.c || "#FFF0B0"; p.font = `bold ${q.big ? 16 : 11}px Georgia`; p.textAlign = "center"; p.fillText(q.text, q.x, q.y - (now - q.at) / 30); p.textAlign = "left"; } p.globalAlpha = 1;
+    },
+    pbEvent(e, now, G) {
+      const fx = this.pbFx, PB = CM.PB, cx = (PB.W * K) / 2, msg = (text, c, big) => fx.pts.push({ text, x: cx, y: TOP + 26 * K, at: now, c, big });
+      if (e.kind === "bumper") { fx.flash["c" + e.x + e.y] = now + 90; this.cgSfx("bump", 0.35, 1.6); }
+      else if (e.kind === "sling") { fx.flash["sling" + e.x] = now + 90; this.cgSfx("bump", 0.3, 1.2); } else if (e.kind === "flip") this.cgSfx("card", 0.18, 0.7); else if (e.kind === "launch") this.cgSfx("zap", 0.35, 0.8);
+      else if (e.kind === "target") this.cgSfx("card", 0.4, 1.4); else if (e.kind === "bank") { this.cgSfx("tablebell", 0.5); msg(`RUNES! x${e.mult}`, "#F0C040", true); }
+      else if (e.kind === "star") this.cgSfx("coin", 0.25, 1.8); else if (e.kind === "stars") { this.cgSfx("spell", 0.45); msg("ALL STARS - bumpers x2, kickback lit", "#FFF080"); }
+      else if (e.kind === "hoard") { this.cgSfx("coin", 0.5, 0.9); msg("THE HOARD +5,000", "#F0C040"); } else if (e.kind === "kickout") this.cgSfx("slam", 0.3, 1.4);
+      else if (e.kind === "dragonhit") { const c = G.T.circles.find((q) => q.kind === "dragon"); fx.flash["c" + c.x + c.y] = now + 120; this.cgSfx("monster", 0.35, 1.3); }
+      else if (e.kind === "dragon") { this.cgSfx("victory", 0.6); msg(`DRAGON SLAIN! MULTIBALL`, "#80FF80", true); } else if (e.kind === "extraball") { this.cgSfx("cardwin", 0.5); msg("EXTRA BALL", "#80E0FF", true); }
+      else if (e.kind === "kickback") { this.cgSfx("slam", 0.5, 0.9); msg("KICKBACK!", "#FFB040"); } else if (e.kind === "saved") { this.cgSfx("spell", 0.4, 1.4); msg("BALL SAVED", "#80E0FF", true); }
+      else if (e.kind === "drain") { this.cgSfx("miss", 0.45, 0.8); msg(`BONUS ${e.bonus.toLocaleString("en")}`, "#FFE070", true); } else if (e.kind === "shootagain") msg("SHOOT AGAIN", "#80E0FF", true);
+      else if (e.kind === "wall" && e.v > 14) this.cgSfx("bump", Math.min(0.3, e.v / 80), 1.9);
+      else if (e.kind === "mark") msg(`${PB.MARKS[e.i - 1].toLocaleString("en")}!`, "#FFE070", true);
     },
   });
 }

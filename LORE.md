@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Wyrmhold Pinball (v14.7)
+
+A tinker from the deep camps built the table out of a dungeon door, a box of springs and a jar of glass marbles, and
+painted it with what she had seen down there - the flagstones, the runes, and the dragon at the bottom of everything.
+The house bought it for a song. The dragon on the table has a habit of looking up when someone walks past.
+
 ## The Wishing Claw (v14.6)
 
 The three glass cases by the Joker's door came from a travelling fair that never came back for them. The house fills
