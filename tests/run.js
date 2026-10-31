@@ -5063,6 +5063,24 @@ test("the Joker's Club: boards keep the ten best and count records broken; a gam
   const s0 = g.gold; assert.strictEqual(g.cgStake("roulette", 25), ""); assert.strictEqual(s0 - g.gold, 25); const p0 = g.gold; g.cgPay("roulette", 40); assert.strictEqual(g.gold - p0, 40);
 });
 
+test("the Daily Challenge: the same table and marks for everyone on a day; a game of that table reaching the marks counts; each mark pays once when collected; a streak of days adds gold and every seventh day a rare card; a day's uncollected marks carry over; the past is kept", () => {
+  const CM = load(), DAILY = CM.DAILY, g = new CM.Game(); g.newGame("dl-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  const A = DAILY.pick("2026-11-02"), B = DAILY.pick("2026-11-02"); assert.strictEqual(JSON.stringify(A), JSON.stringify(B)); assert.ok(CM.CLUB.BOARDS.includes(A.table)); assert.ok(DAILY.pick("2026-11-01").weekend, "a Sunday"); assert.strictEqual(DAILY.prev("2026-11-01"), "2026-10-31");
+  g.dlDay = "2026-11-02"; const D = g.dlState(); assert.strictEqual(D.table, A.table);
+  const other = CM.CLUB.BOARDS.find((t) => t !== D.table); g.cgRecord(other, 5000, 99); assert.ok(!D.got[0], "another table does not count");
+  g.cgRecord(D.table, 1000, D.marks[1]); assert.strictEqual(JSON.stringify(D.got), "[true,true,false]"); assert.strictEqual(D.streak, 1); assert.strictEqual(g.dlUnpaid(), 2);
+  const g0 = g.gold, c0 = Object.values(g.cards().owned).reduce((x, y) => x + y, 0); const o1 = g.dlCollect("0"), o2 = g.dlCollect("1"); assert.strictEqual(o1.gold, DAILY.REWARD[0].gold); assert.strictEqual(o2.cards.length, 1); assert.strictEqual(g.gold - g0, o1.gold + o2.gold); assert.strictEqual(g.dlCollect("0").gold, 0, "once");
+  // the next day: a streak of two adds a tenth; the gold mark of yesterday was never reached; carry what was not collected
+  g.dlDay = "2026-11-03"; const E = g.dlState(); assert.strictEqual(E.history[0].day, "2026-11-02"); g.cgRecord(E.table, 10, E.marks[0]); assert.strictEqual(E.streak, 2); assert.strictEqual(g.dlCollect("0").gold, Math.round(DAILY.REWARD[0].gold * 1.1));
+  g.cgRecord(E.table, 10, E.marks[1]);
+  g.dlDay = "2026-11-04"; const F2 = g.dlState(); assert.strictEqual(F2.carry.length, 1, "silver of the 3rd waits"); const oc = g.dlCollect("carry"); assert.ok(oc.gold > 0 && oc.cards.length === 1); assert.strictEqual(F2.carry.length, 0);
+  // a missed day breaks the streak
+  g.dlDay = "2026-11-06"; const G = g.dlState(); assert.strictEqual(G.streak, 0); g.cgRecord(G.table, 1, G.marks[0]); assert.strictEqual(G.streak, 1);
+  // seven days in a row: a rare card
+  for (let d = 7; d <= 12; d++) { g.dlDay = `2026-11-${String(d).padStart(2, "0")}`; const H = g.dlState(); g.cgRecord(H.table, 1, H.marks[0]); } assert.strictEqual(g.dlState().streak, 7); const os = g.dlCollect("streak"); assert.strictEqual(os.cards.length, 1); assert.ok(CM.CARD_RARES.includes(os.cards[0]));
+  assert.ok(g.dlState().history.length <= DAILY.keep);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

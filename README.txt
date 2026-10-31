@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Daily Challenge (the fortieth big update - v15.0)
+  Each real day the Gilded Joker chalks up one challenge (src/js/64zp-daily.js; 76zg-daily.js), the same for every
+  party that day: one of the ten scoring tables, picked by the date, with a bronze, a silver and a gold mark - the
+  level to reach (or, at the pinball table, the score marks to pass), a little higher at the weekend. Any game of that
+  table finished that day counts. Each mark pays once when collected: 150 gold; 400 gold and a common card; 900 gold
+  and a stronger card. Days in a row with at least bronze make a streak - a tenth more gold for each day, up to double
+  - and every seventh day of a streak brings a rare card. A mark not collected by midnight waits for the next day; the
+  last fortnight is kept on the "Past days" page. Today's challenge heads the gallery, and the slim bar of that table
+  shows how near it is.
+
 The Joker's Club (the thirty-ninth big update - v14.9)
   Three things that tie the casino floor together (src/js/64zo-floorclub.js; 76zf-floorclub.js), reached from a strip
   under the gallery's head:

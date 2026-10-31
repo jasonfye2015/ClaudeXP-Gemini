@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Daily Challenge (v15.0)
+
+Every morning before the doors open the chalk-boy climbs a stool by the entrance and writes one line on the slate: a
+table, and how far to get in it. He says the house tells him. The house says he picks it himself, with a die he keeps
+in his shoe. Either way it is the same line for everyone who walks in that day, and the house pays to see it done.
+
 ## The Joker's Club (v14.9)
 
 The regulars started it - chalking their scores on the wall by the bar, arguing over who had walked every table - and
