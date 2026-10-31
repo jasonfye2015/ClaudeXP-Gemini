@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gilded Joker (the fifteenth big update - v11.5)
+  East of Temple Row, up Gilded Row from Shaft Lane, stands the richest house in Caer Duin: red plaster between gilt
+  pilasters, tall arched windows lit gold, gilded doors under a fanlight, a copper roof, a sign of three cards. Inside,
+  the Timeline's Claudeatro, its rules ported whole (src/js/64k-claudeatro.js; the table src/js/76e-casino.js): poker
+  hands scored as chips times mult, Jokers, Tarot and Planet cards, enhancements and editions, the blinds and their
+  bosses, tags, vouchers, packs and the shop, eight decks, and endless play past Ante 8. Wager 0 to 500 gold at the
+  table: every blind beaten pays back 40%, 60% or 100% of it (small, big, boss), a quarter more for each ante, and
+  beating Ante 8 pays five wagers more. Play for nothing and nothing is paid, but the house's book still fills: 25
+  Jokers to start and one more for every blind ever beaten, and the decks by milestones (a boss beaten, Ante 3, Ante 4,
+  six bosses, a Straight Flush, Ante 6, a won run). The book and any game left on the table are kept with the village.
+  Every step of a hand's score is shown on its card or Joker as the chips and the mult count up, each with its sound.
+
 The Fortress (the fourteenth big update - v11.4)
   UPGRADE_PLAN_12.md says what it does. North of Leshy's clearing stands a black keep with four corner towers and two
   great arched doors of dark wood bound in iron; a third portal in the portal yard goes there, and one by the doors

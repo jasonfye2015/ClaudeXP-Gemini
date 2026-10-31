@@ -2359,7 +2359,7 @@ test("the town above: floor 0 is hand-laid and the same for a seed, a run begins
   const CM = load();
   const t1 = CM.makeFloor(0, "town-1", 2), t2 = CM.makeFloor(0, "town-1", 1), t3 = CM.makeTown("other");
   assert.strictEqual(t1.number, 0); assert.strictEqual(t1.grid.length, CM.TOWN_SIZE); assert.strictEqual(JSON.stringify(t1.grid), JSON.stringify(t2.grid)); assert.strictEqual(JSON.stringify(t1.grid), JSON.stringify(t3.grid), "the town does not depend on the seed");
-  assert.strictEqual(CM.floorPrint(t1), CM.floorPrint(t3)); assert.strictEqual(Object.values(t1.things).filter((t) => t.type === "building").length, 9); assert.ok(CM.goalOf(t1) === CM.TOWN_AT.shaft.join(",")); assert.ok(Object.values(t1.things).some((t) => t.type === "well"));
+  assert.strictEqual(CM.floorPrint(t1), CM.floorPrint(t3)); assert.strictEqual(Object.values(t1.things).filter((t) => t.type === "building").length, 10); assert.ok(CM.goalOf(t1) === CM.TOWN_AT.shaft.join(",")); assert.ok(Object.values(t1.things).some((t) => t.type === "well"));
   for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) assert.ok(CM.isOpen(t1, x, y), `${id} stands on open ground`);
   assert.strictEqual(t1.seen.length, CM.TOWN_SIZE * CM.TOWN_SIZE, "daylight: all on the map"); assert.ok(CM.distances(t1.grid, CM.TOWN_AT.home).get(CM.TOWN_AT.shaft.join(",")) > 10, "a walk from the door to the shaft");
   assert.strictEqual(CM.themeFor(0), CM.TOWN_THEME); assert.strictEqual(CM.themeIndex(0), 0); assert.strictEqual(CM.themeFor(1).name, "The Catacombs"); assert.strictEqual(CM.bandName(null, 0), CM.TOWN_THEME.name);
@@ -2896,7 +2896,7 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   const town = CM.makeTown("sky-1");
   assert.strictEqual(town.solidDefault, "tree");
   assert.strictEqual(CM.solidAt(town, 2, 21), "townwall"); assert.strictEqual(CM.solidAt(town, 0, 0), "cliff"); assert.strictEqual(CM.solidAt(town, 1, 10), "tree"); assert.strictEqual(CM.solidAt(town, ...CM.TOWN_AT.well), null); assert.strictEqual(CM.groundAt(town, ...CM.TOWN_AT.well), "cobbles"); assert.strictEqual(CM.groundAt(town, 6, 22), "dirt"); assert.strictEqual(CM.groundAt(town, ...CM.TOWN_AT.shaft), "flags");
-  for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) if (CM.TOWN_PLOTS[id]) assert.ok(CM.DIRS.some(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(town, x + dx, y + dy))), `${id} has a face with its door`);
+  for (const [id, [x, y]] of Object.entries(CM.TOWN_AT)) if (CM.TOWN_PLOTS[id]) assert.ok(CM.DIRS.some(([dx, dy]) => ["door", "shop", "casinodoor"].includes(CM.solidAt(town, x + dx, y + dy))), `${id} has a face with its door`);
   const mt = CM.floorMesh(town, CM.TOWN_THEME, index), lt = layersOf(mt);
   assert.strictEqual(mt.ceilings, 0); assert.ok(mt.walls > 0 && mt.roofs > 0); assert.strictEqual(mt.data.length % CM.MESH_STRIDE, 0);
   for (const name of ["solid:townwall", "solid:townwall:top", "solid:hedge", "solid:door", "solid:shop", "solid:house", "solid:roof", "ground:cobbles", "ground:dirt", "ground:flags"]) assert.ok(lt.has(index[name]), `the town's mesh wears ${name}`);
@@ -3952,6 +3952,64 @@ test("the Fortress from outside: a black keep in the Wood with its great doors, 
   assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth of their health"); assert.ok(h.xp > xp0 || h.level > lv0, "the experience kept"); assert.strictEqual(g.mode, "explore"); assert.deepStrictEqual(g.floor.pos, F.front);
   h.hp = h.max; g.enterFortress(k); r = g.fortRun; r.gold = 70; r.x = r.fl.stairs[0] + 0.5; r.y = r.fl.stairs[1] + 0.5; g.fortStairs(true); assert.strictEqual(g.gold, gold0 + 110, "out by the stairs: everything"); assert.strictEqual(g.fort.cleared, 2);
   g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.strictEqual(g2.fort.cleared, 2, "kept through a save");
+});
+
+// a simple hand for Claudeatro: the best-scoring play among the hand's subsets (before Jokers), a discard of the
+// lowest when the best is poor, a Joker bought when there is money and room, every blind played
+function caBot(CM, g, deck, wager, steps = 4000, reload = false) {
+  const why = g.casinoDeal(deck, wager); if (why) return why;
+  let run = g.casinoRun(), lastAnte = 1;
+  for (let k = 0; k < steps && run && run.stage !== "over"; k++) {
+    if (reload && k % 25 === 0) { g.caRunLive = null; const K = g.casino(); K.run = JSON.parse(JSON.stringify(K.run)); run = g.casinoRun(); }   // (as if saved and picked up again)
+    if (run.stage === "blind") run.selectBlind();
+    else if (run.stage === "round") {
+      const h = run.rnd.hand; let best = null;
+      for (let m = 1; m < 1 << h.length; m++) { const idx = []; for (let i = 0; i < h.length; i++) if (m & (1 << i)) idx.push(i); if (idx.length > 5) continue; const p = run.preview(idx.map((i) => h[i])); const v = p[2] * p[3] + idx.length; if (!best || v > best.v) best = { idx, v, name: p[0] }; }
+      if (["High Card", "Pair"].includes(best.name) && run.rnd.discards > 0 && run.rnd.hands > 1) { const low = h.map((c, i) => [c.r, i]).sort((a, b) => a[0] - b[0]).slice(0, 4).map((x) => x[1]); run.discard(low); g.casinoAfterHand(run, null); }
+      else { const res = run.play(best.idx); run.afterPlay(); g.casinoAfterHand(run, res); }
+    } else if (run.stage === "cashout") { run.collect(); if (run.won) run.endless = true; g.casinoKeep(run); }
+    else if (run.stage === "shop") { const i = run.shop.cards.findIndex((it) => it && it.type === "joker" && it.price <= run.money); if (i >= 0 && run.jokers.length < run.jokerSlots) run.buy("cards", i); else { const p = run.shop.cards.findIndex((it) => it && it.type === "planet" && it.price <= run.money); if (p >= 0 && run.consumables.length < run.consSlots) { run.buy("cards", p); run.useConsumable(run.consumables.length - 1); } run.nextRound(); } g.casinoKeep(run); }
+    else if (run.stage === "pack") { const [ok] = run.packPick(0, []); if (!ok) run.closePack(); g.casinoKeep(run); }
+    lastAnte = run.ante;
+    run = g.casinoRun() || run;
+    if (!g.casino().run) break;
+  }
+  return lastAnte;
+}
+
+test("Claudeatro at the Gilded Joker, its rules as the Timeline's game has them: poker hands found and scored as chips times mult, levels from planets, the Jokers' sums, blinds and antes, the shop; a run the seed's, saved and picked up again mid-hand", () => {
+  const CM = load(), CA = CM.CA, run = new CM.CaRun("Red Deck", 7), C = (r, s, enh = null) => run.newCard(r, s, enh);
+  assert.strictEqual(run.evaluate([C(5, "H"), C(6, "H"), C(7, "H"), C(8, "H"), C(9, "H")])[0], "Straight Flush");
+  assert.strictEqual(run.evaluate([C(14, "S"), C(2, "D"), C(3, "C"), C(4, "H"), C(5, "S")])[0], "Straight", "the ace low");
+  assert.strictEqual(run.evaluate([C(9, "S"), C(9, "D"), C(9, "C"), C(4, "H"), C(4, "S")])[0], "Full House");
+  const [n2, sc2] = run.evaluate([C(10, "S"), C(10, "H"), C(3, "C"), C(7, "D")]); assert.strictEqual(n2, "Pair"); assert.strictEqual(sc2.length, 2, "only the pair scores");
+  assert.strictEqual(run.evaluate([C(10, "S"), C(10, "H"), C(3, "C", "stone")])[1].length, 3, "a stone always scores");
+  run.usePlanet("Mercury"); assert.deepStrictEqual(run.handValue("Pair").join(), "25,3", "Mercury levels the Pair");
+  run.selectBlind(); assert.strictEqual(run.stage, "round"); assert.strictEqual(run.rnd.hand.length, 8); assert.strictEqual(run.rnd.discards, 4, "the Red Deck's extra discard");
+  run.jokers.push(run.newJoker("Joker"), run.newJoker("Jolly Joker"));
+  run.rnd.hand = [C(10, "S"), C(10, "H"), C(3, "C"), C(7, "D"), C(2, "S"), C(4, "S"), C(5, "D"), C(6, "C")];
+  run.rnd.target = 1e9; const res = run.play([0, 1]); assert.strictEqual(res.hand, "Pair"); assert.strictEqual(res.total, (25 + 10 + 10) * (3 + 4 + 8), "chips (25 + two tens) times mult (3 + Joker 4 + Jolly 8)");
+  assert.ok(res.events.length >= 4, "the steps, for the window"); run.afterPlay(); assert.strictEqual(run.rnd.hand.length, 8, "drawn back up");
+  run.rnd.score = run.rnd.target; run.rnd.played = []; run.rnd.hands = 2; run.winRound(); assert.strictEqual(run.stage, "cashout"); assert.ok(run.cashTotal() >= 3); run.collect(); assert.strictEqual(run.stage, "shop"); assert.strictEqual(run.shop.cards.length, 2);
+  const a = new CM.CaRun("Blue Deck", 99), b = new CM.CaRun("Blue Deck", 99); assert.strictEqual(JSON.stringify(a.toJSON()), JSON.stringify(b.toJSON()), "the seed's run");
+  a.selectBlind(); const back = CM.CaRun.fromJSON(JSON.parse(JSON.stringify(a.toJSON()))); assert.strictEqual(back.rnd.hand.map((c) => c.id).join(), a.rnd.hand.map((c) => c.id).join(), "picked up mid-hand"); assert.strictEqual(back.rand(), a.rand(), "and its dice where they were");
+  assert.ok(back.rnd.hand.every((c) => back.deck.includes(c)), "the hand's cards are the deck's own");
+});
+
+test("the Gilded Joker: a wager paid at the table and a share back for every blind beaten (none for nothing); the unlocks kept with the village - a Joker for every blind beaten, decks by milestones, the locked ones never dealt; a game on the table kept through a save; a whole run played by a simple hand", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("casino-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.village.casino = undefined; g.gold = 1000;
+  assert.strictEqual(g.floor.things[CM.TOWN_AT.casino.join(",")].id, "casino"); assert.strictEqual(CM.solidAt(g.floor, CM.TOWN_AT.casino[0], CM.TOWN_AT.casino[1] - 1), "casinodoor"); let opened = false; g.on("building", (id) => { if (id === "casino") opened = true; });
+  assert.ok(g.pathTo(...CM.TOWN_AT.casino), "a way to its doors"); g.floor.pos = CM.TOWN_AT.casino.slice(); g.use(); assert.ok(opened, "its doors open on the table");
+  assert.strictEqual(g.casinoDecks().join(), "Red Deck"); assert.strictEqual(g.casinoJokers().length, CM.CASINO.startJokers); assert.ok(g.casinoDeal("Blue Deck", 0), "a locked deck is not dealt");
+  assert.strictEqual(g.casinoDeal("Red Deck", 100), ""); assert.strictEqual(g.gold, 900, "the wager paid"); assert.ok(g.casinoDeal("Red Deck", 0), "one game at a time");
+  const run = g.casinoRun(); assert.ok(run.pool.length === CM.CASINO.startJokers); for (let k = 0; k < 40; k++) assert.ok(run.pool.includes(run.randomJokerKey()), "only unlocked Jokers turn up");
+  run.selectBlind(); run.rnd.score = run.rnd.target; run.winRound(); const out = g.casinoAfterHand(run, { hand: "Pair", total: 300 });
+  assert.strictEqual(out.paid, CM.casinoPayout(100, 1, 0)); assert.strictEqual(g.gold, 900 + 40, "the small blind pays 40%"); assert.strictEqual(out.jokers.length, 1, "a Joker unlocked"); assert.strictEqual(g.casino().blinds, 1);
+  g.saveVillage && g.saveVillage(); g.saveRun(); const g2 = new CM.Game(); g2.continueRun(); const r2 = g2.casinoRun(); assert.ok(r2 && r2.stage === "cashout", "the game on the table, kept"); assert.strictEqual(r2.paidFor, run.paidFor, "and not paid twice");
+  g.casinoQuit(); assert.strictEqual(g.casino().run, null);
+  const K = g.casino(); K.bosses = 1; assert.ok(g.casinoDecks().includes("Blue Deck"), "a boss beaten opens the Blue Deck");
+  const ante = caBot(CM, g, "Blue Deck", 0); assert.ok(ante >= 1 && !g.casino().run, `a whole run played, to ante ${ante}`); assert.strictEqual(g.gold, 940, "for nothing, nothing paid");
+  const g3 = new CM.Game(); g3.newGame("casino-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g3.village.casino = undefined; g3.gold = 500; const a3 = caBot(CM, g3, "Red Deck", 50, 4000, true); assert.ok(a3 >= 1 && g3.casino().blinds >= 1, `played through saves (ante ${a3})`);
 });
 
 (async () => {
