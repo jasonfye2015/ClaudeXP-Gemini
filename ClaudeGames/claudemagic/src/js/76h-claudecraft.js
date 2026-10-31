@@ -146,6 +146,10 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("bedroll"); noisy(x, y, "#4A7A3A", 14); p.fillStyle = "#6A4A2A"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#C8B080"; p.fillRect(x + 1, y + 6, 4, 4);
     [x, y] = at("door"); noisy(x, y, "#8A6436", 8); p.fillStyle = "#5A3E1E"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillRect(x, y, 1, 16); p.fillRect(x + 15, y, 1, 16); p.fillRect(x + 7, y, 2, 16); p.fillStyle = "#C8A040"; p.fillRect(x + 11, y + 8, 2, 2);
     [x, y] = at("sign"); noisy(x, y, "#B08D57", 8); p.fillStyle = "#5A3E1E"; for (const ly of [4, 7, 10]) p.fillRect(x + 3, y + ly, 10, 1);
+    // (v12.7) the vault's rune-cut stone, its spikes, and a piece of it in the satchel
+    [x, y] = at("vault"); noisy(x, y, "#34363E", 8); p.fillStyle = "#48C8C0"; for (const [rx, ry, rw, rh] of [[3, 3, 1, 10], [3, 3, 5, 1], [7, 3, 1, 5], [10, 6, 1, 7], [10, 12, 3, 1], [12, 2, 1, 4]]) p.fillRect(x + rx, y + ry, rw, rh); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(x, y + 15, 16, 1); p.fillRect(x + 15, y, 1, 16);
+    [x, y] = at("trap"); noisy(x, y, "#3A3A40", 10); p.fillStyle = "#B0B0B8"; for (let k = 0; k < 4; k++) for (let j = 0; j < 4; j++) { p.fillRect(x + 2 + k * 4, y + 2 + j * 4, 2, 2); p.fillStyle = "#E0E0E8"; p.fillRect(x + 2 + k * 4, y + 2 + j * 4, 1, 1); p.fillStyle = "#B0B0B8"; }
+    [x, y] = at("item_rune"); p.clearRect(x, y, 16, 16); p.fillStyle = "#34363E"; p.fillRect(x + 3, y + 3, 10, 10); p.fillStyle = "#48C8C0"; p.fillRect(x + 5, y + 5, 1, 6); p.fillRect(x + 5, y + 5, 4, 1); p.fillRect(x + 9, y + 7, 1, 4);
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {

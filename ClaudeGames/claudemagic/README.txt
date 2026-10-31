@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 7, v12.7: the vault under the island, and errands
+  Under the island's highest hill (the map of four scraps marks it) lies a sealed vault of rune-cut stone, reached
+  only by digging down; its stone wants a pick that would take silver, and breaks into rune-cut stone. Three rooms in a
+  row: spikes underfoot, two lairs, and the hall of its guardian - the Hollow Mason, a golem of the island's own
+  blocks that wakes when a hero enters its hall and tears stones from the walls to mend itself. Its fall leaves a
+  relic, the Mason's Plumb (an amulet), and a title. Four new errands in town want the island's things: the Smith
+  six iron (a bar counts two), the tavern's cook three cuts of deer or boar, the Library a piece of the vault's
+  rune-cut stone, the Guildhall's builders 128 island stone in the satchels. Three achievements: the first star-iron,
+  the Mason's fall, a homestead.
+
 Claudecraft phase 6, v12.6: a home on the island
   A bedroll (leaves and poles, at a workbench) laid in a room the hero has walled all round and roofed over - a door,
   two high, opened and shut with the right button, counts as wall when shut - makes a camp. Sleeping there at night

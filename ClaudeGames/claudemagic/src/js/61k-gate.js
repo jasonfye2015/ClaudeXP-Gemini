@@ -42,7 +42,7 @@ Object.assign(CM.Game.prototype, {
   craftPick() { const picks = (this.bag || []).filter((it) => it.kind === "pick" && CM.PICKS[it.pick] && (it.points || 0) > 0); const order = Object.keys(CM.PICKS || {}); return picks.sort((a, b) => order.indexOf(b.pick) - order.indexOf(a.pick))[0] || null; },
   // the tool a block would be broken with: the quickest of the picks from home and the island's own tools
   craftToolFor(b) {
-    const cr = this.craft, ore = CM.CC.ORE_OF[b] || (CM.CC.GEM_OF[b] ? CM.CC.GEM_PICK : null), S = cr && cr.satchel; let best = null;   
+    const cr = this.craft, ore = CM.CC.ORE_OF[b] || (CM.CC.GEM_OF[b] ? CM.CC.GEM_PICK : null) || (CM.CC.PICK_FOR || {})[b], S = cr && cr.satchel; let best = null;   
     const offer = (t) => { if (!best || t.factor < best.factor) best = t; };
     if (ore) { const i = CM.bestPick(this.bag || [], ore); if (i >= 0) offer({ home: i, factor: CM.CC.pickFactor(this.bag[i].pick) }); const own = S && S.best("pick", ore); if (own) offer({ slot: own[0], factor: own[1].factor }); return best; }
     if (CM.CC.STONY.has(b)) { const pick = this.craftPick(); if (pick) offer({ factor: CM.CC.pickFactor(pick.pick) }); const own = S && S.best("pick"); if (own) offer({ slot: own[0], factor: own[1].factor }); }
@@ -51,7 +51,7 @@ Object.assign(CM.Game.prototype, {
   },
   craftBreakTime(b) {
     const base = CM.CC.HARDNESS[b] || 1, tool = this.craftToolFor(b);
-    if ((CM.CC.ORE_OF[b] || CM.CC.GEM_OF[b]) && !tool) return Infinity;
+    if ((CM.CC.ORE_OF[b] || CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b]) && !tool) return Infinity;
     return tool ? base * tool.factor : base;
   },
   // a use of an island tool: a point off its uses, and gone at none
@@ -93,7 +93,7 @@ Object.assign(CM.Game.prototype, {
     if (!holding || !hit) { cr.dig = null; return null; }
     const key = hit.join(","), b = cr.world.get(...hit);
     if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : b === CM.CC.B.TREASURE ? "An old chest: open it with the right button." : "The gate's stone will not break."); } return null; }
-    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); else if (cr.dig.need === Infinity && CM.CC.GEM_OF[b]) this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); }
+    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); else if (cr.dig.need === Infinity && (CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b])) this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); }
     if (cr.dig.need === Infinity) return null;
     cr.dig.t += dt;
     if (cr.dig.t >= cr.dig.need) { cr.dig = null; return this.craftBreak(); }
@@ -103,7 +103,7 @@ Object.assign(CM.Game.prototype, {
   craftBreak() {
     const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
     const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) return false;
-    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; } if (CM.CC.GEM_OF[b] && !tool) { this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); return false; }
+    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; } if ((CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b]) && !tool) { this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); return false; }
     if (b === CM.CC.B.CHEST) { const K = this.craftStore(), key = hit.join(","), C = K.chests[key]; if (C && C.some(Boolean)) { this.craftSay("Empty the chest first."); return false; } delete K.chests[key]; }
     if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { this.craftSay("The island has had enough changes for now."); return false; }
     cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1;
