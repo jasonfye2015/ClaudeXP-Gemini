@@ -1404,6 +1404,12 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   two and three wide, the start in one corner and the ladder up in the farthest room, where the floor's boss waits;
   the fortieth is the King's hall, open, with pillars to hide behind. Dark stone and violet torchlight.
 
+  Inside, in real time (v10.3): the hero walks the tower's floors freely (src/js/64e-towerrun.js) - W A S D or the arrows,
+  Q to turn, the mouse after a click into the view; click, Space or F shoots the calling's bolt (an archer's arrow,
+  forty to start, quivers on the floors); right-click, R or 2 casts its great spell (Fireball, Smite, Drain, Thorns,
+  Lullaby, Firework, or the archer's Volley) for magic that comes back slowly. Draughts on the floors mend. The HUD has
+  a crosshair, the hero's bars and the floor's name; "Leave the tower" gives up the floor, and what was won is kept.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1541,6 +1547,7 @@ The source
     64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
+    64e-towerrun.js the Mage Tower inside: the real-time hero, bolts, spells, monsters and bosses
     61e-towerfloor.js the Mage Tower's forty floors
     61d-magetower.js the Mage Tower outside: the portal yard, the tower in the Wood, who may go in
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
@@ -1568,6 +1575,6 @@ Keys
   W/Up forward, S/Down back, A/Left and D/Right turn, Q/E sidestep, Space use (a chest, the ladder or stairs, a
   fountain, an altar, a lever or carving on the wall you face - or search that wall), C cast between fights, I
   inventory, 1-4 a hero's sheet, Tab the automap large (click a square to walk there, right-click for a note), X explore, G
-  Where to? on the surface, K the calendar, T shade or light the torch below ground,
+  Where to? on the surface, K the calendar, T shade or light the torch below ground; in the Mage Tower W A S D and the mouse, click or Space to shoot, right-click or R to cast, E at the ladder,
   Esc the menu. In a fight: F fight the chosen foe, C cast or a skill, P an item, D defend, R run, A auto, Tab or 1-9
   or a click to choose the foe, Esc back. Enter or Space closes the ending. F3 shows frames per second.
