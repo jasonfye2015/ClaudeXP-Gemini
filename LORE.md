@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Shatterpane (v14.2)
+
+When the chapel on the hill fell in, the house bought its windows by the cartload - every saint and sun and star in
+coloured glass - and set them up in the back room one behind another. Nobody remembers why the house wants them
+broken, only that it pays to have it done, and that the lead the old glaziers used goes soft if it is left alone long
+enough with a light shining on it.
+
 ## The Hexmarch (v14.1)
 
 The cellars under the Joker run further than the house admits, and the far wall of the old shooting range is thin.

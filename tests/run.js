@@ -4876,6 +4876,33 @@ test("the Hexmarch: fifty-five march side to side and step down at a wall, quick
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("Shatterpane: windows by the level (lead from 5); the orb waits for a launch, breaks a pane and bounces; the slipper's edge sends it wide; tinted panes take more hits; lead never breaks but crumbles when nothing breaks for long; charms; a lost orb costs a life; each level pays gold every play, every third level a card only the first time", () => {
+  const CM = load(), PN = CM.PN, R = new CM.Random(1);
+  assert.ok(!PN.layout(1, R).flat().includes(9)); assert.ok(PN.layout(7, new CM.Random(2)).flat().includes(9), "lead from 5"); assert.ok(PN.layout(4, new CM.Random(3))[0].includes(3));
+  const L = new PN.Level(1, 5); const b = L.balls[0]; L.update(0.5); assert.strictEqual(b.vy, 0, "waits"); L.input(0, true); L.update(0.02); assert.ok(b.vy < 0, "away");
+  const n0 = L.left(); for (let k = 0; k < 400 && L.left() === n0; k++) L.tick(PN.step); assert.strictEqual(L.left(), n0 - 1); assert.ok(b.vy > 0, "bounced back down");
+  // the edge of the slipper sends it wide
+  const M = new PN.Level(1, 6); M.grid = M.grid.map((r) => r.map(() => 0)); M.grid[0][0] = 1; const o = M.balls[0]; Object.assign(o, { x: M.pad.x + M.pad.w / 2 - 0.1, y: PN.padY - 3, vx: 0, vy: 1, stuck: 0 }); for (let k = 0; k < 120 && o.vy > 0; k++) M.tick(PN.step); assert.ok(o.vy < 0 && o.vx > 0.7, "wide angle");
+  // hit points and lead
+  const N = new PN.Level(1, 7); N.grid[2][3] = 3; const nb = N.balls[0]; N.hit(3, 2, nb); assert.strictEqual(N.grid[2][3], 2); N.grid[2][4] = 9; N.hit(4, 2, nb); assert.strictEqual(N.grid[2][4], 9);
+  N.since = PN.leadAfter + 0.01; N.balls[0].vx = 0; N.tick(PN.step); assert.ok(!N.grid.flat().includes(9), "the lead crumbles");
+  // charms
+  const Q = new PN.Level(1, 8); Q.charm("wide"); assert.strictEqual(Q.pad.w, PN.wideW); Q.balls[0].vx = 0.5; Q.balls[0].vy = -0.8; Q.balls[0].y = 20; Q.charm("multi"); assert.strictEqual(Q.balls.length, 3); const l0 = Q.lives; Q.charm("life"); assert.strictEqual(Q.lives, l0 + 1);
+  // a lost orb
+  const D = new PN.Level(1, 9); Object.assign(D.balls[0], { x: 1, y: PN.H + 0.95, vx: 0, vy: 1 }); D.pad.x = 20; D.tick(PN.step); D.tick(PN.step); assert.strictEqual(D.lives, 2); assert.strictEqual(D.balls.length, 1); D.lives = 1; Object.assign(D.balls[0], { x: 1, y: PN.H + 0.95, vx: 0, vy: 1 }); D.tick(PN.step); D.tick(PN.step); assert.strictEqual(D.stage, "over");
+  // clearing
+  const E = new PN.Level(1, 10); E.grid = E.grid.map((r) => r.map(() => 0)); E.grid[0][5] = 1; E.hit(5, 0, E.balls[0]); assert.strictEqual(E.stage, "clear");
+  // the house's side
+  const g = new CM.Game(); g.newGame("pn-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.pnStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 6; n++) { const Lv = g.pnLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.pnCheck(); assert.strictEqual(out.pay, Math.round(100 * PN.pay(n))); if (out.card) { cards++; assert.strictEqual(n % 3, 0); } }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "levels 3 and 6, the first time only"); assert.strictEqual(g.gold - gold0, [1, 2, 3, 4, 5, 6].reduce((t, n) => t + Math.round(100 * PN.pay(n)), 0));
+    g.pnLevel().stage = "over"; assert.ok(g.pnCheck().over); assert.strictEqual(g.pnLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

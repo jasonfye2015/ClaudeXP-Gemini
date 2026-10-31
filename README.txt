@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Shatterpane (the thirty-second big update - v14.2)
+  A breaker on the Gilded Joker's floor (src/js/64zi-pane.js; 76y-pane.js): a ruined chapel's stained-glass windows,
+  a new design each level, broken pane by pane with a mana orb kept in play by a glass-slipper paddle (the mouse or
+  the keys; where the orb strikes sets its angle). Tinted panes take two hits, the darkest three; lead frames from
+  level 5 never break - though if nothing breaks for a while a guiding light bends the rising orb toward a pane, and
+  later the lead crumbles. Charms fall from broken panes: a wider slipper, two more orbs, a slower orb, a sticky
+  slipper, a life. Three lives. One stake a play: each level cleared pays gold, more each level, every play; and a
+  Claudescryption card the first time ever each third level is cleared (3 common, 6 and 9 a stronger common, rare
+  from 12).
+
 The Hexmarch (the thirty-first big update - v14.1)
   A shooter in the Gilded Joker's cellar range (src/js/64zh-hexmarch.js; 76x-hexmarch.js): fifty-five hexlings in five
   ranks - Grubs, Wisps and Imps - march from side to side and step down at each wall, quicker as they thin, dropping
