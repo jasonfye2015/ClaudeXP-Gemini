@@ -3893,6 +3893,67 @@ test("Claudeita's cave mouth: a crag in the Wood with its path from the fields a
   g.enterClaudeita(mage); g.caveRun.player.gold = 99; const left = g.leaveClaudeita("left"); assert.strictEqual(left.gold, 0, "turned back: nothing kept");
 });
 
+test("the Fortress's floors: twenty, the seed's; mazes that grow; the stairs far from the start; doors across the way down with a key for each before it (and a key of its own for every treasure closet), so any order of keys gets down; lairs and monsters away from the start; a Warden every fifth floor and the Iron Marshal on the twentieth", () => {
+  const CM = load();
+  for (const seed of ["fort-a", "fort-b"]) for (let n = 1; n <= CM.FORT_FLOORS; n++) {
+    const f = CM.makeFortFloor(n, seed), G = f.grid.map((r) => r.slice());
+    if (n === 1) assert.strictEqual(JSON.stringify(f.grid), JSON.stringify(CM.makeFortFloor(1, seed).grid), "the seed's floor");
+    assert.ok(Math.abs(f.stairs[0] - 1) + Math.abs(f.stairs[1] - 1) > f.size * 0.3, "the stairs far off");
+    const keys = new Set(f.items.filter((it) => it.kind === "key").map((it) => `${it.x},${it.y}`)); assert.ok(keys.size >= f.doors.length, "a key for every door");
+    // any order: walk, take every key in reach, open the first door in reach, until the stairs are reached
+    let held = 0, done = false;
+    for (let guard = 0; guard < 40 && !done; guard++) {
+      const seen = new Set(["1,1"]), q = [[1, 1]], doors = [];
+      for (let k = 0; k < q.length; k++) { const [x, y] = q[k]; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, key = `${nx},${ny}`; if (seen.has(key) || !G[ny] || G[ny][nx] === 1 || G[ny][nx] === undefined) continue; seen.add(key); if (G[ny][nx] === 2) doors.push([nx, ny]); else q.push([nx, ny]); } }
+      if (seen.has(`${f.stairs[0]},${f.stairs[1]}`) && G[f.stairs[1]][f.stairs[0]] === 0) { done = true; break; }
+      for (const k of [...keys]) if (seen.has(k)) { keys.delete(k); held++; }
+      if (!held || !doors.length) break;
+      const d = doors[doors.length - 1], group = f.doors.find((g) => g.some(([x, y]) => x === d[0] && y === d[1])); for (const [x, y] of group) G[y][x] = 0; held--;   // (the worst choice: the last door found)
+    }
+    assert.ok(done, `floor ${n} of ${seed} can be got down whatever the keys are spent on`);
+    assert.ok(f.lairs.length >= 3 && f.spawns.length >= 6, "lairs and monsters"); assert.ok(f.spawns.concat(f.lairs).every((m) => Math.abs(m.x - 1) + Math.abs(m.y - 1) > 10), "away from the start");
+    assert.strictEqual(Boolean(f.warden), n % 5 === 0 && n < CM.FORT_FLOORS); assert.strictEqual(Boolean(f.marshal), n === CM.FORT_FLOORS);
+  }
+});
+
+test("inside the Fortress: one fighter in real time - walls stop them, a key opens a whole door, a swing strikes what is in its arc and knocks it back, a lair sends its kind and breaks, a draught mends, a flask burns the near ones; the Marshal holds the way out until he falls; the same inputs give the same run", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("fort-run", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); g.mode = "explore";
+  const k = g.party.findIndex((h) => CM.FORT_FIGHTERS.includes(h.cls)), h = g.party[k];
+  assert.strictEqual(g.enterFortress(k), ""); const r = g.fortRun; assert.strictEqual(g.mode, "fortress"); assert.strictEqual(r.n, 1);
+  for (let i = 0; i < 120; i++) r.update(1 / 60, { left: true, up: true }); assert.ok(r.x >= 1 + CM.FT.radius - 1e-9 && r.y >= 1 + CM.FT.radius - 1e-9, "the wall stops them");
+  const door = r.fl.doors[0], [dx, dy] = door[0]; r.keys = 1; r.bump(dx + 0.5, dy + 0.5); assert.ok(door.every(([x, y]) => r.grid[y][x] === 0) && r.keys === 0, "a key opens all of a door");
+  const o = r.mons[0]; o.x = r.x + 0.9; o.y = r.y; o.m.hp = o.m.max = 9999; const before = o.x; r.face = 0; r.swing(); assert.ok(o.m.hp < 9999 && o.x >= before, "struck, and knocked back");
+  const behind = r.mons[1]; behind.x = r.x - 1; behind.y = r.y; behind.m.hp = behind.m.max = 9999; r.cool = 0; r.swing(); assert.strictEqual(behind.m.hp, 9999, "not what is behind");
+  const L = r.lairs[0]; r.x = L.x - 2.5; r.y = L.y; const n0 = r.mons.length; for (let i = 0; i < 600; i++) r.stepLair(L, 1 / 60); assert.ok(r.mons.length > n0, "a lair sends its kind");
+  L.hp = 1; r.x = L.x - 1; r.y = L.y; r.face = 0; r.cool = 0; r.swing(); assert.ok(L.hp <= 0, "and breaks");
+  h.hp = 1; const dr = r.items.find((it) => it.kind === "draught"); r.x = dr.x + 0.5; r.y = dr.y + 0.5; r.pickUp(); assert.ok(h.hp > 1, "a draught mends");
+  r.flasks = 1; const near = r.mons[2]; near.x = r.x + 1; near.y = r.y; near.m.hp = near.m.max = 9999; r.throwFlask(); assert.ok(near.m.hp < 9999 && r.flasks === 0, "a flask burns");
+  g.fort = { cleared: 19, best: 19 }; g.fortRun = null; g.mode = "explore"; h.hp = h.max; g.enterFortress(k); const m = g.fortRun; assert.strictEqual(m.n, 20); assert.ok(m.marshal);
+  m.x = m.fl.stairs[0] + 0.5; m.y = m.fl.stairs[1] + 0.5; assert.ok(!m.atStairs(), "the Marshal holds the way out"); m.marshal.m.hp = 1; m.face = Math.atan2(m.marshal.y - m.y, m.marshal.x - m.x); m.marshal.x = m.x + 0.8; m.marshal.y = m.y; m.face = 0; m.cool = 0; m.swing(); assert.ok(m.atStairs() && m.loot.length >= 1, "until he falls, leaving a thing");
+  const twin = () => { const q = new CM.Game(); q.newGame("fort-twin", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); q.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); q.mode = "explore"; q.enterFortress(k); const R = q.fortRun; for (let i = 0; i < 600; i++) R.update(1 / 60, { right: i % 200 < 120, down: i % 90 < 50, attack: i % 3 === 0 }); return [R.x, R.y, R.t, q.party[k].hp, R.living().length].join(); };
+  assert.strictEqual(twin(), twin(), "the seed's run");
+});
+
+test("the Fortress from outside: a black keep in the Wood with its great doors, a portal in the yard and one home; fighters only; at the stairs, down (carrying everything) or out (everything the party's), and back in at the next floor; out mid-floor loses that floor's finds; death brings them back at a tenth of their health with nothing carried, but the experience", () => {
+  const CM = load(), land = CM.makeWood("fort-land"), F = CM.FORTRESS;
+  assert.strictEqual(CM.solidAt(land, ...F.doors[0]), "fortdoorL"); assert.strictEqual(CM.solidAt(land, ...F.doors[1]), "fortdoorR"); assert.strictEqual(land.things[F.front.join(",")].type, "fortress"); assert.ok(CM.woodSafe(land, ...F.front));
+  const g = new CM.Game(); g.newGame("fort-out", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.fortress.join(",")].to, "fortress"); g.floor.pos = CM.PORTAL_YARD.fortress.slice(); g.use(); assert.deepStrictEqual(g.floor.pos, F.front, "the portal to its doors");
+  assert.ok(g.pathTo(...CM.WOOD_GATE), "a way on foot"); let asked = false; g.on("fortress", () => { asked = true; }); g.use(); assert.ok(asked, "the doors' dialog");
+  const mage = g.party.findIndex((h) => h.cls === "Mage"), k = g.party.findIndex((h) => CM.FORT_FIGHTERS.includes(h.cls)), h = g.party[k];
+  assert.ok(g.enterFortress(mage), "fighters only");
+  const gold0 = g.gold, bag0 = g.bag.length; g.enterFortress(k); let r = g.fortRun;
+  const S = r.fl.stairs; r.gold = 40; r.xp = 100; r.loot.push(CM.makeItem(3, new CM.Random(1))); r.x = S[0] + 0.5; r.y = S[1] + 0.5; r.keys = 2;
+  assert.strictEqual(g.fortStairs(false), ""); r = g.fortRun; assert.strictEqual(r.n, 2); assert.ok(r.gold === 40 && r.loot.length === 1 && r.keys === 2, "carried down");
+  r.floorGold = 10; r.gold += 10; const fled = g.leaveFortress("fled"); assert.strictEqual(fled.gold, 40, "out mid-floor: the floor's finds lost"); assert.strictEqual(g.gold, gold0 + 40); assert.strictEqual(g.bag.length, bag0 + 1);
+  assert.strictEqual(g.fort.cleared, 1); g.enterFortress(k); assert.strictEqual(g.fortRun.n, 2, "back in at the next floor");
+  r = g.fortRun; r.gold = 500; r.loot.push(CM.makeItem(3, new CM.Random(2))); r.xp = 200; const xp0 = h.xp, lv0 = h.level; h.hp = 0; r.update(1 / 60, {}); assert.strictEqual(r.over, "dead");
+  const dead = g.leaveFortress("dead"); assert.strictEqual(dead.gold, 0); assert.strictEqual(g.gold, gold0 + 40, "nothing carried kept"); assert.strictEqual(g.bag.length, bag0 + 1);
+  assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth of their health"); assert.ok(h.xp > xp0 || h.level > lv0, "the experience kept"); assert.strictEqual(g.mode, "explore"); assert.deepStrictEqual(g.floor.pos, F.front);
+  h.hp = h.max; g.enterFortress(k); r = g.fortRun; r.gold = 70; r.x = r.fl.stairs[0] + 0.5; r.y = r.fl.stairs[1] + 0.5; g.fortStairs(true); assert.strictEqual(g.gold, gold0 + 110, "out by the stairs: everything"); assert.strictEqual(g.fort.cleared, 2);
+  g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.strictEqual(g2.fort.cleared, 2, "kept through a save");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

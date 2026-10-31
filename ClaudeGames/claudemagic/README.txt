@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Fortress (the fourteenth big update - v11.4)
+  UPGRADE_PLAN_12.md says what it does. North of Leshy's clearing stands a black keep with four corner towers and two
+  great arched doors of dark wood bound in iron; a third portal in the portal yard goes there, and one by the doors
+  comes back. One fighter goes in (Knight, Paladin, Rogue, Monk, or a Ranger with a blade) and the game becomes a
+  gauntlet seen from above, in real time (src/js/64j-fortress.js; the window's side src/js/76d-fortress.js): twenty
+  floors of maze, keys that open whole doors across the way, treasure closets behind doors of their own, lairs that
+  keep sending their monsters until they are broken, draughts, gold, fire flasks and chests, and the stairs down
+  somewhere far off. A Warden guards the stairs on floors 5, 10 and 15; the Iron Marshal holds the way out of the
+  twentieth (he charges, slams the floor, and calls help when hurt). W A S D move, Space, J or the mouse strikes (the
+  mouse aims), Q throws a flask, E at the stairs goes down and L comes out with everything carried. Out mid-floor, that
+  floor's finds are lost; a death loses everything carried and leaves the fighter a tenth of their health; experience
+  is always kept, and the next time in is the floor after the last one counted (src/js/61h-fortress.js).
+  tools/fortbot.js measures it: a careless Knight gets 2 to 4 floors at level 1, 7 to 9 at level 10, 13 to 17 at 20.
+
 Claudeita's cave (the thirteenth big update - v11.3)
   UPGRADE_PLAN_11.md says what it does. South of the fields, up a path from them, a crag of grey rock has a low dark
   mouth with a forge-glow far down in it; the second plinth in the portal yard by the shaft is lit for it, and a portal

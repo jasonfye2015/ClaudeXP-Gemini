@@ -1206,6 +1206,31 @@ CM.art.cliff = function (seed = 1) {
   return c;
 };
 // Claudeita's crag: grey rock in ledges, moss on its brow; the mouth's face a low dark arch with a forge-glow far down
+// the Fortress: black ashlar in long courses (the face is stretched three times its width up a wall, so the courses are
+// drawn short), and its doors - each half of a great arched pair of dark brown planks with iron bands and studs
+CM.art.fortWall = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("fortwall")), base = [58, 54, 52];
+  p.fillStyle = "#141210"; p.fillRect(0, 0, S, S);
+  const rows = 14, h = S / rows;
+  for (let j = 0; j < rows; j++) { let x = -(j % 2) * 40; while (x < S) { const w = 60 + rnd.next() * 60; p.fillStyle = rgb(base, 0.7 + rnd.next() * 0.55); p.fillRect(x + 1.5, j * h + 1, w - 3, h - 2); p.fillStyle = "rgba(255,255,255,0.06)"; p.fillRect(x + 1.5, j * h + 1, w - 3, 1.5); x += w; } }
+  speckle(p, rnd, S, S, 1600, rgb(base, 0.4), 0.3, 2); for (let i = 0; i < 4; i++) crack(p, rnd, rnd.next() * S, rnd.next() * S, 40 + rnd.next() * 50, "rgba(0,0,0,0.5)");
+  p.fillStyle = "#0A0806"; p.fillRect(S * 0.47, S * 0.28, S * 0.06, S * 0.14);   // (an arrow slit)
+  return c;
+};
+CM.art.fortDoor = function (side) {
+  const c = CM.art.fortWall(), p = c.getContext("2d"), S = ART_SIZE, inner = side ? 0 : S, outer = side ? S * 0.86 : S * 0.14, top = S * 0.3;
+  p.fillStyle = "#0E0A08"; p.fillRect(0, 0, 0, 0);
+  const arch = (pad) => { p.beginPath(); p.moveTo(outer + (side ? pad : -pad), S); p.lineTo(outer + (side ? pad : -pad), top + S * 0.12); p.quadraticCurveTo(outer + (side ? pad : -pad), top - pad, inner, top - pad); p.lineTo(inner, S); p.closePath(); };
+  p.fillStyle = "#1A1612"; arch(10); p.fill();   // (the arch's stones)
+  p.save(); arch(0); p.clip();
+  const g = p.createLinearGradient(0, top, 0, S); g.addColorStop(0, "#4A2C16"); g.addColorStop(1, "#34200F"); p.fillStyle = g; p.fillRect(0, 0, S, S);
+  for (let x = Math.min(inner, outer); x < Math.max(inner, outer); x += S * 0.1) { p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(x, top - 20, 2.5, S); p.fillStyle = "rgba(255,200,140,0.06)"; p.fillRect(x + 3, top - 20, 3, S); }
+  for (const y of [0.42, 0.62, 0.84]) { p.fillStyle = "#1C1C20"; p.fillRect(0, S * y, S, S * 0.035); p.fillStyle = "#5A5A64"; for (let x = Math.min(inner, outer) + 8; x < Math.max(inner, outer); x += 22) { p.beginPath(); p.arc(x, S * y + S * 0.0175, 2.6, 0, Math.PI * 2); p.fill(); } }
+  p.restore();
+  p.strokeStyle = "#8A7A50"; p.lineWidth = 3; p.beginPath(); p.arc(side ? S * 0.12 : S * 0.88, S * 0.66, 9, 0, Math.PI * 2); p.stroke();   // (the ring to pull)
+  p.fillStyle = "#0A0806"; p.fillRect(side ? 0 : S - 3, top - 10, 3, S);   // (the seam between the leaves)
+  return c;
+};
 CM.art.crag = function (mouth) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`crag:${mouth ? 2 : 1}`)), base = [104, 102, 98];
   p.fillStyle = rgb(base, 0.65); p.fillRect(0, 0, S, S);
@@ -1377,6 +1402,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:hedge"] = use("solid.hedge", () => CM.art.hedge());
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
+  out["solid:fortwall"] = use("solid.fortwall", () => CM.art.fortWall()); out["solid:fortdoorL"] = use("solid.fortdoorL", () => CM.art.fortDoor(0)); out["solid:fortdoorR"] = use("solid.fortdoorR", () => CM.art.fortDoor(1));   // (the Fortress: 61h-fortress.js)
   out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)

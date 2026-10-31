@@ -6,7 +6,8 @@ Object.assign(CM.UI.prototype, {
   refresh() {
     const g = this.game;
     document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
-    document.body.classList.toggle("incave", g.mode === "cave");     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
+    document.body.classList.toggle("incave", g.mode === "cave");
+    document.body.classList.toggle("infort", g.mode === "fortress");  // (the Fortress: its canvas over the view, 76d-fortress.js)     // (Claudeita's cave: its canvas over the view, 76c-cave.js)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -28,6 +29,7 @@ Object.assign(CM.UI.prototype, {
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
     if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
+    if (g.fortRun) this.$("#side .where").textContent = CM.fortFloorName(g.fortRun.n);
     if (g.caveRun) { const pl = g.caveRun.player; this.$("#side .where").textContent = `Claudeita's cave - ${pl.y > CM.CV.SURFACE ? CM.CV_BIOMES[CM.cvBiomeAt(Math.floor(pl.y))].name : "the mouth"}, ${g.caveRun.depth()} m`; }
     if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
@@ -118,6 +120,13 @@ Object.assign(CM.UI.prototype, {
       const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
       if (at) { if (run.n < CM.TOWER_FLOORS) add(`Climb to floor ${run.n + 1} (E)`, () => g.towerClimb(false), "primary"); add(`Leave the tower - floor ${run.n} counted (L)`, () => g.towerClimb(true)); }
       else add("Leave the tower (this floor is lost)", () => g.leaveMageTower("left"));
+      return;
+    }
+    if (g.mode === "fortress") {                                         // the Fortress: at the stairs, down or out; else out, the floor lost
+      const run = g.fortRun, at = run && run.atStairs(), key = `fort:${at}:${run && run.n}`; if (box.dataset.mode === key) return; box.dataset.mode = key; box.innerHTML = "";
+      const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.refresh(); }); box.appendChild(b); };
+      if (at) { add(run.n < CM.FORT_FLOORS ? `Down to floor ${run.n + 1} (E)` : "Out into the daylight (E)", () => g.fortStairs(false), "primary"); if (run.n < CM.FORT_FLOORS) add(`Out, with everything (L)`, () => g.fortStairs(true)); }
+      else add("Turn back (this floor's finds are lost)", () => { if (g.fortRun && !g.fortRun.over) g.leaveFortress("fled"); });
       return;
     }
     if (g.mode === "cave") {                                             // Claudeita's cave: out, empty-handed
