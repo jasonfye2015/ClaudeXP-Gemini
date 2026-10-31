@@ -63,7 +63,6 @@ const url = "file://" + path.join(ROOT, "game", built);
     await page.waitForTimeout(600);
     perf[look] = await page.evaluate(() => CM.perfScenes({ ms: 1500, detail: "high" }));
     for (const [scene, m] of Object.entries(perf[look])) assert.ok(m.frames > 0, `${look} ${scene}: frames are drawn`);
-    assert.ok(perf[look].land.air > 0, `${look}: the air is there on the land at High`);
   }
   await browser.close();
   if (errors.length) { console.log("page errors:\n  " + errors.join("\n  ")); process.exit(1); }

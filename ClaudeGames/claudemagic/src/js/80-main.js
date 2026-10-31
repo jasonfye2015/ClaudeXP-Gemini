@@ -41,8 +41,9 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    if (((number === 0 ? -2 : number === -1 ? -3 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const uc = CM.isUndercroft(number);
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
@@ -50,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
       while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -359,7 +360,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function decorations(fl) {
     const rain = (fl.number === 0 || fl.number === -1) && CM.weather(game) === "rain", key = `${game.seed}:${fl.number}:${fl.grid.length}:${rain ? CM.dayOf(game) : ""}`;
     if (decor.key === key) return decor;
-    const torches = [], water = [], size = fl.grid.length, wet = CM.themeIndex(fl.number) === 1;
+    const torches = [], water = [], size = fl.grid.length, wet = CM.themeIndex(fl.number) === 1 || CM.isUndercroft(fl.number);   // (the Undercroft stands in water)
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       if (fl.grid[y][x] !== 0) continue;
       const here = fl.features[`${x},${y}`];
@@ -439,6 +440,10 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
+      else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
+      else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
+      else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -612,8 +617,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.code === K.cast && (game.mode === "explore" || game.mode === "camp")) { ui.outsideCast(); return; }
     if (e.code === K.journal && (game.mode === "explore" || game.mode === "camp")) { ui.openJournal(); return; }
     if (e.code === K.calendar && (game.mode === "explore" || game.mode === "camp")) { ui.openCalendar(); return; }
-    if (e.code === K.douse && game.mode === "explore" && game.floor && game.floor.number >= 1) { game.douse(); ui.refresh(); return; }
-    if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0) { ui.openWhereTo(); return; }
+    if (e.code === K.douse && game.mode === "explore" && game.floor && CM.isDeep(game.floor.number)) { game.douse(); ui.refresh(); return; }
+    if (e.code === K.whereTo && game.mode === "explore" && game.floor && game.floor.number <= 0 && game.floor.number % 1 === 0 && !CM.isUndercroft(game.floor.number)) { ui.openWhereTo(); return; }
     if (game.mode === "explore") {
       if (MOVES[e.code]) { e.preventDefault(); if (!e.repeat) { held.add(e.code); if (!renderer.busy) act(e.code); } return; }
       if (e.code === K.use) { e.preventDefault(); game.use(); }

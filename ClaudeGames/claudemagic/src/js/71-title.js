@@ -129,8 +129,8 @@ Object.assign(CM.UI.prototype, {
     const mem = g.memorial || [];
     this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="unlock"><small>No hero has been laid to rest at a camp fire yet.</small></div>`;
     const trophies = g.trophies || {};
-    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
-      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
+    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR && G.floor > 0).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
+      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR || G.floor < 0).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
       const t = trophies[id];
       return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${name}</b> <small>${t ? `slain ${this.esc(t.date)} by ${this.esc(t.name)}'s party` : `<i>floor ${floor}: ${where}</i>`}</small></div>`;
     }).join("");

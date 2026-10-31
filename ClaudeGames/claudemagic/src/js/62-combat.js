@@ -56,6 +56,7 @@ Object.assign(CM.Game.prototype, {
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
     const sneaky = this.alive().some((h) => ["Rogue", "Ranger"].includes(h.cls) && this.canAct(h));
     const sleepers = Boolean(this.strikeSleepers); this.strikeSleepers = false;
+    for (const m of this.foes) if (m.guardian === "bell" && CM.festivalIs(this, "bells") && !m.softened) { m.softened = true; m.hp = m.max = Math.round(m.max * 0.8); this.say("It is the Night of Bells above: he hears it, and stands less sure."); }
     for (const m of this.foes) if (m.champion && m.hp > 0) {                    // (a champion's word: 61b-lairs.js)
       if (m.champion === "warded") m.spellWard = 1;
       if (m.champion === "shadowed" && !this.alive().some((h) => h.cls === "Rogue")) m.hidden = true;
@@ -635,6 +636,7 @@ Object.assign(CM.Game.prototype, {
   guardianAct(m) {
     const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
     m.turns = (m.turns || 0) + 1;
+    if (CM.guardianHas(m, "bell") && m.turns % 3 === 1) { const n = this.wakeFloor ? this.wakeFloor() : 0; this.say(`${CM.The(m)} swings the bell. There is no sound - and the party's hearts sink${n ? ", and all through the Undercroft things wake" : ""}.`); this.cheer(-1); this.sound("toll"); }   // (the bell: 64c-undercroft.js)
     m.intent = null;
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }
@@ -797,6 +799,7 @@ Object.assign(CM.Game.prototype, {
         if (near.type === "door") near.locked = false; near.open = true;
         this.say(`${h.name} holds up the reliquary, and somewhere on the floor a lock gives.`); break;
       }
+      case "ring": { let ran = 0; for (const m of foes) { if (CM.unmoved(m)) continue; m.held = Math.max(m.held || 0, 1); if (m.hp < m.max / 3 && this.rnd.chance(0.5)) { m.fled = true; ran++; } } this.say(`${h.name} swings the Bell's Tongue against the stones, and it rings the way the bell did: every foe staggers${ran ? `, and ${CM.plural(ran, "foe")} run` : ""}.`); break; }   // (the Undercroft's relic)
       case "regrow": { const fallen = this.party.find((p) => p.hp <= 0); if (!fallen) { this.say("No one has fallen."); return false; } fallen.hp = 1; this.woundHero(fallen); this.say(`The root wakes in ${h.name}'s hands, and ${fallen.name} draws breath.`); break; }
       default: return false;
     }
@@ -934,6 +937,11 @@ Object.assign(CM.Game.prototype, {
     if (friend && friend.hp <= 0 && !hero.avenged) { hero.avenged = true; dmg *= 2; how += ` - for ${friend.name}`; }
     if (opts.bash && target.chilled > 0) { dmg *= 2; how += " - the ice shatters"; this.combo("shatter"); target.chilled = 0; }
     if (hero.cls === "Rogue" && target.marked) { dmg = Math.ceil(dmg * 1.5); how += " - the knife finds the mark"; this.combo("knife"); }
+    if (weapon && weapon.props && weapon.props.shriek && !weapon.unknown && this.combat && !this.combat.shrieked) {   // the Bell's Tongue: it shrieks on the first blow, wakes the floor and frightens
+      this.combat.shrieked = true; const n = this.wakeFloor ? this.wakeFloor() : 0; let fled = 0;
+      for (const f of this.living()) if (!CM.unmoved(f) && f !== target && rnd.chance(0.25)) { f.fled = true; fled++; }
+      this.say(`The Bell's Tongue shrieks as it lands${fled ? `, and ${CM.plural(fled, "foe")} break and run` : ""}${n ? "; down the halls, things wake" : ""}.`);
+    }
     if (target.champion === "stonehide" && target.stone > 0) { target.stone -= 1; this.say(`${hero.name}'s blow glances off ${CM.the(target)}'s stony hide.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
     if (target.warded > 0) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - the ward takes half"; target.warded -= 1; }
     if (target.gear && target.gear.offhand && !bow && rnd.chance(0.25)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how += " - taken on the shield"; }

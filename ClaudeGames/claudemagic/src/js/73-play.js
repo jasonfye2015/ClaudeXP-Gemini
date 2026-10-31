@@ -25,6 +25,7 @@ Object.assign(CM.UI.prototype, {
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
+    if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
     const hint = this.$("#view .hint");
@@ -110,13 +111,13 @@ Object.assign(CM.UI.prototype, {
     box.classList.remove("combat");
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && g.floor.number >= 1 && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
         ["Back up the shaft", () => g.backUp()], [CM.t("town.home"), () => { const note = g.goHome(); if (note) g.say(note); }], ["Go deeper", () => g.leaveCamp()], [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
     };
-    const key = g.mode + ":" + (g.floor ? (g.floor.number <= 0 && g.floor.number % 1 === 0 ? "s" : "d") : "") + (g.lightOut ? "o" : "") + (g.light && g.light.kind ? "l" : "") + (g.autoOn && g.autoOn() ? "a" : "") + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
+    const key = g.mode + ":" + (g.floor ? (g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? "s" : "d") : "") + (g.lightOut ? "o" : "") + (g.light && g.light.kind ? "l" : "") + (g.autoOn && g.autoOn() ? "a" : "") + ":" + (this.xmenu ? this.xmenu.kind + ":" + (this.xmenu.id || "") + ":" + (this.xmenu.hero === undefined ? "" : this.xmenu.hero) : "");
     if (box.dataset.mode === key) return;
     box.innerHTML = "";
     box.dataset.mode = key;

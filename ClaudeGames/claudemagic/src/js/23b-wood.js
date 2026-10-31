@@ -107,7 +107,7 @@ CM.placeOf = (fl, x, y) => (fl && fl.number === 0 ? CM.townPlace(fl, x, y) : fl 
 // Where to?: the doors and places the party knows on this surface floor, with the walk's length (null: no known way)
 CM.wayPlaces = function (game) {
   const fl = game.floor;
-  if (!fl || fl.number > 0 || fl.number % 1 !== 0) return [];
+  if (!fl || fl.number > 0 || fl.number % 1 !== 0 || (CM.isUndercroft && CM.isUndercroft(fl.number))) return [];
   const out = [], seen = new Set((fl.seen || []).map(([x, y]) => `${x},${y}`));
   const add = (name, x, y, always) => { if (!always && !seen.has(`${x},${y}`)) return; if (x === fl.pos[0] && y === fl.pos[1]) return; const path = game.pathTo(x, y); out.push({ name, x, y, steps: path ? path.length : null }); };
   if (fl.number === 0) {
@@ -140,6 +140,7 @@ CM.makeCave = function (number, seed, gen) {
   const ores = [["copper", "copper"], ["iron", "iron"], ["gold", "iron"]][n], cells = [];   // the cave's own veins: copper in the first, iron in the second, gold at the deepest
   for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && CM.DIRS.some(([dx, dy]) => fl.grid[y + dy][x + dx] === 1)) cells.push(k); }
   ores.forEach((ore, i) => { if (cells.length) { const k = cells[CM.hashSeed(`${seed}:cavevein:${n}:${i}`) % cells.length]; fl.things[k] = { type: "vein", ore, left: CM.VEIN_SWINGS }; } });
+  if (n === 2 && CM.undercroftStairOf) { const k = CM.undercroftStairOf(fl, seed); if (k) fl.things[k] = { type: "ucstair", hidden: true }; }   // (the old stair down: 64c-undercroft.js)
   return fl;
 };
 // the Wood's own kinds: never among a floor's bands

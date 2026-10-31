@@ -1444,6 +1444,14 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   the town): a ring, a crate and a sickle to find on their floors, a carving to read, a champion to slay, iron ore to
   bring; three at a time, one from each a season, each paid in gold, renown, a thing or a favour that lasts.
 
+  The Undercroft (v9.9): in the Wood's third cave, a stair of old stone that only a light finds goes down to the lower
+  town that went under (src/js/64c-undercroft.js): three floors of standing water and drowned streets, five kinds of
+  their own (Drowned Townsfolk, Eels, Marsh Lights that run from you, Cellar Spiders, and a Bell-Ringer leading a pack on
+  each floor), and a carving on each that tells what the town forgot. In the bell-yard below the third stands the tenth
+  guardian, the Bell-Founder's Boy, whose bell wakes everything on the floor; his relic is the Bell's Tongue. Past him a
+  black door - once he has fallen and a party has been to floor six - opens onto the Flooded Vaults: a way to floor six
+  that skips the Catacombs, and from floor six a flooded stair back down to the bell-yard.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
@@ -1508,6 +1516,7 @@ The source
     27-props.js   the props: what the scatter lays on each square, the traces, the wall decals, what drifts in the air
     40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
+    64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
     61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions

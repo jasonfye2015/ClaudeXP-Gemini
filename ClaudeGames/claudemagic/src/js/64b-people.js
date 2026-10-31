@@ -88,7 +88,7 @@ Object.assign(CM.Game.prototype, {
     if (!f) return;
     f.hp = f.max;
     if (f.id === "dog") { const away = number > CM.FOLLOWERS.dog.deepest; if (away && !f.away) this.say(`${f.name} stops at the top of the stair below the tenth floor, and won't come on. He'll be waiting up there.`); if (!away && f.away) this.say(`${f.name} comes bounding back.`); f.away = away; }
-    if (f.id === "wizard" && number >= 1 && fresh && (this.spellLight || 0) < 20) { this.spellLight = 60; this.say(`${f.name} says a word, and a cold light gathers over the party.`); }
+    if (f.id === "wizard" && CM.isDeep(number) && fresh && (this.spellLight || 0) < 20) { this.spellLight = 60; this.say(`${f.name} says a word, and a cold light gathers over the party.`); }
     if (f.id === "adventurer" && number >= 1 && fresh) { f.floors = (f.floors || 0) + 1; const line = CM.FOLLOWER_STORY[f.floors - 1]; if (line) this.say(line); if (f.floors >= CM.FOLLOWER_STORY.length) f.leaving = true; }
     f.mended = null; f.picked = null;
   },

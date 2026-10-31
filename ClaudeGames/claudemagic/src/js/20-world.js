@@ -884,6 +884,7 @@ CM.furnish = function (floor, seed, gen) {
 // a floor: made by the run's generator (CM.GEN for a new run), then furnished; a wing (number + 0.5) is made its own way
 CM.makeFloor = function (number, seed, gen) {
   if (number === 0) return CM.makeTown(seed);                            // (the town above: hand-laid, 23-town.js)
+  if (CM.isUndercroft && CM.isUndercroft(number)) return CM.makeLairs(CM.makeUndercroft(number, seed, gen), `${seed}:undercroft`);   // (the Undercroft: 64c-undercroft.js)
   if (number < 0) return number % 1 === 0 ? CM.makeWood(seed) : CM.makeCave(number, seed, gen);   // (the Deep Wood and its caves, 23b-wood.js)
   if (number % 1 !== 0) return CM.makeWing(number, seed, gen);
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
