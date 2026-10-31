@@ -140,6 +140,14 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gilded Mint and Mana Shelter (v13.7)
+
+The house keeps a coin press in the back that it lets anyone strike - "for the practice," says the dealer - and the
+apprentices it hires to keep striking it when the guests have gone home never seem to go home themselves. Below the
+cellars the house has let a few families dig in out of the weather; they keep a well of mana, a kitchen and a spring,
+and they have a beacon down there that brings in the town's strays. The house counts them every season, and pays
+handsomely when there are more.
+
 ## The Lexicon Engine and the Mana Conduit (v13.6)
 
 An artificer left a brass case with a green glass screen in the Joker's corner against a debt, and the house lets

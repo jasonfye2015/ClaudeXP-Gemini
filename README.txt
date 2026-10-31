@@ -1392,6 +1392,22 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gilded Mint and Mana Shelter (the twenty-seventh big update - v13.7)
+  Two free games on the Gilded Joker's floor that go on in real time, even while you are away:
+  - The Gilded Mint (src/js/64zc-mint.js; 76s-mint.js), an idle game: strike the great coin press for gold dust; buy
+    apprentices, bellows, coin presses, alchemists, kilns, golems, star-forges and a dragon's hoard to mint it for you
+    (a seventh dearer each), double each kind at 10, 25, 50 and 100 owned, buy better hammers; catch the lucky coin when
+    it glints (seven times everything for half a minute, or a lump); melt the mint down at a million for Gilded Seals,
+    a twentieth more for good. Away it mints at half pace for up to eight hours. Gold and a Claudescryption card the first
+    time the dust minted in all passes a hundred, a thousand ... a trillion (common, then stronger, then rare).
+  - Mana Shelter (64zd-shelter.js; 76t-shelter.js): a warren dug under the Joker, in cross-section - a stair down one
+    side and rooms on each floor: Mana Wells (whose mana runs the rest), Kitchens, Springs, Living Quarters (two who
+    share them raise a child), Storerooms, Beacons that draw wanderers, Training Halls. Residents have Might, Grace and
+    Wit, and work faster at the rooms that want them; a room's work waits in a bubble to be gathered, which fills the
+    stores and pays marks to build, dig and improve with. Everyone eats and drinks; with bread or water gone work goes
+    at half pace. Away it runs on for up to four hours. Gold and a card the first time the warren houses 6, 10, 15, 20,
+    25, 30, 40 and 50.
+
 The Lexicon Engine and the Mana Conduit (the twenty-sixth big update - v13.6)
   Two free games of skill on the Gilded Joker's floor, ten levels each; each level pays gold and a Claudescryption card
   the first time it is done (common to level four, a stronger common to nine, rare at ten), and never again:
