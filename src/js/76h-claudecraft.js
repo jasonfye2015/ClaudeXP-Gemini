@@ -23,26 +23,65 @@ Object.assign(CM.UI.prototype, {
     note.textContent = "";
     this.openDialog("#dlg-craftgate");
   },
-  ccToggleSatchel() { this.ccSatchelOpen = !this.ccSatchelOpen; this.ccPick = null; if (this.ccSatchelOpen && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
-  // a click in the satchel's window: the first picks a slot up, the second puts it down (swapping)
+  ccToggleSatchel() { this.ccSatchelOpen = !this.ccSatchelOpen; this.ccChestKey = null; this.ccPick = null; this.ccScroll = 0; if (this.ccSatchelOpen && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
+  ccOpenChest(key) { this.ccSatchelOpen = true; this.ccChestKey = key; this.ccPick = null; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
+  ccCloseWindow() { this.ccSatchelOpen = false; this.ccChestKey = null; this.ccPick = null; },
+  // a click in the window: a recipe makes it; in a chest's window a stack moves across whole; in the satchel the first
+  // click picks a slot up and the second puts it down (swapping)
   ccSatchelClick(e) {
-    const cr = this.game.craft, h = this.$("#crafthud"); if (!cr || !h) return; const r = h.getBoundingClientRect(), x = (e.clientX - r.left) * (h.width / r.width), y = (e.clientY - r.top) * (h.height / r.height);
-    const i = (this.ccSatRects || []).findIndex(([rx, ry, rw, rh]) => x >= rx && x < rx + rw && y >= ry && y < ry + rh);
-    if (i < 0) { this.ccPick = null; return; }
-    if (this.ccPick === null || this.ccPick === undefined) { if (cr.satchel.slots[i]) this.ccPick = i; return; }
-    cr.satchel.swap(this.ccPick, i); this.ccPick = null; try { CM.audio.play("cardplace", 0.3, 0, 1.1); } catch (er) { /* */ }
+    const g = this.game, cr = g.craft, h = this.$("#crafthud"); if (!cr || !h) return; const r = h.getBoundingClientRect(), x = (e.clientX - r.left) * (h.width / r.width), y = (e.clientY - r.top) * (h.height / r.height);
+    const hit = (this.ccRects || []).find((q) => x >= q.x && x < q.x + q.w && y >= q.y && y < q.y + q.h);
+    if (!hit) { this.ccPick = null; return; }
+    const click = () => { try { CM.audio.play("cardplace", 0.3, 0, 1.1); } catch (er) { /* */ } };
+    if (hit.kind === "recipe") { const why = g.craftMake(hit.id); if (why) g.craftSay(why); else { click(); try { CM.audio.play("grind", 0.35, 0, 1.2); } catch (er) { /* */ } } return; }
+    if (this.ccChestKey) { if (g.craftChestMove(this.ccChestKey, hit.kind, hit.i)) click(); return; }
+    if (this.ccPick === null || this.ccPick === undefined) { if (cr.satchel.slots[hit.i]) this.ccPick = hit.i; return; }
+    cr.satchel.swap(this.ccPick, hit.i); this.ccPick = null; click();
+  },
+  // the window itself, drawn on the HUD
+  ccWindow(p, atlas, cr, W, H) {
+    const g = this.game, ss = Math.max(30, Math.min(40, Math.floor((W - 380) / 9))), chest = this.ccChestKey ? g.craftChest(this.ccChestKey) : null, gridW = ss * 9;
+    const panelW = chest ? 0 : Math.min(300, W - gridW - 60), ww = gridW + (panelW ? panelW + 20 : 0) + 28, wh = Math.min(H - 30, chest ? ss * 6 + 110 : Math.max(ss * 3 + 90, 320));
+    const wx = Math.max(6, W / 2 - ww / 2), wy = Math.max(6, H / 2 - wh / 2) - 10; this.ccRects = [];
+    p.fillStyle = "rgba(20,16,12,0.92)"; p.fillRect(wx, wy, ww, wh); p.strokeStyle = "#C8A040"; p.lineWidth = 2; p.strokeRect(wx, wy, ww, wh);
+    const grid = (title, store, kind, gx, gy, sep) => { p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#F0E0B0"; p.textAlign = "left"; p.fillText(title, gx, gy - 8);
+      for (let i = 0; i < store.slots.length; i++) { const row = Math.floor(i / 9), x = gx + (i % 9) * ss, y = gy + row * ss + (sep && row ? 6 : 0); this.ccRects.push({ kind, i, x, y, w: ss, h: ss }); this.ccDrawSlot(p, atlas, store.slots[i], x, y, ss, false, kind === "satchel" && i === this.ccPick); } };
+    const gx = wx + 14;
+    if (chest) {
+      grid("The chest (kept safe on the island)", chest, "chest", gx, wy + 30, false);
+      grid(`${cr.hero.name}'s satchel`, cr.satchel, "satchel", gx, wy + 30 + ss * 3 + 30, true);
+      p.font = "11px Tahoma, sans-serif"; p.fillStyle = "#D8D0C0"; p.fillText("Click a stack to move it across. I, E or Esc closes.", gx, wy + wh - 10);
+      return;
+    }
+    grid(`${cr.hero.name}'s satchel`, cr.satchel, "satchel", gx, wy + 30, true);
+    p.font = "11px Tahoma, sans-serif"; p.fillStyle = "#D8D0C0"; const tips = ["Click a stack, then a slot, to move it", "(the top row is the hotbar). I, E or Esc closes.", "Tools work from the satchel by themselves:", "the best pick, axe or sword is used."];
+    tips.forEach((t, k) => p.fillText(t, gx, wy + 30 + ss * 3 + 26 + k * 14));
+    // what can be made: by hand, and at a workbench or kiln within reach
+    const px = gx + gridW + 20, st = g.craftStations(), rows = CM.CC.RECIPES.map((r) => ({ r, can: g.craftCan(r, st), here: !r.at || st[r.at] })).sort((a, b) => (b.can - a.can) || (b.here - a.here));
+    p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#F0E0B0"; p.fillText(`Make${st.bench ? " - workbench" : ""}${st.kiln ? " - kiln" : ""}`, px, wy + 22);
+    const rh = 22, top = wy + 32, fit = Math.max(3, Math.floor((wh - 48) / rh)); this.ccScroll = Math.max(0, Math.min(this.ccScroll || 0, rows.length - fit));
+    rows.slice(this.ccScroll, this.ccScroll + fit).forEach(({ r, can, here }, k) => {
+      const y = top + k * rh; p.fillStyle = can ? "rgba(120,180,90,0.22)" : "rgba(0,0,0,0.25)"; p.fillRect(px, y, panelW, rh - 2);
+      const [tx, ty] = this.ccTileOf(r.makes[0]); p.globalAlpha = can ? 1 : 0.45; p.drawImage(atlas, tx, ty, 16, 16, px + 3, y + 2, 16, 16);
+      p.font = "bold 11px Tahoma, sans-serif"; p.fillStyle = can ? "#FFF" : "#A09888"; p.fillText(`${r.makes[1] > 1 ? `${r.makes[1]} ` : ""}${CM.CC.NAMES[r.makes[0]]}${r.makes[1] > 1 && !/s$/.test(CM.CC.NAMES[r.makes[0]]) ? "s" : ""}`, px + 24, y + 14);
+      p.font = "10px Tahoma, sans-serif"; p.textAlign = "right"; p.fillStyle = here ? (can ? "#D8F0C0" : "#C8B8A0") : "#E08060";
+      p.fillText(here ? Object.entries(r.needs).map(([b, n]) => `${n} ${CM.CC.NAMES[b].toLowerCase().replace(" ore chunk", "")}`).join(", ") : `at a ${r.at === "bench" ? "workbench" : "kiln"}`, px + panelW - 4, y + 14);
+      p.textAlign = "left"; p.globalAlpha = 1; this.ccRects.push({ kind: "recipe", id: r.id, x: px, y, w: panelW, h: rh - 2 });
+    });
+    if (rows.length > fit) { p.font = "10px Tahoma, sans-serif"; p.fillStyle = "#C8B8A0"; p.fillText(`the wheel scrolls (${this.ccScroll + 1}-${Math.min(rows.length, this.ccScroll + fit)} of ${rows.length})`, px, wy + wh - 6); }
   },
   ccTileOf(b) { if (CM.CC.isItem(b)) { const t = CM.CC.TILE[CM.CC.ITEM_TILE[b]]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; } const face = CM.CC.FACES[b][b === CM.CC.B.GRASS || b === CM.CC.B.LOG ? 1 : 0], t = CM.CC.TILE[face]; return [(t % CM.CC.ATLAS) * 16, Math.floor(t / CM.CC.ATLAS) * 16]; },
   ccDrawSlot(p, atlas, s, x, y, size, lit, picked) {
     p.fillStyle = lit ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.35)"; p.fillRect(x, y, size, size);
     if (s) { const [tx, ty] = this.ccTileOf(s.b), m = Math.round(size * 0.14); p.globalAlpha = picked ? 0.4 : 1; p.drawImage(atlas, tx, ty, 16, 16, x + m, y + m, size - 2 * m, size - 2 * m); p.globalAlpha = 1;
+      if (s.d !== undefined && CM.CC.TOOLS[s.b]) { const f = s.d / CM.CC.TOOLS[s.b].uses; p.fillStyle = "#202020"; p.fillRect(x + 4, y + size - 6, size - 8, 3); p.fillStyle = f > 0.5 ? "#60D040" : f > 0.2 ? "#E0C040" : "#E04030"; p.fillRect(x + 4, y + size - 6, (size - 8) * f, 3); }
       if (s.n > 1) { p.font = "bold 12px Tahoma, sans-serif"; p.textAlign = "right"; p.fillStyle = "#000"; p.fillText(String(s.n), x + size - 3, y + size - 3); p.fillStyle = "#FFF"; p.fillText(String(s.n), x + size - 4, y + size - 4); p.textAlign = "left"; } }
     p.strokeStyle = lit ? "#FFF" : picked ? "#F0D060" : "#808080"; p.lineWidth = lit || picked ? 3 : 1; p.strokeRect(x + 1, y + 1, size - 2, size - 2);
   },
   // the atlas, painted in code as world.py paints it (and two of our own: the basalt and the gate's light)
   ccAtlas() {
     if (this.ccAtlasC) return this.ccAtlasC;
-    const c = document.createElement("canvas"); c.width = 16 * CM.CC.ATLAS; c.height = 16 * 4; const p = c.getContext("2d"), R = new CM.Random(7), u = (a, b) => a + (b - a) * R.next();
+    const c = document.createElement("canvas"); c.width = 16 * CM.CC.ATLAS; c.height = 16 * CM.CC.ROWS; const p = c.getContext("2d"), R = new CM.Random(7), u = (a, b) => a + (b - a) * R.next();
     const noisy = (ox, oy, hex, spread, alpha = 255) => { const n = parseInt(hex.slice(1), 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const k = u(-spread, spread), f = (v) => Math.max(0, Math.min(255, Math.round(v + k))); p.fillStyle = `rgba(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)},${alpha / 255})`; p.fillRect(ox + x, oy + y, 1, 1); } };
     const at = (name) => { const i = CM.CC.TILE[name]; return [(i % CM.CC.ATLAS) * 16, Math.floor(i / CM.CC.ATLAS) * 16]; };
     let [x, y] = at("grass_top"); noisy(x, y, "#5FA33A", 22);
@@ -73,6 +112,24 @@ Object.assign(CM.UI.prototype, {
       p.fillStyle = col; p.beginPath(); p.moveTo(x + 5, y + 9); p.lineTo(x + 6, y + 5); p.lineTo(x + 10, y + 4); p.lineTo(x + 12, y + 7); p.lineTo(x + 11, y + 11); p.lineTo(x + 7, y + 12); p.closePath(); p.fill();
       p.fillStyle = "rgba(255,255,255,0.55)"; p.fillRect(x + 7, y + 5, 2, 1); p.fillRect(x + 6, y + 6, 1, 1);
     }
+    // (v12.2) the workbench, the kiln, the torch, the chest, the ladder, and the made things' icons
+    [x, y] = at("workbench_top"); noisy(x, y, "#B08D57", 10); p.strokeStyle = "#6A4E28"; p.strokeRect(x + 0.5, y + 0.5, 15, 15); p.fillStyle = "#6A4E28"; p.fillRect(x + 8, y, 1, 16); p.fillRect(x, y + 8, 16, 1); p.fillStyle = "#909098"; p.fillRect(x + 2, y + 3, 4, 2); p.fillRect(x + 10, y + 10, 3, 3);
+    [x, y] = at("workbench_side"); noisy(x, y, "#9A7848", 10); p.fillStyle = "#5A4020"; p.fillRect(x, y, 16, 3); p.fillRect(x + 1, y + 3, 3, 13); p.fillRect(x + 12, y + 3, 3, 13); p.fillStyle = "#808088"; p.fillRect(x + 6, y + 6, 4, 2);
+    [x, y] = at("kiln_side"); noisy(x, y, "#7A7470", 22); p.fillStyle = "#1A1210"; p.fillRect(x + 4, y + 7, 8, 7); p.fillStyle = "#E07020"; p.fillRect(x + 5, y + 11, 6, 3); p.fillStyle = "#F0C040"; p.fillRect(x + 7, y + 12, 2, 2);
+    [x, y] = at("kiln_top"); noisy(x, y, "#7A7470", 22); p.fillStyle = "#201814"; p.fillRect(x + 5, y + 5, 6, 6);
+    [x, y] = at("torch"); p.clearRect(x, y, 16, 16); p.fillStyle = "#6B4A26"; p.fillRect(x + 7, y + 5, 2, 11); p.fillStyle = "#F0C040"; p.fillRect(x + 7, y + 2, 2, 3); p.fillStyle = "#E06020"; p.fillRect(x + 7, y + 4, 2, 1);
+    [x, y] = at("chest_side"); noisy(x, y, "#9A6A34", 10); p.fillStyle = "#5A3A18"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillRect(x, y + 6, 16, 1); p.fillStyle = "#C8A040"; p.fillRect(x + 7, y + 5, 2, 4);
+    [x, y] = at("chest_top"); noisy(x, y, "#9A6A34", 10); p.fillStyle = "#5A3A18"; p.strokeStyle = "#5A3A18"; p.strokeRect(x + 0.5, y + 0.5, 15, 15); p.fillStyle = "#C8A040"; p.fillRect(x + 7, y, 2, 16);
+    [x, y] = at("ladder"); p.clearRect(x, y, 16, 16); p.fillStyle = "#7A5A30"; p.fillRect(x + 2, y, 2, 16); p.fillRect(x + 12, y, 2, 16); for (const ry of [2, 6, 10, 14]) p.fillRect(x + 2, y + ry, 12, 2);
+    [x, y] = at("item_pole"); p.clearRect(x, y, 16, 16); p.strokeStyle = "#7A5A30"; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 3, y + 13); p.lineTo(x + 13, y + 3); p.stroke(); p.lineWidth = 1;
+    for (const [m, col, dark] of [["copper", "#D07A40", "#7A3A18"], ["iron", "#B8B0A8", "#5A5450"], ["silver", "#E8ECF8", "#8A90A0"], ["gold", "#F0C838", "#9A7010"], ["stariron", "#8AA4F8", "#2A3A80"]]) {
+      [x, y] = at(`bar_${m}`); p.clearRect(x, y, 16, 16); p.fillStyle = dark; p.beginPath(); p.moveTo(x + 2, y + 12); p.lineTo(x + 5, y + 6); p.lineTo(x + 14, y + 6); p.lineTo(x + 14, y + 10); p.lineTo(x + 11, y + 13); p.closePath(); p.fill(); p.fillStyle = col; p.beginPath(); p.moveTo(x + 2, y + 12); p.lineTo(x + 5, y + 6); p.lineTo(x + 11, y + 6); p.lineTo(x + 11, y + 12); p.closePath(); p.fill(); p.fillStyle = "rgba(255,255,255,0.5)"; p.fillRect(x + 5, y + 7, 5, 1);
+    }
+    for (const [tier, col] of [["stone", "#8A8A8A"], ["copper", "#D07A40"], ["iron", "#D0D0D8"]]) {
+      [x, y] = at(`pick_${tier}`); p.clearRect(x, y, 16, 16); p.strokeStyle = "#7A5A30"; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 4, y + 14); p.lineTo(x + 11, y + 5); p.stroke(); p.strokeStyle = col; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 4, y + 3); p.quadraticCurveTo(x + 11, y + 2, x + 14, y + 9); p.stroke(); p.lineWidth = 1;
+      [x, y] = at(`axe_${tier}`); p.clearRect(x, y, 16, 16); p.strokeStyle = "#7A5A30"; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 4, y + 14); p.lineTo(x + 11, y + 4); p.stroke(); p.lineWidth = 1; p.fillStyle = col; p.beginPath(); p.moveTo(x + 9, y + 2); p.lineTo(x + 14, y + 4); p.lineTo(x + 13, y + 9); p.lineTo(x + 10, y + 6); p.closePath(); p.fill();
+      [x, y] = at(`sword_${tier}`); p.clearRect(x, y, 16, 16); p.strokeStyle = col; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 6, y + 10); p.lineTo(x + 14, y + 2); p.stroke(); p.strokeStyle = "#7A5A30"; p.beginPath(); p.moveTo(x + 2, y + 14); p.lineTo(x + 6, y + 10); p.stroke(); p.strokeStyle = "#C8A040"; p.beginPath(); p.moveTo(x + 4, y + 8); p.lineTo(x + 8, y + 12); p.stroke(); p.lineWidth = 1;
+    }
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
@@ -94,7 +151,7 @@ Object.assign(CM.UI.prototype, {
     gl.bindBuffer(gl.ARRAY_BUFFER, ch.op); gl.bufferData(gl.ARRAY_BUFFER, op, gl.STATIC_DRAW); ch.nOp = op.length / 7;
     gl.bindBuffer(gl.ARRAY_BUFFER, ch.wa); gl.bufferData(gl.ARRAY_BUFFER, wa, gl.STATIC_DRAW); ch.nWa = wa.length / 7;
   },
-  ccDirtyAt(x, z) { const C = CM.CC.CHUNK; for (const [dx, dz] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]]) { const cx = Math.floor((x + dx) / C), cz = Math.floor((z + dz) / C); if (cx >= 0 && cz >= 0 && cx < CM.CC.CHUNKS && cz < CM.CC.CHUNKS) this.ccDirty.add(`${cx},${cz}`); } },
+  ccDirtyAt(x, z, r = 1) { const C = CM.CC.CHUNK; for (const [dx, dz] of [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r], [r, r], [-r, r], [r, -r], [-r, -r]]) { const cx = Math.floor((x + dx) / C), cz = Math.floor((z + dz) / C); if (cx >= 0 && cz >= 0 && cx < CM.CC.CHUNKS && cz < CM.CC.CHUNKS) this.ccDirty.add(`${cx},${cz}`); } },
   ccMvp(w, aspect) {
     const f = 1 / Math.tan((70 * Math.PI) / 360), n = 0.05, fa = 200, P = [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, (2 * fa * n) / (n - fa), 0];
     const mul = (a, b) => { const o = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) o[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k]; return o; };
@@ -125,8 +182,8 @@ Object.assign(CM.UI.prototype, {
       for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1, 1);
       if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 7); }
     if (cr.bundles.length) {                                                   // (the bundles: small glowing blocks, bobbing)
-      const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / 4], out = [], s2 = 0.6;
-      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / 4, 2.5 + sh, 1); }
+      const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / CM.CC.ROWS], out = [], s2 = 0.6;
+      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / CM.CC.ROWS, 2.5 + sh, 1); }
       if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 7); }
     gl.disable(gl.BLEND);
     this.ccHud(cr, now);
@@ -156,11 +213,7 @@ Object.assign(CM.UI.prototype, {
     p.font = "11px Tahoma, sans-serif"; p.fillText(clock, px + 62, py + 56);
     p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.textAlign = "right"; p.fillText(`XYZ ${w.pos[0].toFixed(0)} / ${w.pos[1].toFixed(0)} / ${w.pos[2].toFixed(0)}   broken ${cr.broken || 0}, placed ${cr.placed || 0}${cr.bundles.length ? `   bundles on the island: ${cr.bundles.length}` : ""}`, W - 8, 16);
     p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break - right: place - 1-9 / wheel - I: satchel", W - 8, 46); p.fillText("walk into the gate's light to go home", W - 8, 60); p.textAlign = "left";
-    if (this.ccSatchelOpen) {                                                   // (the satchel's window: 3 rows of 9, the hotbar the first)
-      const ss = 46, gx = W / 2 - (ss * 9) / 2, gy = H / 2 - ss * 1.5 - 20; p.fillStyle = "rgba(20,16,12,0.88)"; p.fillRect(gx - 14, gy - 36, ss * 9 + 28, ss * 3 + 76); p.strokeStyle = "#C8A040"; p.lineWidth = 2; p.strokeRect(gx - 14, gy - 36, ss * 9 + 28, ss * 3 + 76);
-      p.font = "bold 14px Tahoma, sans-serif"; p.fillStyle = "#F0E0B0"; p.fillText(`${hero.name}'s satchel`, gx, gy - 14); this.ccSatRects = [];
-      for (let i = 0; i < CM.CC.SATCHEL; i++) { const r = Math.floor(i / 9), x = gx + (i % 9) * ss, y = gy + r * ss + (r ? 8 : 0); this.ccSatRects.push([x, y, ss, ss]); this.ccDrawSlot(p, atlas, S[i], x, y, ss, false, i === this.ccPick); }
-      p.font = "11px Tahoma, sans-serif"; p.fillStyle = "#D8D0C0"; p.fillText("Click a stack, then a slot, to move it (the top row is the hotbar). I or E closes.", gx, gy + ss * 3 + 26);
+    if (this.ccSatchelOpen) { this.ccWindow(p, atlas, cr, W, H);
     } else if (document.pointerLockElement !== this.$("#craftcanvas")) { p.font = "bold 15px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText("Click to play", W / 2, H / 2 + 34); p.textAlign = "left"; }
     const recent = (cr.says || []).filter(([t]) => now - t < 4000).slice(-3);
     recent.forEach(([t, msg], k) => { p.font = "bold 14px Tahoma, sans-serif"; p.textAlign = "center"; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillText(msg, W / 2 + 1, H * 0.22 + k * 20 + 1); p.fillStyle = `rgba(255,240,200,${Math.min(1, (4000 - (now - t)) / 800)})`; p.fillText(msg, W / 2, H * 0.22 + k * 20); p.textAlign = "left"; });

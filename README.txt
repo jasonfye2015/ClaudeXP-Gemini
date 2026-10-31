@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 2, v12.2: crafting
+  Crafting, from the satchel's window (I): by hand, at a workbench or at a kiln within reach (a right click on one opens
+  it). Planks and poles from wood; a workbench; torches (a pole and charcoal) that light the dark round them; at the
+  workbench a kiln, chests, ladders, and the island's own tools - stone, copper and iron picks, axes and swords, which
+  speed breaking by tier (an island pick also mines ore of its grade), wear with use and stay on the island; at the
+  kiln glass, bricks, and bars from three chunks and a charcoal - the Smith's own sum - which go home lighter than ore.
+  A chest keeps what is put in it safe on the island, through any fall; ladders are climbed with Space or forward.
+
 Claudecraft phase 1, v12.1: ore, caves, and the pick from home
   Under the island's hills now wind caves, with a few large caverns deep down (never under the sea, now and then
   opening on a hillside). Underground it is dark but for the light the party carries: a little of the hero's own, more
