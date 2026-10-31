@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft made a place (the nineteenth big update, UPGRADE_PLAN_13.md) - phase 0, v12.0: one hero and a satchel
+  The Neather Gate now asks who steps through: one hero goes, the rest wait in the Keep-yard. On the island the HUD
+  shows their portrait, health, magic and the game's clock. Breaking a block takes time - hold the left button and a
+  crack grows over it (leaves fast, dirt quick, wood slower, stone slow by hand and quicker with a pick from the bag);
+  the block goes into the hero's own satchel (27 slots, stacks of 64; grass gives dirt, stone gives cobblestone), and
+  the right button places from the hotbar, which is the satchel's first row (I opens the satchel to move stacks).
+  No more flying, and a fall of more than four blocks hurts; a fall that would kill wakes the hero by the island's gate
+  with a tenth of their health, and what they carried is left in a glowing gold bundle where they fell, kept until they
+  walk into it. Each hero's satchel, place and bundles are kept with the village.
+
 The Neather Gate: Claudecraft (the eighteenth big update - v11.9), a tech demo for now
   On the Keep-yard's east side stands a gate of dark basalt blocks, violet runes cut into them, a slow violet shimmer
   inside. The whole party steps through onto the Timeline's Claudecraft island (src/js/64n-claudecraft.js, with its own

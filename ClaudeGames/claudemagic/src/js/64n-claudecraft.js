@@ -14,6 +14,34 @@ CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS
 CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE]);
 CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
+// (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK]);
+CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
+CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
+// what a broken block drops into the satchel (0: nothing); the rest drop themselves
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0 };
+CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
+CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
+// the hero's satchel: 27 slots of {b, n}, stacks of up to 64; the first nine are the hotbar
+CC.SATCHEL = 27; CC.STACK = 64;
+CC.Satchel = class {
+  constructor(saved) { this.slots = Array.from({ length: CC.SATCHEL }, (_, i) => (saved && saved[i] && saved[i].n > 0 ? { b: saved[i].b, n: saved[i].n } : null)); }
+  add(b, n = 1) {
+    for (let k = 0; k < n; k++) {
+      let s = this.slots.find((x) => x && x.b === b && x.n < CC.STACK);
+      if (s) { s.n++; continue; }
+      const i = this.slots.indexOf(null); if (i < 0) return false;
+      this.slots[i] = { b, n: 1 };
+    }
+    return true;
+  }
+  take(i, n = 1) { const s = this.slots[i]; if (!s || s.n < n) return false; s.n -= n; if (!s.n) this.slots[i] = null; return true; }
+  count(b) { return this.slots.reduce((t, s) => t + (s && s.b === b ? s.n : 0), 0); }
+  swap(i, j) { [this.slots[i], this.slots[j]] = [this.slots[j], this.slots[i]]; }
+  empty() { const out = this.slots.filter(Boolean).map((s) => ({ b: s.b, n: s.n })); this.slots.fill(null); return out; }
+  toJSON() { return this.slots.map((s) => (s ? { b: s.b, n: s.n } : null)); }
+};
 CC.ATLAS = 8;                                                              // (the atlas: 8 x 4 tiles of 16 x 16)
 CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
@@ -112,7 +140,7 @@ CC.World = class {
 // the walker: a body 0.6 wide and 1.8 tall moved through the blocks, walking, jumping, swimming, flying
 CC.EYE = 1.62; CC.WALK = 4.3; CC.SPRINT = 6.5; CC.FLY = 11; CC.GRAVITY = 28; CC.JUMP = 8.6;
 CC.Walker = class {
-  constructor(world, pos, yaw = 45, pitch = -10) { Object.assign(this, { world, pos: pos.slice(), vel: [0, 0, 0], yaw, pitch, onGround: false, flying: false, lastSpace: -9, t: 0, slot: 0 }); }
+  constructor(world, pos, yaw = 45, pitch = -10) { Object.assign(this, { world, pos: pos.slice(), vel: [0, 0, 0], yaw, pitch, onGround: false, flying: false, canFly: true, lastSpace: -9, t: 0, slot: 0, fallFrom: null, landed: 0 }); }
   solidAt(x, y, z) { return CC.SOLID.has(this.world.get(Math.floor(x), Math.floor(y), Math.floor(z))); }
   boxHits(px, py, pz) { const r = 0.3; for (const x of [px - r, px + r - 1e-4]) for (const z of [pz - r, pz + r - 1e-4]) for (const y of [py, py + 0.9, py + 1.79]) if (this.solidAt(x, y, z)) return true; return false; }
   inGate() { const w = this.world; return [0.2, 1.0, 1.6].some((dy) => w.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + dy), Math.floor(this.pos[2])) === CB.GATE); }
@@ -132,8 +160,13 @@ CC.Walker = class {
       else { if (i === 1) { if (this.vel[1] < 0) { this.onGround = true; if (this.flying) this.flying = false; } this.vel[1] = 0; } else this.vel[i] = 0; }
     }
     if (this.vel[1] !== 0) this.onGround = this.boxHits(this.pos[0], this.pos[1] - 0.05, this.pos[2]) && this.vel[1] <= 0;
+    // (v12.0) the height a fall began at; on landing, how far it was (read and cleared by the game)
+    const wet = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.2), Math.floor(this.pos[2])) === CB.WATER;
+    if (this.flying || wet) this.fallFrom = null;
+    else if (this.onGround) { if (this.fallFrom !== null) { this.landed = Math.max(this.landed, this.fallFrom - this.pos[1]); this.fallFrom = null; } }
+    else this.fallFrom = this.fallFrom === null ? this.pos[1] : Math.max(this.fallFrom, this.pos[1]);
     if (this.pos[1] < -10) { const s = this.world.spawn(); this.pos = s.slice(); this.vel = [0, 0, 0]; }
   }
   // Space twice quickly: up into the air, or back down to walk
-  pressJump() { if (this.t - this.lastSpace < 0.3) { this.flying = !this.flying; this.vel[1] = 0; this.lastSpace = -9; } else this.lastSpace = this.t; }
+  pressJump() { if (this.canFly && this.t - this.lastSpace < 0.3) { this.flying = !this.flying; this.vel[1] = 0; this.lastSpace = -9; } else this.lastSpace = this.t; }
 };
