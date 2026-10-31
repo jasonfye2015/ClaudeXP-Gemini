@@ -24,7 +24,7 @@ Object.assign(CM.Game.prototype, {
     this.perch = { tower: tower.slice(), from: k };
     this.clock = (this.clock || 0) + CM.TOWER.climbMinutes;
     const ahead = CM.comingWeather(this, 2)[1], D = CM.dialOf(this);
-    this.sound("step");
+    this.sound("wind");
     this.say(`Up the tower stair, round and round, and out among the merlons: the town below, the wall running off round the hill, the trees beyond it. The watchman nods. "Tomorrow? ${CM.TOMORROW_WORDS[ahead.weather] || CM.TOMORROW_WORDS.clear}"`);
     if (!D.night && D.dusk - D.hour <= 1.5) { this.say("The sun goes down over the Wood, and the whole town is gold for a moment."); this.achieve("tower"); }
     this.emit("change");

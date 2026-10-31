@@ -127,6 +127,13 @@ CM.audio = {
       roar_undead: () => this._mix(...[0, 0.08, 0.16, 0.26, 0.4].map((d) => this._after(d, N(0.05, 0.3, 0.9, 43 + Math.floor(d * 100)))), this._sweep(300, 200, 0.6, "sine", 0.04)),
       lich: () => this._mix(T([[55, 1.2]], "sine", 0.22), T([[82.4, 1.2]], "sine", 0.1), this._after(0.3, N(0.9, 0.08, 0.95, 47)), this._after(0.6, this._sweep(400, 180, 0.6, "sine", 0.05))),
       miss: () => this._mix(this._sweep(1200, 300, 0.12, "sine", 0.06), N(0.12, 0.15, 0.5, 61)),
+      snore: () => this._mix(N(0.7, 0.16, 0.92, 83), this._sweep(70, 55, 0.7, "sine", 0.06)),                                       // (a sleeper, near: phase 7)
+      hinge: () => this._mix(this._sweep(520, 300, 0.32, "sawtooth", 0.03), this._sweep(610, 380, 0.28, "square", 0.015)),         // (a door swinging)
+      chain: () => this._mix(...[0, 0.07, 0.14, 0.21, 0.28, 0.35, 0.42].map((d, i) => this._after(d, T([[900 + (i % 3) * 140, 0.03]], "square", 0.07))), this._after(0.5, T([[70, 0.2]], "square", 0.12))),   // (a portcullis)
+      lap: () => this._mix(N(0.5, 0.1, 0.97, 89), this._after(0.25, N(0.4, 0.07, 0.97, 97))),                                   // (water against stone)
+      wind: () => this._mix(N(1.6, 0.14, 0.985, 101), this._sweep(240, 330, 1.6, "sine", 0.015)),                              // (up on a tower)
+      bark: () => this._mix(this._sweep(520, 300, 0.09, "square", 0.12), this._after(0.16, this._sweep(560, 320, 0.09, "square", 0.1))),   // (the dog)
+      bell: () => this._mix(T([[131, 1.6]], "sine", 0.24), T([[139, 1.4]], "sine", 0.12), T([[262, 0.8]], "triangle", 0.05), this._after(0.01, N(0.06, 0.3, 0.5, 103))),   // (a cracked bell)
       toll: () => this._mix(T([[98, 1.4]], "sine", 0.26), T([[147, 1.1]], "sine", 0.12), T([[196, 0.9]], "triangle", 0.06), this._after(0.02, N(0.08, 0.3, 0.6, 73))),
       slam: () => this._mix(N(0.3, 0.55, 0.25, 71), this._sweep(140, 40, 0.45, "sine", 0.35), this._after(0.25, N(0.4, 0.2, 0.1, 79))),
       fallen: () => T([[220, 0.15], [165, 0.2], [110, 0.45]], "square", 0.14),

@@ -3564,6 +3564,25 @@ test("the Undercroft: an old stair in the third cave, found only by a light; thr
   assert.ok(!fl4.things["1,1"].asleep, "the bell wakes every lair"); assert.ok(CM.isDeep(-3) && !CM.isDeep(-1) && !CM.isDeep(0)); assert.ok(CM.powerOf(Object.assign(CM.relic("bell"), { unknown: false })), "the Bell's Tongue has a power");
 });
 
+test("the Deep's ten more: two kinds for each of five bands, met in generator 2's groups and never in generator 1's; the Spore Mother spawns, the Grave Lantern leads astray; their calls, the new sounds, and a fourth scene to measure", () => {
+  const CM = load();
+  for (const band of [5, 6, 7, 8, 9]) assert.strictEqual(CM.MONSTERS.filter((m) => m.deep === band && m.since).length, 2, `band ${band}: two more`);
+  for (const k of CM.DEEP_MORE) { assert.ok(k.shape && k.colour && k.body, `${k.name} can be drawn`); assert.notStrictEqual(CM.roarFor(k.name), undefined); }
+  const met = new Set(); for (let i = 0; i < 400; i++) for (const m of CM.deepGroup(43, new CM.Random(i), 2)) met.add(m.kind);
+  assert.ok(met.has("Grave Lantern") || met.has("Charnel Hound"), "generator 2 meets them");
+  const old = new Set(); for (let i = 0; i < 400; i++) for (const m of CM.deepGroup(43, new CM.Random(i), 1)) old.add(m.kind);
+  assert.ok(!old.has("Grave Lantern") && !old.has("Charnel Hound"), "generator 1 never does");
+  for (let i = 0; i < 200; i++) assert.ok(!CM.deepGroup(30, new CM.Random(i), 2).some((m) => m.kind === "Sporeling"), "a Sporeling is only spawned");
+  const g = new CM.Game(); g.newGame("deep-1", fixedParty(CM)); g.enterFloor(28, "down");
+  const mother = CM.makeMonster(CM.monsterKind("Spore Mother"), 28, new CM.Random(1)); g.foes = [mother]; g.startCombat(`${g.floor.pos[0]},${g.floor.pos[1]}`, { group: [mother] });
+  for (let t = 0; t < 7; t++) { mother.hp = mother.max; g.monsterAct(mother); }
+  const spores = g.foes.filter((f) => f.kind === "Sporeling"); assert.ok(spores.length >= 1 && spores.length <= CM.SPAWN.most, `she spawns, two at most (${spores.length})`);
+  const lantern = CM.makeMonster(CM.monsterKind("Grave Lantern"), 43, new CM.Random(2)), hero = g.alive()[0]; hero.status = {}; g.rnd.chance = () => true;
+  assert.ok(g.leadAstray(lantern, hero) && hero.status.paralysis, "led astray: the moment lost");
+  const audio = fs.readFileSync(path.join(ROOT, "src", "js", "50-audio.js"), "utf8"); for (const id of ["snore", "hinge", "chain", "lap", "wind", "bark", "bell"]) assert.ok(audio.includes(`${id}: () =>`), `the ${id} is cooked`);
+  const perf = fs.readFileSync(path.join(ROOT, "tools", "perf.js"), "utf8"); assert.ok(perf.includes("measure(\"tower\""), "the fourth scene: the town at night from a tower");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
