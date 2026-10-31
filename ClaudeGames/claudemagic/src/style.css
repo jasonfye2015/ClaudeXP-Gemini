@@ -849,3 +849,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .claw .cwicon { width: 26px; height: 26px; }
 .claw .cwprize { margin: 6px 0; padding: 6px 10px; border: 1px solid rgba(255,224,112,0.4); border-radius: 6px; background: rgba(0,0,0,0.3); font-weight: bold; }
 .claw .cwhold { min-width: 200px; user-select: none; }
+.pinball .pbcol { display: flex; flex-direction: column; gap: 6px; }
+.pinball .pbcanvas { width: 320px; height: 606px; border-radius: 10px; border: 8px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.pinball .pbbtns { justify-content: space-between; }
+.pinball .pbbtns button { user-select: none; }

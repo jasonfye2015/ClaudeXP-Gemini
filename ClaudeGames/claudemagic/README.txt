@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Wyrmhold Pinball (the thirty-seventh big update - v14.7)
+  A pinball table on the Gilded Joker's floor (src/js/64zn-pinball.js; 76zd-pinball.js), painted with the dungeon:
+  a plunger lane, a curved top with a deflector, three rune bumpers, two slingshots, inlanes and outlanes (a kickback in
+  the left one), the R U N E S drop targets that raise the bonus multiplier, three stars (all lit doubles the bumpers
+  and relights the kickback), the Hoard Hole saucer, and the dragon at the top - slay it for a three-ball multiball,
+  and every second dragon gives an extra ball. Ball save once per ball; three balls; a bonus times the multiplier at
+  the end of each. Its own physics: a ball against segments, circles and two flippers, stepped 600 times a second.
+  One stake a game: every score mark passed (3,000 up to 500,000) pays gold, more for each, every game; and a
+  Claudescryption card the first time ever each mark is passed (common, a stronger common, rare).
+
 The Wishing Claw (the thirty-sixth big update - v14.6)
   Three claw machines on the Gilded Joker's floor (src/js/64zm-claw.js; 76zc-claw.js) - the Copper Claw (25 gold a
   try), the Silver Claw (120, from floor 4) and the Gold Claw (400, from floor 10) - each with its own pit of prizes kept
