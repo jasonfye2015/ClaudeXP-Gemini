@@ -4286,6 +4286,36 @@ test("Claudecraft (v12.3): a blow at a creature in reach uses the main game's su
   const gold0 = g.gold, bag0 = g.bag.length, out = g.leaveCraft(); assert.strictEqual(g.gold - gold0, 40, "the island's gold"); assert.ok(g.bag.length >= bag0 + 1, "the find in the bag"); assert.strictEqual(out.gold, 40);
 });
 
+test("Claudecraft (v12.4): home through the gate, each kind lands as the main game's own (ore, bars, charcoal, meat, gold, finds) and the island's own stays; the merchant buys timber and stone by the stack; the builders' blocks are renown off the next build; a pick worn there is worn at home; on the island a potion is drunk and a ration or meat eaten", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-h", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  g.bag = g.bag.filter((it) => !["pick", "heal", "greaterheal", "mana", "ration"].includes(it.kind)); g.bag.push(CM.pick("iron")); const pick = g.bag[g.bag.length - 1];
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, S = cr.satchel, h = cr.hero, w = cr.walker; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  // a pick worn there is worn at home: the very same thing
+  const x = Math.floor(w.pos[0]) + 2, z = Math.floor(w.pos[2]), y = cr.world.top(x, z) + 3; cr.world.set(x, y, z, B.IRON_ORE); cr.target = [[x, y, z], null]; const p0 = pick.points; g.craftBreak(); assert.strictEqual(pick.points, p0 - 1);
+  // potions and food
+  h.hp = Math.max(1, h.max - 30); g.bag.push({ name: "Healing Potion", kind: "heal", power: 50, value: 20 }, { name: "Healing Potion", kind: "heal", power: 10, value: 20 });
+  const hp0 = h.hp; assert.strictEqual(g.craftDrink(), "heal"); assert.strictEqual(h.hp, Math.min(h.max, hp0 + 50), "the one that will do"); assert.strictEqual(g.bag.filter((i) => i.kind === "heal").length, 1);
+  h.hp = Math.max(1, h.max - 20); g.bag.push({ name: "Ration", kind: "ration", power: 0, value: 2 }); const r0 = h.hp; assert.strictEqual(g.craftEat(), "ration"); assert.ok(h.hp > r0);
+  S.add(108, 2); h.hp = Math.max(1, h.max - 20); const m0 = h.hp; assert.strictEqual(g.craftEat(), "meat"); assert.ok(h.hp > m0); assert.strictEqual(S.count(108), 1);
+  // home: each as the main game's own; the island's own stays
+  S.slots.fill(null); S.add(101, 3); S.add(112, 2); S.add(106, 1); S.add(109, 2); S.add(B.PLANKS, 40); S.add(B.COBBLE, 64); S.add(B.COBBLE, 30); S.add(B.DIRT, 50); S.add(121); S.add(B.TORCH, 5);
+  const L = g.craftLife(); L.gold = 25; L.loot.push(CM.makeItem(4, new CM.Random(9)));
+  const bag0 = g.bag.length, gold0 = g.gold; g.leaveCraft(); const got = g.bag.slice(bag0);
+  assert.strictEqual(got.filter((i) => i.kind === "ore" && i.ore === "copper").length, 3); assert.strictEqual(got.filter((i) => i.kind === "bar" && i.bar === "iron").length, 2); assert.strictEqual(got.filter((i) => i.kind === "charcoal").length, 1);
+  assert.strictEqual(got.filter((i) => i.kind === "meat" && i.meat === "Boar").length, 2, "meat for the cook"); assert.strictEqual(g.gold - gold0, 25); assert.ok(got.length >= 9, "and the find");
+  const K = g.village.craft.satchels[CM.craftKey(g.party[0])], has = (b) => K.reduce((t, s2) => t + (s2 && s2.b === b ? s2.n : 0), 0);
+  assert.strictEqual(has(B.PLANKS), 40); assert.strictEqual(has(B.TORCH), 5); assert.strictEqual(has(121), 1, "the island's own stay"); assert.strictEqual(has(101) + has(112) + has(109), 0);
+  // the merchant: by the stack of sixteen
+  const o = g.islandSellable(); assert.strictEqual(o.n, 40 + 94); assert.strictEqual(o.stacks, Math.floor(134 / 16));
+  const g1 = g.gold; g.sellIslandStone(); assert.strictEqual(g.gold - g1, o.stacks * CM.CH.stackGold); assert.strictEqual(g.islandSellable().n, 134 - o.stacks * 16);
+  // the builders: a hundred blocks, ten renown off the next build
+  S.slots.fill(null); const K2 = g.village.craft.satchels[CM.craftKey(g.party[0])]; for (let i = 0; i < 4; i++) K2[10 + i] = { b: B.DIRT, n: 64 };
+  const before = g.islandStock(CC.BUILDING); assert.ok(before >= 200); const msg = g.giveBuilders(); assert.ok(/renown/.test(msg)); const lots = Math.floor(before / 100); assert.strictEqual(g.builderCredit(), lots * CM.CH.builderRenown); assert.strictEqual(g.islandStock(CC.BUILDING), before - lots * 100);
+  const id = Object.keys(CM.VILLAGE).find((k) => CM.VILLAGE[k].costs && CM.VILLAGE[k].costs.length && g.villageLevel(k) < CM.VILLAGE[k].costs.length), cost = CM.VILLAGE[id].costs[g.villageLevel(id)];
+  const credit = g.builderCredit(), used = Math.min(credit, cost); g.village.renown = (g.village.spent || 0) + cost - used; assert.ok(g.renown() < cost);
+  assert.strictEqual(g.build(id), "", "built with the credit"); assert.strictEqual(g.builderCredit(), credit - used); assert.strictEqual(g.renown(), 0);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

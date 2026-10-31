@@ -13,6 +13,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    this.$("#btn-sell-island").addEventListener("click", () => { this.note(g.sellIslandStone()); this.fillBag(); });
     for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
       this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
         const w = which(), { rows, gold } = g.sellable(w);
@@ -42,6 +43,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
     for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";
+    { const o = g.islandSellable ? g.islandSellable() : { stacks: 0 }, b = this.$("#btn-sell-island"); b.style.display = shop && o.stacks ? "" : "none"; b.textContent = `Sell island timber and stone (${o.stacks * CM.CH.stack} for ${o.gold} gold)`; }
     this.$("#btn-sell-shown").textContent = (this.bagFilter || "all") === "all" ? "Sell everything" : `Sell all ${CM.BAG_FILTERS[this.bagFilter].name.toLowerCase()}`;
     const list = (el, head, items, selected, describe, onPick) => {
       el.innerHTML = `<div class="head">${head}</div>` + (items.length ? "" : `<div class="empty">Nothing here.</div>`);
