@@ -178,7 +178,8 @@ CM.TowerRun = class {
       const S = o.scale || 1, ax = Math.sin(this.yaw), az = -Math.cos(this.yaw), away = M.back - M.forward;
       const c = cell(o.x + ax * away, o.z + az * away);
       if (o.aura) out.push(Object.assign({}, cell(o.x, o.z), { layer: "shadow", flat: true, w: 1.2 * S, alpha: 0.9, glow: 0 }));
-      out.push(Object.assign(c, { layer: `monster:${o.kind}`, w: 0.85 * S, h: 0.85 * S * M.scaleY, tilt: M.tilt, skew: M.skew, alpha: M.alpha * (o.blink ? 0.4 : 1), flash: Math.max(M.flash, o.aura ? 0.18 + 0.1 * Math.sin(now / 250) : 0), shade: o.aura ? 1.25 : 1, lift: o.lift || 0 }));
+      const HS = Math.min(S, 1.12);                                       // (the ceiling is a square up: a boss grows wide, not through it)
+      out.push(Object.assign(c, { layer: `monster:${o.kind}`, w: 0.85 * (S + HS) / 2, h: 0.85 * HS * M.scaleY, tilt: M.tilt, skew: M.skew, alpha: M.alpha * (o.blink ? 0.4 : 1), flash: Math.max(M.flash, o.aura ? 0.18 + 0.1 * Math.sin(now / 250) : 0), shade: o.aura ? 1.25 : 1, lift: o.lift || 0 }));
     }
     for (const b of this.bolts) out.push(Object.assign(cell(b.x, b.z), { layer: b.layer, w: b.size || 0.22, h: b.size || 0.22, lift: 0.4, glow: 2, alpha: 1 }));
     for (const it of this.items) if (!it.taken) out.push({ x: it.x, y: it.y, layer: it.kind === "quiver" ? "fx:arrow" : "fx:holy", w: 0.45, h: 0.45, lift: 0.1, glow: 0.6 + 0.3 * Math.sin(now / 300 + it.x) });
@@ -231,6 +232,7 @@ Object.assign(CM.Game.prototype, {
     const won = this.bankTower(run);
     this.say(`Floor ${run.n} of the Mage Tower cleared${won.xp || won.gold ? `: ${won.xp} experience, ${won.gold} gold${won.things ? `, ${CM.plural(won.things, "thing")}` : ""}` : ""}.`);
     if (run.n === 10) this.achieve("tower10");
+    if (run.n >= CM.TOWER_FLOORS) { this.achieve("towerking"); this.remember && this.remember("tower", CM.TOWER_KING_LINES.fall, { floor: 0 }); }
     if (leave || run.n >= CM.TOWER_FLOORS) return this.leaveMageTower("cleared") ? "" : "";
     const next = new CM.TowerRun(this, run.heroIndex, run.n + 1);
     next.arrows = run.arrows; this.towerRun = next;

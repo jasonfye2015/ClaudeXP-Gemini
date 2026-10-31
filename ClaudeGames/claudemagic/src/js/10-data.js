@@ -853,6 +853,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  towerking: { name: "The Tower Falls Silent", what: "Defeat the King of the Tower", title: "Kingslayer of the Tower" },
   tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },
   tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
   champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },

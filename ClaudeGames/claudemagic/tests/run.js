@@ -3705,6 +3705,28 @@ test("the Mage Tower's ladder: shut while the boss stands; up to the next floor 
   assert.ok(fs.readFileSync(path.join(ROOT, "src", "js", "70-ui.js"), "utf8").includes("\"Mage Tower\", `floor ${t.towerBest}"), "on the card");
 });
 
+test("the King of the Tower: in his hall of pillars; he teleports every 1 to 15 seconds, never within three squares nor into a wall; he keeps his distance, casts bolts, a ring of fire, a summoning and a slowing curse; at half he speaks and quickens; his fall makes the dais the way out, with his circlet and a title", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("king-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); g.mode = "explore";
+  g.tower = { cleared: 39, best: 39 }; const mi = g.party.findIndex((h) => h.cls === "Mage"); g.enterMageTower(mi);
+  const r = g.towerRun, k = r.king, h = r.hero; h.hp = h.max = 1e6; assert.strictEqual(r.n, 40); assert.ok(k && k.king && k.boss && r.boss === k && k.scale > 1.5, "the King, on the fortieth");
+  assert.ok(r.events.some((e) => e.kind === "kingspeaks"), "he speaks first"); assert.ok(r.bossInSight() === k);
+  let last = r.t, waits = [], landed = 0, kinds = new Set(), slowed = false;
+  for (let i = 0; i < 60 * 120; i++) {
+    const tp0 = k.teleports || 0; r.update(1 / 60, {}); for (const e of r.events) if (e.kind === "kingcast") kinds.add(e.spell); r.events.length = 0;
+    if (r.slowT > 0) slowed = true;
+    if ((k.teleports || 0) > tp0) { waits.push(r.t - last); last = r.t; landed++; assert.ok(Math.hypot(k.x - r.x, k.z - r.z) >= CM.TK.tpNear - 0.4, "never close"); assert.ok(r.free(k.x, k.z, 0.3), "never in a wall"); }
+  }
+  assert.ok(landed >= 8, `he teleports (${landed} in two minutes)`); for (const w of waits) assert.ok(w >= CM.TK.tpMin - 0.05 && w <= CM.TK.tpMax + 0.05, `a wait of ${w.toFixed(2)}`);
+  for (const sp of ["bolt", "ring", "summon"]) assert.ok(kinds.has(sp), `he casts ${sp}`); assert.ok(kinds.has("curse") && slowed, "and slows the hero");
+  assert.ok(h.hp < 1e6, "his spells land");
+  k.m.hp = Math.floor(k.m.max / 2) - 1; r.update(1 / 60, {}); assert.ok(k.spoke && r.events.some((e) => e.kind === "kingspeaks"), "at half he speaks"); k.cd = 0; r.update(1 / 60, {}); assert.ok(k.cd <= CM.TK.castCd2 + 0.01, "and casts quicker");
+  r.fall(Object.assign(k, { m: Object.assign(k.m, { hp: 0 }) })); assert.ok(r.living().length === 0, "the hall is quiet"); assert.deepStrictEqual(r.fl.ladder, r.fl.dais, "the dais is the way out");
+  assert.ok(r.loot.some((it) => it.name === "The King's Circlet"));
+  r.x = r.fl.dais[0] + 0.5; r.z = r.fl.dais[1] + 0.5; assert.ok(r.atLadder()); assert.strictEqual(g.towerClimb(false), ""); assert.strictEqual(g.mode, "explore", "out of the doors");
+  assert.strictEqual(g.tower.cleared, 40); assert.ok(g.achievements.towerking, "the title"); assert.ok(g.bag.some((it) => it.name === "The King's Circlet"));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

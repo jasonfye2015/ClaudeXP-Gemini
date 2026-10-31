@@ -742,6 +742,10 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (ev.kind === "monshoot") { try { CM.audio.play("miss", 0.3); } catch (er) { /* */ } }
       else if (ev.kind === "dodge") { try { CM.audio.play("miss", 0.2); } catch (er) { /* */ } }
       else if (ev.kind === "bossdown") { game.say(`${ev.mon.name} falls. The ladder up is free - and it left ${ev.item.name} (${CM.itemLabel(ev.item)}).`); renderer.shake(0.6); try { CM.audio.play("toll", 0.6); } catch (er) { /* */ } ui.refresh(); }
+      else if (ev.kind === "kingspeaks") game.say(ev.line);
+      else if (ev.kind === "teleport") { fxs.burst({ at: ev.from, layer: "fx:force", n: 18, size: 0.08, speed: 1.8, up: 1.2 }); fxs.burst({ at: ev.to, layer: "fx:force", n: 18, size: 0.08, speed: 1.4, up: 1.4 }); try { CM.audio.play("spell", 0.5, 0, 0.6); } catch (er) { /* */ } }
+      else if (ev.kind === "kingcast") { try { CM.audio.play(ev.spell === "ring" ? "slam" : ev.spell === "summon" ? "elite" : "spell", 0.4); } catch (er) { /* */ } if (ev.spell === "curse") ui.tint("rgba(120,60,200,0.35)", 600); }
+      else if (ev.kind === "kingdown") { game.say(ev.line); game.say(`On the dais: ${ev.item.name}.`); renderer.shake(1); ui.tint("rgba(200,180,255,0.5)", 900); try { CM.audio.play("toll", 0.8); } catch (er) { /* */ } ui.refresh(); }
       else if (ev.kind === "pickup") { try { CM.audio.play("coin", 0.4); } catch (er) { /* */ } }
       else if (ev.kind === "fell") { setTimeout(() => { if (game.towerRun === run) { game.leaveMageTower("fell"); ui.refresh(); } }, 900); }
     }

@@ -141,7 +141,17 @@ achievement. After the fortieth, the doors stay shut.
 - **Tests**: clearing counts; leaving keeps it; coming back starts at the next floor; a fall counts nothing and
   carries the hero out; the save keeps it.
 
-## Phase 5 - The King of the Tower - v10.6 (content and mechanics; medium)
+## Phase 5 - The King of the Tower - v10.6 (content and mechanics; medium) - DONE
+
+As built (`64g-towerking.js`): the King is a kind of his own (in no pack; Crawl's deep elf annihilator in Pixel, a
+crowned and robed figure with a staff when drawn), four levels over the floor's, sixteen times the health. He keeps
+four to seven squares off, walks round the pillars to see the hero, and casts every 1.7 seconds (1.0 once hurt): a
+bolt (three at once once hurt), a ring of fire that grows out from where he stood and burns once as it passes unless a
+pillar stands between, two of the tower's own summoned beside him (four at most), and a curse that halves the hero's
+pace for three seconds. Every 1 to 15 seconds by his own dice he teleports to an open square three or more from the
+hero. He speaks on sight and at half. His fall quiets the hall, makes the dais the way out, and leaves the King's
+Circlet (+2 Intelligence and Wisdom, magic back twice as fast in the tower); the title "Kingslayer of the Tower". A boss
+grows wide rather than tall, so it is never cut by the ceiling.
 
 - **Floor 40's hall**: pillars to hide behind; the King on his dais. He walks, casts (a bolt of his own, a ring of
   fire that grows from him, a summoning of two of the tower's monsters, a curse that slows), and every 1 to 15 seconds

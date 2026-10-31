@@ -1420,6 +1420,12 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   tower the party can go home by the portal, sell, rest, and come back: the doors take the hero to the floor after the
   last one cleared. A fall puts the hero outside at one health, and the floor is lost.
 
+  The King of the Tower (v10.6): on the fortieth floor, in a hall of pillars, the King keeps his distance and casts -
+  bolts, a ring of fire that grows out from him (a pillar between you and it is safety), two of the tower's monsters
+  summoned at his side, a curse that slows - and every 1 to 15 seconds he is somewhere else in the hall, never close
+  (src/js/64g-towerking.js). At half his health he speaks and casts faster. His fall leaves the King's Circlet and a
+  title, and the dais takes the hero out.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1557,6 +1563,7 @@ The source
     64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
+    64g-towerking.js the King of the Tower
     64f-towerfoes.js the Mage Tower's monsters in real time, and the floor bosses
     64e-towerrun.js the Mage Tower inside: the real-time hero, bolts, spells, monsters and bosses
     61e-towerfloor.js the Mage Tower's forty floors
