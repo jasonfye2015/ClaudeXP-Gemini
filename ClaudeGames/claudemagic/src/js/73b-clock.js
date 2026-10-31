@@ -43,6 +43,14 @@ Object.assign(CM.UI.prototype, {
     slot.title = `The moon: ${CM.MOON_NAMES[D.phase]}, day ${D.moonDay} of ${CM.CLOCK.moon}${CM.MOON_DOES[D.phase] ? ` - ${CM.MOON_DOES[D.phase]}` : ""}`;
     el.dataset.phase = D.phase; el.dataset.sky = D.sky;
   },
+  // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
+  openMageTower() {
+    const g = this.game, box = this.$("#magetower-who"), note = this.$("#magetower-note");
+    box.innerHTML = g.towerChoices().map((c) => `<div class="recruit" style="grid-template-columns: 1fr auto"><div><b>${this.esc(c.name)}</b> the ${this.esc(c.cls)}${c.why ? `<br><small>${this.esc(c.why)}</small>` : ""}</div><div class="hire"><button data-tower-hero="${c.i}" ${c.why ? "disabled" : ""}>Go in</button></div></div>`).join("");
+    for (const b of box.querySelectorAll("[data-tower-hero]")) b.addEventListener("click", () => { const why = g.enterMageTower ? g.enterMageTower(Number(b.dataset.towerHero)) : "The doors stay shut. Inside, something is still being built."; note.textContent = why || ""; if (!why) { this.closeDialogs(); this.refresh(); } });
+    note.textContent = "";
+    this.openDialog("#dlg-magetower");
+  },
   // the Calendar: the moon's month, the seasons, the weather ahead and the year's festivals
   openCalendar() {
     const g = this.game, D = CM.dialOf(g), season = CM.season(g), f = CM.festival(g), month = new Date().getMonth(), today = CM.weather(g);

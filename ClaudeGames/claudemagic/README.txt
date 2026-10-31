@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Mage Tower (the twelfth big update - v10.1 to v11.0)
+  UPGRADE_PLAN_10.md says what each phase does.
+  The portal yard and the tower (v10.1): in the Keep-yard by the shaft, a portal yard - a lit portal to the Mage Tower,
+  and two dark plinths waiting for challenges to come. The tower stands in a clearing north of the fields: black and
+  grey stone, seven stories, narrow violet windows, a slate cone, and two great dark doors, with dark shrubs and fog
+  about its foot (src/js/61d-magetower.js). A portal by its door goes home. At the doors the party chooses who goes in
+  alone: a caster (Mage, Necromancer, Druid, Cleric, Bard, Artificer) or anyone with a bow or a crossbow.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1529,6 +1537,7 @@ The source
     64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
+    61d-magetower.js the Mage Tower outside: the portal yard, the tower in the Wood, who may go in
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
     61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions
     46-air.js     the air: dust, drips, embers, spores, rain, snow, leaves, birds, clouds and smoke about the party

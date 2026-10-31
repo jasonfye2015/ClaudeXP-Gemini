@@ -113,6 +113,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
+  game.on("magetower", () => ui.openMageTower());                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
   game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
@@ -334,7 +335,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (fl.number === 0) chimneys = CM.chimneysOf(fl).map((c) => [c.x, c.z, c.top]); }   // (the smoke from the chimneys' own tops)
     const surface = fl.number === 0 || fl.number === -1, detail = Object.keys(CM.DETAIL).find((k) => CM.DETAIL[k] === renderer.density) || "medium";   // (the Detail in force, after any step-down)
     const budget = CM.AIR_BUDGET[detail] || 0, weather = surface ? CM.weather(game) : "clear";
-    const kinds = budget ? CM.airKinds({ surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
+    const towerNear = fl.number === -1 && Math.abs(fl.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(fl.pos[1] - CM.MAGE_TOWER.at[1]) <= 9;
+    const kinds = budget ? CM.airKinds({ towerNear, surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
     const scale = detail === "high" ? 1 : 0.6;
     air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
   }
@@ -446,6 +448,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
+      else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
+      else if (thing.type === "magedoor") { /* the doors are the tower's own, in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -511,6 +516,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (dc.kind === "fungus") out.push({ x: dc.x, y: dc.y, layer: "fungus", flat: true, w: 0.9, glow: 0.6 + 0.2 * Math.sin(now / 700 + dc.x + dc.y) });
       else if (dc.kind === "crystal") out.push({ x: dc.x, y: dc.y, layer: "crystal", w: 0.7, h: 0.9, glow: 0.55 + 0.25 * Math.sin(now / 500 + dc.x * 1.7) });
       else if (dc.kind === "root") out.push({ x: dc.x, y: dc.y, layer: "root", w: 0.9, h: 0.95 });
+      else if (dc.kind === "darkshrub") out.push({ x: dc.x, y: dc.y, dx: ((dc.x * 37 + dc.y * 11) % 30 - 15) / 100, dz: ((dc.x * 13 + dc.y * 29) % 30 - 15) / 100, layer: "prop:shrub", w: 1.0, h: 0.9, shade: 0.32 });   // (dark shrubs about the Mage Tower)
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
@@ -747,7 +753,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
-        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
+        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);

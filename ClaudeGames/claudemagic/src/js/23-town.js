@@ -103,6 +103,7 @@ CM.makeTown = function (seed) {
   for (const [tx, ty] of CM.TOWN_TOWERS || []) kinds[key(tx, ty)] = "tower";   // the gate towers, their stairs at their feet, and the postern (61c-tower.js)
   for (const k of Object.keys(CM.TOWER_STAIRS || {})) if (!things[k]) things[k] = { type: "towerstair" };
   if (CM.TOWN_POSTERN && !things[key(...CM.TOWN_POSTERN)]) things[key(...CM.TOWN_POSTERN)] = { type: "postern" };
+  if (CM.layPortalYard) CM.layPortalYard({ things });                    // the portal yard by the shaft (61d-magetower.js)
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   const [sx0, sy0, sx1, sy1] = CM.TOWN_SQUARE, [yx0, yy0, yx1, yy1] = CM.TOWN_YARD;
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, decor: [], special: "town", solidDefault: "tree", kinds, ground,

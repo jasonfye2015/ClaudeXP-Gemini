@@ -44,6 +44,7 @@ CM.Air = class {
       case "snow": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.8, y: 1.2 + r() * 1.6, vy: -0.5 - r() * 0.3, swayAmp: 0.35, windy: 0.5, life: 7, size: 0.03 + r() * 0.035, glow: 2, top: 3.2 }); }
       case "cloud": { const a = r() * Math.PI * 2, d = 40 + r() * 30; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 22 + r() * 10, vx: 0.6, life: 160, size: 9 + r() * 7, h: 0.45, alpha: 0.85, glow: 2, far: true, top: 60 }); }
       case "bird": { const a = r() * Math.PI * 2, d = 35 + r() * 20, s = 3 + r() * 2; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 12 + r() * 8, vx: -Math.sin(a) * s, vz: Math.cos(a) * s, life: 25, size: 0.7, far: true, top: 40, flap: true }); }
+      case "fog": { const [x, z] = around(); return Object.assign(base, { x, z, y: 0.05 + r() * 0.4, vy: 0.02, windy: 0.3, swayAmp: 0.08, life: 8 + r() * 5, size: 0.9 + r() * 0.7, grow: 0.05, alpha: 0.32, top: 2 }); }
       case "smoke": { const ch = (env.chimneys || [])[Math.floor(r() * (env.chimneys || []).length)]; if (!ch) return null; return Object.assign(base, { x: ch[0] + (r() - 0.5) * 0.1, z: ch[1] + (r() - 0.5) * 0.1, y: (ch[2] || 2.05) + 0.03, vy: 0.35, windy: 0.4, swayAmp: 0.1, life: 6, size: 0.3, grow: 0.18, alpha: 0.8, top: 6 }); }
       default: return null;
     }
@@ -77,9 +78,10 @@ CM.art.airPicture = function (id) {
     case "snow": dot("#FFFFFF", S * 0.34); break;
     case "cloud": { p.fillStyle = "#F2F4F8"; for (const [x, y, r] of [[0.3, 0.6, 0.22], [0.5, 0.45, 0.28], [0.7, 0.6, 0.22], [0.5, 0.68, 0.24], [0.18, 0.7, 0.14], [0.84, 0.7, 0.14]]) { p.beginPath(); p.arc(S * x, S * y, S * r, 0, Math.PI * 2); p.fill(); } p.fillStyle = "rgba(170,180,200,1)"; p.fillRect(S * 0.08, S * 0.78, S * 0.84, S * 0.06); break; }
     case "bird": p.strokeStyle = "#2A2A30"; p.lineWidth = 6; p.lineCap = "round"; p.beginPath(); p.moveTo(S * 0.08, S * 0.35); p.quadraticCurveTo(S * 0.3, S * 0.2, S / 2, S * 0.55); p.quadraticCurveTo(S * 0.7, S * 0.2, S * 0.92, S * 0.35); p.stroke(); break;
+    case "fog": { const g = p.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2); g.addColorStop(0, "rgba(170,172,186,0.9)"); g.addColorStop(1, "rgba(170,172,186,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); break; }
     case "smoke": { const rnd = new CM.Random(5), img = p.createImageData(S, S); for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const d = Math.hypot(x - S / 2, y - S / 2) / (S / 2), k = Math.max(0, 1 - d), i = (y * S + x) * 4; img.data[i] = 150; img.data[i + 1] = 150; img.data[i + 2] = 156; img.data[i + 3] = k > 0.45 || rnd.next() < k * 2.2 ? 255 : 0; } p.putImageData(img, 0, 0); break; }
     default: break;
   }
   return c;
 };
-CM.art.AIR = ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke"];
+CM.art.AIR = ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke", "fog"];
