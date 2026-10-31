@@ -13,6 +13,8 @@ CM.SOLID = {
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
   tower: { face: "solid:townwall", h: 2.3, tower: true },
+  cabin: { face: "solid:logs", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs" },        // Leshy's cabin (61f-cabin.js): logs all round
+  cabindoor: { face: "solid:cabindoor", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs", door: true },
   magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
@@ -24,7 +26,7 @@ CM.SOLID = {
 // roof and a block is one wide one: [{ x0, y0, x1, y1 (cells, inclusive), along: "x" | "z" (the ridge), h (the walls),
 // rise (the ridge over the walls), overhang }]. CM.roofAt says how high a building's roof is over a point, and
 // CM.chimneysOf where its chimneys stand (and the smoke starts). Plain arithmetic, so the tests can check it.
-CM.BUILDING_KINDS = ["house", "door", "shop"];
+CM.BUILDING_KINDS = ["house", "door", "shop", "cabin", "cabindoor"];
 CM.ROOF = { overhang: 0.16, gableOverhang: 0.1, pitch: 0.62, minRise: 0.45, maxRise: 1.25 };
 CM.isBuilding = (fl, x, y) => CM.inBounds(fl, x, y) && fl.grid[y][x] !== 0 && CM.BUILDING_KINDS.includes(CM.solidAt(fl, x, y));
 CM.buildingsOf = function (fl) {
@@ -69,7 +71,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -222,13 +224,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind];
       // a door or a shop shows its face once, toward the open square that has the building behind it
       let front = -1;
-      if (kind !== "house") FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy) && CM.isBuilding(fl, x - dx, y - dy)) front = d; });
-      if (kind !== "house" && front < 0) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy)) front = d; });
+      const doorish = ["door", "shop", "cabindoor"].includes(kind);
+      if (doorish) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy) && CM.isBuilding(fl, x - dx, y - dy)) front = d; });
+      if (doorish && front < 0) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy)) front = d; });
       FACES.forEach(([dx, dy, shade], d) => {
         if (CM.isBuilding(fl, x + dx, y + dy)) return;                                // (inside the building)
         const a = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
-        const layer = d === front ? L(K.face) : L("solid:house"), h = K.h;
+        const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade);
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 10 < 7) {   // a window lit for the night
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
@@ -266,10 +269,10 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
       for (const u of [U0, U1]) {                                                     // the gable ends: plaster and timber up to the ridge, a strip a square
         const cuts = [V0]; for (let v = V0 + 1; v < V1; v++) cuts.push(v); if (!cuts.includes(mid)) cuts.push(mid); cuts.push(V1); cuts.sort((p, q) => p - q);
-        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0;
+        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0, BK = CM.SOLID[CM.solidAt(fl, B.x0, B.y0)] || {}, gableL = BK.gable ? L(BK.gable) : gable;
         for (let i = 0; i + 1 < cuts.length; i++) {
           const va = cuts[i], vb = cuts[i + 1], ua = (va - Math.floor(va)), ub = vb - Math.floor(va) > 1 ? 1 : vb - Math.floor(va);
-          poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gable, shade);
+          poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gableL, shade);
         }
       }
     }

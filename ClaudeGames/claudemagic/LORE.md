@@ -131,6 +131,15 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## Leshy's cabin (v11.1)
+
+Leshy is not of Caer Duin and does not say where he is from. The woodcutters say the cabin was empty for years and then
+was not; the burner says the man in it buys nothing, sells nothing, and has a card for every creature in the Wood and a
+few that are not. He plays anyone who sits down, wears other people's faces when he deals (the Prospector, the Angler,
+the Trapper: names no one in the town knows), and keeps the Moon for last. He has never asked anyone what happened in
+the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
+in short lines, and never about himself.
+
 ## The Mage Tower (v10.1 to v11.0)
 
 The tower in the Wood is older than the shaft and has nothing to do with the king. It was built by the College that

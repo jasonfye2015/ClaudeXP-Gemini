@@ -83,7 +83,8 @@ CM.makeWood = function (seed) {
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground,
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
-  if (CM.layMageTower) CM.layMageTower(fl);                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
+  if (CM.layMageTower) CM.layMageTower(fl);
+  if (CM.layCabin) CM.layCabin(fl);                                      // Leshy's cabin (61f-cabin.js; laid last)                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
   CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
@@ -98,6 +99,7 @@ CM.woodPlace = function (fl, x, y) {
   if (fl.ford && x === fl.ford[0] && y === fl.ford[1]) return "the ford";
   if (fl.bridge && x === fl.bridge[0] && y === fl.bridge[1]) return "the bridge";
   if (CM.LAND_ROAD.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) return "the road";
+  if (CM.CABIN && x === CM.CABIN.path[0] && y >= CM.CABIN.path[1] && y <= CM.CABIN.path[3]) return "the cabin path";
   if (CM.POSTERN_PATH && x === CM.POSTERN_PATH[0] && y >= CM.POSTERN_PATH[1] && y <= CM.POSTERN_PATH[3]) return "the cliff path";
   const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
   if (room) return room.name;
@@ -116,7 +118,7 @@ CM.wayPlaces = function (game) {
     add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
     add("The portal yard", ...CM.PORTAL_YARD.tower, true); add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
   } else {
-    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true);
+    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true); add("Leshy's cabin", ...CM.CABIN.front, true);
     const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
     if (farm) add("The farm", ...farm.split(",").map(Number), true);
     add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
@@ -124,7 +126,7 @@ CM.wayPlaces = function (game) {
   }
   return out;
 };
-CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "Leshy's cabin", "the cabin path", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end

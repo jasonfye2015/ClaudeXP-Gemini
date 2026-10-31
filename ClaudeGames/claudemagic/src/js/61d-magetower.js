@@ -49,7 +49,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
-  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = { type: "plinth" };
+  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = P.cabin && p === P.cabin ? { type: "portal", to: "cabin" } : { type: "plinth" };   // (the first plinth lit: to Leshy's cabin)
   return fl;
 };
 
@@ -58,7 +58,8 @@ Object.assign(CM.Game.prototype, {
   usePortal(t) {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
-    if (t.to === "town") { this.enterFloor(0, "rope", CM.PORTAL_YARD.tower.slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
+    if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
+    if (t.to === "town") { this.enterFloor(0, "rope", (this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - CM.CABIN.portal[0]) + Math.abs(this.floor.pos[1] - CM.CABIN.portal[1]) <= 1 ? CM.PORTAL_YARD.cabin : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
     return false;
   },
   // the tower's doors: the choice of who goes in (the dialog is the window's); the rules say who may

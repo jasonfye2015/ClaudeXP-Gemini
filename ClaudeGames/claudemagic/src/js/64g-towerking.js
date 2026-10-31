@@ -90,6 +90,7 @@ Object.assign(CM.TowerRun.prototype, {
     this.fl.ladder = this.fl.dais.slice();
     const it = { name: "The King's Circlet", base: "The King's Circlet", kind: "helm", slot: "helm", power: 4, value: 3000, props: { relic: true, stats: { int: 2, wis: 2 }, towerRegen: 1 }, unknown: false };
     this.loot.push(it);
+    if (this.game.findCard) { this.game.findCard("towerking:1", 1, "rare", "Beside the circlet:"); this.game.findCard("towerking:2", 1, "rare", "And another:"); }
     this.events.push({ kind: "kingdown", mon: o, item: it, line: CM.TOWER_KING_LINES.fall });
   }; }
 // the circlet: magic comes back twice as fast in the tower
