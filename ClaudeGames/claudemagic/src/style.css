@@ -796,3 +796,21 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* The Gilded Cascade (76p-cascade.js) */
 .cascade .cswrap { display: flex; gap: 16px; align-items: flex-start; } .cascade .cscanvas { width: 470px; height: 504px; border-radius: 12px; border: 5px solid #6A4A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); cursor: crosshair; }
 .cascade .cside { flex: 1; min-width: 260px; } .cascade .cscup { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+
+/* The Lexicon Engine (76q-lexicon.js): a green glass screen */
+.lexicon .lxlevels { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0 10px; } .lexicon .lxlevels button { min-width: 38px; }
+.lexicon .crt { position: relative; padding: 14px; border-radius: 26px; background: linear-gradient(145deg, #8A6A2A, #4A3410 60%, #2A1C08); box-shadow: 0 10px 24px rgba(0,0,0,0.7), inset 0 2px 4px rgba(255,230,160,0.4); }
+.lexicon .crtglass { border-radius: 38px / 30px; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #0E2A14, #031006 75%); box-shadow: inset 0 0 50px rgba(0,0,0,0.9), inset 0 0 8px rgba(80,255,120,0.25); }
+.lexicon .crtscreen { position: relative; padding: 14px 26px; min-height: 0; color: #4CFF7A; font: bold 12.5px/1.22 "Courier New", Consolas, monospace; text-shadow: 0 0 5px rgba(80,255,120,0.75), 0 0 1px #B0FFC0; animation: lxflick 4s infinite steps(1); user-select: none; }
+@keyframes lxflick { 0% { opacity: 1; } 47% { opacity: 0.94; } 48% { opacity: 1; } 83% { opacity: 0.97; } }
+.lexicon .crtscan { position: absolute; inset: 14px; border-radius: 38px / 30px; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.25) 0 1px, transparent 1px 3px); }
+.lexicon .crtroll { position: absolute; left: 22px; right: 22px; top: 22px; height: 80px; pointer-events: none; background: linear-gradient(rgba(120,255,150,0), rgba(120,255,150,0.06), rgba(120,255,150,0)); animation: lxroll 6s linear infinite; }
+@keyframes lxroll { from { transform: translateY(-80px); } to { transform: translateY(460px); } }
+.lexicon .lxhead { margin-bottom: 8px; min-height: 4.9em; } .lexicon .tries { letter-spacing: 3px; }
+.lexicon .lxbody { display: flex; gap: 22px; } .lexicon .lxmem { display: flex; gap: 22px; } .lexicon .lxrow { white-space: pre; } .lexicon .lxrow .ad { opacity: 0.8; }
+.lexicon .lxrow span[data-i] { cursor: pointer; } .lexicon .lxrow span.lit { background: #4CFF7A; color: #031006; text-shadow: none; }
+.lexicon .lxlog { flex: 1; min-width: 150px; display: flex; flex-direction: column; justify-content: flex-end; } .lexicon .cur { display: inline-block; width: 9px; height: 15px; background: #4CFF7A; vertical-align: -2px; animation: lxblink 1s steps(1) infinite; } @keyframes lxblink { 50% { opacity: 0; } }
+
+/* The Mana Conduit (76r-conduit.js) */
+.conduit .lxlevels { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0 10px; } .conduit .lxlevels button { min-width: 38px; }
+.conduit .cdwrap { display: flex; justify-content: center; } .conduit .cdcanvas { max-width: 100%; max-height: calc(94vh - 330px); border-radius: 8px; border: 5px solid #4A3420; box-shadow: 0 8px 18px rgba(0,0,0,0.7); cursor: pointer; }

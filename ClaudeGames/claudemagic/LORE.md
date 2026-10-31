@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Lexicon Engine and the Mana Conduit (v13.6)
+
+An artificer left a brass case with a green glass screen in the Joker's corner against a debt, and the house lets
+anyone who can talk their way into it keep what it pays out; it answers every wrong word with how near it came, which
+the regulars find either kind or cruel. Beside it the attendant keeps a slate with a font of mana set in it that opens
+whether you are ready or not, and a rack of brass conduit to lay a way for it.
+
 ## Runestack and the Gilded Cascade (v13.5)
 
 By the wall of the Joker stands a tall glass case of black water, and rune-stones sink through it by themselves; fill a

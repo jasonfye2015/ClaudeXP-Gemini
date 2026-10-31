@@ -4683,6 +4683,51 @@ test("the Gilded Cascade: a shelf of coins from the seed, kept between visits; a
   assert.ok(back / into > 0.75 && back / into < 1.3, `returned ${(back / into).toFixed(2)}`);
 });
 
+test("the Lexicon Engine: a memory of symbols with the level's words hidden in it, the password among them; a word's likeness answered; tries run out and it locks; a clean bracket pair takes a dud or gives the tries back; ten levels, longer words, more of them, fewer tries late; gold and a card the first time each is cracked, and never again", () => {
+  const CM = load(), LX = CM.LX;
+  for (let lv = 1; lv <= 10; lv++) { const P = new LX.Puzzle(lv, 40 + lv), [len, n, tries] = LX.LEVELS[lv - 1];
+    assert.strictEqual(P.words.length, n, `level ${lv} words`); assert.ok(P.words.every((w) => w.w.length === len)); assert.ok(P.words.some((w) => w.w === P.answer)); assert.strictEqual(P.tries, tries);
+    for (const w of P.words) assert.strictEqual(P.chars.slice(w.at, w.at + len).join(""), w.w, "laid in the memory");
+    for (const b of P.brackets) { const inner = P.chars.slice(b.a + 1, b.b).join(""); assert.ok(!/[A-Z]/.test(inner), "only symbols between"); assert.strictEqual("([{<".indexOf(P.chars[b.a]), ")]}>".indexOf(P.chars[b.b])); } }
+  assert.strictEqual(LX.likeness("CANDLE", "CASTLE"), 4);
+  const P = new LX.Puzzle(3, 9), dud = P.words.find((w) => w.w !== P.answer).w, r = P.choose(dud); assert.strictEqual(r.like, LX.likeness(dud, P.answer)); assert.strictEqual(P.tries, LX.LEVELS[2][2] - 1);
+  if (P.brackets.length) { const before = P.removed.size, t0 = P.tries, b = P.bracket(P.brackets[0]); assert.ok(b.dud ? P.removed.size === before + 1 : P.tries === P.maxTries && t0 < P.maxTries); assert.strictEqual(P.bracket(P.brackets[0]), null, "once"); }
+  while (P.stage === "play") { const w = P.words.find((x) => x.w !== P.answer && !P.removed.has(x.w)); if (!w) break; P.choose(w.w); } if (P.stage === "play") P.tries = 0;
+  const L = new LX.Puzzle(1, 3); for (const w of L.words.filter((x) => x.w !== L.answer).slice(0, 4)) L.choose(w.w); assert.strictEqual(L.stage, "locked");
+  // rewards, once a level; levels open in order
+  const g = new CM.Game(); g.newGame("lx-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0);
+  assert.ok(g.lxStart(2).error, "locked"); let Z = g.lxStart(1); Z.choose(Z.answer); const gold0 = g.gold, o0 = owned(); let pr = g.lxCracked(); assert.strictEqual(pr.gold, LX.gold(1)); assert.strictEqual(g.gold, gold0 + LX.gold(1)); assert.strictEqual(owned(), o0 + 1);
+  Z = g.lxStart(1); Z.choose(Z.answer); pr = g.lxCracked(); assert.ok(pr.again); assert.strictEqual(owned(), o0 + 1, "not twice"); assert.ok(!g.lxStart(2).error);
+  for (let lv = 2; lv <= 10; lv++) { const Q = g.lxStart(lv); Q.choose(Q.answer); pr = g.lxCracked(); if (lv === 6) assert.ok(CM.CARD_BETTER.includes(pr.card)); }
+  assert.ok(CM.CARD_RARES.includes(pr.card), "a rare at ten"); assert.strictEqual(g.lxStore().best, 10);
+});
+
+test("the Mana Conduit: a level's slate from the seed with the font, rubble and (from six) a drain; pieces laid from the rack, a dry one swapped; the font opens after the wait and the mana runs piece by piece; a crossing run both ways counts twice; an open end spills; enough pieces passed wins; gold and a card the first time a level is done", () => {
+  const CM = load(), CD = CM.CD, a = new CD.Board(4, 7), b = new CD.Board(4, 7);
+  assert.strictEqual(JSON.stringify(a.grid), JSON.stringify(b.grid)); assert.strictEqual(a.queue.join(), b.queue.join(), "the seed's");
+  assert.strictEqual(a.grid.flat().filter((c) => c && c.kind === "rubble").length, CD.LEVELS[3][5]); assert.ok(!a.drain && new CD.Board(6, 3).drain, "a drain from six");
+  // a straight run: the font at (1,1) facing east on a clear slate
+  const B = new CD.Board(1, 2); B.grid = Array.from({ length: B.rows }, () => Array(B.cols).fill(null)); B.grid[1][1] = { kind: "font", out: "E" }; B.font = [1, 1, "E"]; B.need = 3;
+  B.queue = ["H", "H", "X", "SW", "V"]; assert.ok(B.place(2, 1)); assert.ok(B.place(3, 1)); assert.ok(B.place(4, 1)); assert.ok(!B.place(1, 1), "not on the font");
+  B.queue[0] = "NE"; assert.ok(B.place(4, 1)); assert.strictEqual(B.grid[1][4].p, "NE", "a dry piece swapped"); B.queue[0] = "X"; B.place(4, 1);
+  assert.strictEqual(B.stage, "build"); B.update(B.wait + 0.01); assert.strictEqual(B.stage, "flow");
+  for (let k = 0; k < 3; k++) B.update(B.fill + 0.01); assert.strictEqual(B.passed, 3); assert.ok(B.grid[1][2].wet && B.grid[1][4].wet); B.update(B.fill + 0.01); assert.strictEqual(B.stage, "done"); assert.ok(B.won, "spilled after enough: won"); assert.strictEqual(B.why, "spill");
+  // a crossing both ways counts twice: a loop through an X
+  const X = new CD.Board(1, 5); X.grid = Array.from({ length: X.rows }, () => Array(X.cols).fill(null)); X.grid[2][1] = { kind: "font", out: "E" }; X.font = [1, 2, "E"]; X.need = 20;
+  const lay = [[2, 2, "X"], [3, 2, "SW"], [3, 3, "NW"], [2, 3, "NE"]]; for (const [x, y, k] of lay) X.grid[y][x] = { kind: "pipe", p: k, wet: 0 };
+  X.grid[1][2] = { kind: "pipe", p: "V", wet: 0 }; X.update(X.wait + 0.01); for (let k = 0; k < 8 && X.stage === "flow"; k++) X.update(X.fill + 0.01);
+  assert.strictEqual(X.grid[2][2].wet, 2, "the crossing twice"); assert.ok(X.passed >= 6); assert.ok(!X.won);
+  // a drain ends it
+  const D = new CD.Board(1, 6); D.grid = Array.from({ length: D.rows }, () => Array(D.cols).fill(null)); D.grid[1][1] = { kind: "font", out: "E" }; D.font = [1, 1, "E"]; D.grid[1][3] = { kind: "drain", in: "W" }; D.need = 1; D.grid[1][2] = { kind: "pipe", p: "H", wet: 0 };
+  D.update(D.wait + 0.01); D.update(D.fill + 0.01); D.update(D.fill + 0.01); assert.ok(D.won && D.drained);
+  // rewards
+  const g = new CM.Game(); g.newGame("cd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  assert.ok(g.cdStart(2).error); let L = g.cdStart(1); L.stage = "done"; L.won = true; L.drained = false; const gold0 = g.gold; let r = g.cdDone(); assert.strictEqual(r.gold, CD.gold(1)); assert.strictEqual(g.gold, gold0 + CD.gold(1)); assert.strictEqual(owned(), o0 + 1);
+  L = g.cdStart(1); L.stage = "done"; L.won = true; r = g.cdDone(); assert.ok(r.again); assert.strictEqual(owned(), o0 + 1);
+  L = g.cdStart(2); L.stage = "done"; L.won = false; L.passed = 3; r = g.cdDone(); assert.ok(!r.won); assert.strictEqual(g.cdStore().best, 1);
+  L = g.cdStart(2); L.stage = "done"; L.won = true; L.drained = true; r = g.cdDone(); assert.strictEqual(r.gold, Math.round(CD.gold(2) * 1.2), "a fifth more for the drain");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
