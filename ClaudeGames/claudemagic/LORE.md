@@ -140,6 +140,14 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gilded Joker (v11.5)
+
+The house east of the Square was a cloth-merchant's until the merchant lost it at cards, to a woman who came up the
+hill with a deck that hummed. She painted it red, gilded what would take gilding, and hung out a sign of three cards.
+Nobody in Caer Duin knows where she learned the game she deals - Claudeatro, she calls it - and she will not say,
+though she keeps a book of every player's hands and lets them play with what they have earned. The priest disapproves.
+The chronicler plays on Thursdays.
+
 ## The Fortress (v11.4)
 
 The keep north of the cabin was the queen's, before the city was moved up the hill: a muster-house for the men who

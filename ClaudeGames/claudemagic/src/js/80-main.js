@@ -446,7 +446,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "peddler") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85, glow: 0.3 });
       else if (thing.type === "building") {                            // the house is the block behind the doorway; what stands in the doorway says its level: a foundation, a frame, or the sign over the door
         const P = CM.TOWN_PLOTS[thing.id] || {}, V = P.village ? CM.VILLAGE[P.village] : null, lvl = CM.plotLevel(game, thing.id), stage = P.always && !V ? 4 : CM.houseStage(lvl, V ? V.costs.length : 1);
-        const face = CM.DIRS.findIndex(([dx, dy]) => ["door", "shop"].includes(CM.solidAt(fl, x + dx, y + dy)));
+        const face = CM.DIRS.findIndex(([dx, dy]) => ["door", "shop", "casinodoor"].includes(CM.solidAt(fl, x + dx, y + dy)));
         if (stage <= 1) out.push({ x, y, layer: stage ? "house1" : "foundation", w: 0.9, h: 0.9 });
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }

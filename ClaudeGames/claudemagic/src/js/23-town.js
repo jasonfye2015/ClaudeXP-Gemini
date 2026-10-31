@@ -21,6 +21,7 @@ CM.TOWN_PLOTS = {
   temple: { name: "The Temple", village: "shrine", what: "The shrine of the fallen: candles, the Patriarch's history, the priest's services." },
   guildhall: { name: "The Guildhall", village: "guildhall", what: "The trainers, the second calling, the week's contracts." },
   chronicler: { name: "The Chronicler's House", village: null, what: "The films, the statistics, the ledger and the Hall of Fame, under a roof." },
+  casino: { name: "The Gilded Joker", village: null, always: true, what: "Claudeatro for gold or for nothing; the house keeps a book of your unlocks (76e-casino.js)." },
 };
 CM.TOWN_SIZE = 45;
 // the blocks: each plot's house [x0, y0, x1, y1] and the door cell cut into its street side; the shops wear a board over the door
@@ -34,6 +35,7 @@ CM.TOWN_BLOCKS = {
   library: { rect: [17, 9, 19, 12], door: [19, 10] },
   temple: { rect: [18, 4, 22, 7], door: [20, 7] },
   chronicler: { rect: [27, 22, 29, 24], door: [28, 22] },
+  casino: { rect: [25, 10, 29, 14], door: [27, 14], kind: "casino" },   // the Gilded Joker: red and gold, taller than its neighbours (64k-claudeatro.js)
 };
 CM.TOWN_HOUSES = [[11, 20, 15, 21], [8, 24, 10, 26], [4, 24, 6, 26], [21, 9, 23, 12], [17, 29, 19, 31], [21, 29, 23, 31], [27, 17, 29, 19], [10, 16, 12, 18]];   // the townsfolk's
 CM.TOWN_STREETS = {                                                       // [x0, y0, x1, y1] of dirt, by name (the compass says where the party stands)
@@ -42,6 +44,7 @@ CM.TOWN_STREETS = {                                                       // [x0
   "Shaft Lane": [[24, 20, 31, 21]],
   "Temple Row": [[20, 8, 20, 16]],
   "Smiths' Lane": [[20, 24, 20, 32]],
+  "Gilded Row": [[26, 15, 27, 15], [26, 16, 26, 19]],                  // (from Shaft Lane up to the Gilded Joker's doors)
 };
 CM.TOWN_SQUARE = [17, 17, 23, 23];
 CM.TOWN_YARD = [32, 17, 38, 23];                                          // the Keep-yard, walled, open to Shaft Lane at its west side
@@ -49,7 +52,7 @@ CM.TOWN_HEDGES = [[3, 27, 6, 27], [12, 27, 14, 28], [24, 29, 25, 31], [15, 29, 1
 CM.TOWN_FENCES = [[8, 27, 10, 27], [30, 22, 30, 24], [9, 20, 10, 21], [13, 18, 15, 18]];
 // where each door is (x, y), and the town's other places - the tests and the bot read these by name
 CM.TOWN_AT = { home: [5, 22], shaft: [35, 20], well: [18, 18], market: [22, 18], cross: [20, 22], woodgate: [2, 19],
-  tavern: [18, 16], merchant: [22, 16], smith: [18, 24], garden: [13, 24], library: [19, 10], temple: [20, 7], guildhall: [22, 24], chronicler: [28, 22] };
+  tavern: [18, 16], merchant: [22, 16], smith: [18, 24], garden: [13, 24], library: [19, 10], temple: [20, 7], guildhall: [22, 24], chronicler: [28, 22], casino: [27, 14] };
 CM.TOWN_SIGNS = [                                                        // the signposts, on the grass beside the junctions
   { at: [7, 21], text: "LANTERN STREET, east: the Square, the Hanged Lantern, the Merchant's House. GATE LANE, north and west: the West Gate, the road, the farm and the Deep Wood." },
   { at: [16, 21], text: "THE SQUARE. North by Temple Row: the Library, the Temple. South by Smiths' Lane: the Smith's forge, the Guildhall. East by Shaft Lane: the Chronicler's House, the Keep-yard and the shaft." },
@@ -80,12 +83,12 @@ CM.makeTown = function (seed) {
   open(2, 19, "dirt"); open(1, 19, "dirt"); open(0, 19, "dirt");
   // the blocks: the plots' houses with a door cell each, and the townsfolk's
   for (const [id, B] of Object.entries(CM.TOWN_BLOCKS)) {
-    rect(B.rect, (x, y) => solid(x, y, "house"));
+    rect(B.rect, (x, y) => solid(x, y, B.kind || "house"));
     const [dx, dy] = B.door;
     open(dx, dy, "flags");
     things[key(dx, dy)] = { type: "building", id };
     const street = CM.DIRS.find(([ox, oy]) => grid[dy + oy] && grid[dy + oy][dx + ox] === 0 && !things[key(dx + ox, dy + oy)]);   // the way out of the doorway
-    if (street) { const bx = dx - street[0], by = dy - street[1]; if (kinds[key(bx, by)] === "house") kinds[key(bx, by)] = B.shop ? "shop" : "door"; }
+    if (street) { const bx = dx - street[0], by = dy - street[1]; if (kinds[key(bx, by)] === (B.kind || "house")) kinds[key(bx, by)] = B.kind ? `${B.kind}door` : B.shop ? "shop" : "door"; }
   }
   for (const r of CM.TOWN_HOUSES) rect(r, (x, y) => solid(x, y, "house"));
   for (const r of CM.TOWN_HEDGES) rect(r, (x, y) => solid(x, y, "hedge"));

@@ -1208,6 +1208,29 @@ CM.art.cliff = function (seed = 1) {
 // Claudeita's crag: grey rock in ledges, moss on its brow; the mouth's face a low dark arch with a forge-glow far down
 // the Fortress: black ashlar in long courses (the face is stretched three times its width up a wall, so the courses are
 // drawn short), and its doors - each half of a great arched pair of dark brown planks with iron bands and studs
+// the Gilded Joker: deep red plaster between gilt pilasters, tall arched windows lit gold, a band of gold under the eaves;
+// its door a pair of gilded doors under a fanlight with a lamp each side; its gable red with a gold sunburst; its roof copper
+CM.art.casino = function (part) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`casino:${part}`));
+  if (part === "roof") { p.fillStyle = "#2E5A4E"; p.fillRect(0, 0, S, S); for (let j = 0; j < 8; j++) for (let i = -1; i < 9; i++) { p.fillStyle = `rgb(${46 + rnd.int(-8, 8)},${96 + rnd.int(-10, 10)},${80 + rnd.int(-8, 8)})`; p.fillRect(i * 32 + (j % 2) * 16 + 1, j * 32 + 1, 30, 30); } p.fillStyle = "#C8A040"; for (let i = 0; i < S; i += 64) p.fillRect(i, 0, 4, S); return c; }
+  const g = p.createLinearGradient(0, 0, 0, S); g.addColorStop(0, "#8E2A2A"); g.addColorStop(1, "#6A1C1E"); p.fillStyle = g; p.fillRect(0, 0, S, S);
+  speckle(p, rnd, S, S, 900, "rgba(40,0,0,0.25)", 0.3, 2);
+  p.fillStyle = "#C8A040"; p.fillRect(0, 0, S, S * 0.05); p.fillRect(0, S * 0.94, S, S * 0.06); p.fillStyle = "#E8C860"; p.fillRect(0, S * 0.05, S, 3);
+  if (part === "gable") { const cx = S / 2, cy = S * 0.62; p.fillStyle = "#E8C050"; for (let i = 0; i < 12; i++) { const a = Math.PI + (i / 11) * Math.PI; p.beginPath(); p.moveTo(cx, cy); p.lineTo(cx + Math.cos(a - 0.08) * 90, cy + Math.sin(a - 0.08) * 90); p.lineTo(cx + Math.cos(a + 0.08) * 90, cy + Math.sin(a + 0.08) * 90); p.fill(); } p.beginPath(); p.arc(cx, cy, 22, 0, Math.PI * 2); p.fill(); return c; }
+  for (const x of [0, S - 16]) { p.fillStyle = "#B8902E"; p.fillRect(x, S * 0.05, 16, S * 0.89); p.fillStyle = "#E8C860"; p.fillRect(x + 3, S * 0.05, 3, S * 0.89); }   // (the pilasters)
+  if (part === "door") {
+    p.fillStyle = "#3A1010"; p.beginPath(); p.moveTo(S * 0.2, S * 0.94); p.lineTo(S * 0.2, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.3, Math.PI, 0); p.lineTo(S * 0.8, S * 0.94); p.closePath(); p.fill();
+    p.fillStyle = "#FFD880"; p.beginPath(); p.moveTo(S * 0.25, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.25, Math.PI, 0); p.closePath(); p.fill(); p.strokeStyle = "#8A6A20"; p.lineWidth = 3; for (let i = 1; i < 6; i++) { const a = Math.PI + (i / 6) * Math.PI; p.beginPath(); p.moveTo(S / 2, S * 0.42); p.lineTo(S / 2 + Math.cos(a) * S * 0.25, S * 0.42 + Math.sin(a) * S * 0.25); p.stroke(); }   // (the fanlight)
+    for (const x0 of [S * 0.25, S * 0.5]) { const dg = p.createLinearGradient(x0, 0, x0 + S * 0.25, 0); dg.addColorStop(0, "#B8902E"); dg.addColorStop(0.5, "#F0D070"); dg.addColorStop(1, "#A07A22"); p.fillStyle = dg; p.fillRect(x0 + 2, S * 0.44, S * 0.25 - 4, S * 0.5); p.strokeStyle = "#6A4A10"; p.lineWidth = 3; p.strokeRect(x0 + 10, S * 0.5, S * 0.25 - 20, S * 0.18); p.strokeRect(x0 + 10, S * 0.72, S * 0.25 - 20, S * 0.18); }
+    for (const x of [S * 0.11, S * 0.89]) { p.fillStyle = "#2A2A2A"; p.fillRect(x - 3, S * 0.4, 6, S * 0.12); const lg = p.createRadialGradient(x, S * 0.36, 2, x, S * 0.36, 22); lg.addColorStop(0, "#FFF0B0"); lg.addColorStop(0.4, "#FFC040"); lg.addColorStop(1, "rgba(255,180,60,0)"); p.fillStyle = lg; p.beginPath(); p.arc(x, S * 0.36, 22, 0, Math.PI * 2); p.fill(); }   // (two lamps)
+    return c;
+  }
+  const wx = S * 0.32, ww = S * 0.36; p.fillStyle = "#C8A040"; p.beginPath(); p.moveTo(wx - 6, S * 0.82); p.lineTo(wx - 6, S * 0.36); p.arc(S / 2, S * 0.36, ww / 2 + 6, Math.PI, 0); p.lineTo(wx + ww + 6, S * 0.82); p.closePath(); p.fill();
+  const wg = p.createLinearGradient(0, S * 0.2, 0, S * 0.8); wg.addColorStop(0, "#FFE8A0"); wg.addColorStop(1, "#E89A30"); p.fillStyle = wg; p.beginPath(); p.moveTo(wx, S * 0.8); p.lineTo(wx, S * 0.36); p.arc(S / 2, S * 0.36, ww / 2, Math.PI, 0); p.lineTo(wx + ww, S * 0.8); p.closePath(); p.fill();   // (a tall arched window, lit)
+  p.strokeStyle = "#7A5A1A"; p.lineWidth = 3; p.beginPath(); p.moveTo(S / 2, S * 0.2); p.lineTo(S / 2, S * 0.8); p.moveTo(wx, S * 0.52); p.lineTo(wx + ww, S * 0.52); p.stroke();
+  p.fillStyle = "#B8902E"; p.fillRect(wx - 12, S * 0.82, ww + 24, 8);
+  return c;
+};
 CM.art.fortWall = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("fortwall")), base = [58, 54, 52];
   p.fillStyle = "#141210"; p.fillRect(0, 0, S, S);
@@ -1365,13 +1388,16 @@ CM.art.cross = function () {                                              // the
   p.fillStyle = "#B8B2A8"; p.fillRect(S / 2 - 10, S * 0.06, 20, S * 0.2); p.fillRect(S / 2 - 36, S * 0.11, 72, 16);
   return c;
 };
-CM.SIGN_MARKS = { home: "key", tavern: "lantern", merchant: "bale", smith: "anvil", garden: "mortar", library: "book", temple: "sun", guildhall: "swords", chronicler: "quill" };
+CM.SIGN_MARKS = { home: "key", tavern: "lantern", merchant: "bale", smith: "anvil", garden: "mortar", library: "book", temple: "sun", guildhall: "swords", chronicler: "quill", casino: "cards" };
 CM.art.sign = function (id) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, mark = CM.SIGN_MARKS[id] || "key";
   p.fillStyle = "#3A2A18"; p.fillRect(S * 0.46, 0, S * 0.08, S * 0.14);                       // the bracket
   p.fillStyle = "#8A6A3A"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, S * 0.72);                  // the board
   p.fillStyle = "#5A4028"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.86 - 8, S * 0.8, 8); p.fillRect(S * 0.1, S * 0.14, 8, S * 0.72); p.fillRect(S * 0.9 - 8, S * 0.14, 8, S * 0.72);
   const cx = S / 2, cy = S * 0.5; p.lineWidth = 8; p.lineCap = "round"; p.strokeStyle = "#F0D080"; p.fillStyle = "#F0D080";
+  if (mark === "cards") { p.fillStyle = "#2A0E10"; p.fillRect(S * 0.1, S * 0.14, S * 0.8, S * 0.72); p.strokeStyle = "#E8C050"; p.lineWidth = 6; p.strokeRect(S * 0.12, S * 0.16, S * 0.76, S * 0.68);
+    [[-34, -0.28, "#F4ECD8", "#C02020", "♥"], [0, 0, "#F4ECD8", "#1A1A1A", "♠"], [34, 0.28, "#F4ECD8", "#C02020", "♦"]].forEach(([dx, a, bg, fg, s]) => { p.save(); p.translate(cx + dx, cy + 8); p.rotate(a); p.fillStyle = bg; p.fillRect(-24, -34, 48, 68); p.strokeStyle = "#8A6A2A"; p.lineWidth = 2; p.strokeRect(-24, -34, 48, 68); p.fillStyle = fg; p.font = "bold 34px serif"; p.textAlign = "center"; p.textBaseline = "middle"; p.fillText(s, 0, 2); p.restore(); });
+    return c; }
   if (mark === "lantern") { p.fillStyle = "#F0D080"; p.fillRect(cx - 26, cy - 36, 52, 70); p.fillStyle = "#8A6A3A"; p.fillRect(cx - 18, cy - 28, 36, 54); p.fillStyle = "#FFE890"; p.beginPath(); p.ellipse(cx, cy, 10, 18, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#F0D080"; p.beginPath(); p.arc(cx, cy - 44, 12, Math.PI, 0); p.stroke(); }
   else if (mark === "bale") { p.fillRect(cx - 40, cy - 30, 80, 60); p.strokeStyle = "#5A4028"; p.lineWidth = 6; p.beginPath(); p.moveTo(cx - 40, cy); p.lineTo(cx + 40, cy); p.moveTo(cx, cy - 30); p.lineTo(cx, cy + 30); p.stroke(); }
   else if (mark === "anvil") { p.beginPath(); p.moveTo(cx - 44, cy - 20); p.lineTo(cx + 44, cy - 20); p.lineTo(cx + 30, cy); p.lineTo(cx + 12, cy + 4); p.lineTo(cx + 20, cy + 30); p.lineTo(cx - 20, cy + 30); p.lineTo(cx - 12, cy + 4); p.lineTo(cx - 30, cy); p.closePath(); p.fill(); }
@@ -1402,6 +1428,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:hedge"] = use("solid.hedge", () => CM.art.hedge());
   out["solid:fence"] = use("solid.fence", () => CM.art.fence());
   out["solid:cliff"] = use("solid.cliff", () => CM.art.cliff());
+  out["solid:casino"] = use("solid.casino", () => CM.art.casino("wall")); out["solid:casinodoor"] = use("solid.casinodoor", () => CM.art.casino("door")); out["solid:casinogable"] = use("solid.casinogable", () => CM.art.casino("gable")); out["solid:casinoroof"] = use("solid.casinoroof", () => CM.art.casino("roof"));   // (the Gilded Joker)
   out["solid:fortwall"] = use("solid.fortwall", () => CM.art.fortWall()); out["solid:fortdoorL"] = use("solid.fortdoorL", () => CM.art.fortDoor(0)); out["solid:fortdoorR"] = use("solid.fortdoorR", () => CM.art.fortDoor(1));   // (the Fortress: 61h-fortress.js)
   out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());

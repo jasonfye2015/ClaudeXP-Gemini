@@ -13,6 +13,8 @@ CM.SOLID = {
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
   tower: { face: "solid:townwall", h: 2.3, tower: true },
+  casino: { face: "solid:casino", h: 2.15, roof: "solid:casinoroof", side: "solid:casino", gable: "solid:casinogable" },   // the Gilded Joker (64k-claudeatro.js): red plaster, gold, a copper roof
+  casinodoor: { face: "solid:casinodoor", h: 2.15, roof: "solid:casinoroof", side: "solid:casino", gable: "solid:casinogable", door: true },
   cabin: { face: "solid:logs", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs" },        // Leshy's cabin (61f-cabin.js): logs all round
   cabindoor: { face: "solid:cabindoor", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs", door: true },
   magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
@@ -32,7 +34,7 @@ CM.SOLID = {
 // roof and a block is one wide one: [{ x0, y0, x1, y1 (cells, inclusive), along: "x" | "z" (the ridge), h (the walls),
 // rise (the ridge over the walls), overhang }]. CM.roofAt says how high a building's roof is over a point, and
 // CM.chimneysOf where its chimneys stand (and the smoke starts). Plain arithmetic, so the tests can check it.
-CM.BUILDING_KINDS = ["house", "door", "shop", "cabin", "cabindoor"];
+CM.BUILDING_KINDS = ["house", "door", "shop", "cabin", "cabindoor", "casino", "casinodoor"];
 CM.ROOF = { overhang: 0.16, gableOverhang: 0.1, pitch: 0.62, minRise: 0.45, maxRise: 1.25 };
 CM.isBuilding = (fl, x, y) => CM.inBounds(fl, x, y) && fl.grid[y][x] !== 0 && CM.BUILDING_KINDS.includes(CM.solidAt(fl, x, y));
 CM.buildingsOf = function (fl) {
@@ -77,7 +79,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", crag: "#5A5650", fortwall: "#2A2624", forttower: "#2A2624", fortdoorL: "#4A2C16", fortdoorR: "#4A2C16", cragtall: "#5A5650", craglow: "#5A5650", cavemouth: "#1A1410", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", casino: "#8A2A2A", casinodoor: "#B08A2E", crag: "#5A5650", fortwall: "#2A2624", forttower: "#2A2624", fortdoorL: "#4A2C16", fortdoorR: "#4A2C16", cragtall: "#5A5650", craglow: "#5A5650", cavemouth: "#1A1410", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -223,14 +225,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0;
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
-    const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofL = L("solid:roof");
+    const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
     const FACES = [[0, -1, 1.0], [0, 1, 0.96], [1, 0, 0.84], [-1, 0, 0.8]];        // a cell's north, south, east and west faces
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       if (!CM.isBuilding(fl, x, y)) continue;
       const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind];
       // a door or a shop shows its face once, toward the open square that has the building behind it
       let front = -1;
-      const doorish = ["door", "shop", "cabindoor"].includes(kind);
+      const doorish = ["door", "shop", "cabindoor", "casinodoor"].includes(kind);
       if (doorish) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy) && CM.isBuilding(fl, x - dx, y - dy)) front = d; });
       if (doorish && front < 0) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy)) front = d; });
       FACES.forEach(([dx, dy, shade], d) => {
@@ -254,6 +256,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     for (const B of CM.buildingsOf(fl)) {
       buildings++;
+      const RK = CM.SOLID[CM.solidAt(fl, B.x0, B.y0)] || {}, roofL = RK.roof && index[RK.roof] !== undefined ? index[RK.roof] : roofDefault;   // (a building's own roof: the Gilded Joker's copper)
       const X0 = B.x0, X1 = B.x1 + 1, Z0 = B.y0, Z1 = B.y1 + 1, h = B.h, top = h + B.rise, o = B.overhang, g = CM.ROOF.gableOverhang;
       // in the roof's own frame: u along the ridge, v across it (0 at one eave line, span at the other); P(u, v, y) back to the world
       const ax = B.along === "x", U0 = ax ? X0 : Z0, U1 = ax ? X1 : Z1, V0 = ax ? Z0 : X0, V1 = ax ? Z1 : X1, mid = (V0 + V1) / 2, half = (V1 - V0) / 2;
@@ -275,7 +278,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
       for (const u of [U0, U1]) {                                                     // the gable ends: plaster and timber up to the ridge, a strip a square
         const cuts = [V0]; for (let v = V0 + 1; v < V1; v++) cuts.push(v); if (!cuts.includes(mid)) cuts.push(mid); cuts.push(V1); cuts.sort((p, q) => p - q);
-        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0, BK = CM.SOLID[CM.solidAt(fl, B.x0, B.y0)] || {}, gableL = BK.gable ? L(BK.gable) : gable;
+        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0, BK = CM.SOLID[CM.solidAt(fl, B.x0, B.y0)] || {}, gableL = BK.gable && index[BK.gable] !== undefined ? L(BK.gable) : gable;
         for (let i = 0; i + 1 < cuts.length; i++) {
           const va = cuts[i], vb = cuts[i + 1], ua = (va - Math.floor(va)), ub = vb - Math.floor(va) > 1 ? 1 : vb - Math.floor(va);
           poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gableL, shade);

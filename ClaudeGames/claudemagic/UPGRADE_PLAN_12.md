@@ -18,6 +18,18 @@ between floors they may leave and come back to resume.
 - src/js/76d-fortress.js: the floor seen from above, the monsters in the game's own pictures, the fighter's token.
 - tools/fortbot.js measures it.
 
-## v11.5: Claudeatro's house
+## v11.5: Claudeatro's house - the Gilded Joker (DONE)
 Asked for: a building in town, a little richer than the rest (a casino), hosting Claudeatro from the Games folder;
 wager gold and earn gold back for each round; keep the game's unlocks; play for nothing, for fun and unlocks.
+- src/js/23-town.js: the Gilded Joker, east of Temple Row up its own lane (Gilded Row) from Shaft Lane - five squares
+  of deep red plaster between gilt pilasters, tall arched windows lit gold, gilded doors under a fanlight with a lamp
+  each side, a copper roof, taller than its neighbours, and a sign of three cards.
+- src/js/64k-claudeatro.js: Claudeatro's rules ported whole (hands, chips and mult, 78 Jokers, Tarots, Planets,
+  enhancements and editions, the blinds and the eighteen bosses and three showdowns, tags, vouchers, packs, the shop,
+  eight decks, endless after Ante 8); a run is plain data, saved with the village and picked up again.
+- The house: a wager of 0 to 500 gold, paid back 40% / 60% / 100% for the small, big and boss blinds, a quarter more
+  each ante, five wagers more for beating Ante 8. The unlocks: 25 Jokers to start and one more for every blind ever
+  beaten (wagered or not); the decks by milestones (a boss beaten, Ante 3, Ante 4, six bosses, a Straight Flush,
+  Ante 6, a won run). Locked Jokers never turn up.
+- src/js/76e-casino.js: the lobby, the blinds, the round (every step of a hand's score shown on its card or Joker,
+  with the chips and the mult counting up and a sound for each), the cash-out, the shop, the packs.
