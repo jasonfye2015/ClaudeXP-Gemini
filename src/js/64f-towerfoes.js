@@ -93,6 +93,7 @@ Object.assign(CM.TowerRun.prototype, {
     if (!o.boss) return;
     const rnd = new CM.Random(CM.hashSeed(`${this.game.seed}:towerboss:${this.n}`)), depth = CM.towerDepth(this.n), it = CM.affix(CM.makeItem(depth + 2, rnd), depth + 6, rnd);
     it.unknown = false; this.loot.push(it);
+    if (this.game.findCard) this.game.findCard(`towerboss:${this.n}`, this.n % 10 === 0 ? 1 : CM.CARD_FIND.towerBoss, this.n % 10 === 0 ? "rare" : "common", `Where ${o.name} fell:`);
     this.events.push({ kind: "bossdown", mon: o, item: it });
   },
 });

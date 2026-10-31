@@ -2904,7 +2904,7 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   // the Wood: trees as trees, grass underfoot, canopy over the close paths, and no ceiling
   const wood = CM.makeWood("sky-1"), mw = CM.floorMesh(wood, CM.WOOD_THEME, index), lw = layersOf(mw);
   assert.strictEqual(wood.solidDefault, "tree"); assert.ok(wood.canopy.length > 10, `${wood.canopy.length} cells under the leaves`); assert.ok(wood.canopy.every((k) => CM.isOpen(wood, ...k.split(",").map(Number))));
-  assert.ok(mw.trees > 30 && mw.ceilings === 0 && mw.roofs === 0, JSON.stringify({ trees: mw.trees, ceilings: mw.ceilings }));
+  assert.ok(mw.trees > 30 && mw.ceilings === 0 && mw.roofs > 0 && mw.buildings === 1,   /* (one building on the land: Leshy's cabin, v11.1) */ JSON.stringify({ trees: mw.trees, ceilings: mw.ceilings }));
   assert.ok(lw.has(index.canopy) && lw.has(index["ground:grass"]) && [0, 1, 2].some((v) => lw.has(index[`tree:${v}`])) && !lw.has(index.ceiling));
   assert.strictEqual(CM.groundAt(wood, ...wood.ford), "dirt", "the river's bed is mud");
   // a dungeon floor: as it was - a ceiling over every open cell, the depth's stone, nothing of the surface
@@ -3586,7 +3586,7 @@ test("the Deep's ten more: two kinds for each of five bands, met in generator 2'
 test("the Mage Tower, from outside: a portal yard by the shaft with a lit portal and two dark plinths; the portal to the tower's front and back; the tower in its clearing, reachable and safe; who may go in", () => {
   const CM = load();
   const town = CM.makeTown("mt-1"), P = CM.PORTAL_YARD;
-  assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, "plinth");
+  assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, p === P.cabin ? "portal" : "plinth");   // (the first plinth lit for the cabin, v11.1)
   assert.strictEqual(CM.townPlace(town, ...P.tower), "The Keep-yard", "in the Keep-yard, by the shaft");
   const land = CM.makeWood("mt-1");
   for (let y = CM.MAGE_TOWER.at[1] - 1; y <= CM.MAGE_TOWER.at[1] + 1; y++) for (let x = CM.MAGE_TOWER.at[0] - 1; x <= CM.MAGE_TOWER.at[0] + 1; x++) assert.strictEqual(CM.solidAt(land, x, y), "magetower");
@@ -3732,6 +3732,81 @@ test("the Mage Tower, measured: the tower's own hand climbs three floors with a 
   assert.strictEqual(climb(CM, "Mage", 15, "tower-test-1", 3).cleared, 3, "a Mage of fifteen climbs three");
   assert.strictEqual(climb(CM, "archer", 15, "tower-test-1", 3).cleared, 3, "an archer of fifteen climbs three");
   assert.ok(climb(CM, "Mage", 1, "tower-test-2", 40).cleared < 15, "a hero of one does not walk to the top");
+});
+
+test("Claudescryption at the cabin: Leshy's rules as the Timeline's game has them - blood by sacrifice, bones from the dead, the bell, airborne over, the scale to five; a plain hand wins the Woodlands often and the Moon rarely; the seed's games", () => {
+  const CM = load(), S = CM.cardSpec;
+  const b = new CM.CardBattle([S("Wolf"), S("Stoat"), S("Sparrow")], 0, 0, null, 7);
+  assert.strictEqual(b.hand.length, 4, "a squirrel and three"); assert.ok(b.hand.some((c) => c.name === "Squirrel"));
+  b.drawn = false; assert.ok(b.draw("squirrel") && !b.draw("squirrel"), "one draw a turn");
+  const sq = b.hand.findIndex((c) => c.name === "Squirrel"); assert.ok(b.play(sq, 0)); const sq2 = b.hand.findIndex((c) => c.name === "Squirrel"); assert.ok(b.play(sq2, 1));
+  const wolf = b.hand.findIndex((c) => c.name === "Wolf"); assert.ok(!b.play(wolf, 2, [0]), "two blood for a wolf"); assert.ok(b.play(wolf, 0, [0, 1]), "two squirrels for a wolf");
+  assert.strictEqual(b.you[0].name, "Wolf"); assert.strictEqual(b.bones, 2, "a bone from each sacrifice");
+  for (let k = 0; k < 4; k++) { b.leshy[k] = null; b.queue[k] = null; } const before = b.scale; for (const _e of b.ringBell()) { /* the whole turn */ } assert.ok(b.scale - before >= 3 || b.over === "won", "the wolf strikes the scale");
+  const a = new CM.CardBattle([S("Sparrow")], 0, 0, null, 3); a.you[0] = new CM.CardCreature(S("Sparrow"), "you"); a.leshy[0] = new CM.CardCreature(S("Stoat"), "leshy"); for (let k = 1; k < 4; k++) a.leshy[k] = null; a.queue = [null, null, null, null];
+  [...a.strike("you", 0)]; assert.strictEqual(a.scale, 1, "over the stoat"); a.scale = 0; a.leshy[0] = new CM.CardCreature(S("Bullfrog"), "leshy"); [...a.strike("you", 0)]; assert.strictEqual(a.scale, 0, "the bullfrog leaps to block");
+  const play = (seed, deck, region = 0, diff = 0, boss = null) => {
+    const B = new CM.CardBattle(deck.map((n) => S(n)), region, diff, boss, seed);
+    for (let turn = 0; turn < 60 && !B.over; turn++) {
+      if (B.canDraw()) B.draw(B.hand.filter((c) => c.name === "Squirrel").length < 2 && B.squirrels ? "squirrel" : B.deck.length ? "deck" : "squirrel");
+      for (let tries = 0; tries < 6; tries++) {
+        const cards = B.hand.map((c, i) => [c, i]).filter(([c]) => c.name !== "Squirrel").sort((x, y) => CM.cardInfo(y[0]).power - CM.cardInfo(x[0]).power);
+        let played = false;
+        for (const [c, i] of cards) {
+          const I = CM.cardInfo(c); if (I.bones > B.bones) continue;
+          const sq = [0, 1, 2, 3].filter((l) => B.you[l] && (B.you[l].name === "Squirrel" || B.you[l].basePower === 0)); if (I.blood > B.bloodOf(sq)) continue;
+          const sac = sq.slice(0, I.blood), lane = sac.length ? sac[0] : [0, 1, 2, 3].filter((l) => !B.you[l]).sort((p, q) => B.powerOf("leshy", q) - B.powerOf("leshy", p))[0];
+          if (lane === undefined) continue; if (B.play(i, lane, sac)) { played = true; break; }
+        }
+        if (!played) { const si = B.hand.findIndex((c) => c.name === "Squirrel"), empty = [0, 1, 2, 3].filter((l) => !B.you[l]); if (si >= 0 && empty.length) B.play(si, empty[0]); else break; }
+      }
+      for (const _e of B.ringBell()) { /* */ }
+      if (B.over === "phase") B.nextPhase();
+    }
+    return B.over;
+  };
+  const deck = ["Stoat", "Bullfrog", "Wolf", "Sparrow", "Mantis", "Opossum"];
+  assert.strictEqual(play(11, deck), play(11, deck), "the seed's game");
+  let won = 0; for (let k = 0; k < 30; k++) if (play(100 + k, deck) === "won") won++; assert.ok(won >= 8, `a plain hand wins the Woodlands now and then (${won} of 30)`);
+  let moon = 0; for (let k = 0; k < 20; k++) if (play(200 + k, deck, 2, 3, "Leshy") === "won") moon++; assert.ok(moon <= 12, `the Moon is no easy thing (${moon} of 20)`);
+});
+
+test("Leshy's cabin: in the Wood with its path, a portal from the yard and back; a starter deck kept with the village; decks changed within the box's counts; a game won pays gold (doubled the first time), a card to choose and against a mask a thing; a game lost costs nothing; the games open in order; cards found go to the box", () => {
+  const CM = load(), land = CM.makeWood("cabin-1"), C = CM.CABIN;
+  assert.strictEqual(CM.solidAt(land, ...C.door), "cabindoor"); assert.strictEqual(land.things[C.front.join(",")].type, "cabin"); assert.ok(CM.woodSafe(land, ...C.front) && CM.woodSafe(land, C.path[0], C.path[3]), "a safe clearing and path");
+  assert.strictEqual(CM.buildingsOf(land).length, 1);
+  const g = new CM.Game(); g.newGame("cabin-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.cards = undefined;
+  g.floor.pos = CM.PORTAL_YARD.cabin.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.deepStrictEqual(g.floor.pos, C.front, "the portal to the cabin");
+  assert.ok(g.pathTo(...CM.WOOD_GATE), "and a way on foot"); let asked = false; g.on("cabin", () => { asked = true; }); g.use(); assert.ok(asked, "Leshy's table");
+  g.floor.pos = C.portal.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.deepStrictEqual(g.floor.pos, CM.PORTAL_YARD.cabin, "and home to its plinth");
+  const K = g.cards(); assert.deepStrictEqual(K.deck, CM.CARD_STARTER); assert.strictEqual(K.owned.Wolf, 1);
+  assert.ok(g.deckAdd("Wolf"), "no second wolf in the box");
+  while (K.deck.length > CM.CARD_DECK_MIN) assert.strictEqual(g.deckRemove(K.deck[0]), ""); assert.ok(g.deckRemove(K.deck[0]), "never fewer than four");
+  assert.ok(g.startCardGame("snow"), "the Snow Line waits on the Wetlands"); assert.ok(g.startCardGame("leshy"));
+  assert.strictEqual(g.startCardGame("woods"), ""); g.cardGame.battle.over = "won"; const gold = g.gold, r = g.finishCardGame();
+  assert.ok(r.won && g.gold === gold + 2 * CM.CARD_TABLES[0].gold, "doubled the first time"); assert.strictEqual(r.choices.length, 3); assert.ok(r.choices.every((n) => CM.CARD_COMMONS.includes(n)));
+  const pick = r.choices[0], had = K.owned[pick] || 0; assert.ok(g.takeCardReward(pick) && !g.takeCardReward(r.choices[1]), "one card"); assert.strictEqual(K.owned[pick], had + 1);
+  assert.ok(g.cardTableOpen(CM.CARD_TABLES.find((t) => t.id === "prospector")), "the mask opens");
+  g.startCardGame("woods"); g.cardGame.battle.over = "won"; const g2 = g.gold; g.finishCardGame(); assert.strictEqual(g.gold, g2 + CM.CARD_TABLES[0].gold, "plain after the first");
+  g.startCardGame("prospector"); g.cardGame.battle.over = "won"; const bag = g.bag.length, rr = g.finishCardGame(); assert.ok(rr.item && g.bag.length === bag + 1, "a thing against a mask"); assert.ok(rr.choices.some((n) => CM.CARD_RARES.includes(n)), "a rare among them");
+  g.startCardGame("woods"); g.cardGame.battle.over = "lost"; const g3 = g.gold, bag3 = g.bag.length, lost = g.finishCardGame(); assert.ok(!lost.won && g.gold === g3 && g.bag.length === bag3, "a loss costs nothing");
+  g.addCard("Cat", "In the chest:"); assert.strictEqual(K.owned.Cat, 1); const again = new CM.Game(); assert.strictEqual(again.cards().owned.Cat, 1, "kept with the village");
+});
+
+test("Claudescryption cards found: about one chest in twenty-two, a champion one time in four, a tower boss one in three (a rare every tenth floor), a rare from every guardian and the Lich King - the seed's, and into the box at the cabin", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("find-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.village.cards = undefined; g.cards();
+  let n = 0; for (let i = 0; i < 2200; i++) if (g.findCard(`chest:3:${i},1`, CM.CARD_FIND.chest, "common", null)) n++;
+  assert.ok(n > 60 && n < 140, `about one in twenty-two (${n} of 2200)`);
+  const box = () => Object.values(g.cards().owned).reduce((s, k) => s + k, 0), b0 = box();
+  const r = g.findCard("guardian:rat", 1, "rare", "Among what it guarded:"); assert.ok(CM.CARD_RARES.includes(r) && box() === b0 + 1, "a rare from a guardian");
+  const h = new CM.Game(); h.newGame("find-1", fixedParty(CM)); assert.strictEqual(h.findCard("guardian:rat", 1, "rare", null), r, "the seed's card");
+  const src = (f) => fs.readFileSync(path.join(ROOT, "src", "js", f), "utf8");
+  assert.ok(src("61-explore.js").includes("CM.CARD_FIND.chest") && src("62-combat.js").includes("`guardian:${id}`") && src("62-combat.js").includes("findCard(\"lich\"") && src("64f-towerfoes.js").includes("towerboss:") && src("64g-towerking.js").includes("towerking:1"), "found in chests, from guardians, the king, the tower");
+  // a chest opened on a floor puts a card in the box when its hash says so
+  const c = new CM.Game(); c.newGame("find-2", fixedParty(CM)); c.enterFloor(2, "down"); c.mode = "explore"; c.village.cards = undefined; c.cards(); const before = c.tally.cardsFound || 0;
+  const fl = c.floor; let opened = 0;
+  for (let i = 0; i < 300 && (c.tally.cardsFound || 0) === before; i++) { fl.things[`${fl.pos[0]},${fl.pos[1]}`] = { type: "chest", gold: 1, items: [], trap: null }; c.seed = `find-2-${i}`; c.use(); opened++; }   // (each seed its own hash)
+  assert.ok((c.tally.cardsFound || 0) > before, `a chest gave a card (after ${opened})`);
 });
 
 (async () => {

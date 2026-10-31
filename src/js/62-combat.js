@@ -738,6 +738,7 @@ Object.assign(CM.Game.prototype, {
   crown() {
     this.crowned = true;
     this.trophy("lich");
+    if (this.findCard) this.findCard("lich", 1, "rare", "On the Lich King's throne, face down:");
     const steps = (this.tally || {}).steps || 0;
     this.achieve("crown");
     if (!this.everFell) this.achieve("ironman");
@@ -759,6 +760,7 @@ Object.assign(CM.Game.prototype, {
     const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
     if (!m.echo) this.trophy(id);
+    if (!m.echo && this.findCard) this.findCard(`guardian:${id}`, 1, "rare", "Among what it guarded:");
     if (relic) this.gain([relic], "relic");
     this.sound("toll");
     this.say(G.fall);
@@ -1443,6 +1445,7 @@ Object.assign(CM.Game.prototype, {
       loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
       if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
       this.tally.champions = (this.tally.champions || 0) + 1;
+      if (this.findCard) this.findCard(`champion:${this.floor.number}:${this.tally.champions}`, CM.CARD_FIND.champion, "common", `On ${CM.the(m)}:`);
       if (this.tally.champions >= 5) this.achieve("champions");
     }
     this.makeNoise(CM.NOISE.fight);

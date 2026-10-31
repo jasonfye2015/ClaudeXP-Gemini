@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Leshy's cabin: Claudescryption in the Wood (v11.1)
+  In a clearing between the river and the fields, up a path from the road, stands a log cabin with smoke from its
+  chimney and a candle in its window; the second portal in the portal yard by the shaft goes there, and one by its door
+  comes back. Inside, Leshy deals Claudescryption - the Timeline's own card game, its rules ported whole into
+  src/js/64h-cards.js: four lanes, blood paid by sacrificing your creatures, bones from your dead, the bell, the scale
+  tipped five teeth to win. Seven games at his table, each opened by winning the one before: the Woodlands, the
+  Wetlands and the Snow Line, then Leshy in the Prospector's, the Angler's and the Trapper's masks, then Leshy himself
+  and the Moon. A win pays gold (doubled the first time), a card of three to choose, and against a mask a thing besides;
+  a loss costs nothing. Your collection and your deck are kept between runs (src/js/61f-cabin.js): a starter deck of
+  six, changed between games at the table (four to twenty cards; squirrels are always to hand). Cards turn up in about
+  one chest in twenty-two, on a champion one time in four and a tower boss one in three; every guardian, the Lich King
+  and the tower's tenth floors give a rare one. Beating Leshy and the Moon is an achievement.
+
 The Mage Tower (the twelfth big update - v10.1 to v11.0)
   UPGRADE_PLAN_10.md says what each phase does.
   The portal yard and the tower (v10.1): in the Keep-yard by the shaft, a portal yard - a lit portal to the Mage Tower,
@@ -1571,6 +1584,9 @@ The source
     64g-towerking.js the King of the Tower
     64f-towerfoes.js the Mage Tower's monsters in real time, and the floor bosses
     64e-towerrun.js the Mage Tower inside: the real-time hero, bolts, spells, monsters and bosses
+    61f-cabin.js  Leshy's cabin in the Wood, the card collection and deck, his games and their winnings
+    64h-cards.js  Claudescryption's rules: the cards, the sigils, the battle
+    76b-cabin.js  Leshy's table: the games, the deck, the board
     61e-towerfloor.js the Mage Tower's forty floors
     61d-magetower.js the Mage Tower outside: the portal yard, the tower in the Wood, who may go in
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v11.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v11.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -530,6 +530,25 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 @media (max-width: 760px) { #splash h1 { font-size: 46px; } #splash .lineup { flex-wrap: wrap; width: 92vw; } #splash .tag { font-size: 15px; } }
 @media (prefers-reduced-motion: reduce) { #splash * { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; } }
 @media (max-width: 640px) { #view .sky { padding: 3px 6px 3px 3px; gap: 4px; } #view .sky .dial { width: 52px; height: 52px; flex-basis: 52px; } #view .sky .clocktext { min-width: 0; font-size: 10px; } #view .sky .time { font-size: 15px; } #view .sky .wx .ahead, #view .sky .fest { display: none !important; } .calbox { min-width: 0; } .mfaces { flex-wrap: wrap; } }
+
+/* Leshy's table (76b-cabin.js) */
+#dlg-cabin .box.cabinbox { min-width: 760px; max-width: min(980px, 96vw); background: radial-gradient(ellipse at 50% 30%, #3A2814 0%, #1A1008 70%); border-color: #6A4A2A; }
+.ctables { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; } .ctable { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid rgba(200,160,90,0.35); border-radius: 4px; background: rgba(0,0,0,0.25); } .ctable.locked { opacity: 0.5; }
+.crow { display: flex; gap: 8px; justify-content: center; margin: 4px 0; } .crow.wrap { flex-wrap: wrap; justify-content: flex-start; } .crow.queue { opacity: 0.6; transform: scale(0.9); } .crow.mine .ccard.empty { cursor: pointer; border-color: rgba(220,190,120,0.5); }
+.crow.hand { min-height: 120px; flex-wrap: wrap; }
+.ccard { position: relative; width: 82px; height: 112px; border-radius: 6px; background: linear-gradient(#E9DCBC, #CDB990); color: #2A2118; border: 2px solid #5A4228; box-shadow: 0 2px 6px rgba(0,0,0,0.6); cursor: pointer; font: 11px var(--serif); user-select: none; }
+.ccard.small { width: 70px; height: 96px; } .ccard.small .cemo { font-size: 26px; } .ccard.rare { border-color: #C8A040; box-shadow: 0 0 8px rgba(232,200,112,0.7); }
+.ccard.empty { background: rgba(0,0,0,0.25); border: 2px dashed rgba(200,170,110,0.25); box-shadow: none; }
+.ccard .cname { text-align: center; font-weight: bold; padding: 3px 2px 0; line-height: 1.1; height: 24px; overflow: hidden; } .ccard .ccost { position: absolute; top: 26px; right: 3px; font-size: 9px; }
+.ccard .cemo { text-align: center; font-size: 32px; line-height: 40px; } .ccard .csig { text-align: center; font-size: 14px; height: 16px; }
+.ccard .cstat { position: absolute; bottom: 3px; left: 6px; right: 6px; display: flex; justify-content: space-between; font: bold 15px var(--serif); } .ccard .cstat i { color: #8A1A1A; font-style: normal; }
+.ccard.sel { outline: 3px solid #F6D36A; transform: translateY(-6px); } .ccard.sac { outline: 3px solid #C83A3A; filter: brightness(0.75); } .ccard.dim { opacity: 0.55; }
+.cwrap { position: relative; } .cwrap span { position: absolute; right: 4px; top: -6px; background: #2A1A0E; color: #F6D36A; border-radius: 8px; padding: 0 5px; font-size: 11px; }
+.cbattle .chead { display: flex; justify-content: space-between; align-items: center; color: #F0D8A0; margin-bottom: 4px; }
+.cscale { display: inline-flex; gap: 3px; } .cscale i { width: 12px; height: 16px; border-radius: 3px; background: rgba(255,255,255,0.12); } .cscale i.mid { background: #8A7A5A; } .cscale i.yours { background: #5AC85A; } .cscale i.his { background: #C83A3A; }
+.clog { min-height: 44px; font: italic 13px var(--serif); color: #E8D8B0; text-align: center; }
+.cbar { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 8px 0; color: #F0D8A0; flex-wrap: wrap; } .cbar .ctip { font: italic 12px var(--serif); color: #C8B890; min-width: 220px; text-align: center; }
+@media (max-width: 760px) { .cabinbox { min-width: 0; } .ccard { width: 64px; height: 92px; } .ccard .cemo { font-size: 24px; line-height: 30px; } }
 </style>
 </head>
 <body>
@@ -539,7 +558,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "11.0", built: "2026-10-31" };
+const CM = window.CM = { version: "11.1", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1453,6 +1472,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  moon: { name: "Beneath the Moon", what: "Beat Leshy at his own table, Moon and all", title: "the Card Master" },
   towerking: { name: "The Tower Falls Silent", what: "Defeat the King of the Tower", title: "Kingslayer of the Tower" },
   tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },
   tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
@@ -4590,7 +4610,8 @@ CM.makeWood = function (seed) {
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground,
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
-  if (CM.layMageTower) CM.layMageTower(fl);                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
+  if (CM.layMageTower) CM.layMageTower(fl);
+  if (CM.layCabin) CM.layCabin(fl);                                      // Leshy's cabin (61f-cabin.js; laid last)                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
   CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
@@ -4605,6 +4626,7 @@ CM.woodPlace = function (fl, x, y) {
   if (fl.ford && x === fl.ford[0] && y === fl.ford[1]) return "the ford";
   if (fl.bridge && x === fl.bridge[0] && y === fl.bridge[1]) return "the bridge";
   if (CM.LAND_ROAD.some(([x0, y0, x1, y1]) => x >= x0 && x <= x1 && y >= y0 && y <= y1)) return "the road";
+  if (CM.CABIN && x === CM.CABIN.path[0] && y >= CM.CABIN.path[1] && y <= CM.CABIN.path[3]) return "the cabin path";
   if (CM.POSTERN_PATH && x === CM.POSTERN_PATH[0] && y >= CM.POSTERN_PATH[1] && y <= CM.POSTERN_PATH[3]) return "the cliff path";
   const room = (fl.rooms || []).find((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
   if (room) return room.name;
@@ -4623,7 +4645,7 @@ CM.wayPlaces = function (game) {
     add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
     add("The portal yard", ...CM.PORTAL_YARD.tower, true); add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
   } else {
-    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true);
+    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true); add("Leshy's cabin", ...CM.CABIN.front, true);
     const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
     if (farm) add("The farm", ...farm.split(",").map(Number), true);
     add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
@@ -4631,7 +4653,7 @@ CM.wayPlaces = function (game) {
   }
   return out;
 };
-CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "Leshy's cabin", "the cabin path", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end
@@ -5062,6 +5084,8 @@ CM.SOLID = {
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
   tower: { face: "solid:townwall", h: 2.3, tower: true },
+  cabin: { face: "solid:logs", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs" },        // Leshy's cabin (61f-cabin.js): logs all round
+  cabindoor: { face: "solid:cabindoor", h: 1.45, roof: "solid:roof", side: "solid:logs", gable: "solid:logs", door: true },
   magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
@@ -5073,7 +5097,7 @@ CM.SOLID = {
 // roof and a block is one wide one: [{ x0, y0, x1, y1 (cells, inclusive), along: "x" | "z" (the ridge), h (the walls),
 // rise (the ridge over the walls), overhang }]. CM.roofAt says how high a building's roof is over a point, and
 // CM.chimneysOf where its chimneys stand (and the smoke starts). Plain arithmetic, so the tests can check it.
-CM.BUILDING_KINDS = ["house", "door", "shop"];
+CM.BUILDING_KINDS = ["house", "door", "shop", "cabin", "cabindoor"];
 CM.ROOF = { overhang: 0.16, gableOverhang: 0.1, pitch: 0.62, minRise: 0.45, maxRise: 1.25 };
 CM.isBuilding = (fl, x, y) => CM.inBounds(fl, x, y) && fl.grid[y][x] !== 0 && CM.BUILDING_KINDS.includes(CM.solidAt(fl, x, y));
 CM.buildingsOf = function (fl) {
@@ -5118,7 +5142,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", cabin: "#6A4A2A", cabindoor: "#7A5432", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -5271,13 +5295,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind];
       // a door or a shop shows its face once, toward the open square that has the building behind it
       let front = -1;
-      if (kind !== "house") FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy) && CM.isBuilding(fl, x - dx, y - dy)) front = d; });
-      if (kind !== "house" && front < 0) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy)) front = d; });
+      const doorish = ["door", "shop", "cabindoor"].includes(kind);
+      if (doorish) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy) && CM.isBuilding(fl, x - dx, y - dy)) front = d; });
+      if (doorish && front < 0) FACES.forEach(([dx, dy], d) => { if (front < 0 && openAt(x + dx, y + dy)) front = d; });
       FACES.forEach(([dx, dy, shade], d) => {
         if (CM.isBuilding(fl, x + dx, y + dy)) return;                                // (inside the building)
         const a = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
-        const layer = d === front ? L(K.face) : L("solid:house"), h = K.h;
+        const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade);
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 10 < 7) {   // a window lit for the night
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
@@ -5315,10 +5340,10 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
       for (const u of [U0, U1]) {                                                     // the gable ends: plaster and timber up to the ridge, a strip a square
         const cuts = [V0]; for (let v = V0 + 1; v < V1; v++) cuts.push(v); if (!cuts.includes(mid)) cuts.push(mid); cuts.push(V1); cuts.sort((p, q) => p - q);
-        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0;
+        const roofY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half), shade = ax ? 0.84 : 1.0, BK = CM.SOLID[CM.solidAt(fl, B.x0, B.y0)] || {}, gableL = BK.gable ? L(BK.gable) : gable;
         for (let i = 0; i + 1 < cuts.length; i++) {
           const va = cuts[i], vb = cuts[i + 1], ua = (va - Math.floor(va)), ub = vb - Math.floor(va) > 1 ? 1 : vb - Math.floor(va);
-          poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gable, shade);
+          poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gableL, shade);
         }
       }
     }
@@ -6915,6 +6940,18 @@ CM.art.ice = function () {
 };
 // the Mage Tower's pictures: black and grey stone in long blocks, two dark-brown doors with iron, a narrow window's
 // cold light, the portal's arch with the light turning in it, and a dark plinth waiting for its portal
+// the cabin's walls: round logs laid one on another, the ends notched; the door's face a plank door and a small window
+CM.art.logs = function (door) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(door ? 95 : 94), n = 7, h = S / n;
+  p.fillStyle = "#2A1A0E"; p.fillRect(0, 0, S, S);
+  for (let j = 0; j < n; j++) { const g = p.createLinearGradient(0, j * h, 0, (j + 1) * h); const k = 0.85 + rnd.next() * 0.3; g.addColorStop(0, `rgb(${Math.round(90 * k)},${Math.round(62 * k)},${Math.round(36 * k)})`); g.addColorStop(0.5, `rgb(${Math.round(128 * k)},${Math.round(90 * k)},${Math.round(54 * k)})`); g.addColorStop(1, `rgb(${Math.round(60 * k)},${Math.round(40 * k)},${Math.round(22 * k)})`);
+    p.fillStyle = g; p.beginPath(); p.roundRect ? p.roundRect(2, j * h + 2, S - 4, h - 3, h / 2) : p.rect(2, j * h + 2, S - 4, h - 3); p.fill();
+    p.strokeStyle = "rgba(40,24,12,0.5)"; p.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const x = rnd.next() * S; p.beginPath(); p.moveTo(x, j * h + h * 0.3); p.lineTo(x + 20 + rnd.next() * 40, j * h + h * 0.35); p.stroke(); } }
+  if (door) { p.fillStyle = "#3A2614"; p.fillRect(S * 0.3, S * 0.22, S * 0.4, S * 0.78); p.fillStyle = "#5A3C20"; p.fillRect(S * 0.33, S * 0.25, S * 0.34, S * 0.75); p.fillStyle = "#3A2614"; for (let i = 1; i < 4; i++) p.fillRect(S * 0.33 + i * S * 0.085, S * 0.25, 3, S * 0.75); p.fillRect(S * 0.33, S * 0.5, S * 0.34, 5);
+    p.fillStyle = "#B08A40"; p.beginPath(); p.arc(S * 0.62, S * 0.62, 5, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#2A1A0E"; p.fillRect(S * 0.76, S * 0.3, S * 0.18, S * 0.2); p.fillStyle = "#E8A850"; p.fillRect(S * 0.78, S * 0.32, S * 0.14, S * 0.16); p.fillStyle = "#2A1A0E"; p.fillRect(S * 0.845, S * 0.32, 3, S * 0.16); }   // (a candle in the window)
+  return c;
+};
 CM.art.mageStone = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(91);
   p.fillStyle = "#16151A"; p.fillRect(0, 0, S, S);
@@ -7131,6 +7168,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
+  out["solid:logs"] = use("solid.logs", () => CM.art.logs(false)); out["solid:cabindoor"] = use("solid.cabindoor", () => CM.art.logs(true));   // (Leshy's cabin: 61f-cabin.js)
   out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
   out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
@@ -9602,8 +9640,8 @@ Object.assign(CM.Game.prototype, {
           farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
-          magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
+          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : thing.to === "cabin" ? "A portal, its light the colour of candle flame. (Space: to Leshy's cabin in the Wood)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
+          magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", cabin: "The cabin's door, and a candle behind the window. (Space: sit at Leshy's table)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
           ucdoor: "A door of black oak in the bell-yard's wall. (Space)", ucback: "A flooded stair going down, and a black door at the bottom of it: the Undercroft. (Space)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
           cross: "The market cross, on its three steps: the Square's oldest stone. (Space to read what is cut in it)",
@@ -9804,6 +9842,7 @@ Object.assign(CM.Game.prototype, {
       if (t0 && t0.type === "postern") { this.postern(); return; }
       if (t0 && t0.type === "portal") { this.usePortal(t0); return; }   // (the Mage Tower: 61d-magetower.js)
       if (t0 && t0.type === "magedoor") { this.emit("magetower"); return; }
+      if (t0 && t0.type === "cabin") { this.say(CM.LESHY_LINES.greet); this.emit("cabin"); return; }   // (Leshy's table: 61f-cabin.js)
       if (t0 && t0.type === "plinth") { this.say("A plinth of dark stone with a rune cut in it, unlit. Something will stand here one day."); return; }
       if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
       if (t0 && ["ucstair", "ucdown", "ucup", "ucdoor", "ucback"].includes(t0.type) && !t0.hidden) { this.undercroftWay(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (the Undercroft: 64c-undercroft.js)   // (an errand's thing: 64b-people.js)
@@ -9896,6 +9935,7 @@ Object.assign(CM.Game.prototype, {
       this.gold += gold; this.count("goldFound", gold);
       if (fl.number >= 3 && CM.hashSeed(`${this.seed}:homecoming:${fl.number}:${k}`) % CM.HOMECOMING.chest === 0) thing.items.push(CM.scroll("homecoming"));   // (one chest in twenty carries the way home)
       this.gain(thing.items, "chest");
+      if (this.findCard) this.findCard(`chest:${fl.number}:${k}`, CM.CARD_FIND.chest, "common", "In the chest, under the rest:");   // (a Claudescryption card, now and then: 61f-cabin.js)
       this.sound("chest"); this.makeNoise(CM.NOISE.chest);
       this.count("chests");
       this.emit("fx", { kind: "sparkle", at: [x, y] });
@@ -10852,7 +10892,7 @@ CM.layMageTower = function (fl) {
 CM.layPortalYard = function (fl) {
   const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
   if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
-  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = { type: "plinth" };
+  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = P.cabin && p === P.cabin ? { type: "portal", to: "cabin" } : { type: "plinth" };   // (the first plinth lit: to Leshy's cabin)
   return fl;
 };
 
@@ -10861,7 +10901,8 @@ Object.assign(CM.Game.prototype, {
   usePortal(t) {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
-    if (t.to === "town") { this.enterFloor(0, "rope", CM.PORTAL_YARD.tower.slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
+    if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
+    if (t.to === "town") { this.enterFloor(0, "rope", (this.floor && this.floor.number === -1 && Math.abs(this.floor.pos[0] - CM.CABIN.portal[0]) + Math.abs(this.floor.pos[1] - CM.CABIN.portal[1]) <= 1 ? CM.PORTAL_YARD.cabin : CM.PORTAL_YARD.tower).slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
     return false;
   },
   // the tower's doors: the choice of who goes in (the dialog is the window's); the rules say who may
@@ -10953,6 +10994,126 @@ CM.makeTowerFloor = function (n, seed) {
   for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 2 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 3 === 0 ? "quiver" : "draught" }); }
   return fl;
 };
+
+// ---- 61f-cabin.js ----
+"use strict";
+// The cabin in the Wood (the thirteenth update): a log cabin in a clearing between the river and the fields, a path
+// north to it from the road, smoke from its chimney, and inside, at a candlelit table, Leshy - the card master - who
+// will play Claudescryption with anyone who sits down (64h-cards.js has the rules). A portal in the portal yard by the
+// shaft comes here, and one by the cabin's door goes back. For now a game lost costs nothing; a game won pays gold, a
+// card of the winner's choosing, and against his masks a thing besides. The collection and the deck are kept between
+// runs in the village store (village.cards), and the deck is changed between games at the table.
+CM.CABIN = { cells: [30, 14, 34, 16], door: [32, 16], front: [32, 17], path: [32, 18, 32, 29], clearing: [26, 10, 38, 22], portal: [29, 18], centre: [32, 15] };
+CM.PORTAL_YARD.cabin = CM.PORTAL_YARD.plinths[0];                      // the first plinth lights for the cabin
+CM.CARD_DECK_MIN = 4;
+CM.CARD_DECK_MAX = 20;
+// Leshy's games: where in his woods the cards are drawn from, how hard, what it pays, and what must be won first
+CM.CARD_TABLES = [
+  { id: "woods", name: "A game in the Woodlands", region: 0, difficulty: 0, gold: 25, pick: "common" },
+  { id: "wet", name: "A game in the Wetlands", region: 1, difficulty: 1, gold: 45, pick: "common", needs: ["woods"] },
+  { id: "snow", name: "A game on the Snow Line", region: 2, difficulty: 2, gold: 70, pick: "common", needs: ["wet"] },
+  { id: "prospector", name: "Leshy wears the Prospector's mask", region: 0, difficulty: 1, boss: "The Prospector", gold: 110, pick: "rare", item: true, needs: ["woods"] },
+  { id: "angler", name: "Leshy wears the Angler's mask", region: 1, difficulty: 2, boss: "The Angler", gold: 150, pick: "rare", item: true, needs: ["wet"] },
+  { id: "trapper", name: "Leshy wears the Trapper's mask", region: 2, difficulty: 2, boss: "The Trapper", gold: 190, pick: "rare", item: true, needs: ["snow"] },
+  { id: "leshy", name: "Leshy, unmasked - and the Moon", region: 2, difficulty: 3, boss: "Leshy", gold: 400, pick: "rare", item: true, needs: ["prospector", "angler", "trapper"] },
+];
+CM.LESHY_LINES = {
+  greet: "The cabin smells of pine smoke and old paper. Behind the table, past the candles, two eyes catch the light. \"Sit,\" says Leshy. \"Let us play a game.\"",
+  win: ["\"Hm. Well played.\"", "\"The cards favoured you. This time.\"", "\"You learn quickly. I do not like that.\""],
+  lose: ["\"The scale tips my way. Come back when you have learned something.\"", "\"A pity. Sit again whenever you like.\"", "\"Your creatures are scattered. Collect yourself, and play again.\""],
+};
+CM.isCabinCell = (x, y) => x >= CM.CABIN.cells[0] && x <= CM.CABIN.cells[2] && y >= CM.CABIN.cells[1] && y <= CM.CABIN.cells[3];
+
+// laid on the land after everything else (as the Mage Tower's clearing is): nothing the seed placed moves
+CM.layCabin = function (fl) {
+  const C = CM.CABIN, [x0, y0, x1, y1] = C.clearing, key = (x, y) => `${x},${y}`, [cx, cy] = C.centre;
+  const open = (x, y, g) => { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[key(x, y)]; (fl.ground = fl.ground || {})[key(x, y)] = g; };
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (((x - cx) / 5.6) ** 2 + ((y - cy - 1) / 5.2) ** 2 <= 1 && !CM.isCabinCell(x, y)) open(x, y, (x * 7 + y * 3) % 5 ? "grass" : "litter");
+  for (let y = C.cells[1]; y <= C.cells[3]; y++) for (let x = C.cells[0]; x <= C.cells[2]; x++) { fl.grid[y][x] = 1; (fl.kinds = fl.kinds || {})[key(x, y)] = x === C.door[0] && y === C.door[1] ? "cabindoor" : "cabin"; if (fl.ground) delete fl.ground[key(x, y)]; }
+  const [px, py0, , py1] = C.path; for (let y = py0; y <= py1; y++) { open(px, y, "dirt"); if (!(fl.seen || []).some(([sx, sy]) => sx === px && sy === y)) (fl.seen = fl.seen || []).push([px, y]); }   // (the path is on the map from the road)
+  fl.things[key(...C.front)] = { type: "cabin" };
+  fl.things[key(...C.portal)] = { type: "portal", to: "town" };
+  fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "Leshy's cabin" });
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) if (!(fl.seen || []).some(([sx, sy]) => sx === x && sy === y)) (fl.seen = fl.seen || []).push([x, y]);
+  return fl;
+};
+
+CM.CARD_FIND = { chest: 1 / 22, champion: 1 / 4, towerBoss: 1 / 3 };     // the odds of a card: in a chest, on a champion, from a tower boss
+Object.assign(CM.Game.prototype, {
+  // a card found: by a hash of the run's seed and the place (never the floor's own dice), at the odds given
+  findCard(where, odds, rarity, why) {
+    const h = CM.hashSeed(`${this.seed}:cardfind:${where}`);
+    if ((h % 10000) / 10000 >= odds) return null;
+    const pool = rarity === "rare" ? CM.CARD_RARES : CM.CARD_COMMONS, name = pool[Math.floor(h / 10000) % pool.length];
+    this.addCard(name, why); this.tally.cardsFound = (this.tally.cardsFound || 0) + 1;
+    return name;
+  },
+  // the collection and the deck, kept with the village
+  cards() {
+    this.village = this.village || {};
+    const K = this.village.cards = this.village.cards || {};
+    if (!K.owned) { K.owned = {}; for (const n of CM.CARD_STARTER) K.owned[n] = (K.owned[n] || 0) + 1; }
+    if (!K.deck) K.deck = CM.CARD_STARTER.slice();
+    K.beaten = K.beaten || {}; K.games = K.games || 0; K.wins = K.wins || 0; K.found = K.found || 0;
+    return K;
+  },
+  saveCards() { if (this.saveVillage) this.saveVillage(); },
+  // a card found (a chest, a boss, a reward): into the box at the cabin
+  addCard(name, why) {
+    if (!CM.CARDS[name]) return false;
+    const K = this.cards(); K.owned[name] = (K.owned[name] || 0) + 1; K.found += why === "reward" ? 0 : 1;
+    if (K.deck.length < 8 && why !== "reward") K.deck.push(name);         // (a small deck takes a new card at once)
+    this.saveCards();
+    if (why && why !== "reward") this.say(`${why} A Claudescryption card: ${CM.CARDS[name][0]} ${name}. It goes to the box in Leshy's cabin.`);
+    return true;
+  },
+  // the deck: a card in (if one is free in the box) or out (keeping at least the least a deck may be)
+  deckAdd(name) {
+    const K = this.cards(), inDeck = K.deck.filter((n) => n === name).length;
+    if (!K.owned[name] || inDeck >= K.owned[name]) return "There is no other copy of that card in the box.";
+    if (K.deck.length >= CM.CARD_DECK_MAX) return `A deck holds ${CM.CARD_DECK_MAX} cards at most.`;
+    K.deck.push(name); this.saveCards(); return "";
+  },
+  deckRemove(name) {
+    const K = this.cards(), i = K.deck.indexOf(name);
+    if (i < 0) return "That card is not in the deck.";
+    if (K.deck.length <= CM.CARD_DECK_MIN) return `A deck needs ${CM.CARD_DECK_MIN} cards at least.`;
+    K.deck.splice(i, 1); this.saveCards(); return "";
+  },
+  cardTableOpen(T) { const K = this.cards(); return !T.needs || T.needs.every((id) => K.beaten[id]); },
+  // sit down to a game
+  startCardGame(id) {
+    const T = CM.CARD_TABLES.find((t) => t.id === id), K = this.cards();
+    if (!T) return "No such game.";
+    if (!this.cardTableOpen(T)) return "Leshy shakes his head. \"Not yet. Win the games before it.\"";
+    if (K.deck.length < CM.CARD_DECK_MIN) return `A deck needs ${CM.CARD_DECK_MIN} cards at least.`;
+    K.games += 1; this.saveCards();
+    const seed = CM.hashSeed(`${this.seed}:cards:${K.games}:${id}`);
+    this.cardGame = { id, table: T, battle: new CM.CardBattle(K.deck.map((n) => CM.cardSpec(n)), T.region, T.difficulty, T.boss || null, seed), reward: null };
+    return "";
+  },
+  // the game over: a win pays (gold now, a card to choose, a thing against a mask); a loss costs nothing
+  finishCardGame() {
+    const G = this.cardGame; if (!G || !G.battle.over || G.done) return null;
+    G.done = true; const T = G.table, K = this.cards(), rnd = new CM.Random(CM.hashSeed(`${this.seed}:cardreward:${K.games}`));
+    if (G.battle.over !== "won") { this.say(`Leshy: ${rnd.pick(CM.LESHY_LINES.lose)}`); return { won: false }; }
+    K.wins += 1; const first = !K.beaten[T.id]; K.beaten[T.id] = (K.beaten[T.id] || 0) + 1;
+    const gold = first ? T.gold * 2 : T.gold; this.gold += gold;
+    const pool = T.pick === "rare" ? CM.CARD_RARES.concat(CM.CARD_COMMONS.filter((n) => CM.CARDS[n][1] >= 2 || CM.CARDS[n][2] >= 5)) : CM.CARD_COMMONS, choices = [];
+    while (choices.length < 3) { const n = rnd.pick(pool); if (!choices.includes(n)) choices.push(n); }
+    if (T.pick === "rare" && !choices.some((n) => CM.CARD_RARES.includes(n))) choices[0] = rnd.pick(CM.CARD_RARES);
+    let item = null;
+    if (T.item) { const depth = Math.max(4, ...(this.trail || []).map((t) => t[0] || 0)); item = CM.affix(CM.makeItem(depth + 2, rnd), depth + 4, rnd); item.unknown = false; this.gain([item], "cards"); }
+    G.reward = { gold, choices, item };
+    this.tally.cardWins = (this.tally.cardWins || 0) + 1;
+    if (T.id === "leshy") this.achieve("moon");
+    this.saveCards(); this.saveRun();
+    this.say(`Leshy: ${rnd.pick(CM.LESHY_LINES.win)} (${gold} gold${first ? ", the first time doubled" : ""}${item ? `, and ${item.name}` : ""}.)`);
+    return { won: true, gold, choices, item };
+  },
+  takeCardReward(name) { const G = this.cardGame; if (!G || !G.reward || G.reward.taken || !G.reward.choices.includes(name)) return false; G.reward.taken = name; this.addCard(name, "reward"); this.say(`Leshy slides a card across the table: ${CM.CARDS[name][0]} ${name}.`); return true; },
+  leaveCardTable() { this.cardGame = null; },
+});
 
 // ---- 62-combat.js ----
 "use strict";
@@ -11695,6 +11856,7 @@ Object.assign(CM.Game.prototype, {
   crown() {
     this.crowned = true;
     this.trophy("lich");
+    if (this.findCard) this.findCard("lich", 1, "rare", "On the Lich King's throne, face down:");
     const steps = (this.tally || {}).steps || 0;
     this.achieve("crown");
     if (!this.everFell) this.achieve("ironman");
@@ -11716,6 +11878,7 @@ Object.assign(CM.Game.prototype, {
     const id = m.guardian, G = CM.GUARDIANS[id], relic = G.relic && !m.echo ? CM.relic(id) : null;
     this.tally.guardians = (this.tally.guardians || []).concat(id);
     if (!m.echo) this.trophy(id);
+    if (!m.echo && this.findCard) this.findCard(`guardian:${id}`, 1, "rare", "Among what it guarded:");
     if (relic) this.gain([relic], "relic");
     this.sound("toll");
     this.say(G.fall);
@@ -12400,6 +12563,7 @@ Object.assign(CM.Game.prototype, {
       loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
       if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
       this.tally.champions = (this.tally.champions || 0) + 1;
+      if (this.findCard) this.findCard(`champion:${this.floor.number}:${this.tally.champions}`, CM.CARD_FIND.champion, "common", `On ${CM.the(m)}:`);
       if (this.tally.champions >= 5) this.achieve("champions");
     }
     this.makeNoise(CM.NOISE.fight);
@@ -15287,6 +15451,7 @@ Object.assign(CM.TowerRun.prototype, {
     if (!o.boss) return;
     const rnd = new CM.Random(CM.hashSeed(`${this.game.seed}:towerboss:${this.n}`)), depth = CM.towerDepth(this.n), it = CM.affix(CM.makeItem(depth + 2, rnd), depth + 6, rnd);
     it.unknown = false; this.loot.push(it);
+    if (this.game.findCard) this.game.findCard(`towerboss:${this.n}`, this.n % 10 === 0 ? 1 : CM.CARD_FIND.towerBoss, this.n % 10 === 0 ? "rare" : "common", `Where ${o.name} fell:`);
     this.events.push({ kind: "bossdown", mon: o, item: it });
   },
 });
@@ -15388,11 +15553,211 @@ Object.assign(CM.TowerRun.prototype, {
     this.fl.ladder = this.fl.dais.slice();
     const it = { name: "The King's Circlet", base: "The King's Circlet", kind: "helm", slot: "helm", power: 4, value: 3000, props: { relic: true, stats: { int: 2, wis: 2 }, towerRegen: 1 }, unknown: false };
     this.loot.push(it);
+    if (this.game.findCard) { this.game.findCard("towerking:1", 1, "rare", "Beside the circlet:"); this.game.findCard("towerking:2", 1, "rare", "And another:"); }
     this.events.push({ kind: "kingdown", mon: o, item: it, line: CM.TOWER_KING_LINES.fall });
   }; }
 // the circlet: magic comes back twice as fast in the tower
 { const step = CM.TowerRun.prototype.step;
   CM.TowerRun.prototype.step = function (dt, inp, first) { this.regenBonus = CM.equipped(this.hero).some((it) => it.props && it.props.towerRegen) ? 1 : 0; return step.call(this, dt, inp, first); }; }
+
+// ---- 64h-cards.js ----
+"use strict";
+// Claudescryption at the cabin in the Wood (the thirteenth update): Leshy's card game, the rules ported whole from the
+// Timeline's own Claudescryption (ClaudeGames/claudescryption/game.py) so a game at the cabin plays as a game there.
+// A battle is four lanes: your creatures in the bottom row, Leshy's above, the cards he means to play next behind
+// them. You draw (your deck or a squirrel), play cards - blood paid by sacrificing your own creatures, bones from your
+// dead - and ring the bell: your creatures strike lane by lane, then his. Tip the scale five teeth your way to win.
+// The battle steps as a generator, so the table shows it one strike at a time. The collection and the deck are kept
+// between runs, with the village (village.cards).
+
+// name -> [emoji, blood, bones, power, health, sigils, rarity]   rarity: c common, r rare, t terrain, s special
+CM.CARDS = {
+  "Squirrel": ["🐿️", 0, 0, 0, 1, [], "s"], "Stoat": ["🦡", 1, 0, 1, 3, [], "c"], "Bullfrog": ["🐸", 1, 0, 1, 2, ["Mighty Leap"], "c"],
+  "Wolf": ["🐺", 2, 0, 3, 2, [], "c"], "Wolf Cub": ["🐕", 1, 0, 1, 1, ["Fledgling"], "c"], "Raven": ["🐦‍⬛", 2, 0, 2, 3, ["Airborne"], "c"],
+  "Sparrow": ["🐦", 1, 0, 1, 2, ["Airborne"], "c"], "Mantis": ["🦗", 1, 0, 1, 1, ["Bifurcated Strike"], "c"], "Mantis God": ["🙏", 1, 0, 0, 1, ["Trifurcated Strike"], "r"],
+  "Adder": ["🐍", 2, 0, 1, 1, ["Touch of Death"], "c"], "Black Goat": ["🐐", 1, 0, 0, 1, ["Worthy Sacrifice"], "r"], "Cat": ["🐈", 1, 0, 0, 1, ["Many Lives"], "r"],
+  "Grizzly": ["🐻", 3, 0, 4, 6, [], "c"], "Moose Buck": ["🫎", 3, 0, 3, 7, ["Sprinter"], "r"], "Elk": ["🦌", 2, 0, 2, 4, ["Sprinter"], "c"],
+  "Elk Fawn": ["🦌", 1, 0, 1, 1, ["Sprinter", "Fledgling"], "c"], "Field Mice": ["🐁", 2, 0, 2, 2, ["Fecundity"], "c"], "Warren": ["🕳️", 1, 0, 0, 2, ["Rabbit Hole"], "c"],
+  "Rabbit": ["🐇", 0, 0, 0, 1, [], "s"], "Beehive": ["🍯", 1, 0, 0, 2, ["Bees Within"], "c"], "Bee": ["🐝", 0, 0, 1, 1, ["Airborne"], "s"],
+  "Porcupine": ["🦔", 1, 0, 1, 2, ["Sharp Quills"], "c"], "Skunk": ["🦨", 1, 0, 0, 3, ["Stinky"], "c"], "Mole": ["🐀", 1, 0, 0, 4, ["Burrower"], "c"],
+  "Bloodhound": ["🐕‍🦺", 2, 0, 2, 3, ["Guardian"], "c"], "Kingfisher": ["🐟", 1, 0, 1, 1, ["Airborne", "Waterborne"], "c"], "River Snapper": ["🐢", 2, 0, 1, 6, [], "c"],
+  "Coyote": ["🐾", 0, 4, 2, 1, [], "c"], "Opossum": ["🐭", 0, 2, 1, 1, [], "c"], "Vulture": ["🦅", 0, 8, 3, 3, ["Airborne"], "r"], "Rattler": ["🪱", 0, 6, 3, 1, [], "c"],
+  "Alpha": ["🐺", 0, 4, 1, 2, ["Leader"], "c"], "Corpse Maggots": ["🐛", 0, 5, 1, 2, ["Corpse Eater"], "c"], "Beaver": ["🦫", 2, 0, 1, 3, ["Dam Builder"], "c"],
+  "Ouroboros": ["🐉", 2, 0, 1, 1, ["Unkillable"], "r"], "Amalgam": ["🧬", 2, 0, 3, 3, [], "r"], "Pack Mule": ["🫏", 0, 0, 0, 5, ["Sprinter"], "s"],
+  "Dam": ["🪵", 0, 0, 0, 2, [], "t"], "Boulder": ["🪨", 0, 0, 0, 5, [], "t"], "Grand Fir": ["🌲", 0, 0, 0, 3, ["Mighty Leap"], "t"], "Gold Nugget": ["🪙", 0, 0, 0, 2, [], "t"],
+  "Steel Trap": ["🪤", 0, 0, 0, 1, ["Steel Trap"], "t"], "Bait Bucket": ["🪣", 0, 0, 0, 1, [], "t"], "The Moon": ["🌕", 0, 0, 1, 24, ["Mighty Leap", "All Lanes"], "s"],
+};
+CM.SIGILS = {
+  "Airborne": ["🪶", "Attacks the opponent directly, flying over creatures."], "Mighty Leap": ["🦘", "Blocks Airborne attacks."], "Touch of Death": ["☠️", "Kills any creature it damages."],
+  "Bifurcated Strike": ["✌️", "Strikes the lanes to its left and right."], "Trifurcated Strike": ["🔱", "Strikes the lanes to its left, ahead and right."],
+  "Sprinter": ["💨", "Moves a lane at the end of its owner's turn."], "Fecundity": ["🥚", "When played, a copy goes into your hand."], "Unkillable": ["♾️", "When it dies, it returns to your hand."],
+  "Worthy Sacrifice": ["🩸", "Counts as three blood when sacrificed."], "Many Lives": ["🐾", "Survives being sacrificed."], "Bone King": ["👑", "Gives four bones when it dies."],
+  "Stinky": ["🤢", "The creature opposite it loses 1 power."], "Rabbit Hole": ["🕳️", "When played, a Rabbit goes into your hand."], "Bees Within": ["🐝", "When struck, a Bee goes into your hand."],
+  "Sharp Quills": ["🌵", "Whatever strikes it takes 1 damage."], "Guardian": ["🛡️", "Moves to block a creature played opposite an empty lane."], "Burrower": ["⛏️", "Moves to block attacks on empty lanes."],
+  "Leader": ["🚩", "Creatures beside it gain 1 power."], "Waterborne": ["🌊", "Submerged: attacks pass over it."], "Corpse Eater": ["🪱", "From your hand, takes the place of a creature of yours that dies."],
+  "Dam Builder": ["🪵", "When played, builds Dams in the lanes beside it."], "Fledgling": ["🐣", "Grows up after a turn."], "Steel Trap": ["🪤", "When it dies, it kills the creature opposite."],
+  "All Lanes": ["🌕", "Strikes every lane."],
+};
+CM.CARD_GROWS = { "Wolf Cub": "Wolf", "Elk Fawn": "Elk" };
+CM.CARD_REGIONS = [
+  { name: "The Woodlands", boss: "The Prospector", pool: ["Stoat", "Bullfrog", "Opossum", "Skunk", "Wolf Cub", "Sparrow", "Mantis", "Elk Fawn", "Coyote", "Alpha", "Raven", "Wolf"], terrain: ["Boulder", "Grand Fir"] },
+  { name: "The Wetlands", boss: "The Angler", pool: ["Bullfrog", "Kingfisher", "Skunk", "Beehive", "Sparrow", "Beaver", "River Snapper", "Adder", "Corpse Maggots", "Field Mice", "Rattler", "Raven"], terrain: ["Boulder", "Bait Bucket"] },
+  { name: "The Snow Line", boss: "The Trapper", pool: ["Stoat", "Opossum", "Porcupine", "Elk Fawn", "Mole", "Bloodhound", "Field Mice", "Raven", "Elk", "Adder", "Wolf", "Alpha", "Vulture", "Grizzly", "Moose Buck"], terrain: ["Grand Fir", "Boulder", "Steel Trap"] },
+];
+CM.CARD_BOSS_POOL = {
+  "The Prospector": ["Stoat", "Pack Mule", "Coyote", "Bloodhound", "Wolf", "Alpha"], "The Angler": ["Bullfrog", "Bait Bucket", "Kingfisher", "Beehive", "River Snapper", "Adder"],
+  "The Trapper": ["Porcupine", "Bloodhound", "Raven", "Elk", "Wolf", "Grizzly"], "Leshy": ["Porcupine", "Bloodhound", "Raven", "Adder", "Wolf", "Vulture", "Grizzly", "Moose Buck"],
+};
+CM.CARD_COMMONS = Object.keys(CM.CARDS).filter((n) => CM.CARDS[n][6] === "c");
+CM.CARD_RARES = Object.keys(CM.CARDS).filter((n) => CM.CARDS[n][6] === "r");
+CM.CARD_STARTER = ["Stoat", "Bullfrog", "Wolf", "Sparrow", "Mantis", "Opossum"];
+CM.cardSpec = (name, kw = {}) => Object.assign({ name, power: 0, health: 0, sigils: [] }, kw);
+CM.cardInfo = (s) => { const c = CM.CARDS[s.name], sig = c[5].concat((s.sigils || []).filter((g) => !c[5].includes(g))); return { emoji: c[0], blood: c[1], bones: c[2], power: c[3] + (s.power || 0), health: c[4] + (s.health || 0), sigils: sig }; };
+
+CM.CardCreature = class {
+  constructor(s, owner) { const I = CM.cardInfo(s); this.spec = s; this.owner = owner; this.emoji = I.emoji; this.blood = I.blood; this.bones = I.bones; this.basePower = I.power; this.maxHealth = I.health; this.health = I.health; this.sigils = I.sigils; this.name = s.name; this.turns = 0; this.direction = 1; }
+  has(g) { return this.sigils.includes(g); }
+};
+
+CM.CardBattle = class {
+  // region 0-2, difficulty 0-3, boss a name or null
+  constructor(deck, region, difficulty, boss = null, seed = 1) {
+    this.rng = new CM.Random(typeof seed === "number" ? seed : CM.hashSeed(String(seed)));
+    this.region = region; this.difficulty = difficulty; this.boss = boss; this.phase = 1;
+    this.you = [null, null, null, null]; this.leshy = [null, null, null, null]; this.queue = [null, null, null, null];
+    this.deck = deck.map((s) => Object.assign({}, s)); this.rng.shuffle(this.deck);
+    this.squirrels = 20; this.hand = []; this.bones = 0; this.scale = 0; this.turn = 0; this.drawn = true; this.over = null; this.log = []; this.tricks = 0; this.rising = false;
+    this.hand.push(CM.cardSpec("Squirrel")); for (let i = 0; i < 3; i++) this.drawDeck();
+    this.plan = this.makePlan(); this.leshyTurnPlays(0);
+    if (!boss && this.rng.next() < 0.35) { const lane = this.rng.int(0, 3); this.leshy[lane] = new CM.CardCreature(CM.cardSpec(this.rng.pick(CM.CARD_REGIONS[region].terrain)), "leshy"); }
+  }
+  say(t) { this.log.push(t); this.log = this.log.slice(-6); }
+  makePlan() {
+    const reg = CM.CARD_REGIONS[this.region], pool = (CM.CARD_BOSS_POOL[this.boss] || reg.pool).slice(), plan = [], strength = 1 + this.difficulty;
+    const reach = Math.min(pool.length, Math.floor(2 + strength * 2)), counts = ({ 1: [0, 1, 1], 2: [0, 1, 1, 1, 2], 3: [1, 1, 1, 2] })[Math.round(strength)] || [1, 1, 2, 2];
+    for (let t = 0; t < 40; t++) {
+      const k = t < 2 ? 1 : this.rng.pick(counts), turn = [];
+      for (let i = 0; i < k; i++) { const ramp = this.boss ? 1 + Math.floor(t / 2) : 2 + t; turn.push(CM.cardSpec(this.rng.pick(pool.slice(0, Math.min(reach, ramp))))); }
+      plan.push(turn);
+    }
+    return plan;
+  }
+  leshyTurnPlays(t) {
+    for (const s of t < this.plan.length ? this.plan[t] : []) {
+      const free = [0, 1, 2, 3].filter((i) => !this.queue[i]); if (!free.length) break;
+      this.queue[this.rng.pick(free)] = new CM.CardCreature(s, "leshy");
+    }
+  }
+  drawDeck() { if (this.deck.length) { this.hand.push(this.deck.pop()); return true; } return false; }
+  draw(pile) {
+    if (this.drawn || this.over) return false;
+    if (pile === "deck" && this.deck.length) this.drawDeck();
+    else if (pile === "squirrel" && this.squirrels > 0) { this.squirrels -= 1; this.hand.push(CM.cardSpec("Squirrel")); }
+    else if (!this.deck.length && this.squirrels <= 0) { /* nothing left */ }
+    else return false;
+    this.drawn = true; return true;
+  }
+  canDraw() { return !this.drawn && (this.deck.length > 0 || this.squirrels > 0); }
+  bloodOf(lanes) { return lanes.reduce((s, i) => s + (this.you[i] ? (this.you[i].has("Worthy Sacrifice") ? 3 : 1) : 0), 0); }
+  canAfford(card) { const I = CM.cardInfo(card); if (I.bones && this.bones < I.bones) return false; if (I.blood) return this.bloodOf([0, 1, 2, 3].filter((i) => this.you[i])) >= I.blood; return true; }
+  play(handIndex, lane, sacrifices = []) {
+    const card = this.hand[handIndex]; if (!card || this.over) return false;
+    const I = CM.cardInfo(card);
+    if (I.bones > this.bones || this.bloodOf(sacrifices) < I.blood) return false;
+    if (this.you[lane] && !sacrifices.includes(lane)) return false;
+    for (const i of sacrifices) { const c = this.you[i]; if (!c || c.has("Many Lives")) continue; this.you[i] = null; this.died(c, i, "you", true); }
+    if (this.you[lane]) return false;
+    this.bones -= I.bones; this.hand.splice(handIndex, 1);
+    const c = new CM.CardCreature(card, "you"); this.you[lane] = c; this.onPlay(c, lane, "you");
+    return true;
+  }
+  onPlay(c, lane, side) {
+    const row = side === "you" ? this.you : this.leshy, other = side === "you" ? this.leshy : this.you;
+    if (c.has("Fecundity") && side === "you") this.hand.push(Object.assign({}, c.spec));
+    if (c.has("Rabbit Hole") && side === "you") this.hand.push(CM.cardSpec("Rabbit"));
+    if (c.has("Dam Builder")) for (const j of [lane - 1, lane + 1]) if (j >= 0 && j < 4 && !row[j]) row[j] = new CM.CardCreature(CM.cardSpec("Dam"), side);
+    if (!other[lane]) for (let j = 0; j < 4; j++) { const g = other[j]; if (g && g.has("Guardian") && !other[lane]) { other[lane] = g; other[j] = null; break; } }
+  }
+  died(c, lane, side, sacrificed = false) {
+    if (side === "you") {
+      this.bones += c.has("Bone King") ? 4 : 1;
+      if (c.has("Unkillable") && c.name !== "Squirrel") { const s = Object.assign({}, c.spec); if (c.name === "Ouroboros") { s.power = (s.power || 0) + 1; s.health = (s.health || 0) + 1; } this.hand.push(s); }
+      if (!sacrificed) for (let k = 0; k < this.hand.length; k++) if (CM.cardInfo(this.hand[k]).sigils.includes("Corpse Eater") && !this.you[lane]) { const h = this.hand.splice(k, 1)[0]; this.you[lane] = new CM.CardCreature(h, "you"); this.say("Corpse Maggots crawl into the empty place."); break; }
+    }
+    if (c.has("Steel Trap")) { const other = side === "leshy" ? this.you : this.leshy; if (other[lane]) { const v = other[lane]; other[lane] = null; this.died(v, lane, side === "leshy" ? "you" : "leshy"); this.say("The steel trap snaps shut."); } }
+  }
+  kill(side, lane) { const row = side === "you" ? this.you : this.leshy, c = row[lane]; if (!c) return; row[lane] = null; this.died(c, lane, side); }
+  powerOf(side, lane) {
+    const row = side === "you" ? this.you : this.leshy, other = side === "you" ? this.leshy : this.you, c = row[lane]; if (!c) return 0;
+    let p = c.basePower; for (const j of [lane - 1, lane + 1]) if (j >= 0 && j < 4 && row[j] && row[j].has("Leader")) p += 1;
+    if (other[lane] && other[lane].has("Stinky")) p -= 1;
+    return Math.max(0, p);
+  }
+  *strike(side, lane) {
+    const row = side === "you" ? this.you : this.leshy, other = side === "you" ? this.leshy : this.you, c = row[lane]; if (!c) return;
+    let lanes = [lane]; if (c.has("All Lanes")) lanes = [0, 1, 2, 3]; else if (c.has("Trifurcated Strike")) lanes = [lane - 1, lane, lane + 1]; else if (c.has("Bifurcated Strike")) lanes = [lane - 1, lane + 1];
+    for (const t of lanes) {
+      if (t < 0 || t > 3 || row[lane] !== c) continue;
+      const power = this.powerOf(side, lane); if (power <= 0) continue;
+      let target = other[t];
+      if (!target) for (let j = 0; j < 4; j++) { const b = other[j]; if (b && b.has("Burrower") && !other[t]) { other[t] = b; other[j] = null; target = b; break; } }
+      const flying = c.has("Airborne") && !(target && target.has("Mighty Leap"));
+      if (!target || flying || target.has("Waterborne")) { this.scale += side === "you" ? power : -power; yield { kind: "face", side, lane, t, power }; if (Math.abs(this.scale) >= 5 && !this.moonGuard()) return; continue; }
+      target.health -= power; yield { kind: "hit", side, lane, t, power };
+      if (target.has("Sharp Quills")) c.health -= 1;
+      if (target.has("Bees Within") && target.owner === "you") this.hand.push(CM.cardSpec("Bee"));
+      if (target.health <= 0 || (c.has("Touch of Death") && target.name !== "The Moon")) for (let j = 0; j < 4; j++) if (other[j] === target) this.kill(side === "you" ? "leshy" : "you", j);
+      if (c.health <= 0) { this.kill(side, lane); return; }
+    }
+  }
+  moonGuard() { return this.leshy.some((c) => c && c.name === "The Moon"); }
+  *ringBell() {
+    if (this.over) return;
+    for (let lane = 0; lane < 4; lane++) { yield* this.strike("you", lane); if (this.check()) return; }
+    this.endOfTurn("you"); yield { kind: "leshy_turn" };
+    for (let lane = 0; lane < 4; lane++) if (this.queue[lane] && !this.leshy[lane]) { this.leshy[lane] = this.queue[lane]; this.queue[lane] = null; this.onPlay(this.leshy[lane], lane, "leshy"); yield { kind: "advance", lane }; }
+    this.turn += 1; this.leshyTurnPlays(this.turn);
+    yield* this.bossTrick();
+    if (this.turn >= 30) { this.scale -= 1; this.say("The cold creeps in. Leshy grows impatient."); yield { kind: "face", side: "leshy", lane: 0, t: 0, power: 1 }; if (this.check()) return; }
+    for (let lane = 0; lane < 4; lane++) {
+      if (this.rising) { this.rising = false; this.say("The Moon hangs in the sky, gathering itself."); break; }
+      yield* this.strike("leshy", lane); if (this.check()) return;
+      if (this.leshy[lane] && this.leshy[lane].has("All Lanes")) break;
+    }
+    this.endOfTurn("leshy");
+    for (const row of [this.you, this.leshy]) row.forEach((c, i) => { if (!c) return; c.turns += 1; if (c.has("Fledgling") && c.turns >= 1 && CM.CARD_GROWS[c.name]) row[i] = new CM.CardCreature(CM.cardSpec(CM.CARD_GROWS[c.name], { power: c.spec.power || 0, health: c.spec.health || 0 }), c.owner); });
+    this.drawn = !(this.deck.length || this.squirrels > 0);
+    yield { kind: "your_turn" };
+  }
+  endOfTurn(side) {
+    const row = side === "you" ? this.you : this.leshy, moved = new Set();
+    for (let i = 0; i < 4; i++) {
+      const c = row[i]; if (!c || moved.has(c) || !c.has("Sprinter")) continue;
+      let j = i + c.direction; if (j < 0 || j > 3 || row[j]) { c.direction = -c.direction; j = i + c.direction; }
+      if (j >= 0 && j < 4 && !row[j]) { row[j] = c; row[i] = null; moved.add(c); }
+    }
+  }
+  check() {
+    const moon = this.moonGuard();
+    if (this.boss === "Leshy" && this.phase === 2 && !moon) { this.over = "won"; return true; }
+    if (this.scale >= 5 && !moon) { this.over = this.boss && this.phase === 1 ? "phase" : "won"; return true; }
+    if (this.scale <= -5) { this.over = "lost"; return true; }
+    return false;
+  }
+  *bossTrick() {
+    const b = this.boss; if (!b || this.tricks >= (this.phase === 1 ? 1 : 2) || this.turn < 4 + this.tricks * 3) return;
+    const mine = [0, 1, 2, 3].filter((i) => this.you[i] && this.you[i].name !== "Gold Nugget");
+    if (b === "The Prospector" && mine.length) { this.tricks += 1; const i = mine.sort((a, c) => this.powerOf("you", c) - this.powerOf("you", a))[0]; this.you[i] = new CM.CardCreature(CM.cardSpec("Gold Nugget"), "you"); this.say("\"GOLD!\" The Prospector's pickaxe turns your creature to gold."); yield { kind: "trick", boss: b }; }
+    else if (b === "The Angler" && mine.length) { const i = mine.sort((a, c) => this.powerOf("you", c) - this.powerOf("you", a))[0]; if (!this.leshy[i]) { this.tricks += 1; this.leshy[i] = this.you[i]; this.you[i] = null; this.leshy[i].owner = "leshy"; this.say("The Angler's hook drags your creature to his side."); yield { kind: "trick", boss: b }; } }
+    else if (b === "The Trapper") { const free = [0, 1, 2, 3].filter((i) => !this.leshy[i]); if (free.length) { this.tricks += 1; this.leshy[free[0]] = new CM.CardCreature(CM.cardSpec("Steel Trap"), "leshy"); this.say("The Trapper sets his steel traps."); yield { kind: "trick", boss: b }; } }
+    else if (b === "Leshy" && this.phase === 1 && mine.length && this.turn >= 6) { this.tricks += 1; const i = this.rng.pick(mine); this.you[i] = new CM.CardCreature(CM.cardSpec("Gold Nugget"), "you"); this.say("Leshy wears the Prospector's mask for a moment. \"Gold.\""); yield { kind: "trick", boss: b }; }
+  }
+  nextPhase() {
+    this.phase = 2; this.scale = 0; this.tricks = 0; this.over = null; this.leshy = [null, null, null, null]; this.queue = [null, null, null, null];
+    if (this.boss === "Leshy") { const moon = new CM.CardCreature(CM.cardSpec("The Moon"), "leshy"); this.leshy = [moon, moon, moon, moon]; this.rising = true; this.plan = []; this.hand.push(CM.cardSpec("Squirrel"), CM.cardSpec("Squirrel")); this.say("\"Behold... the Moon.\" Two squirrels scurry to your side."); }
+    else { this.plan = this.makePlan(); this.leshyTurnPlays(this.turn); this.say(`${this.boss} takes off his mask... no. He puts on another.`); }
+  }
+};
 
 // ---- 65-village.js ----
 "use strict";
@@ -16952,6 +17317,7 @@ CM.UI = class {
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-magetower"><div class="box"><h2>The Mage Tower</h2><p class="lore">The doors are taller than three men, and warm to the touch. Whoever goes in, goes in alone: a caster, or someone with a bow.</p><div id="magetower-who"></div><div class="small" id="magetower-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
+<div class="dialog" id="dlg-cabin"><div class="box cabinbox"><div id="cabin-body"></div></div></div>
 <div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button><button data-page="errands" title="What the townsfolk have asked of you, and what they ask now">Errands</button></span></h2><div id="journal-list"></div>
@@ -19186,6 +19552,99 @@ Object.assign(CM.UI.prototype, {
   },
 });
 
+// ---- 76b-cabin.js ----
+"use strict";
+// Leshy's table in the cabin (the thirteenth update): the window's side of Claudescryption. Four views in one dialog -
+// the table (which game to play, the deck, the box), the deck (cards in and out), the battle (the board, the hand,
+// the scale, the bell) and the winnings (a card to choose). The rules are 64h-cards.js; the collection and the
+// rewards 61f-cabin.js.
+Object.assign(CM.UI.prototype, {
+  openCabin() { this.cabinView = this.game.cardGame && !this.game.cardGame.done ? "battle" : "table"; this.renderCabin(); this.openDialog("#dlg-cabin"); },
+  cardHtml(s, o = {}) {
+    const I = CM.cardInfo(s), c = o.creature, power = c ? o.power : I.power, health = c ? c.health : I.health;
+    const cost = I.blood ? "🩸".repeat(I.blood) : I.bones ? `🦴${I.bones}` : "";
+    const tip = [s.name, ...I.sigils.map((g) => `${g}: ${(CM.SIGILS[g] || ["", ""])[1]}`)].join("\n");
+    return `<div class="ccard${o.cls ? " " + o.cls : ""}"${o.data ? ` ${o.data}` : ""} title="${this.esc(tip)}"><div class="cname">${this.esc(s.name)}</div><div class="ccost">${cost}</div><div class="cemo">${I.emoji}</div><div class="csig">${I.sigils.map((g) => (CM.SIGILS[g] || ["?"])[0]).join("")}</div><div class="cstat"><b>${power}</b><i>${health}</i></div></div>`;
+  },
+  renderCabin() {
+    const g = this.game, K = g.cards(), box = this.$("#cabin-body"), v = this.cabinView || "table";
+    if (v === "table") {
+      const rows = CM.CARD_TABLES.map((T) => { const open = g.cardTableOpen(T), won = K.beaten[T.id] || 0;
+        return `<div class="ctable${open ? "" : " locked"}"><div><b>${this.esc(T.name)}</b><br><small>${open ? `${T.boss ? "a boss game: " : ""}${T.gold} gold${won ? "" : " (doubled the first time)"}, a ${T.pick} card to choose${T.item ? ", and a thing" : ""}${won ? ` - won ${won}` : ""}` : `first win ${T.needs.map((id) => CM.CARD_TABLES.find((t) => t.id === id).name.replace(/^A game (in|on) the /, "the ").replace("Leshy wears the ", "the ").replace("'s mask", "")).join(", ")}`}</small></div><button data-sit="${T.id}" ${open ? "" : "disabled"}>Sit down</button></div>`; }).join("");
+      const owned = Object.values(K.owned).reduce((s, n) => s + n, 0);
+      box.innerHTML = `<h2>Leshy's cabin</h2><p class="lore">${this.esc(CM.LESHY_LINES.greet)}</p><div class="ctables">${rows}</div>
+        <p class="small">Your deck: ${K.deck.length} cards (${CM.CARD_DECK_MIN} to ${CM.CARD_DECK_MAX}). In the box: ${owned} cards of ${Object.keys(K.owned).length} kinds. Games won: ${K.wins} of ${K.games}. Cards turn up now and then in chests below, and good ones from the guardians and the tower's bosses. A lost game costs nothing.</p>
+        <div class="row"><button data-cabin="deck">Change the deck</button><button class="close">Leave the table</button></div><div class="small" id="cabin-note"></div>`;
+      for (const b of box.querySelectorAll("[data-sit]")) b.addEventListener("click", () => { const why = g.startCardGame(b.dataset.sit); if (why) this.$("#cabin-note").textContent = why; else { this.cabinSel = { hand: null, sac: [] }; this.cabinView = "battle"; this.renderCabin(); } });
+    } else if (v === "deck") {
+      const inDeck = {}; for (const n of K.deck) inDeck[n] = (inDeck[n] || 0) + 1;
+      const names = Object.keys(K.owned).sort((a, b) => (CM.CARDS[a][6] === "r") - (CM.CARDS[b][6] === "r") || a.localeCompare(b));
+      const deck = K.deck.slice().sort().map((n) => this.cardHtml(CM.cardSpec(n), { data: `data-out="${this.esc(n)}"`, cls: "small" })).join("");
+      const boxed = names.filter((n) => K.owned[n] - (inDeck[n] || 0) > 0).map((n) => `<div class="cwrap">${this.cardHtml(CM.cardSpec(n), { data: `data-in="${this.esc(n)}"`, cls: "small" + (CM.CARDS[n][6] === "r" ? " rare" : "") })}<span>x${K.owned[n] - (inDeck[n] || 0)}</span></div>`).join("");
+      box.innerHTML = `<h2>The deck</h2><p class="small">Click a card in the deck to put it back in the box; click one in the box to add it. A deck holds ${CM.CARD_DECK_MIN} to ${CM.CARD_DECK_MAX} cards, and squirrels are always to hand besides.</p>
+        <div class="list-title">The deck (${K.deck.length})</div><div class="crow wrap">${deck}</div><div class="list-title">The box</div><div class="crow wrap">${boxed || "<small>Every card you own is in the deck.</small>"}</div>
+        <div class="small" id="cabin-note"></div><div class="row"><button data-cabin="table">Back to the table</button></div>`;
+      for (const b of box.querySelectorAll("[data-out]")) b.addEventListener("click", () => { const why = g.deckRemove(b.dataset.out); this.renderCabin(); if (why) this.$("#cabin-note").textContent = why; });
+      for (const b of box.querySelectorAll("[data-in]")) b.addEventListener("click", () => { const why = g.deckAdd(b.dataset.in); this.renderCabin(); if (why) this.$("#cabin-note").textContent = why; });
+    } else if (v === "battle") this.renderCardBattle();
+    else if (v === "reward") {
+      const R = g.cardGame && g.cardGame.reward;
+      box.innerHTML = `<h2>${R ? "You win" : "Leshy wins"}</h2>${R ? `<p class="lore">${R.gold} gold${R.item ? `, and ${this.esc(R.item.name)} (${this.esc(CM.itemLabel(R.item))})` : ""}. Leshy fans three cards on the table: take one.</p>
+        <div class="crow">${R.choices.map((n) => this.cardHtml(CM.cardSpec(n), { data: `data-take="${this.esc(n)}"`, cls: (R.taken === n ? "sel" : "") + (CM.CARDS[n][6] === "r" ? " rare" : "") })).join("")}</div>` : `<p class="lore">The scale tips his way. Nothing is lost: sit down again whenever you like.</p>`}
+        <div class="row"><button data-cabin="table" ${R && !R.taken ? "disabled" : ""}>Back to the table</button></div>`;
+      for (const b of box.querySelectorAll("[data-take]")) b.addEventListener("click", () => { if (g.takeCardReward(b.dataset.take)) this.renderCabin(); this.refresh(); });
+    }
+    for (const b of box.querySelectorAll("[data-cabin]")) b.addEventListener("click", () => { if (b.dataset.cabin === "table") g.leaveCardTable(); this.cabinView = b.dataset.cabin; this.renderCabin(); });
+    for (const b of box.querySelectorAll("button.close")) b.addEventListener("click", () => this.closeDialogs());
+  },
+  // the board: his queue, his row, yours; the hand; the piles, the bones, the scale and the bell
+  renderCardBattle() {
+    const g = this.game, G = g.cardGame, B = G.battle, box = this.$("#cabin-body"), sel = this.cabinSel || (this.cabinSel = { hand: null, sac: [] }), busy = Boolean(this.cabinBusy);
+    const slot = (c, side, i, cls) => (c ? this.cardHtml(c.spec, { creature: c, power: side === "queue" ? c.basePower : B.powerOf(side, i), cls: `${cls || ""}${side === "you" && sel.sac.includes(i) ? " sac" : ""}${c.flash ? " flash" : ""}`, data: `data-lane="${side}:${i}"` }) : `<div class="ccard empty" data-lane="${side}:${i}"></div>`);
+    const teeth = []; for (let k = -5; k <= 5; k++) teeth.push(`<i class="${k === 0 ? "mid" : (k < 0 && B.scale <= k) || (k > 0 && B.scale >= k) ? (k < 0 ? "his" : "yours") : ""}"></i>`);
+    const hand = B.hand.map((s, i) => this.cardHtml(s, { data: `data-hand="${i}"`, cls: `${sel.hand === i ? "sel" : ""}${B.canAfford(s) ? "" : " dim"}` })).join("");
+    const need = sel.hand !== null && B.hand[sel.hand] ? CM.cardInfo(B.hand[sel.hand]).blood : 0, have = B.bloodOf(sel.sac);
+    const tip = B.over ? "" : busy ? "..." : B.canDraw() ? "Draw: a card from your deck, or a squirrel." : sel.hand === null ? "Play a card from your hand, or ring the bell." : need > have ? `Sacrifice ${need - have} more blood: click your creatures.` : "Now click an empty lane of yours.";
+    box.innerHTML = `<div class="cbattle"><div class="chead"><b>${this.esc(G.table.name)}</b>${B.boss && B.phase === 2 ? " - the second phase" : ""}<span class="cscale" title="The scale: five teeth your way wins">${teeth.join("")}</span></div>
+      <div class="clog">${B.log.slice(-3).map((l) => `<div>${this.esc(l)}</div>`).join("") || "<div>Leshy waits for you to play.</div>"}</div>
+      <div class="crow queue">${B.queue.map((c, i) => slot(c, "queue", i, "q")).join("")}</div>
+      <div class="crow">${B.leshy.map((c, i) => slot(c, "leshy", i)).join("")}</div>
+      <div class="crow mine">${B.you.map((c, i) => slot(c, "you", i)).join("")}</div>
+      <div class="cbar"><button data-draw="deck" ${B.canDraw() && B.deck.length && !busy ? "" : "disabled"}>Deck (${B.deck.length})</button><button data-draw="squirrel" ${B.canDraw() && B.squirrels && !busy ? "" : "disabled"}>🐿️ Squirrels (${B.squirrels})</button><span>🦴 ${B.bones}</span><span class="ctip">${this.esc(tip)}</span><button class="primary" data-bell ${!B.canDraw() && !busy && !B.over ? "" : "disabled"}>🔔 Ring the bell</button></div>
+      <div class="crow hand">${hand}</div>
+      <div class="row"><button data-forfeit>${B.over ? "Back to the table" : "Leave the game (it is lost)"}</button></div></div>`;
+    box.querySelectorAll("[data-draw]").forEach((b) => b.addEventListener("click", () => { B.draw(b.dataset.draw); this.renderCabin(); }));
+    box.querySelectorAll("[data-hand]").forEach((b) => b.addEventListener("click", () => { if (busy || B.canDraw()) return; const i = Number(b.dataset.hand); sel.hand = sel.hand === i ? null : i; sel.sac = []; this.renderCabin(); }));
+    box.querySelectorAll("[data-lane^='you:']").forEach((b) => b.addEventListener("click", () => {
+      if (busy || sel.hand === null) return; const lane = Number(b.dataset.lane.split(":")[1]), card = B.hand[sel.hand]; if (!card) return;
+      const I = CM.cardInfo(card), haveNow = B.bloodOf(sel.sac);
+      if (B.you[lane] && I.blood && haveNow < I.blood && !sel.sac.includes(lane)) { sel.sac.push(lane); this.renderCabin(); return; }
+      if (B.you[lane] && sel.sac.includes(lane) && haveNow < I.blood) { sel.sac = sel.sac.filter((k) => k !== lane); this.renderCabin(); return; }
+      if (B.play(sel.hand, lane, sel.sac)) { sel.hand = null; sel.sac = []; this.cardSound("play"); }
+      this.renderCabin();
+    }));
+    const bell = box.querySelector("[data-bell]"); if (bell) bell.addEventListener("click", () => this.ringCardBell());
+    box.querySelector("[data-forfeit]").addEventListener("click", () => { if (!B.over) { B.over = "lost"; g.finishCardGame(); } g.leaveCardTable(); this.cabinView = "table"; this.renderCabin(); this.refresh(); });
+  },
+  cardSound(what) { try { CM.audio.play(what === "bell" ? "toll" : what === "hit" ? "hit" : what === "face" ? "slam" : "step", what === "bell" ? 0.35 : 0.3); } catch (e) { /* quiet */ } },
+  // the bell: the battle's steps, a beat apart, the board redrawn at each
+  ringCardBell() {
+    const g = this.game, B = g.cardGame.battle, it = B.ringBell(); this.cabinBusy = true; this.cabinSel = { hand: null, sac: [] }; this.cardSound("bell");
+    const step = () => {
+      const r = it.next();
+      if (r.done || r.value.kind === "your_turn" || B.over) {
+        this.cabinBusy = false;
+        if (B.over === "phase") { B.nextPhase(); this.renderCabin(); return; }
+        if (B.over) { g.finishCardGame(); this.cabinView = "reward"; this.refresh(); }
+        this.renderCabin(); return;
+      }
+      if (r.value.kind === "hit" || r.value.kind === "face") this.cardSound(r.value.kind);
+      this.renderCabin(); setTimeout(step, CM.reducedMotion ? 60 : 300);
+    };
+    this.renderCabin(); setTimeout(step, 250);
+  },
+});
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -19383,6 +19842,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
+  game.on("cabin", () => ui.openCabin());                                // (Leshy's table: 76b-cabin.js)
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
@@ -19603,11 +20063,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const fl = game.floor;
     if (!fl || CM.reducedMotion || game.mode === "title") { air.parts = []; return; }
     if (airFloor !== fl) { airFloor = fl; air.parts = []; chimneys = [];
-      if (fl.number === 0) chimneys = CM.chimneysOf(fl).map((c) => [c.x, c.z, c.top]); }   // (the smoke from the chimneys' own tops)
+      if (fl.number === 0 || fl.number === -1) chimneys = CM.chimneysOf(fl).map((c) => [c.x, c.z, c.top]); }   // (the town's, and the cabin's in the Wood)   // (the smoke from the chimneys' own tops)
     const surface = fl.number === 0 || fl.number === -1, detail = Object.keys(CM.DETAIL).find((k) => CM.DETAIL[k] === renderer.density) || "medium";   // (the Detail in force, after any step-down)
     const budget = CM.AIR_BUDGET[detail] || 0, weather = surface ? CM.weather(game) : "clear";
     const towerNear = fl.number === -1 && Math.abs(fl.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(fl.pos[1] - CM.MAGE_TOWER.at[1]) <= 9;
-    const kinds = budget ? CM.airKinds({ towerNear, surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
+    const kinds = budget ? CM.airKinds({ towerNear, surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 || (fl.number === -1 && Math.abs(fl.pos[0] - CM.CABIN.centre[0]) + Math.abs(fl.pos[1] - CM.CABIN.centre[1]) <= 12) }) : [];
     const scale = detail === "high" ? 1 : 0.6;
     air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
   }
@@ -20070,8 +20530,8 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
-        { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
-          if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
+        { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
+          if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);
         stepAir(dt);
         const { out, hud } = sprites();

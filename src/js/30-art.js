@@ -1125,6 +1125,18 @@ CM.art.ice = function () {
 };
 // the Mage Tower's pictures: black and grey stone in long blocks, two dark-brown doors with iron, a narrow window's
 // cold light, the portal's arch with the light turning in it, and a dark plinth waiting for its portal
+// the cabin's walls: round logs laid one on another, the ends notched; the door's face a plank door and a small window
+CM.art.logs = function (door) {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(door ? 95 : 94), n = 7, h = S / n;
+  p.fillStyle = "#2A1A0E"; p.fillRect(0, 0, S, S);
+  for (let j = 0; j < n; j++) { const g = p.createLinearGradient(0, j * h, 0, (j + 1) * h); const k = 0.85 + rnd.next() * 0.3; g.addColorStop(0, `rgb(${Math.round(90 * k)},${Math.round(62 * k)},${Math.round(36 * k)})`); g.addColorStop(0.5, `rgb(${Math.round(128 * k)},${Math.round(90 * k)},${Math.round(54 * k)})`); g.addColorStop(1, `rgb(${Math.round(60 * k)},${Math.round(40 * k)},${Math.round(22 * k)})`);
+    p.fillStyle = g; p.beginPath(); p.roundRect ? p.roundRect(2, j * h + 2, S - 4, h - 3, h / 2) : p.rect(2, j * h + 2, S - 4, h - 3); p.fill();
+    p.strokeStyle = "rgba(40,24,12,0.5)"; p.lineWidth = 1.5; for (let i = 0; i < 3; i++) { const x = rnd.next() * S; p.beginPath(); p.moveTo(x, j * h + h * 0.3); p.lineTo(x + 20 + rnd.next() * 40, j * h + h * 0.35); p.stroke(); } }
+  if (door) { p.fillStyle = "#3A2614"; p.fillRect(S * 0.3, S * 0.22, S * 0.4, S * 0.78); p.fillStyle = "#5A3C20"; p.fillRect(S * 0.33, S * 0.25, S * 0.34, S * 0.75); p.fillStyle = "#3A2614"; for (let i = 1; i < 4; i++) p.fillRect(S * 0.33 + i * S * 0.085, S * 0.25, 3, S * 0.75); p.fillRect(S * 0.33, S * 0.5, S * 0.34, 5);
+    p.fillStyle = "#B08A40"; p.beginPath(); p.arc(S * 0.62, S * 0.62, 5, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#2A1A0E"; p.fillRect(S * 0.76, S * 0.3, S * 0.18, S * 0.2); p.fillStyle = "#E8A850"; p.fillRect(S * 0.78, S * 0.32, S * 0.14, S * 0.16); p.fillStyle = "#2A1A0E"; p.fillRect(S * 0.845, S * 0.32, 3, S * 0.16); }   // (a candle in the window)
+  return c;
+};
 CM.art.mageStone = function () {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(91);
   p.fillStyle = "#16151A"; p.fillRect(0, 0, S, S);
@@ -1341,6 +1353,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
+  out["solid:logs"] = use("solid.logs", () => CM.art.logs(false)); out["solid:cabindoor"] = use("solid.cabindoor", () => CM.art.logs(true));   // (Leshy's cabin: 61f-cabin.js)
   out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
   out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
