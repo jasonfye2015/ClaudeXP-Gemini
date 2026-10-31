@@ -5043,6 +5043,26 @@ test("the casino's gallery: every table on the floor has its line, its kind and 
   for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
 });
 
+test("the Joker's Club: boards keep the ten best and count records broken; a game's end puts its score on its board; the loyalty card stamps each different table, fills at eight, and pays when collected with membership rising; achievements unlock from the floor's records and pay once, when collected", () => {
+  const CM = load(), CLUB = CM.CLUB, g = new CM.Game(); g.newGame("club-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const F = () => g.cgStore();
+  // boards
+  for (let k = 1; k <= 12; k++) g.cgRecord("swarm", k * 100, k); const B = F().boards.swarm; assert.strictEqual(B.length, CLUB.keep); assert.strictEqual(B[0].score, 1200); assert.strictEqual(B[B.length - 1].score, 300); assert.strictEqual(F().records, 11, "each beat the last best");
+  assert.strictEqual(g.cgRecord("swarm", 50, 1), 0, "too low for the board");
+  // a real game's end lands on its board
+  assert.ok(!g.mmStart(10).error); const L = g.mmLevel(); L.score = 4321; L.stage = "over"; g.mmCheck(); assert.strictEqual(F().boards.manamine[0].score, 4321);
+  // loyalty: stamps for different tables only
+  const L0 = F().loyalty; const had = L0.card.length; g.cgStake("slots", 5); g.cgStake("slots", 5); assert.ok(F().loyalty.card.length <= had + 1, "the same table stamps once");
+  for (const t of ["roulette", "blackjack", "poker", "runefall", "dash", "gemtray", "hexwand", "pit", "cascade"]) g.cgStake(t, 5);
+  const Lo = F().loyalty; assert.ok(Lo.done >= 1 && Lo.unpaid >= 1); assert.strictEqual(CLUB.member(Lo.done), "Bronze"); const gold0 = g.gold, cards0 = F().cards.length, out = g.cgCollect("loyalty"); assert.ok(out.gold >= 150 && out.cards.length === 1); assert.strictEqual(g.gold - gold0, out.gold); assert.strictEqual(F().cards.length, cards0 + 1); assert.strictEqual(g.cgCollect("loyalty").gold, Lo.unpaid ? g.cgCollect("loyalty").gold : 0);
+  // achievements: unlocked by the records, paid once when collected
+  const A = F().ach; assert.ok(A.first && A.tables5 && A.board1 && A.loyal1, "unlocked"); const U = g.cgUnpaid(); assert.ok(U.ach.includes("first"));
+  const g1 = g.gold, r1 = g.cgCollect("first"); assert.strictEqual(r1.gold, CLUB.REWARD.bronze.gold); assert.strictEqual(g.gold - g1, r1.gold); assert.strictEqual(g.cgCollect("first").gold, 0, "once");
+  F().jackpots = 1; g.cgAchieve(); const r2 = g.cgCollect("jackpot"); assert.strictEqual(r2.gold, CLUB.REWARD.silver.gold); assert.strictEqual(r2.cards.length, 1);
+  assert.ok(!A.platinum); F().loyalty.done = 10; g.cgAchieve(); assert.ok(F().ach.platinum);
+  // a stake still costs exactly the stake; a payout still pays exactly what it says
+  const s0 = g.gold; assert.strictEqual(g.cgStake("roulette", 25), ""); assert.strictEqual(s0 - g.gold, 25); const p0 = g.gold; g.cgPay("roulette", 40); assert.strictEqual(g.gold - p0, 40);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

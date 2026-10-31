@@ -122,7 +122,7 @@ Object.assign(CM.Game.prototype, {
     while ((S.paid || 0) < G.marks) { const i = (S.paid || 0) + 1, pay = Math.round(S.bet * PB.pay(i)), C = this.pbClaimed(); let card = null;
       if (!C[i]) { card = this.cgTierCard(CM.cardTierFor(i), `Wyrmhold Pinball: ${PB.MARKS[i - 1].toLocaleString("en")} points!`, new CM.Random(CM.hashSeed(`${this.seed}:pinball:card:${i}`))); C[i] = card || true; if (card) S.cards.push(card); }
       this.cgPay("pinball", pay); S.won += pay; S.paid = i; out.marks.push({ i, pay, card }); }
-    if (G.stage === "over") { S.stage = "done"; S.last = { score: G.score, won: S.won, cards: S.cards.slice(), marks: G.marks }; const F = this.cgStore(); F.pbBest = Math.max(F.pbBest || 0, G.score); this.pbLive = null; out.over = true; }
+    if (G.stage === "over") { S.stage = "done"; S.last = { score: G.score, won: S.won, cards: S.cards.slice(), marks: G.marks }; const F = this.cgStore(); F.pbBest = Math.max(F.pbBest || 0, G.score); this.cgRecord && this.cgRecord("pinball", G.score, G.marks); this.pbLive = null; out.over = true; }
     if (out.marks.length || out.over) { this.saveCasino && this.saveCasino(); this.emit("change"); }
     return out.marks.length || out.over ? out : null;
   },

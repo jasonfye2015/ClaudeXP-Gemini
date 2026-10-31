@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v14.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v14.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -882,6 +882,57 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .cggallery .cgcard i { font-size: 11px; opacity: 0.55; }
 .cggallery .cgpager { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 12px 0 6px; }
 @media (max-width: 900px) { .cggallery .cggrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.cggallery .cgclub, .cgclub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -2px 0 10px; padding: 6px 8px; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(200,160,64,0.3); }
+.cgmember { font-family: Georgia, serif; font-weight: bold; padding: 3px 10px; border-radius: 12px; background: #3A3028; color: #E0D0B0; }
+.m-bronze .cgpunchhead span, .cgmember.m-bronze { background: #7A4A20; color: #FFE0C0; }
+.cgmember.m-silver { background: #8A929A; color: #101418; }
+.cgmember.m-gold { background: #C89A20; color: #201400; }
+.cgmember.m-platinum { background: linear-gradient(90deg, #C0D8E8, #F0F8FF, #B0C8E0); color: #102030; }
+.cgminicard { display: inline-flex; gap: 3px; padding: 4px 6px; background: #F0E6D0; border-radius: 5px; }
+.cgminicard i { width: 10px; height: 10px; border-radius: 50%; border: 1px dashed #8A6A40; }
+.cgminicard i.on { background: #B03030; border: 1px solid #701010; }
+.cgclub .cgwait { color: #F0D070; font-weight: bold; margin-left: auto; }
+.cghall .cghallgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cgboard { background: linear-gradient(#2A2018, #1A140E); border: 1px solid rgba(200,160,64,0.45); border-radius: 8px; padding: 8px; }
+.cgboard .cgbhead { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cgboard .cgbhead canvas { width: 66px; height: 33px; border-radius: 4px; }
+.cgboard .cgbhead b { color: #F0D070; font-family: Georgia, serif; flex: 1; }
+.cgboard ol { margin: 0; padding-left: 22px; font-size: 12px; }
+.cgboard li { display: grid; grid-template-columns: 1.1fr 0.9fr 1fr 0.9fr; gap: 6px; padding: 1px 0; }
+.cgboard li.top { color: #F0D070; font-weight: bold; }
+.cgboard li.none { display: list-item; opacity: 0.6; font-style: italic; }
+.cgboard li .sc { text-align: right; font-family: monospace; }
+.cgboard li .at, .cgboard li .lv { opacity: 0.7; }
+.cgpunch { margin: 8px auto; max-width: 640px; background: #F4ECD8; color: #3A2410; border-radius: 12px; padding: 12px 16px; box-shadow: 0 6px 16px rgba(0,0,0,0.6); border: 3px double #B08A50; }
+.cgpunchhead { display: flex; justify-content: space-between; align-items: center; font-family: Georgia, serif; letter-spacing: 2px; margin-bottom: 8px; }
+.cgpunchhead span { padding: 2px 10px; border-radius: 10px; background: #D8C8A8; letter-spacing: 0; font-weight: bold; }
+.m-silver .cgpunchhead span { background: #A8B0B8; } .m-gold .cgpunchhead span { background: #E0B840; } .m-platinum .cgpunchhead span { background: #D8E8F4; }
+.cgslots { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+.cgslot { aspect-ratio: 1 / 1.3; border: 2px dashed #B08A50; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-family: Georgia, serif; color: #B08A50; }
+.cgslot.on { border: 2px solid #8A2020; background: rgba(176,48,48,0.08); }
+.cgslot canvas { width: 80%; aspect-ratio: 1; border-radius: 50%; border: 2px solid #8A2020; }
+.cgslot small { font-size: 9px; text-align: center; color: #5A3010; line-height: 1.1; }
+.cgpunchfoot { margin-top: 8px; font-size: 12px; text-align: center; font-style: italic; }
+.cgtiers { display: flex; gap: 8px; justify-content: center; margin: 10px 0; }
+.cgtiers div { padding: 6px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); opacity: 0.55; display: flex; flex-direction: column; align-items: center; }
+.cgtiers div.on { opacity: 1; border-color: #F0C040; }
+.cgtiers span { font-size: 11px; }
+.cgtroph h4 { margin: 10px 0 6px; font-family: Georgia, serif; }
+.cgachs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.cgach { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); }
+.cgach.locked { opacity: 0.55; }
+.cgach.ready { border-color: #F0C040; box-shadow: 0 0 8px rgba(240,192,64,0.35); }
+.cgach .medal { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #201400; flex: none; }
+.cgach div { flex: 1; display: flex; flex-direction: column; }
+.cgach div b { color: #F0D070; }
+.cgach div span { font-size: 12px; opacity: 0.85; }
+.cgach i { font-size: 11px; opacity: 0.6; }
+.cgtoasts { position: fixed; top: 70px; right: 24px; display: flex; flex-direction: column; gap: 6px; z-index: 9999; pointer-events: none; }
+.cgtoast { background: linear-gradient(#3A2A10, #201408); color: #F0E0B0; border: 1px solid #F0C040; border-radius: 8px; padding: 8px 12px; font-family: Georgia, serif; box-shadow: 0 6px 14px rgba(0,0,0,0.6); max-width: 320px; transition: opacity 0.7s, transform 0.7s; animation: cgtoastin 0.35s ease-out; }
+.cgtoast.out { opacity: 0; transform: translateX(30px); }
+.cgtoast.t-ach, .cgtoast.t-loyalty { border-color: #FFE080; color: #FFF0C0; }
+.cgtoast.t-record { border-color: #80E0FF; }
+@keyframes cgtoastin { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
 </style>
 </head>
 <body>
@@ -891,7 +942,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "14.8", built: "2026-10-31" };
+const CM = window.CM = { version: "14.9", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20581,7 +20632,7 @@ Object.assign(CM.Game.prototype, {
         C[n] = card || true; if (card) S.cards.push(card); }
       this.cgPay("runestack", pay); S.won += pay; out.push({ level: n, pay, card, kind: card ? RS.cardKind(n) : null });
     }
-    if (W.stage === "over") { S.stage = "done"; S.last = { lines: W.lines, level: W.level, score: W.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rsBest = Math.max(F.rsBest || 0, W.score); this.rsLive = null; out.push({ over: true }); }
+    if (W.stage === "over") { S.stage = "done"; S.last = { lines: W.lines, level: W.level, score: W.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rsBest = Math.max(F.rsBest || 0, W.score); this.cgRecord && this.cgRecord("runestack", W.score, W.level); this.rsLive = null; out.push({ over: true }); }
     if (out.length) { this.saveCasino && this.saveCasino(); this.emit("change"); }
     return out;
   },
@@ -21109,7 +21160,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("manamine", pay); S.won += pay; S.n += 1; S.best = Math.max(S.best || 0, n); this.saveCasino && this.saveCasino(); this.emit("change");
       this.mmLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mmBest = Math.max(F.mmBest || 0, L.score); this.mmLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mmBest = Math.max(F.mmBest || 0, L.score); this.cgRecord && this.cgRecord("manamine", L.score, S.last.level); this.mmLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21273,7 +21324,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("glimmer", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.gzLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.gzBest = Math.max(F.gzBest || 0, L.score); this.gzLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.gzBest = Math.max(F.gzBest || 0, L.score); this.cgRecord && this.cgRecord("glimmer", L.score, S.last.level); this.gzLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21418,7 +21469,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("swarm", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.swLevel(); return { cleared: n, pay, card, bonus: L.bonus, hits: L.hits };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.swBest = Math.max(F.swBest || 0, L.score); this.swLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.swBest = Math.max(F.swBest || 0, L.score); this.cgRecord && this.cgRecord("swarm", L.score, S.last.level); this.swLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21519,7 +21570,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("hexmarch", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.hxLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.hxBest = Math.max(F.hxBest || 0, L.score); this.hxLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.hxBest = Math.max(F.hxBest || 0, L.score); this.cgRecord && this.cgRecord("hexmarch", L.score, S.last.level); this.hxLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21652,7 +21703,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("shatterpane", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.pnLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.pnBest = Math.max(F.pnBest || 0, L.score); this.pnLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.pnBest = Math.max(F.pnBest || 0, L.score); this.cgRecord && this.cgRecord("shatterpane", L.score, S.last.level); this.pnLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21762,7 +21813,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("starstone", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.sdLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.sdBest = Math.max(F.sdBest || 0, L.score); this.sdLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.sdBest = Math.max(F.sdBest || 0, L.score); this.cgRecord && this.cgRecord("starstone", L.score, S.last.level); this.sdLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21866,7 +21917,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("moatleap", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.mqLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mqBest = Math.max(F.mqBest || 0, L.score); this.mqLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mqBest = Math.max(F.mqBest || 0, L.score); this.cgRecord && this.cgRecord("moatleap", L.score, S.last.level); this.mqLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -21999,7 +22050,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("runestep", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.rpLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rpBest = Math.max(F.rpBest || 0, L.score); this.rpLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rpBest = Math.max(F.rpBest || 0, L.score); this.cgRecord && this.cgRecord("runestep", L.score, S.last.level); this.rpLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });
@@ -22215,11 +22266,105 @@ Object.assign(CM.Game.prototype, {
     while ((S.paid || 0) < G.marks) { const i = (S.paid || 0) + 1, pay = Math.round(S.bet * PB.pay(i)), C = this.pbClaimed(); let card = null;
       if (!C[i]) { card = this.cgTierCard(CM.cardTierFor(i), `Wyrmhold Pinball: ${PB.MARKS[i - 1].toLocaleString("en")} points!`, new CM.Random(CM.hashSeed(`${this.seed}:pinball:card:${i}`))); C[i] = card || true; if (card) S.cards.push(card); }
       this.cgPay("pinball", pay); S.won += pay; S.paid = i; out.marks.push({ i, pay, card }); }
-    if (G.stage === "over") { S.stage = "done"; S.last = { score: G.score, won: S.won, cards: S.cards.slice(), marks: G.marks }; const F = this.cgStore(); F.pbBest = Math.max(F.pbBest || 0, G.score); this.pbLive = null; out.over = true; }
+    if (G.stage === "over") { S.stage = "done"; S.last = { score: G.score, won: S.won, cards: S.cards.slice(), marks: G.marks }; const F = this.cgStore(); F.pbBest = Math.max(F.pbBest || 0, G.score); this.cgRecord && this.cgRecord("pinball", G.score, G.marks); this.pbLive = null; out.over = true; }
     if (out.marks.length || out.over) { this.saveCasino && this.saveCasino(); this.emit("change"); }
     return out.marks.length || out.over ? out : null;
   },
 });
+
+// ---- 64zo-floorclub.js ----
+"use strict";
+// The Joker's Club (the thirty-ninth big update - v14.9): three things that tie the floor together.
+// - High-score boards: each scoring table keeps its ten best games - the score, how far it went, the day and who
+//   played - and a score that beats the old best is a record broken.
+// - The loyalty card: a stamp for each different table played (a stake laid, or a free table paying out); eight
+//   different tables fill a card, which (collected) pays gold and a Claudescryption card; a fresh card starts. Cards filled raise
+//   the membership - Bronze, Silver, Gold, Platinum - and the better the membership the better a full card's reward.
+// - Achievements: bronze, silver and gold marks of what has been done on the floor, each paying once when collected -
+//   gold, and from silver up a card too.
+// The window is 76zf-floorclub.js.
+CM.CLUB = {
+  BOARDS: ["runestack", "manamine", "glimmer", "swarm", "hexmarch", "shatterpane", "starstone", "moatleap", "runestep", "pinball"],
+  ARCADE: ["rsCards", "mmCards", "gzCards", "swCards", "hxCards", "pnCards", "sdCards", "mqCards", "rpCards"],
+  keep: 10, stamps: 8,
+  TIERS: [["Guest", 0], ["Bronze", 1], ["Silver", 3], ["Gold", 6], ["Platinum", 10]],
+  REWARD: { bronze: { gold: 100 }, silver: { gold: 400, card: "common" }, gold: { gold: 1500, card: "rare" } },
+};
+const CLUB = CM.CLUB;
+CLUB.levelIn = (F, key) => Object.keys(F[key] || {}).filter((k) => F[key][k]).reduce((m, k) => Math.max(m, Number(k) || 0), 0);
+CLUB.arcadeBest = (F) => Math.max(0, ...CLUB.ARCADE.map((k) => CLUB.levelIn(F, k)));
+CLUB.arcadeAt = (F, n) => CLUB.ARCADE.filter((k) => CLUB.levelIn(F, k) >= n).length;
+CLUB.sum = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
+CLUB.tables = (F) => Object.keys((F.loyalty || {}).all || {}).length;
+CLUB.onBoards = (F) => Object.values(F.boards || {}).filter((b) => b.length).length;
+CLUB.member = (done) => { let t = CLUB.TIERS[0]; for (const x of CLUB.TIERS) if (done >= x[1]) t = x; return t[0]; };
+CLUB.ACH = [
+  ["first", "bronze", "First Chip", "Play any table.", (F) => CLUB.tables(F) >= 1],
+  ["tables5", "bronze", "Floor Walker", "Play five different tables.", (F) => CLUB.tables(F) >= 5],
+  ["card1", "bronze", "Lucky Card", "Win a card on the floor.", (F) => (F.cards || []).length >= 1],
+  ["claw1", "bronze", "Got One!", "Win a prize from the Wishing Claw.", (F) => (F.clawPrizes || 0) >= 1],
+  ["board1", "bronze", "On the Board", "Put a score on a high-score board.", (F) => CLUB.onBoards(F) >= 1],
+  ["loyal1", "bronze", "Stamped", "Fill a loyalty card.", (F) => ((F.loyalty || {}).done || 0) >= 1],
+  ["won1k", "bronze", "In the Black", "Be paid 1,000 gold by the floor, all told.", (F) => CLUB.sum(F.paid) >= 1000],
+  ["arcade5", "bronze", "Arcade Regular", "Reach level 5 on an arcade table.", (F) => CLUB.arcadeBest(F) >= 5],
+  ["tables15", "silver", "Grand Tour", "Play fifteen different tables.", (F) => CLUB.tables(F) >= 15],
+  ["card10", "silver", "Card Shark", "Win ten cards on the floor.", (F) => (F.cards || []).length >= 10],
+  ["jackpot", "silver", "Jackpot!", "Hit the Gilded Reels' jackpot.", (F) => (F.jackpots || 0) >= 1],
+  ["claw10", "silver", "Claw Master", "Win ten prizes from the Wishing Claw.", (F) => (F.clawPrizes || 0) >= 10],
+  ["boards5", "silver", "Scoreboard Regular", "Be on five different high-score boards.", (F) => CLUB.onBoards(F) >= 5],
+  ["records3", "silver", "Record Breaker", "Beat your own best score three times.", (F) => (F.records || 0) >= 3],
+  ["silver", "silver", "Silver Member", "Reach Silver membership.", (F) => ((F.loyalty || {}).done || 0) >= 3],
+  ["won10k", "silver", "Well Off", "Be paid 10,000 gold by the floor, all told.", (F) => CLUB.sum(F.paid) >= 10000],
+  ["arcade10", "silver", "Arcade Ace", "Reach level 10 on an arcade table.", (F) => CLUB.arcadeBest(F) >= 10],
+  ["pinball100k", "silver", "Wizard of the Wyrmhold", "Score 100,000 at Wyrmhold Pinball.", (F) => (F.pbBest || 0) >= 100000],
+  ["tables25", "gold", "Every Table", "Play twenty-five different tables.", (F) => CLUB.tables(F) >= 25],
+  ["card30", "gold", "The Full Deck", "Win thirty cards on the floor.", (F) => (F.cards || []).length >= 30],
+  ["gold", "gold", "Gold Member", "Reach Gold membership.", (F) => ((F.loyalty || {}).done || 0) >= 6],
+  ["platinum", "gold", "Platinum Member", "Reach Platinum membership.", (F) => ((F.loyalty || {}).done || 0) >= 10],
+  ["won100k", "gold", "High Roller", "Be paid 100,000 gold by the floor, all told.", (F) => CLUB.sum(F.paid) >= 100000],
+  ["arcade6", "gold", "Arcade Polymath", "Reach level 5 on six different arcade tables.", (F) => CLUB.arcadeAt(F, 5) >= 6],
+  ["boards10", "gold", "Hall of Champions", "Be on every high-score board.", (F) => CLUB.onBoards(F) >= CLUB.BOARDS.length],
+  ["pinball500k", "gold", "The Dragon's Bane", "Score 500,000 at Wyrmhold Pinball.", (F) => (F.pbBest || 0) >= 500000],
+];
+{ const stake0 = CM.Game.prototype.cgStake, pay0 = CM.Game.prototype.cgPay;
+  Object.assign(CM.Game.prototype, {
+    cgStake(game, bet) { const why = stake0.call(this, game, bet); if (!why) { this.cgStamp(game); this.cgAchieve(); } return why; },
+    cgPay(game, amount) { const n = pay0.call(this, game, amount); if (n > 0) { this.cgStamp(game); this.cgAchieve(); } return n; },
+    cgNews() { const F = this.cgStore(); F.news = F.news || []; return F.news; },
+    // a high-score board: the ten best, and whether this one is a record
+    cgRecord(table, score, level) {
+      if (!(score > 0)) return 0; const F = this.cgStore(); F.boards = F.boards || {}; const B = F.boards[table] = F.boards[table] || [], best = B.length ? B[0].score : 0;
+      const who = (this.party && this.party[0] && this.party[0].name) || "The party", e = { score: Math.floor(score), level: level || 0, at: CM.today ? CM.today() : "", who };
+      B.push(e); B.sort((a, b) => b.score - a.score); B.length = Math.min(B.length, CLUB.keep); const rank = B.indexOf(e) + 1;
+      if (rank === 1 && best > 0 && score > best) { F.records = (F.records || 0) + 1; this.cgNews().push({ kind: "record", table, score: e.score }); }
+      else if (rank > 0) this.cgNews().push({ kind: "board", table, score: e.score, rank });
+      this.cgAchieve(); return rank;
+    },
+    // the loyalty card: a stamp for a table not yet on this card; eight make a full card
+    cgStamp(table) {
+      const F = this.cgStore(), L = F.loyalty = F.loyalty || { card: [], done: 0, all: {} }; L.all[table] = (L.all[table] || 0) + 1;
+      if (L.card.includes(table)) return false; L.card.push(table); this.cgNews().push({ kind: "stamp", table, n: L.card.length });
+      if (L.card.length >= CLUB.stamps) { L.done += 1; L.card = []; L.unpaid = (L.unpaid || 0) + 1; this.cgNews().push({ kind: "loyalty", done: L.done, member: CLUB.member(L.done) }); }
+      return true;
+    },
+    // achievements: each checked against the floor's records, paid once
+    cgAchieve() {
+      const F = this.cgStore(), A = F.ach = F.ach || {}; let any = false;
+      for (const [id, tier, name, , check] of CLUB.ACH) { if (A[id] || !check(F, this)) continue; A[id] = { at: CM.today ? CM.today() : "", paid: false }; any = true; this.cgNews().push({ kind: "ach", id, tier, name }); }
+      if (any) { this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); } return any;
+    },
+    // what is waiting to be collected, and collecting it: an achievement's reward, or a full loyalty card's
+    cgUnpaid() { const F = this.cgStore(), A = F.ach || {}, L = F.loyalty || {}; return { ach: CLUB.ACH.filter(([id]) => A[id] && !A[id].paid).map(([id]) => id), loyalty: L.unpaid || 0 }; },
+    cgCollect(what) {
+      const F = this.cgStore(), out = { gold: 0, cards: [] };
+      if (what === "loyalty") { const L = F.loyalty || {}; if (!L.unpaid) return out; const n = L.done - L.unpaid + 1, member = CLUB.member(n), k = CLUB.TIERS.findIndex((t) => t[0] === member); L.unpaid -= 1;
+        out.gold = 150 + 100 * k; const card = this.cgTierCard(k >= 4 ? "rare" : k >= 3 ? "better" : "common", `A full loyalty card at the Gilded Joker (${member} member).`, new CM.Random(CM.hashSeed(`${this.seed}:loyalty:${n}`))); if (card) out.cards.push(card); }
+      else { const row = CLUB.ACH.find(([id]) => id === what), A = F.ach || {}; if (!row || !A[what] || A[what].paid) return out; const R = CLUB.REWARD[row[1]]; A[what].paid = true; out.gold = R.gold;
+        if (R.card) { const card = this.cgTierCard(R.card, `The Gilded Joker's achievement: ${row[2]}.`, new CM.Random(CM.hashSeed(`${this.seed}:ach:${what}`))); if (card) out.cards.push(card); } }
+      this.gold += out.gold; F.clubGold = (F.clubGold || 0) + out.gold; this.cgAchieve(); this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); return out;
+    },
+  });
+}
 
 // ---- 65-village.js ----
 "use strict";
@@ -29960,6 +30105,80 @@ CM.CG_THUMB = (() => {
       box.querySelectorAll("[data-cgpg]").forEach((b) => b.addEventListener("click", () => { this.cgPage = page + Number(b.dataset.cgpg); this.caSfx("card", 0.3, 1.2); this.renderCasino(); }));
       box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
       if (!this.cgGalKeys) { this.cgGalKeys = (e) => { if (this.cgView !== "gallery" || !this.dialogOpen() || !this.$("#casino-body .cggallery")) return; const d = e.code === "ArrowRight" ? 1 : e.code === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); this.cgPage = (this.cgPage || 0) + d; this.renderCasino(); }; window.addEventListener("keydown", this.cgGalKeys); }
+    },
+  });
+}
+
+// ---- 76zf-floorclub.js ----
+"use strict";
+// The Joker's Club, the window's side (the thirty-ninth big update): under the gallery's head a strip - the membership,
+// a little loyalty card filling with stamps, and doors to the Hall of Champions (every high-score board, best first),
+// the loyalty card itself (its stamps as tiny pictures of the tables, the membership and what a full card brings, and
+// any full card waiting to be collected) and the achievements (bronze, silver and gold, locked, waiting to be
+// collected, or collected). What happens on the floor - a stamp, a place on a board, a record, an achievement - shows
+// for a moment in the corner of the window. The rules are 64zo-floorclub.js.
+{ const r2 = CM.UI.prototype.renderCasino, gal0 = CM.UI.prototype.cgGallery, CLUB = CM.CLUB;
+  const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id[0].toUpperCase() + id.slice(1);
+  const MEDAL = { bronze: "#C88A50", silver: "#C8D0D8", gold: "#F0C040" };
+  const thumbInto = (c, id) => { const p = c.getContext("2d"), f = CM.CG_THUMB[id]; if (f) f(p, c.width, c.height); else { p.fillStyle = "#3A2A10"; p.fillRect(0, 0, c.width, c.height); p.fillStyle = "#F0C040"; p.font = `bold ${c.height * 0.5}px Georgia`; p.textAlign = "center"; p.fillText("★", c.width / 2, c.height * 0.68); } };
+  Object.assign(CM.UI.prototype, {
+    renderCasino() {
+      const v = this.cgView, box = this.$("#casino-body");
+      if (v === "hall") this.cgHall(box); else if (v === "loyalty") this.cgLoyalty(box); else if (v === "trophies") this.cgTrophies(box); else r2.call(this);
+      this.cgToasts();
+    },
+    cgClubHead(box, title) {
+      const head = document.createElement("div"); head.className = "cgnav cgbar"; head.innerHTML = `<button data-cggal>◀ All games</button><span class="cgname">${title}</span><span class="cggold">${this.game.gold} gold</span>`; box.prepend(head);
+      head.querySelector("[data-cggal]").addEventListener("click", () => { this.cgView = "gallery"; this.caSfx("cardplace", 0.3); this.renderCasino(); });
+    },
+    cgGallery(box) {
+      gal0.call(this, box); const F = this.game.cgStore(), L = F.loyalty || { card: [], done: 0 }, member = CLUB.member(L.done || 0), U = this.game.cgUnpaid(), got = Object.keys(F.ach || {}).length, waiting = U.ach.length + U.loyalty;
+      const strip = document.createElement("div"); strip.className = "cgclub";
+      strip.innerHTML = `<span class="cgmember m-${member.toLowerCase()}">${member} member</span><span class="cgminicard" title="Loyalty card: ${L.card.length} of ${CLUB.stamps} different tables">${Array.from({ length: CLUB.stamps }, (_, k) => `<i class="${k < L.card.length ? "on" : ""}"></i>`).join("")}</span>
+        <button data-cgclub="hall">Hall of Champions</button><button data-cgclub="loyalty">Loyalty card${U.loyalty ? " ✦" : ""}</button><button data-cgclub="trophies">Achievements ${got}/${CLUB.ACH.length}${U.ach.length ? " ✦" : ""}</button>${waiting ? `<span class="cgwait">${waiting} reward${waiting > 1 ? "s" : ""} to collect</span>` : ""}`;
+      const head = box.querySelector(".cghead"); head.after(strip);
+      strip.querySelectorAll("[data-cgclub]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.cgclub; this.caSfx("cardplace", 0.3); this.renderCasino(); }));
+    },
+    // the Hall of Champions: every board, its ten best
+    cgHall(box) {
+      const F = this.game.cgStore(), B = F.boards || {};
+      box.innerHTML = `<div class="cghall"><p class="lore">On the wall by the bar, ten boards in gilt frames, the house's chalk-boy keeping them. "Beat your own name," he says, "and I'll write it larger."</p><div class="cghallgrid">${CLUB.BOARDS.map((id) => { const rows = B[id] || [];
+        return `<div class="cgboard"><div class="cgbhead"><canvas width="88" height="44" data-cgbt="${id}"></canvas><b>${nameOf(id)}</b><button data-cgplay="${id}">Play</button></div><ol>${rows.length ? rows.map((e, k) => `<li class="${k === 0 ? "top" : ""}"><span class="sc">${e.score.toLocaleString("en")}</span><span class="lv">${id === "pinball" ? `${e.level} mark${e.level === 1 ? "" : "s"}` : `level ${e.level}`}</span><span class="who">${e.who}</span><span class="at">${e.at || ""}</span></li>`).join("") : `<li class="none">No scores yet.</li>`}</ol></div>`; }).join("")}</div><div class="small">Records broken: ${F.records || 0}.</div></div>`;
+      this.cgClubHead(box, "Hall of Champions");
+      box.querySelectorAll("[data-cgbt]").forEach((c) => thumbInto(c, c.dataset.cgbt));
+      box.querySelectorAll("[data-cgplay]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.cgplay; this.cgNote = ""; this.caSfx("cardplace", 0.35); this.renderCasino(); }));
+    },
+    // the loyalty card
+    cgLoyalty(box) {
+      const g = this.game, F = g.cgStore(), L = F.loyalty || { card: [], done: 0, all: {} }, member = CLUB.member(L.done || 0), k = CLUB.TIERS.findIndex((t) => t[0] === member), next = CLUB.TIERS[k + 1], U = g.cgUnpaid();
+      const nextGold = 150 + 100 * CLUB.TIERS.findIndex((t) => t[0] === CLUB.member((L.done || 0) + 1)), nextCard = CLUB.member((L.done || 0) + 1);
+      box.innerHTML = `<div class="cgloyal"><p class="lore">The attendant punches a little gilt card. "A stamp for every different table," she says. "Eight on a card and the house thanks you for it. Fill enough and you'll find the house thanks its better members better."</p>
+        <div class="cgpunch m-${member.toLowerCase()}"><div class="cgpunchhead"><b>THE GILDED JOKER</b><span>${member} member</span></div><div class="cgslots">${Array.from({ length: CLUB.stamps }, (_, i) => { const id = L.card[i]; return `<div class="cgslot ${id ? "on" : ""}">${id ? `<canvas width="64" height="64" data-cgst="${id}"></canvas><small>${nameOf(id)}</small>` : `<span>${i + 1}</span>`}</div>`; }).join("")}</div>
+        <div class="cgpunchfoot">${L.card.length} of ${CLUB.stamps} - a full card brings ${nextGold} gold and a ${nextCard === "Platinum" ? "rare" : nextCard === "Gold" ? "stronger common" : "common"} card</div></div>
+        ${U.loyalty ? `<div class="row"><button class="primary" data-cgcollect="loyalty">Collect ${U.loyalty} full card${U.loyalty > 1 ? "s" : ""}</button></div>` : ""}
+        <div class="cgtiers">${CLUB.TIERS.slice(1).map(([n, need]) => `<div class="${(L.done || 0) >= need ? "on" : ""} m-${n.toLowerCase()}"><b>${n}</b><span>${need} full card${need > 1 ? "s" : ""}</span></div>`).join("")}</div>
+        <div class="small">Cards filled: ${L.done || 0}${next ? ` - ${next[1] - (L.done || 0)} more for ${next[0]}` : " - the highest membership"}. Different tables played, all told: ${Object.keys(L.all || {}).length}. A stamp comes with a stake laid, or with gold from a free table. Gold from the club so far: ${F.clubGold || 0}.</div>${this.cwOutCards || ""}</div>`;
+      this.cgClubHead(box, "Loyalty Card");
+      box.querySelectorAll("[data-cgst]").forEach((c) => { thumbInto(c, c.dataset.cgst); });
+      const cb = box.querySelector("[data-cgcollect]"); if (cb) cb.addEventListener("click", () => this.cgDoCollect("loyalty"));
+    },
+    // the achievements
+    cgTrophies(box) {
+      const F = this.game.cgStore(), A = F.ach || {};
+      box.innerHTML = `<div class="cgtroph"><p class="lore">A glass case of medals by the cashier's cage, each with a little brass plate. "Earn one and it's yours," says the cashier, "and the house pays to have it said."</p>${["bronze", "silver", "gold"].map((tier) => { const R = CLUB.REWARD[tier];
+        return `<h4 style="color:${MEDAL[tier]}">${tier[0].toUpperCase() + tier.slice(1)} - ${R.gold} gold${R.card ? ` and a ${R.card} card` : ""} each</h4><div class="cgachs">${CLUB.ACH.filter((a) => a[1] === tier).map(([id, , name, desc]) => { const a = A[id], st = !a ? "locked" : a.paid ? "done" : "ready";
+          return `<div class="cgach ${st}"><span class="medal" style="background:${a ? MEDAL[tier] : "#3A3430"}">${a ? "★" : "?"}</span><div><b>${name}</b><span>${desc}</span></div>${st === "ready" ? `<button class="primary" data-cgcollect="${id}">Collect</button>` : st === "done" ? `<i>${a.at || "collected"}</i>` : ""}</div>`; }).join("")}</div>`; }).join("")}${this.cwOutCards || ""}</div>`;
+      this.cgClubHead(box, `Achievements - ${Object.keys(A).length} of ${CLUB.ACH.length}`);
+      box.querySelectorAll("[data-cgcollect]").forEach((b) => b.addEventListener("click", () => this.cgDoCollect(b.dataset.cgcollect)));
+    },
+    cgDoCollect(what) { const out = this.game.cgCollect(what); if (!out.gold && !out.cards.length) return; this.cgSfx("cardwin", 0.5); this.cgCoins(this.$("#casino-body"), 12); this.cwOutCards = out.cards.map((c) => this.cgCardWon(c)).join(""); this.renderCasino(); this.cwOutCards = ""; },
+    // what has happened on the floor, for a moment in the corner
+    cgToasts() {
+      const news = this.game.cgNews(); if (!news.length) return; const dlg = this.$("#dlg-casino") || document.body; let host = dlg.querySelector(".cgtoasts"); if (!host) { host = document.createElement("div"); host.className = "cgtoasts"; dlg.appendChild(host); }
+      for (const n of news.splice(0)) { const t = document.createElement("div"); t.className = `cgtoast t-${n.kind}`;
+        t.textContent = n.kind === "stamp" ? `Loyalty stamp: ${nameOf(n.table)} (${n.n}/${CLUB.stamps})` : n.kind === "loyalty" ? `Loyalty card full! ${n.member} member - collect it on the loyalty card.` : n.kind === "record" ? `New record at ${nameOf(n.table)}: ${n.score.toLocaleString("en")}!` : n.kind === "board" ? `High-score board: #${n.rank} at ${nameOf(n.table)} (${n.score.toLocaleString("en")})` : n.kind === "ach" ? `Achievement: ${n.name} (${n.tier}) - collect it in Achievements` : "";
+        host.appendChild(t); if (n.kind === "ach" || n.kind === "loyalty" || n.kind === "record") this.cgSfx("cardwin", 0.35); setTimeout(() => t.classList.add("out"), 6000); setTimeout(() => t.remove(), 6800); }
+      this.game.saveCasino && this.game.saveCasino();
     },
   });
 }

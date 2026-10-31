@@ -137,7 +137,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("swarm", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.swLevel(); return { cleared: n, pay, card, bonus: L.bonus, hits: L.hits };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.swBest = Math.max(F.swBest || 0, L.score); this.swLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.swBest = Math.max(F.swBest || 0, L.score); this.cgRecord && this.cgRecord("swarm", L.score, S.last.level); this.swLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });

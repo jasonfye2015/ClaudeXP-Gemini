@@ -102,7 +102,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("starstone", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.sdLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.sdBest = Math.max(F.sdBest || 0, L.score); this.sdLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.sdBest = Math.max(F.sdBest || 0, L.score); this.cgRecord && this.cgRecord("starstone", L.score, S.last.level); this.sdLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });

@@ -96,7 +96,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("moatleap", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.mqLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mqBest = Math.max(F.mqBest || 0, L.score); this.mqLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mqBest = Math.max(F.mqBest || 0, L.score); this.cgRecord && this.cgRecord("moatleap", L.score, S.last.level); this.mqLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });

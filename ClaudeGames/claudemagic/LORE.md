@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Joker's Club (v14.9)
+
+The regulars started it - chalking their scores on the wall by the bar, arguing over who had walked every table - and
+the house, which never misses a chance, made it a club: gilt boards for the scores, a punch card for the faithful, and
+a glass case of medals by the cashier's cage. The Platinum members get a nod from the doorman. Nobody has seen what the
+doorman does for anyone else.
+
 ## The Gilded Joker's gallery (v14.8)
 
 When the floor passed two dozen tables the house gave up on the brass signs over each one and hung a gallery in the
