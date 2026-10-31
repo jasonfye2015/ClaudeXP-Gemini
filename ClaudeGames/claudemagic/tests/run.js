@@ -3603,6 +3603,26 @@ test("the Mage Tower, from outside: a portal yard by the shaft with a lit portal
   ranger.weapon = { name: "Sword", kind: "weapon", props: {} }; assert.ok(CM.towerWhyNot(ranger), "a sword won't");
 });
 
+test("the Mage Tower's floors: forty of them, the seed's; large rooms and wide halls, all joined; the start and the ladder far apart, the ladder in the boss's room; spawns in the rooms, never the start; the fortieth an open hall with pillars and a dais", () => {
+  const CM = load();
+  assert.ok(CM.isTowerFloor(1001) && CM.isTowerFloor(1040) && !CM.isTowerFloor(40) && !CM.isTowerFloor(1041)); assert.strictEqual(CM.themeFor(1012), CM.TOWER_THEME);
+  for (const n of [1, 7, 15, 28, 39]) {
+    const fl = CM.makeTowerFloor(n, "tower-1"); assert.strictEqual(JSON.stringify(fl), JSON.stringify(CM.makeTowerFloor(n, "tower-1")), `floor ${n}: the seed's`);
+    assert.notStrictEqual(JSON.stringify(fl.grid), JSON.stringify(CM.makeTowerFloor(n, "tower-2").grid), "another seed, another floor");
+    const open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0, d = CM.distances(fl.grid, fl.start.slice(0, 2), open);
+    let cells = 0; for (let y = 0; y < fl.grid.length; y++) for (let x = 0; x < fl.grid.length; x++) if (open(x, y)) { cells++; assert.ok(d.has(`${x},${y}`), `floor ${n}: ${x},${y} joined`); }
+    assert.ok(cells > 250, `floor ${n}: room to move (${cells})`);
+    assert.ok(open(...fl.ladder) && d.get(fl.ladder.join(",")) >= 12, `floor ${n}: the ladder far from the start`);
+    const br = fl.rooms.find((r) => r.name === "The ladder's room"); assert.ok(br && fl.ladder[0] >= br.x0 && fl.ladder[0] <= br.x1 && fl.ladder[1] >= br.y0 && fl.ladder[1] <= br.y1, "the ladder in the boss's room");
+    assert.ok(fl.boss.kind && fl.boss.word && CM.CHAMPIONS[fl.boss.word]);
+    const st = fl.rooms.find((r) => r.name === "The stair-head"); assert.ok(fl.spawns.length >= 6, "monsters"); for (const s of fl.spawns) { assert.ok(open(s.x, s.y)); assert.ok(!(s.x >= st.x0 && s.x <= st.x1 && s.y >= st.y0 && s.y <= st.y1), "none in the start"); assert.ok(CM.monsterKind(s.kind), s.kind); }
+    let wide = 0; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) if (open(x, y) && open(x + 1, y) && open(x, y + 1) && open(x + 1, y + 1)) wide++; assert.ok(wide > cells * 0.6, "wide rooms and halls, not corridors");
+  }
+  const top = CM.makeTowerFloor(40, "tower-1"); assert.ok(top.boss.king && !top.ladder && top.pillars.length >= 8, "the King's hall: pillars, no ladder");
+  let open = 0, size = top.grid.length; for (const row of top.grid) for (const c of row) if (c === 0) open++; assert.ok(open > (size - 4) ** 2 * 0.85, "nearly all open");
+  assert.ok(CM.towerDepth(1) <= 2 && CM.towerDepth(40) >= 45, "the first floors low, the last deep");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

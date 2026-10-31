@@ -41,9 +41,9 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const uc = CM.isUndercroft(number);
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const uc = CM.isUndercroft(number) || CM.isTowerFloor(number);   // (the Undercroft and the Mage Tower: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
@@ -51,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
       while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -349,7 +349,7 @@ window.addEventListener("DOMContentLoaded", () => {
     slag: { colour: [1.0, 0.45, 0.15], reach: 1.6, z: 0.1, flicker: true }, lamp: { colour: [1.0, 0.75, 0.4], reach: 4.0, z: 1.2 } };
   function lightsNear(fl) {
     if (!fl || !renderer.ok) return [];
-    const out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: L.colour.map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
+    const tint = CM.themeFor(fl.number).lightColour, out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: (kind === "torch" && tint ? tint : L.colour).map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
     // (the wall torches: below always, on the surface after dark)
     if (!CM.themeFor(fl.number).sky || CM.isNight(game)) for (const t of decorations(fl).torches) { if (Math.abs(t.x - px) + Math.abs(t.y - py) > 10) continue; const [dx, dy] = CM.DIRS[t.face]; push("torch", t.x + 0.5 + dx * 0.4, t.y + 0.5 + dy * 0.4); }
     for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);

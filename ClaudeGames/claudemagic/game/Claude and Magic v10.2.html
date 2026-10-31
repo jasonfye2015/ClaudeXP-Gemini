@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v10.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v10.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -527,7 +527,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "10.1", built: "2026-10-30" };
+const CM = window.CM = { version: "10.2", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1687,7 +1687,7 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
-CM.themeFor = (number) => (number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
+CM.themeFor = (number) => (CM.isTowerFloor && CM.isTowerFloor(number) ? CM.TOWER_THEME : number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
   : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 // a slight colour grade per band, multiplied into the view (1, 1, 1 is none)
 CM.GRADES = [[1.0, 0.98, 0.95], [0.94, 0.98, 1.02], [1.03, 0.99, 0.94], [0.95, 0.97, 1.05], [0.94, 1.0, 1.02], [0.95, 1.04, 0.95], [0.97, 0.99, 1.06], [1.06, 0.97, 0.9], [1.0, 0.98, 0.96], [1.04, 0.95, 0.94]];
@@ -10854,6 +10854,92 @@ Object.assign(CM.Game.prototype, {
   towerChoices() { return this.party.map((h, i) => ({ i, name: h.name, cls: h.cls, why: CM.towerWhyNot(h) })); },
 });
 
+// ---- 61e-towerfloor.js ----
+"use strict";
+// The Mage Tower's floors (the twelfth update, phase 1): forty floors of its own, apart from the shaft's - numbered 1001
+// to 1040 where a floor needs a number, never saved as floors (the run keeps only how far it has climbed). Each is made
+// from the run's seed: large rooms (five to ten a side) joined by halls two and three wide, the hero's start in the
+// room nearest one corner, and the ladder up in the room farthest from it - the boss's room. The fortieth is one hall
+// with pillars through it and the King's dais at the far end. What the floor holds is a list for the real-time fight
+// (CM.TowerRun): the monsters' spawns, the boss's, and the things lying about (quivers, draughts).
+CM.TOWER_FLOORS = 40;
+CM.TOWER_BASE = 1000;
+CM.isTowerFloor = (n) => n > CM.TOWER_BASE && n <= CM.TOWER_BASE + CM.TOWER_FLOORS;
+CM.TOWER_THEME = Object.assign({}, CM.THEMES[3], {
+  name: "The Mage Tower", floors: [1001, 1040], stone: [62, 60, 72], mortar: [22, 20, 28], floor: [46, 44, 54], ceiling: [30, 28, 38], moss: [90, 70, 140],
+  fog: [0.02, 0.015, 0.035], torch: [0.82, 0.78, 1.0], reach: 7.5, bones: 0.08, photos: "t3", pixel: "t3", tower: true, grade: [0.97, 0.96, 1.05],
+  lightColour: [0.62, 0.48, 1.0],
+});
+CM.towerFloorName = (n) => (n === CM.TOWER_FLOORS ? "The Mage Tower, the King's hall" : `The Mage Tower, floor ${n}`);
+// the dungeon floor whose kinds and strength a tower floor borrows: the first bands low, the Deep high
+CM.towerDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 1.2)));
+
+CM.makeTowerFloor = function (n, seed) {
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:magetower:${n}`)), size = n === CM.TOWER_FLOORS ? 31 : 33 + 2 * Math.min(3, Math.floor(n / 10));
+  const grid = []; for (let y = 0; y < size; y++) grid.push(new Array(size).fill(1));
+  const carve = (x0, y0, x1, y1) => { for (let y = Math.max(1, y0); y <= Math.min(size - 2, y1); y++) for (let x = Math.max(1, x0); x <= Math.min(size - 2, x1); x++) grid[y][x] = 0; };
+  const fl = { number: CM.TOWER_BASE + n, tower: n, grid, things: {}, features: {}, dark: [], seen: [], decor: [], rooms: [], spawns: [], items: [], pillars: [] };
+  if (n === CM.TOWER_FLOORS) {                                          // the King's hall: open, pillars, a dais
+    carve(2, 2, size - 3, size - 3);
+    for (let y = 6; y <= size - 9; y += 5) for (let x = 5 + ((y / 5) % 2 ? 2 : 0); x <= size - 6; x += 6) { grid[y][x] = 1; grid[y][x + 1] = 1; grid[y + 1][x] = 1; grid[y + 1][x + 1] = 1; fl.pillars.push([x, y]); }
+    const mid = Math.floor(size / 2);
+    fl.start = [mid, size - 4, 0]; fl.ladder = null; fl.dais = [mid, 4];
+    fl.rooms.push({ x0: 2, y0: 2, x1: size - 3, y1: size - 3, name: "The King's hall" });
+    fl.boss = { x: mid, y: 4, king: true };
+    for (const [x, y] of [[3, 3], [size - 4, 3], [3, size - 4], [size - 4, size - 4]]) fl.items.push({ x, y, kind: "draught" });
+    fl.pos = fl.start.slice(0, 2); fl.facing = 0;
+    return fl;
+  }
+  // rooms: as many as fit, a few tries each, three cells of rock between
+  const rooms = [];
+  for (let tries = 0; tries < 900 && rooms.length < 9 + Math.floor(n / 8); tries++) {
+    const w = rnd.int(5, rooms.length < 3 ? 10 : 8), h = rnd.int(5, rooms.length < 3 ? 10 : 8), x0 = rnd.int(2, size - 3 - w), y0 = rnd.int(2, size - 3 - h), r = { x0, y0, x1: x0 + w - 1, y1: y0 + h - 1 };
+    if (rooms.some((o) => r.x0 - 2 <= o.x1 && o.x0 - 2 <= r.x1 && r.y0 - 2 <= o.y1 && o.y0 - 2 <= r.y1)) continue;
+    rooms.push(r);
+  }
+  for (const r of rooms) carve(r.x0, r.y0, r.x1, r.y1);
+  const mid = (r) => [Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2)];
+  // the halls: each room to its nearest joined room (a spanning tree), and a couple more for loops, two or three wide
+  const hall = (a, b) => {
+    const [ax, ay] = mid(a), [bx, by] = mid(b), w = rnd.chance(0.5) ? 2 : 3, flip = rnd.chance(0.5);
+    const run = (x0, y0, x1, y1) => carve(Math.min(x0, x1), Math.min(y0, y1), Math.max(x0, x1) + (y0 === y1 ? 0 : w - 1), Math.max(y0, y1) + (y0 === y1 ? w - 1 : 0));
+    if (flip) { run(ax, ay, bx, ay); run(bx, ay, bx, by); } else { run(ax, ay, ax, by); run(ax, by, bx, by); }
+  };
+  const joined = [rooms[0]], left = rooms.slice(1);
+  while (left.length) {
+    let best = null;
+    for (const a of joined) for (const b of left) { const [ax, ay] = mid(a), [bx, by] = mid(b), d = Math.abs(ax - bx) + Math.abs(ay - by); if (!best || d < best.d) best = { a, b, d }; }
+    hall(best.a, best.b); joined.push(best.b); left.splice(left.indexOf(best.b), 1);
+  }
+  for (let i = 0; i < 2 && rooms.length > 3; i++) hall(rooms[rnd.int(0, rooms.length - 1)], rooms[rnd.int(0, rooms.length - 1)]);
+  // the start: the room nearest the south-west corner; the boss's room: the farthest walk from it
+  const start = rooms.slice().sort((a, b) => (a.x0 + (size - a.y1)) - (b.x0 + (size - b.y1)))[0];
+  const [sx, sy] = mid(start), dist = CM.distances(grid, [sx, sy], (x, y) => grid[y] && grid[y][x] === 0);
+  const boss = rooms.filter((r) => r !== start).sort((a, b) => (dist.get(mid(b).join(",")) || 0) - (dist.get(mid(a).join(",")) || 0))[0];
+  fl.start = [sx, sy, 0]; fl.pos = [sx, sy]; fl.facing = 0;
+  const [bx, by] = mid(boss), far = [boss.x0 + 1, boss.y0 + 1, boss.x1 - 1, boss.y1 - 1];
+  const corners = [[far[0], far[1]], [far[2], far[1]], [far[0], far[3]], [far[2], far[3]]].sort((p, q) => (dist.get(q.join(",")) || 0) - (dist.get(p.join(",")) || 0));
+  fl.ladder = corners[0]; fl.boss = { x: bx, y: by };
+  fl.rooms = rooms.map((r) => Object.assign({}, r, { name: r === start ? "The stair-head" : r === boss ? "The ladder's room" : "A room" }));
+  // the floor's monsters: in the rooms but the start's, two or three a room, more as the tower rises
+  const depth = CM.towerDepth(n), spawnRnd = new CM.Random(CM.hashSeed(`${seed}:magetower:spawns:${n}`));
+  for (const r of rooms) {
+    if (r === start) continue;
+    const count = (r === boss ? 1 : 2) + (spawnRnd.chance(Math.min(0.8, n / 40)) ? 1 : 0);
+    for (let i = 0; i < count; i++) {
+      const x = spawnRnd.int(r.x0, r.x1), y = spawnRnd.int(r.y0, r.y1);
+      if ((x === fl.ladder[0] && y === fl.ladder[1]) || (x === bx && y === by)) continue;
+      const g = depth > 20 ? CM.deepGroup(depth, spawnRnd, 2) : CM.monsterGroup(depth, spawnRnd, 2);
+      fl.spawns.push({ x, y, kind: (g[0] && (g[0].kind || g[0].name)) || "Goblin" });
+    }
+  }
+  const bossRnd = new CM.Random(CM.hashSeed(`${seed}:magetower:boss:${n}`)), bg = depth > 20 ? CM.deepGroup(depth, bossRnd, 2) : CM.monsterGroup(depth, bossRnd, 2), words = Object.keys(CM.CHAMPIONS || { frenzied: 1 });
+  fl.boss.kind = (bg[0] && (bg[0].kind || bg[0].name)) || "Orc"; fl.boss.word = words[CM.hashSeed(`${seed}:magetower:word:${n}`) % words.length];
+  // things lying about: a quiver or two, a draught, in rooms off the way
+  for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 3 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 2 ? "quiver" : "draught" }); }
+  return fl;
+};
+
 // ---- 62-combat.js ----
 "use strict";
 // The fight: turn by turn in order of speed, the heroes' blows, spells and skills, the monsters' ways, the Lich King
@@ -18710,9 +18796,9 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const uc = CM.isUndercroft(number);
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const uc = CM.isUndercroft(number) || CM.isTowerFloor(number);   // (the Undercroft and the Mage Tower: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
@@ -18720,7 +18806,7 @@ window.addEventListener("DOMContentLoaded", () => {
       while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? -4 : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -19018,7 +19104,7 @@ window.addEventListener("DOMContentLoaded", () => {
     slag: { colour: [1.0, 0.45, 0.15], reach: 1.6, z: 0.1, flicker: true }, lamp: { colour: [1.0, 0.75, 0.4], reach: 4.0, z: 1.2 } };
   function lightsNear(fl) {
     if (!fl || !renderer.ok) return [];
-    const out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: L.colour.map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
+    const tint = CM.themeFor(fl.number).lightColour, out = [], [px, py] = fl.pos, push = (kind, x, z, y, k = 1) => { const L = LIGHT[kind]; if (L) out.push({ x, y: L.z, z, reach: L.reach, colour: (kind === "torch" && tint ? tint : L.colour).map((c) => c * k), flicker: L.flicker, d: Math.abs(x - px - 0.5) + Math.abs(z - py - 0.5) }); };
     // (the wall torches: below always, on the surface after dark)
     if (!CM.themeFor(fl.number).sky || CM.isNight(game)) for (const t of decorations(fl).torches) { if (Math.abs(t.x - px) + Math.abs(t.y - py) > 10) continue; const [dx, dy] = CM.DIRS[t.face]; push("torch", t.x + 0.5 + dx * 0.4, t.y + 0.5 + dy * 0.4); }
     for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);

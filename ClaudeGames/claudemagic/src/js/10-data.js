@@ -1099,7 +1099,7 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
-CM.themeFor = (number) => (number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
+CM.themeFor = (number) => (CM.isTowerFloor && CM.isTowerFloor(number) ? CM.TOWER_THEME : number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
   : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 // a slight colour grade per band, multiplied into the view (1, 1, 1 is none)
 CM.GRADES = [[1.0, 0.98, 0.95], [0.94, 0.98, 1.02], [1.03, 0.99, 0.94], [0.95, 0.97, 1.05], [0.94, 1.0, 1.02], [0.95, 1.04, 0.95], [0.97, 0.99, 1.06], [1.06, 0.97, 0.9], [1.0, 0.98, 0.96], [1.04, 0.95, 0.94]];
