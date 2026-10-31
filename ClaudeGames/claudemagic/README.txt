@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The pipe in the Square: Super Claude Bros (the seventeenth big update - v11.7), for fun
+  A great bronze pipe, green with age, stands up out of the cobbles at the Square's east corner. Any one of the party
+  climbs in and comes out in a side-on world of four levels (src/js/64m-claudebros.js; the window's side
+  src/js/76g-claudebros.js): 1-1 the Meadow Road, 1-2 Under the Hill, 1-3 the Treetops, and 1-4 the Brass Keep, where
+  the Brass Warden charges and leaps. Run and jump to the banner pole at the end of each. Land on foes, or use what you
+  carry - a blade for the fighters, bolts for the casters, arrows for a bow. Coins in the air and in crates knocked
+  from below are gold (two each), every foe is experience, and a few draughts mend; there is no gear to find. A fall
+  (or a pit, or the lava) brings the hero back up the pipe with a tenth of their health, but the coins and the
+  experience come too (src/js/61j-pipe.js). A D or the arrows run (Shift faster), Space, W or Up jump (held: higher),
+  J, F or the mouse uses the weapon. The levels, foes and pictures are this game's own.
+
 The red portal: Claudeablo (the sixteenth big update - v11.6)
   A red portal on the Keep-yard's north side leads to Haven, a village of thatch and timber under a dark cathedral:
   the Timeline's Claudeablo, ported whole (src/js/64l-claudeablo.js; the window's side src/js/76f-claudeablo.js) and

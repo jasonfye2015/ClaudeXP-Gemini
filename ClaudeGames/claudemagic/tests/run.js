@@ -4042,6 +4042,47 @@ test("the red portal: in the Keep-yard; any one of the party steps through, as t
   g.floor.pos = CM.PORTAL_YARD.ablo.slice(); g.mode = "explore"; g.enterClaudeablo(mage); assert.strictEqual(g.abloWorld.player.level, kept.level, "the same character, next time");
 });
 
+// a simple hand down the pipe: run right, jump at walls, gaps and foes, swing at foes ahead, fight the Warden
+function brosBot(CM, r, seconds = 240) {
+  let jumpT = 0, stuck = 0, lastX = 0;
+  for (let k = 0; k < 60 * seconds && !r.cleared && !r.over; k++) {
+    const p = r.p, W = r.foes.find((f) => f.boss && !f.dead), inp = {};
+    if (W && Math.abs(W.x - p.x) < 14) { const d = W.x - p.x; inp.right = d > 1.2; inp.left = d < -1.2; inp.attack = Math.abs(d) < (r.arms.ranged ? 9 : 2.2) && k % 12 < 6; if (Math.abs(d) < 3 && p.onGround && k % 50 === 0) inp.jump = true; if (p.vy < 0) inp.jump = true; }
+    else {
+      inp.right = true; inp.run = true;
+      const ahead = r.solid(p.x + 0.8, p.y - 0.5) || r.solid(p.x + 0.8, p.y - 1.2), gap = !r.solid(p.x + 0.9, p.y + 0.3) && !r.solid(p.x + 1.6, p.y + 0.3), foe = r.foes.find((f) => !f.dead && f.x > p.x && f.x - p.x < 2.5 && Math.abs(f.y - p.y) < 2);
+      if (foe) inp.attack = k % 10 < 5;
+      if (p.onGround && (ahead || gap || foe)) jumpT = 0.4;
+      if (jumpT > 0) { inp.jump = true; jumpT -= 1 / 60; }
+      if (Math.abs(p.x - lastX) < 0.01) stuck++; else stuck = 0; lastX = p.x;
+      if (stuck > 30) { inp.left = true; inp.right = false; if (stuck > 60) stuck = 0; }
+    }
+    r.update(1 / 60, inp);
+  }
+  return r;
+}
+
+test("Super Claude Bros: four levels from 1-1 to 1-4, each one gone through to its banner by a simple hand (the Brass Warden beaten by a blade and by a spell); coins from the air and from crates knocked from below; a foe landed on falls; a draught mends; the lava and the pits are a fall", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("bros-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const knight = g.party.findIndex((h) => h.cls === "Knight"), mage = g.party.findIndex((h) => h.cls === "Mage");
+  for (let li = 0; li < CM.BR_LEVELS.length; li++) for (const who of li === 3 ? [knight, mage] : [knight]) { const r = new CM.BrosRun(g, who, li); r.hurt = () => {}; brosBot(CM, r); assert.ok(r.cleared, `${CM.BR_LEVELS[li].id} gone through (${g.party[who].cls}, x ${r.p.x.toFixed(1)})`); if (li === 3) assert.ok(r.foes.every((f) => !f.boss || f.dead), "the Warden beaten first"); }
+  const r = new CM.BrosRun(g, knight, 0); let cy = -1, cx = -1; for (let y = 0; y < 14 && cx < 0; y++) for (let x = 0; x < r.w; x++) if (r.grid[y][x] === "C") { cx = x; cy = y; break; }
+  r.p.x = cx + 0.5; r.p.y = cy + 1 + CM.BR.h + 0.05; r.p.vy = -10; r.p.onGround = false; const c0 = r.coins; for (let k = 0; k < 20; k++) r.tick(1 / 60, {}); assert.ok(r.coins > c0 && r.grid[cy][cx] === "K", "a crate knocked from below gives its coin");
+  const f = r.foes[0]; r.p.x = f.x; r.p.y = f.y - f.h + 0.2; r.p.vy = 6; const k0 = r.kills; r.stepFoe(f, 1 / 60); assert.ok(f.dead && r.kills === k0 + 1 && r.p.vy < 0, "landed on, it falls, and the hero bounces");
+  const h = g.party[knight]; h.hp = 1; r.grid[5][5] = "h"; r.p.x = 5.5; r.p.y = 6.2; r.tick(1 / 60, {}); assert.ok(h.hp > 1, "a draught mends");
+  h.hp = h.max; r.p.y = 20; r.tick(1 / 60, {}); assert.strictEqual(r.over, "dead", "a fall into a pit");
+});
+
+test("the pipe in the Square: any one of the party climbs in; a banner reached goes on to the next level with the coins and experience; after 1-4 home, all of it kept; a fall comes back up with a tenth of the health and still the coins (as gold) and the experience", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("bros-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.strictEqual(g.floor.things[CM.TOWN_PIPE.join(",")].type, "pipe"); let asked = false; g.on("pipe", () => { asked = true; }); g.floor.pos = CM.TOWN_PIPE.slice(); g.use(); assert.ok(asked, "the pipe asks who climbs in");
+  const i = 1, h = g.party[i]; assert.strictEqual(g.enterBros(i), ""); assert.strictEqual(g.mode, "bros"); let r = g.brosRun; assert.strictEqual(r.L.id, "1-1");
+  r.coins = 30; r.xp = 100; r.cleared = true; r = g.brosNext(); assert.strictEqual(r.L.id, "1-2"); assert.ok(r.coins === 30 && r.xp === 100, "carried on");
+  const gold0 = g.gold, xp0 = h.xp, lv0 = h.level; r.coins = 50; r.die(); const out = g.leaveBros("dead");
+  assert.strictEqual(g.gold, gold0 + 50 * CM.BR.coinGold, "the coins, as gold"); assert.ok(h.xp > xp0 || h.level > lv0, "the experience"); assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth of the health"); assert.strictEqual(g.mode, "explore");
+  h.hp = h.max; g.floor.pos = CM.TOWN_PIPE.slice(); g.enterBros(i); for (let li = 0; li < 3; li++) { g.brosRun.cleared = true; g.brosNext(); } assert.strictEqual(g.brosRun.L.id, "1-4"); g.brosRun.coins = 10; g.brosRun.cleared = true; const won = g.brosNext(); assert.strictEqual(won.how, "won"); assert.strictEqual(g.mode, "explore");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

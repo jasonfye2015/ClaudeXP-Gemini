@@ -853,6 +853,7 @@ CM.parseRunCode = function (text) {
 };
 // achievements, kept between runs; the first one earned in this order is the title the player wears on the title screen
 CM.ACHIEVEMENTS = {
+  bros: { name: "Down the Pipe", what: "Beat the Brass Warden and raise the banner at the end of 1-4", title: "the Bounding" },
   undying: { name: "The Candle Outlasts", what: "Undo Vorthak the Undying at the bottom of the cathedral under Haven", title: "of Haven" },
   marshal: { name: "Twenty Floors Down", what: "Fell the Iron Marshal at the bottom of the Fortress", title: "of the Gauntlet" },
   unmaker: { name: "Undone", what: "Undo the Unmaker at the bottom of Claudeita's cave", title: "the Wandwright" },

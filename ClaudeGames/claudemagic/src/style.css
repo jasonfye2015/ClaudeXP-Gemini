@@ -648,3 +648,7 @@ body.infort #fortcanvas { display: block; } body.infort #view .sky, body.infort 
 /* Claudeablo through the red portal (76f-claudeablo.js): its canvas over the view */
 #ablocanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; background: #000; }
 body.inablo #ablocanvas { display: block; } body.inablo #view .sky, body.inablo #view .compass, body.inablo #view .hint { display: none; }
+
+/* Super Claude Bros down the pipe (76g-claudebros.js): its canvas over the view */
+#broscanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; background: #000; }
+body.inbros #broscanvas { display: block; } body.inbros #view .sky, body.inbros #view .compass, body.inbros #view .hint { display: none; }

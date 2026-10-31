@@ -1210,6 +1210,17 @@ CM.art.cliff = function (seed = 1) {
 // drawn short), and its doors - each half of a great arched pair of dark brown planks with iron bands and studs
 // the Gilded Joker: deep red plaster between gilt pilasters, tall arched windows lit gold, a band of gold under the eaves;
 // its door a pair of gilded doors under a fanlight with a lamp each side; its gable red with a gold sunburst; its roof copper
+// the pipe in the Square: a great bronze pipe standing up out of the cobbles, green with age, a dark mouth at its top
+CM.art.pipe = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed("pipe"));
+  const body = p.createLinearGradient(S * 0.18, 0, S * 0.82, 0); body.addColorStop(0, "#5A4020"); body.addColorStop(0.35, "#C89A50"); body.addColorStop(0.6, "#A07838"); body.addColorStop(1, "#4A3418");
+  p.fillStyle = body; p.fillRect(S * 0.22, S * 0.3, S * 0.56, S * 0.7);
+  const lip = p.createLinearGradient(S * 0.12, 0, S * 0.88, 0); lip.addColorStop(0, "#6A4A22"); lip.addColorStop(0.35, "#D8AA60"); lip.addColorStop(1, "#4A3418"); p.fillStyle = lip; p.fillRect(S * 0.14, S * 0.16, S * 0.72, S * 0.16);
+  p.fillStyle = "#1A120A"; p.beginPath(); p.ellipse(S / 2, S * 0.17, S * 0.34, S * 0.06, 0, 0, Math.PI * 2); p.fill();
+  p.fillStyle = "rgba(80,170,130,0.55)"; for (let i = 0; i < 26; i++) { p.beginPath(); p.ellipse(S * 0.22 + rnd.next() * S * 0.56, S * 0.2 + rnd.next() * S * 0.78, 3 + rnd.next() * 9, 2 + rnd.next() * 5, 0, 0, Math.PI * 2); p.fill(); }   // (verdigris)
+  p.fillStyle = "#5A4020"; for (const y of [0.45, 0.75]) { p.fillRect(S * 0.2, S * y, S * 0.6, 6); for (let x = 0.26; x < 0.8; x += 0.12) { p.fillStyle = "#D8AA60"; p.beginPath(); p.arc(S * x, S * y + 3, 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#5A4020"; } }   // (bands and rivets)
+  return c;
+};
 CM.art.casino = function (part) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`casino:${part}`));
   if (part === "roof") { p.fillStyle = "#2E5A4E"; p.fillRect(0, 0, S, S); for (let j = 0; j < 8; j++) for (let i = -1; i < 9; i++) { p.fillStyle = `rgb(${46 + rnd.int(-8, 8)},${96 + rnd.int(-10, 10)},${80 + rnd.int(-8, 8)})`; p.fillRect(i * 32 + (j % 2) * 16 + 1, j * 32 + 1, 30, 30); } p.fillStyle = "#C8A040"; for (let i = 0; i < S; i += 64) p.fillRect(i, 0, 4, S); return c; }
@@ -1421,7 +1432,8 @@ CM.art.surfaceLayers = function (pick) {
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
   out["solid:logs"] = use("solid.logs", () => CM.art.logs(false)); out["solid:cabindoor"] = use("solid.cabindoor", () => CM.art.logs(true));   // (Leshy's cabin: 61f-cabin.js)
   out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
-  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:redportal"] = use("solid.redportal", () => { const src = CM.art.portal(), c = artCanvas(), p = c.getContext("2d"); p.filter = "hue-rotate(95deg) saturate(1.6)"; p.drawImage(src, 0, 0); return c; });   // (the red portal to Haven) out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
+  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:pipe"] = use("solid.pipe", () => CM.art.pipe());   // (the pipe in the Square)
+  out["solid:redportal"] = use("solid.redportal", () => { const src = CM.art.portal(), c = artCanvas(), p = c.getContext("2d"); p.filter = "hue-rotate(95deg) saturate(1.6)"; p.drawImage(src, 0, 0); return c; });   // (the red portal to Haven) out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));

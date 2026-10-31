@@ -321,7 +321,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
-    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null; this.fort = d.fort || null; this.fortRun = null; this.abloWorld = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
+    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred); this.tower = d.tower || null; this.towerRun = null; this.caveRun = null; this.fort = d.fort || null; this.fortRun = null; this.abloWorld = null; this.brosRun = null;   // (the Mage Tower: how far climbed)   // (a follower, and a tavern that won't hire after one died)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -379,7 +379,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null; this.fort = null; this.fortRun = null; this.abloWorld = null;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false; this.tower = null; this.towerRun = null; this.caveRun = null; this.fort = null; this.fortRun = null; this.abloWorld = null; this.brosRun = null;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
