@@ -4824,6 +4824,34 @@ test("the Glimmer Maze: the maze is closed and joined up; the slime steers, eats
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("the Gloomwing Swarm: thirty-two swoop in and settle in formation; two bolts at once; a Warden takes two hits; a dive bonus; the beam carries the skiff off and shooting that Warden out of formation frees it to fly double; a hit costs one of two skiffs first; the Bonus Flight pays 10,000 for all forty; every stage pays gold every play, the card stages a card only the first time", () => {
+  const CM = load(), SW = CM.SW, L = new SW.Level(1, 7); assert.strictEqual(L.foes.length, 32); assert.strictEqual(L.foes.filter((f) => f.kind === "warden").length, 4);
+  L.diveT = 1e9; for (let k = 0; k < 20 * 60 && L.foes.some((f) => f.state !== "form"); k++) L.tick(SW.step); assert.ok(L.foes.every((f) => f.state === "form"), "all in formation");
+  // bolts: two at once
+  L.input(0, true); L.tick(SW.step); L.input(0, false); L.p.cool = 0; L.input(0, true); L.tick(SW.step); L.input(0, false); L.p.cool = 0; L.input(0, true); L.tick(SW.step); assert.strictEqual(L.bolts.length, 2);
+  // a Warden: two hits; worth double when diving
+  L.bolts = []; const w = L.foes.find((f) => f.kind === "warden"); L.bolts.push({ x: w.x, y: w.y + 0.5 }); L.tick(SW.step); assert.strictEqual(w.hp, 1); assert.notStrictEqual(w.state, "dead");
+  const s0 = L.score; w.state = "dive"; w.vx = 0; w.t = 0; w.y = 18; L.bolts.push({ x: w.x, y: w.y + 0.5 }); L.tick(SW.step); assert.strictEqual(w.state, "dead"); assert.strictEqual(L.score - s0, 400);
+  // the beam: capture, then the rescue
+  const L2 = new SW.Level(1, 8); L2.foes.forEach((f) => { f.state = "form"; }); L2.diveT = 1e9; const b = L2.foes.find((f) => f.kind === "warden"); Object.assign(b, { state: "beam", t: 1, x: L2.p.x, y: SW.H - 12 }); L2.beamFoe = b.id;
+  L2.tick(SW.step); assert.ok(b.captive); assert.strictEqual(L2.lives, 2); assert.ok(L2.p.dead > 0);
+  for (let k = 0; k < 3 * 60; k++) L2.tick(SW.step); assert.ok(!L2.p.dead, "a new skiff");
+  b.state = "dive"; b.hp = 1; b.y = 18; b.vx = 0; L2.bolts.push({ x: b.x, y: b.y + 0.5 }); L2.tick(SW.step); assert.ok(L2.dual, "freed"); assert.strictEqual(L2.shipXs().length, 2);
+  L2.shots.push({ x: L2.p.x + 0.9, y: SW.shipY, vx: 0, vy: 0 }); L2.tick(SW.step); assert.ok(!L2.dual); assert.strictEqual(L2.lives, 2, "one of two lost, no life");
+  // the Bonus Flight
+  const B = new SW.Level(4, 9); assert.ok(B.bonus); assert.strictEqual(B.foes.length, 40); B.foes.forEach((f) => { f.state = "dead"; }); B.hits = 40; B.tick(SW.step); assert.strictEqual(B.stage, "clear"); assert.strictEqual(B.score, 10000);
+  // the house's side
+  const g = new CM.Game(); g.newGame("sw-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.swStart(100).error); const gold0 = g.gold; let cards = 0;
+    for (let n = 1; n <= 4; n++) { const Lv = g.swLevel(); assert.strictEqual(Lv.n, n); Lv.stage = "clear"; const out = g.swCheck(); assert.strictEqual(out.pay, Math.round(100 * SW.pay(n))); if (out.card) cards++; assert.ok(!out.card || SW.CARDS.includes(n)); }
+    assert.strictEqual(cards, play === 0 ? 2 : 0, "stages 2 and 4, the first time only");
+    assert.strictEqual(g.gold - gold0, [1, 2, 3, 4].reduce((t, n) => t + Math.round(100 * SW.pay(n)), 0));
+    g.swLevel().stage = "over"; assert.ok(g.swCheck().over); assert.strictEqual(g.swLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

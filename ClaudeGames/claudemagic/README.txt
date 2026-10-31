@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gloomwing Swarm (the thirtieth big update - v14.0)
+  A shooter on the Gilded Joker's roof (src/js/64zg-swarm.js; 76w-swarm.js): a lantern-skiff slides along the bottom
+  of the night sky firing mana bolts (two in the air at once) while thirty-two Gloomwings swoop in on curving paths and
+  settle into a breathing formation - Mites, Moths and four armoured Wardens that take two hits - then peel off to dive,
+  dropping embers. A Warden that hovers low lowers a binding beam that carries the skiff off (a life); shoot that Warden
+  out of formation to free it and fly two skiffs side by side. Every fourth stage is a Bonus Flight: forty fly past,
+  100 each, 10,000 for all. Three lives, more at 20,000 and 70,000. One stake a play: each stage cleared pays gold,
+  more each stage, every play; and a Claudescryption card the first time ever each of stages 2, 4, 6, 8, 10, 12, 15
+  and 20 is cleared (common, a stronger common from 6, rare from 10).
+
 The Glimmer Maze (the twenty-ninth big update - v13.9)
   A maze-chase on the Gilded Joker's floor (src/js/64zf-glimmer.js; 76v-glimmer.js): a glimmerslime eats its way round
   a hedge maze of glimmer motes while four Lantern Haunts hunt it, each its own way - Ember straight at it, Bramble at

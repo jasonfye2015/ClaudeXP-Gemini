@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.9 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v14.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -849,6 +849,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .shelter .shbuild, .shelter .shidle { display: flex; flex-wrap: wrap; gap: 4px; } .shelter .shbuild button, .shelter .shidle button { font-size: 12px; padding: 3px 7px; }
 .manamine .mmcanvas { width: 448px; height: 540px; image-rendering: pixelated; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 .glimmer .gzcanvas { width: 456px; height: 532px; border-radius: 6px; border: 6px solid #2A3A20; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
+.swarm .swcanvas { width: 448px; height: 540px; border-radius: 6px; border: 6px solid #20203A; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 </style>
 </head>
 <body>
@@ -858,7 +859,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.9", built: "2026-10-31" };
+const CM = window.CM = { version: "14.0", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -21245,6 +21246,151 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64zg-swarm.js ----
+"use strict";
+// The Gloomwing Swarm (the thirtieth big update - v14.0): a shooter on the Gilded Joker's floor. A little lantern-skiff
+// at the bottom of the night sky slides left and right firing mana bolts (two in the air at once). Each stage the
+// Gloomwings swoop in along curving paths and settle into a breathing formation - Mites below, Moths above them and four
+// armoured Wardens on top (two hits each) - then peel off and dive, Moths weaving, the diving ones dropping embers. A
+// Warden now and then hovers low and lowers a binding beam: a skiff caught in it is carried up into the formation (a
+// life lost), and shooting that Warden while it is out of formation sets the skiff free to fly beside yours - two skiffs,
+// two bolts at once. Every fourth stage is a Bonus Flight: forty fly past without fighting back, 100 each, 10,000 for all.
+// Three lives (more at 20,000 and 70,000). One stake a play: each stage cleared pays gold, more each stage, every play;
+// and a Claudescryption card the first time ever each of stages 2, 4, 6, 8, 10, 12, 15 and 20 is cleared (common, then a
+// stronger common, then rare). The same inputs give the same game. The window: 76w-swarm.js.
+CM.SW = {
+  W: 28, H: 32, step: 1 / 60, lives: 3, extras: [20000, 70000], shipY: 30,
+  shipSpeed: 15, boltSpeed: 36, maxBolts: 2, refire: 0.16, shotSpeed: 14, flySpeed: 17, diveSpeed: 11,
+  KINDS: { mite: { hp: 1, pts: [50, 100] }, moth: { hp: 1, pts: [80, 160] }, warden: { hp: 2, pts: [150, 400] } },
+  ROWS: [["warden", 4], ["moth", 6], ["moth", 6], ["mite", 8], ["mite", 8]],
+  CARDS: [2, 4, 6, 8, 10, 12, 15, 20], bonusEvery: 4,
+  pay: (n) => 0.05 + 0.03 * n,
+};
+const SW = CM.SW;
+// a cubic curve, sampled
+SW.curve = (a, b, c, d, k = 10) => { const out = []; for (let i = 1; i <= k; i++) { const t = i / k, u = 1 - t; out.push([u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]]); } return out; };
+SW.loop = (cx, cy, r, from, turn, k = 10) => { const out = []; for (let i = 1; i <= k; i++) { const a = from + (turn * i) / k; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } return out; };
+// the ways in: from the top (m = which side it curls to) or from a side (s = -1 left, 1 right)
+SW.entry = (kind, m) => { const W2 = SW.W / 2;
+  if (kind === "top") { const a = [W2 + m * 2, -2], d = [W2 + m * 9, 20]; return [a, ...SW.curve(a, [W2 + m * 2, 10], [W2 + m * 12, 14], d), ...SW.loop(W2 + m * 6, 20, 3, m > 0 ? 0 : Math.PI, m > 0 ? Math.PI * 1.5 : -Math.PI * 1.5)]; }
+  const a = [W2 + m * 16, 27], d = [W2 - m * 2, 14]; return [a, ...SW.curve(a, [W2 + m * 6, 26], [W2 - m * 6, 20], d), ...SW.loop(W2 + m * 1, 14, 3, m > 0 ? Math.PI : 0, m > 0 ? Math.PI * 1.6 : -Math.PI * 1.6)]; };
+// the Bonus Flight's ways through and out again
+SW.flyby = (w, m) => { const W2 = SW.W / 2;
+  if (w % 2 === 0) { const a = [W2 + m * 3, -2]; return [a, ...SW.curve(a, [W2 + m * 3, 18], [W2 + m * 13, 24], [W2 + m * 8, 12]), ...SW.loop(W2 + m * 8, 16, 4, -Math.PI / 2, m * Math.PI * 1.5, 12), ...SW.curve([W2 + m * 4, 16], [W2 - m * 4, 10], [W2 - m * 10, 4], [W2 - m * 20, -4])]; }
+  const a = [W2 + m * 16, 22]; return [a, ...SW.curve(a, [W2 + m * 4, 24], [W2 - m * 4, 6], [W2 - m * 8, 12]), ...SW.loop(W2 - m * 4, 12, 4, Math.PI, -m * Math.PI * 2, 14), ...SW.curve([W2 - m * 8, 12], [W2, 20], [W2 + m * 8, 26], [W2 + m * 18, 30])]; };
+SW.Level = class {
+  constructor(n, seed, keep) {
+    this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; this.bonus = n % SW.bonusEvery === 0;
+    Object.assign(this, keep || { score: 0, lives: SW.lives, extrasGiven: 0, dual: false });
+    this.mul = 1 + Math.min(0.6, (n - 1) * 0.05); this.p = { x: SW.W / 2, dead: 0, cool: 0 }; this.move = 0; this.fireHeld = false; this.firePressed = false;
+    this.bolts = []; this.shots = []; this.foes = []; this.hits = 0; this.diveT = 5; this.beamFoe = null;
+    let id = 0; const add = (kind, row, col, count, path, at) => { this.foes.push({ id: id++, kind, hp: SW.KINDS[kind].hp, row, col, count, state: "wait", at, path, pi: 0, x: path[0][0], y: path[0][1], dir: 0, t: 0, captive: false, shots: 0 }); };
+    if (this.bonus) { const kinds = ["mite", "moth", "warden", "moth", "mite"]; for (let w = 0; w < 5; w++) for (let j = 0; j < 8; j++) { const m = j % 2 ? 1 : -1; add(kinds[w] === "warden" ? "moth" : kinds[w], -1, j, 8, SW.flyby(w, w % 2 ? m : (w % 4 ? -m : m)), 0.5 + w * 3.2 + Math.floor(j / 2) * 0.22); } this.foes.forEach((f) => { f.hp = 1; }); return; }
+    // the formation's waves: Mites from the top; Wardens and Moths from the left; Moths from the right; Mites from the top
+    const slots = (r) => Array.from({ length: SW.ROWS[r][1] }, (_, c) => [r, c]);
+    const waves = [{ from: "top", list: slots(3) }, { from: "side", m: -1, list: [...slots(0), ...slots(1).slice(1, 5)] }, { from: "side", m: 1, list: [...slots(1).filter((s) => s[1] === 0 || s[1] === 5), ...slots(2)] }, { from: "top", list: slots(4) }];
+    waves.forEach((W, k) => W.list.forEach(([r, c], j) => { const m = W.from === "top" ? (j % 2 ? 1 : -1) : W.m; add(SW.ROWS[r][0], r, c, SW.ROWS[r][1], SW.entry(W.from, m), 0.6 + k * 2.8 + j * 0.16); }));
+  }
+  slot(f) { const br = 1 + 0.07 * Math.sin(this.t * 1.3); return [SW.W / 2 + (f.col - (f.count - 1) / 2) * 2.6 * br, 4 + f.row * 2.3]; }
+  live() { return this.foes.filter((f) => f.state !== "dead" && f.state !== "gone"); }
+  input(move, fire) { this.move = move; if (fire && !this.fireHeld) this.firePressed = true; this.fireHeld = !!fire; }
+  shipXs() { const P = this.p; return this.dual ? [P.x - 0.9, P.x + 0.9] : [P.x]; }
+  stepShip(dt) {
+    const P = this.p; if (P.dead) return; const half = this.dual ? 1.9 : 1;
+    P.x = Math.max(half, Math.min(SW.W - half, P.x + this.move * SW.shipSpeed * dt)); P.cool -= dt;
+    if ((this.firePressed || (this.fireHeld && P.cool <= 0)) && this.bolts.length < SW.maxBolts * (this.dual ? 2 : 1) && P.cool <= 0) { for (const x of this.shipXs()) this.bolts.push({ x, y: SW.shipY - 1 }); P.cool = SW.refire; this.events.push({ kind: "fire" }); }
+    this.firePressed = false;
+  }
+  // flying a path, then to the slot (or out, on a Bonus Flight)
+  follow(f, dt, sp) { let left = sp * dt; while (left > 0 && f.pi < f.path.length) { const [tx, ty] = f.path[f.pi], dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy); if (d <= left) { f.x = tx; f.y = ty; left -= d; f.pi++; } else { f.x += (dx / d) * left; f.y += (dy / d) * left; f.dir = Math.atan2(dy, dx); left = 0; } } return f.pi >= f.path.length; }
+  toward(f, tx, ty, sp, dt) { const dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy); if (d <= sp * dt) { f.x = tx; f.y = ty; return true; } f.x += (dx / d) * sp * dt; f.y += (dy / d) * sp * dt; f.dir = Math.atan2(dy, dx); return false; }
+  stepFoe(f, dt) {
+    const P = this.p, sp = SW.flySpeed * this.mul;
+    if (f.state === "wait") { if (this.t >= f.at) f.state = "enter"; return; }
+    if (f.state === "enter") { if (this.follow(f, dt, sp)) f.state = this.bonus ? "gone" : "home"; return; }
+    if (f.state === "home" || f.state === "return") { const [sx, sy] = this.slot(f); if (this.toward(f, sx, sy, sp, dt)) { f.state = "form"; f.dir = -Math.PI / 2; } return; }
+    if (f.state === "form") { [f.x, f.y] = this.slot(f); f.dir = -Math.PI / 2; return; }
+    if (f.state === "loop") { if (this.follow(f, dt, sp * 0.8)) { f.state = f.beam ? "tobeam" : "dive"; f.t = 0; f.vx = 0; } return; }
+    if (f.state === "tobeam") { if (this.toward(f, f.beamX, SW.H - 12, SW.diveSpeed * this.mul, dt)) { f.state = "beam"; f.t = 0; this.events.push({ kind: "beam", f }); } return; }
+    if (f.state === "beam") {
+      f.t += dt; const on = f.t > 0.7 && f.t < 3.2;
+      if (on && !P.dead && !this.dual && !f.captive && Math.abs(P.x - f.x) < 1.7) { f.captive = true; this.captured = f.id; this.events.push({ kind: "captured", f }); this.lose("beam"); }
+      if (f.t > 3.6) { f.state = "return"; f.beam = false; this.beamFoe = null; } return;
+    }
+    if (f.state === "dive") {
+      f.t += dt; const vy = SW.diveSpeed * this.mul, want = Math.max(-8, Math.min(8, (P.x - f.x) * 1.4)) + (f.kind === "moth" ? Math.sin(f.t * 4) * 7 : 0);
+      f.vx += (want - f.vx) * Math.min(1, dt * 3); f.x = Math.max(0.5, Math.min(SW.W - 0.5, f.x + f.vx * dt)); f.y += vy * dt; f.dir = Math.atan2(vy, f.vx);
+      // embers on the way down
+      for (const fy of [9, 14, 18].slice(0, f.shots)) if (f.y - vy * dt < fy && f.y >= fy && !P.dead) { const tt = (SW.shipY - f.y) / SW.shotSpeed, vx = Math.max(-6, Math.min(6, (P.x - f.x) / tt)); this.shots.push({ x: f.x, y: f.y + 0.8, vx, vy: SW.shotSpeed }); this.events.push({ kind: "ember" }); }
+      if (f.y > SW.H + 1) { f.y = -2; f.x = this.slot(f)[0]; f.state = "return"; } return;
+    }
+  }
+  // who dives next: one at a time, quicker as the stages go; a Warden takes two Moths with it, or goes low to bind
+  stepDives(dt) {
+    if (this.bonus || this.p.dead) return; this.diveT -= dt; if (this.diveT > 0) return;
+    const form = this.foes.filter((f) => f.state === "form"); if (!form.length) { this.diveT = 0.5; return; }
+    const R = this.rnd, inFlight = this.foes.filter((f) => ["loop", "dive", "tobeam", "beam"].includes(f.state)).length, alive = this.live().length;
+    this.diveT = Math.max(0.55, 2.6 - 0.14 * this.n) * (alive < 8 ? 0.6 : 1) * (0.7 + R.next() * 0.6); if (inFlight >= 2 + Math.floor(this.n / 3)) return;
+    const f = R.pick(form), side = f.x < SW.W / 2 ? -1 : 1, go = (g, beam) => { g.state = "loop"; g.pi = 0; g.vx = 0; g.beam = !!beam; g.shots = beam ? 0 : Math.min(3, 1 + Math.floor(this.n / 3)); g.path = SW.loop(g.x + side * 1.6, g.y, 1.6, side > 0 ? Math.PI : 0, side > 0 ? Math.PI * 1.2 : -Math.PI * 1.2, 8); this.events.push({ kind: "dive", f: g }); };
+    if (f.kind === "warden" && !f.captive && !this.dual && this.beamFoe === null && !this.foes.some((g) => g.captive) && R.chance(0.45)) { f.beamX = Math.max(3, Math.min(SW.W - 3, this.p.x)); this.beamFoe = f.id; go(f, true); return; }
+    go(f); if (f.kind === "warden") for (const e of form.filter((g) => g.kind === "moth" && g.row === 1 && Math.abs(g.col - (f.col + 1)) <= 1).slice(0, 2)) go(e);
+  }
+  kill(f, how) {
+    const diving = f.state !== "form"; f.state = "dead"; let pts = this.bonus ? 100 : SW.KINDS[f.kind].pts[diving ? 1 : 0]; this.hits += this.bonus ? 1 : 0;
+    if (f.captive) { f.captive = false; if (diving && this.lives > 0) { this.dual = true; this.captured = 0; this.events.push({ kind: "rescue" }); } else { this.captured = 0; this.events.push({ kind: "lostcaptive" }); } }
+    if (this.beamFoe === f.id) this.beamFoe = null; this.score += pts; this.events.push({ kind: "kill", f, pts, how });
+  }
+  lose(why) { const P = this.p; if (P.dead) return; if (this.dual && why !== "beam") { this.dual = false; this.events.push({ kind: "lostone" }); return; } P.dead = 2.2; this.lives -= 1; this.bolts = []; this.events.push({ kind: "die", why }); }
+  update(dt) { for (let s = 0; s < dt / SW.step - 1e-9; s++) this.tick(SW.step); }
+  tick(dt) {
+    if (this.stage !== "play") return; this.t += dt; const P = this.p;
+    if (P.dead) { P.dead -= dt; if (P.dead <= 0) { if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } P.dead = 0; P.x = SW.W / 2; this.shots = []; this.events.push({ kind: "respawn" }); } }
+    this.stepShip(dt); for (const f of this.foes) this.stepFoe(f, dt); this.stepDives(dt);
+    for (const b of this.bolts) b.y -= SW.boltSpeed * dt; this.bolts = this.bolts.filter((b) => b.y > -1);
+    for (const b of this.bolts) for (const f of this.foes) { if (b.dead || f.state === "dead" || f.state === "gone" || f.state === "wait" || f.y < -0.5) continue; if (Math.abs(b.x - f.x) < 1 && Math.abs(b.y - f.y) < 1) { b.dead = true; f.hp -= 1; if (f.hp <= 0) this.kill(f, "bolt"); else this.events.push({ kind: "dent", f }); } }
+    this.bolts = this.bolts.filter((b) => !b.dead);
+    for (const s of this.shots) { s.x += s.vx * dt; s.y += s.vy * dt; } this.shots = this.shots.filter((s) => s.y < SW.H + 1);
+    if (!P.dead) {
+      const xs = this.shipXs();
+      for (const s of this.shots) if (!s.dead && Math.abs(s.y - SW.shipY) < 0.9 && xs.some((x) => Math.abs(s.x - x) < 0.8)) { s.dead = true; this.lose("ember"); break; }
+      this.shots = this.shots.filter((s) => !s.dead);
+      if (!this.bonus) for (const f of this.foes) if (["dive", "loop", "return"].includes(f.state) && Math.abs(f.y - SW.shipY) < 1.1 && xs.some((x) => Math.abs(f.x - x) < 1.2)) { this.kill(f, "crash"); this.lose("crash"); break; }
+    }
+    const k = this.extrasGiven || 0; if (k < SW.extras.length && this.score >= SW.extras[k]) { this.extrasGiven = k + 1; this.lives += 1; this.events.push({ kind: "extra" }); }
+    if (!this.live().length && !P.dead) { this.stage = "clear"; if (this.bonus && this.hits === this.foes.length) { this.score += 10000; this.events.push({ kind: "perfect" }); } this.events.push({ kind: "clear", hits: this.hits }); }
+  }
+};
+Object.assign(CM.Game.prototype, {
+  swState() { return this.cgStore().sw || null; },
+  swClaimed() { const F = this.cgStore(); F.swCards = F.swCards || {}; return F.swCards; },
+  swLevel() {
+    const S = this.swState(); if (!S || S.stage !== "play") return null;
+    if (!this.swLive || this.swLive.key !== `${S.seed}:${S.n}`) {
+      if (this.swLive && this.swLive.key && this.swLive.key.startsWith(`${S.seed}:`)) { const L = this.swLive, keep = { score: L.score, lives: L.lives, extrasGiven: L.extrasGiven, dual: L.dual }; this.swLive = new SW.Level(S.n, CM.hashSeed(`${S.seed}:${S.n}`), keep); this.swLive.key = `${S.seed}:${S.n}`; }
+      else { S.stage = "done"; S.last = S.last || { level: S.n, won: S.won, cards: [], lost: true }; this.saveCasino && this.saveCasino(); return null; }
+    }
+    return this.swLive;
+  },
+  swStart(bet) {
+    const S0 = this.swState(); if (S0 && S0.stage === "play" && this.swLive && this.swLive.key && this.swLive.key.startsWith(`${S0.seed}:`)) return { error: "A game is on." };
+    const why = this.cgStake("swarm", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.sw = { stage: "play", n: 1, bet: Math.floor(bet), seed: `${this.seed}:swarm:${F.n}`, won: 0, cards: [] };
+    this.swLive = new SW.Level(1, CM.hashSeed(`${F.sw.seed}:1`)); this.swLive.key = `${F.sw.seed}:1`; this.saveCasino && this.saveCasino(); return F.sw;
+  },
+  // a stage cleared: its gold (every play), and at the card stages a card the first time ever; on to the next
+  swCheck() {
+    const S = this.swState(), L = this.swLive; if (!S || !L || S.stage !== "play") return null;
+    if (L.stage === "clear") {
+      const n = S.n, pay = Math.round(S.bet * SW.pay(n)), C = this.swClaimed(); let card = null;
+      if (SW.CARDS.includes(n) && !C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `The Gloomwing Swarm, stage ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:swarm:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("swarm", pay); S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.swLevel(); return { cleared: n, pay, card, bonus: L.bonus, hits: L.hits };
+    }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.swBest = Math.max(F.swBest || 0, L.score); this.swLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    return null;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -28146,6 +28292,96 @@ CM.CG_TABLES.push(["glimmer", "The Glimmer Maze"]);
       p.closePath(); p.fill(); p.restore();
       if (!scared) { p.fillStyle = "rgba(255,255,220,0.45)"; p.fillRect(X - 6, Y + 3, 12, 2); p.fillStyle = "#3A2A10"; p.fillRect(X - 3, Y - 14, 6, 3); eyes(); }
       else { p.fillStyle = blink ? "#E04040" : "#FFE0C0"; p.fillRect(X - 4, Y - 4, 3, 3); p.fillRect(X + 1, Y - 4, 3, 3); p.strokeStyle = p.fillStyle; p.beginPath(); for (let k = 0; k <= 4; k++) p.lineTo(X - 6 + k * 3, Y + 3 + (k % 2 ? -2 : 0)); p.stroke(); }
+    },
+  });
+}
+
+// ---- 76w-swarm.js ----
+"use strict";
+// The Gloomwing Swarm, the window's side (the thirtieth big update): a night sky of drifting stars on a canvas; the
+// lantern-skiff (two side by side once one is freed), its mana bolts; Mites, Moths and the armoured Wardens with their
+// wings beating, turned along their flight when they swoop, a dented Warden's shell gone blue; the binding beam, a
+// captive skiff above its Warden, the embers, bursts and points; the stage's banner, the Bonus Flight's tally; the score,
+// the lives and the stage at the top. Left and right (or A and D) to slide, Space to fire (hold for a steady stream), P
+// to pause. The rules are 64zg-swarm.js.
+CM.CG_TABLES.push(["swarm", "The Gloomwing Swarm"]);
+{ const floor0 = CM.UI.prototype.renderFloor, C = 16, TOP = 28;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "swarm") return this.cgSwarm(box); return floor0.call(this, box); },
+    cgSwarm(box) {
+      const g = this.game, SW = CM.SW, S = g.swState(), L = g.swLevel(), live = !!L, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.swClaimed(), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(20, (S && live ? S.n : 1) + 4), rows = []; for (let n = 1; n <= top; n++) { const card = SW.CARDS.includes(n), tier = CM.cardTierFor(n); rows.push(`<div class="rung${live && S.n === n ? " now" : ""}${live && S.n > n ? " done" : ""}"><span>Stage ${n}${n % SW.bonusEvery ? "" : " ✧"}</span><b>${Math.round(bet * SW.pay(n))}</b><i class="${!card ? "" : Cl[n] ? "got" : tier}" title="${!card ? "" : Cl[n] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${!card ? "" : Cl[n] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`); }
+      box.innerHTML = `<div class="cgtable swarm runestack dash"><h3>The Gloomwing Swarm</h3><div class="rswrap"><canvas class="swcanvas" width="${SW.W * C}" height="${SW.H * C + TOP}" tabindex="0"></canvas>
+        <div class="dashside"><p class="lore">On the Joker's roof, under the night sky, the house keeps a lantern-skiff on a rail. "The Gloomwings come to the lights every night," says the attendant. "Thin them out and the house pays by the wave."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-swpause>${this.swPaused ? "Go on" : "Pause"}</button>` : `<button class="primary" data-swstart>Up to the roof (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Left and right (or A and D) to slide; Space to fire - two bolts in the air at once, hold it for a steady stream; P to pause. Mites 50, Moths 80, Wardens take two hits for 150 - all worth double when shot diving. A Warden that hovers low lowers a binding beam: get caught and your skiff is carried off (a life); shoot that Warden while it is out of the formation to free it, and fly two skiffs side by side. Every fourth stage (✧) is a Bonus Flight: 100 each, 10,000 for all forty. Three lives, more at 20,000 and 70,000. Each stage cleared pays gold, more each, every play; at stages 2, 4, 6, 8, 10, 12, 15 and 20 a card, the first time ever (♦ common, ◆ a stronger common from 6, ★ rare from 10). Best score ${g.cgStore().swBest || 0}.</div>${this.cgStats("swarm")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-swstart]")) q("[data-swstart]").addEventListener("click", () => { const r = g.swStart(bet); this.cgNote = r.error || "Stage 1. Here they come!"; this.swFx = { parts: [], pts: [], banner: { at: performance.now(), text: "STAGE 1" } }; this.swPaused = false; this.cgSfx(r.error ? "miss" : "door", 0.45); this.renderCasino(); const cv = this.$("#casino-body .swcanvas"); if (cv) cv.focus(); });
+      if (q("[data-swpause]")) q("[data-swpause]").addEventListener("click", () => { this.swPaused = !this.swPaused; this.renderCasino(); });
+      this.swCanvas = q(".swcanvas");
+      if (!this.swKeys) { this.swHeld = new Set();
+        this.swKeys = (e) => { if (this.cgView !== "swarm" || !this.dialogOpen() || !this.game.swLevel()) return; const k = { ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r", Space: "f" }[e.code];
+          if (e.type === "keydown" && e.code === "KeyP") { e.preventDefault(); this.swPaused = !this.swPaused; this.renderCasino(); return; }
+          if (!k) return; e.preventDefault(); e.stopPropagation(); if (e.type === "keydown") this.swHeld.add(k); else this.swHeld.delete(k); };
+        window.addEventListener("keydown", this.swKeys, true); window.addEventListener("keyup", this.swKeys, true); }
+      if (!this.swLoop) { let prev = performance.now(); const loop = (now) => { if (!this.swCanvas || !this.swCanvas.isConnected || this.cgView !== "swarm") { this.swLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.swFrame(dt, now); this.swLoop = requestAnimationFrame(loop); }; this.swLoop = requestAnimationFrame(loop); }
+    },
+    swFrame(dt, now) {
+      const g = this.game, SW = CM.SW, L = g.swLevel(), cv = this.swCanvas, p = cv.getContext("2d"), fx = this.swFx = this.swFx || { parts: [], pts: [] }, H = this.swHeld || new Set();
+      if (L && !this.swPaused) { L.input((H.has("r") ? 1 : 0) - (H.has("l") ? 1 : 0), H.has("f")); L.update(dt); for (const e of L.events.splice(0)) this.swEvent(e, now, L); const out = g.swCheck();
+        if (out && out.cleared) { const nx = out.cleared + 1; fx.banner = { at: now, text: nx % SW.bonusEvery ? `STAGE ${nx}` : "BONUS FLIGHT", sub: `Stage ${out.cleared} cleared: +${out.pay} gold${out.bonus ? ` - ${out.hits} of 40 hit` : ""}${out.card ? ` - ${out.card}` : ""}` }; this.cgSfx("victory", 0.5); if (out.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 300); this.cgNote = `Stage ${out.cleared} cleared: ${out.pay} gold${out.card ? `, and a card - ${out.card}` : ""}.`; this.renderCasino(); return; }
+        if (out && out.over) { const S = g.swState(); this.cgNote = `The skiff's last lantern goes out on stage ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
+      const Lv = L || this.swLastDrawn; if (L) this.swLastDrawn = L;
+      // the sky
+      p.fillStyle = "#06061A"; p.fillRect(0, 0, cv.width, cv.height);
+      for (let k = 0; k < 70; k++) { const x = (k * 97) % cv.width, sp = 10 + (k % 3) * 14, y = TOP + ((k * 53 + now / 1000 * sp) % (cv.height - TOP)); p.fillStyle = ["#6070A0", "#A0B0E0", "#F0E0A0"][k % 3]; p.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(now / 500 + k)); p.fillRect(x, y, k % 5 ? 1 : 2, k % 5 ? 1 : 2); } p.globalAlpha = 1;
+      p.fillStyle = "#100C20"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "THE GLOOMWING SWARM", 8, 19);
+      if (Lv) { p.fillText(`STAGE ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.swSkiff(p, cv.width - 14 - k * 18, 14, 0.55, now); }
+      if (!Lv) { p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("The Gloomwing Swarm", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
+      p.save(); p.translate(0, TOP);
+      // the binding beam
+      for (const f of Lv.foes) if (f.state === "beam") { const k = Math.min(1, Math.max(0, (f.t - 0.2) / 0.5)) * (f.t > 3.2 ? Math.max(0, 1 - (f.t - 3.2) / 0.4) : 1), X = f.x * C, Y = f.y * C + 10, Y2 = (SW.shipY + 1.2) * C; p.save(); p.globalAlpha = 0.55 * k; const gr = p.createLinearGradient(0, Y, 0, Y2); gr.addColorStop(0, "#C0F0FF"); gr.addColorStop(1, "#6060FF"); p.fillStyle = gr; p.beginPath(); p.moveTo(X - 6, Y); p.lineTo(X + 6, Y); p.lineTo(X + 28 * k, Y2); p.lineTo(X - 28 * k, Y2); p.closePath(); p.fill();
+        p.strokeStyle = "#FFFFFF"; p.globalAlpha = 0.5 * k; for (let s = 0; s < 6; s++) { const yy = Y + ((s / 6 + now / 900) % 1) * (Y2 - Y), w = 6 + (yy - Y) / (Y2 - Y) * 22 * k; p.beginPath(); p.moveTo(X - w, yy); p.lineTo(X + w, yy); p.stroke(); } p.restore(); }
+      for (const f of Lv.foes) { if (f.state === "dead" || f.state === "gone" || f.state === "wait") continue; this.swFoe(p, f, now); if (f.captive) { p.save(); p.globalAlpha = 0.85; p.filter = "hue-rotate(150deg)"; this.swSkiff(p, f.x * C, f.y * C - 18, 0.8, now); p.restore(); } }
+      for (const b of Lv.bolts) { p.fillStyle = "#80F0FF"; p.shadowColor = "#80F0FF"; p.shadowBlur = 6; p.fillRect(b.x * C - 1.5, b.y * C - 7, 3, 12); p.shadowBlur = 0; }
+      for (const s of Lv.shots) { p.fillStyle = "#FFB040"; p.beginPath(); p.arc(s.x * C, s.y * C, 3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFF0C0"; p.fillRect(s.x * C - 1, s.y * C - 1, 2, 2); }
+      if (!Lv.p.dead) for (const x of Lv.shipXs()) this.swSkiff(p, x * C, SW.shipY * C, 1, now);
+      fx.parts = fx.parts.filter((q) => (q.life -= dt) > 0); for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; p.globalAlpha = Math.min(1, q.life * 2.5); p.fillStyle = q.c; p.fillRect(q.x - 1.5, q.y - 1.5, 3, 3); } p.globalAlpha = 1;
+      fx.pts = fx.pts.filter((q) => now - q.at < 800); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 800; p.fillStyle = "#A0F0FF"; p.font = "bold 11px monospace"; p.fillText(String(q.n), q.x - 10, q.y - (now - q.at) / 40); } p.globalAlpha = 1;
+      p.restore();
+      if (fx.banner && now - fx.banner.at < 2600) { const B = fx.banner, t = (now - B.at) / 2600; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : 1; p.fillStyle = "#80E0FF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText(B.text, cv.width / 2, cv.height / 2 + 20); if (B.sub) { p.font = "14px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(B.sub, cv.width / 2, cv.height / 2 - 14); } p.textAlign = "left"; p.globalAlpha = 1; }
+      if (Lv.bonus && Lv.t < 2) { p.fillStyle = "#FFE070"; p.font = "bold 18px Georgia, serif"; p.textAlign = "center"; p.fillText("Hit as many as you can!", cv.width / 2, cv.height / 2 + 50); p.textAlign = "left"; }
+      if (this.swPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+    },
+    swEvent(e, now, L) {
+      const fx = this.swFx, burst = (x, y, cols, n = 16) => { for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120; fx.parts.push({ x: x * C, y: y * C, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.4, c: cols[k % cols.length] }); } };
+      if (e.kind === "fire") this.cgSfx("zap", 0.15, 1.8);
+      else if (e.kind === "kill") { this.cgSfx("shatter", 0.35, 1.1 + Math.random() * 0.3); burst(e.f.x, e.f.y, e.f.kind === "warden" ? ["#80E070", "#F0D060", "#FFF"] : e.f.kind === "moth" ? ["#F09040", "#60D0E0", "#FFF"] : ["#B070F0", "#F0E0FF"]); fx.pts.push({ x: e.f.x * C, y: e.f.y * C, n: e.pts, at: now }); }
+      else if (e.kind === "dent") this.cgSfx("bump", 0.35, 1.5); else if (e.kind === "dive") this.cgSfx("monster", 0.12, 1.7); else if (e.kind === "ember") this.cgSfx("wandboom", 0.12, 2);
+      else if (e.kind === "beam") this.cgSfx("spell", 0.4, 0.6); else if (e.kind === "captured") this.cgSfx("cardlose", 0.5);
+      else if (e.kind === "rescue") { this.cgSfx("cardwin", 0.5); fx.banner = { at: now, text: "SKIFF FREED!" }; } else if (e.kind === "lostcaptive") this.cgSfx("miss", 0.4);
+      else if (e.kind === "die" || e.kind === "lostone") { this.cgSfx("hurt", 0.6); burst(L.p.x, CM.SW.shipY, ["#FFE070", "#F06030", "#FFFFFF"], 28); }
+      else if (e.kind === "extra") this.cgSfx("cardwin", 0.4); else if (e.kind === "perfect") { this.cgSfx("victory", 0.6); fx.banner = { at: now, text: "PERFECT! +10000" }; }
+    },
+    // the lantern-skiff: a little hull, two swept fins, a lantern at the mast giving off its glow
+    swSkiff(p, X, Y, s, now) {
+      p.save(); p.translate(X, Y); p.scale(s * 1.2, s * 1.2);
+      p.fillStyle = "#8A5A2A"; p.beginPath(); p.moveTo(-9, 2); p.lineTo(9, 2); p.lineTo(6, 8); p.lineTo(-6, 8); p.closePath(); p.fill();
+      p.fillStyle = "#C0C8E0"; p.beginPath(); p.moveTo(-3, 2); p.lineTo(-11, 6); p.lineTo(-10, 0); p.closePath(); p.fill(); p.beginPath(); p.moveTo(3, 2); p.lineTo(11, 6); p.lineTo(10, 0); p.closePath(); p.fill();
+      p.fillStyle = "#5A3A1A"; p.fillRect(-1, -8, 2, 10); p.fillStyle = "#FFE070"; p.shadowColor = "#FFD040"; p.shadowBlur = 10 + 3 * Math.sin(now / 120); p.fillRect(-3, -11, 6, 5); p.shadowBlur = 0; p.fillStyle = "#3A2A10"; p.fillRect(-3, -12, 6, 1.5);
+      p.restore();
+    },
+    // the Gloomwings, with beating wings, turned along their flight when not in the formation
+    swFoe(p, f, now) {
+      const X = f.x * C, Y = f.y * C, beat = Math.sin(now / 70 + f.id), ang = f.state === "form" ? 0 : f.dir + Math.PI / 2;
+      p.save(); p.translate(X, Y); p.rotate(ang); p.scale(1.35, 1.35);
+      if (f.kind === "mite") { p.fillStyle = "#D0B0FF"; p.globalAlpha = 0.85; p.beginPath(); p.ellipse(-5, -1, 5, 3 + beat * 1.5, -0.4, 0, Math.PI * 2); p.ellipse(5, -1, 5, 3 + beat * 1.5, 0.4, 0, Math.PI * 2); p.fill(); p.globalAlpha = 1; p.fillStyle = "#7030C0"; p.beginPath(); p.ellipse(0, 1, 3.5, 6, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0E040"; p.fillRect(-2, -4, 1.5, 1.5); p.fillRect(0.5, -4, 1.5, 1.5); }
+      else if (f.kind === "moth") { p.fillStyle = "#F09040"; const w = 8 + beat * 2; p.beginPath(); p.moveTo(0, -2); p.lineTo(-w, -7); p.lineTo(-w + 1, 4); p.closePath(); p.moveTo(0, -2); p.lineTo(w, -7); p.lineTo(w - 1, 4); p.closePath(); p.fill(); p.fillStyle = "#60D0E0"; p.beginPath(); p.arc(-w / 2, -2, 1.8, 0, Math.PI * 2); p.arc(w / 2, -2, 1.8, 0, Math.PI * 2); p.fill(); p.fillStyle = "#402810"; p.beginPath(); p.ellipse(0, 1, 2.5, 6, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#402810"; p.beginPath(); p.moveTo(-1, -5); p.lineTo(-3, -9); p.moveTo(1, -5); p.lineTo(3, -9); p.stroke(); }
+      else { const dent = f.hp < CM.SW.KINDS.warden.hp; p.fillStyle = dent ? "#5080E0" : "#40A050"; p.globalAlpha = 0.8; p.beginPath(); p.ellipse(-8, 0, 6, 3 + beat, -0.3, 0, Math.PI * 2); p.ellipse(8, 0, 6, 3 + beat, 0.3, 0, Math.PI * 2); p.fill(); p.globalAlpha = 1;
+        p.fillStyle = dent ? "#3050B0" : "#2A7A3A"; p.beginPath(); p.ellipse(0, 1, 6, 8, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#F0D060"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(0, -6); p.lineTo(0, 8); p.stroke(); p.lineWidth = 1; p.fillStyle = "#F0D060"; p.fillRect(-5, -9, 10, 3); p.fillStyle = "#F04040"; p.fillRect(-3, -5, 2, 2); p.fillRect(1, -5, 2, 2); }
+      p.restore();
     },
   });
 }
