@@ -312,7 +312,18 @@ not take the route (Automatic has no reason to go into a cave with a light lit o
   in the village store; a run that goes down by the Undercroft has the Catacombs' floors untouched; the sim runs
   the route; the films play it.
 
-## Phase 7 - Around the world that moves - v10.0 (small to medium)
+## Phase 7 - Around the world that moves - v10.0 (small to medium) - DONE
+
+As built: the ten kinds in `64d-bestiary.js` (bands five to nine, two each; the Drowned Town has the Undercroft's
+kin), with Crawl tiles and calls; they carry `since`, and generator 1's groups never meet them, so its frozen floors
+(the fixtures' fingerprints) stay as they were. The two new ways: the Spore Mother spawns Sporelings, the Grave Lantern
+leads astray. Sounds, cooked in code: snore, hinge, chain, lap, wind, bark, the cracked bell; a door's hinge and a
+portcullis's chain play when they move. `tools/perf.js` has a fourth scene: the town at night from a tower's
+top. Measured, a desktop card, 3 s a scene, both looks: every scene 58 to 60 fps at High and Medium, the script 1.1 to
+2.3 ms a frame. Balance (Fair, 12 seeds to 50): v9.2 - 9 to the bottom, 2 fell; v10.0 - 10 to the bottom, 2 fell, both
+on floors 16 to 20; with the town (10 seeds to 20) 6 crowned on every difficulty (the simulator's difficulty appears not
+to take with --town: worth a look). LORE.md has the lower town and the new people; the Timeline's Help and Manual say
+what the update brought.
 
 - **Fifteen monsters in all** across the bands (the Undercroft's five in Phase 6; ten here: two for each of five
   bands that are thin - the Fungal Deep's Spore Mother, the Crystal Caverns' Glass Hound, the Foundry's Bellows

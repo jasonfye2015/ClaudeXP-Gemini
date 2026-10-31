@@ -25,6 +25,8 @@
         const group = CM.monsterGroup(fl.number, rnd, g.gen).map((m) => g.tune(m)); g.foes = group; g.startCombat(k, { group }, true);
         boom = setInterval(() => g.emit("fx", { kind: "fireball" }), 700); });
       clearInterval(boom);
+      if (g.mode === "combat") { g.mode = "explore"; g.combat = null; g.foes = []; }
+      if (g.floorAt && CM.TOWER_STAIRS) await measure("tower", () => { g.clock = 16 * 60; g.enterFloor(0, "rope", Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number)); g.floor.facing = 1; g.perch = null; g.climbTower(Object.keys(CM.TOWER_STAIRS)[0]); });
     } finally { g.startCombat = keep; CM.perf.hold = false; }
     return out;
   };

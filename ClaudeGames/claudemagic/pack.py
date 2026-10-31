@@ -75,6 +75,9 @@ PIXEL = {
     "m.The Rat King": "monster/animals/orange_rat", "m.The Drowned Knight": "monster/death_knight", "m.The Forge-Warden": "monster/nonliving/iron_golem",
     "ember": "dungeon/floor/lava_0",
     # the Deep's monsters and guardians
+    "m.Spore Mother": "monster/fungi_plants/hyperactive_ballistomycete", "m.Mycelid Crawler": "monster/fungi_plants/vine_stalker", "m.Sporeling": "monster/fungi_plants/deathcap",   # the Deep's ten more (v10.0)
+    "m.Glass Hound": "monster/animals/war_dog", "m.Prism Sentinel": "monster/nonliving/fulminant_prism_1", "m.Bellows Imp": "monster/demons/imp", "m.Slag Golem": "monster/nonliving/iron_elemental",
+    "m.Grave Lantern": "monster/undead/hungry_ghost", "m.Charnel Hound": "monster/undead/zombies/zombie_hound", "m.Thorn Lotus": "monster/fungi_plants/thorn_lotus", "m.Root Wyrm": "monster/animals/rock_worm",
     "m.Drowned Townsfolk": "monster/undead/revenant", "m.Eel": "monster/aquatic/electric_eel", "m.Marsh Light": "monster/nonliving/ball_lightning",   # the Undercroft's (v9.9)
     "m.Cellar Spider": "monster/animals/wolf_spider_new", "m.Bell-Ringer": "monster/undead/silent_spectre", "m.The Bell-Founder's Boy": "monster/human_monk_ghost",
     "m.Drowned": "monster/undead/drowned_soul", "m.Weed Hag": "monster/undead/bog_body", "m.Fungal Horror": "monster/fungi_plants/wandering_mushroom_new",

@@ -339,9 +339,10 @@ CM.monsterGroup = function (floor, rnd, gen) {
 // leader one time in five; their level climbs more slowly than the floors do (CM.monsterLevel)
 CM.deepGroup = function (floor, rnd, gen) {
   const band = CM.themeIndex(floor), level = CM.monsterLevel(floor);
-  const here = CM.MONSTERS.filter((m) => m.deep === band), above = CM.MONSTERS.filter((m) => m.deep === band - 1);
+  const known = (m) => (gen || 1) >= 2 || !m.since;                     // (generator 1 is frozen: its floors meet only the kinds it always met)
+  const here = CM.MONSTERS.filter((m) => m.deep === band && known(m)), above = CM.MONSTERS.filter((m) => m.deep === band - 1 && known(m));
   const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
-  const kinds = here.length ? here : shallow.length ? shallow : CM.MONSTERS.filter((m) => m.deep);
+  const kinds = here.length ? here : shallow.length ? shallow : CM.MONSTERS.filter((m) => m.deep && known(m));
   const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0) + (floor > CM.BOTTOM ? 1 : 0));
   const group = [];
   for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, level, rnd));

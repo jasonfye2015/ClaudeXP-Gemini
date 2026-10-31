@@ -116,6 +116,20 @@ dailies carry Gloom more often, summer dailies Swift).
 | Aldous the Lesser | slew a troll with a chair | the troll was already wounded | - |
 | Mother Ennis | the child's mother | looked at the king | what she saw |
 | the child | wrote on floor 12 | - | - |
+| **The Bell-Founder's Boy** | the tenth guardian, in the Undercroft's bell-yard | that the hill closed its gate on the lower town | that the bell he rings has no tongue: he is waiting to be answered |
+| the tavern-keeper | of the Hanged Lantern | her brother went down the shaft with her ring | - |
+| the farmer's hand | the farm's | his grandfather's sickle went down the year the dead came up | - |
+| Brannoc, Pip and the rest | for hire, behind a party | the tavern's porters and torchbearers | that they are afraid; they come anyway |
+
+## The lower town (the Undercroft, v9.9)
+
+Below the Wood's third cave are the streets of the lower town, the part of Caer Duin that "went under" in the Harvest
+Fair's lore. The upper town's story is that the water took it. Its own walls say otherwise: the lower town was *let
+go* - the hill closed its gate on it and stopped ringing the bells that called its people up (the three carvings,
+chapter "The lower town"). The Bell-Founder cast the last bell and sent his boy down to hang it the night the water
+came; the boy is still there, ringing a bell with no tongue. The Night of Bells, above, is the town keeping a promise
+it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
+city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
 ## The lies, and where the truth is
 

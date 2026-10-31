@@ -596,7 +596,7 @@ Object.assign(CM.Game.prototype, {
       const m = nearest.t.group.find((f) => f.hp > 0 && !f.fled) || nearest.t.group[0];
       const [mx, my] = nearest.k.split(",").map(Number), [fx, fy] = CM.DIRS[fl.facing];
       const pan = CM.clamp(((mx - px) * -fy + (my - py) * fx) / Math.max(1, Math.abs(mx - px) + Math.abs(my - py)), -1, 1);   // (right of the facing is positive)
-      if (m) this.emit("near", m.kind || m.name, nearest.d, pan);
+      if (m && nearest.t.asleep) this.emit("snore", nearest.d, pan); else if (m) this.emit("near", m.kind || m.name, nearest.d, pan);   // (a sleeper snores)
     }
     if (fl.bait && (this.steps || 0) > fl.bait.until) { fl.bait = null; this.say("Something small has had the bait while you weren't looking."); }
     const baitDist = fl.bait ? CM.distances(fl.grid, fl.bait.at.split(",").map(Number), walk) : null;

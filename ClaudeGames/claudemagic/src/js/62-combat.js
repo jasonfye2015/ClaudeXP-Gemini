@@ -69,7 +69,7 @@ Object.assign(CM.Game.prototype, {
     if (ratproof) wary = true;
     if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
-    if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); }
+    if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); this.sound("bark"); }
     if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
       this.say("They are asleep. The party's blows fall before they wake.");
       this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
@@ -518,6 +518,7 @@ Object.assign(CM.Game.prototype, {
     if (m.champion === "shrieking" && !m.shrieked) { m.shrieked = true; const n = this.wakeFloor(); this.say(`${CM.The(m)} shrieks${n ? " - and all down the floor, things wake and come" : ""}.`); this.sound("elite"); }
     if (m.boss) { this.lichAct(m); return; }
     if (m.guardian) { this.guardianAct(m); return; }
+    if (m.ability === "spawns" && this.spawnTurn && this.spawnTurn(m)) return;   // (64d-bestiary.js)
     if (m.ability === "breath" && c.silence) { this.say(`${CM.The(m)} draws breath, and nothing comes.`); return; }
     if (m.gear && m.gear.weapon && CM.weaponClass(m.gear.weapon) === "polearm" && m.ability === null) m.ability = "ranged";   // (a spear reaches the back row)
     if (m.ability !== "ranged" && m.ability !== "breath") {
@@ -582,6 +583,7 @@ Object.assign(CM.Game.prototype, {
       if (m.ability === "charge" && !m.charged) { m.charged = true; dmg *= 2; how = " - it charges"; }
       const dealt = this.hurt(target, dmg, m, { how });
       if (target.hp > 0) {
+        if (m.ability === "astray" && this.leadAstray) this.leadAstray(m, target);
         if (m.ability === "stun" && rnd.chance(0.25) && !target.thrall && !(target.status || {}).paralysis && !CM.trait(target, "immovable") && target.quirk !== "stubborn") { target.status.paralysis = 1; this.say(`${target.name} is knocked flat!`); }
         if (m.ability === "drain" && target.xp > 0) {
           const lost = Math.min(target.xp, Math.max(5, Math.floor(CM.xpForLevel(target.level + 1) * 0.15)));
@@ -636,7 +638,7 @@ Object.assign(CM.Game.prototype, {
   guardianAct(m) {
     const rnd = this.rnd, G = CM.GUARDIANS[m.guardian], moves = G.moves || [];
     m.turns = (m.turns || 0) + 1;
-    if (CM.guardianHas(m, "bell") && m.turns % 3 === 1) { const n = this.wakeFloor ? this.wakeFloor() : 0; this.say(`${CM.The(m)} swings the bell. There is no sound - and the party's hearts sink${n ? ", and all through the Undercroft things wake" : ""}.`); this.cheer(-1); this.sound("toll"); }   // (the bell: 64c-undercroft.js)
+    if (CM.guardianHas(m, "bell") && m.turns % 3 === 1) { const n = this.wakeFloor ? this.wakeFloor() : 0; this.say(`${CM.The(m)} swings the bell. There is no sound - and the party's hearts sink${n ? ", and all through the Undercroft things wake" : ""}.`); this.cheer(-1); this.sound("bell"); }   // (the bell: 64c-undercroft.js)
     m.intent = null;
     const every = m.quick ? 2 : 3;                                        // (the flooded Knight comes faster)
     if (m.hidden) { const up = this.foes.filter((f) => f.summoned && f.hp > 0 && !f.fled).length; if (up < 4) this.summonFor(m, moves[0], Math.min(2, 4 - up)); else this.say("The heap seethes."); return; }

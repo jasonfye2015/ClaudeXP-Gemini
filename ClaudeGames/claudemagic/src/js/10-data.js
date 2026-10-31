@@ -1066,7 +1066,9 @@ CM.roarFor = function (kind) {
   const g = Object.values(CM.GUARDIANS).find((G) => G.name === kind);
   if (g) return g.undead ? "roar_undead" : g.body === "beast" ? "roar_beast" : "roar_big";
   const k = CM.monsterKind(kind), name = k ? k.name : kind;
-  if (["Giant Rat", "Kobold", "Goblin", "Dark Elf", "Shard Wisp", "Rootling", "Foundry Imp", "Weed Hag"].includes(name)) return "roar_small";
+  if (["Giant Rat", "Kobold", "Goblin", "Dark Elf", "Shard Wisp", "Rootling", "Foundry Imp", "Weed Hag", "Bellows Imp", "Sporeling", "Thorn Lotus", "Marsh Light", "Cellar Spider", "Mycelid Crawler", "Grave Lantern"].includes(name)) return "roar_small";
+  if (["Drowned Townsfolk", "Bell-Ringer", "Charnel Hound"].includes(name)) return "roar_undead";
+  if (["Glass Hound", "Eel", "Root Wyrm"].includes(name)) return "roar_beast";
   if (["Skeleton", "Zombie", "Ghoul", "Wraith", "Vampire", "Drowned", "Grave Priest", "Bone Colossus", "Hollow One"].includes(name)) return "roar_undead";
   if (["Wyvern", "Spore Beast", "Iron Hound"].includes(name)) return "roar_beast";
   return "roar_big";

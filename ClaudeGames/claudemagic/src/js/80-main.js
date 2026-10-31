@@ -112,7 +112,9 @@ window.addEventListener("DOMContentLoaded", () => {
   const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
-  game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));   // something is coming: louder the nearer, from the side it is on
+  game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
+  game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
+  game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
   game.on("floor", (fl) => {                                             // chapter cards: the band's epigraph on its first floor; on its last, a word that the walls below will differ
     if (fl.number % 1 !== 0 || fl.number > CM.BOTTOM || game.film) return;
@@ -390,7 +392,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function changed(id, state, sideOf) {
     let st = movers.get(id);
     if (!st) { st = { state, at: null, side: sideOf ? sideOf() : 1 }; movers.set(id, st); }
-    else if (st.state !== state) { st.state = state; st.at = performance.now(); if (sideOf) st.side = sideOf(); }
+    else if (st.state !== state) { st.state = state; st.at = performance.now(); if (sideOf) st.side = sideOf(); try { CM.audio.play(id.startsWith("door") ? "hinge" : id.startsWith("gate") ? "chain" : "lever", 0.5); } catch (e) { /* quiet */ } }
     return st;
   }
   // a frame of a monster's picture, where the theme has it (the Drawn frames; the Pixel tiles stand still)

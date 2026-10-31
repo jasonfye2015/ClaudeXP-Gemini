@@ -1452,6 +1452,16 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   black door - once he has fallen and a party has been to floor six - opens onto the Flooded Vaults: a way to floor six
   that skips the Catacombs, and from floor six a flooded stair back down to the bell-yard.
 
+  Around the world that moves (v10.0): ten more kinds for the Deep, two for each band below the Drowned Town
+  (src/js/64d-bestiary.js) - the Spore Mother (a Sporeling bursts from her every third turn) and the Mycelid Crawler;
+  the Glass Hound and the Prism Sentinel; the Bellows Imp and the Slag Golem; the Grave Lantern (its touch leads a hero
+  astray, and the hero loses the moment) and the Charnel Hound; the Thorn Lotus and the Root Wyrm - each with a Crawl
+  tile and a call. Runs that began on generator 1 never meet them, so their floors stay as they were. New sounds,
+  cooked in code like the rest: a sleeper's snore, a door's hinge, a portcullis's chain, water lapping, the wind on a
+  tower, the dog, the cracked bell. tools/perf.js measures a fourth scene, the town at night from a tower's top.
+  Measured (tools/sim.js, Fair, 12 seeds to floor 50): v9.2 - 9 to the bottom, 2 fell; v10.0 - 10 to the bottom, 2 fell,
+  both on floors 16 to 20, the party a little higher at each camp; with the town (10 seeds to floor 20), 6 crowned.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
@@ -1516,6 +1526,7 @@ The source
     27-props.js   the props: what the scatter lays on each square, the traces, the wall decals, what drifts in the air
     40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
+    64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
