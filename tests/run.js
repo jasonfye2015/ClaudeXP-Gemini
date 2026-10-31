@@ -4095,18 +4095,54 @@ test("Claudecraft through the Neather Gate: the island the seed's, with bedrock 
   w.update(1 / 60, { jump: true }); assert.ok(w.vel[1] > 0 || w.pos[1] > g.y, "jumps"); w.t = 1; w.pressJump(); w.t = 1.1; w.pressJump(); assert.ok(w.flying, "Space twice: flies");
 });
 
-test("the Neather Gate: in the Keep-yard; the whole party steps through to the island; a block broken and one placed (never bedrock, never the gate, never where you stand); the changes kept for the next visit; the gate's light brings them home", () => {
+test("the Neather Gate: in the Keep-yard; one hero steps through (the rest wait); a block broken goes in their satchel as its drop and one placed spends it (never bedrock, never the gate, never where you stand, never from an empty slot); the changes and the satchel kept for the next visit; the gate's light brings them home", () => {
   const CM = load(), g = new CM.Game(); g.newGame("craft-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.craft = undefined;
-  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.gate.join(",")].to, "claudecraft"); g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.use(); assert.strictEqual(g.mode, "craft", "through the gate");
-  const cr = g.craft, w = cr.walker, B = CM.CC.B; for (let k = 0; k < 120; k++) w.update(1 / 60, {});
+  let asked = 0; g.on("craftgate", () => asked++);
+  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.gate.join(",")].to, "claudecraft"); g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.use(); assert.strictEqual(asked, 1, "the gate asks who"); assert.strictEqual(g.mode, "explore");
+  g.party[2].hp = 0; assert.ok(g.enterCraft(2), "not a fallen hero"); g.party[2].hp = g.party[2].max;
+  assert.strictEqual(g.enterCraft(1), ""); assert.strictEqual(g.mode, "craft", "through the gate"); assert.strictEqual(g.craft.hero, g.party[1], "the one chosen");
+  const cr = g.craft, w = cr.walker, B = CM.CC.B; assert.ok(!w.canFly, "no flying with a satchel"); for (let k = 0; k < 120; k++) w.update(1 / 60, {});
   w.pitch = -89; cr.target = cr.world.raycast(w.eye(), w.look()); const under = cr.target[0]; assert.ok(under);
-  const was = cr.world.get(...under); assert.ok(g.craftBreak() === was && cr.world.get(...under) === B.AIR, "broken");
+  const was = cr.world.get(...under); assert.strictEqual(was, B.GRASS); assert.ok(g.craftBreak() === was && cr.world.get(...under) === B.AIR, "broken");
+  assert.strictEqual(cr.satchel.count(B.DIRT), 1, "grass gives dirt"); assert.strictEqual(cr.satchel.count(B.GRASS), 0);
   const gt = cr.world.gate; cr.target = [[gt.x, gt.y, gt.z], null]; assert.ok(!g.craftBreak(), "not the gate's stone");
-  w.pitch = 0; w.yaw = 0; const t2 = cr.world.raycast(w.eye(), w.look(), 6); cr.target = [[0, 0, 0], [Math.floor(w.pos[0]) + 3, Math.floor(w.pos[1]) + 4, Math.floor(w.pos[2])]]; w.slot = 2; assert.ok(g.craftPlace(), "placed"); assert.strictEqual(cr.world.get(Math.floor(w.pos[0]) + 3, Math.floor(w.pos[1]) + 4, Math.floor(w.pos[2])), B.STONE);
-  cr.target = [[0, 0, 0], [Math.floor(w.pos[0]), Math.floor(w.pos[1]), Math.floor(w.pos[2])]]; assert.ok(!g.craftPlace(), "not where the party stands");
-  const out = g.leaveCraft(); assert.strictEqual(g.mode, "explore"); assert.strictEqual(out.broken, 1);
-  g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.use(); assert.strictEqual(g.craft.world.get(...under), B.AIR, "the island keeps its changes");
+  const spot = [Math.floor(w.pos[0]) + 3, Math.floor(w.pos[1]) + 4, Math.floor(w.pos[2])];
+  w.slot = 4; cr.target = [[0, 0, 0], spot]; assert.ok(!g.craftPlace(), "nothing in that slot");
+  w.slot = 0; assert.ok(g.craftPlace(), "placed"); assert.strictEqual(cr.world.get(...spot), B.DIRT); assert.strictEqual(cr.satchel.count(B.DIRT), 0, "spent");
+  cr.satchel.add(B.DIRT, 2); cr.target = [[0, 0, 0], [Math.floor(w.pos[0]), Math.floor(w.pos[1]), Math.floor(w.pos[2])]]; assert.ok(!g.craftPlace(), "not where the hero stands");
+  const out = g.leaveCraft(); assert.strictEqual(g.mode, "explore"); assert.strictEqual(out.broken, 1); assert.strictEqual(out.placed, 1);
+  assert.strictEqual(g.enterCraft(0), ""); assert.strictEqual(g.craft.satchel.count(B.DIRT), 0, "each hero their own satchel"); g.leaveCraft();
+  assert.strictEqual(g.enterCraft(1), ""); assert.strictEqual(g.craft.world.get(...under), B.AIR, "the island keeps its changes"); assert.strictEqual(g.craft.satchel.count(B.DIRT), 2, "and the satchel");
   const c2 = g.craft, gate = c2.world.gate; c2.walker.pos = [gate.x + 1.5, gate.y + 1, gate.z + 0.5]; assert.ok(c2.walker.inGate()); g.leaveCraft(); assert.strictEqual(g.mode, "explore", "the gate's light is the way home");
+});
+
+test("Claudecraft (v12.0): the satchel stacks to 64 in 27 slots; breaking takes the block's hardness held (stone slow by hand, quicker with a pick, bedrock never); a long fall hurts the hero; a killing fall wakes them by the gate at a tenth, the satchel left in a bundle that walking into gives back", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, S = new CC.Satchel();
+  for (let k = 0; k < 64 * 27; k++) assert.ok(S.add(k < 64 * 26 ? B.DIRT : B.SAND));
+  assert.ok(!S.add(B.STONE), "full"); assert.strictEqual(S.count(B.DIRT), 64 * 26); assert.ok(S.slots.every((x) => x.n === 64));
+  const S2 = new CC.Satchel(JSON.parse(JSON.stringify(S.toJSON()))); assert.strictEqual(S2.count(B.SAND), 64, "kept as it was"); S2.take(26, 64); assert.strictEqual(S2.slots[26], null);
+  const g = new CM.Game(); g.newGame("craft-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  g.bag = g.bag.filter((it) => it.kind !== "pick"); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker, h = g.party[0];
+  for (let k = 0; k < 120; k++) w.update(1 / 60, {});
+  // hardness: leaves fast, stone slow by hand, quicker with a pick; bedrock never
+  assert.ok(g.craftBreakTime(B.LEAVES) < g.craftBreakTime(B.DIRT) && g.craftBreakTime(B.DIRT) < g.craftBreakTime(B.LOG) && g.craftBreakTime(B.LOG) < g.craftBreakTime(B.STONE));
+  const bare = g.craftBreakTime(B.STONE); g.bag.push(CM.pick("iron")); assert.ok(g.craftBreakTime(B.STONE) < bare * 0.5, "a pick quickens stone"); assert.strictEqual(g.craftBreakTime(B.DIRT), CC.HARDNESS[B.DIRT], "not dirt");
+  const x = Math.floor(w.pos[0]) + 2, z = Math.floor(w.pos[2]), y = cr.world.top(x, z) + 3; cr.world.set(x, y, z, B.STONE); cr.target = [[x, y, z], null];
+  let got = null, t = 0; while (!got && t < 10) { got = g.craftDig(0.05, true); t += 0.05; }
+  assert.strictEqual(got, B.STONE); assert.ok(Math.abs(t - g.craftBreakTime(B.STONE)) < 0.11, `held ${t}`); assert.strictEqual(cr.satchel.count(B.COBBLE), 1, "stone gives cobblestone");
+  cr.world.set(x, y, z, B.DIRT); g.craftDig(0.2, true); assert.ok(cr.dig && cr.dig.t > 0); g.craftDig(0.05, false); assert.strictEqual(cr.dig, null, "let go: the crack is gone");
+  cr.world.set(x, y, z, B.BEDROCK); for (let k = 0; k < 400; k++) g.craftDig(0.05, true); assert.strictEqual(cr.world.get(x, y, z), B.BEDROCK, "bedrock never");
+  // a fall: a short one is free, a long one hurts
+  assert.strictEqual(CC.fallHurt(3, 100), 0); assert.strictEqual(CC.fallHurt(4, 100), 0); assert.ok(CC.fallHurt(8, 100) > 0); assert.ok(CC.fallHurt(25, 100) >= 100, "a long one kills");
+  const top = cr.world.top(Math.floor(w.pos[0]), Math.floor(w.pos[2])); w.pos = [w.pos[0], top + 12, w.pos[2]]; w.vel = [0, 0, 0]; w.landed = 0; for (let k = 0; k < 240 && !w.landed; k++) w.update(1 / 60, {});
+  assert.ok(w.landed > 10 && w.landed < 13, `fell ${w.landed}`); const before = h.hp; assert.ok(!g.craftHurt(CC.fallHurt(w.landed, h.max) * 0.1, "A fall")); assert.ok(h.hp < before, "hurt");
+  // a killing fall: by the gate, a tenth, the satchel in a bundle
+  cr.satchel.add(B.PLANKS, 5); const n = cr.satchel.slots.filter(Boolean).length; w.pos = [w.pos[0] + 12, cr.world.top(Math.floor(w.pos[0]) + 12, Math.floor(w.pos[2])) + 1, w.pos[2]]; const at = w.pos.slice(); assert.ok(n >= 2);
+  assert.ok(g.craftHurt(h.max * 2, "A fall")); assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1))); assert.ok(cr.satchel.slots.every((s) => !s), "the satchel emptied");
+  assert.strictEqual(cr.bundles.length, 1); assert.ok(Math.abs(cr.bundles[0].x - at[0]) < 1, "where they fell"); const gate = cr.world.gate; assert.ok(Math.abs(w.pos[0] - (gate.x + 1.5)) < 0.01, "by the gate");
+  assert.strictEqual(g.craftFetch(), 0, "not from the gate"); g.leaveCraft(); assert.strictEqual(g.village.craft.bundles.length, 1, "kept with the village");
+  g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.enterCraft(0); const c2 = g.craft; c2.walker.pos = [c2.bundles[0].x, c2.bundles[0].y, c2.bundles[0].z];
+  assert.ok(g.craftFetch() >= 6); assert.strictEqual(c2.bundles.length, 0, "fetched"); assert.strictEqual(c2.satchel.count(B.PLANKS), 5);
 });
 
 (async () => {

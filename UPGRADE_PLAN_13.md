@@ -21,15 +21,17 @@ Principles, kept throughout:
 
 ---
 
-## Phase 0 (v12.0): the party on the island, and a satchel
-- **Who walks.** The whole party goes through; the front hero is the one who walks and acts (Tab changes who leads).
-  Hits land on the leader first, then spread to the front row, as in the dungeon.
-- **The HUD** gains the leader's health and magic bars, the party's four portraits (click to lead), and a clock.
+## Phase 0 (v12.0): the party on the island, and a satchel - done
+- **Who goes.** One hero, chosen at the gate (any calling); the rest of the party waits in the Keep-yard. Hits land
+  on that hero, against their own health; a long fall hurts.
+- **The HUD** gains the hero's portrait, health and magic bars, and the game's clock.
 - **The satchel.** Breaking a block puts it in the satchel (a 27-slot store of stacks, up to 64 each), shown with I.
   The hotbar's nine slots now hold what is in the satchel; placing uses it up. Creative placement of any block ends.
 - **Breaking takes time.** Each block has a hardness (leaves fast, dirt quick, stone slower, ore slower still); hold
   the button and a crack grows over the block. Bare hands are slow on stone and cannot break ore.
-- Tests: breaking yields the block, placing spends it; hardness timings; the leader takes the hits.
+- **Falling** (a long drop is the first danger, before there are creatures): the hero wakes by the island's gate with a
+  tenth of their health, and the satchel's contents are left in a glowing bundle where they fell, kept until fetched.
+- Tests: breaking yields the block, placing spends it; hardness timings; a long fall hurts; the bundle.
 
 ## Phase 1 (v12.1): ore, caves, and the pick from home
 - **Caves.** A 3D noise carves winding caves and a few large caverns under the hills (never through the sea floor),
@@ -132,8 +134,9 @@ Principles, kept throughout:
 | Builders' credit | 100 blocks = 50 gold off the next village build |
 | Gems | garnet 40, sapphire 80, emerald 120 gold |
 
-## Open questions for you
-1. Should the **whole party** fight (four heroes taking turns as leader), or should one hero go in as in the other
-   places? The plan keeps the whole party, with a leader.
-2. Should **falling** keep the satchel in a bundle to fetch (as planned), or lose it outright like the Fortress?
-3. Is **building a homestead** (phase 6) wanted, or should the island stay a place to mine and fight?
+## Decided (2026-10-31)
+1. **One hero goes in**, chosen at the gate, as in the other places; the rest wait in the Keep-yard. (Phase 0 is
+   rewritten for this: no leader switching; hits land on that hero.)
+2. **Falling leaves the satchel in a bundle** on the island, there until the hero fetches it.
+3. **Both**: the island is a place to mine and fight, and a place to build a home - the homestead (phase 6) is a
+   help, never a need. Nothing in phases 1-5 or 7 depends on it.

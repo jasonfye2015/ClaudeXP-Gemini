@@ -62,7 +62,7 @@ Object.assign(CM.Game.prototype, {
     this.sound("spell");
     if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
     if (t.to === "cabin") { this.enterFloor(-1, "rope", CM.CABIN.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing among the pines. A log cabin, smoke from its chimney, a light in its window."); return true; }
-    if (t.to === "claudecraft") { const why = this.enterCraft(); if (why) this.say(why); return true; }   // (the whole party steps through)
+    if (t.to === "claudecraft") { this.say("The Neather Gate: violet light behind rune-cut basalt. One of you could step through."); this.emit("craftgate"); return true; }   // (one hero steps through: 76h-claudecraft.js asks who)
     if (t.to === "claudeablo") { this.emit("claudeablo"); return true; }   // (who steps through: the window asks)
     if (t.to === "fortress") { this.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); this.floor.facing = 0; this.say("The portal sets you down in a clearing of trampled earth. Over you the Fortress: black stone, four towers, and two great doors of dark wood."); return true; }
     if (t.to === "claudeita") { this.enterFloor(-1, "rope", CM.CLAUDEITA.front.slice()); this.floor.facing = 2; this.say("The portal leaves you among the trees south of the fields, before a crag of grey rock with a dark mouth in it. Warm air breathes out of the dark."); return true; }
