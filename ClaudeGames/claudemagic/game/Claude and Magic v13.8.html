@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.7 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.8 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -847,6 +847,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .shelter .shnums { margin: 6px 0; } .shelter .shnums b { color: #FFE070; } .shelter .shnums em { color: #FF9070; }
 .shelter .shroom { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); border: 1px solid #C8A040; } .shelter .shstaff { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; } .shelter .shstaff span { padding: 2px 6px; border-radius: 8px; background: rgba(240,208,112,0.15); } .shelter .shstaff button { padding: 0 5px; margin-left: 3px; }
 .shelter .shbuild, .shelter .shidle { display: flex; flex-wrap: wrap; gap: 4px; } .shelter .shbuild button, .shelter .shidle button { font-size: 12px; padding: 3px 7px; }
+.manamine .mmcanvas { width: 448px; height: 540px; image-rendering: pixelated; border-radius: 6px; border: 6px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 </style>
 </head>
 <body>
@@ -856,7 +857,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.7", built: "2026-10-31" };
+const CM = window.CM = { version: "13.8", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20945,6 +20946,140 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64ze-manamine.js ----
+"use strict";
+// Mana-Mine (the twenty-eighth big update - v13.8): an arcade game on the Gilded Joker's floor. A miner with a lamp on
+// her helmet digs down through four bands of earth. In the hollows wait Mudlings (that drift through the earth as a pair
+// of eyes when they cannot reach her) and Ember Newts (that spit fire along their row, through earth and all). Her
+// mana-tether shoots a beam along the tunnel: it latches, and each pump swells the creature until it bursts (left
+// alone it shrinks back). Boulders in the earth wobble and fall when what holds them is dug away, crushing whatever is
+// below - creatures, or her. Two boulders down and a mana crystal shows in the middle for a while. Clear every creature
+// to finish the level; the next has more of them, quicker. Three lives. One stake a play: each level cleared pays gold
+// back, more for each, every play; and a Claudescryption card for each level the first time it is ever cleared (common to
+// four, a stronger common to nine, rare from ten). The same inputs give the same game. The window: 76u-manamine.js.
+CM.MM = {
+  W: 14, H: 16, SKY: 2, step: 1 / 60, speed: 3.2, digSpeed: 2.2, monSpeed: 2.0, ghostSpeed: 1.2, lives: 3,
+  beam: 3, beamTime: 0.25, pumpGap: 0.55, stages: 4, deflate: 1.4, wobble: 0.7, fall: 9, fireReach: 3, fireTime: 0.6, fireWarn: 0.5,
+  pay: (n) => 0.15 + 0.1 * n, SCORE: { dig: 10, pop: [200, 300, 400, 500], rock: 1000, crystal: [400, 600, 800, 1000, 1500] },
+  DIRS: { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] },
+};
+const MM = CM.MM;
+MM.Level = class {
+  constructor(n, seed, keep) {
+    const R = this.rnd = new CM.Random(seed), W = MM.W, H = MM.H; this.n = n; this.t = 0; this.events = []; this.stage = "play"; this.rocksDown = 0; this.crystal = null; this.shots = [];
+    Object.assign(this, keep || { score: 0, lives: MM.lives });
+    this.dug = Array.from({ length: H }, (_, y) => Array(W).fill(y < MM.SKY));
+    // the miner's shaft down the middle to the start, and the creatures' hollows (short tunnels)
+    const cx = Math.floor(W / 2); for (let y = MM.SKY; y <= 8; y++) this.dug[y][cx] = true; this.dug[8][cx - 1] = this.dug[8][cx + 1] = true;
+    const count = Math.min(10, 3 + n), newts = Math.min(4, Math.floor(n / 2)), used = new Set();
+    this.mons = [];
+    for (let i = 0; i < count; i++) {
+      let x, y, horiz, ok = false; for (let k = 0; k < 200 && !ok; k++) { horiz = R.chance(0.5); x = R.int(1, W - 5); y = R.int(MM.SKY + 2, H - 3); ok = Math.abs(x - cx) > 2 || y > 11; for (let d = -1; d <= 4 && ok; d++) { const cx2 = horiz ? x + d : x, cy2 = horiz ? y : y + d; if (used.has(`${cx2},${cy2}`) || cy2 >= H - 1) ok = false; } }
+      for (let d = 0; d < 4; d++) { const tx = horiz ? x + d : x, ty = horiz ? y : y + d; if (ty < H) { this.dug[ty][tx] = true; used.add(`${tx},${ty}`); } }
+      this.mons.push({ id: i, kind: i < newts ? "newt" : "mud", x: x + (horiz ? 1 : 0), y: y + (horiz ? 0 : 1), dir: horiz ? "right" : "down", home: [x, y], swell: 0, pumpT: 0, ghost: false, ghostT: 3 + R.next() * 6, fireT: 0, warnT: 0, dead: false });
+    }
+    this.rocks = []; for (let k = 0; k < 400 && this.rocks.length < 3 + Math.floor(n / 3); k++) { const x = R.int(0, W - 1), y = R.int(MM.SKY + 1, H - 4); if (this.dug[y][x] || this.dug[y + 1][x] || used.has(`${x},${y}`) || this.rocks.some((r) => Math.abs(r.x - x) + Math.abs(r.y - y) < 3)) continue; this.rocks.push({ x, y, fy: y, state: "set", t: 0, crushed: 0 }); }
+    this.spawn(); this.speedMul = 1 + Math.min(0.8, (n - 1) * 0.07);
+  }
+  spawn() { this.p = { x: Math.floor(MM.W / 2), y: 8, fx: Math.floor(MM.W / 2), fy: 8, dir: "right", face: "right", beam: null, dead: 0 }; for (const m of this.mons) if (!m.dead) { m.x = m.home[0] + 1; m.y = m.home[1]; m.fx = m.x; m.fy = m.y; m.swell = 0; m.ghost = false; m.ghostT = 3 + this.rnd.next() * 6; } this.shots = []; }
+  solid(x, y) { return x < 0 || x >= MM.W || y < 0 || y >= MM.H || !this.dug[y][x]; }
+  rockAt(x, y) { return this.rocks.find((r) => r.state !== "gone" && Math.round(r.fy) === y && r.x === x); }
+  live() { return this.mons.filter((m) => !m.dead); }
+  // the miner: moves cell to cell along an axis, turning only at a cell's middle, digging what she walks into
+  input(dir) { this.want = dir; }
+  pump() { this.pumpPressed = true; }
+  stepMiner(dt) {
+    const P = this.p; if (P.dead) return;
+    const at = Math.abs(P.fx - P.x) < 1e-6 && Math.abs(P.fy - P.y) < 1e-6;
+    if (P.beam && P.beam.hold !== undefined) { const m = this.mons.find((q) => q.id === P.beam.hold); if (!m || m.dead) P.beam = null; else { if (this.want && this.want !== P.face) P.beam = null; return; } }
+    if (at && this.want) { const [dx, dy] = MM.DIRS[this.want], nx = P.x + dx, ny = P.y + dy; P.face = this.want; if (nx >= 0 && nx < MM.W && ny >= MM.SKY - 1 && ny < MM.H && !this.rockAt(nx, ny)) { P.x = nx; P.y = ny; P.dir = this.want; } }
+    if (!this.want) return;
+    const digging = !this.dug[P.y][P.x], sp = (digging ? MM.digSpeed : MM.speed) * dt;
+    const mv = (a, b) => (Math.abs(b - a) <= sp ? b : a + Math.sign(b - a) * sp); P.fx = mv(P.fx, P.x); P.fy = mv(P.fy, P.y);
+    if (Math.abs(P.fx - P.x) < 0.5 && Math.abs(P.fy - P.y) < 0.5 && !this.dug[P.y][P.x]) { this.dug[P.y][P.x] = true; this.score += MM.SCORE.dig; this.events.push({ kind: "dig", x: P.x, y: P.y }); }
+  }
+  // the tether: a beam along the tunnel that latches; each pump after swells the creature
+  stepBeam(dt) {
+    const P = this.p; if (!this.pumpPressed || P.dead) return; this.pumpPressed = false;
+    if (P.beam && P.beam.hold !== undefined) { const m = this.mons.find((q) => q.id === P.beam.hold); if (m && !m.dead) { m.swell += 1; m.pumpT = 0; this.events.push({ kind: "pump", m, stage: m.swell }); if (m.swell >= MM.stages) this.pop(m); } return; }
+    const [dx, dy] = MM.DIRS[P.face]; let hit = null, len = 0;
+    for (let k = 1; k <= MM.beam; k++) { const x = Math.round(P.fx) + dx * k, y = Math.round(P.fy) + dy * k; if (this.solid(x, y)) break; len = k; hit = this.live().find((m) => Math.round(m.fx) === x && Math.round(m.fy) === y && !m.ghost) || null; if (hit) break; }
+    P.beam = { len: hit ? len : Math.max(len, 0.6), t: MM.beamTime, hold: hit ? hit.id : undefined }; if (hit) { hit.swell = Math.max(1, hit.swell + 1); hit.pumpT = 0; this.events.push({ kind: "latch", m: hit }); } else this.events.push({ kind: "beam" });
+  }
+  pop(m) { m.dead = true; const band = Math.min(3, Math.floor(((m.y - MM.SKY) / (MM.H - MM.SKY)) * 4)); const pts = MM.SCORE.pop[band] * (m.kind === "newt" && (m.dir === "left" || m.dir === "right") ? 2 : 1); this.score += pts; this.p.beam = null; this.events.push({ kind: "pop", m, pts }); this.checkClear(); }
+  checkClear() { if (!this.live().length && this.stage === "play") { this.stage = "clear"; this.events.push({ kind: "clear" }); } }
+  // the creatures: down the tunnels toward her; when they cannot reach her a while, through the earth as eyes
+  stepMon(m, dt) {
+    if (m.dead) return; const P = this.p, R = this.rnd;
+    if (m.swell > 0) { m.pumpT += dt; if (m.pumpT > MM.deflate) { m.swell -= 1; m.pumpT = 0; if (!m.swell && P.beam && P.beam.hold === m.id) P.beam = null; } return; }
+    const sp = (m.ghost ? MM.ghostSpeed : MM.monSpeed) * this.speedMul * dt;
+    if (m.ghost) { const dx = P.x - m.fx, dy = P.y - m.fy, d = Math.hypot(dx, dy) || 1; m.fx += (dx / d) * sp; m.fy += (dy / d) * sp; const cx = Math.round(m.fx), cy = Math.round(m.fy); if (Math.hypot(m.fx - cx, m.fy - cy) < 0.15 && !this.solid(cx, cy) && m.ghostT < -1.5) { m.ghost = false; m.x = cx; m.y = cy; m.fx = cx; m.fy = cy; m.ghostT = 4 + R.next() * 6; } m.ghostT -= dt; return; }
+    // the newts' fire, along their row, through earth: a breath drawn first
+    if (m.kind === "newt") { if (m.warnT > 0) { m.warnT -= dt; if (m.warnT <= 0) { const dir = P.fx > m.fx ? 1 : -1; this.shots.push({ x: m.fx, y: m.y, dir, t: MM.fireTime, m: m.id }); this.events.push({ kind: "fire", m }); } return; } m.fireT -= dt; if (m.fireT <= 0 && Math.round(P.fy) === m.y && Math.abs(P.fx - m.fx) <= MM.fireReach + 0.5) { m.warnT = MM.fireWarn; m.fireT = 3 + R.next() * 2; m.dir = P.fx > m.fx ? "right" : "left"; return; } }
+    const at = Math.abs(m.fx - m.x) < 1e-6 && Math.abs(m.fy - m.y) < 1e-6;
+    if (at) {
+      m.ghostT -= dt * 0;
+      // the shortest way through the tunnels to her
+      const key = (x, y) => y * MM.W + x, prev = new Map([[key(m.x, m.y), null]]), q = [[m.x, m.y]]; let found = null;
+      while (q.length && !found) { const [x, y] = q.shift(); for (const [d, [dx, dy]] of Object.entries(MM.DIRS)) { const nx = x + dx, ny = y + dy; if (this.solid(nx, ny) || ny < MM.SKY || this.rockAt(nx, ny) || prev.has(key(nx, ny))) continue; prev.set(key(nx, ny), [x, y, d]); if (nx === P.x && ny === P.y) { found = [nx, ny]; break; } q.push([nx, ny]); } }
+      let step = null; if (found) { let c = found; while (true) { const pr = prev.get(key(...c)); if (!pr || (pr[0] === m.x && pr[1] === m.y)) { step = pr ? pr[2] : null; break; } c = [pr[0], pr[1]]; } }
+      if (!step) { const ds = Object.keys(MM.DIRS).filter((d) => { const [dx, dy] = MM.DIRS[d]; return !this.solid(m.x + dx, m.y + dy) && m.y + dy >= MM.SKY && !this.rockAt(m.x + dx, m.y + dy); }); step = ds.includes(m.dir) && R.chance(0.8) ? m.dir : ds.length ? R.pick(ds) : null; m.ghostT -= 0.25; if (m.ghostT <= 0) { m.ghost = true; m.ghostT = 0; this.events.push({ kind: "ghost", m }); return; } }
+      else m.ghostT = Math.max(m.ghostT, 2);
+      if (step) { m.dir = step; const [dx, dy] = MM.DIRS[step]; m.x += dx; m.y += dy; }
+    }
+    const mv = (a, b) => (Math.abs(b - a) <= sp ? b : a + Math.sign(b - a) * sp); m.fx = mv(m.fx, m.x); m.fy = mv(m.fy, m.y);
+  }
+  // boulders: once what holds them is dug away (and she is not right under, pushing up), they wobble, then fall
+  stepRocks(dt) {
+    for (const r of this.rocks) {
+      if (r.state === "gone") continue; const below = Math.round(r.fy) + 1;
+      if (r.state === "set") { const P = this.p; if (below < MM.H && this.dug[below][r.x] && !(Math.round(P.fx) === r.x && Math.round(P.fy) === below)) { r.state = "wobble"; r.t = MM.wobble; this.events.push({ kind: "wobble", r }); } continue; }
+      if (r.state === "wobble") { r.t -= dt; if (r.t <= 0) { r.state = "fall"; this.dug[r.y][r.x] = true; } continue; }
+      if (r.state === "fall") {
+        r.fy += MM.fall * dt; const cy = Math.floor(r.fy + 0.99);
+        for (const m of this.live()) if (Math.abs(m.fx - r.x) < 0.7 && Math.abs(m.fy - r.fy) < 0.8) { m.dead = true; r.crushed++; this.events.push({ kind: "crush", m }); }
+        const P = this.p; if (!P.dead && Math.abs(P.fx - r.x) < 0.7 && Math.abs(P.fy - r.fy) < 0.8) this.lose("rock");
+        if (cy >= MM.H || this.solid(r.x, cy)) { r.fy = cy - 1; r.state = "gone"; this.rocksDown += 1; const pts = r.crushed ? MM.SCORE.rock * Math.pow(2, r.crushed - 1) : 0; this.score += pts; this.events.push({ kind: "land", r, pts }); if (this.rocksDown === 2 && !this.crystal) { this.crystal = { x: Math.floor(MM.W / 2), y: 8, t: 10 }; this.events.push({ kind: "crystal" }); } this.checkClear(); }
+      }
+    }
+  }
+  lose(why) { const P = this.p; if (P.dead) return; P.dead = 1.6; this.lives -= 1; this.events.push({ kind: "die", why }); }
+  update(dt) { for (let s = 0; s < dt / MM.step - 1e-9; s++) this.tick(MM.step); }
+  tick(dt) {
+    if (this.stage !== "play") return; this.t += dt; const P = this.p;
+    if (P.dead) { P.dead -= dt; if (P.dead <= 0) { if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else { this.spawn(); this.events.push({ kind: "respawn" }); } } return; }
+    this.stepMiner(dt); this.stepBeam(dt); if (P.beam && P.beam.hold === undefined) { P.beam.t -= dt; if (P.beam.t <= 0) P.beam = null; }
+    for (const m of this.mons) this.stepMon(m, dt); this.stepRocks(dt);
+    for (const s of this.shots) { s.t -= dt; } this.shots = this.shots.filter((s) => s.t > 0);
+    for (const s of this.shots) { const reach = MM.fireReach * (1 - s.t / MM.fireTime), x0 = s.x, x1 = s.x + s.dir * reach; if (Math.round(P.fy) === s.y && P.fx >= Math.min(x0, x1) - 0.4 && P.fx <= Math.max(x0, x1) + 0.4) this.lose("fire"); }
+    if (this.crystal) { this.crystal.t -= dt; if (this.crystal.t <= 0) this.crystal = null; else if (Math.round(P.fx) === this.crystal.x && Math.round(P.fy) === this.crystal.y) { const pts = MM.SCORE.crystal[Math.min(4, this.n - 1)]; this.score += pts; this.events.push({ kind: "gem", pts }); this.crystal = null; } }
+    for (const m of this.live()) if (!m.swell && Math.abs(m.fx - P.fx) < 0.6 && Math.abs(m.fy - P.fy) < 0.6) { this.lose("touch"); break; }
+  }
+};
+Object.assign(CM.Game.prototype, {
+  mmState() { return this.cgStore().mm || null; },
+  mmClaimed() { const F = this.cgStore(); F.mmCards = F.mmCards || {}; return F.mmCards; },
+  mmLevel() { const S = this.mmState(); if (!S || S.stage !== "play") return null; if (!this.mmLive || this.mmLive.key !== `${S.seed}:${S.n}`) { if (this.mmLive && this.mmLive.key && this.mmLive.key.startsWith(`${S.seed}:`)) { const keep = { score: this.mmLive.score, lives: this.mmLive.lives }; this.mmLive = new MM.Level(S.n, CM.hashSeed(`${S.seed}:${S.n}`), keep); this.mmLive.key = `${S.seed}:${S.n}`; } else { S.stage = "done"; S.last = S.last || { level: S.n, won: S.won, lost: true }; this.saveCasino && this.saveCasino(); return null; } } return this.mmLive; },
+  mmStart(bet) {
+    const S0 = this.mmState(); if (S0 && S0.stage === "play" && this.mmLive && this.mmLive.key && this.mmLive.key.startsWith(`${S0.seed}:`)) return { error: "A game is on." };
+    const why = this.cgStake("manamine", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.mm = { stage: "play", n: 1, bet: Math.floor(bet), seed: `${this.seed}:manamine:${F.n}`, won: 0, cards: [] };
+    this.mmLive = new MM.Level(1, CM.hashSeed(`${F.mm.seed}:1`)); this.mmLive.key = `${F.mm.seed}:1`; this.saveCasino && this.saveCasino(); return F.mm;
+  },
+  // a level cleared: its gold (every play), its card (the first time ever); on to the next. The game over: done.
+  mmCheck() {
+    const S = this.mmState(), L = this.mmLive; if (!S || !L || S.stage !== "play") return null;
+    if (L.stage === "clear") {
+      const n = S.n, pay = Math.round(S.bet * MM.pay(n)), C = this.mmClaimed(); let card = null;
+      if (!C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `Mana-Mine, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:manamine:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay("manamine", pay); S.won += pay; S.n += 1; S.best = Math.max(S.best || 0, n); this.saveCasino && this.saveCasino(); this.emit("change");
+      this.mmLevel(); return { cleared: n, pay, card };
+    }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mmBest = Math.max(F.mmBest || 0, L.score); this.mmLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    return null;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -27662,6 +27797,101 @@ CM.CG_TABLES.push(["shelter", "Mana Shelter"]);
       const child = pp.age < CM.SHL.grow, s = child ? 0.65 : 1, step = Math.sin(now / 120 + pp.id) * 2;
       p.save(); p.translate(x, y); p.scale(dir * s, s); p.fillStyle = "#2A2420"; p.fillRect(-4, -8, 3, 8 + (step > 0 ? 0 : -1)); p.fillRect(1, -8, 3, 8 + (step > 0 ? -1 : 0));
       p.fillStyle = tint(pp.id); p.fillRect(-6, -24, 12, 16); p.fillStyle = "#E8C8A0"; p.beginPath(); p.arc(0, -29, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = ["#3A2A1A", "#8A6A3A", "#C8A060", "#1A1A1A"][pp.id % 4]; p.fillRect(-5, -35, 10, 4); p.restore();
+    },
+  });
+}
+
+// ---- 76u-manamine.js ----
+"use strict";
+// Mana-Mine, the window's side (the twenty-eighth big update): the mine on a canvas in a chunky pixel look - a sky with
+// the Joker's sign, four bands of earth darker as they go down (pebbles, roots, crystals), black tunnels, the miner with
+// her lamp and its cone of light, Mudlings and Ember Newts with their walks (as floating eyes when they pass through the
+// earth), the tether's beam, a creature swelling at each pump and bursting, the newts' breath and fire, boulders that
+// shake and fall, the crystal; the score, the lives and the level at the top. Arrows or W A S D to dig, Space to shoot
+// and pump, P to pause. The rules are 64ze-manamine.js.
+CM.CG_TABLES.push(["manamine", "Mana-Mine"]);
+{ const floor0 = CM.UI.prototype.renderFloor, C = 32;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "manamine") return this.cgManaMine(box); return floor0.call(this, box); },
+    cgManaMine(box) {
+      const g = this.game, MM = CM.MM, S = g.mmState(), L = g.mmLevel(), live = !!L, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.mmClaimed(), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(12, (S && live ? S.n : 1) + 4), rows = []; for (let n = 1; n <= top; n++) { const tier = CM.cardTierFor(n); rows.push(`<div class="rung${live && S.n === n ? " now" : ""}${live && S.n > n ? " done" : ""}"><span>Level ${n}</span><b>${Math.round(bet * MM.pay(n))}</b><i class="${Cl[n] ? "got" : tier}" title="${Cl[n] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${Cl[n] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`); }
+      box.innerHTML = `<div class="cgtable manamine runestack dash"><h3>Mana-Mine</h3><div class="rswrap"><canvas class="mmcanvas" width="${MM.W * C}" height="${MM.H * C + 28}" tabindex="0"></canvas>
+        <div class="dashside"><p class="lore">A trapdoor behind the Joker's bar and a ladder down into a mine the house says is "lively". "Dig where you like," says the attendant, handing over a lamp-helmet and a mana-tether. "Pop what you meet. Mind the rocks."</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-mmpause>${this.mmPaused ? "Go on" : "Pause"}</button>` : `<button class="primary" data-mmstart>Down the ladder (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Arrows or W A S D to dig and walk; Space to shoot the tether and pump (keep pumping until it bursts); P to pause. Mudlings drift through the earth as eyes; Ember Newts spit fire along their row when you are near - watch for the breath. Dig under a boulder to drop it on what follows you. Three lives. Each level cleared pays gold, more each, every play; its card comes the first time ever (♦ common 1-4, ◆ a stronger common 5-9, ★ rare from 10). Best score ${g.cgStore().mmBest || 0}.</div>${this.cgStats("manamine")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-mmstart]")) q("[data-mmstart]").addEventListener("click", () => { const r = g.mmStart(bet); this.cgNote = r.error || "Level 1. Dig!"; this.mmFx = { parts: [], banner: null }; this.mmPaused = false; this.cgSfx(r.error ? "miss" : "door", 0.45); this.renderCasino(); const cv = this.$("#casino-body .mmcanvas"); if (cv) cv.focus(); });
+      if (q("[data-mmpause]")) q("[data-mmpause]").addEventListener("click", () => { this.mmPaused = !this.mmPaused; this.renderCasino(); });
+      this.mmCanvas = q(".mmcanvas");
+      if (!this.mmKeys) { this.mmHeld = []; const map = { ArrowUp: "up", KeyW: "up", ArrowDown: "down", KeyS: "down", ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right" };
+        this.mmKeys = (e) => { if (this.cgView !== "manamine" || !this.dialogOpen() || !this.game.mmLevel()) return; const d = map[e.code]; if (e.type === "keydown") { if (e.code === "Space") { e.preventDefault(); e.stopPropagation(); if (!e.repeat && !this.mmPaused) this.game.mmLevel().pump(); return; } if (e.code === "KeyP") { e.preventDefault(); this.mmPaused = !this.mmPaused; this.renderCasino(); return; } if (d) { e.preventDefault(); e.stopPropagation(); this.mmHeld = this.mmHeld.filter((x) => x !== d).concat(d); } } else if (d) { this.mmHeld = this.mmHeld.filter((x) => x !== d); } };
+        window.addEventListener("keydown", this.mmKeys, true); window.addEventListener("keyup", this.mmKeys, true); }
+      if (!this.mmLoop) { let prev = performance.now(); const loop = (now) => { if (!this.mmCanvas || !this.mmCanvas.isConnected || this.cgView !== "manamine") { this.mmLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.mmFrame(dt, now); this.mmLoop = requestAnimationFrame(loop); }; this.mmLoop = requestAnimationFrame(loop); }
+    },
+    mmFrame(dt, now) {
+      const g = this.game, MM = CM.MM, L = g.mmLevel(), cv = this.mmCanvas, p = cv.getContext("2d"), fx = this.mmFx = this.mmFx || { parts: [] }; p.imageSmoothingEnabled = false;
+      if (L && !this.mmPaused) { L.input(this.mmHeld[this.mmHeld.length - 1] || null); L.update(dt); for (const e of L.events.splice(0)) this.mmEvent(e, now); const out = g.mmCheck();
+        if (out && out.cleared) { fx.banner = { at: now, level: out.cleared, pay: out.pay, card: out.card }; this.cgSfx("victory", 0.55); if (out.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 300); this.cgNote = `Level ${out.cleared} cleared: ${out.pay} gold${out.card ? `, and a card - ${out.card}` : ""}.`; this.renderCasino(); return; }
+        if (out && out.over) { const S = g.mmState(); this.cgNote = `The last lamp goes out on level ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
+      const Lv = L || this.mmLastDrawn; if (L) this.mmLastDrawn = L;
+      // the hud strip
+      p.fillStyle = "#120C08"; p.fillRect(0, 0, cv.width, 28); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "MANA-MINE", 8, 19); if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 34, 19); for (let k = 0; k < Lv.lives; k++) this.mmMiner(p, cv.width - 24 - k * 22, 4, "left", 0.55, now); }
+      p.save(); p.translate(0, 28);
+      // sky and earth
+      const band = ["#C89A5A", "#B07A3A", "#8A5A2A", "#6A3A1E"];
+      for (let y = 0; y < MM.H; y++) for (let x = 0; x < MM.W; x++) { const X = x * C, Y = y * C;
+        if (y < MM.SKY) { p.fillStyle = y ? "#5A8AD0" : "#4A7AC0"; p.fillRect(X, Y, C, C); continue; }
+        const b = Math.min(3, Math.floor(((y - MM.SKY) / (MM.H - MM.SKY)) * 4)); p.fillStyle = band[b]; p.fillRect(X, Y, C, C);
+        const h = (x * 73 + y * 151) % 17; p.fillStyle = "rgba(0,0,0,0.18)"; p.fillRect(X + (h % 5) * 5 + 2, Y + (h % 7) * 4 + 3, 4, 3); if (h < 3) { p.fillStyle = b > 1 ? "#60C0F0" : "#E0C080"; p.fillRect(X + 18, Y + 20, 3, 3); }
+        if (Lv && Lv.dug[y][x]) { p.fillStyle = "#140C08"; p.fillRect(X + 2, Y + 2, C - 4, C - 4); if (y > MM.SKY && Lv.dug[y - 1][x]) p.fillRect(X + 2, Y - 2, C - 4, 6); if (x > 0 && Lv.dug[y][x - 1]) p.fillRect(X - 2, Y + 2, 6, C - 4); } }
+      p.fillStyle = "#4A8A2A"; p.fillRect(0, MM.SKY * C - 4, cv.width, 4);
+      p.fillStyle = "#8A2030"; p.fillRect(cv.width - 92, 6, 84, 22); p.fillStyle = "#FFE070"; p.font = "bold 10px Georgia, serif"; p.fillText("THE GILDED", cv.width - 86, 16); p.fillText("JOKER", cv.width - 70, 26);
+      if (!Lv) { p.restore(); p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("Mana-Mine", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
+      // the miner's lamp light
+      const P = Lv.p, mx = P.fx * C + C / 2, my = P.fy * C + C / 2, lg = p.createRadialGradient(mx, my, 10, mx, my, 120); lg.addColorStop(0, "rgba(255,230,150,0.18)"); lg.addColorStop(1, "rgba(255,230,150,0)"); p.fillStyle = lg; p.fillRect(mx - 120, my - 120, 240, 240);
+      for (const r of Lv.rocks) { if (r.state === "gone") continue; const wob = r.state === "wobble" ? Math.sin(now / 30) * 2 : 0, X = r.x * C + wob, Y = r.fy * C; p.fillStyle = "#6A6460"; p.beginPath(); p.moveTo(X + 4, Y + 26); p.lineTo(X + 2, Y + 12); p.lineTo(X + 10, Y + 3); p.lineTo(X + 24, Y + 4); p.lineTo(X + 30, Y + 14); p.lineTo(X + 27, Y + 27); p.closePath(); p.fill(); p.fillStyle = "#8A847E"; p.fillRect(X + 10, Y + 7, 8, 5); p.strokeStyle = "#3A3430"; p.beginPath(); p.moveTo(X + 14, Y + 16); p.lineTo(X + 20, Y + 22); p.stroke(); }
+      if (Lv.crystal) { const X = Lv.crystal.x * C + C / 2, Y = Lv.crystal.y * C + C / 2 + Math.sin(now / 200) * 2; p.save(); p.shadowColor = "#80E0FF"; p.shadowBlur = 14; p.fillStyle = "#80D8FF"; p.beginPath(); p.moveTo(X, Y - 12); p.lineTo(X + 8, Y); p.lineTo(X, Y + 12); p.lineTo(X - 8, Y); p.closePath(); p.fill(); p.restore(); }
+      for (const m of Lv.mons) if (!m.dead) this.mmMon(p, m, now);
+      for (const s of Lv.shots) { const k = 1 - s.t / MM.fireTime, reach = MM.fireReach * k * C, X = s.x * C + C / 2, Y = s.y * C + C / 2; const gr = p.createLinearGradient(X, Y, X + s.dir * reach, Y); gr.addColorStop(0, "rgba(255,240,120,0.95)"); gr.addColorStop(1, "rgba(255,80,20,0.5)"); p.fillStyle = gr; p.beginPath(); p.moveTo(X, Y - 4); p.lineTo(X + s.dir * reach, Y - 10 - Math.sin(now / 40) * 3); p.lineTo(X + s.dir * reach, Y + 10); p.lineTo(X, Y + 4); p.closePath(); p.fill(); }
+      if (P.beam) { const [dx, dy] = MM.DIRS[P.face], len = P.beam.hold !== undefined ? (() => { const m = Lv.mons.find((q) => q.id === P.beam.hold); return m ? Math.hypot(m.fx - P.fx, m.fy - P.fy) : 0; })() : P.beam.len * (1 - Math.max(0, P.beam.t) / MM.beamTime * 0.3);
+        p.strokeStyle = "#80F0FF"; p.lineWidth = 3; p.shadowColor = "#80F0FF"; p.shadowBlur = 8; p.beginPath(); p.moveTo(mx, my); for (let k = 1; k <= 8; k++) { const f = k / 8; p.lineTo(mx + dx * len * C * f + dy * Math.sin(now / 50 + k) * 3, my + dy * len * C * f + dx * Math.sin(now / 50 + k) * 3); } p.stroke(); p.shadowBlur = 0; p.lineWidth = 1; }
+      if (!P.dead || Math.floor(now / 120) % 2) this.mmMiner(p, P.fx * C, P.fy * C, P.face, 1, now, P.dead);
+      fx.parts = fx.parts.filter((q) => (q.life -= dt) > 0); for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 300 * dt; p.globalAlpha = Math.min(1, q.life * 2); p.fillStyle = q.c; p.fillRect(q.x, q.y, 4, 4); } p.globalAlpha = 1;
+      fx.pts = (fx.pts || []).filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = "#FFF0A0"; p.font = "bold 13px monospace"; p.fillText(String(q.n), q.x, q.y - (now - q.at) / 30); p.globalAlpha = 1; }
+      p.restore();
+      if (fx.banner && now - fx.banner.at < 2400) { const B = fx.banner, t = (now - B.at) / 2400; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : 1; p.fillStyle = "rgba(0,0,0,0.7)"; p.fillRect(0, cv.height / 2 - 50, cv.width, 100); p.fillStyle = "#FFE070"; p.font = "bold 28px Georgia, serif"; p.textAlign = "center"; p.fillText(`Level ${B.level} cleared!`, cv.width / 2, cv.height / 2 - 10); p.font = "15px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(`+${B.pay} gold${B.card ? ` - ${B.card}` : ""}`, cv.width / 2, cv.height / 2 + 20); p.textAlign = "left"; p.globalAlpha = 1; }
+      if (this.mmPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+    },
+    mmEvent(e, now) {
+      const fx = this.mmFx, C2 = C;
+      if (e.kind === "dig") { if (Math.random() < 0.3) this.cgSfx("step", 0.12, 0.7 + Math.random() * 0.3); }
+      else if (e.kind === "beam") this.cgSfx("zap", 0.25, 1.6); else if (e.kind === "latch") this.cgSfx("zap", 0.35, 1.2);
+      else if (e.kind === "pump") this.cgSfx("card", 0.35, 0.9 + e.stage * 0.25);
+      else if (e.kind === "pop" || e.kind === "crush") { this.cgSfx(e.kind === "pop" ? "shatter" : "slam", 0.5, 1.2); const m = e.m; for (let k = 0; k < 14; k++) fx.parts.push({ x: m.fx * C2 + 16, y: m.fy * C2 + 16, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 200, life: 0.6, c: m.kind === "newt" ? (k % 2 ? "#60C040" : "#F08030") : (k % 2 ? "#C84040" : "#F0D0A0") }); if (e.pts) (fx.pts = fx.pts || []).push({ x: m.fx * C2, y: m.fy * C2, n: e.pts, at: now }); }
+      else if (e.kind === "wobble") this.cgSfx("grind", 0.35, 1.3); else if (e.kind === "land") { this.cgSfx("bump", 0.55, 0.6); if (e.pts) (fx.pts = fx.pts || []).push({ x: e.r.x * C2, y: e.r.fy * C2, n: e.pts, at: now }); }
+      else if (e.kind === "crystal") this.cgSfx("spell", 0.5); else if (e.kind === "gem") this.cgSfx("coin", 0.6);
+      else if (e.kind === "fire") this.cgSfx("wandboom", 0.4, 1.4); else if (e.kind === "ghost") this.cgSfx("monster", 0.15, 1.6);
+      else if (e.kind === "die") this.cgSfx("hurt", 0.6); else if (e.kind === "clear") this.cgSfx("tablebell", 0.5);
+    },
+    // the miner: boots, a blue coat, a lamp-helmet (its light toward where she faces), the tether in hand
+    mmMiner(p, X, Y, face, s, now, dead) {
+      p.save(); p.translate(X + 16 * s, Y + 16 * s); p.scale((face === "left" ? -1 : 1) * s, s); if (face === "up") p.rotate(-Math.PI / 2 * 0.0); if (dead) p.rotate(Math.PI / 2);
+      const step = Math.sin(now / 80) > 0 ? 1 : 0; p.fillStyle = "#3A2A1A"; p.fillRect(-7, 8, 5, 6 + step); p.fillRect(2, 8, 5, 7 - step);
+      p.fillStyle = "#3060B0"; p.fillRect(-8, -4, 16, 13); p.fillStyle = "#F0C8A0"; p.fillRect(-6, -12, 12, 9); p.fillStyle = "#202020"; p.fillRect(2, -9, 2, 2);
+      p.fillStyle = "#E0B030"; p.fillRect(-8, -16, 16, 6); p.fillStyle = "#FFF4B0"; p.fillRect(6, -15, 4, 4); p.fillStyle = "#8A8A90"; p.fillRect(6, 0, 9, 3); p.fillStyle = "#80F0FF"; p.fillRect(14, -1, 3, 5);
+      p.restore();
+    },
+    mmMon(p, m, now) {
+      const C2 = C, X = m.fx * C2 + 16, Y = m.fy * C2 + 16;
+      if (m.ghost) { p.fillStyle = "rgba(255,255,255,0.9)"; for (const dx of [-6, 6]) { p.beginPath(); p.arc(X + dx, Y, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = m.kind === "newt" ? "#F08030" : "#C03030"; for (const dx of [-6, 6]) p.fillRect(X + dx - 1, Y - 1, 2, 2); return; }
+      const sw = 1 + m.swell * 0.3, flip = m.dir === "left" ? -1 : 1, bob = Math.sin(now / 150 + m.id) * 1.5; p.save(); p.translate(X, Y + bob); p.scale(sw * flip, sw);
+      if (m.kind === "mud") { p.fillStyle = m.swell ? `rgb(${200 + m.swell * 10},${90 + m.swell * 20},${70 + m.swell * 20})` : "#A0583A"; p.beginPath(); p.arc(0, 0, 12, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A3020"; p.fillRect(-10, 6, 6, 5); p.fillRect(4, 6, 6, 5); p.fillStyle = "#FFF0A0"; p.beginPath(); p.arc(-4, -3, 4, 0, Math.PI * 2); p.arc(5, -3, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#201008"; p.fillRect(-3, -4, 2, 3); p.fillRect(6, -4, 2, 3); }
+      else { p.fillStyle = m.swell ? "#90E070" : "#4A9A3A"; p.beginPath(); p.ellipse(0, 2, 13, 9, 0, 0, Math.PI * 2); p.fill(); p.fillRect(-16, 2, 6, 4); p.fillStyle = "#F08030"; for (const k of [-6, 0, 6]) p.fillRect(k - 1, -8, 3, 4); p.fillStyle = "#3A7A2A"; p.fillRect(-9, 9, 4, 4); p.fillRect(5, 9, 4, 4); p.fillStyle = "#FFE060"; p.fillRect(6, -2, 4, 4); p.fillStyle = "#101010"; p.fillRect(8, -1, 2, 2);
+        if (m.warnT > 0) { p.fillStyle = `rgba(255,${120 + 100 * Math.sin(now / 40)},40,0.9)`; p.beginPath(); p.arc(14, 2, 4 + 3 * Math.sin(now / 40), 0, Math.PI * 2); p.fill(); } }
+      p.restore();
     },
   });
 }

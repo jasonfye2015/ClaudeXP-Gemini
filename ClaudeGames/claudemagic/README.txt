@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Mana-Mine (the twenty-eighth big update - v13.8)
+  An arcade game under the Gilded Joker (src/js/64ze-manamine.js; 76u-manamine.js): a miner with a lamp-helmet digs
+  down through four bands of earth. Mudlings wait in their hollows and drift through the earth as a pair of eyes when
+  they cannot reach her; Ember Newts draw a breath and spit fire along their row. Her mana-tether latches onto a
+  creature along the tunnel and each pump swells it until it bursts (left alone it shrinks back). Boulders wobble and
+  fall when the earth under them is dug away, crushing what is below; two down and a mana crystal shows for a while.
+  Clear every creature for the next level - more of them, quicker. Three lives, one stake a play: each level cleared
+  pays gold back, more each level, every play; and a card the first time each level is ever cleared (common to 4, a
+  stronger common to 9, rare from 10). Arrows or W A S D, Space to shoot and pump, P to pause.
+
 The Gilded Mint and Mana Shelter (the twenty-seventh big update - v13.7)
   Two free games on the Gilded Joker's floor that go on in real time, even while you are away:
   - The Gilded Mint (src/js/64zc-mint.js; 76s-mint.js), an idle game: strike the great coin press for gold dust; buy

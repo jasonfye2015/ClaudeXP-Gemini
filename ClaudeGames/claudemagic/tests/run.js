@@ -4765,6 +4765,34 @@ test("Mana Shelter: the warren starts with five and four rooms; rooms work faste
   g.shKeep(5); g.shWarren = null; assert.strictEqual(g.shLive().floors, Wg.floors, "kept");
 });
 
+test("Mana-Mine: the same seed lays out the same mine; the miner digs; the tether latches and each pump swells a creature until it bursts; a boulder falls on what is under it; a touch costs a life and three end it; every level cleared pays gold each play, its card only the first time", () => {
+  const CM = load(), MM = CM.MM, A = new MM.Level(3, 99), B = new MM.Level(3, 99);
+  assert.strictEqual(JSON.stringify(A.dug), JSON.stringify(B.dug)); assert.strictEqual(A.mons.length, 6); assert.strictEqual(A.mons.filter((m) => m.kind === "newt").length, 1);
+  // digging: right from the start, into earth
+  const L = new MM.Level(1, 5); L.mons.forEach((m) => { m.dead = true; }); L.rocks = []; L.mons[0].dead = false; Object.assign(L.mons[0], { x: 1, y: 14, fx: 1, fy: 14, home: [0, 14] }); L.dug[14][1] = true;
+  const s0 = L.score; L.input("right"); L.update(1.2); assert.ok(L.p.x >= 9 && L.dug[8][9], "dug through"); assert.ok(L.score > s0);
+  // the tether: a creature two cells along the tunnel; latch, pump, burst
+  L.input(null); const P = L.p; P.x = P.fx = 5; P.y = P.fy = 8; P.face = "right"; L.dug[8][5] = L.dug[8][6] = L.dug[8][7] = true; const m = L.mons[0]; Object.assign(m, { x: 7, y: 8, fx: 7, fy: 8, swell: 0, ghost: false });
+  L.pump(); L.tick(MM.step); assert.strictEqual(P.beam.hold, m.id); assert.strictEqual(m.swell, 1);
+  for (let k = 0; k < MM.stages - 1; k++) { L.pump(); L.tick(MM.step); } assert.ok(m.dead, "burst"); assert.strictEqual(L.stage, "clear");
+  // left alone, a swollen creature shrinks back
+  const L2 = new MM.Level(1, 6); const m2 = L2.mons[0]; m2.swell = 2; L2.p.dead = 0; L2.stepMon(m2, MM.deflate + 0.01); assert.strictEqual(m2.swell, 1);
+  // a boulder: the earth under it dug away, it wobbles, falls and crushes
+  const L3 = new MM.Level(1, 7); L3.mons.forEach((q) => { q.dead = true; }); const r = { x: 2, y: 4, fy: 4, state: "set", t: 0, crushed: 0 }; L3.rocks = [r]; for (let y = 5; y <= 9; y++) L3.dug[y][2] = true; const vic = L3.mons[1]; Object.assign(vic, { dead: false, x: 2, y: 7, fx: 2, fy: 7, swell: 3 });
+  L3.update(2); assert.strictEqual(r.state, "gone"); assert.ok(vic.dead, "crushed"); assert.strictEqual(L3.score, MM.SCORE.rock);
+  // lives
+  const L4 = new MM.Level(1, 8); const m4 = L4.mons[0]; Object.assign(m4, { fx: L4.p.fx, fy: L4.p.fy, swell: 0 }); L4.tick(MM.step); assert.strictEqual(L4.lives, 2); L4.lose("x"); L4.p.dead = 0.01; L4.lives = 0; L4.tick(MM.step); L4.tick(MM.step); assert.strictEqual(L4.stage, "over");
+  // the house's side: pay every play, a card once
+  const g = new CM.Game(); g.newGame("mm-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), o0 = owned();
+  for (let play = 0; play < 2; play++) {
+    assert.ok(!g.mmStart(100).error); const gold0 = g.gold;
+    for (let n = 1; n <= 2; n++) { const Lv = g.mmLevel(); assert.strictEqual(Lv.n, n); Lv.mons.forEach((q) => { q.dead = true; }); Lv.checkClear(); const out = g.mmCheck(); assert.strictEqual(out.cleared, n); assert.strictEqual(out.pay, Math.round(100 * MM.pay(n))); assert.strictEqual(!!out.card, play === 0, "a card only the first time"); }
+    assert.strictEqual(g.gold - gold0, Math.round(100 * MM.pay(1)) + Math.round(100 * MM.pay(2))); assert.strictEqual(g.mmLevel().score >= 0, true, "score kept");
+    const Lv = g.mmLevel(); Lv.stage = "over"; assert.ok(g.mmCheck().over); assert.strictEqual(g.mmState().stage, "done"); assert.strictEqual(g.mmLevel(), null);
+  }
+  assert.strictEqual(owned(), o0 + 2);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

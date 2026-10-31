@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Mana-Mine (v13.8)
+
+Behind the Joker's bar is a trapdoor, and under it a ladder into a mine the house calls "lively". The Mudlings that live
+there were there first, and the Ember Newts came up from somewhere hotter; neither likes miners. The house rents out a
+lamp-helmet and a mana-tether by the descent, and pays by the level for every hollow cleared - more the deeper you go.
+
 ## The Gilded Mint and Mana Shelter (v13.7)
 
 The house keeps a coin press in the back that it lets anyone strike - "for the practice," says the dealer - and the
