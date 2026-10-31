@@ -59,7 +59,7 @@ Principles, kept throughout:
 - The crafting window: the satchel on one side, the recipes the party can make lit on the other, one click to make.
 - Tests: every recipe's inputs and outputs; the kiln's bars equal the forge's; tools break faster by tier.
 
-## Phase 3 (v12.3): day, night, and the island's creatures
+## Phase 3 (v12.3): day, night, and the island's creatures - done
 - **The island keeps the game's clock**: day and night, the sky's colours, the sun and moon, and dark at night.
 - **Creatures**, the game's own monsters seen in their own pictures (billboards in the 3D view): by day, harmless
   wildlife to hunt for meat (the cook's ingredients, 69d-cook.js); at night and in the caves, monsters by depth -

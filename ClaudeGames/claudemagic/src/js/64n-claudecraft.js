@@ -205,7 +205,7 @@ CC.World = class {
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
-        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? 1 : this.lightAt(x + nx, y + ny, z + nz, near);
+        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? CC.FULL : CC.packLight(this.skyAt(x + nx, y + ny, z + nz), this.torchAt(x + nx, y + ny, z + nz, near));
         for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade, sky);   // (shade 2: the gate's light, which the shader moves)
       });
     } }
@@ -214,7 +214,7 @@ CC.World = class {
   // a torch: a stick an eighth wide, and a flame on it that the shader makes flicker (shade 3: gold)
   meshTorch(out, x, y, z, near) {
     const t = CC.TILE.torch, u0 = (t % CC.ATLAS) / CC.ATLAS, v0 = Math.floor(t / CC.ATLAS) / CC.ROWS, ts = 1 / CC.ATLAS, tsv = 1 / CC.ROWS;
-    const box = (ax, ay, az, w, h, shade) => { for (const [, sh, corners] of CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + ax + dx * w, y + ay + dy * h, z + az + dz * w, u0 + (0.44 + u * 0.12) * ts, v0 + (0.3 + v * 0.7) * tsv, shade || sh, 1); };
+    const box = (ax, ay, az, w, h, shade) => { for (const [, sh, corners] of CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + ax + dx * w, y + ay + dy * h, z + az + dz * w, u0 + (0.44 + u * 0.12) * ts, v0 + (0.3 + v * 0.7) * tsv, shade || sh, CC.FULL); };
     box(0.4375, 0, 0.4375, 0.125, 0.6, 0); box(0.42, 0.6, 0.42, 0.16, 0.16, 3.5); void near;
   }
   // the block under the eye, and the empty one before it (Amanatides and Woo)
@@ -233,6 +233,8 @@ CC.World = class {
 
 // the walker: a body 0.6 wide and 1.8 tall moved through the blocks, walking, jumping, swimming, flying
 CC.TORCH_REACH = 8;
+CC.packLight = (sky, torch) => Math.round(Math.max(0, Math.min(1, sky)) * 15) * 16 + Math.round(Math.max(0, Math.min(1, torch)) * 15);   // (sky and torch, 0-15 each)
+CC.FULL = 255;
 CC.EYE = 1.62; CC.WALK = 4.3; CC.SPRINT = 6.5; CC.FLY = 11; CC.GRAVITY = 28; CC.JUMP = 8.6;
 CC.Walker = class {
   constructor(world, pos, yaw = 45, pitch = -10) { Object.assign(this, { world, pos: pos.slice(), vel: [0, 0, 0], yaw, pitch, onGround: false, flying: false, canFly: true, lastSpace: -9, t: 0, slot: 0, fallFrom: null, landed: 0 }); }

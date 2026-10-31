@@ -6,13 +6,14 @@
 // hero's portrait, health, magic and the clock, the satchel's hotbar with its counts and its window (I), the crack
 // that grows over a block being broken, and the glowing bundles left by a fall.)
 const CC_VERT = "attribute vec3 pos; attribute vec2 uv; attribute float shade; attribute float sky; uniform mat4 mvp; uniform vec3 eye; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vDist = distance(pos, eye); vPos = pos; vSky = sky; }";
-const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; uniform float lamp; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky;\n"
-  + "void main() { if (lines > 1.5) { vec2 q = floor(vUv * 16.0); float r = fract(sin(dot(q, vec2(12.9898, 78.233))) * 43758.5453); vec2 d = (q + 0.5) / 16.0 - 0.5; float arm = min(abs(d.x - d.y * 0.6), min(abs(d.y + d.x * 0.4), abs(d.x + d.y))); float reach = length(d) * 1.1 + r * 0.25; if (arm > 0.045 + r * 0.03 + (lines - 2.0) * 0.06 || reach > (lines - 2.0) * 0.75) discard; gl_FragColor = vec4(0.06, 0.05, 0.04, 0.8); return; } if (lines > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.85); return; } vec4 c = texture2D(atlas, vUv); if (c.a < 0.1) discard;\n"
-  + "  float carried = clamp(1.0 - vDist / lamp, 0.0, 1.0); carried = (1.0 - (1.0 - carried) * (1.0 - carried)) * 0.92; float lit = max(0.035, max(vSky, carried));\n"
-  + "  vec3 rgb = c.rgb * min(vShade, 1.0) * lit * mix(vec3(1.0), vec3(1.0, 0.86, 0.66), carried > vSky ? 0.8 : 0.0);\n"
+const CC_FRAG = "precision mediump float; uniform sampler2D atlas; uniform vec3 fog; uniform float fogStart; uniform float fogEnd; uniform float lines; uniform float time; uniform float lamp; uniform float daylight; varying vec2 vUv; varying float vShade; varying float vDist; varying vec3 vPos; varying float vSky;\n"
+  + "void main() { if (lines > 1.5) { vec2 q = floor(vUv * 16.0); float r = fract(sin(dot(q, vec2(12.9898, 78.233))) * 43758.5453); vec2 d = (q + 0.5) / 16.0 - 0.5; float arm = min(abs(d.x - d.y * 0.6), min(abs(d.y + d.x * 0.4), abs(d.x + d.y))); float reach = length(d) * 1.1 + r * 0.25; if (arm > 0.045 + r * 0.03 + (lines - 2.0) * 0.06 || reach > (lines - 2.0) * 0.75) discard; gl_FragColor = vec4(0.06, 0.05, 0.04, 0.8); return; } if (lines > 0.5) { gl_FragColor = vec4(0.0, 0.0, 0.0, 0.85); return; } vec4 c = texture2D(atlas, vUv); if (c.a < 0.1) discard; if (vShade > 4.0) { gl_FragColor = vec4(c.rgb * (vShade > 4.6 ? 1.6 : 1.0), c.a); return; }\n"
+  + "  float lv = floor(vSky + 0.5), sk = floor(lv / 16.0 + 0.01) / 15.0, tc = (lv - floor(lv / 16.0 + 0.01) * 16.0) / 15.0, skyLit = sk * daylight;\n"
+  + "  float carried = clamp(1.0 - vDist / lamp, 0.0, 1.0); carried = (1.0 - (1.0 - carried) * (1.0 - carried)) * 0.92; float near = max(carried, tc); float lit = max(0.035, max(skyLit, near));\n"
+  + "  vec3 rgb = c.rgb * min(vShade, 1.0) * lit * mix(vec3(1.0), vec3(1.0, 0.86, 0.66), near > skyLit ? 0.8 : 0.0);\n"
   + "  if (vShade > 2.5) { float k = min(1.0, vShade - 2.5), p2 = 0.5 + 0.5 * sin(time * 4.0 + vPos.y * 7.0); rgb = mix(vec3(0.85, 0.62, 0.18), vec3(1.0, 0.94, 0.62), p2) * (0.55 + 0.45 * k); c.a = 0.95; }\n"
   + "  else if (vShade > 1.5) { float w = sin(vPos.x * 3.1 + vPos.y * 2.3 + time * 2.7) * 0.5 + 0.5, w2 = sin(vPos.y * 4.0 - time * 3.9 + vPos.z) * 0.5 + 0.5; float band = smoothstep(0.92, 1.0, sin(vPos.y * 6.0 - time * 2.2 + sin(vPos.x * 2.0 + vPos.z * 2.0) * 1.5)); rgb = mix(mix(vec3(0.40, 0.18, 0.80), vec3(0.30, 0.85, 0.82), w * 0.6), vec3(1.0, 0.92, 0.70), band * 0.8 + w2 * 0.12) * min(1.0, vShade - 1.0); c.a = 0.8; }\n"
-  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, vShade > 1.5 ? fog : fog * vSky, vShade > 1.5 ? f * 0.4 : f), c.a); }";
+  + "  float f = clamp((vDist - fogStart) / (fogEnd - fogStart), 0.0, 1.0); gl_FragColor = vec4(mix(rgb, vShade > 1.5 ? fog : fog * sk, vShade > 1.5 ? f * 0.4 : f), c.a); }";
 Object.assign(CM.UI.prototype, {
   // the gate's dialog: who steps through (the rest wait in the Keep-yard)
   openCraftGate() {
@@ -164,10 +165,11 @@ Object.assign(CM.UI.prototype, {
     const r = c.getBoundingClientRect(); if (c.width !== Math.round(r.width) || c.height !== Math.round(r.height)) { c.width = Math.max(320, Math.round(r.width)); c.height = Math.max(200, Math.round(r.height)); }
     const t0 = performance.now(); while (this.ccPending.length && performance.now() - t0 < 12) this.ccBuild(...this.ccPending.shift());   // (the island built a few chunks a frame)
     for (const k of this.ccDirty) this.ccBuild(...k.split(",").map(Number)); this.ccDirty.clear();
-    gl.viewport(0, 0, c.width, c.height); gl.clearColor(0.53, 0.71, 0.96, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
+    const day = CM.CL.daylight(g), skyCol = this.ccSkyColour(g, day);
+    gl.viewport(0, 0, c.width, c.height); gl.clearColor(skyCol[0], skyCol[1], skyCol[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE);
     const P = this.ccProg; gl.useProgram(P); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, this.ccTex);
     const U = (n) => gl.getUniformLocation(P, n);
-    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), [0.53, 0.71, 0.96]); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000); gl.uniform1f(U("lamp"), g.craftLight());
+    gl.uniform1i(U("atlas"), 0); gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.ccMvp(w, c.width / c.height))); gl.uniform3fv(U("eye"), w.eye()); gl.uniform3fv(U("fog"), skyCol); gl.uniform1f(U("daylight"), day); gl.uniform1f(U("fogStart"), 40); gl.uniform1f(U("fogEnd"), 90); gl.uniform1f(U("lines"), 0); gl.uniform1f(U("time"), now / 1000); gl.uniform1f(U("lamp"), g.craftLight());
     const draw = (buf, n, mode = gl.TRIANGLES) => { if (!n) return; gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2, 3]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 28, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 28, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 28, 20); gl.vertexAttribPointer(3, 1, gl.FLOAT, false, 28, 24); gl.drawArrays(mode, 0, n); };
     for (const ch of this.ccChunks.values()) draw(ch.op, ch.nOp);
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
@@ -175,18 +177,53 @@ Object.assign(CM.UI.prototype, {
     gl.depthMask(true);
     const hit = cr.target && cr.target[0];
     if (hit) { const [x, y, z] = hit, e = 0.003, C = [[x - e, y - e, z - e], [x + 1 + e, y - e, z - e], [x + 1 + e, y - e, z + 1 + e], [x - e, y - e, z + 1 + e], [x - e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z - e], [x + 1 + e, y + 1 + e, z + 1 + e], [x - e, y + 1 + e, z + 1 + e]], out = [];
-      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, 1, ...C[b], 0, 0, 1, 1);
+      for (const [a, b] of [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]) out.push(...C[a], 0, 0, 1, 255, ...C[b], 0, 0, 1, 255);
       gl.uniform1f(U("lines"), 1); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccLine); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccLine, 24, gl.LINES); }
     if (hit && cr.dig && cr.dig.key === hit.join(",") && cr.dig.need < Infinity) {          // (the crack, growing with the dig)
       const [x, y, z] = hit, e2 = 0.004, out = [];
-      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1, 1);
+      for (const [, , corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + (dx ? 1 + e2 : -e2), y + (dy ? 1 + e2 : -e2), z + (dz ? 1 + e2 : -e2), u, v, 1, 255);
       if (!this.ccCrackBuf) this.ccCrackBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 2 + Math.min(1, cr.dig.t / cr.dig.need) * 1.45); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccCrackBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccCrackBuf, out.length / 7); }
     if (cr.bundles.length) {                                                   // (the bundles: small glowing blocks, bobbing)
       const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / CM.CC.ROWS], out = [], s2 = 0.6;
-      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / CM.CC.ROWS, 2.5 + sh, 1); }
+      for (const B of cr.bundles) { const bob = Math.sin(now / 400 + B.x) * 0.15 + 0.45; for (const [nrm, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(B.x - s2 / 2 + dx * s2, B.y + bob + dy * s2, B.z - s2 / 2 + dz * s2, tx + (u / CM.CC.ATLAS), ty + v / CM.CC.ROWS, 2.5 + sh, 255); }
       if (!this.ccBundleBuf) this.ccBundleBuf = gl.createBuffer(); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccBundleBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccBundleBuf, out.length / 7); }
+    this.ccDrawLife(gl, U, draw, cr, now, w);
     gl.disable(gl.BLEND);
     this.ccHud(cr, now);
+  },
+  // (v12.3) the sky's colour by the hour: blue by day, gold at dawn and dusk, near black at night
+  ccSkyColour(g, day) { const h = CM.hourOf(g), dusk = (h > 16 && h < 22) || (h > 4 && h < 8), warm = dusk ? Math.max(0, 1 - Math.abs(day - 0.5) * 2) : 0, base = [0.03 + 0.50 * day, 0.04 + 0.67 * day, 0.10 + 0.86 * day]; return [base[0] + warm * 0.45, base[1] + warm * 0.15, base[2] - warm * 0.2]; },
+  // the creatures' pictures, the game's own monster drawings, on a sheet the GL draws from (and the sun and the moon)
+  ccSprites() {
+    if (this.ccSpr) return this.ccSpr; const kinds = [...new Set([...CM.CL.WILD, ...CM.CL.TOP, ...CM.CL.CAVE, ...CM.CL.DEEP, ...(CM.CL.EXTRA || [])])], cell = 128, cols = 8, rows = Math.ceil((kinds.length + 2) / cols);
+    const c = document.createElement("canvas"); c.width = cell * cols; c.height = cell * rows; const p = c.getContext("2d"), at = {};
+    kinds.forEach((k, i) => { const x = (i % cols) * cell, y = Math.floor(i / cols) * cell; try { const pic = CM.art.monster(CM.monsterKind(k) || (CM.CL.ART && CM.CL.ART[k])); p.drawImage(pic, x, y, cell, cell); } catch (e) { p.fillStyle = "#808080"; p.fillRect(x + 32, y + 32, 64, 96); } at[k] = i; });
+    const sun = kinds.length, moon = kinds.length + 1;
+    { const x = (sun % cols) * cell + 64, y = Math.floor(sun / cols) * cell + 64, gr = p.createRadialGradient(x, y, 10, x, y, 62); gr.addColorStop(0, "rgba(255,250,220,1)"); gr.addColorStop(0.45, "rgba(255,230,140,1)"); gr.addColorStop(0.55, "rgba(255,210,120,0.5)"); gr.addColorStop(1, "rgba(255,200,100,0)"); p.fillStyle = gr; p.fillRect(x - 64, y - 64, 128, 128); }
+    { const x = (moon % cols) * cell + 64, y = Math.floor(moon / cols) * cell + 64; p.fillStyle = "#E8ECF4"; p.beginPath(); p.arc(x, y, 30, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C0C6D4"; for (const [dx, dy, r] of [[-10, -6, 7], [9, 8, 5], [4, -14, 4], [-6, 14, 4]]) { p.beginPath(); p.arc(x + dx, y + dy, r, 0, Math.PI * 2); p.fill(); } }
+    at.sun = sun; at.moon = moon;
+    const gl = this.ccGl, tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.ccSpr = { tex, at, cols, rows, canvas: c }; return this.ccSpr;
+  },
+  ccDrawLife(gl, U, draw, cr, now, w) {
+    const g = this.game, L = cr.life, S = this.ccSprites(), yr = (w.yaw * Math.PI) / 180, right = [Math.cos(yr), 0, -Math.sin(yr)], out = [];
+    const quad = (cx, by, cz, wd, ht, cell, shade, light, flip) => { const u0 = (cell % S.cols) / S.cols, v0 = Math.floor(cell / S.cols) / S.rows, du = 1 / S.cols, dv = 1 / S.rows, hx = right[0] * wd / 2, hz = right[2] * wd / 2;
+      const P = [[cx - hx, by, cz - hz, flip ? u0 + du : u0, v0 + dv], [cx + hx, by, cz + hz, flip ? u0 : u0 + du, v0 + dv], [cx + hx, by + ht, cz + hz, flip ? u0 : u0 + du, v0], [cx - hx, by + ht, cz - hz, flip ? u0 + du : u0, v0]];
+      for (const i of [0, 1, 2, 0, 2, 3]) out.push(P[i][0], P[i][1], P[i][2], P[i][3], P[i][4], shade, light); };
+    // the sun and the moon, far off along the hour's arc
+    const h = CM.hourOf(g), a = ((h - 6) / 12) * Math.PI, e = w.eye();
+    for (const [cell, ang] of [[S.at.sun, a], [S.at.moon, a + Math.PI]]) { const dir = [Math.cos(ang) * 0.9, Math.sin(ang), 0.35], n = Math.hypot(...dir); if (dir[1] < -0.1) continue; const D = 150; const cx = e[0] + (dir[0] / n) * D, cy = e[1] + (dir[1] / n) * D, cz = e[2] + (dir[2] / n) * D; quad(cx, cy - 9, cz, 18, 18, cell, 4.5, 255); }
+    if (L) for (const o of L.mobs) {
+      const fell = o.fellAt !== null ? Math.min(1, (L.t - o.fellAt) / 0.6) : 0, hitNow = L.t - o.hitAt < 0.15, wd = Math.max(o.r * 2.6, o.h * 0.9), ht = o.h * (1 - fell * 0.85);
+      const lx = Math.floor(o.w.pos[0]), ly = Math.floor(o.w.pos[1] + 0.5), lz = Math.floor(o.w.pos[2]), W = cr.world, light = CM.CC.packLight(W.skyAt(lx, ly, lz), W.torchAt(lx, ly, lz));
+      const facing = Math.sin(((o.w.yaw - w.yaw) * Math.PI) / 180) > 0;
+      quad(o.w.pos[0], o.w.pos[1] - 0.02, o.w.pos[2], wd, Math.max(0.1, ht), S.at[o.kind] || 0, hitNow ? 4.8 : 1.0, light, facing);
+    }
+    if (out.length) { if (!this.ccLifeBuf) this.ccLifeBuf = gl.createBuffer(); gl.bindTexture(gl.TEXTURE_2D, S.tex); gl.uniform1f(U("lines"), 0); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccLifeBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(out), gl.DYNAMIC_DRAW); draw(this.ccLifeBuf, out.length / 7); gl.bindTexture(gl.TEXTURE_2D, this.ccTex); }
+    // the shots: little glowing blocks (gold bolts, brown arrows)
+    if (L && L.shots.length) { const [tx, ty] = [(CM.CC.TILE.gate % CM.CC.ATLAS) / CM.CC.ATLAS, Math.floor(CM.CC.TILE.gate / CM.CC.ATLAS) / CM.CC.ROWS], o2 = [];
+      for (const s of L.shots) { const s2 = s.kind === "bolt" ? 0.22 : 0.12; for (const [, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) o2.push(s.x - s2 / 2 + dx * s2, s.y - s2 / 2 + dy * s2, s.z - s2 / 2 + dz * s2, tx + u / CM.CC.ATLAS, ty + v / CM.CC.ROWS, s.kind === "bolt" ? 3.5 : 1.0 + sh * 0.3, 255); }
+      if (!this.ccShotBuf) this.ccShotBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccShotBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(o2), gl.DYNAMIC_DRAW); draw(this.ccShotBuf, o2.length / 7); }
   },
   // the HUD on a 2D canvas over the GL one: the crosshair, the hotbar, where you stand, a word of help
   ccHud(cr, now) {
@@ -210,9 +247,9 @@ Object.assign(CM.UI.prototype, {
     if (hero.maxmp) bar(py + 31, hero.mp, hero.maxmp, "#3F7DE0", `${hero.mp} / ${hero.maxmp}`);
     const load = g2.craftLoad(), cap = g2.craftCap(); if (load) { p.font = "11px Tahoma, sans-serif"; p.fillStyle = cr.walker.heavy ? "#FF9060" : "#E8D8B0"; p.fillText(`Ore and charcoal: ${load} of ${cap}${cr.walker.heavy ? " - heavy!" : ""}`, px + 62, py + 70); }
     let clock = ""; try { const m = CM.minuteOf(this.game), hh = Math.floor(m / 60), mm = m % 60; clock = `${hh}:${mm < 10 ? "0" : ""}${mm}, ${CM.hourWord(CM.hourOf(this.game))}`; } catch (er) { /* */ }
-    p.font = "11px Tahoma, sans-serif"; p.fillText(clock, px + 62, py + 56);
+    const L = cr.life; p.font = "11px Tahoma, sans-serif"; p.fillText(`${clock}  -  level ${hero.level}${L && (L.gold || L.loot.length) ? `  -  ${L.gold} gold${L.loot.length ? `, ${L.loot.length} found` : ""}` : ""}`, px + 62, py + 56);
     p.font = "11px Tahoma, sans-serif"; p.fillStyle = "rgba(255,255,255,0.9)"; p.textAlign = "right"; p.fillText(`XYZ ${w.pos[0].toFixed(0)} / ${w.pos[1].toFixed(0)} / ${w.pos[2].toFixed(0)}   broken ${cr.broken || 0}, placed ${cr.placed || 0}${cr.bundles.length ? `   bundles on the island: ${cr.bundles.length}` : ""}`, W - 8, 16);
-    p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break - right: place - 1-9 / wheel - I: satchel", W - 8, 46); p.fillText("walk into the gate's light to go home", W - 8, 60); p.textAlign = "left";
+    p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break (or strike) - F: shoot / strike - right: place / use - I: satchel", W - 8, 46); p.fillText("walk into the gate's light to go home", W - 8, 60); p.textAlign = "left";
     if (this.ccSatchelOpen) { this.ccWindow(p, atlas, cr, W, H);
     } else if (document.pointerLockElement !== this.$("#craftcanvas")) { p.font = "bold 15px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText("Click to play", W / 2, H / 2 + 34); p.textAlign = "left"; }
     const recent = (cr.says || []).filter(([t]) => now - t < 4000).slice(-3);
