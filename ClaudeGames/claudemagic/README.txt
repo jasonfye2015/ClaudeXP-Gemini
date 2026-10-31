@@ -1428,6 +1428,12 @@ A world that moves (the eleventh big update - v9.3 to v10.0)
   them (CM.CROWNS in src/js/26-surface.js). Snow lies in winter on a day of snow and the day after (CM.snowLying): the
   roofs, the ground, the wall's walk and the hedges go white, and the river freezes. Mist lies low on the land.
 
+  The gate towers and the postern (v9.7): two round towers of stone flank the West Gate (src/js/61c-tower.js). Space
+  at the stair at a tower's foot climbs it: the party stands among the merlons with the town below, can turn to look
+  round, and the watchman says what tomorrow's weather will be; any step comes down. Watch the sun go down from there for
+  an achievement. Once a party has been to floor five, the postern - a small iron door in the Keep-yard's north-east
+  corner - opens onto a path down the cliffs' foot to the fields: the short way from the shaft to the land, and back.
+
 The town's buildings, rebuilt (v9.2)
   The houses were walls only where a street faced them, under a fringe of half-square slopes: the sky showed through the
   middle of every block, and a house beside a hedge, a fence or a tree was open on that side. Now CM.buildingsOf
@@ -1492,6 +1498,7 @@ The source
     27-props.js   the props: what the scatter lays on each square, the traces, the wall decals, what drifts in the air
     40-render.js  the WebGL 2 view: the mesh, the sky, billboards, torchlight and fog, smooth steps and turns, shakes
     45-fx.js      what flies, bursts, rings and rains: the effects, advanced each frame into sprites
+    61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
     61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions
     46-air.js     the air: dust, drips, embers, spores, rain, snow, leaves, birds, clouds and smoke about the party
     50-audio.js   the sounds, each depth's ambience and the monsters' calls, synthesised

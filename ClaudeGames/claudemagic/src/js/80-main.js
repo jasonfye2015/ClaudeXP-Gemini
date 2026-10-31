@@ -439,6 +439,8 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
+      else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });
       else if (thing.type === "signpost") out.push({ x, y, layer: "signpost", w: 0.55, h: 0.95 });
       else if (thing.type === "cross") out.push({ x, y, layer: "cross", w: 0.55, h: 0.75 });
@@ -735,6 +737,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
+        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again

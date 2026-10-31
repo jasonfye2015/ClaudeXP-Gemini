@@ -12,6 +12,7 @@ CM.SOLID = {
   shop: { face: "solid:shop", h: 1.6, roof: "solid:roof" },                       // a door, and the board over it
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
+  tower: { face: "solid:townwall", h: 2.3, tower: true },                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -67,7 +68,7 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
 CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
@@ -172,7 +173,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], L(`ground:${g}`), kind === "tree" ? 0.6 : 0.85); covered.add(key);
         if (kind === "tree") trees.add(key);
       } else if (K.top && index[K.top] !== undefined) { if (!tops.has(key)) { tops.add(key); quad([x, K.h, y + 1], [x + 1, K.h, y + 1], [x + 1, K.h, y], [x, K.h, y], index[K.top], 0.95); } covered.add(key); }
-      else if (K.roof) covered.add(key);                                       // (a house's square is under its roof)
+      else if (K.roof || K.tower) covered.add(key);                            // (a house's square is under its roof; a tower's under its top)
       continue;
     }
     covered.add(`${x},${y}`);
@@ -190,7 +191,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const nx = x + dx, ny = y + dy;
       if (!solid(nx, ny)) return;
       const K = kindOf(nx, ny), key = `${nx},${ny}`;
-      if (K.roof) return;                                                             // (a building: walled and roofed below, every face)
+      if (K.roof || K.tower) return;                                                  // (a building or a tower: walled and roofed below, every face)
       if (K.tree) {                                                                   // the trees: this one, and the rank behind it
         trees.add(key);
         if (solid(nx + dx, ny + dy) && kindOf(nx + dx, ny + dy).tree) trees.add(`${nx + dx},${ny + dy}`);
@@ -210,7 +211,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
-  let buildings = 0, chimneys = 0, litWindows = 0;
+  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0;
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofL = L("solid:roof");
@@ -270,6 +271,25 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gable, shade);
         }
       }
+    }
+    for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
+      if (tkind !== "tower") continue;
+      const [tx, ty] = tk.split(",").map(Number), cx = tx + 0.5, cz = ty + 0.5, T = CM.TOWER, H = T.h, R = T.r, top = L("solid:townwall:top");
+      const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
+      for (let i = 0; i < 8; i++) {
+        const [ax, az] = at(i, R), [bx, bz] = at(i + 1, R), shade = 0.78 + 0.22 * Math.abs(Math.cos((Math.PI / 4) * i + Math.PI / 4));
+        for (const [y0, y1] of [[0, H / 2], [H / 2, H]]) poly([[ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]], [[0, 1], [0.5, 1], [0.5, 0], [0, 0]], stone, shade);
+        poly([[cx, H, cz], [ax, H, az], [bx, H, bz]], [[0.5, 0.5], [0, 0], [1, 0]], top, 0.9);   // (the top, a fan)
+        const m = 0.2, [mx0, mz0] = [ax + (bx - ax) * m, az + (bz - az) * m], [mx1, mz1] = [ax + (bx - ax) * (1 - m), az + (bz - az) * (1 - m)], k = (R - 0.1) / R;   // a merlon on this face
+        const [ix0, iz0, ix1, iz1] = [cx + (mx0 - cx) * k, cz + (mz0 - cz) * k, cx + (mx1 - cx) * k, cz + (mz1 - cz) * k], Y = H + T.merlon;
+        poly([[mx0, H, mz0], [mx1, H, mz1], [mx1, Y, mz1], [mx0, Y, mz0]], [[0, 1], [0.3, 1], [0.3, 0.7], [0, 0.7]], stone, shade);
+        poly([[ix1, H, iz1], [ix0, H, iz0], [ix0, Y, iz0], [ix1, Y, iz1]], [[0, 1], [0.3, 1], [0.3, 0.7], [0, 0.7]], stone, shade * 0.85);
+        poly([[mx0, Y, mz0], [mx1, Y, mz1], [ix1, Y, iz1], [ix0, Y, iz0]], [[0, 0.1], [0.3, 0.1], [0.3, 0], [0, 0]], top, 0.95);
+        poly([[ix0, H, iz0], [mx0, H, mz0], [mx0, Y, mz0], [ix0, Y, iz0]], [[0, 1], [0.1, 1], [0.1, 0.7], [0, 0.7]], stone, shade * 0.8);
+        poly([[mx1, H, mz1], [ix1, H, iz1], [ix1, Y, iz1], [mx1, Y, mz1]], [[0, 1], [0.1, 1], [0.1, 0.7], [0, 0.7]], stone, shade * 0.8);
+        walls++;
+      }
+      towers++;
     }
     for (const C of CM.chimneysOf(fl)) {                                               // the chimneys: a stack of stone, and a cap
       const r = C.w / 2, x0 = C.x - r, x1 = C.x + r, z0 = C.z - r, z1 = C.z + r, uv = [[0, 1], [0.3, 1], [0.3, 0.3], [0, 0.3]];
@@ -359,5 +379,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };

@@ -3433,6 +3433,35 @@ test("the seasons seen: each tree's crown by the season (bare oaks and birches i
   assert.ok(art.includes("C.bare") && art.includes("C.blossom") && art.includes("C.snow"), "the painters read the crown");
 });
 
+test("the gate towers and the postern: two towers drawn by the gate with their stairs; up a stair to the top and down by any step; the top is never saved; the postern shut until the fifth floor, then the short way to the cliff path and back; the path is safe and on the list", () => {
+  const CM = load();
+  const town = CM.makeTown("tower-1");
+  for (const [x, y] of CM.TOWN_TOWERS) { assert.strictEqual(CM.solidAt(town, x, y), "tower"); assert.notStrictEqual(town.grid[y][x], 0, "a tower is solid"); }
+  for (const k of Object.keys(CM.TOWER_STAIRS)) { assert.strictEqual(town.things[k].type, "towerstair"); const [x, y] = k.split(",").map(Number); assert.strictEqual(town.grid[y][x], 0, "the stair stands in the street"); }
+  assert.strictEqual(town.things[CM.TOWN_POSTERN.join(",")].type, "postern");
+  const index = {}; ["wall", "solid:house", "solid:door", "solid:shop", "solid:roof", "solid:gable", "solid:townwall", "solid:townwall:top", "ground:grass"].forEach((n, i) => { index[n] = i; });
+  assert.strictEqual(CM.floorMesh(town, CM.themeFor(0), index, { props: [] }).towers, CM.TOWN_TOWERS.length, "both towers drawn");
+  // up and down
+  const g = new CM.Game(); g.newGame("tower-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const stair = Object.keys(CM.TOWER_STAIRS)[0]; g.floor.pos = stair.split(",").map(Number); g.mode = "explore";
+  const c0 = g.clock; g.use(); assert.ok(g.perch && g.perch.from === stair, "on the top"); assert.strictEqual(g.clock, c0 + CM.TOWER.climbMinutes);
+  assert.ok(g.messages.slice(-2).join(" ").includes("Tomorrow?"), "the watchman says what tomorrow brings");
+  g.turn(1); assert.ok(g.perch, "turning keeps the view"); g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.ok(!g2.perch, "the top is never saved");
+  g.move(0); assert.ok(!g.perch, "a step is the stair down"); assert.strictEqual(g.floor.pos.join(","), stair, "at the stair's foot");
+  g.use(); g.use(); assert.ok(!g.perch, "Space climbs down too"); g.use(); g.travelTo(...CM.TOWN_AT.well); assert.ok(!g.perch, "a walk climbs down first");
+  // the postern
+  const p = new CM.Game(); p.newGame("tower-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); p.mode = "explore"; p.village.posternOpen = false; p.trail = [[1, 10]];
+  p.floor.pos = CM.TOWN_POSTERN.slice(); p.use(); assert.strictEqual(p.floor.number, 0, "shut before the fifth floor"); assert.ok(!CM.posternOpen(p));
+  p.floor.pos = CM.TOWN_AT.well.slice(); assert.ok(!CM.wayPlaces(p).some((w) => w.name === "The postern"), "not on the list while shut"); p.floor.pos = CM.TOWN_POSTERN.slice();
+  p.trail.push([5, 400]); assert.ok(CM.posternOpen(p)); p.floor.pos = CM.TOWN_AT.well.slice(); assert.ok(CM.wayPlaces(p).some((w) => w.name === "The postern"), "on the list once it opens"); p.floor.pos = CM.TOWN_POSTERN.slice();
+  p.use(); assert.strictEqual(p.floor.number, -1); assert.deepStrictEqual(p.floor.pos, CM.POSTERN_LAND, "out on the cliff path"); assert.ok(p.village.posternOpen, "kept open for every run after");
+  const land = p.floor; for (let y = CM.POSTERN_PATH[1]; y <= CM.POSTERN_PATH[3]; y++) { assert.strictEqual(land.grid[y][CM.POSTERN_PATH[0]], 0); assert.ok(CM.woodSafe(land, CM.POSTERN_PATH[0], y), "the path is safe"); }
+  assert.strictEqual(CM.woodPlace(land, ...CM.POSTERN_LAND), "the cliff path"); assert.strictEqual(land.grid[CM.POSTERN_PATH[3] + 1][CM.POSTERN_PATH[0]], 0, "it comes down to the fields");
+  assert.ok(p.pathTo(...CM.WOOD_GATE), "and the gate can be walked to from it");
+  p.use(); assert.strictEqual(p.floor.number, 0); assert.deepStrictEqual(p.floor.pos, CM.TOWN_POSTERN, "back in the Keep-yard");
+  const fresh = new CM.Game(); fresh.newGame("tower-4", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(CM.posternOpen(fresh), "open for the next run");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
