@@ -25,6 +25,8 @@ Object.assign(CM.UI.prototype, {
     this.openDialog("#dlg-craftgate");
   },
   ccToggleSatchel() { this.ccSatchelOpen = !this.ccSatchelOpen; this.ccChestKey = null; this.ccPick = null; this.ccScroll = 0; if (this.ccSatchelOpen && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
+  // (v12.6) a signpost's name, asked for when it is placed or right-clicked
+  openSignName(key) { const g = this.game, K = g.craftStore(), s = (K.signs || []).find((q) => `${q.x},${q.y},${q.z}` === key); if (!s) return; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); const inp = this.$("#sign-name"); inp.value = s.name; this.ccSignKey = key; this.openDialog("#dlg-sign"); setTimeout(() => { inp.focus(); inp.select(); }, 30); },
   ccOpenChest(key) { this.ccSatchelOpen = true; this.ccChestKey = key; this.ccPick = null; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
   ccCloseWindow() { this.ccSatchelOpen = false; this.ccChestKey = null; this.ccPick = null; },
   // a click in the window: a recipe makes it; in a chest's window a stack moves across whole; in the satchel the first
@@ -140,6 +142,10 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("treasure_side"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y, 16, 2); p.fillRect(x, y + 14, 16, 2); p.fillRect(x, y + 7, 16, 2); p.fillRect(x + 2, y, 2, 16); p.fillRect(x + 12, y, 2, 16); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y + 6, 2, 4);
     [x, y] = at("treasure_top"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y, 2, 16);
     [x, y] = at("lair"); noisy(x, y, "#241C22", 10); p.strokeStyle = "#C03020"; p.beginPath(); p.moveTo(x + 2, y + 3); p.lineTo(x + 7, y + 8); p.lineTo(x + 5, y + 13); p.moveTo(x + 7, y + 8); p.lineTo(x + 13, y + 6); p.moveTo(x + 10, y + 12); p.lineTo(x + 13, y + 14); p.stroke(); p.fillStyle = "#FF6030"; p.fillRect(x + 7, y + 7, 2, 2);
+    // (v12.6) the bedroll, the door, the signpost's board
+    [x, y] = at("bedroll"); noisy(x, y, "#4A7A3A", 14); p.fillStyle = "#6A4A2A"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#C8B080"; p.fillRect(x + 1, y + 6, 4, 4);
+    [x, y] = at("door"); noisy(x, y, "#8A6436", 8); p.fillStyle = "#5A3E1E"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillRect(x, y, 1, 16); p.fillRect(x + 15, y, 1, 16); p.fillRect(x + 7, y, 2, 16); p.fillStyle = "#C8A040"; p.fillRect(x + 11, y + 8, 2, 2);
+    [x, y] = at("sign"); noisy(x, y, "#B08D57", 8); p.fillStyle = "#5A3E1E"; for (const ly of [4, 7, 10]) p.fillRect(x + 3, y + ly, 10, 1);
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {

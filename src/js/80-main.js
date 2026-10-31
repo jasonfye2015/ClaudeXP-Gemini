@@ -120,6 +120,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("claudeablo", () => ui.openClaudeablo());
   game.on("pipe", () => ui.openBrosPipe());
   game.on("craftgate", () => ui.openCraftGate());
+  game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
   game.on("bros", (run) => { brosIn = {}; ui.brosStart(run); ui.refresh(); });
   game.on("brosLevel", (run) => { ui.brosStart(run); try { CM.audio.play("victory", 0.4); } catch (er) { /* */ } });                    // (the red portal: 76f-claudeablo.js)
@@ -769,6 +770,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
     if (e.button === 0) { if (game.craftAttack(false)) { craftDig = false; return; } craftDig = true; }
     else if (e.button === 2) { const use = game.craftUse(); if (use && use.kind === "treasure") { const got = game.craftOpenTreasure(use.key); if (got) { const [tx, , tz] = use.key.split(",").map(Number); ui.ccDirtyAt(tx, tz); try { CM.audio.play("chest", 0.6); CM.audio.play("coin", 0.5); } catch (er) { /* */ } } return; }
+      if (use && use.kind === "door") { const r = game.craftToggleDoor(use.key); if (r) { const [dx, , dz] = use.key.split(",").map(Number); ui.ccDirtyAt(dx, dz); try { CM.audio.play("hinge", 0.5); } catch (er) { /* */ } } return; }
+      if (use && use.kind === "bed") { const r = game.craftSleep(use.key); if (r === "slept") { try { CM.audio.play("snore", 0.5); } catch (er) { /* */ } for (let cx = 0; cx < CM.CC.CHUNKS; cx++) for (let cz = 0; cz < CM.CC.CHUNKS; cz++) ui.ccDirty.add(`${cx},${cz}`); } else if (r) game.craftSay(r); return; }
+      if (use && use.kind === "sign") { craftIn = {}; craftDig = false; ui.openSignName(use.key); return; }
+      if (use && use.kind === "homechest") { craftIn = {}; craftDig = false; ui.ccOpenChest(use.key); try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       const placed = game.craftPlace(); if (placed) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2], placed === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
   });

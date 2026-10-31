@@ -4354,6 +4354,42 @@ test("Claudecraft (v12.5): a gem wants a pick that would take silver and drops t
   assert.ok(g.setGems("ruby", "amulet").startsWith("The Smith")); assert.strictEqual(g.bag.filter((i) => i.kind === "gem").length, 0); assert.ok(g.bag.some((i) => i.kind === "amulet")); assert.ok(g.setGems("ruby", "ring").startsWith("Three"), "not without three");
 });
 
+test("Claudecraft (v12.6): a camp wants walls and a roof (a shut door is wall); sleeping there at night passes to the dawn and mends, and the bed is where the hero wakes from a fall; a homestead (chest, workbench and kiln by the bed) is heard of in town, once, and its chest opens from the gate; signposts are named for the compass", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-c", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, W = cr.world, w = cr.walker, h = cr.hero, K = g.craftStore(); for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  // a hut of cobblestone, five by five inside a seven by seven wall, three high, roofed, with a door, out in the open
+  let base = null; for (let x = 20; x < CC.SIZE - 20 && !base; x++) for (let z = 20; z < CC.SIZE - 20 && !base; z++) { const h0 = W.top(x, z); if (h0 > CC.SEA + 2 && Math.hypot(x - W.gate.x, z - W.gate.z) > 15) { let flat = true; for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) if (W.top(x + dx, z + dz) !== h0 || W.get(x + dx, h0, z + dz) === B.LEAVES) flat = false; if (flat) base = [x, h0, z]; } }
+  assert.ok(base, "a flat place"); const [bx, by, bz] = base;
+  for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) for (let dy = 1; dy <= 5; dy++) W.set(bx + dx, by + dy, bz + dz, B.AIR);
+  const wall = (on) => { for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) { const edge = Math.max(Math.abs(dx), Math.abs(dz)) === 3; for (let dy = 1; dy <= 3; dy++) if (edge) W.set(bx + dx, by + dy, bz + dz, B.COBBLE); if (on) W.set(bx + dx, by + 4, bz + dz, B.PLANKS); } };
+  wall(false); const bed = `${bx},${by + 1},${bz}`; W.set(bx, by + 1, bz, B.BEDROLL); w.pos = [bx + 1.5, by + 1.01, bz + 0.5];
+  g.clock = 18 * 60 + CM.CLOCK.day * 2;                                           // (midnight)
+  assert.ok(!g.craftEnclosed(bx, by + 1, bz), "no roof"); assert.ok(/walled/.test(g.craftSleep(bed)));
+  wall(true); assert.ok(g.craftEnclosed(bx, by + 1, bz), "walled and roofed");
+  W.set(bx + 3, by + 1, bz, B.AIR); W.set(bx + 3, by + 2, bz, B.AIR); assert.ok(!g.craftEnclosed(bx, by + 1, bz), "a gap");
+  W.set(bx + 3, by + 1, bz, B.DOOR); W.set(bx + 3, by + 2, bz, B.DOOR); assert.ok(g.craftEnclosed(bx, by + 1, bz), "a shut door is wall");
+  assert.strictEqual(g.craftToggleDoor(`${bx + 3},${by + 1},${bz}`), "open"); assert.strictEqual(W.get(bx + 3, by + 2, bz), B.DOOR_OPEN, "both halves"); assert.ok(!g.craftEnclosed(bx, by + 1, bz)); assert.ok(!CC.SOLID.has(B.DOOR_OPEN));
+  assert.strictEqual(g.craftToggleDoor(`${bx + 3},${by + 2},${bz}`), "shut");
+  // sleeping: at night, to the dawn, mended; by day, not tired
+  h.hp = 1; h.mp = 0; const day0 = CM.dayOf(g); assert.strictEqual(g.craftSleep(bed), "slept"); assert.strictEqual(h.hp, h.max); assert.strictEqual(h.mp, h.maxmp);
+  assert.ok(CM.CL.daylight(g) > 0.6, "dawn"); assert.ok(CM.dayOf(g) >= day0); assert.strictEqual(K.beds[CM.craftKey(h)], bed); assert.ok(/not tired/.test(g.craftSleep(bed)));
+  // a fall that kills: back on the bed, not by the gate
+  w.pos = [bx + 10.5, W.top(bx + 10, bz) + 1.01, bz + 0.5]; assert.ok(g.craftHurt(h.max * 3, "A fall")); assert.ok(Math.abs(w.pos[0] - (bx + 0.5)) < 0.01 && Math.abs(w.pos[2] - (bz + 0.5)) < 0.01, "on the bedroll");
+  // the homestead: chest, workbench and kiln by the bed - renown, once
+  const r0 = g.village.renown || 0; assert.ok(!g.craftHomestead(bed));
+  W.set(bx - 2, by + 1, bz - 2, B.CHEST); W.set(bx + 2, by + 1, bz - 2, B.WORKBENCH); W.set(bx - 2, by + 1, bz + 2, B.KILN);
+  assert.ok(g.craftHomestead(bed)); assert.strictEqual(g.village.renown, r0 + CM.CAMP.renown); assert.ok(g.craftHomestead(bed)); assert.strictEqual(g.village.renown, r0 + CM.CAMP.renown, "once");
+  cr.target = [[W.gate.x, W.gate.y, W.gate.z], null]; const u = g.craftUse(); assert.strictEqual(u.kind, "homechest"); assert.strictEqual(u.key, `${bx - 2},${by + 1},${bz - 2}`, "its chest, from the gate");
+  // breaking the door takes both halves; the bed broken is no longer slept in
+  cr.target = [[bx + 3, by + 1, bz], null]; assert.strictEqual(g.craftBreak(), B.DOOR); assert.strictEqual(W.get(bx + 3, by + 2, bz), B.AIR); assert.strictEqual(cr.satchel.count(B.DOOR), 1);
+  // signposts: placed, named, on the compass; gone when broken
+  cr.satchel.add(B.SIGN, 1); const si = cr.satchel.slots.findIndex((s2) => s2 && s2.b === B.SIGN); cr.satchel.swap(si, 0); w.slot = 0; let asked = null; g.on("signname", (k) => { asked = k; });
+  const sx = bx + 6, sz = bz + 6, sy = W.top(sx, sz) + 1; cr.target = [[sx, sy - 1, sz], [sx, sy, sz]]; w.pos = [bx + 0.5, by + 1.01, bz + 0.5]; assert.strictEqual(g.craftPlace(), B.SIGN); assert.strictEqual(asked, `${sx},${sy},${sz}`);
+  assert.ok(g.craftNameSign(asked, "The old well")); assert.strictEqual(K.signs.find((q) => q.x === sx).name, "The old well");
+  cr.target = [[sx, sy, sz], null]; assert.strictEqual(g.craftBreak(), B.SIGN); assert.strictEqual((K.signs || []).length, 0);
+  cr.target = [[bx, by + 1, bz], null]; g.craftBreak(); assert.ok(!K.beds[CM.craftKey(h)], "no bed to wake on");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

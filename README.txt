@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 6, v12.6: a home on the island
+  A bedroll (leaves and poles, at a workbench) laid in a room the hero has walled all round and roofed over - a door,
+  two high, opened and shut with the right button, counts as wall when shut - makes a camp. Sleeping there at night
+  (the right button on the bedroll) passes the night to the dawn and mends the hero fully, and from then on a fatal
+  fall wakes them on that bedroll rather than by the gate. A camp with a chest, a workbench and a kiln within reach of
+  the bed is a homestead: word of it reaches Caer Duin (+40 renown, once), and its chest can be opened from the
+  island's gate (the right button on the gate's stone). Signposts (planks and a pole) are named when placed and show
+  on the compass. All of it helps; none of it is needed.
+
 Claudecraft phase 5, v12.5: finds and places to go
   The island now hides things, the seed's: gems on the deep caverns' walls - the main game's own rubies, sapphires,
   sunstones and the odd diamond, which want a pick that would take silver; four old chests sunk in the sea and a few

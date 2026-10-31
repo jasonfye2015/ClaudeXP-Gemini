@@ -9,21 +9,21 @@ const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
 CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
   COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27,
-  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33 };
+  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33, BEDROLL: 34, DOOR: 35, DOOR_OPEN: 36, SIGN: 37 };
 const CB = CC.B;
 CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
   17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal",
   23: "Workbench", 24: "Kiln", 25: "Torch", 26: "Chest", 27: "Ladder", 107: "Pole", 111: "Copper bar", 112: "Iron bar", 113: "Silver bar", 114: "Gold bar", 115: "Star-iron bar",
-  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
+  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 34: "Bedroll", 35: "Door", 36: "Door", 37: "Signpost", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
   121: "Stone pick", 122: "Stone axe", 123: "Stone sword", 124: "Copper pick", 125: "Copper axe", 126: "Copper sword", 127: "Iron pick", 128: "Iron axe", 129: "Iron sword" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
-CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33]);
+CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER, 34, 36, 37]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33, 35]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6 };
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6, 34: 0.4, 35: 1.2, 36: 1.2, 37: 0.6 };
 CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN, 28, 29, 30, 31, 33]);
-CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER]);
+CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER, 35, 36, 37]);
 // (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
 // main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
 CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
@@ -50,6 +50,7 @@ CC.RECIPES = [
   { id: "workbench", makes: [CB.WORKBENCH, 1], needs: { [CB.PLANKS]: 4 } }, { id: "torch", makes: [CB.TORCH, 4], needs: { 107: 1, 106: 1 } },
   { id: "kiln", makes: [CB.KILN, 1], needs: { [CB.COBBLE]: 8 }, at: "bench" }, { id: "chest", makes: [CB.CHEST, 1], needs: { [CB.PLANKS]: 8 }, at: "bench" },
   { id: "ladder", makes: [CB.LADDER, 3], needs: { 107: 7 }, at: "bench" },
+  { id: "bedroll", makes: [CB.BEDROLL, 1], needs: { [CB.LEAVES]: 6, 107: 2 }, at: "bench" }, { id: "door", makes: [CB.DOOR, 1], needs: { [CB.PLANKS]: 6 }, at: "bench" }, { id: "sign", makes: [CB.SIGN, 2], needs: { [CB.PLANKS]: 2, 107: 1 }, at: "bench" },
   { id: "stonepick", makes: [121, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stoneaxe", makes: [122, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stonesword", makes: [123, 1], needs: { [CB.COBBLE]: 2, 107: 1 }, at: "bench" },
   { id: "copperpick", makes: [124, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "copperaxe", makes: [125, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "coppersword", makes: [126, 1], needs: { 111: 2, 107: 1 }, at: "bench" },
   { id: "ironpick", makes: [127, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironaxe", makes: [128, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironsword", makes: [129, 1], needs: { 112: 2, 107: 1 }, at: "bench" },
@@ -59,7 +60,7 @@ for (const [i, ore] of ["copper", "iron", "silver", "gold", "stariron"].entries(
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0 };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0, 36: CB.DOOR };
 CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
@@ -93,12 +94,12 @@ CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5
   item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29, workbench_top: 30, workbench_side: 31, kiln_side: 32, kiln_top: 33, torch: 34,
   chest_side: 35, chest_top: 36, ladder: 37, item_pole: 38, bar_copper: 39, bar_iron: 40, bar_silver: 41, bar_gold: 42, bar_stariron: 43, pick_stone: 44, axe_stone: 45, sword_stone: 46,
   pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52, gem_ruby: 55, gem_sapphire: 56, gem_sunstone: 57, gem_diamond: 58, treasure_side: 59, treasure_top: 60, lair: 61,
-  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65 };
+  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65, bedroll: 66, door: 67, sign: 68 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
   9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
   17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"],
   23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"],
-  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"] };
+  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"], 34: ["bedroll", "bedroll", "bedroll"], 35: ["door", "door", "door"], 36: ["door", "door", "door"], 37: ["sign", "sign", "sign"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -225,6 +226,7 @@ CC.World = class {
     for (let y = 0; y <= top; y++) for (let z = z0; z < z0 + CC.CHUNK; z++) { const base = (y * S + z) * S; for (let x = x0; x < x0 + CC.CHUNK; x++) {
       const b = bl[base + x]; if (b === CB.AIR) continue; const tl = tiles[b], out = b === CB.WATER || b === CB.GATE ? wa : op;
       if (b === CB.TORCH) { this.meshTorch(op, x, y, z, near); continue; }
+      if (b === CB.BEDROLL || b === CB.DOOR_OPEN || b === CB.SIGN) { this.meshShape(op, b, x, y, z, near); continue; }
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
@@ -233,6 +235,14 @@ CC.World = class {
       });
     } }
     return [new Float32Array(op), new Float32Array(wa)];
+  }
+  // (v12.6) a bedroll lies flat, an open door is a thin leaf against its frame, a signpost a post and a board
+  meshShape(out, b, x, y, z, near) {
+    const light = CC.packLight(this.skyAt(x, y, z), this.torchAt(x, y, z, near)), tile = (n) => { const t = CC.TILE[n]; return [(t % CC.ATLAS) / CC.ATLAS, Math.floor(t / CC.ATLAS) / CC.ROWS]; };
+    const box = (ax, ay, az, w, h, d, tn) => { const [u0, v0] = tile(tn); for (const [, sh, corners] of CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + ax + dx * w, y + ay + dy * h, z + az + dz * d, u0 + u / CC.ATLAS, v0 + v / CC.ROWS, sh, light); };
+    if (b === CB.BEDROLL) box(0.05, 0, 0.1, 0.9, 0.18, 0.8, "bedroll");
+    else if (b === CB.DOOR_OPEN) box(0, 0, 0, 0.14, 1, 1, "door");
+    else { box(0.44, 0, 0.44, 0.12, 0.85, 0.12, "planks"); box(0.08, 0.55, 0.45, 0.84, 0.4, 0.1, "sign"); }
   }
   // a torch: a stick an eighth wide, and a flame on it that the shader makes flicker (shade 3: gold)
   meshTorch(out, x, y, z, near) {

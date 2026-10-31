@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v12.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v12.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -716,7 +716,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "12.5", built: "2026-10-31" };
+const CM = window.CM = { version: "12.6", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -18903,21 +18903,21 @@ const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
 CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
   COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27,
-  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33 };
+  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33, BEDROLL: 34, DOOR: 35, DOOR_OPEN: 36, SIGN: 37 };
 const CB = CC.B;
 CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
   17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal",
   23: "Workbench", 24: "Kiln", 25: "Torch", 26: "Chest", 27: "Ladder", 107: "Pole", 111: "Copper bar", 112: "Iron bar", 113: "Silver bar", 114: "Gold bar", 115: "Star-iron bar",
-  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
+  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 34: "Bedroll", 35: "Door", 36: "Door", 37: "Signpost", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
   121: "Stone pick", 122: "Stone axe", 123: "Stone sword", 124: "Copper pick", 125: "Copper axe", 126: "Copper sword", 127: "Iron pick", 128: "Iron axe", 129: "Iron sword" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
-CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33]);
+CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER, 34, 36, 37]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33, 35]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6 };
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6, 34: 0.4, 35: 1.2, 36: 1.2, 37: 0.6 };
 CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN, 28, 29, 30, 31, 33]);
-CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER]);
+CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER, 35, 36, 37]);
 // (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
 // main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
 CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
@@ -18944,6 +18944,7 @@ CC.RECIPES = [
   { id: "workbench", makes: [CB.WORKBENCH, 1], needs: { [CB.PLANKS]: 4 } }, { id: "torch", makes: [CB.TORCH, 4], needs: { 107: 1, 106: 1 } },
   { id: "kiln", makes: [CB.KILN, 1], needs: { [CB.COBBLE]: 8 }, at: "bench" }, { id: "chest", makes: [CB.CHEST, 1], needs: { [CB.PLANKS]: 8 }, at: "bench" },
   { id: "ladder", makes: [CB.LADDER, 3], needs: { 107: 7 }, at: "bench" },
+  { id: "bedroll", makes: [CB.BEDROLL, 1], needs: { [CB.LEAVES]: 6, 107: 2 }, at: "bench" }, { id: "door", makes: [CB.DOOR, 1], needs: { [CB.PLANKS]: 6 }, at: "bench" }, { id: "sign", makes: [CB.SIGN, 2], needs: { [CB.PLANKS]: 2, 107: 1 }, at: "bench" },
   { id: "stonepick", makes: [121, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stoneaxe", makes: [122, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stonesword", makes: [123, 1], needs: { [CB.COBBLE]: 2, 107: 1 }, at: "bench" },
   { id: "copperpick", makes: [124, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "copperaxe", makes: [125, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "coppersword", makes: [126, 1], needs: { 111: 2, 107: 1 }, at: "bench" },
   { id: "ironpick", makes: [127, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironaxe", makes: [128, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironsword", makes: [129, 1], needs: { 112: 2, 107: 1 }, at: "bench" },
@@ -18953,7 +18954,7 @@ for (const [i, ore] of ["copper", "iron", "silver", "gold", "stariron"].entries(
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0 };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0, 36: CB.DOOR };
 CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
@@ -18987,12 +18988,12 @@ CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5
   item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29, workbench_top: 30, workbench_side: 31, kiln_side: 32, kiln_top: 33, torch: 34,
   chest_side: 35, chest_top: 36, ladder: 37, item_pole: 38, bar_copper: 39, bar_iron: 40, bar_silver: 41, bar_gold: 42, bar_stariron: 43, pick_stone: 44, axe_stone: 45, sword_stone: 46,
   pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52, gem_ruby: 55, gem_sapphire: 56, gem_sunstone: 57, gem_diamond: 58, treasure_side: 59, treasure_top: 60, lair: 61,
-  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65 };
+  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65, bedroll: 66, door: 67, sign: 68 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
   9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
   17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"],
   23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"],
-  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"] };
+  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"], 34: ["bedroll", "bedroll", "bedroll"], 35: ["door", "door", "door"], 36: ["door", "door", "door"], 37: ["sign", "sign", "sign"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -19119,6 +19120,7 @@ CC.World = class {
     for (let y = 0; y <= top; y++) for (let z = z0; z < z0 + CC.CHUNK; z++) { const base = (y * S + z) * S; for (let x = x0; x < x0 + CC.CHUNK; x++) {
       const b = bl[base + x]; if (b === CB.AIR) continue; const tl = tiles[b], out = b === CB.WATER || b === CB.GATE ? wa : op;
       if (b === CB.TORCH) { this.meshTorch(op, x, y, z, near); continue; }
+      if (b === CB.BEDROLL || b === CB.DOOR_OPEN || b === CB.SIGN) { this.meshShape(op, b, x, y, z, near); continue; }
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
@@ -19127,6 +19129,14 @@ CC.World = class {
       });
     } }
     return [new Float32Array(op), new Float32Array(wa)];
+  }
+  // (v12.6) a bedroll lies flat, an open door is a thin leaf against its frame, a signpost a post and a board
+  meshShape(out, b, x, y, z, near) {
+    const light = CC.packLight(this.skyAt(x, y, z), this.torchAt(x, y, z, near)), tile = (n) => { const t = CC.TILE[n]; return [(t % CC.ATLAS) / CC.ATLAS, Math.floor(t / CC.ATLAS) / CC.ROWS]; };
+    const box = (ax, ay, az, w, h, d, tn) => { const [u0, v0] = tile(tn); for (const [, sh, corners] of CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + ax + dx * w, y + ay + dy * h, z + az + dz * d, u0 + u / CC.ATLAS, v0 + v / CC.ROWS, sh, light); };
+    if (b === CB.BEDROLL) box(0.05, 0, 0.1, 0.9, 0.18, 0.8, "bedroll");
+    else if (b === CB.DOOR_OPEN) box(0, 0, 0, 0.14, 1, 1, "door");
+    else { box(0.44, 0, 0.44, 0.12, 0.85, 0.12, "planks"); box(0.08, 0.55, 0.45, 0.84, 0.4, 0.1, "sign"); }
   }
   // a torch: a stick an eighth wide, and a flame on it that the shader makes flicker (shade 3: gold)
   meshTorch(out, x, y, z, near) {
@@ -19365,6 +19375,103 @@ Object.assign(CM.Game.prototype, {
     }
   },
 });
+
+// ---- 64q-craftcamp.js ----
+"use strict";
+// A home on the island (the nineteenth update, phase 6 - v12.6). A bedroll (leaves and poles, at a workbench) laid in a
+// room the hero has walled and roofed - a door (two high; the right button opens and shuts it) counts as wall when
+// shut - makes a camp: sleeping there at night passes it to the dawn, mends the hero as a night's rest at home does,
+// and the bed becomes where they wake from a fall. A camp with a chest, a workbench and a kiln within reach of the bed
+// is a homestead: the town hears of it (renown, once), and its chest can be opened from the island's gate (the right
+// button on the gate's stone). Signposts are placed and named; the compass shows them. It is all a help, never a need.
+CM.CAMP = { room: 400, renown: 40 };
+{ const B = CM.CC.B, P = CM.Game.prototype;
+  Object.assign(P, {
+    // walled and roofed: the air round the bed is bounded (a shut door is wall) and none of it is under the open sky
+    craftEnclosed(x, y, z) {
+      const W = this.craft.world, seen = new Set([`${x},${y},${z}`]), todo = [[x, y, z]];
+      while (todo.length) {
+        const [a, b, c] = todo.pop(); if (!W.inside(a, b, c) || W.roof[c * CM.CC.SIZE + a] <= b) return false;
+        for (const [dx, dy, dz] of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+          const n = [a + dx, b + dy, c + dz], k = n.join(","); if (seen.has(k) || CM.CC.SOLID.has(W.get(...n))) continue;
+          seen.add(k); if (seen.size > CM.CAMP.room) return false; todo.push(n);
+        }
+      }
+      return true;
+    },
+    craftBedOk(key) { const cr = this.craft; if (!cr || !key) return false; const [x, y, z] = key.split(",").map(Number); return cr.world.get(x, y, z) === B.BEDROLL && this.craftEnclosed(x, y, z); },
+    // a night's sleep in a camp: to the dawn, mended, and the bed is where the hero wakes now
+    craftSleep(key) {
+      const cr = this.craft; if (!cr) return ""; const K = this.craftStore(), h = cr.hero, L = this.craftLife();
+      if (!this.craftBedOk(key)) return "Not safe to sleep here: a bedroll wants a room walled all round and roofed over (a shut door counts as wall).";
+      if (CM.CL.daylight(this) > 0.6) return `${h.name} is not tired: the bedroll is for the night.`;
+      if (L.mobs.some((o) => !o.wild && o.fellAt === null && Math.hypot(o.w.pos[0] - cr.walker.pos[0], o.w.pos[2] - cr.walker.pos[2]) < 10)) return "Not with monsters about.";
+      const [dawn] = CM.daylightOf ? CM.daylightOf(this) : [5, 21], m = CM.minuteOf(this), wake = Math.round((dawn + 1) * 60), wait = (wake - m + CM.CLOCK.day) % CM.CLOCK.day || CM.CLOCK.day;
+      this.clock = (this.clock || 0) + wait; L.night = false; L.mobs = L.mobs.filter((o) => o.wild); L.shots = [];
+      h.hp = h.max; h.mp = h.maxmp; if (this.cure) this.cure(h, CM.CURABLE || []);
+      K.beds = K.beds || {}; K.beds[CM.craftKey(h)] = key; this.tally.islandSleeps = (this.tally.islandSleeps || 0) + 1;
+      this.craftSay(`${h.name} sleeps in the camp until the dawn, and wakes mended. This is where they will wake now.`);
+      this.craftHomestead(key); this.saveVillage && this.saveVillage();
+      return "slept";
+    },
+    // a homestead: the camp, and a chest, a workbench and a kiln within reach of the bed - the town hears, once
+    craftHomestead(key) {
+      const cr = this.craft, K = this.craftStore(), W = cr.world, [x, y, z] = key.split(",").map(Number), R = CM.CC.REACH; let chest = null, bench = false, kiln = false;
+      for (let a = x - R; a <= x + R; a++) for (let b = y - 2; b <= y + 3; b++) for (let c = z - R; c <= z + R; c++) { const v = W.get(a, b, c); if (v === B.CHEST && !chest) chest = `${a},${b},${c}`; else if (v === B.WORKBENCH) bench = true; else if (v === B.KILN) kiln = true; }
+      if (!chest || !bench || !kiln || !this.craftBedOk(key)) return false;
+      const first = !K.homestead; K.homestead = { bed: key, chest };
+      if (first) { this.village.renown = (this.village.renown || 0) + CM.CAMP.renown; this.craftSay(`A homestead on the island! Word of it reaches Caer Duin (+${CM.CAMP.renown} renown). Its chest can be opened from the island's gate.`); this.tally.homestead = true; }
+      return true;
+    },
+    craftHomeChest() { const K = this.craftStore(), cr = this.craft; if (!K.homestead || !cr) return null; const [x, y, z] = K.homestead.chest.split(",").map(Number); return cr.world.get(x, y, z) === B.CHEST ? K.homestead.chest : null; },
+    // a door: shut, it is wall; the right button opens and shuts both its halves
+    craftToggleDoor(key) {
+      const W = this.craft.world, [x, y, z] = key.split(",").map(Number), v = W.get(x, y, z); if (v !== B.DOOR && v !== B.DOOR_OPEN) return false;
+      const to = v === B.DOOR ? B.DOOR_OPEN : B.DOOR, p = this.craft.walker.pos;
+      if (to === B.DOOR && Math.floor(p[0]) === x && Math.floor(p[2]) === z && Math.abs(Math.floor(p[1]) - y) <= 1) return false;   // (not shut on the hero)
+      for (const dy of [-1, 0, 1]) { const u = W.get(x, y + dy, z); if (u === B.DOOR || u === B.DOOR_OPEN) W.set(x, y + dy, z, to); }
+      return to === B.DOOR_OPEN ? "open" : "shut";
+    },
+    craftNameSign(key, name) { const K = this.craftStore(), s = (K.signs || []).find((q) => `${q.x},${q.y},${q.z}` === key); if (!s) return false; s.name = String(name || "").trim().slice(0, 24) || s.name; this.saveVillage && this.saveVillage(); return true; },
+  });
+  // the right button: a door, a bed, a signpost, the gate's stone (the homestead's chest), after the chests and stations
+  const use0 = P.craftUse;
+  P.craftUse = function () {
+    const u = use0.call(this); if (u) return u; const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return null; const b = cr.world.get(...hit), key = hit.join(",");
+    if (b === B.DOOR || b === B.DOOR_OPEN) return { kind: "door", key };
+    if (b === B.BEDROLL) return { kind: "bed", key };
+    if (b === B.SIGN) return { kind: "sign", key };
+    if ((b === B.BASALT || b === B.GATE) && this.craftHomeChest()) return { kind: "homechest", key: this.craftHomeChest() };
+    return null;
+  };
+  // placing: a door takes two blocks of room; a signpost is written down for the compass
+  const place0 = P.craftPlace;
+  P.craftPlace = function () {
+    const cr = this.craft, prev = cr && cr.target[1], slot = cr && cr.satchel.slots[cr.walker.slot];
+    if (prev && slot && slot.b === B.DOOR && cr.world.get(prev[0], prev[1] + 1, prev[2]) !== B.AIR) { this.craftSay("A door wants two blocks of room."); return false; }
+    const b = place0.call(this); if (!b) return b; const [x, y, z] = prev;
+    if (b === B.DOOR) cr.world.set(x, y + 1, z, B.DOOR);
+    if (b === B.SIGN) { const K = this.craftStore(); K.signs = K.signs || []; K.signs.push({ x, y, z, name: `Signpost ${K.signs.length + 1}` }); this.emit("signname", `${x},${y},${z}`); }
+    return b;
+  };
+  // breaking: a door's other half goes with it; a signpost leaves the compass; a bed is no longer slept in
+  const break0 = P.craftBreak;
+  P.craftBreak = function () {
+    const cr = this.craft, hit = cr && cr.target[0], was = hit ? cr.world.get(...hit) : 0, b = break0.call(this); if (!b) return b;
+    const [x, y, z] = hit, K = this.craftStore();
+    if (was === B.DOOR || was === B.DOOR_OPEN) for (const dy of [-1, 1]) { const u = cr.world.get(x, y + dy, z); if (u === B.DOOR || u === B.DOOR_OPEN) cr.world.set(x, y + dy, z, B.AIR); }
+    if (was === B.SIGN) K.signs = (K.signs || []).filter((q) => !(q.x === x && q.y === y && q.z === z));
+    if (was === B.BEDROLL && K.beds) for (const k of Object.keys(K.beds)) if (K.beds[k] === hit.join(",")) delete K.beds[k];
+    return b;
+  };
+  // a fall that kills: from a camp's bed, the hero wakes there rather than by the gate
+  const hurt0 = P.craftHurt;
+  P.craftHurt = function (dmg, why) {
+    const cr = this.craft, K = this.craftStore(), bed = cr && K.beds && K.beds[CM.craftKey(cr.hero)], died = hurt0.call(this, dmg, why);
+    if (died && bed && this.craftBedOk(bed)) { const [x, y, z] = bed.split(",").map(Number); cr.walker.pos = [x + 0.5, y + 0.01, z + 0.5]; this.craftSay("...in the camp, on the bedroll, not by the gate."); }
+    return died;
+  };
+}
 
 // ---- 65-village.js ----
 "use strict";
@@ -21005,6 +21112,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-sign"><div class="box"><h2>A signpost</h2><p class="small">What does it say? (The compass on the island shows it by this name.)</p><input type="text" id="sign-name" maxlength="24" style="width:100%"><div class="row"><button id="btn-sign-ok">Write it</button><button class="close">Leave it</button></div></div></div>
 <div class="dialog" id="dlg-craftgate"><div class="box"><h2>The Neather Gate</h2><p class="lore">Rune-cut basalt, gold at the edges, and a violet light inside that moves like water. Beyond it, faintly, birdsong and a blue sky. One of you could step through.</p><div id="craft-who"></div><div class="small" id="craft-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-bros"><div class="box"><h2>The pipe</h2><p class="lore">A great bronze pipe, green with age, and from far down it a very cheerful tune and the sound of coins. One of you could climb in.</p><div id="bros-who"></div><div class="small" id="bros-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-claudeablo"><div class="box"><h2>The red portal</h2><p class="lore">Through the red light: a village of thatch and timber under a dark cathedral, and the smell of rain. Haven. One of you may step through.</p><div id="ablo-who"></div><div class="small" id="ablo-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
@@ -21123,6 +21231,8 @@ CM.UI = class {
     this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") this.openCalendar(); });
     game.on("building", (id) => { if (id === "casino") this.openCasino(); else if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
+    this.$("#btn-sign-ok").addEventListener("click", () => { game.craftNameSign(this.ccSignKey, this.$("#sign-name").value); this.closeDialogs(); });
+    this.$("#sign-name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); game.craftNameSign(this.ccSignKey, this.$("#sign-name").value); this.closeDialogs(); } e.stopPropagation(); });
     this.$("#btn-guild-build").addEventListener("click", () => { this.$("#guild-note").textContent = game.build("guildhall") || "The guildhall rises a level."; this.openGuild(true); });
     this.$("#btn-home-build").addEventListener("click", () => { this.$("#home-note").textContent = game.build("home") || "The house rises a level."; this.openHome(true); });
     this.$("#btn-building-build").addEventListener("click", () => { const P = CM.TOWN_PLOTS[this.buildingId] || {}; if (P.village) { this.$("#building-note").textContent = game.build(P.village) || `${P.name} rises a level.`; this.openBuilding(this.buildingId, true); } });
@@ -24553,6 +24663,8 @@ Object.assign(CM.UI.prototype, {
     this.openDialog("#dlg-craftgate");
   },
   ccToggleSatchel() { this.ccSatchelOpen = !this.ccSatchelOpen; this.ccChestKey = null; this.ccPick = null; this.ccScroll = 0; if (this.ccSatchelOpen && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
+  // (v12.6) a signpost's name, asked for when it is placed or right-clicked
+  openSignName(key) { const g = this.game, K = g.craftStore(), s = (K.signs || []).find((q) => `${q.x},${q.y},${q.z}` === key); if (!s) return; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); const inp = this.$("#sign-name"); inp.value = s.name; this.ccSignKey = key; this.openDialog("#dlg-sign"); setTimeout(() => { inp.focus(); inp.select(); }, 30); },
   ccOpenChest(key) { this.ccSatchelOpen = true; this.ccChestKey = key; this.ccPick = null; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); },
   ccCloseWindow() { this.ccSatchelOpen = false; this.ccChestKey = null; this.ccPick = null; },
   // a click in the window: a recipe makes it; in a chest's window a stack moves across whole; in the satchel the first
@@ -24668,6 +24780,10 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("treasure_side"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y, 16, 2); p.fillRect(x, y + 14, 16, 2); p.fillRect(x, y + 7, 16, 2); p.fillRect(x + 2, y, 2, 16); p.fillRect(x + 12, y, 2, 16); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y + 6, 2, 4);
     [x, y] = at("treasure_top"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y, 2, 16);
     [x, y] = at("lair"); noisy(x, y, "#241C22", 10); p.strokeStyle = "#C03020"; p.beginPath(); p.moveTo(x + 2, y + 3); p.lineTo(x + 7, y + 8); p.lineTo(x + 5, y + 13); p.moveTo(x + 7, y + 8); p.lineTo(x + 13, y + 6); p.moveTo(x + 10, y + 12); p.lineTo(x + 13, y + 14); p.stroke(); p.fillStyle = "#FF6030"; p.fillRect(x + 7, y + 7, 2, 2);
+    // (v12.6) the bedroll, the door, the signpost's board
+    [x, y] = at("bedroll"); noisy(x, y, "#4A7A3A", 14); p.fillStyle = "#6A4A2A"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#C8B080"; p.fillRect(x + 1, y + 6, 4, 4);
+    [x, y] = at("door"); noisy(x, y, "#8A6436", 8); p.fillStyle = "#5A3E1E"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillRect(x, y, 1, 16); p.fillRect(x + 15, y, 1, 16); p.fillRect(x + 7, y, 2, 16); p.fillStyle = "#C8A040"; p.fillRect(x + 11, y + 8, 2, 2);
+    [x, y] = at("sign"); noisy(x, y, "#B08D57", 8); p.fillStyle = "#5A3E1E"; for (const ly of [4, 7, 10]) p.fillRect(x + 3, y + ly, 10, 1);
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
@@ -25011,6 +25127,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("claudeablo", () => ui.openClaudeablo());
   game.on("pipe", () => ui.openBrosPipe());
   game.on("craftgate", () => ui.openCraftGate());
+  game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
   game.on("bros", (run) => { brosIn = {}; ui.brosStart(run); ui.refresh(); });
   game.on("brosLevel", (run) => { ui.brosStart(run); try { CM.audio.play("victory", 0.4); } catch (er) { /* */ } });                    // (the red portal: 76f-claudeablo.js)
@@ -25660,6 +25777,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
     if (e.button === 0) { if (game.craftAttack(false)) { craftDig = false; return; } craftDig = true; }
     else if (e.button === 2) { const use = game.craftUse(); if (use && use.kind === "treasure") { const got = game.craftOpenTreasure(use.key); if (got) { const [tx, , tz] = use.key.split(",").map(Number); ui.ccDirtyAt(tx, tz); try { CM.audio.play("chest", 0.6); CM.audio.play("coin", 0.5); } catch (er) { /* */ } } return; }
+      if (use && use.kind === "door") { const r = game.craftToggleDoor(use.key); if (r) { const [dx, , dz] = use.key.split(",").map(Number); ui.ccDirtyAt(dx, dz); try { CM.audio.play("hinge", 0.5); } catch (er) { /* */ } } return; }
+      if (use && use.kind === "bed") { const r = game.craftSleep(use.key); if (r === "slept") { try { CM.audio.play("snore", 0.5); } catch (er) { /* */ } for (let cx = 0; cx < CM.CC.CHUNKS; cx++) for (let cz = 0; cz < CM.CC.CHUNKS; cz++) ui.ccDirty.add(`${cx},${cz}`); } else if (r) game.craftSay(r); return; }
+      if (use && use.kind === "sign") { craftIn = {}; craftDig = false; ui.openSignName(use.key); return; }
+      if (use && use.kind === "homechest") { craftIn = {}; craftDig = false; ui.ccOpenChest(use.key); try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       const placed = game.craftPlace(); if (placed) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2], placed === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
   });
