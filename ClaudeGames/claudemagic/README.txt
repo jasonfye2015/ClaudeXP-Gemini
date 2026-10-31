@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Wishing Claw (the thirty-sixth big update - v14.6)
+  Three claw machines on the Gilded Joker's floor (src/js/64zm-claw.js; 76zc-claw.js) - the Copper Claw (25 gold a
+  try), the Silver Claw (120, from floor 4) and the Gold Claw (400, from floor 10) - each with its own pit of prizes kept
+  between visits: gold pouches and hoards, card capsules, mystery eggs, weapons, armour, shields and helms. Hold to
+  slide the claw right, let go; hold to send it back, let go, and it drops (its shadow on the floor shows where). It
+  grips the nearest prize, more surely over the middle and the lighter the prize, and may lose it on the way to the
+  chute - though a slip over the chute still wins. Gold is paid out; a card capsule gives a Claudescryption card (common,
+  a stronger common, or rare by the machine); gear is real gear for the party's pack, made for floor 3, 9 or 18 by the
+  machine, the dearer ones more often enchanted.
+
 Runestep Pyramid (the thirty-fifth big update - v14.5)
   A hopping game on the Gilded Joker's floor (src/js/64zl-runestep.js; 76zb-runestep.js): a pyramid of twenty-eight
   rune-cubes seen from the corner, and a glimmerkin hopping diagonally to light every cube's top - one hop each on

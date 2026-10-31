@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Wishing Claw (v14.6)
+
+The three glass cases by the Joker's door came from a travelling fair that never came back for them. The house fills
+them from its own vaults - gold it has won, cards it has taken in, and steel pawned by adventurers who went down
+and did not come up. The brass claws are old and stubborn. The attendant swears they are not rigged, only particular.
+
 ## Runestep Pyramid (v14.5)
 
 The pyramid in the back room was a temple's once, small enough to be carried off in a cart - every cube carved with a

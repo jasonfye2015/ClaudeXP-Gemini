@@ -4988,6 +4988,29 @@ test("Runestep Pyramid: hops light cubes (one step, then two, then toggling); of
   assert.strictEqual(owned(), o0 + 2);
 });
 
+test("the Wishing Claw: each machine keeps a stocked pit clear of the chute; a try costs its price; hold to go right, then back, and it drops; it grips the prize under it (surely over the middle, never far off), may slip on the way, and a slip over the chute still wins; gold, a card or real gear comes out; the silver and gold machines wait for a deep enough party", () => {
+  const CM = load(), CW = CM.CW, g = new CM.Game(); g.newGame("cw-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000;
+  const M = g.cwMachine("copper"); assert.ok(M.pit.length >= CW.restock); assert.ok(M.pit.every((q) => !CW.inChute(q.x, q.z)));
+  assert.ok(g.cwStart("silver").error, "silver locked"); g.trail = [[12, 0]]; assert.ok(g.cwOpen("gold"));
+  // steering: hold, let go, hold, let go
+  const gold0 = g.gold; assert.ok(!g.cwStart("copper").error); assert.strictEqual(gold0 - g.gold, CW.TIERS.copper.price); const T = g.cwLive;
+  T.input(true); for (let k = 0; k < 60; k++) T.tick(CW.step); assert.ok(T.x > CW.home.x + 1.5); T.input(false); T.tick(CW.step); assert.strictEqual(T.stage, "z");
+  T.input(true); for (let k = 0; k < 30; k++) T.tick(CW.step); assert.ok(T.z > CW.home.z + 0.5); T.input(false); T.tick(CW.step); assert.strictEqual(T.stage, "drop");
+  // gripping: right over a light prize, with no slipping, it comes home
+  const pit = [{ id: 1, kind: "pouch", x: 5, z: 3, rot: 0 }], A = new CW.Try(pit, 5); A.stage = "drop"; A.x = 5; A.z = 3; assert.ok(A.aim().chance > 0.8); A.rnd.chance = (p) => p > 0.5; A.update(20); assert.ok(A.result.prize, "won"); assert.strictEqual(pit.length, 0);
+  const B = new CW.Try([{ id: 2, kind: "pouch", x: 8, z: 4, rot: 0 }], 6); B.stage = "drop"; B.x = 5; B.z = 3; assert.strictEqual(B.aim().chance, 0, "too far"); B.update(20); assert.strictEqual(B.result.prize, null);
+  // a slip over the chute still wins; a slip elsewhere leaves it in the pit
+  const C = new CW.Try([{ id: 3, kind: "hoard", x: 3, z: 2, rot: 0 }], 7); C.stage = "drop"; C.x = 3; C.z = 2; let calls = 0; C.rnd.chance = () => { calls++; return calls === 1 || C.x < 1.5; }; C.update(20); assert.ok(C.result.prize && C.result.lucky, "dropped into the chute");
+  const D = new CW.Try([{ id: 4, kind: "armor", x: 8, z: 5, rot: 0 }], 8); D.stage = "drop"; D.x = 8; D.z = 5; calls = 0; D.rnd.chance = () => { calls++; return calls === 1 || calls === 3; }; D.update(20); assert.strictEqual(D.result.prize, null); assert.strictEqual(D.pit.length, 1, "back in the pit");
+  // what comes out: gold, a card, gear in the pack
+  const settle = (kind, tier) => { g.cwLive = new CW.Try([], 1); g.cwLive.tier = tier; g.cwLive.stage = "done"; g.cwLive.result = { prize: { id: 900 + (settle.n = (settle.n || 0) + 1), kind } }; return g.cwSettle(); };
+  const gb = g.gold, o1 = settle("pouch", "copper"); assert.ok(o1.gold > 0 && g.gold - gb === o1.gold);
+  const owned = () => Object.values(g.cards().owned).reduce((x, y) => x + y, 0), c0 = owned(); const o2 = settle("card", "gold"); assert.ok(CM.CARD_RARES.includes(o2.card)); assert.strictEqual(owned(), c0 + 1);
+  const bag0 = g.bag.length, o3 = settle("weapon", "silver"); assert.strictEqual(o3.item.kind, "weapon"); assert.strictEqual(g.bag.length, bag0 + 1); const o4 = settle("armor", "copper"); assert.strictEqual(o4.item.kind, "armor"); assert.ok(settle("egg", "copper").item);
+  // the pit is restocked between visits
+  M.pit.length = 3; assert.ok(g.cwMachine("copper").pit.length >= CW.restock);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
