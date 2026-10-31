@@ -89,7 +89,7 @@ Principles, kept throughout:
 - Tests: each kind carried home lands as the main game's own thing; the builders' credit; a pick worn there is worn
   at home.
 
-## Phase 5 (v12.5): finds and places to go
+## Phase 5 (v12.5): finds and places to go - done
 - **Buried and hidden finds**: gem blocks in the deep caverns (garnet, sapphire, emerald) - sellable at home, and
   three of a kind make a ring or an amulet at the Smith (CM.makeItem of that slot); **sunken chests** in the sea and
   **ruins** on the hills, each a small built structure with a chest (gold, a thing by depth, a map fragment).

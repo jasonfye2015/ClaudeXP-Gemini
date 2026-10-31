@@ -131,6 +131,15 @@ Object.assign(CM.UI.prototype, {
       [x, y] = at(`axe_${tier}`); p.clearRect(x, y, 16, 16); p.strokeStyle = "#7A5A30"; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 4, y + 14); p.lineTo(x + 11, y + 4); p.stroke(); p.lineWidth = 1; p.fillStyle = col; p.beginPath(); p.moveTo(x + 9, y + 2); p.lineTo(x + 14, y + 4); p.lineTo(x + 13, y + 9); p.lineTo(x + 10, y + 6); p.closePath(); p.fill();
       [x, y] = at(`sword_${tier}`); p.clearRect(x, y, 16, 16); p.strokeStyle = col; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 6, y + 10); p.lineTo(x + 14, y + 2); p.stroke(); p.strokeStyle = "#7A5A30"; p.beginPath(); p.moveTo(x + 2, y + 14); p.lineTo(x + 6, y + 10); p.stroke(); p.strokeStyle = "#C8A040"; p.beginPath(); p.moveTo(x + 4, y + 8); p.lineTo(x + 8, y + 12); p.stroke(); p.lineWidth = 1;
     }
+    // (v12.5) gems in the rock, the old chests, the lairs, and the gems' icons
+    for (const [gname, col, hi] of [["ruby", "#D02838", "#FF8090"], ["sapphire", "#2850D0", "#90B0FF"], ["sunstone", "#E89820", "#FFE080"], ["diamond", "#C8F0FF", "#FFFFFF"]]) {
+      [x, y] = at(`gem_${gname}`); noisy(x, y, "#5A5A62", 18); const r2 = new CM.Random(gname.length * 7 + 1);
+      for (let k = 0; k < 4; k++) { const ox = r2.int(2, 11), oy = r2.int(2, 11); p.fillStyle = col; p.beginPath(); p.moveTo(x + ox + 1.5, y + oy); p.lineTo(x + ox + 3, y + oy + 2); p.lineTo(x + ox + 1.5, y + oy + 4); p.lineTo(x + ox, y + oy + 2); p.closePath(); p.fill(); p.fillStyle = hi; p.fillRect(x + ox + 1, y + oy + 1, 1, 1); }
+      [x, y] = at(`item_${gname}`); p.clearRect(x, y, 16, 16); p.fillStyle = col; p.beginPath(); p.moveTo(x + 8, y + 2); p.lineTo(x + 14, y + 7); p.lineTo(x + 8, y + 14); p.lineTo(x + 2, y + 7); p.closePath(); p.fill(); p.fillStyle = hi; p.beginPath(); p.moveTo(x + 8, y + 3); p.lineTo(x + 11, y + 6); p.lineTo(x + 8, y + 8); p.lineTo(x + 5, y + 6); p.closePath(); p.fill();
+    }
+    [x, y] = at("treasure_side"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y, 16, 2); p.fillRect(x, y + 14, 16, 2); p.fillRect(x, y + 7, 16, 2); p.fillRect(x + 2, y, 2, 16); p.fillRect(x + 12, y, 2, 16); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y + 6, 2, 4);
+    [x, y] = at("treasure_top"); noisy(x, y, "#5A3A20", 10); p.fillStyle = "#3A3A40"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#E0B040"; p.fillRect(x + 7, y, 2, 16);
+    [x, y] = at("lair"); noisy(x, y, "#241C22", 10); p.strokeStyle = "#C03020"; p.beginPath(); p.moveTo(x + 2, y + 3); p.lineTo(x + 7, y + 8); p.lineTo(x + 5, y + 13); p.moveTo(x + 7, y + 8); p.lineTo(x + 13, y + 6); p.moveTo(x + 10, y + 12); p.lineTo(x + 13, y + 14); p.stroke(); p.fillStyle = "#FF6030"; p.fillRect(x + 7, y + 7, 2, 2);
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
@@ -225,6 +234,19 @@ Object.assign(CM.UI.prototype, {
       for (const s of L.shots) { const s2 = s.kind === "bolt" ? 0.22 : 0.12; for (const [, sh, corners] of CM.CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) o2.push(s.x - s2 / 2 + dx * s2, s.y - s2 / 2 + dy * s2, s.z - s2 / 2 + dz * s2, tx + u / CM.CC.ATLAS, ty + v / CM.CC.ROWS, s.kind === "bolt" ? 3.5 : 1.0 + sh * 0.3, 255); }
       if (!this.ccShotBuf) this.ccShotBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.ccShotBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(o2), gl.DYNAMIC_DRAW); draw(this.ccShotBuf, o2.length / 7); }
   },
+  // (v12.5) the compass across the top: north, east, south and west, the gate, and the vault once the map is whole
+  ccCompass(p, cr, W, H) {
+    const g = this.game, w = cr.walker, cx = W / 2, top = H - 136, half = Math.min(170, W / 2 - 40); if (half < 60 || this.ccSatchelOpen) return;
+    p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(cx - half - 6, top, half * 2 + 12, 22); p.strokeStyle = "rgba(200,160,64,0.8)"; p.lineWidth = 1; p.strokeRect(cx - half - 6 + 0.5, top + 0.5, half * 2 + 11, 21);
+    const at = (a) => { let rel = a - w.yaw; rel = ((rel + 540) % 360) - 180; return Math.abs(rel) > 90 ? null : cx - (rel / 90) * half; };
+    p.font = "bold 11px Tahoma, sans-serif"; p.textAlign = "center";
+    for (const [a, t] of [[0, "N"], [-90, "E"], [180, "S"], [90, "W"], [-45, "NE"], [-135, "SE"], [135, "SW"], [45, "NW"]]) { const x = at(a); if (x !== null) { p.fillStyle = t.length > 1 ? "rgba(255,255,255,0.45)" : "#FFF"; p.fillText(t, x, top + 15); } }
+    const mark = (tx, tz, col, label) => { const a = (Math.atan2(-(tx - w.pos[0]), -(tz - w.pos[2])) * 180) / Math.PI, x = at(a); const d = Math.round(Math.hypot(tx - w.pos[0], tz - w.pos[2])); if (x === null) return; p.fillStyle = col; p.beginPath(); p.moveTo(x, top + 22); p.lineTo(x - 5, top + 30); p.lineTo(x + 5, top + 30); p.closePath(); p.fill(); p.font = "10px Tahoma, sans-serif"; p.fillText(`${label} ${d}`, x, top + 41); };
+    const gt = cr.world.gate; mark(gt.x + 2, gt.z, "#B070FF", "gate");
+    const v = g.craftMap && g.craftMap(); if (v) mark(v.x + 0.5, v.z + 0.5, "#F0C040", "the vault");
+    for (const s of (g.craftStore().signs || [])) mark(s.x + 0.5, s.z + 0.5, "#E0E0E0", s.name);
+    p.textAlign = "left";
+  },
   // the HUD on a 2D canvas over the GL one: the crosshair, the hotbar, where you stand, a word of help
   ccHud(cr, now) {
     let h = this.$("#crafthud"); if (!h) { h = document.createElement("canvas"); h.id = "crafthud"; this.$("#view").appendChild(h); }
@@ -252,6 +274,7 @@ Object.assign(CM.UI.prototype, {
     p.fillText("WASD walk - mouse look - Space jump - Shift sprint", W - 8, 32); p.fillText("hold left: break (or strike) - F: shoot / strike - right: place / use - I: satchel", W - 8, 46); p.fillText(`Q drink (${this.game.potionCount ? this.game.potionCount() : 0} potions) - G eat - the gate's light: home`, W - 8, 60); p.textAlign = "left";
     if (this.ccSatchelOpen) { this.ccWindow(p, atlas, cr, W, H);
     } else if (document.pointerLockElement !== this.$("#craftcanvas")) { p.font = "bold 15px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText("Click to play", W / 2, H / 2 + 34); p.textAlign = "left"; }
+    this.ccCompass(p, cr, W, H);
     const recent = (cr.says || []).filter(([t]) => now - t < 4000).slice(-3);
     recent.forEach(([t, msg], k) => { p.font = "bold 14px Tahoma, sans-serif"; p.textAlign = "center"; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillText(msg, W / 2 + 1, H * 0.22 + k * 20 + 1); p.fillStyle = `rgba(255,240,200,${Math.min(1, (4000 - (now - t)) / 800)})`; p.fillText(msg, W / 2, H * 0.22 + k * 20); p.textAlign = "left"; });
   },

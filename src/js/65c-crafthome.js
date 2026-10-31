@@ -54,6 +54,19 @@ Object.assign(CM.Game.prototype, {
     this.craftSay("Nothing to eat: a ration from the bag, or meat from the island's deer and boar."); return "";
   },
 });
+// (v12.5) at the Smith: three like gems from the island (the main game's own) set in a ring or an amulet
+CM.GEM_JEWEL = { ruby: 14, sapphire: 14, sunstone: 16, diamond: 24 };
+Object.assign(CM.Game.prototype, {
+  setGems(gem, slot) {
+    const rows = this.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "gem" && it.gem === gem);
+    if (rows.length < 3) return `Three like gems for a ${slot}: the bag has ${rows.length} ${gem}.`;
+    if (!["ring", "amulet"].includes(slot)) return "A ring or an amulet.";
+    for (const [, i] of rows.slice(0, 3).reverse()) this.bag.splice(i, 1);
+    const depth = CM.GEM_JEWEL[gem] || 14, R = new CM.Random(CM.hashSeed(`${this.seed}:gemjewel:${(this.tally.gemJewels || 0)}:${gem}`)); let it = CM.makeItem(depth, R, slot); if (CM.affix) it = CM.affix(it, depth + 2, R) || it; it.unknown = false;
+    this.tally.gemJewels = (this.tally.gemJewels || 0) + 1; this.gain([it], "smith"); this.emit("change");
+    return `The Smith sets three ${CM.GEMS[gem].name.toLowerCase()}s in ${/^[aeiou]/i.test(it.name) ? "an" : "a"} ${it.name}.`;
+  },
+});
 // the village's builds take the builders' credit first
 { const build0 = CM.Game.prototype.build, renown0 = CM.Game.prototype.renown;
   CM.Game.prototype.build = function (id) {

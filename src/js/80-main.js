@@ -768,7 +768,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.ccSatchelOpen) { ui.ccSatchelClick(e); return; }
     if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
     if (e.button === 0) { if (game.craftAttack(false)) { craftDig = false; return; } craftDig = true; }
-    else if (e.button === 2) { const use = game.craftUse(); if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
+    else if (e.button === 2) { const use = game.craftUse(); if (use && use.kind === "treasure") { const got = game.craftOpenTreasure(use.key); if (got) { const [tx, , tz] = use.key.split(",").map(Number); ui.ccDirtyAt(tx, tz); try { CM.audio.play("chest", 0.6); CM.audio.play("coin", 0.5); } catch (er) { /* */ } } return; }
+      if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       const placed = game.craftPlace(); if (placed) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2], placed === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
   });
   window.addEventListener("mouseup", (e) => { if (e.button === 0) craftDig = false; });
@@ -825,6 +826,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.kind === "hurt") { CM.audio.play("hurt", 0.6); ui.ccHurtAt = now; if (game.craft && game.craft.hero.hp === Math.max(1, Math.round(game.craft.hero.max * 0.1))) ui.ccDeadAt = now; }
       else if (e.kind === "shoot") CM.audio.play(e.shot === "arrow" ? "miss" : "zap", 0.5);
       else if (e.kind === "monshoot") CM.audio.play("miss", 0.35);
+      else if (e.kind === "lairdown") CM.audio.play("shatter", 0.6);
+      else if (e.kind === "spawn") CM.audio.play("monster", 0.3);
     } catch (er) { /* */ } }
   }
   function craftFrame(now, dt) {

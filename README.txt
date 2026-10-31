@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claudecraft phase 5, v12.5: finds and places to go
+  The island now hides things, the seed's: gems on the deep caverns' walls - the main game's own rubies, sapphires,
+  sunstones and the odd diamond, which want a pick that would take silver; four old chests sunk in the sea and a few
+  ruins on the hills, each with an old chest (a right click opens it: gold and a thing by its depth, and a scrap of
+  map); and three lairs in the deepest caverns that send out the deep's monsters while the hero is near, until they are
+  broken - and then leave an old chest of their own. Four scraps make a map, and a compass above the hotbar marks the
+  place under the island's highest hill where the vault lies (the gate is always on it). At the Smith, three like gems
+  are set in a ring or an amulet.
+
 Claudecraft phase 4, v12.4: the way home, and what comes with it
   Out through the gate, what has a meaning at home comes home as the main game's own: ore chunks, bars and charcoal
   into the bag (for the Smith), deer and boar meat (for the cook), the island's gold into the purse and its finds into

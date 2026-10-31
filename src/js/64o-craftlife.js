@@ -112,6 +112,7 @@ Object.assign(CM.Game.prototype, {
     L.minutes = (L.minutes || 0) + dt * CM.CL.minute; const whole = Math.floor(L.minutes); if (whole) { L.minutes -= whole; this.clock = (this.clock || 0) + whole; }   // (a minute a second, the game's own clock, in whole minutes)
     const night = CM.isNight(this); if (night && !L.night) { K.nights = (K.nights || 0) + 1; this.craftSay("Night falls on the island. Things stir in the dark."); } if (!night && L.night) this.craftSay("Dawn: the island's monsters go back into the dark."); L.night = night;
     if ((L.spawnT -= dt) <= 0) { L.spawnT = CM.CL.spawnEvery; this.craftSpawn(); }
+    this.craftLairs(dt);
     for (const o of L.mobs) this.craftStepMob(o, dt);
     L.mobs = L.mobs.filter((o) => !(o.fellAt !== null && L.t - o.fellAt > 0.8) && Math.hypot(o.w.pos[0] - p[0], o.w.pos[2] - p[2]) < CM.CL.gone && o.w.pos[1] > -5 && !(o.hostile && !o.wild && o.dawnGone));
     for (const s of L.shots) this.craftStepShot(s, dt);
@@ -137,6 +138,32 @@ Object.assign(CM.Game.prototype, {
     if (k.fwd && w.onGround && Math.hypot(w.pos[0] - before[0], w.pos[2] - before[1]) < 0.2 * dt) { o.stuck += dt; if (o.stuck > 0.15) { w.vel[1] = CM.CC.JUMP; o.stuck = 0; } } else o.stuck = 0;   // (a step up: a hop)
     w.fallFrom = null; w.landed = 0;
   },
+  // (v12.5) a lair near the hero sends out the deep's kinds until it is broken
+  craftLairs(dt) {
+    const cr = this.craft, W = cr.world, L = this.craftLife(), p = cr.walker.pos, nights = this.craftStore().nights || 0;
+    for (const f of W.finds || []) {
+      if (f.kind !== "lair" || W.get(f.x, f.y, f.z) !== CM.CC.B.LAIR || Math.hypot(f.x + 0.5 - p[0], f.y - p[1], f.z + 0.5 - p[2]) > 14) continue;
+      f.t = (f.t === undefined ? 1 : f.t) - dt; if (f.t > 0) continue; f.t = 4;
+      const key = `${f.x},${f.y},${f.z}`; if (L.mobs.filter((o) => o.lair === key && o.fellAt === null).length >= 4) continue;
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = f.x + dx, z = f.z + dz; if (W.get(x, f.y, z) || W.get(x, f.y + 1, z)) continue; const o = this.craftMakeMob(L.rnd.pick(CM.CL.DEEP), x + 0.5, f.y + 0.01, z + 0.5, Math.min(30, 15 + nights)); o.lair = key; o.m.xp = Math.ceil(o.m.xp / 2); L.mobs.push(o); (L.events = L.events || []).push({ kind: "spawn" }); break; }
+    }
+  },
+  // (v12.5) an old chest opened: gold and a thing by its depth, a map fragment from the sunken ones and the ruins; it
+  // stays an empty chest (kept in the island's edits)
+  craftOpenTreasure(key) {
+    const cr = this.craft, W = cr.world, K = this.craftStore(), L = this.craftLife(), [x, y, z] = key.split(",").map(Number);
+    if (W.get(x, y, z) !== CM.CC.B.TREASURE) return null;
+    const f = (W.finds || []).find((q) => q.x === x && q.y === y && q.z === z), kind = f ? f.kind : y < 12 ? "lair" : "ruin", depth = f ? f.depth : kind === "lair" ? 25 : 6, R = new CM.Random(CM.hashSeed(`${this.seed}:islandchest:${key}`));
+    const gold = Math.round((20 + depth * 6) * (0.75 + R.next() * 0.5)); let it = CM.makeItem(depth, R); if (R.chance(0.5) && CM.affix) it = CM.affix(it, depth, R) || it;
+    L.gold += gold; L.loot.push(it); const frag = kind !== "lair"; if (frag) K.fragments = (K.fragments || 0) + 1;
+    W.set(x, y, z, CM.CC.B.CHEST); K.opened = (K.opened || 0) + 1; this.tally.islandChests = (this.tally.islandChests || 0) + 1;
+    this.craftSay(`The old chest: ${gold} gold, ${it.unknown ? "something wrapped in oilcloth" : it.name}${frag ? `, and a scrap of map (${K.fragments} of 4)` : ""}.`);
+    if (frag && K.fragments === 4) this.craftSay("Four scraps make a map: it marks a place deep under the island's highest hill.");
+    (L.events = L.events || []).push({ kind: "treasure" }); this.saveVillage && this.saveVillage();
+    return { gold, item: it, fragment: frag, depth };
+  },
+  // (v12.5) the map: four fragments mark the vault under the highest hill
+  craftMap() { const K = this.craftStore(); return (K.fragments || 0) >= 4 && this.craft ? this.craft.world.vault : null; },
   craftClear(a, b) { const W = this.craft.world, n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) * 2); for (let i = 1; i < n; i++) { const t = i / n; if (CM.CC.SOLID.has(W.get(Math.floor(a[0] + (b[0] - a[0]) * t), Math.floor(a[1] + (b[1] - a[1]) * t), Math.floor(a[2] + (b[2] - a[2]) * t)))) return false; } return true; },
   craftStepShot(s, dt) {
     const cr = this.craft, W = cr.world; s.life -= dt; if (s.from === "hero") s.v[1] -= (s.kind === "arrow" ? 6 : 0) * dt; else s.v[1] -= 3 * dt;
