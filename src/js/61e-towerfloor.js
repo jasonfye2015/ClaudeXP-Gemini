@@ -79,6 +79,6 @@ CM.makeTowerFloor = function (n, seed) {
   const bossRnd = new CM.Random(CM.hashSeed(`${seed}:magetower:boss:${n}`)), bg = depth > 20 ? CM.deepGroup(depth, bossRnd, 2) : CM.monsterGroup(depth, bossRnd, 2), words = Object.keys(CM.CHAMPIONS || { frenzied: 1 });
   fl.boss.kind = (bg[0] && (bg[0].kind || bg[0].name)) || "Orc"; fl.boss.word = words[CM.hashSeed(`${seed}:magetower:word:${n}`) % words.length];
   // things lying about: a quiver or two, a draught, in rooms off the way
-  for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 3 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 2 ? "quiver" : "draught" }); }
+  for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 2 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 3 === 0 ? "quiver" : "draught" }); }
   return fl;
 };

@@ -162,7 +162,31 @@ grows wide rather than tall, so it is never cut by the ceiling.
 - **Tests**: the teleport's wait is always 1 to 15 seconds; he never lands within three cells or in a wall; each spell
   does what it says; the second phase at half; the relic.
 
-## Phase 6 - Around the tower - v11.0 (small to medium)
+## Phase 6 - Around the tower - v11.0 (small to medium) - DONE
+
+As built: `tools/towerbot.js` climbs the tower (faces the nearest monster it can see and shoots, casts at a boss or a
+crowd, walks to a draught when hurt, otherwise by the shortest walk to the nearest monster, then the ladder; rests to
+full between floors). What it found, and what was changed: line of sight sampled every fifth of a square let bolts clip
+corners (now an exact walk along the line); the floors walled up where a band turned to shooting kinds whatever the
+hero's level, because melee monsters never reached a hero who shoots across a room and the hero's health barely grows
+with level. Now: monsters' level is the floor's (two plus one a floor), a close fighter that has seen the hero rushes
+the last seven squares, a blow is softened or hardened by the monster's level against the hero's, a hero out of the
+fight a few seconds gets breath back, shooters fire less often and softer, the tower's monsters have half again the
+health, a hero's power grows 1.4 a level, an archer has ninety arrows a floor and twenty a quiver, half the rooms hold a
+draught or a quiver, and the tower's experience is a third (one hero takes every kill: at the full rate a level-5 Mage
+gained a level and a quarter a floor).
+
+Measured (3 seeds, the pauper's kit, resting between floors; floors cleared in a row, levels gained on the way):
+
+| Start level | 5 | 10 | 20 | 30 | 40 |
+|---|---|---|---|---|---|
+| Mage | 8 | 10 | 16 | 28 | 33 |
+| archer (Ranger, long bow) | 10 | 11 | 15 | 24 | 24 |
+
+The King stays the summit: the bot, which neither takes cover nor gears up, does not reach him; a player with good gear,
+who hides behind pillars and leaves to rest between floors, should, at about level forty. Frame cost, a desktop card:
+the fifth scene (a tower floor, the room awake) 60 fps at High and Medium in both looks, under a millisecond of script.
+Sounds: the doors, bolts and their strikes, the King's teleport and spells, a boss's fall, from the cooked set.
 
 - **Balance**: a headless climb by a simple tower bot (aim, shoot, back off) measures how far heroes of each level and
   calling get; the floors' monster levels are set from it.

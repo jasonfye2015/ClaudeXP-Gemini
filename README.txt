@@ -1426,6 +1426,11 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   (src/js/64g-towerking.js). At half his health he speaks and casts faster. His fall leaves the King's Circlet and a
   title, and the dais takes the hero out.
 
+  Around the tower (v11.0): tools/towerbot.js climbs it and measures how far heroes get (a Mage starting at level 20
+  clears about sixteen floors in a row, at level 40 about thirty-three); the tower's numbers are set from it. Close
+  fighters rush the last stretch, a hero out of the fight a few seconds gets breath back, and the tower's experience is
+  a third of a fight's (one hero takes every kill). LORE.md says who the King was.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1586,7 +1591,7 @@ The source
   src\art\pixel\*.png and src\art\stone\*.jpg are the chosen tiles and textures (pack.py --gather puts them there).
   python build.py writes game\Claude and Magic v<VERSION>.html from them (and removes an older version's file);
   python build.py --check says whether the built file is current. Bump VERSION in build.py for a new file name.
-  tests/run.js and tests/smoke.js are the tests (npm test); tools/sim.js the balance simulator; tools/perf.js the frame's cost; tools/headless.js loads
+  tests/run.js and tests/smoke.js are the tests (npm test); tools/sim.js the balance simulator; tools/perf.js the frame's cost; tools/towerbot.js the Mage Tower's climb; tools/headless.js loads
   the rules into Node for both. Tests\test_claudemagic.py, in the Timeline, drives the built game in Qt WebEngine.
 
 Keys

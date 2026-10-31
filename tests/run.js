@@ -3691,7 +3691,7 @@ test("the Mage Tower's ladder: shut while the boss stands; up to the next floor 
   toLadder(r); assert.ok(!r.atLadder(), "shut while the boss stands"); assert.ok(g.towerClimb(false), "the boss first");
   r.boss.m.hp = 0; r.gold = 40; r.xp = 25; const gold = g.gold, xp = r.hero.xp, c0 = g.clock || 0;
   assert.ok(r.atLadder()); assert.strictEqual(g.towerClimb(false), ""); assert.strictEqual(g.towerRun.n, 2, "up to floor two");
-  assert.strictEqual(g.gold, gold + 40); assert.ok(r.hero.xp >= xp + 25 || r.hero.level > 1, "banked as it was cleared"); assert.strictEqual(g.tower.cleared, 1); assert.strictEqual(g.clock, c0 + CM.CLOCK.stair, "an hour a floor");
+  assert.strictEqual(g.gold, gold + 40); assert.ok(r.hero.xp >= xp + Math.round(25 * CM.TR.xpShare) || r.hero.level > 1, "banked as it was cleared (a third of the experience: one hero takes every kill)"); assert.strictEqual(g.tower.cleared, 1); assert.strictEqual(g.clock, c0 + CM.CLOCK.stair, "an hour a floor");
   r = g.towerRun; toLadder(r); r.boss.m.hp = 0; assert.strictEqual(g.towerClimb(true), ""); assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.tower.cleared, 2, "out, the floor counted"); assert.deepStrictEqual(g.floor.pos, CM.MAGE_DOOR);
   assert.strictEqual(g.tally.towerBest, 2);
   g.saveRun(); const g2 = new CM.Game(); assert.ok(g2.continueRun()); assert.strictEqual(g2.tower.cleared, 2, "kept through a save");
@@ -3725,6 +3725,13 @@ test("the King of the Tower: in his hall of pillars; he teleports every 1 to 15 
   assert.ok(r.loot.some((it) => it.name === "The King's Circlet"));
   r.x = r.fl.dais[0] + 0.5; r.z = r.fl.dais[1] + 0.5; assert.ok(r.atLadder()); assert.strictEqual(g.towerClimb(false), ""); assert.strictEqual(g.mode, "explore", "out of the doors");
   assert.strictEqual(g.tower.cleared, 40); assert.ok(g.achievements.towerking, "the title"); assert.ok(g.bag.some((it) => it.name === "The King's Circlet"));
+});
+
+test("the Mage Tower, measured: the tower's own hand climbs three floors with a level-15 Mage and with a level-15 archer; a level-1 hero does not get far", () => {
+  const CM = load(), { climb } = require(path.join(ROOT, "tools", "towerbot.js"));
+  assert.strictEqual(climb(CM, "Mage", 15, "tower-test-1", 3).cleared, 3, "a Mage of fifteen climbs three");
+  assert.strictEqual(climb(CM, "archer", 15, "tower-test-1", 3).cleared, 3, "an archer of fifteen climbs three");
+  assert.ok(climb(CM, "Mage", 1, "tower-test-2", 40).cleared < 15, "a hero of one does not walk to the top");
 });
 
 (async () => {

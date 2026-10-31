@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v10.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v11.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -539,7 +539,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "10.6", built: "2026-10-31" };
+const CM = window.CM = { version: "11.0", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -10950,7 +10950,7 @@ CM.makeTowerFloor = function (n, seed) {
   const bossRnd = new CM.Random(CM.hashSeed(`${seed}:magetower:boss:${n}`)), bg = depth > 20 ? CM.deepGroup(depth, bossRnd, 2) : CM.monsterGroup(depth, bossRnd, 2), words = Object.keys(CM.CHAMPIONS || { frenzied: 1 });
   fl.boss.kind = (bg[0] && (bg[0].kind || bg[0].name)) || "Orc"; fl.boss.word = words[CM.hashSeed(`${seed}:magetower:word:${n}`) % words.length];
   // things lying about: a quiver or two, a draught, in rooms off the way
-  for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 3 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 2 ? "quiver" : "draught" }); }
+  for (const r of rooms) { if (r === start || r === boss) continue; const h = CM.hashSeed(`${seed}:magetower:item:${n}:${r.x0},${r.y0}`); if (h % 2 === 0) fl.items.push({ x: r.x0, y: r.y0, kind: h % 3 === 0 ? "quiver" : "draught" }); }
   return fl;
 };
 
@@ -14928,8 +14928,8 @@ Object.assign(CM.Game.prototype, {
 // Positions are in squares (x east, z south), the facing a yaw as the renderer's: 0 looks north (-z).
 CM.TR = {
   step: 1 / 60, speed: 3.3, back: 0.7, strafe: 0.85, turn: 2.6, radius: 0.24, eye: 0.5,
-  bolt: 9, arrow: 12, boltLife: 2.2, fireCd: 0.38, arrowCd: 0.55, spellCd: 1.2,
-  regen: 0.4, arrowsStart: 40, quiver: 10, monRadius: 0.32,
+  bolt: 9, arrow: 12, boltLife: 2.2, fireCd: 0.42, arrowCd: 0.5, spellCd: 1.2,
+  regen: 0.4, arrowsStart: 90, quiver: 20, monRadius: 0.32, monHp: 1.5, levelBase: 2, levelPer: 1.0, calmAfter: 4, calmHeal: 0.03, powerPer: 1.4, xpShare: 0.33,
 };
 // each calling's bolt and great spell: { bolt: the layer and the stat its power follows; spell: what the right hand does }
 CM.TOWER_ARMS = {
@@ -14953,9 +14953,11 @@ CM.TowerRun = class {
     this.t = 0; this.acc = 0; this.cool = 0; this.spellCool = 0; this.regenT = 0; this.bolts = []; this.events = [];
     this.xp = 0; this.gold = 0; this.loot = []; this.kills = 0; this.over = null; this.ids = 0;
     this.items = this.fl.items.map((it) => Object.assign({ taken: false }, it));
-    const depth = CM.towerDepth(n), level = Math.max(1, Math.round(CM.monsterLevel(depth) * 0.85)), rnd = new CM.Random(CM.hashSeed(`${game.seed}:towerrun:${n}`));
+    const depth = CM.towerDepth(n), level = Math.max(1, Math.round(CM.TR.levelBase + n * CM.TR.levelPer)),   // (the tower's own strength, floor by floor: the kinds are the band's, the level the floor's)
+       rnd = new CM.Random(CM.hashSeed(`${game.seed}:towerrun:${n}`));
     this.level = level;
     this.mons = this.fl.spawns.map((s) => this.makeMon(s.kind, s.x + 0.5, s.y + 0.5, level, rnd));
+    for (const o of this.mons) { o.m.max = o.m.hp = Math.round(o.m.max * CM.TR.monHp); }   // (the tower's own are hardier than the shaft's)
     if (this.addBoss) this.addBoss(rnd);                                 // (the floor's boss: phase 3)
   }
   makeMon(kind, x, z, level, rnd, extra) {
@@ -14966,7 +14968,17 @@ CM.TowerRun = class {
   solidAt(x, z) { const g = this.fl.grid, cx = Math.floor(x), cz = Math.floor(z); return !g[cz] || g[cz][cx] !== 0; }
   free(x, z, r = CM.TR.radius) { return !this.solidAt(x - r, z - r) && !this.solidAt(x + r, z - r) && !this.solidAt(x - r, z + r) && !this.solidAt(x + r, z + r); }
   // a clear line between two points (no wall square on it): the eyes' and the bolts' rule
-  clear(x0, z0, x1, z1) { const d = Math.hypot(x1 - x0, z1 - z0), n = Math.ceil(d / 0.2); for (let i = 1; i < n; i++) { const k = i / n; if (this.solidAt(x0 + (x1 - x0) * k, z0 + (z1 - z0) * k)) return false; } return true; }
+  clear(x0, z0, x1, z1) {                                               // (every square the line passes through, exactly: no corner skipped)
+    let cx = Math.floor(x0), cz = Math.floor(z0); const ex = Math.floor(x1), ez = Math.floor(z1), dx = x1 - x0, dz = z1 - z0, sx = Math.sign(dx), sz = Math.sign(dz);
+    const tdx = dx ? Math.abs(1 / dx) : Infinity, tdz = dz ? Math.abs(1 / dz) : Infinity;
+    let tx = dx ? (sx > 0 ? cx + 1 - x0 : x0 - cx) * tdx : Infinity, tz = dz ? (sz > 0 ? cz + 1 - z0 : z0 - cz) * tdz : Infinity;
+    for (let guard = 0; guard < 200 && !(cx === ex && cz === ez); guard++) {
+      if (tx < tz) { tx += tdx; cx += sx; } else { tz += tdz; cz += sz; }
+      if (cx === ex && cz === ez) break;
+      const g = this.fl.grid; if (!g[cz] || g[cz][cx] !== 0) return false;
+    }
+    return true;
+  }
   living() { return this.mons.filter((o) => o.m.hp > 0); }
   // the way to a point, square by square: the yaw from (x, z) toward the next square on the shortest walk (the monsters'
   // chase, and the balance bot's); null when it is there or there is no way. The walk's map is kept per target square.
@@ -15005,7 +15017,9 @@ CM.TowerRun = class {
     if (inp.fire && this.cool <= 0) this.fire();
     if (inp.spell && this.spellCool <= 0) this.cast();
     // magic comes back, slowly
-    this.regenT += dt; if (this.regenT >= 1) { this.regenT -= 1; if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.max(1, Math.round(h.maxmp * 0.04 * (1 + (this.regenBonus || 0))))); }
+    this.regenT += dt; if (this.regenT >= 1) { this.regenT -= 1;
+      if (this.t - (this.lastHurt === undefined ? -99 : this.lastHurt) > CM.TR.calmAfter && !this.living().some((o) => o.seen && this.clear(o.x, o.z, this.x, this.z))) h.hp = Math.min(h.max, h.hp + Math.max(1, Math.round(h.max * CM.TR.calmHeal)));   // (out of the fight a while: the hero gets breath back)
+      if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + Math.max(1, Math.round(h.maxmp * 0.04 * (1 + (this.regenBonus || 0))))); }
     this.stepBolts(dt);
     if (this.monsterStep) this.monsterStep(dt);                           // (the monsters' minds: phase 3)
     this.pickUp();
@@ -15015,8 +15029,8 @@ CM.TowerRun = class {
   // the bolt's (or the arrow's) power: the hero's level and their calling's stat, or the bow
   power() {
     const h = this.hero, g = this.game, A = this.arms, st = g.stat(h, A.stat);
-    if (A.arrows) return (h.weapon ? h.weapon.power : 2) + Math.max(0, CM.mod(st));
-    return 3 + Math.floor(h.level * 0.9) + Math.max(0, CM.mod(st) * 2);
+    if (A.arrows) return (h.weapon ? h.weapon.power : 2) + Math.floor(h.level * CM.TR.powerPer * 0.9) + Math.max(0, CM.mod(st) * 2);
+    return 2 + Math.floor(h.level * CM.TR.powerPer) + Math.max(0, CM.mod(st) * 2);
   }
   shoot(yaw, o = {}) {
     const A = this.arms, sp = A.arrows ? CM.TR.arrow : CM.TR.bolt;
@@ -15131,10 +15145,11 @@ Object.assign(CM.Game.prototype, {
   // what a floor won goes to the party as it is cleared (a fall later loses only the floor it happened on)
   bankTower(run) {
     const h = run.hero;
-    if (run.xp) { h.xp += run.xp; this.checkLevels(); }
+    const xp = Math.round(run.xp * CM.TR.xpShare);                      // (one hero, every kill: a third of it, or a climb is a ladder of levels)
+    if (xp) { h.xp += xp; this.checkLevels(); }
     if (run.gold) this.gold += run.gold;
     if (run.loot.length) this.gain(run.loot, "tower");
-    const won = { xp: run.xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
+    const won = { xp, gold: run.gold, things: run.loot.length }; run.xp = 0; run.gold = 0; run.loot = [];
     return won;
   },
   // the floor's ladder: the floor is counted cleared; up to the next, or out of the doors ("leave")
@@ -15152,7 +15167,7 @@ Object.assign(CM.Game.prototype, {
     if (run.n >= CM.TOWER_FLOORS) { this.achieve("towerking"); this.remember && this.remember("tower", CM.TOWER_KING_LINES.fall, { floor: 0 }); }
     if (leave || run.n >= CM.TOWER_FLOORS) return this.leaveMageTower("cleared") ? "" : "";
     const next = new CM.TowerRun(this, run.heroIndex, run.n + 1);
-    next.arrows = run.arrows; this.towerRun = next;
+    this.towerRun = next;                                                // (a full quiver on every floor: the tower's racks hold arrows)
     this.say(`Up the ladder: ${CM.towerFloorName(next.n)}.`);
     this.emit("towerfloor", next);
     return "";
@@ -15184,7 +15199,7 @@ Object.assign(CM.Game.prototype, {
 // that shoots or casts, keeps its distance and sends a bolt of its own. The floor's boss is one of the floor's kinds
 // made more: larger, an aura, a champion's word that works here as it does below, far more health; it keeps its room
 // until the hero comes in, and when it falls the ladder is open and it leaves something worth having.
-CM.TF = { eyes: 8, bossEyes: 10, hear: 7, reach: 0.9, meleeCd: 1.25, rangedCd: 2.2, keep: 4, dodge: 0.12, bossScale: 1.45, bossHp: 2.6, bossAtk: 1.3, boltSpeed: 6.5 };
+CM.TF = { eyes: 8, bossEyes: 10, hear: 7, reach: 0.9, meleeCd: 1.25, rangedCd: 2.8, rangedHit: 0.7, rush: 1.9, rushRange: 7, hit: 0.7, edge: 1.5, keep: 4, dodge: 0.12, bossScale: 1.45, bossHp: 2.6, bossAtk: 1.3, boltSpeed: 6.5 };
 CM.TOWER_SHOOTERS = ["Goblin", "Dark Elf", "Shard Wisp", "Weed Hag", "Grave Priest", "Hedge Wizard", "Foundry Imp", "Bellows Imp", "Thorn Lotus", "Eel", "Demon", "Wyvern", "Spore Beast", "Prism Sentinel", "Grave Lantern"];
 CM.towerShoots = (kind) => { const K = CM.monsterKind(kind) || {}; return CM.TOWER_SHOOTERS.includes(K.name) || K.ability === "ranged" || K.ability === "breath"; };
 
@@ -15215,7 +15230,7 @@ Object.assign(CM.TowerRun.prototype, {
       if (!o.seen) {                                                     // idle: it has to see the hero, or hear a shot
         const sees = d < (o.boss ? T.bossEyes : T.eyes) && this.clear(o.x, o.z, this.x, this.z), hears = shot && d < T.hear;
         if (o.boss && !this.inRoom(o.room, this.x, this.z)) continue;   // (the boss waits in its room)
-        if (sees || hears) { o.seen = true; this.events.push({ kind: "alert", mon: o }); if (o.word === "shrieking") for (const q of this.living()) q.seen = true; }
+        if (sees || hears) { o.seen = true; this.events.push({ kind: "alert", mon: o }); for (const q of this.living()) if (!q.boss && Math.hypot(q.x - o.x, q.z - o.z) < 5) q.seen = true; if (o.word === "shrieking") for (const q of this.living()) q.seen = true; }   // (a room wakes together)
         else continue;
       }
       const shoots = CM.towerShoots(o.kind), sees = this.clear(o.x, o.z, this.x, this.z);
@@ -15233,7 +15248,8 @@ Object.assign(CM.TowerRun.prototype, {
       if (way !== null) this.monMove(o, way, dt);
     }
   },
-  monSpeed(o) { return Math.min(2.6, 1.0 + (o.m.speed || 10) * 0.1) * (o.word === "fleet" ? 1.4 : 1) * (o.boss ? 0.9 : 1); },
+  monSpeed(o) { const rush = o.seen && !CM.towerShoots(o.kind) && Math.hypot(this.x - o.x, this.z - o.z) < CM.TF.rushRange ? CM.TF.rush : 1;   // (a close fighter that has seen the hero rushes the last stretch)
+    return rush * Math.min(2.9, 1.3 + (o.m.speed || 10) * 0.11) * (o.word === "fleet" ? 1.4 : 1) * (o.boss ? 0.9 : 1); },
   monMove(o, yaw, dt) {
     const sp = this.monSpeed(o) * dt, nx = o.x + Math.sin(yaw) * sp, nz = o.z - Math.cos(yaw) * sp, R = CM.TR.monRadius * (o.scale || 1) * 0.8;
     const ok = (x, z) => this.free(x, z, R) && Math.hypot(x - this.x, z - this.z) > CM.TR.radius + R && !this.living().some((q) => q !== o && Math.hypot(q.x - x, q.z - z) < R * 1.6) && (!o.room || this.inRoom(o.room, x, z));
@@ -15244,7 +15260,8 @@ Object.assign(CM.TowerRun.prototype, {
   heroDf() { const g = this.game; return g.effective(this.hero).df + CM.gearDefence(this.hero); },
   hurtHero(o, dmg) {
     const h = this.hero;
-    h.hp -= dmg; this.events.push({ kind: "hurt", amount: dmg, mon: o });
+    dmg = Math.max(1, Math.round(dmg * CM.TF.hit * Math.pow(Math.min(2, Math.max(0.25, this.level / Math.max(1, h.level))), CM.TF.edge)));   // (a blow from below the hero's level lands softer; from above, harder)
+    h.hp -= dmg; this.lastHurt = this.t; this.events.push({ kind: "hurt", amount: dmg, mon: o });
     if (o.word === "vampiric") o.m.hp = Math.min(o.m.max, o.m.hp + Math.ceil(dmg / 2));
     if (o.blink) o.blink = false;                                        // (a shadowed one is seen once it strikes)
   },
@@ -15262,7 +15279,7 @@ Object.assign(CM.TowerRun.prototype, {
     if (Math.hypot(b.x - this.x, b.z - this.z) > CM.TR.radius + 0.12) return false;
     b.life = 0; const o = b.mon;
     if (this.game.rnd.chance(CM.TF.dodge)) { this.events.push({ kind: "dodge", mon: o }); return true; }
-    this.hurtHero(o, Math.max(1, Math.round(this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf()) * 0.85)));
+    this.hurtHero(o, Math.max(1, Math.round(this.game.damage(Math.floor(o.m.atk / 2), 0, this.heroDf()) * (o.king ? 0.85 : CM.TF.rangedHit))));
     return true;
   },
   // when one falls: the boss's things, and the ladder open

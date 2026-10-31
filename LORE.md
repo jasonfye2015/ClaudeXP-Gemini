@@ -131,6 +131,17 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## The Mage Tower (v10.1 to v11.0)
+
+The tower in the Wood is older than the shaft and has nothing to do with the king. It was built by the College that
+taught the court's mages, when the College was sent out of the city for asking where the queen's water came from; the
+masters went into the Wood, raised forty floors to study in, and set a test at every one so that only those who could
+carry their own light would come up. The last master would not come down when the College died out. He is the King of
+the Tower now - not a crown anyone gave him, a name the woodcutters gave him - and he has been testing the climbers so
+long that he no longer remembers what the test was for. He knows every caster who ever climbed; he does not know about
+the Lich King, and would not care. His circlet is the College's own sign of office. Nothing in the tower contradicts
+the city's story: it is the one place in the land that never heard it.
+
 ## The lies, and where the truth is
 
 | The lie (upper) | Floor | The truth (lower) | Floor |
