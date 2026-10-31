@@ -5,6 +5,7 @@ Object.assign(CM.UI.prototype, {
   // (the dial in the view's corner: drawSky, in 73b-clock.js)
   refresh() {
     const g = this.game;
+    document.body.classList.toggle("intower", g.mode === "tower");   // (the Mage Tower's own HUD)
     if (this.screen === "title") { this.refreshTitle(); return; }
     if (this.screen !== "play") return;
     const fl = g.floor;
@@ -25,6 +26,7 @@ Object.assign(CM.UI.prototype, {
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
+    if (g.towerRun) { this.$("#side .where").textContent = CM.towerFloorName(g.towerRun.n); }
     if (fl && CM.isUndercroft(fl.number)) { this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   The Undercroft`; this.$("#side .where").textContent = `${CM.UNDERCROFT_NAMES[-fl.number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-fl.number - 2].slice(1)}`; }
     { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
@@ -109,6 +111,7 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, box = this.$("#actions");
     if (g.mode === "combat") { this.renderCombat(); return; }
     box.classList.remove("combat");
+    if (g.mode === "tower") { if (box.dataset.mode === "tower") return; box.dataset.mode = "tower"; box.innerHTML = ""; const b = document.createElement("button"); b.textContent = "Leave the tower (this floor is lost)"; b.addEventListener("click", () => { g.leaveMageTower("left"); this.refresh(); }); box.appendChild(b); return; }
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
         ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
@@ -185,7 +188,7 @@ Object.assign(CM.UI.prototype, {
   },
 
   drawAutomap(canvas) {
-    const fl = this.game.floor;
+    const fl = this.game.towerRun ? this.game.towerRun.fl : this.game.floor;   // (in the Mage Tower: its floor)
     if (!fl) return;
     const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size;
     p.fillStyle = "#E8DCC0";                                              // graph paper

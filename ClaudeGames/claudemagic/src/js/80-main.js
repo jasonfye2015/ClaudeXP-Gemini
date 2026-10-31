@@ -113,7 +113,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
-  game.on("magetower", () => ui.openMageTower());                       // (the tower's doors: who goes in)
+  game.on("magetower", () => ui.openMageTower());
+  game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
   game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
@@ -573,6 +574,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const K = game.settings.keys || CM.DEFAULT_KEYS;
     if (ui.rebinding) { e.preventDefault(); ui.rebind(ui.rebinding, e.code); return; }   // (Settings > Keys: the next key pressed is the one)
     if (e.code === "F3") { e.preventDefault(); ui.toggleFps(); return; }
+    if (game.mode === "tower" && game.towerRun && !ui.dialogOpen()) {   // the Mage Tower: real time (64e-towerrun.js)
+      const f = TOWER_KEYS[e.code]; if (f) { e.preventDefault(); towerIn[f] = true; return; }
+      if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
+      if (e.code !== "Escape") return;
+    }
     if (game.film) { if (e.code === "Escape") { e.preventDefault(); game.stopFilm(); } else if (e.code === "Space") { e.preventDefault(); game.film.playing = !game.film.playing; ui.filmBar(); } return; }   // (a film: watch, or stop)
     if (game.travel && !ui.dialogOpen()) { game.stopTravel(); if (MOVES[e.code] || e.code === K.explore) { e.preventDefault(); return; } }   // (any key stops a walk; a move key only stops it)
     if (game.autoOn() && !ui.dialogOpen() && e.code !== K.autoPlay && (MOVES[e.code] || [K.use, K.explore, K.fight, K.auto, K.item, K.defend, K.run].includes(e.code))) { game.autoPlay(false); ui.refresh(); }   // (the reins: a move or a fight key takes them back)
@@ -707,11 +713,41 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => held.delete(e.code));
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; });
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "tower" || e.target.closest("button")) return; e.preventDefault(); if (document.pointerLockElement !== view && view.requestPointerLock) { try { view.requestPointerLock(); } catch (er) { /* not here */ } } if (e.button === 2) towerIn.spell = true; else towerIn.fire = true; });
+  window.addEventListener("mouseup", (e) => { if (e.button === 2) towerIn.spell = false; else towerIn.fire = false; });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "tower") e.preventDefault(); });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "tower" && document.pointerLockElement === view) towerIn.look = (towerIn.look || 0) + e.movementX * 0.0028; });
   window.addEventListener("blur", () => held.clear());
   window.addEventListener("beforeunload", () => { if (game.dirty) game.saveRun(); });
   window.addEventListener("pointerdown", () => CM.audio.unlock(), { once: false });
 
+  // ---- the Mage Tower's hands and feet (64e-towerrun.js): held keys, the mouse's turn ----
+  const TOWER_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", KeyD: "right", KeyQ: "turnL", ArrowLeft: "turnL", KeyE_: "", ArrowRight: "turnR", Space: "fire", KeyF: "fire", KeyR: "spell", Digit2: "spell" };
+  let towerIn = {}, towerMapT = 0;
+  function towerFrame(now, dt) {                                        // a frame in the tower: the run steps, the view follows the hero
+    const run = game.towerRun; if (!run) return;
+    run.update(dt, towerIn); towerIn.look = 0;
+    for (const ev of run.events) {
+      if (ev.kind === "hit") { fxs.burst({ at: ev.at, n: 7, size: 0.06, speed: 1.2, up: 1 }); CM.audio.bark(ev.mon.kind, "hit"); }
+      else if (ev.kind === "die") { fxs.burst({ at: ev.at, layer: "fx:spark", n: 16, size: 0.07, speed: 1.6, up: 1.6 }); CM.audio.bark(ev.mon.kind, "die"); }
+      else if (ev.kind === "wall") fxs.burst({ at: ev.at, layer: ev.layer, n: 4, size: 0.05, speed: 0.8, up: 0.6 });
+      else if (ev.kind === "burst") { fxs.ring({ at: [ev.at[0], 0, ev.at[2]], to: 1.7 }); renderer.shake(0.3); try { CM.audio.play("slam", 0.4); } catch (er) { /* */ } }
+      else if (ev.kind === "shoot") { try { CM.audio.play(ev.arrow ? "miss" : "spell", 0.25); } catch (er) { /* */ } }
+      else if (ev.kind === "spell") { try { CM.audio.play("spell", 0.5); } catch (er) { /* */ } }
+      else if (ev.kind === "hurt") { ui.tint("rgba(200,30,20,0.35)", 250); renderer.shake(0.25); }
+      else if (ev.kind === "pickup") { try { CM.audio.play("coin", 0.4); } catch (er) { /* */ } }
+      else if (ev.kind === "fell") { setTimeout(() => { if (game.towerRun === run) { game.leaveMageTower("fell"); ui.refresh(); } }, 900); }
+    }
+    run.events.length = 0;
+    renderer.eye = [run.x, 0.5, run.z]; renderer.yaw = run.yaw; renderer.move = renderer.turn = null; renderer.bob = 0;
+    renderer.light = 1; renderer.sky = null; renderer.lights = run.lights();
+    stepAir(0);
+    renderer.setSprites(run.sprites(now).concat(fxs.sprites(now)));
+    renderer.frame(dt);
+    ui.drawTowerHud(run);
+    if ((towerMapT += dt) > 0.25) { towerMapT = 0; ui.drawAutomap(ui.$("#automap")); }
+  }
   // ---- the frame loop ----
   let last = performance.now(), fpsTime = 0, frames = 0, fps = 0, lastStep = 0, lastAuto = 0, lastAutoStep = 0;
   // what a frame costs: frames and the time spent in this function (the JavaScript's share), since CM.perf.reset();
@@ -726,7 +762,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold) autoScale(dt);
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
-      if (game.mode === "title") {
+      if (game.mode === "tower") towerFrame(now, dt);
+      else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;
         renderer.setSprites([]);
