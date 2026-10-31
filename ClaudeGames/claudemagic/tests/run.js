@@ -3633,7 +3633,8 @@ test("inside the Mage Tower: one hero in real time - a fixed step, moving and sl
   for (let i = 0; i < 300; i++) r.update(1 / 30, { fwd: true }); assert.ok(r.free(r.x, r.z), "never into a wall"); assert.ok(!r.solidAt(r.x, r.z));
   const y0 = r.yaw; r.update(0.2, { turnR: true }); assert.ok(r.yaw > y0, "it turns"); r.update(1 / 60, { look: 0.3 }); 
   // a bolt toward a monster in a clear line strikes it; toward a wall, it stops
-  const o = r.mons[0]; r.x = o.x; r.z = o.z + 3; while (!r.free(r.x, r.z) || !r.clear(r.x, r.z, o.x, o.z)) { r.x = o.x + (Math.random() - 0.5) * 4; r.z = o.z + (Math.random() - 0.5) * 4; }
+  const o = r.mons[0]; let spot = null; for (let dz = -4; dz <= 4 && !spot; dz++) for (let dx = -4; dx <= 4 && !spot; dx++) { const x = o.x + dx, z = o.z + dz, d = Math.hypot(dx, dz); if (d >= 2 && r.free(x, z) && r.clear(x, z, o.x, o.z) && !r.mons.some((q) => q !== o && Math.hypot(q.x - x, q.z - z) < 1.2)) spot = [x, z]; }
+  assert.ok(spot, "a place to shoot from"); for (const q of r.mons) if (q !== o) q.m.hp = 0; r.x = spot[0]; r.z = spot[1];
   r.yaw = Math.atan2(o.x - r.x, -(o.z - r.z)); const hp = o.m.hp; o.m.hp = o.m.max = 9999; r.update(1 / 60, { fire: true }); assert.strictEqual(r.bolts.length, 1);
   for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.m.hp < 9999, "the bolt strikes"); assert.ok(hp > 0);
   o.m.hp = 1; r.cool = 0; r.update(1 / 60, { fire: true }); for (let i = 0; i < 120 && r.bolts.length; i++) r.update(1 / 60, {}); assert.ok(o.fellAt !== null && r.kills === 1 && r.xp >= o.m.xp, "it falls, and is counted");

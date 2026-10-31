@@ -114,6 +114,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
+  game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
   game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on

@@ -74,7 +74,17 @@ with a violet torchlight. `CM.isTowerFloor` (CM.isTower was already the tower sh
 - **Tests**: every floor is connected; the ladder is reachable; the boss room holds the ladder; halls are at least two
   wide; floor 40 is open with pillars; the seed's floors are the same twice.
 
-## Phase 2 - Moving and shooting in real time - v10.3 (mechanics; large)
+## Phase 2 - Moving and shooting in real time - v10.3 (mechanics; large) - DONE
+
+As built (`64e-towerrun.js`, `CM.TowerRun`): a fixed step of a sixtieth of a second; the hero slides along walls and
+never through a monster; W/S/A/D (and the arrows), Q to turn, the mouse with pointer lock on a click into the view;
+click, Space or F shoots, right-click, R or 2 the great spell (Mage Fireball, a burst; Cleric Smite; Necromancer
+Drain, half back as health; Druid Thorns and the archer's Volley, three at once; Bard Lullaby, the room stunned;
+Artificer Firework). A caster's bolt is free on its cooldown and the great spell costs magic, which comes back a
+twenty-fifth a second; an archer starts with forty arrows and finds quivers. Damage is the rules' own sum. The HUD:
+a crosshair, the bars, the arrows or the spell's cost, the floor's name; the side panel's map is the tower's, as seen.
+`run.toward()` walks square by square (for the monsters and the bot). Films leave the tower out (it is outside the
+rules' clock); the tower's run is not saved mid-floor (a floor is entered fresh).
 
 - **The tower's loop** (`CM.TowerRun`, a class with a fixed step): the hero's position and facing are continuous; the
   frame loop steps it by the frame's time. Keys: W/S forward and back, A/D (or Q/E) sidestep, the arrows and the mouse
