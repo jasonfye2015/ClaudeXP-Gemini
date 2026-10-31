@@ -7,6 +7,10 @@
 //   - a long fall hurts, against the hero's own health; a fall that kills wakes them by the island's gate with a
 //     tenth of their health, and the satchel's contents are left in a glowing bundle where they fell, kept until fetched;
 //   - the island and every change made to it are kept with the village; the gate's light is the way home.
+// (v12.1) Under the hills, caves, dark but for the light the party carries; ore in the stone by depth that only a pick
+// from the bag that mines it can break (a point of wear a block), dropping the main game's own ore chunks, and
+// charstone that drops charcoal. Both are heavy: past what the hero can carry they slow down. Out through the gate,
+// the ore and charcoal go into the party's bag, for the Smith's smelter.
 CM.PORTAL_YARD.gate = [37, 20];                                            // the Neather Gate, on the yard's east side
 CM.CRAFT_EDITS_MAX = 20000;
 CM.craftKey = (h) => `${h.name}:${h.cls}`;
@@ -26,20 +30,33 @@ Object.assign(CM.Game.prototype, {
     this.craft = { heroIndex: i, hero: h, world, walker, satchel, target: [null, null], dig: null, broken: 0, placed: 0, says: [], since: 0, bundles: K.bundles };
     this.craftSay(`${h.name} steps out onto a green island under a blue sky.`);
     this.say(`${h.name} steps into the Neather Gate's violet light, and is gone; the others wait in the Keep-yard.`);
-    this.setMode("craft"); this.emit("craft", this.craft);
+    this.craftHeavy(); this.setMode("craft"); this.emit("craft", this.craft);
     return "";
   },
   craftKeep() { const cr = this.craft; if (!cr) return; const K = this.craftStore(), w = cr.walker, key = CM.craftKey(cr.hero); K.edits = cr.world.edits; K.places[key] = { pos: w.pos.slice(), yaw: w.yaw, pitch: w.pitch }; K.satchels[key] = cr.satchel.toJSON(); K.bundles = cr.bundles; this.saveVillage && this.saveVillage(); },
   // the pick from home: its grade quickens stone (and, in phase 1, sets which ore can be had)
   craftPick() { const picks = (this.bag || []).filter((it) => it.kind === "pick" && CM.PICKS[it.pick] && (it.points || 0) > 0); const order = Object.keys(CM.PICKS || {}); return picks.sort((a, b) => order.indexOf(b.pick) - order.indexOf(a.pick))[0] || null; },
-  craftBreakTime(b) { const base = CM.CC.HARDNESS[b] || 1, pick = this.craftPick(), stony = CM.CC.STONY.has(b); return stony && pick ? base * CM.CC.pickFactor(pick.pick) : base; },
+  craftBreakTime(b) {
+    const base = CM.CC.HARDNESS[b] || 1, ore = CM.CC.ORE_OF[b];
+    if (ore) { const i = CM.bestPick(this.bag || [], ore); return i < 0 ? Infinity : base * CM.CC.pickFactor(this.bag[i].pick); }
+    const pick = this.craftPick(); return CM.CC.STONY.has(b) && pick ? base * CM.CC.pickFactor(pick.pick) : base;
+  },
+  // why an ore will not break: no pick, a blunt one, or one that will not bite it
+  craftOreWhy(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
+  // the light the hero carries into the dark: the party's lantern, glow stone or torch (a little of their own without)
+  craftLight() { const l = this.light; if (!l) return 4; if (l.kind === "lantern" && (l.left || 0) > 0) return 11; if (l.kind === "glow") return 9; if (l.kind === "torch" && (l.left || 0) > 0) return 7; return 4; },
+  // the satchel's load (ore and charcoal: what is heavy at home is heavy here) against what one hero carries
+  craftLoad() { const cr = this.craft; return cr ? cr.satchel.slots.reduce((t, s) => t + (s ? CM.CC.itemWeight(s.b) * s.n : 0), 0) : 0; },
+  craftCap() { const cr = this.craft; return cr ? CM.carryCap([cr.hero]) * 2 : 0; },
+  craftHeavy() { const cr = this.craft; if (!cr) return false; const was = cr.walker.heavy; cr.walker.heavy = this.craftLoad() > this.craftCap(); if (cr.walker.heavy && !was) this.craftSay("The satchel drags: too much ore to carry quickly. Home through the gate with it."); return cr.walker.heavy; },
   // held on a block: the crack grows; at its end the block breaks into the satchel
   craftDig(dt, holding) {
     const cr = this.craft; if (!cr) return null; const hit = cr.target[0];
     if (!holding || !hit) { cr.dig = null; return null; }
     const key = hit.join(","), b = cr.world.get(...hit);
     if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : "The gate's stone will not break."); } return null; }
-    if (!cr.dig || cr.dig.key !== key) cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) };
+    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); }
+    if (cr.dig.need === Infinity) return null;
     cr.dig.t += dt;
     if (cr.dig.t >= cr.dig.need) { cr.dig = null; return this.craftBreak(); }
     return null;
@@ -48,16 +65,23 @@ Object.assign(CM.Game.prototype, {
   craftBreak() {
     const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
     const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) return false;
+    const ore = CM.CC.ORE_OF[b], pi = ore ? CM.bestPick(this.bag || [], ore) : -1; if (ore && pi < 0) { this.craftSay(this.craftOreWhy(ore)); return false; }
     if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { this.craftSay("The island has had enough changes for now."); return false; }
     cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1;
     const drop = CM.CC.DROPS[b] === undefined ? b : CM.CC.DROPS[b];
-    if (drop && !cr.satchel.add(drop)) this.craftSay("The satchel is full: it falls at your feet and is lost.");
+    if (drop && !cr.satchel.add(drop, CM.CC.DROP_COUNT[b] || 1)) this.craftSay("The satchel is full: it falls at your feet and is lost.");
+    if (ore) {                                                               // (a point off the pick, as a swing in the shaft's caves)
+      const pick = this.bag[pi]; pick.points = Math.max(0, (pick.points || 0) - 1); cr.ore = (cr.ore || 0) + (CM.CC.DROP_COUNT[b] || 1);
+      this.craftSay(`${CM.CC.NAMES[drop]}${CM.CC.DROP_COUNT[b] ? ` x${CM.CC.DROP_COUNT[b]}` : ""} - the ${pick.name} has ${pick.points} point${pick.points === 1 ? "" : "s"} left.`);
+    }
+    this.craftHeavy();
     return b;
   },
   // a block placed from the hotbar's slot (the satchel's first row), not where the hero stands
   craftPlace() {
     const cr = this.craft, prev = cr && cr.target[1], w = cr && cr.walker; if (!prev) return false;
     const slot = cr.satchel.slots[w.slot]; if (!slot) { this.craftSay("Nothing in that slot: break something first."); return false; }
+    if (CM.CC.isItem(slot.b)) { this.craftSay(`${CM.CC.NAMES[slot.b]} is for the forge at home, not for building.`); return false; }
     const [x, y, z] = prev, p = w.pos; if (x + 1 > p[0] - 0.3 && x < p[0] + 0.3 && z + 1 > p[2] - 0.3 && z < p[2] + 0.3 && y + 1 > p[1] && y < p[1] + 1.8) return false;   // (not inside the walker)
     if (cr.world.get(x, y, z) === CM.CC.B.GATE) return false;
     cr.world.set(x, y, z, slot.b); cr.satchel.take(w.slot); cr.placed += 1; return true;
@@ -82,6 +106,7 @@ Object.assign(CM.Game.prototype, {
       B.items = B.items.filter((s) => { let left = s.n; while (left > 0 && cr.satchel.add(s.b)) { left--; got++; } s.n = left; return left > 0; });
       if (!B.items.length) cr.bundles.splice(cr.bundles.indexOf(B), 1);
     }
+    if (got) this.craftHeavy();
     if (got) this.craftSay(`Picked up the bundle: ${got} blocks back in the satchel.`);
     return got;
   },
@@ -90,8 +115,11 @@ Object.assign(CM.Game.prototype, {
     const cr = this.craft; if (!cr) return null;
     this.craftKeep(); const K = this.craftStore(), g = cr.world.gate; if (cr.walker.inGate()) { K.places[CM.craftKey(cr.hero)] = { pos: [g.x + 1.5, g.y, g.z + 2.5], yaw: 180, pitch: -8 }; this.saveVillage && this.saveVillage(); }   // (out through the gate: next time, in front of it)
     this.tally.craftBroken = (this.tally.craftBroken || 0) + cr.broken; this.tally.craftPlaced = (this.tally.craftPlaced || 0) + cr.placed;
-    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.`);
-    const out = { broken: cr.broken, placed: cr.placed };
+    const home = [], counts = {};                                            // (ore and charcoal out of the satchel, into the bag)
+    cr.satchel.slots.forEach((s, i) => { if (!s || !CM.CC.isItem(s.b)) return; for (let k = 0; k < s.n; k++) home.push(CM.CC.toHome(s.b)); counts[s.b] = (counts[s.b] || 0) + s.n; cr.satchel.slots[i] = null; });
+    if (home.length) { this.gain(home, "claudecraft"); this.tally.craftOre = (this.tally.craftOre || 0) + home.length; K.satchels[CM.craftKey(cr.hero)] = cr.satchel.toJSON(); this.saveVillage && this.saveVillage(); }
+    this.say(`${cr.hero.name} steps back out of the Neather Gate into the Keep-yard${cr.broken || cr.placed ? ` (${cr.broken} blocks broken, ${cr.placed} placed - the island keeps them)` : ""}.${home.length ? ` Into the bag: ${Object.entries(counts).map(([b, n]) => `${n} ${CM.CC.NAMES[b].toLowerCase()}${n > 1 && b !== "106" ? "s" : ""}`).join(", ")}.` : ""}`);
+    const out = { broken: cr.broken, placed: cr.placed, home: home.length };
     this.craft = null; if (typeof document !== "undefined" && document.pointerLockElement && document.exitPointerLock) document.exitPointerLock();
     this.setMode("explore"); this.floor.pos = [CM.PORTAL_YARD.gate[0] - 1, CM.PORTAL_YARD.gate[1]]; this.floor.facing = 1;
     this.saveRun(); this.emit("floor", this.floor);

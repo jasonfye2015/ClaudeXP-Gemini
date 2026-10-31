@@ -33,7 +33,9 @@ Principles, kept throughout:
   tenth of their health, and the satchel's contents are left in a glowing bundle where they fell, kept until fetched.
 - Tests: breaking yields the block, placing spends it; hardness timings; a long fall hurts; the bundle.
 
-## Phase 1 (v12.1): ore, caves, and the pick from home
+## Phase 1 (v12.1): ore, caves, and the pick from home - done
+- (Brought forward from phase 4, so the ore is useful at once: out through the gate, ore chunks and charcoal go
+  into the bag. The satchel's ore weighs against twice what the one hero carries; over it, they slow down.)
 - **Caves.** A 3D noise carves winding caves and a few large caverns under the hills (never through the sea floor),
   lit only by what the party carries.
 - **Ore in the stone, by depth** (the deeper, the rarer): copper near the surface, iron below, silver deeper, gold in
