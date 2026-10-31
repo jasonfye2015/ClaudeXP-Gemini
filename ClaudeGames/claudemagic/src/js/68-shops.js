@@ -48,7 +48,7 @@ Object.assign(CM.Game.prototype, {
   drink() {
     if (!this.inTown()) return "The Hanged Lantern is in town.";
     if (this.floor.drank) return "One round is enough before a descent.";
-    const price = CM.festivalIs(this, "midsummer") ? 0 : CM.DRINK_PRICE; if (this.gold < price) return `A round is ${CM.DRINK_PRICE} gold.`;
+    const price = CM.festivalIs(this, "midsummer") ? 0 : ((this.village || {}).perks || {}).tavern ? Math.ceil(CM.DRINK_PRICE / 2) : CM.DRINK_PRICE; if (this.gold < price) return `A round is ${price} gold.`;   // (the tavern-keeper's errand: half price)
     this.logAct("drink");
     this.gold -= price; this.spend("tavern", price); this.floor.drank = true;
     if (CM.festivalIs(this, "wassail")) { this.gain([CM.dish("beer")], "tavern"); this.say("The Wassail: the cellar is open, and a jug of beer goes into the pack."); }

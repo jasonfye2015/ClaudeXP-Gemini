@@ -54,7 +54,7 @@ CM.UI = class {
 <div id="play" class="screen">
   <div class="top">
     <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="follower"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
   <div id="log" role="log" aria-live="polite"></div>
@@ -193,7 +193,7 @@ CM.UI = class {
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
-<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
+<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button><button data-page="errands" title="What the townsfolk have asked of you, and what they ask now">Errands</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div><div class="page ended" id="over-page"></div>
@@ -519,6 +519,7 @@ CM.UI = class {
       const sel = document.createElement("select"); sel.innerHTML = `<option value="">${F.order ? "He sows " + CM.CROPS[F.order].name.toLowerCase() : "Tell him what to sow"}...</option><option value="-">Nothing</option>` + Object.keys(CM.CROPS).map((c) => `<option value="${c}">${this.esc(CM.CROPS[c].name)} (${CM.CROPS[c].sow.join(", ")})</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) act(() => g.orderHand(sel.value === "-" ? null : sel.value)); }); more.appendChild(sel); }
     if (L >= 5) btn(more, F.cowFed > F.days ? `The cow is fed for ${F.cowFed - F.days} dawns` : "Feed the cow a cabbage (milk a dawn for a week)", () => g.feedCow(), F.cowFed > F.days);
     if (F.notes.length) { const n = document.createElement("div"); n.className = "small"; n.textContent = `Lately: ${F.notes.slice(-4).join("; ")}.`; more.appendChild(n); }
+    this.hireRow(more, ["dog"], () => this.openFarm());               // (the farm's dog, once there's a cow to mind)
     this.openDialog("#dlg-farm");
   }
   dishButtons(into, run) {                                              // the dishes the pack's things would make, and the apron
@@ -575,6 +576,7 @@ CM.UI = class {
     { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))} ${this.esc(this.brought("library"))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
     { const r = room(`The tomes (one out at a time${L.lent ? `: ${this.esc(CM.TOMES[L.lent.tome] || "a tome")} is out with this party` : ""})`); Object.keys(CM.TOMES).forEach((id) => { const b = btn(r, `Borrow the ${CM.TOMES[id]}`, () => say(g.borrowTome(id))); b.disabled = Boolean(L.lent); }); }
     { const r = room("The shelf of lost pages"); r.innerHTML = `<div class="small">${L.pages ? `${CM.plural(L.pages, "lost page")} found and copied here: fire, frost or lightning on every foe, once each, torn from tomes no one has whole.` : "Empty. The Lost Page scrolls found below are copied here."}</div>`; }
+    { const r = room("A hedge-wizard, for hire"); this.hireRow(r, ["wizard"], () => this.openLibrary(true)); }
     if (lvl >= 5) { const r = room("The gazetteer"); r.innerHTML = `<div class="small">The first ${CM.GAZETTEER_FLOORS} floors of any seed, mapped: on a new run their walls are on the map before the party is on them.</div>`; }
     this.openDialog("#dlg-library");
   }
@@ -1093,8 +1095,36 @@ CM.UI = class {
     for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.classList.toggle("on", b.dataset.page === (this.journalPage || "journal"));
     if (this.journalPage === "codex") { box.innerHTML = this.codexHtml(); this.openDialog("#dlg-journal"); return; }
     if (this.journalPage === "things") { box.innerHTML = this.compendiumHtml(); this.openDialog("#dlg-journal"); return; }
+    if (this.journalPage === "errands") { box.innerHTML = this.errandsHtml(); this.wireErrands(box); this.openDialog("#dlg-journal"); return; }
     box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
     this.openDialog("#dlg-journal");
+  }
+  // the errands (64b-people.js): what each of the six asks, taken, done this season; take one, or hand one in, in the town
+  errandsHtml() {
+    const g = this.game, E = g.errands(), inTown = g.floor && g.floor.number === 0, season = CM.errandSeason();
+    const rows = Object.entries(CM.ERRANDS).map(([id, R]) => {
+      const t = E.taken[id], who = R.giver.charAt(0).toUpperCase() + R.giver.slice(1);
+      if (t) { const left = g.errandLeft(id); return `<div class="entry"><small>${this.esc(who)} - taken</small><p>${this.esc(g.errandAsk(id))}</p><p class="small">${left ? `Still to do: ${this.esc(left)}.` : `Done: ${inTown ? "hand it in." : "hand it in, in the town."}`}</p>${!left && inTown ? `<button data-errand-hand="${id}">Hand it in</button>` : ""}</div>`; }
+      if (E.done[id] === season) return `<div class="entry"><small>${this.esc(who)} - done this season</small><p class="small">Nothing more until the season turns.</p></div>`;
+      const can = g.errandOffered(id);
+      return `<div class="entry"><small>${this.esc(who)} - asks</small><p>${this.esc(R.ask.replace("{n}", CM.errandFloor(id, season) || ""))}</p>${inTown ? `<button data-errand-take="${id}" ${can ? "" : "disabled"}>${can ? "Take it on" : "Three at a time"}</button>` : `<p class="small">Taken in the town.</p>`}</div>`;
+    }).join("");
+    const perks = Object.keys((g.village || {}).perks || {});
+    return `<div class="small">Six of the townsfolk have errands below: three at a time, one from each a season. What they pay is theirs to give.${perks.length ? ` Favours kept: ${perks.map((p) => ({ tavern: "the round at half price", merchant: "a tenth off at the merchant", dog: "the farm's dog" })[p] || p).join(", ")}.` : ""}</div>${rows}`;
+  }
+  wireErrands(box) {
+    const g = this.game;
+    for (const b of box.querySelectorAll("[data-errand-take]")) b.addEventListener("click", () => { g.takeErrand(b.dataset.errandTake); this.openJournal(); this.refresh(); });
+    for (const b of box.querySelectorAll("[data-errand-hand]")) b.addEventListener("click", () => { const note = g.handInErrand(b.dataset.errandHand); if (note) g.say(note); this.openJournal(); this.refresh(); });
+  }
+  // a row of followers to take on, where they are to be had
+  hireRow(into, ids, after) {
+    const g = this.game, row = document.createElement("div"); row.className = "small";
+    if (g.follower) { const s = document.createElement("span"); s.textContent = `Behind the party: ${g.followerName()}. `; row.appendChild(s); const b = document.createElement("button"); b.textContent = "Let them go"; b.addEventListener("click", () => { g.dismissFollower(); after(); this.refresh(); }); row.appendChild(b); into.appendChild(row); return; }
+    for (const id of ids) { const F = CM.FOLLOWERS[id], why = g.canHire(id), b = document.createElement("button");
+      b.textContent = `Take on a ${F.name}${F.price ? `, ${F.price} gold` : ""}`; b.title = why || F.what; b.disabled = Boolean(why);
+      b.addEventListener("click", () => { const note = g.hireFollower(id); if (note) g.say(note); after(); this.refresh(); }); row.appendChild(b); }
+    into.appendChild(row);
   }
   // the compendium: every base, by group, the unseen as outlines
   compendiumHtml() {

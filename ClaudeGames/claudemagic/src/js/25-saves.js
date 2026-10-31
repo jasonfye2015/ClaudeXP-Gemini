@@ -101,7 +101,7 @@ CM.MIGRATIONS = {
   },
   // 3 -> 4: the light lit and the halls quiet (a run saved before the lairs); the floors' sleepers come from the seed
   4(data) {
-    data.lightOut = false; data.noiseLevel = 0;
+    data.lightOut = false; data.noiseLevel = 0; data.follower = null; data.tavernBarred = false;
     return data;
   },
 };

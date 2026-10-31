@@ -229,7 +229,19 @@ seed's land moved); both ends are on the Where to? list once it is open, and the
   minutes; no monster path ever enters a cell with height; the postern is locked before floor 5 and the path's
   length is nine; the land's places list (Where to?) knows the postern once it is opened.
 
-## Phase 5 - The people's part: a fifth place, and the townsfolk's errands - v9.8 (mechanics and content; large)
+## Phase 5 - The people's part: a fifth place, and the townsfolk's errands - v9.8 (mechanics and content; large) - DONE
+
+As built (`64b-people.js`): the five followers as planned, one at a time, hired at the tavern (porter, torchbearer),
+the library (the hedge-wizard, at level three) and the farm (the dog, once there is a cow - or once the farmer's hand's
+errand is done); the rescued adventurer asks to come when she is cut loose. A blow that misses a hero in the back row
+catches the follower one time in four; a follower mends between floors; one that falls leaves bones, a name on the
+memorial, and a tavern that will not hire to the party again that run. The dog waits above the tenth floor and comes
+back when the party does. Errands: six givers as planned, kept in the village store; the floor of a fetch errand is the
+giver's and the season's by hash; taken and handed in on the Journal's new Errands page in the town (the dialogs of
+the six buildings were left as they are; the page is the board). Favours: the round at half price, a tenth off at the
+merchant, the farm's dog. Automatic hires a torchbearer (no quiet one leads) or a porter (a heavy pack), takes the
+errands that lie on its way and hands them in. Measured with the town on (10 seeds, Fair, to 20): 6 crowned with the
+followers and errands, 5 without.
 
 - **A fifth place.** Behind the four heroes stands at most one **follower** (`game.follower`), not a hero: no
   level, no gear slots, no turn in the fight. Each has a trade that acts by itself:

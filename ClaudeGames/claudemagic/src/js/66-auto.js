@@ -190,7 +190,7 @@ CM.Autopilot = class {
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
-    const keys = things.filter(([k, t]) => t.type === "key" && can(k));
+    const keys = things.filter(([k, t]) => (t.type === "key" || t.type === "errand") && can(k));   // (and an errand's thing)
     if (keys.length) return keys[0][0];
     const box = things.find(([, t]) => t.type === "strongbox" && !t.opened && game.bag.some((i) => i.kind === "boxkey" && i.box === fl.number));
     if (box && can(box[0])) return box[0];
@@ -223,6 +223,15 @@ CM.Autopilot = class {
     return "warped";
   }
   // one step: what it did, or false when it has stopped
+  // the people's part: in the town, the errands that lie on its way taken and the done ones handed in, and a follower
+  // hired - a torchbearer when no quiet one leads, a porter when the pack is heavy
+  people(fl) {
+    const game = this.game; if (!fl || fl.number !== 0 || this.peopleAt === game.tally.steps) return; this.peopleAt = game.tally.steps;
+    for (const id of Object.keys(game.errands().taken)) if (!game.errandLeft(id)) { game.handInErrand(id); this.tools.errands = (this.tools.errands || 0) + 1; }
+    for (const id of ["farm", "tavern", "temple", "merchant"]) if (game.errandOffered(id)) game.takeErrand(id);
+    if (!game.follower && game.gold >= 200) { const lead = game.party.find((h) => h.hp > 0), quiet = lead && ["Rogue", "Ranger", "Monk"].includes(lead.cls);
+      const id = game.overweight() > 0.7 ? "porter" : quiet ? null : "torchbearer"; if (id && !game.canHire(id)) { game.hireFollower(id); this.tools.hired = (this.tools.hired || 0) + 1; } }
+  }
   // the light shaded near a sleeper when a Rogue, Ranger or Monk leads; lit again when nothing sleeps close
   stealth(fl) {
     const game = this.game; if (!fl || fl.number < 1 || !(game.light && game.light.kind)) return;
@@ -269,7 +278,7 @@ CM.Autopilot = class {
       }
       if (f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known && kit && game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0) === "") { this.tools.disarmed++; return "disarmed"; }
     }
-    this.stealth(fl);
+    this.stealth(fl); this.people(fl);
     this.walk(fl);
     const target = this.pick();
     if (t && t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)
@@ -315,6 +324,7 @@ CM.Autopilot = class {
       else if (t && t.type === "bones") { /* picked up by walking on it */ }
       else if (f && (f.type === "lever" || f.type === "plate")) { if (f.type === "lever") { this.face(f.face); game.use(); } if ((f.type === "lever" && !f.pulled) || (f.type === "plate" && f.gate && !f.pressed)) { this.stuck++; this.log.push("lever won't"); } }
       else if (t && t.type === "key") { /* taken as we stepped on it */ }
+      else if (t && t.type === "errand") game.use();
       else if (t && (t.type === "event" || t.type === "peddler" || t.type === "strongbox")) { this.stuck++; this.log.push(`${t.type} not taken at ${here}`); t.done = true; t.opened = true; delete fl.things[here]; }
       else { if (this.stuck > 6) return this.stop("nothing to do"); return this.giveUp(`nothing to do at ${here} on floor ${fl.number}`); }
       return "used";

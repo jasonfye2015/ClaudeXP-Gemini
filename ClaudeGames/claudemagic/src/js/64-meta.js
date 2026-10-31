@@ -535,6 +535,7 @@ Object.assign(CM.Game.prototype, {
         this.story.recalled = (this.story.recalled || []).concat(m.name);
         this.emit("talk", { title: h.name + " the " + h.cls, text: `${CM.ADVENTURER.found} You know the face. ${h.name} fell on floor ${m.floor} of another descent, ${m.date} - or was left for dead, and crawled, and was taken. "You look like you've seen a ghost," ${h.name} says. "Fair."` });
       } else this.emit("talk", { title: h.name + " the " + h.cls, text: CM.ADVENTURER.found });
+      if (!this.follower && CM.FOLLOWERS) { this.follower = { id: "adventurer", name: h.name, hp: CM.FOLLOWERS.adventurer.hp, max: CM.FOLLOWERS.adventurer.hp, floors: 0 }; this.say(`${h.name} asks to come along a while, behind the party. She knows locks.`); }   // (a follower: 64b-people.js)
       this.saveRun(); return;
     }
     const fallen = this.party.findIndex((p) => p.hp <= 0 || (p.status || {}).stone);

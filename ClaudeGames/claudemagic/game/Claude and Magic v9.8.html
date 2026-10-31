@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v9.7 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v9.8 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -234,6 +234,8 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #side .light.dark { color: #E06060; font-weight: bold; }
 #side .temper { font: italic 12px var(--serif); color: var(--dim); text-align: center; }
 #side .temper.low { color: #E0A060; }
+#side .follower { font: 12px var(--serif); color: #C8B890; text-align: center; }
+#side .follower:empty { display: none; }
 .slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }
@@ -525,7 +527,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "9.7", built: "2026-10-30" };
+const CM = window.CM = { version: "9.8", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4884,7 +4886,7 @@ CM.MIGRATIONS = {
   },
   // 3 -> 4: the light lit and the halls quiet (a run saved before the lairs); the floors' sleepers come from the seed
   4(data) {
-    data.lightOut = false; data.noiseLevel = 0;
+    data.lightOut = false; data.noiseLevel = 0; data.follower = null; data.tavernBarred = false;
     return data;
   },
 };
@@ -8939,7 +8941,7 @@ CM.Game = class {
   }
   count(what, n = 1) { if (!this.tally) this.tally = this.freshTally(); this.tally[what] = (this.tally[what] || 0) + n; }
 
-  setMode(mode) { if (mode !== "explore") this.travel = null; this.mode = mode; this.emit("mode", mode); this.emit("change"); }
+  setMode(mode) { if (mode !== "explore") this.travel = null; if (mode === "camp" && this.followerAtCamp) this.followerAtCamp(); this.mode = mode; this.emit("mode", mode); this.emit("change"); }
 
   // ---- the log: every choice the player makes, as a line, so a run can be played again from its seed (CM.replayRun) ----
   logAct(name, ...args) { if (this.replaying) return; this.runLog = this.runLog || []; this.runLog.push(args.length ? [name, ...args] : [name]); }
@@ -9088,7 +9090,7 @@ CM.Game = class {
       difficulty: this.difficulty || "fair", mutators: this.mutators || [], everFell: Boolean(this.everFell), earned: this.earned || [], crowned: Boolean(this.crowned), endless: Boolean(this.endless), deepened: this.deepened || [],
       camps: this.camps || [], pairFights: this.pairFights || {}, bonds: this.bonds || [], hazardsMet: this.hazardsMet || [], remainsFound: this.remainsFound || [],
       startParty: this.startParty || null, startMutators: this.startMutators || [], log: CM.packLog(this.runLog || []), formation: this.formation || "line", ascension: this.ascension || 0, iron: Boolean(this.iron), awakened: Boolean(this.awakened), dream: Boolean(this.dream), rootPending: Boolean(this.rootPending), behind: this.behind || 0, startedInTown: Boolean(this.startedInTown), clock: this.clock || 0, fellFrom: this.fellFrom || null, orders: this.orders || [], bounty: this.bounty || null, blessedUntil: this.blessedUntil || 0, rumourBox: this.rumourBox || 0, season: this.season || null, farmDay: this.farmDay || 0, festival: this.festival || null,
-      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0 };
+      morale: this.morale === undefined ? CM.MORALE.start : this.morale, fed: this.fed || 0, trail: this.trail || [], lightOut: Boolean(this.lightOut), noiseLevel: this.noiseLevel || 0, follower: this.follower || null, tavernBarred: Boolean(this.tavernBarred) };
     this.lastRun = data;
     const ok = CM.store.set(this.runKey(this.slot), data);
     if (!ok && !this.saveWarned) {                                       // (the browser's keeping is full, or forbidden: say so once, loudly)
@@ -9116,6 +9118,7 @@ CM.Game = class {
     this.light = d.light || { kind: "torch", left: CM.TORCH_STEPS };
     this.spellLight = d.spellLight || 0;
     this.lightOut = Boolean(d.lightOut); this.noiseLevel = d.noiseLevel || 0;   // (the eleventh update's light and noise)
+    this.follower = d.follower || null; this.tavernBarred = Boolean(d.tavernBarred);   // (a follower, and a tavern that won't hire after one died)
     this.phylactery = Boolean(d.phylactery); this.reminded = Boolean(d.reminded);
     this.belt = Array.isArray(d.belt) ? d.belt.slice(0, CM.BELT_SIZE) : []; this.buffs = d.buffs || {}; this.lanternHeld = Boolean(d.lanternHeld); this.meal = d.meal || null; this.alchemistFree = Boolean(d.alchemistFree);
     if (this.light && this.light.kind === "lantern" && !this.light.left) this.light.left = CM.LANTERN_OIL;   // (a lantern from before v4.4: a flask of oil in it)
@@ -9173,7 +9176,7 @@ CM.Game = class {
     this.gold = 30;
     this.floors = {};
     this.light = { kind: "torch", left: CM.TORCH_STEPS };
-    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0;
+    this.spellLight = 0; this.lightOut = false; this.noiseLevel = 0; this.follower = null; this.tavernBarred = false;
     this.phylactery = false;
     this.combat = null;
     this.messages = [];
@@ -9279,6 +9282,8 @@ CM.Game = class {
       if (g && number > 1) { const d = (this.tally.steps || 0) - g[1]; this.say(`The ghost of your best run on this seed took this stair at step ${g[1].toLocaleString()}: you are ${d > 0 ? `${d} steps behind` : d < 0 ? `${-d} steps ahead` : "level with it"}.`); }
     }
     if (number === -1) this.refreshWood();
+    if (this.followerOnFloor) this.followerOnFloor(number, fresh);       // (the follower: 64b-people.js)
+    if (this.layErrand && number >= 1) this.layErrand(fl);              // (an errand's thing, on its floor)
     if (fresh) this.layRemains(fl);
     this.showHeart(fl);
     if (fresh && (fl.special === "wading" || fl.tide)) this.banter("water");
@@ -9618,6 +9623,7 @@ Object.assign(CM.Game.prototype, {
       if (l.left <= 0) { const oil = this.bag.findIndex((i) => i.kind === "lampoil"); if (oil >= 0) { this.bag.splice(oil, 1); l.left = CM.LANTERN_OIL; this.say("The lantern gutters, and is filled from the pack."); } else { this.light = { kind: null, left: 0 }; this.say("The lantern goes out. Lamp oil would light it again."); this.emit("change"); } }
       return;
     }
+    if (this.followerIs && this.followerIs("torchbearer") && (this.steps || 0) % 2 === 1 && l.kind === "torch") return;   // (a torchbearer: half the rate)
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide || (this.floor.number === -1 && CM.weather(this) === "rain" && this.floor.ford && this.floor.pos.join(",") === this.floor.ford.join(","))) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
@@ -9691,7 +9697,8 @@ Object.assign(CM.Game.prototype, {
     if (this.perch) { this.climbDown(); return; }
     { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
       if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
-      if (t0 && t0.type === "postern") { this.postern(); return; } }
+      if (t0 && t0.type === "postern") { this.postern(); return; }
+      if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (an errand's thing: 64b-people.js)
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -9706,7 +9713,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (here && here.type === "carving" && here.face === fl.facing) {
-      here.read = true;
+      here.read = true; if (this.errandRead) this.errandRead(fl.number);
       let text = this.dream && typeof here.text === "number" && here.text >= 0 && here.text < CM.BOTTOM ? CM.DREAM.lore[here.text] : CM.loreText(here.text, this.seed, here.telling);
       const wall = text, lkey = CM.loreKey(here.text), L = CM.LORE_TEXT[lkey];
       if (!this.dream && L && (L.chapter === "root" || L.chapter === "endless")) {   // the Root's own voice: it knows the party
@@ -9998,6 +10005,7 @@ Object.assign(CM.Game.prototype, {
   // Rogue's chance (a master pick at the full chance, and a dwarven lock only to it); a pick breaks on a miss. "" when it gave.
   tryLock(f, k, what = "door") {
     const fl = this.floor, grade = f.grade || (f.grade = CM.lockGrade(this.seed, fl.number, k)), G = CM.LOCKS[grade];
+    if (this.followerIs && this.followerIs("adventurer") && this.follower.picked !== fl.number) { this.follower.picked = fl.number; this.sound("unlock"); this.say(`${this.follower.name === "the one you cut loose" ? "The one you cut loose" : this.follower.name} kneels at ${G.name} with a bent pin, and it gives.`); return ""; }   // (the rescued adventurer: the first lock of a floor)
     const relic = this.alive().flatMap((h) => CM.equipped(h)).find((it) => CM.OPENS_ANYTHING.includes(CM.baseIdOf(it)) && !it.unknown);
     if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
     const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
@@ -10097,7 +10105,7 @@ Object.assign(CM.Game.prototype, {
     this.dirty = true;
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
-  overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
+  overweight() { return CM.bagWeight(this.bag) / (CM.carryCap(this.party) + (this.followerCarry ? this.followerCarry() : 0)); },   // (a porter carries forty more)
   // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
   lightSpare() {
     if (this.lightOut) return;                                           // (shaded on purpose: not lit behind the party's back)
@@ -10156,8 +10164,8 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
-const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
+const WATCHED = ["errand", "chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
+const SEEN_AS = { errand: "something the townsfolk asked after", chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
   event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", farm: "the farm's gate", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
@@ -10565,8 +10573,9 @@ Object.assign(CM.Game.prototype, {
     if (this.spellLight > 0) return CM.LIGHT_REACH.spell;
     if (this.lightOut) return 0;
     const l = this.light || {};
-    if (l.kind === "torch") return l.left > 40 ? CM.LIGHT_REACH.torch : CM.LIGHT_REACH.low;
-    return CM.LIGHT_REACH[l.kind] || 0;
+    const held = this.followerIs && this.followerIs("torchbearer") ? 1 : 0;   // (a torchbearer holds it high)
+    if (l.kind === "torch") return (l.left > 40 ? CM.LIGHT_REACH.torch : CM.LIGHT_REACH.low) + held;
+    return (CM.LIGHT_REACH[l.kind] || 0) + (CM.LIGHT_REACH[l.kind] ? held : 0);
   },
   // a sleeper at k sees the light: on the party's row or column, within the reach, nothing shut between
   seesLight(k, reach) {
@@ -10754,6 +10763,7 @@ Object.assign(CM.Game.prototype, {
     if (ratproof) wary = true;
     if (this.floor && this.floor.number === -1 && CM.weather(this) === "mist") wary = true;   // (mist: nobody is on anybody before they can draw)
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
+    if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); }
     if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
       this.say("They are asleep. The party's blows fall before they wake.");
       this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
@@ -11257,7 +11267,7 @@ Object.assign(CM.Game.prototype, {
       const target = this.pickTarget(m);
       if (!target) break;
       if (m.marked && !target.thrall && rnd.chance(0.3) && this.alive().some((h) => CM.trait(h, "lastlaugh"))) { const own = Math.max(1, Math.floor(m.atk / 3)); m.hp -= own; this.say(`${CM.The(m)}, mocked past bearing, strikes at nothing and catches itself (-${own}).`); continue; }
-      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
+      if (!rnd.chance(0.8 * (m.blind > 0 ? 0.5 : 1) * this.dodgeOf(target) * (this.terrain().includes("dark") ? 0.85 : 1))) { this.say(`${CM.The(m)} misses ${target.name}.`); if (target.row === "back" && this.followerTakes) this.followerTakes(m); if (!target.thrall && CM.trait(target, "counter") && this.canAct(target)) { this.say(`${target.name} answers.`); this.strike(target, m, " in answer"); } continue; }
       let dmg = this.damage(Math.floor(m.atk / 2), 0, this.effective(target).df + (wc === "blunt" ? Math.floor(CM.gearDefence(target) * 2 / 3) : CM.gearDefence(target))), how = wc === "blunt" ? " - the maul cares little for armour" : "";
       if (wc === "axe" && rnd.chance(0.15)) { dmg = Math.ceil(dmg * 1.5); how = " - the axe bites"; }
       if (wc === "dagger" && rnd.chance(0.15)) { dmg = Math.ceil(dmg * 1.5); how = " - the knife finds a gap"; }
@@ -12121,6 +12131,7 @@ Object.assign(CM.Game.prototype, {
       if (this.tally.champions >= 5) this.achieve("champions");
     }
     this.makeNoise(CM.NOISE.fight);
+    if (this.followerAfterFight) this.followerAfterFight();
     if (this.floor.number >= 1 && slain.length && rnd.chance(slain.some((m) => m.elite) ? 1 / CM.HOMECOMING.elite : 1 / CM.HOMECOMING.drop)) loot.push(CM.scroll("homecoming"));   // (the dead carry the way home now and then)
     for (const m of slain) {                                             // what they carried, seen before it was won; and a part that broke
       if (m.gear && m.gear.weapon && rnd.chance(0.6)) loot.push(m.gear.weapon);
@@ -12347,7 +12358,8 @@ Object.assign(CM.Game.prototype, {
       if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
-      if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
+      if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
+      if (this.floor.number === 0 && ((this.village || {}).perks || {}).merchant) for (const it of this.stock) it.value = Math.ceil(it.value * 0.9);   // (the merchant's errand: a tenth off, for good)   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
       this.deliverOrders();
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
@@ -12751,7 +12763,7 @@ Object.assign(CM.Game.prototype, {
   // field kit, relics, a Scroll of Homecoming that remembers a square below.
   sellable(which) {
     const F = CM.BAG_FILTERS[which], gear = ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
-    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
+    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell", "errand"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
     const rows = [];
     this.bag.forEach((it, i) => {
       if (keep(it)) return;
@@ -13991,6 +14003,7 @@ Object.assign(CM.Game.prototype, {
         this.story.recalled = (this.story.recalled || []).concat(m.name);
         this.emit("talk", { title: h.name + " the " + h.cls, text: `${CM.ADVENTURER.found} You know the face. ${h.name} fell on floor ${m.floor} of another descent, ${m.date} - or was left for dead, and crawled, and was taken. "You look like you've seen a ghost," ${h.name} says. "Fair."` });
       } else this.emit("talk", { title: h.name + " the " + h.cls, text: CM.ADVENTURER.found });
+      if (!this.follower && CM.FOLLOWERS) { this.follower = { id: "adventurer", name: h.name, hp: CM.FOLLOWERS.adventurer.hp, max: CM.FOLLOWERS.adventurer.hp, floors: 0 }; this.say(`${h.name} asks to come along a while, behind the party. She knows locks.`); }   // (a follower: 64b-people.js)
       this.saveRun(); return;
     }
     const fallen = this.party.findIndex((p) => p.hp <= 0 || (p.status || {}).stone);
@@ -14237,6 +14250,220 @@ CM.statistics = function (ledger) {
   st.favourite = Object.entries(st.callings).sort((x, y) => y[1].n - x[1].n || y[1].crowns - x[1].crowns)[0] || null;
   return st;
 };
+
+// ---- 64b-people.js ----
+"use strict";
+// The people's part (the eleventh update, phase 5): a fifth place behind the heroes for one follower, and the
+// townsfolk's errands.
+//
+// A follower (this.follower) is not a hero: no level, no gear, no turn in a fight. Each has a trade that acts by
+// itself (CM.FOLLOWERS). It can be struck - a blow that misses a hero in the back row may catch it instead - and it can
+// die: a line in the log, its remains on the floor, a name on the memorial, and the tavern will not hire to this party
+// for the rest of the run. It mends between floors. One at a time; let go at any time (no gold back).
+//
+// Errands (CM.ERRANDS) are asked by six of the townsfolk, kept between runs in the village store (village.errands):
+// three taken at a time, one from each giver a season. A fetch errand lays its thing on its floor (the floor is the
+// giver's and the season's, by hash) the first time the party is on that floor after taking it; read and slay errands
+// look at what the party did after taking them. Handed in in the town (the Journal's Errands page), each pays in the
+// giver's own coin: gold, renown, a thing, and a lasting favour (village.perks).
+CM.FOLLOWERS = {
+  porter: { name: "porter", hire: "tavern", price: 30, hp: 22, what: "carries forty more", carry: 40 },
+  torchbearer: { name: "torchbearer", hire: "tavern", price: 20, hp: 14, what: "the light burns at half the rate, and is seen a square further" },
+  dog: { name: "dog", hire: "farm", price: 0, hp: 18, what: "smells an ambush before it comes; will not go below the tenth floor", deepest: 10 },
+  wizard: { name: "hedge-wizard", hire: "library", price: 40, hp: 12, what: "a Light on each new floor, and a Mend after a fight once a floor", library: 3 },
+  adventurer: { name: "rescued adventurer", hire: "rescue", price: 0, hp: 24, what: "picks the first lock of each floor; tells her story over three floors, then goes her way with a gift" },
+};
+CM.FOLLOWER_NAMES = { porter: ["Brannoc", "Hew", "Old Sef", "Marra"], torchbearer: ["Lin", "Tam", "Wren", "Pip"], dog: ["Grip"], wizard: ["Mother Ysolde", "Cadoc", "Aunt Breda"], adventurer: ["the one you cut loose"] };
+CM.FOLLOWER_STORY = [
+  "\"I came down with three others,\" she says, on the stair. \"The Guild said floor four was clear. The Guild says a lot of things.\"",
+  "\"They didn't kill me,\" she says, picking at a knot in the dark. \"They argued about whether I'd fetch more alive. I fetched nothing. I waited.\"",
+  "\"I'll go my own way from the next camp,\" she says. \"Not ungrateful - just done with the dark for a while. Here. You'll get more use from it than me.\"",
+];
+CM.ERRANDS = {
+  tavern: { giver: "the tavern-keeper", building: "tavern", kind: "fetch", floors: [3, 8], thing: "a tarnished ring",
+    ask: "\"My brother went down the shaft with a ring of mine on his finger and didn't come up. Floor {n}, they said. Bring the ring home.\"",
+    done: "\"That's his.\" She turns it over twice. \"The round's half price for you from now on, and that's for good.\"", reward: { gold: 60, renown: 12, perk: "tavern" } },
+  merchant: { giver: "the merchant", building: "merchant", kind: "fetch", floors: [5, 12], thing: "the merchant's sealed crate",
+    ask: "\"A crate of mine went down the shaft with a fool who thought he'd sell it below. Floor {n}. My seal's on it.\"",
+    done: "\"Seal unbroken. Well.\" He makes a note in a book. \"A tenth off at my counter, from now on.\"", reward: { gold: 120, renown: 12, perk: "merchant" } },
+  smith: { giver: "the smith", building: "smith", kind: "bring", ore: "iron", n: 4,
+    ask: "\"Bring me four lumps of iron ore - good ore, from the caves or below - and I'll make something of them for you.\"",
+    done: "\"Good iron.\" The forge roars. \"There. A blade with a bit of the hill in it.\"", reward: { gold: 0, renown: 10, thing: "blade" } },
+  library: { giver: "the librarian", building: "library", kind: "read", floors: [4, 14],
+    ask: "\"The carving on floor {n} - read it, and tell me what it says. Word for word, if you can.\"",
+    done: "\"So that's what it says.\" The librarian writes it down, slowly. \"Take this. It was gathering dust.\"", reward: { gold: 30, renown: 15, thing: "tome" } },
+  temple: { giver: "the priest", building: "temple", kind: "champion",
+    ask: "\"There are champions leading the packs below the sixth floor, and the dead lie badly while they walk. Put one down.\"",
+    done: "\"One less.\" The priest lights a candle for it anyway. \"These are blessed. Carry them.\"", reward: { gold: 40, renown: 15, thing: "potions" } },
+  farm: { giver: "the farmer's hand", building: "garden", kind: "fetch", floors: [2, 6], thing: "an old sickle",
+    ask: "\"My grandad's sickle went down the shaft the year the dead came up. Floor {n}, he always said. Silly to want it back. I want it back.\"",
+    done: "\"That's it, that's the one.\" He holds it like a baby. \"The dog's taken to you, too - he'll come along, if you'll have him.\"", reward: { gold: 25, renown: 10, perk: "dog" } },
+};
+CM.ERRANDS_MOST = 3;
+CM.errandSeason = (d) => { d = d || new Date(); return `${d.getFullYear()}-${CM.seasonOfDate(d)}`; };   // (one from each giver a season)
+CM.errandFloor = (giver, season) => { const E = CM.ERRANDS[giver]; if (!E.floors) return null; const [a, b] = E.floors; return a + (CM.hashSeed(`errand:${giver}:${season}`) % (b - a + 1)); };
+
+Object.assign(CM.Game.prototype, {
+  // ---- the follower ----
+  followerIs(id) { const f = this.follower; return Boolean(f && f.id === id && !f.away && f.hp > 0); },
+  followerCarry() { return this.followerIs("porter") ? CM.FOLLOWERS.porter.carry : 0; },
+  followerName() { const f = this.follower; return f ? `${f.name} the ${CM.FOLLOWERS[f.id].name}` : ""; },
+  canHire(id) {
+    const F = CM.FOLLOWERS[id];
+    if (!F) return "No one by that trade.";
+    if (this.follower) return `${this.followerName()} is with you already; one follower at a time.`;
+    if (F.hire === "tavern" && this.tavernBarred) return "The tavern won't hire to you again this run. Not after the last one.";
+    if (F.hire === "library" && this.villageLevel("library") < F.library) return `The library has no one to spare until it has grown (level ${F.library}).`;
+    if (F.hire === "farm" && !(this.villageLevel("farm") >= 5 || ((this.village || {}).perks || {}).dog)) return "The farm has no dog to spare yet: when there's a cow to mind, there's a dog.";
+    if (this.gold < F.price) return `A ${F.name} wants ${F.price} gold for the run.`;
+    return "";
+  },
+  hireFollower(id) {
+    const no = this.canHire(id);
+    if (no) return no;
+    this.logAct("hireFollower", id);
+    const F = CM.FOLLOWERS[id], names = CM.FOLLOWER_NAMES[id];
+    this.gold -= F.price; if (F.price) this.spend(F.hire, F.price);
+    this.follower = { id, name: names[CM.hashSeed(`${this.seed}:follower:${id}:${this.tally.steps || 0}`) % names.length], hp: F.hp, max: F.hp, floors: 0 };
+    this.say(`${this.followerName()} falls in behind the party: ${F.what}.`);
+    this.emit("change");
+    return "";
+  },
+  dismissFollower() {
+    if (!this.follower) return false;
+    this.logAct("dismissFollower");
+    this.say(`${this.followerName()} goes back the way you came.`);
+    this.follower = null; this.emit("change");
+    return true;
+  },
+  // a floor: the follower mends; the dog stops at the tenth; the hedge-wizard lights the way; the adventurer tells her story
+  followerOnFloor(number, fresh) {
+    const f = this.follower;
+    if (!f) return;
+    f.hp = f.max;
+    if (f.id === "dog") { const away = number > CM.FOLLOWERS.dog.deepest; if (away && !f.away) this.say(`${f.name} stops at the top of the stair below the tenth floor, and won't come on. He'll be waiting up there.`); if (!away && f.away) this.say(`${f.name} comes bounding back.`); f.away = away; }
+    if (f.id === "wizard" && number >= 1 && fresh && (this.spellLight || 0) < 20) { this.spellLight = 60; this.say(`${f.name} says a word, and a cold light gathers over the party.`); }
+    if (f.id === "adventurer" && number >= 1 && fresh) { f.floors = (f.floors || 0) + 1; const line = CM.FOLLOWER_STORY[f.floors - 1]; if (line) this.say(line); if (f.floors >= CM.FOLLOWER_STORY.length) f.leaving = true; }
+    f.mended = null; f.picked = null;
+  },
+  // at a camp, the adventurer goes her way with a gift
+  followerAtCamp() {
+    const f = this.follower;
+    if (!f || f.id !== "adventurer" || !f.leaving) return;
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:gift:${this.floor.number}`)), gift = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "ring", "amulet"])), this.floor.number + 6, rnd);
+    gift.unknown = false; this.bag.push(gift);
+    this.say(`${f.name} shoulders a pack at the camp and goes her own way, up. She leaves you ${gift.name} (${CM.itemLabel(gift)}).`);
+    this.village = this.village || {}; this.village.followerTales = (this.village.followerTales || []).concat({ name: f.name, floor: this.floor.number, date: new Date().toLocaleDateString() }).slice(-12); if (this.saveVillage) this.saveVillage();
+    this.follower = null;
+  },
+  // after a fight: the hedge-wizard's Mend, once a floor
+  followerAfterFight() {
+    const f = this.follower;
+    if (!this.followerIs("wizard") || f.mended === this.floor.number) return;
+    const hurt = this.alive().filter((h) => h.hp < h.max * 0.7).sort((a, b) => a.hp / a.max - b.hp / b.max)[0];
+    if (!hurt) return;
+    const back = Math.max(4, Math.ceil(hurt.max / 4)); hurt.hp = Math.min(hurt.max, hurt.hp + back); f.mended = this.floor.number;
+    this.say(`${f.name} lays a hand on ${hurt.name}: +${back}.`);
+  },
+  // a blow that misses a hero in the back row may catch the follower behind instead
+  followerTakes(m) {
+    const f = this.follower;
+    if (!f || f.away || f.hp <= 0 || !this.rnd.chance(0.25)) return false;
+    const dmg = Math.max(1, this.damage(Math.floor(m.atk / 2), 0, 1));
+    f.hp -= dmg;
+    this.say(`${CM.The(m)}'s blow goes past, and catches ${this.followerName()} (-${dmg}).`);
+    if (f.hp <= 0) this.followerDies(m);
+    return true;
+  },
+  followerDies(m) {
+    const f = this.follower;
+    this.say(`${this.followerName()} falls, and doesn't get up. You hadn't known them long.`);
+    this.trace("bones", ...this.floor.pos);
+    this.memorial = (this.memorial || []).concat({ name: f.name, cls: CM.FOLLOWERS[f.id].name, floor: this.floor.number, date: new Date().toLocaleDateString(), follower: true });
+    if (CM.FOLLOWERS[f.id].hire === "tavern") this.tavernBarred = true;
+    this.tally.followersLost = (this.tally.followersLost || 0) + 1;
+    this.follower = null;
+    this.cheer(-1);
+  },
+
+  // ---- errands ----
+  errands() { this.village = this.village || {}; const E = this.village.errands = this.village.errands || { taken: {}, done: {} }; E.taken = E.taken || {}; E.done = E.done || {}; return E; },
+  errandOffered(giver) {
+    const E = this.errands(), season = CM.errandSeason();
+    return Boolean(CM.ERRANDS[giver]) && !E.taken[giver] && E.done[giver] !== season && Object.keys(E.taken).length < CM.ERRANDS_MOST;
+  },
+  takeErrand(giver) {
+    if (!this.errandOffered(giver)) return "That errand isn't to be had just now.";
+    this.logAct("takeErrand", giver);
+    const E = this.errands(), season = CM.errandSeason(), R = CM.ERRANDS[giver];
+    E.taken[giver] = { season, floor: CM.errandFloor(giver, season), from: { champions: this.tally.champions || 0 }, found: false };
+    if (this.saveVillage) this.saveVillage();
+    this.say(`${R.giver.charAt(0).toUpperCase() + R.giver.slice(1)}: ${this.errandAsk(giver)}`);
+    if (this.floor && this.floor.number === E.taken[giver].floor) this.layErrand(this.floor);
+    this.emit("change");
+    return "";
+  },
+  errandAsk(giver) { const t = this.errands().taken[giver], R = CM.ERRANDS[giver]; return R.ask.replace("{n}", t ? t.floor : CM.errandFloor(giver, CM.errandSeason())); },
+  // what is left to do: "" when it can be handed in
+  errandLeft(giver) {
+    const t = this.errands().taken[giver], R = CM.ERRANDS[giver];
+    if (!t) return "not taken";
+    if (R.kind === "fetch") return this.bag.some((i) => i.kind === "errand" && i.giver === giver) ? "" : `${R.thing}, on floor ${t.floor}`;
+    if (R.kind === "bring") { const have = this.bag.filter((i) => i.kind === "ore" && i.ore === R.ore).length; return have >= R.n ? "" : `${have} of ${R.n} ${CM.ORES[R.ore].name} ore`; }
+    if (R.kind === "read") return t.read ? "" : `the carving on floor ${t.floor}`;
+    if (R.kind === "champion") return (this.tally.champions || 0) > ((t.from || {}).champions || 0) || t.slain ? "" : "a champion, slain below the sixth floor";
+    return "?";
+  },
+  handInErrand(giver) {
+    const t = this.errands().taken[giver], R = CM.ERRANDS[giver];
+    if (!t) return "No such errand.";
+    if (!this.floor || this.floor.number !== 0) return `${R.giver.charAt(0).toUpperCase() + R.giver.slice(1)} is in the town.`;
+    const left = this.errandLeft(giver);
+    if (left) return `Still to do: ${left}.`;
+    this.logAct("handInErrand", giver);
+    if (R.kind === "fetch") { const i = this.bag.findIndex((it) => it.kind === "errand" && it.giver === giver); if (i >= 0) this.bag.splice(i, 1); }
+    if (R.kind === "bring") for (let n = 0; n < R.n; n++) { const i = this.bag.findIndex((it) => it.kind === "ore" && it.ore === R.ore); if (i >= 0) this.bag.splice(i, 1); }
+    const rw = R.reward, E = this.errands(), rnd = new CM.Random(CM.hashSeed(`${this.seed}:errand:${giver}:${t.season}`));
+    if (rw.gold) { this.gold += rw.gold; }
+    if (rw.renown) { this.village.renown = (this.village.renown || 0) + rw.renown; }
+    if (rw.perk) { this.village.perks = this.village.perks || {}; this.village.perks[rw.perk] = true; }
+    let thing = null;
+    if (rw.thing === "blade") thing = CM.affix(CM.makeItem(Math.max(4, (this.camps || []).length * 3 + 4), rnd, "weapon"), 12, rnd);
+    else if (rw.thing === "tome" && CM.TOMES) { const ids = Object.keys(CM.TOMES); thing = CM.tome(ids[rnd.int(0, ids.length - 1)]); }
+    else if (rw.thing === "potions") { const depth = Math.max(5, ...(this.trail || []).map((x) => x[0] || 0)); for (let i = 0; i < 2; i++) this.bag.push({ name: "Blessed Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + depth * 3), value: 70 }); }
+    if (thing) { thing.unknown = false; this.bag.push(thing); }
+    delete E.taken[giver]; E.done[giver] = t.season;
+    this.tally.errands = (this.tally.errands || 0) + 1;
+    if (this.saveVillage) this.saveVillage();
+    this.journal = (this.journal || []).concat({ kind: "errand", floor: 0, who: R.giver, text: R.done });
+    this.say(`${R.giver.charAt(0).toUpperCase() + R.giver.slice(1)}: ${R.done}${rw.gold ? ` (+${rw.gold} gold` : " ("}${rw.renown ? `${rw.gold ? ", " : ""}+${rw.renown} renown` : ""})${thing ? ` - ${thing.name}` : ""}`);
+    this.emit("change");
+    return "";
+  },
+  // a fetch errand's thing, laid on its floor the first time the party is there after taking it
+  layErrand(fl) {
+    const E = this.errands();
+    for (const [giver, t] of Object.entries(E.taken)) {
+      const R = CM.ERRANDS[giver];
+      if (R.kind !== "fetch" || t.floor !== fl.number || this.bag.some((i) => i.kind === "errand" && i.giver === giver) || Object.values(fl.things).some((x) => x.type === "errand" && x.giver === giver)) continue;
+      const reach = CM.reachable(fl), cells = [...reach].filter((k) => !fl.things[k] && !fl.features[k] && k !== `${fl.pos[0]},${fl.pos[1]}`).sort();
+      if (!cells.length) continue;
+      const k = cells[CM.hashSeed(`${this.seed}:errandat:${giver}:${fl.number}`) % cells.length];
+      fl.things[k] = { type: "errand", giver };
+      this.dirty = true;
+    }
+  },
+  pickUpErrand(thing, k) {
+    const R = CM.ERRANDS[thing.giver];
+    this.bag.push({ name: R.thing.charAt(0).toUpperCase() + R.thing.slice(1), kind: "errand", giver: thing.giver, weight: 1, value: 0 });
+    delete this.floor.things[k];
+    this.sound("chest");
+    this.say(`${R.thing.charAt(0).toUpperCase() + R.thing.slice(1)}: ${R.giver}'s errand. Into the pack, carefully.`);
+    this.emit("change");
+  },
+  // a carving read: the librarian's errand, if it was this floor's
+  errandRead(floorNumber) { const t = this.errands().taken.library; if (t && t.floor === floorNumber && !t.read) { t.read = true; if (this.saveVillage) this.saveVillage(); this.say("Word for word: the librarian will want this."); } },
+});
 
 // ---- 65-village.js ----
 "use strict";
@@ -14574,7 +14801,7 @@ CM.Autopilot = class {
     }
     const phyl = things.find(([, t]) => t.type === "phylactery");
     if (phyl && can(phyl[0])) return phyl[0];
-    const keys = things.filter(([k, t]) => t.type === "key" && can(k));
+    const keys = things.filter(([k, t]) => (t.type === "key" || t.type === "errand") && can(k));   // (and an errand's thing)
     if (keys.length) return keys[0][0];
     const box = things.find(([, t]) => t.type === "strongbox" && !t.opened && game.bag.some((i) => i.kind === "boxkey" && i.box === fl.number));
     if (box && can(box[0])) return box[0];
@@ -14607,6 +14834,15 @@ CM.Autopilot = class {
     return "warped";
   }
   // one step: what it did, or false when it has stopped
+  // the people's part: in the town, the errands that lie on its way taken and the done ones handed in, and a follower
+  // hired - a torchbearer when no quiet one leads, a porter when the pack is heavy
+  people(fl) {
+    const game = this.game; if (!fl || fl.number !== 0 || this.peopleAt === game.tally.steps) return; this.peopleAt = game.tally.steps;
+    for (const id of Object.keys(game.errands().taken)) if (!game.errandLeft(id)) { game.handInErrand(id); this.tools.errands = (this.tools.errands || 0) + 1; }
+    for (const id of ["farm", "tavern", "temple", "merchant"]) if (game.errandOffered(id)) game.takeErrand(id);
+    if (!game.follower && game.gold >= 200) { const lead = game.party.find((h) => h.hp > 0), quiet = lead && ["Rogue", "Ranger", "Monk"].includes(lead.cls);
+      const id = game.overweight() > 0.7 ? "porter" : quiet ? null : "torchbearer"; if (id && !game.canHire(id)) { game.hireFollower(id); this.tools.hired = (this.tools.hired || 0) + 1; } }
+  }
   // the light shaded near a sleeper when a Rogue, Ranger or Monk leads; lit again when nothing sleeps close
   stealth(fl) {
     const game = this.game; if (!fl || fl.number < 1 || !(game.light && game.light.kind)) return;
@@ -14653,7 +14889,7 @@ CM.Autopilot = class {
       }
       if (f && f.type === "plate" && f.trap && !f.spent && !f.gate && f.known && kit && game.give(game.bag.findIndex((i) => i.kind === "trapkit"), 0) === "") { this.tools.disarmed++; return "disarmed"; }
     }
-    this.stealth(fl);
+    this.stealth(fl); this.people(fl);
     this.walk(fl);
     const target = this.pick();
     if (t && t.type === "event" && !t.done && !this.handled.has(fl.number + ":" + here)) {   // (asked once: "walk on" leaves the thing standing)
@@ -14699,6 +14935,7 @@ CM.Autopilot = class {
       else if (t && t.type === "bones") { /* picked up by walking on it */ }
       else if (f && (f.type === "lever" || f.type === "plate")) { if (f.type === "lever") { this.face(f.face); game.use(); } if ((f.type === "lever" && !f.pulled) || (f.type === "plate" && f.gate && !f.pressed)) { this.stuck++; this.log.push("lever won't"); } }
       else if (t && t.type === "key") { /* taken as we stepped on it */ }
+      else if (t && t.type === "errand") game.use();
       else if (t && (t.type === "event" || t.type === "peddler" || t.type === "strongbox")) { this.stuck++; this.log.push(`${t.type} not taken at ${here}`); t.done = true; t.opened = true; delete fl.things[here]; }
       else { if (this.stuck > 6) return this.stop("nothing to do"); return this.giveUp(`nothing to do at ${here} on floor ${fl.number}`); }
       return "used";
@@ -14936,7 +15173,7 @@ Object.assign(CM.Game.prototype, {
   drink() {
     if (!this.inTown()) return "The Hanged Lantern is in town.";
     if (this.floor.drank) return "One round is enough before a descent.";
-    const price = CM.festivalIs(this, "midsummer") ? 0 : CM.DRINK_PRICE; if (this.gold < price) return `A round is ${CM.DRINK_PRICE} gold.`;
+    const price = CM.festivalIs(this, "midsummer") ? 0 : ((this.village || {}).perks || {}).tavern ? Math.ceil(CM.DRINK_PRICE / 2) : CM.DRINK_PRICE; if (this.gold < price) return `A round is ${price} gold.`;   // (the tavern-keeper's errand: half price)
     this.logAct("drink");
     this.gold -= price; this.spend("tavern", price); this.floor.drank = true;
     if (CM.festivalIs(this, "wassail")) { this.gain([CM.dish("beer")], "tavern"); this.say("The Wassail: the cellar is open, and a jug of beer goes into the pack."); }
@@ -15648,7 +15885,7 @@ CM.UI = class {
 <div id="play" class="screen">
   <div class="top">
     <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
-    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
+    <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="follower"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
   <div id="log" role="log" aria-live="polite"></div>
@@ -15787,7 +16024,7 @@ CM.UI = class {
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
 <div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
-<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button></span></h2><div id="journal-list"></div>
+<div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button><button data-page="errands" title="What the townsfolk have asked of you, and what they ask now">Errands</button></span></h2><div id="journal-list"></div>
   <div class="end"><button class="close primary">Close</button></div></div></div>
 <div class="dialog" id="dlg-over"><div class="box overbox"><div class="emblem-slot"></div><h2 id="over-title"></h2><p id="over-text" class="lore"></p>
   <div class="roll" id="over-party"></div><div class="small" id="over-retire"></div><div class="tally" id="over-tally"></div><div class="page ended" id="over-page"></div>
@@ -16113,6 +16350,7 @@ CM.UI = class {
       const sel = document.createElement("select"); sel.innerHTML = `<option value="">${F.order ? "He sows " + CM.CROPS[F.order].name.toLowerCase() : "Tell him what to sow"}...</option><option value="-">Nothing</option>` + Object.keys(CM.CROPS).map((c) => `<option value="${c}">${this.esc(CM.CROPS[c].name)} (${CM.CROPS[c].sow.join(", ")})</option>`).join(""); sel.addEventListener("change", () => { if (sel.value) act(() => g.orderHand(sel.value === "-" ? null : sel.value)); }); more.appendChild(sel); }
     if (L >= 5) btn(more, F.cowFed > F.days ? `The cow is fed for ${F.cowFed - F.days} dawns` : "Feed the cow a cabbage (milk a dawn for a week)", () => g.feedCow(), F.cowFed > F.days);
     if (F.notes.length) { const n = document.createElement("div"); n.className = "small"; n.textContent = `Lately: ${F.notes.slice(-4).join("; ")}.`; more.appendChild(n); }
+    this.hireRow(more, ["dog"], () => this.openFarm());               // (the farm's dog, once there's a cow to mind)
     this.openDialog("#dlg-farm");
   }
   dishButtons(into, run) {                                              // the dishes the pack's things would make, and the apron
@@ -16169,6 +16407,7 @@ CM.UI = class {
     { const r = room("Wren, the chronicler"); const W = CM.VILLAGERS.chronicler; r.innerHTML = `<div class="small">${this.esc(W.greet.join(" "))} ${this.esc(this.brought("library"))}</div>`; btn(r, "Read the Book of Caer Duin", () => { this.bookOpen = true; this.openVillage(); }); }
     { const r = room(`The tomes (one out at a time${L.lent ? `: ${this.esc(CM.TOMES[L.lent.tome] || "a tome")} is out with this party` : ""})`); Object.keys(CM.TOMES).forEach((id) => { const b = btn(r, `Borrow the ${CM.TOMES[id]}`, () => say(g.borrowTome(id))); b.disabled = Boolean(L.lent); }); }
     { const r = room("The shelf of lost pages"); r.innerHTML = `<div class="small">${L.pages ? `${CM.plural(L.pages, "lost page")} found and copied here: fire, frost or lightning on every foe, once each, torn from tomes no one has whole.` : "Empty. The Lost Page scrolls found below are copied here."}</div>`; }
+    { const r = room("A hedge-wizard, for hire"); this.hireRow(r, ["wizard"], () => this.openLibrary(true)); }
     if (lvl >= 5) { const r = room("The gazetteer"); r.innerHTML = `<div class="small">The first ${CM.GAZETTEER_FLOORS} floors of any seed, mapped: on a new run their walls are on the map before the party is on them.</div>`; }
     this.openDialog("#dlg-library");
   }
@@ -16687,8 +16926,36 @@ CM.UI = class {
     for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.classList.toggle("on", b.dataset.page === (this.journalPage || "journal"));
     if (this.journalPage === "codex") { box.innerHTML = this.codexHtml(); this.openDialog("#dlg-journal"); return; }
     if (this.journalPage === "things") { box.innerHTML = this.compendiumHtml(); this.openDialog("#dlg-journal"); return; }
+    if (this.journalPage === "errands") { box.innerHTML = this.errandsHtml(); this.wireErrands(box); this.openDialog("#dlg-journal"); return; }
     box.innerHTML = html || `<div class="small">Nothing yet. Read the walls (Space before a carving), and listen to whoever you meet; the hermit pays for stories.</div>`;
     this.openDialog("#dlg-journal");
+  }
+  // the errands (64b-people.js): what each of the six asks, taken, done this season; take one, or hand one in, in the town
+  errandsHtml() {
+    const g = this.game, E = g.errands(), inTown = g.floor && g.floor.number === 0, season = CM.errandSeason();
+    const rows = Object.entries(CM.ERRANDS).map(([id, R]) => {
+      const t = E.taken[id], who = R.giver.charAt(0).toUpperCase() + R.giver.slice(1);
+      if (t) { const left = g.errandLeft(id); return `<div class="entry"><small>${this.esc(who)} - taken</small><p>${this.esc(g.errandAsk(id))}</p><p class="small">${left ? `Still to do: ${this.esc(left)}.` : `Done: ${inTown ? "hand it in." : "hand it in, in the town."}`}</p>${!left && inTown ? `<button data-errand-hand="${id}">Hand it in</button>` : ""}</div>`; }
+      if (E.done[id] === season) return `<div class="entry"><small>${this.esc(who)} - done this season</small><p class="small">Nothing more until the season turns.</p></div>`;
+      const can = g.errandOffered(id);
+      return `<div class="entry"><small>${this.esc(who)} - asks</small><p>${this.esc(R.ask.replace("{n}", CM.errandFloor(id, season) || ""))}</p>${inTown ? `<button data-errand-take="${id}" ${can ? "" : "disabled"}>${can ? "Take it on" : "Three at a time"}</button>` : `<p class="small">Taken in the town.</p>`}</div>`;
+    }).join("");
+    const perks = Object.keys((g.village || {}).perks || {});
+    return `<div class="small">Six of the townsfolk have errands below: three at a time, one from each a season. What they pay is theirs to give.${perks.length ? ` Favours kept: ${perks.map((p) => ({ tavern: "the round at half price", merchant: "a tenth off at the merchant", dog: "the farm's dog" })[p] || p).join(", ")}.` : ""}</div>${rows}`;
+  }
+  wireErrands(box) {
+    const g = this.game;
+    for (const b of box.querySelectorAll("[data-errand-take]")) b.addEventListener("click", () => { g.takeErrand(b.dataset.errandTake); this.openJournal(); this.refresh(); });
+    for (const b of box.querySelectorAll("[data-errand-hand]")) b.addEventListener("click", () => { const note = g.handInErrand(b.dataset.errandHand); if (note) g.say(note); this.openJournal(); this.refresh(); });
+  }
+  // a row of followers to take on, where they are to be had
+  hireRow(into, ids, after) {
+    const g = this.game, row = document.createElement("div"); row.className = "small";
+    if (g.follower) { const s = document.createElement("span"); s.textContent = `Behind the party: ${g.followerName()}. `; row.appendChild(s); const b = document.createElement("button"); b.textContent = "Let them go"; b.addEventListener("click", () => { g.dismissFollower(); after(); this.refresh(); }); row.appendChild(b); into.appendChild(row); return; }
+    for (const id of ids) { const F = CM.FOLLOWERS[id], why = g.canHire(id), b = document.createElement("button");
+      b.textContent = `Take on a ${F.name}${F.price ? `, ${F.price} gold` : ""}`; b.title = why || F.what; b.disabled = Boolean(why);
+      b.addEventListener("click", () => { const note = g.hireFollower(id); if (note) g.say(note); after(); this.refresh(); }); row.appendChild(b); }
+    into.appendChild(row);
   }
   // the compendium: every base, by group, the unseen as outlines
   compendiumHtml() {
@@ -17057,6 +17324,7 @@ Object.assign(CM.UI.prototype, {
     const temper = this.$("#side .temper"), hungry = g.hungerWord();
     temper.textContent = `The party: ${g.moraleWord()}${hungry ? ", " + hungry.toLowerCase() : ""}${g.weightWord ? (g.weightWord() ? ", " + g.weightWord().toLowerCase() : "") : ""}${g.blessed && g.blessed() ? ", " + CM.t("hud.blessed") : ""}${g.autoOn() ? ", " + CM.t("hud.automatic") : ""}`;
     temper.title = CM.MORALE.what + " " + CM.HUNGER.what;
+    { const fo = this.$("#side .follower"), f = g.follower; if (fo) { fo.textContent = f ? `Behind: ${g.followerName()}${f.away ? " (waiting above)" : ` (${Math.max(0, f.hp)}/${f.max})`}` : ""; fo.title = f ? CM.FOLLOWERS[f.id].what : ""; } }
     temper.classList.toggle("low", (g.morale === undefined ? 70 : g.morale) <= 30 || hungry === "Weary");
     const hint = this.$("#view .hint");
     if (g.mode === "camp") hint.textContent = "A merchant's camp. Rest, trade, see to the fallen - then go deeper, or back up.";
@@ -17771,6 +18039,7 @@ Object.assign(CM.UI.prototype, {
       const b = document.createElement("button"); b.textContent = g.bounty ? (g.bountyDone() ? "The board: claim the bounty" : `The board: ${g.bountyProgress()} of ${CM.plural(CM.BOUNTY_NEED, g.bounty.kind)}`) : "The board: take a bounty"; b.addEventListener("click", () => { this.$("#tavern-note").textContent = (g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty()) || "Done."; this.renderTavern(); this.refresh(); }); row.appendChild(b);
       const c = document.createElement("div"); c.className = "small"; c.innerHTML = `<i>${this.esc(this.brought("tavern"))}</i><br>` + g.contracts().map(({ c: ct, done }) => `${done ? "✓" : "○"} ${this.esc(ct.name)}: ${this.esc(ct.what)} (${ct.renown} renown)`).join("<br>"); row.appendChild(c);
       fence.appendChild(row);
+      this.hireRow(fence, ["porter", "torchbearer"], () => this.renderTavern());   // (a follower: 64b-people.js)
     }
     if (g.inTown())
     g.bag.forEach((it, row) => { if (!it.unknown && !(it.props && it.props.cursed)) return; const b = document.createElement("button"); b.textContent = it.unknown ? CM.t("fence.unknown", { what: CM.baseName(it), n: Math.floor(it.value / 2) }) : CM.t("fence.cursed", { what: it.name }); b.addEventListener("click", () => { this.$("#tavern-note").textContent = g.fence(row) || "Done."; this.renderTavern(); this.refresh(); }); fence.appendChild(b); });
@@ -18480,6 +18749,7 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
       else if (thing.type === "villager") out.push({ x, y, layer: "npc:adventurer", w: 0.75, h: 0.8 });

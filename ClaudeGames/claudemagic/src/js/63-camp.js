@@ -25,7 +25,8 @@ Object.assign(CM.Game.prototype, {
       if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
-      if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);   // (the Merchant's House in town carries it all)
+      if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
+      if (this.floor.number === 0 && ((this.village || {}).perks || {}).merchant) for (const it of this.stock) it.value = Math.ceil(it.value * 0.9);   // (the merchant's errand: a tenth off, for good)   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
       this.deliverOrders();
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
@@ -429,7 +430,7 @@ Object.assign(CM.Game.prototype, {
   // field kit, relics, a Scroll of Homecoming that remembers a square below.
   sellable(which) {
     const F = CM.BAG_FILTERS[which], gear = ["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak", "trinket"];
-    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
+    const keep = (it) => ["key", "boxkey", "bones", "page", "kit", "bell", "errand"].includes(it.kind) || (it.props && (it.props.relic || it.props.heirloom)) || (it.kind === "scroll" && it.back) || !(it.value > 0 || it.unknown);
     const rows = [];
     this.bag.forEach((it, i) => {
       if (keep(it)) return;

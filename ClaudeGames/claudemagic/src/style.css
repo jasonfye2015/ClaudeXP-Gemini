@@ -221,6 +221,8 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #side .light.dark { color: #E06060; font-weight: bold; }
 #side .temper { font: italic 12px var(--serif); color: var(--dim); text-align: center; }
 #side .temper.low { color: #E0A060; }
+#side .follower { font: 12px var(--serif); color: #C8B890; text-align: center; }
+#side .follower:empty { display: none; }
 .slot .who select.quirk { grid-column: 1 / -1; }
 #side { width: 296px; flex: 0 0 296px; display: flex; flex-direction: column; gap: 8px; }
 #automap { width: 290px; height: 290px; border: 3px solid var(--edge); background: var(--paper); }

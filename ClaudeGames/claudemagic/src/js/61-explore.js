@@ -263,6 +263,7 @@ Object.assign(CM.Game.prototype, {
       if (l.left <= 0) { const oil = this.bag.findIndex((i) => i.kind === "lampoil"); if (oil >= 0) { this.bag.splice(oil, 1); l.left = CM.LANTERN_OIL; this.say("The lantern gutters, and is filled from the pack."); } else { this.light = { kind: null, left: 0 }; this.say("The lantern goes out. Lamp oil would light it again."); this.emit("change"); } }
       return;
     }
+    if (this.followerIs && this.followerIs("torchbearer") && (this.steps || 0) % 2 === 1 && l.kind === "torch") return;   // (a torchbearer: half the rate)
     if (l.kind !== "torch") return;
     if ((this.steps || 0) % 2 === 1 && this.alive().some((h) => CM.trait(h, "pathfinder"))) return;   // (the Pathfinder banks the fire: every other step is free)
     const wet = this.floor && (this.floor.special === "wading" || this.floor.tide || (this.floor.number === -1 && CM.weather(this) === "rain" && this.floor.ford && this.floor.pos.join(",") === this.floor.ford.join(","))) && !this.alive().some((h) => (h.boots && h.boots.props && h.boots.props.waterwalk && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.waterwalk) || h.origin === "lowertown" || CM.setWorn(h) === "watch");
@@ -336,7 +337,8 @@ Object.assign(CM.Game.prototype, {
     if (this.perch) { this.climbDown(); return; }
     { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
       if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
-      if (t0 && t0.type === "postern") { this.postern(); return; } }
+      if (t0 && t0.type === "postern") { this.postern(); return; }
+      if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (an errand's thing: 64b-people.js)
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
     const [dx, dy] = CM.DIRS[fl.facing], ak = keyOf(x + dx, y + dy), ahead = fl.features[ak];
     if (here && here.type === "lever" && here.face === fl.facing) {
@@ -351,7 +353,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (here && here.type === "carving" && here.face === fl.facing) {
-      here.read = true;
+      here.read = true; if (this.errandRead) this.errandRead(fl.number);
       let text = this.dream && typeof here.text === "number" && here.text >= 0 && here.text < CM.BOTTOM ? CM.DREAM.lore[here.text] : CM.loreText(here.text, this.seed, here.telling);
       const wall = text, lkey = CM.loreKey(here.text), L = CM.LORE_TEXT[lkey];
       if (!this.dream && L && (L.chapter === "root" || L.chapter === "endless")) {   // the Root's own voice: it knows the party
@@ -643,6 +645,7 @@ Object.assign(CM.Game.prototype, {
   // Rogue's chance (a master pick at the full chance, and a dwarven lock only to it); a pick breaks on a miss. "" when it gave.
   tryLock(f, k, what = "door") {
     const fl = this.floor, grade = f.grade || (f.grade = CM.lockGrade(this.seed, fl.number, k)), G = CM.LOCKS[grade];
+    if (this.followerIs && this.followerIs("adventurer") && this.follower.picked !== fl.number) { this.follower.picked = fl.number; this.sound("unlock"); this.say(`${this.follower.name === "the one you cut loose" ? "The one you cut loose" : this.follower.name} kneels at ${G.name} with a bent pin, and it gives.`); return ""; }   // (the rescued adventurer: the first lock of a floor)
     const relic = this.alive().flatMap((h) => CM.equipped(h)).find((it) => CM.OPENS_ANYTHING.includes(CM.baseIdOf(it)) && !it.unknown);
     if (relic) { this.sound("unlock"); this.say(`${CM.itemName(relic)} is held to ${G.name}, and the lock forgets itself.`); return ""; }
     const rogue = this.alive().find((h) => h.cls === "Rogue" && h.level >= G.rogue && this.canAct(h));
@@ -742,7 +745,7 @@ Object.assign(CM.Game.prototype, {
     this.dirty = true;
   },
   // the pack's weight against what the party can carry: 1 is the line; over it costs, half again over it there is no running
-  overweight() { return CM.bagWeight(this.bag) / CM.carryCap(this.party); },
+  overweight() { return CM.bagWeight(this.bag) / (CM.carryCap(this.party) + (this.followerCarry ? this.followerCarry() : 0)); },   // (a porter carries forty more)
   // nothing burning and a torch in the pack: light it (a torch found after the last went out is lit when it's wanted)
   lightSpare() {
     if (this.lightOut) return;                                           // (shaded on purpose: not lit behind the party's back)
@@ -801,8 +804,8 @@ Object.assign(CM.Game.prototype, {
 // view, or the light fails. The window takes one step each time the view is still; any key or click stops it. ----
 {
 const keyOf = CM.keyOf;
-const WATCHED = ["chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
-const SEEN_AS = { chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
+const WATCHED = ["errand", "chest", "key", "ghost", "hermit", "adventurer", "phylactery", "bones", "rope", "event", "strongbox", "boxkey", "peddler", "rivals", "remains", "wingstair", "node", "building", "well", "villager", "woodgate", "cave", "caveexit", "hut", "shrine", "burner", "vein", "farm"];
+const SEEN_AS = { errand: "something the townsfolk asked after", chest: "a chest", key: "a key on the floor", ghost: "a pale shape in the air", hermit: "someone in a nest of rags", adventurer: "someone bound against the wall", phylactery: "a cold box", bones: "bones on the floor", rope: "a rope from above",
   event: "something strange", node: "something growing", building: "a door", well: "the well", villager: "one of the townsfolk", woodgate: "the gate", cave: "a cave mouth", vein: "ore in the rock", caveexit: "the way out", hut: "a hut", farm: "the farm's gate", shrine: "a ruined shrine", burner: "a smoking mound", strongbox: "an iron strongbox", boxkey: "a heavy key on the floor", peddler: "a peddler with a lantern", rivals: "other adventurers", remains: "the remains of a party", wingstair: "a second stair down" };
 Object.assign(CM.Game.prototype, {
   // a way over the squares the party knows, from where it stands to (x, y): the steps, or null
