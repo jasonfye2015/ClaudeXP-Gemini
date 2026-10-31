@@ -47,7 +47,7 @@ Principles, kept throughout:
   heavy, as at home: the party's carrying limit applies to the satchel's ore.
 - Tests: ore depths by seed; a copper pick cannot take silver; points worn; chunks are the main game's.
 
-## Phase 2 (v12.2): crafting on the island
+## Phase 2 (v12.2): crafting on the island - done
 - **A workbench** (from planks) and a **kiln** (from cobblestone) the party can build and place.
 - **Recipes** (the satchel's materials, nothing from home): planks and poles from wood; **torches** (pole and
   charcoal) that light their blocks and can be placed on walls; **island tools** - stone pick, stone axe, stone

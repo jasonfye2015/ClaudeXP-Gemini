@@ -598,7 +598,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (game.mode === "craft" && game.craft && !ui.dialogOpen()) {      // Claudecraft (76h-claudecraft.js draws it)
       const f = CRAFT_KEYS[e.code], w = game.craft.walker; if (f) { e.preventDefault(); if (f === "jump" && !craftIn.jump) w.pressJump(); craftIn[f] = true; return; }
       if (/^Digit[1-9]$/.test(e.code)) { w.slot = Number(e.code.slice(-1)) - 1; return; }
-      if (e.code === "KeyI" || e.code === "KeyE") { e.preventDefault(); ui.ccToggleSatchel(); craftIn = {}; craftDig = false; return; }
+      if (e.code === "KeyI" || e.code === "KeyE") { e.preventDefault(); if (ui.ccSatchelOpen) ui.ccCloseWindow(); else ui.ccToggleSatchel(); craftIn = {}; craftDig = false; return; }
+      if (e.code === "Escape" && ui.ccSatchelOpen) { e.preventDefault(); ui.ccCloseWindow(); return; }
       if (e.code !== "Escape") { e.preventDefault(); return; }
     }
     if (game.mode === "bros" && game.brosRun && !ui.dialogOpen()) {     // Super Claude Bros
@@ -764,12 +765,13 @@ window.addEventListener("DOMContentLoaded", () => {
     if (ui.ccSatchelOpen) { ui.ccSatchelClick(e); return; }
     if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
     if (e.button === 0) craftDig = true;
-    else if (e.button === 2) { if (game.craftPlace()) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2]); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
+    else if (e.button === 2) { const use = game.craftUse(); if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
+      const placed = game.craftPlace(); if (placed) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2], placed === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
   });
   window.addEventListener("mouseup", (e) => { if (e.button === 0) craftDig = false; });
   window.addEventListener("mousemove", (e) => { if (game.mode === "craft" && game.craft && document.pointerLockElement === ui.$("#craftcanvas")) { const w = game.craft.walker; w.yaw -= e.movementX * 0.15; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.15)); } });
   view.addEventListener("contextmenu", (e) => { if (game.mode === "craft") e.preventDefault(); });
-  view.addEventListener("wheel", (e) => { if (game.mode !== "craft" || !game.craft) return; e.preventDefault(); const w = game.craft.walker; w.slot = (w.slot + (e.deltaY > 0 ? 1 : -1) + 9) % 9; }, { passive: false });
+  view.addEventListener("wheel", (e) => { if (game.mode !== "craft" || !game.craft) return; e.preventDefault(); if (ui.ccSatchelOpen) { ui.ccScroll = Math.max(0, (ui.ccScroll || 0) + (e.deltaY > 0 ? 2 : -2)); return; } const w = game.craft.walker; w.slot = (w.slot + (e.deltaY > 0 ? 1 : -1) + 9) % 9; }, { passive: false });
   view.addEventListener("mousedown", (e) => { if (game.mode === "bros" && e.target.closest("#broscanvas")) { e.preventDefault(); brosIn.attack = true; } });
   window.addEventListener("mouseup", () => { if (game.mode === "bros") brosIn.attack = false; });
   // ---- Claudeablo's mouse: on its canvas, every click is the game's ----
@@ -816,11 +818,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const cr = game.craft; if (!cr) return;
     if (!ui.dialogOpen() && !ui.ccSatchelOpen && ui.screen === "play" && !ui.ccPending.length) { cr.walker.update(Math.min(0.05, dt), Object.assign({}, craftIn, { down: craftIn.down || (cr.walker.flying && craftIn.sprint) })); cr.target = cr.world.raycast(cr.walker.eye(), cr.walker.look());
       const locked = document.pointerLockElement === ui.$("#craftcanvas"), before = cr.dig ? Math.floor(cr.dig.t * 4) : -1, hit = cr.target[0], b = game.craftDig(Math.min(0.05, dt), craftDig && locked);
-      if (b) { ui.ccDirtyAt(hit[0], hit[2]); try { CM.audio.play(b === CM.CC.B.LEAVES ? "step" : b === CM.CC.B.LOG || b === CM.CC.B.PLANKS ? "grind" : "bump", 0.45, 0, 0.9 + Math.random() * 0.3); } catch (er) { /* */ } }
+      if (b) { ui.ccDirtyAt(hit[0], hit[2], b === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play(b === CM.CC.B.LEAVES ? "step" : b === CM.CC.B.LOG || b === CM.CC.B.PLANKS ? "grind" : "bump", 0.45, 0, 0.9 + Math.random() * 0.3); } catch (er) { /* */ } }
       else if (cr.dig && cr.dig.need < Infinity && Math.floor(cr.dig.t * 4) !== before) { try { CM.audio.play("step", 0.18, 0, 1.3 + Math.random() * 0.3); } catch (er) { /* */ } }
       if (cr.walker.landed) { const d = cr.walker.landed; cr.walker.landed = 0; const hurt = CM.CC.fallHurt(d, cr.hero.max); if (hurt) { try { CM.audio.play("bump", 0.7, 0, 0.6); } catch (er) { /* */ } ui.ccHurtAt = now; if (game.craftHurt(hurt, `A fall of ${Math.round(d)} blocks`)) { craftDig = false; ui.ccDeadAt = now; } } }
       if (cr.bundles.length && game.craftFetch()) { try { CM.audio.play("coin", 0.5); } catch (er) { /* */ } } }
-    if (cr.walker.inGate()) { try { CM.audio.play("teleport", 0.6); } catch (er) { /* */ } craftIn = {}; craftDig = false; ui.ccSatchelOpen = false; game.leaveCraft(); ui.refresh(); return; }
+    if (cr.walker.inGate()) { try { CM.audio.play("teleport", 0.6); } catch (er) { /* */ } craftIn = {}; craftDig = false; ui.ccCloseWindow(); game.leaveCraft(); ui.refresh(); return; }
     ui.drawCraft(now, dt);
     if ((cr.since += dt) > 30) { cr.since = 0; game.craftKeep(); }
     if ((craftT += dt) > 1) { craftT = 0; ui.refresh(); }

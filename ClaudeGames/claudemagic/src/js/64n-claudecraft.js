@@ -8,25 +8,49 @@
 const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
 CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
-  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22 };
+  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27 };
 const CB = CC.B;
 CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
-  17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal" };
+  17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal",
+  23: "Workbench", 24: "Kiln", 25: "Torch", 26: "Chest", 27: "Ladder", 107: "Pole", 111: "Copper bar", 112: "Iron bar", 113: "Silver bar", 114: "Gold bar", 115: "Star-iron bar",
+  121: "Stone pick", 122: "Stone axe", 123: "Stone sword", 124: "Copper pick", 125: "Copper axe", 126: "Copper sword", 127: "Iron pick", 128: "Iron axe", 129: "Iron sword" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
-CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22]);
+CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2 };
-CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22]);
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN]);
+CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER]);
 // (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
 // main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
 CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
-CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true } };
-CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal" };
+CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true }, 107: { pole: true },
+  111: { bar: "copper" }, 112: { bar: "iron" }, 113: { bar: "silver" }, 114: { bar: "gold" }, 115: { bar: "stariron" } };
+CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal", 107: "item_pole",
+  111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
+// (v12.2) the island's own tools, made at a workbench: they stay on the island. A pick quickens stone and mines ore of its
+// grade, an axe quickens wood, a sword adds to the hero's blows there; each has its uses, a block broken (or a blow) one.
+CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"], uses: 60 }, 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
+  124: { kind: "pick", tier: "copper", factor: 0.45, mines: ["copper", "iron"], uses: 150 }, 125: { kind: "axe", tier: "copper", factor: 0.4, uses: 150 }, 126: { kind: "sword", tier: "copper", power: 4, uses: 150 },
+  127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
 CC.isItem = (b) => b > 100;
-CC.itemWeight = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.WEIGHTS.ore : CM.WEIGHTS.charcoal) : 0);
-CC.toHome = (b) => (CC.ITEM[b] ? (CC.ITEM[b].ore ? CM.oreChunk(CC.ITEM[b].ore) : CM.charcoal()) : null);
+CC.itemWeight = (b) => { const I = CC.ITEM[b]; return !I ? 0 : I.ore ? CM.WEIGHTS.ore : I.bar ? CM.WEIGHTS.bar : I.charcoal ? CM.WEIGHTS.charcoal : 0; };
+CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal)); };
+CC.toHome = (b) => { const I = CC.ITEM[b]; return !I ? null : I.ore ? CM.oreChunk(I.ore) : I.bar ? CM.metalBar(I.bar) : I.charcoal ? CM.charcoal() : null; };
+// (v12.2) what the island makes: by hand, at a workbench or at a kiln within reach. A kiln's bar is the Smith's own sum.
+CC.REACH = 4;
+CC.RECIPES = [
+  { id: "planks", makes: [CB.PLANKS, 4], needs: { [CB.LOG]: 1 } }, { id: "poles", makes: [107, 4], needs: { [CB.PLANKS]: 2 } },
+  { id: "workbench", makes: [CB.WORKBENCH, 1], needs: { [CB.PLANKS]: 4 } }, { id: "torch", makes: [CB.TORCH, 4], needs: { 107: 1, 106: 1 } },
+  { id: "kiln", makes: [CB.KILN, 1], needs: { [CB.COBBLE]: 8 }, at: "bench" }, { id: "chest", makes: [CB.CHEST, 1], needs: { [CB.PLANKS]: 8 }, at: "bench" },
+  { id: "ladder", makes: [CB.LADDER, 3], needs: { 107: 7 }, at: "bench" },
+  { id: "stonepick", makes: [121, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stoneaxe", makes: [122, 1], needs: { [CB.COBBLE]: 3, 107: 2 }, at: "bench" }, { id: "stonesword", makes: [123, 1], needs: { [CB.COBBLE]: 2, 107: 1 }, at: "bench" },
+  { id: "copperpick", makes: [124, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "copperaxe", makes: [125, 1], needs: { 111: 3, 107: 2 }, at: "bench" }, { id: "coppersword", makes: [126, 1], needs: { 111: 2, 107: 1 }, at: "bench" },
+  { id: "ironpick", makes: [127, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironaxe", makes: [128, 1], needs: { 112: 3, 107: 2 }, at: "bench" }, { id: "ironsword", makes: [129, 1], needs: { 112: 2, 107: 1 }, at: "bench" },
+  { id: "glass", makes: [CB.GLASS, 4], needs: { [CB.SAND]: 4, 106: 1 }, at: "kiln" }, { id: "bricks", makes: [CB.BRICK, 4], needs: { [CB.COBBLE]: 4, 106: 1 }, at: "kiln" },
+];
+for (const [i, ore] of ["copper", "iron", "silver", "gold", "stariron"].entries()) CC.RECIPES.push({ id: `bar_${ore}`, makes: [111 + i, 1], needs: { [101 + i]: 3, 106: 1 }, at: "kiln" });   // (three chunks and a charcoal, as the Smith smelts)
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
@@ -37,8 +61,9 @@ CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 
 // the hero's satchel: 27 slots of {b, n}, stacks of up to 64; the first nine are the hotbar
 CC.SATCHEL = 27; CC.STACK = 64;
 CC.Satchel = class {
-  constructor(saved) { this.slots = Array.from({ length: CC.SATCHEL }, (_, i) => (saved && saved[i] && saved[i].n > 0 ? { b: saved[i].b, n: saved[i].n } : null)); }
+  constructor(saved, size = CC.SATCHEL) { this.slots = Array.from({ length: size }, (_, i) => (saved && saved[i] && saved[i].n > 0 ? Object.assign({ b: saved[i].b, n: saved[i].n }, saved[i].d !== undefined ? { d: saved[i].d } : {}) : null)); }
   add(b, n = 1) {
+    if (CC.TOOLS[b]) { for (let k = 0; k < n; k++) { const i = this.slots.indexOf(null); if (i < 0) return false; this.slots[i] = { b, n: 1, d: CC.TOOLS[b].uses }; } return true; }   // (a tool to a slot, with its uses)
     for (let k = 0; k < n; k++) {
       let s = this.slots.find((x) => x && x.b === b && x.n < CC.STACK);
       if (s) { s.n++; continue; }
@@ -49,16 +74,24 @@ CC.Satchel = class {
   }
   take(i, n = 1) { const s = this.slots[i]; if (!s || s.n < n) return false; s.n -= n; if (!s.n) this.slots[i] = null; return true; }
   count(b) { return this.slots.reduce((t, s) => t + (s && s.b === b ? s.n : 0), 0); }
+  takeCount(b, n) { if (this.count(b) < n) return false; for (let i = this.slots.length - 1; i >= 0 && n > 0; i--) { const s = this.slots[i]; if (!s || s.b !== b) continue; const k = Math.min(n, s.n); s.n -= k; n -= k; if (!s.n) this.slots[i] = null; } return true; }
   swap(i, j) { [this.slots[i], this.slots[j]] = [this.slots[j], this.slots[i]]; }
-  empty() { const out = this.slots.filter(Boolean).map((s) => ({ b: s.b, n: s.n })); this.slots.fill(null); return out; }
-  toJSON() { return this.slots.map((s) => (s ? { b: s.b, n: s.n } : null)); }
+  empty() { const out = this.slots.filter(Boolean).map((s) => Object.assign({}, s)); this.slots.fill(null); return out; }
+  toJSON() { return this.slots.map((s) => (s ? Object.assign({}, s) : null)); }
+  // a stack put in whole (a tool with its uses kept); false if it would not all fit
+  put(st) { if (CC.TOOLS[st.b]) { const i = this.slots.indexOf(null); if (i < 0) return false; this.slots[i] = Object.assign({}, st); return true; } const room = this.slots.reduce((t, x) => t + (!x ? CC.STACK : x.b === st.b ? CC.STACK - x.n : 0), 0); if (room < st.n) return false; return this.add(st.b, st.n); }
+  // the best tool of a kind (picks: one that mines this ore, if one is asked), as [slot, tool]
+  best(kind, ore) { let out = null; this.slots.forEach((s, i) => { const T = s && CC.TOOLS[s.b]; if (!T || T.kind !== kind || (ore && !(T.mines || []).includes(ore))) return; if (!out || (T.factor ? T.factor < out[1].factor : T.power > out[1].power)) out = [i, T]; }); return out; }
 };
-CC.ATLAS = 8;                                                              // (the atlas: 8 x 4 tiles of 16 x 16)
+CC.ATLAS = 8; CC.ROWS = 8;                                                // (the atlas: 8 x 8 tiles of 16 x 16)
 CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17, ore_copper: 18, ore_iron: 19, ore_silver: 20, ore_gold: 21, ore_stariron: 22, charstone: 23,
-  item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29 };
+  item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29, workbench_top: 30, workbench_side: 31, kiln_side: 32, kiln_top: 33, torch: 34,
+  chest_side: 35, chest_top: 36, ladder: 37, item_pole: 38, bar_copper: 39, bar_iron: 40, bar_silver: 41, bar_gold: 42, bar_stariron: 43, pick_stone: 44, axe_stone: 45, sword_stone: 46,
+  pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
   9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
-  17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"] };
+  17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"],
+  23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -77,14 +110,18 @@ CC.noise3 = (seed, x, y, z, scale) => { const fy = y / scale, y0 = Math.floor(fy
 // (v12.1) the ore's depths: [block, veins, length, lowest y, highest y]
 CC.VEINS = [[22, 240, 7, 14, 46], [17, 260, 6, 10, 40], [18, 190, 5, 5, 28], [19, 110, 4, 3, 16], [20, 70, 4, 2, 10], [21, 45, 3, 1, 3]];
 CC.World = class {
-  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; this.roof = new Uint8Array(CC.SIZE * CC.SIZE); }
+  constructor(seed, edits = {}) { this.seed = seed >>> 0; this.blocks = new Uint8Array(CC.SIZE * CC.SIZE * CC.HEIGHT); this.edits = Object.assign({}, edits); this.heights = []; this.roof = new Uint8Array(CC.SIZE * CC.SIZE); this.torches = new Set(); }
   // the highest block that keeps out the sky in a column (leaves, glass and water let it through)
   roofAt(x, z) { for (let y = CC.HEIGHT - 1; y > 0; y--) { const b = this.get(x, y, z); if (CC.SOLID.has(b) && b !== CB.LEAVES && b !== CB.GLASS) return y; } return 0; }
-  skyAt(x, y, z) { if (x < 0 || z < 0 || x >= CC.SIZE || z >= CC.SIZE) return 1; const d = this.roof[z * CC.SIZE + x] - y; return d < 0 ? 1 : Math.max(0, 1 - (d + 1) * 0.3); }
+  skyOwn(x, y, z) { if (x < 0 || z < 0 || x >= CC.SIZE || z >= CC.SIZE) return 1; const d = this.roof[z * CC.SIZE + x] - y; return d < 0 ? 1 : Math.max(0, 1 - (d + 1) * 0.3); }
+  skyAt(x, y, z) { const own = this.skyOwn(x, y, z); if (own >= 1) return 1; return Math.max(own, 0.7 * Math.max(this.skyOwn(x + 1, y, z), this.skyOwn(x - 1, y, z), this.skyOwn(x, y, z + 1), this.skyOwn(x, y, z - 1))); }   // (under an overhang, the open sky beside it still lights)
+  // (v12.2) a torch's light: bright by it, gone eight blocks away (list: the torches to look at, or all)
+  torchAt(x, y, z, list) { let best = 0; for (const k of list || this.torches) { const [tx, ty, tz] = typeof k === "string" ? k.split(",").map(Number) : k, d = Math.hypot(tx - x, ty - y, tz - z); if (d < CC.TORCH_REACH) best = Math.max(best, 0.95 * (1 - d / CC.TORCH_REACH)); } return best; }
+  lightAt(x, y, z, list) { return Math.max(this.skyAt(x, y, z), this.torchAt(x, y, z, list)); }
   index(x, y, z) { return (y * CC.SIZE + z) * CC.SIZE + x; }
   inside(x, y, z) { return x >= 0 && x < CC.SIZE && y >= 0 && y < CC.HEIGHT && z >= 0 && z < CC.SIZE; }
   get(x, y, z) { if (x < 0 || x >= CC.SIZE || z < 0 || z >= CC.SIZE || y < 0) return y < 0 ? CB.BEDROCK : CB.AIR; if (y >= CC.HEIGHT) return CB.AIR; return this.blocks[(y * CC.SIZE + z) * CC.SIZE + x]; }
-  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) { this.edits[`${x},${y},${z}`] = b; this.roof[z * CC.SIZE + x] = this.roofAt(x, z); } return true; }
+  set(x, y, z, b, record = true) { if (!this.inside(x, y, z)) return false; this.blocks[this.index(x, y, z)] = b; if (record) { this.edits[`${x},${y},${z}`] = b; this.roof[z * CC.SIZE + x] = this.roofAt(x, z); } if (b === CB.TORCH) this.torches.add(`${x},${y},${z}`); else this.torches.delete(`${x},${y},${z}`); return true; }
   generate() {
     const s = this.seed, R = new CM.Random(s), S = CC.SIZE, H = CC.HEIGHT, bl = this.blocks;
     for (let x = 0; x < S; x++) { this.heights.push(new Array(S).fill(0)); for (let z = 0; z < S; z++) {
@@ -157,20 +194,28 @@ CC.World = class {
   top(x, z) { for (let y = CC.HEIGHT - 1; y >= 0; y--) if (this.get(x, y, z) !== CB.AIR) return y; return 0; }
   // a chunk's faces that can be seen: [opaque floats, see-through floats] (x, y, z, u, v, shade, sky per vertex)
   meshChunk(cx, cz) {
-    const S = CC.SIZE, bl = this.blocks, ts = 1 / CC.ATLAS, rows = 4, tsv = 1 / rows, op = [], wa = [], x0 = cx * CC.CHUNK, z0 = cz * CC.CHUNK;
+    const S = CC.SIZE, bl = this.blocks, ts = 1 / CC.ATLAS, rows = CC.ROWS, tsv = 1 / rows, op = [], wa = [], x0 = cx * CC.CHUNK, z0 = cz * CC.CHUNK;
+    const near = [...this.torches].map((k) => k.split(",").map(Number)).filter(([tx, , tz]) => tx >= x0 - CC.TORCH_REACH && tx < x0 + CC.CHUNK + CC.TORCH_REACH && tz >= z0 - CC.TORCH_REACH && tz < z0 + CC.CHUNK + CC.TORCH_REACH);
     const tiles = {}; for (const [b, [t, sd, bt]] of Object.entries(CC.FACES)) tiles[b] = [CC.TILE[t], CC.TILE[bt], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd], CC.TILE[sd]];
     let top = 0; for (let x = x0; x < x0 + CC.CHUNK; x++) for (let z = z0; z < z0 + CC.CHUNK; z++) top = Math.max(top, this.top(x, z));
     top = Math.min(CC.HEIGHT - 1, top + 1);
     for (let y = 0; y <= top; y++) for (let z = z0; z < z0 + CC.CHUNK; z++) { const base = (y * S + z) * S; for (let x = x0; x < x0 + CC.CHUNK; x++) {
       const b = bl[base + x]; if (b === CB.AIR) continue; const tl = tiles[b], out = b === CB.WATER || b === CB.GATE ? wa : op;
+      if (b === CB.TORCH) { this.meshTorch(op, x, y, z, near); continue; }
       CC.FACE_DEFS.forEach(([[nx, ny, nz], shade, corners], f) => {
         const nb = this.get(x + nx, y + ny, z + nz);
         if (b === CB.WATER) { if (nb !== CB.AIR) return; } else if (b === CB.GATE) { if (nb === CB.GATE || nb === CB.BASALT) return; } else if (!CC.TRANSPARENT.has(nb) || nb === b) return;
-        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? 1 : this.skyAt(x + nx, y + ny, z + nz);
+        const tile = tl[f], u0 = (tile % CC.ATLAS) * ts, v0 = Math.floor(tile / CC.ATLAS) * tsv, sky = b === CB.GATE ? 1 : this.lightAt(x + nx, y + ny, z + nz, near);
         for (const [dx, dy, dz, u, v] of corners) out.push(x + dx, y + dy - (b === CB.WATER && dy ? 0.12 : 0), z + dz, u0 + u * ts, v0 + v * tsv, b === CB.GATE ? 2.0 : shade, sky);   // (shade 2: the gate's light, which the shader moves)
       });
     } }
     return [new Float32Array(op), new Float32Array(wa)];
+  }
+  // a torch: a stick an eighth wide, and a flame on it that the shader makes flicker (shade 3: gold)
+  meshTorch(out, x, y, z, near) {
+    const t = CC.TILE.torch, u0 = (t % CC.ATLAS) / CC.ATLAS, v0 = Math.floor(t / CC.ATLAS) / CC.ROWS, ts = 1 / CC.ATLAS, tsv = 1 / CC.ROWS;
+    const box = (ax, ay, az, w, h, shade) => { for (const [, sh, corners] of CC.FACE_DEFS) for (const [dx, dy, dz, u, v] of corners) out.push(x + ax + dx * w, y + ay + dy * h, z + az + dz * w, u0 + (0.44 + u * 0.12) * ts, v0 + (0.3 + v * 0.7) * tsv, shade || sh, 1); };
+    box(0.4375, 0, 0.4375, 0.125, 0.6, 0); box(0.42, 0.6, 0.42, 0.16, 0.16, 3.5); void near;
   }
   // the block under the eye, and the empty one before it (Amanatides and Woo)
   raycast(o, d, reach = 6) {
@@ -187,6 +232,7 @@ CC.World = class {
 };
 
 // the walker: a body 0.6 wide and 1.8 tall moved through the blocks, walking, jumping, swimming, flying
+CC.TORCH_REACH = 8;
 CC.EYE = 1.62; CC.WALK = 4.3; CC.SPRINT = 6.5; CC.FLY = 11; CC.GRAVITY = 28; CC.JUMP = 8.6;
 CC.Walker = class {
   constructor(world, pos, yaw = 45, pitch = -10) { Object.assign(this, { world, pos: pos.slice(), vel: [0, 0, 0], yaw, pitch, onGround: false, flying: false, canFly: true, lastSpace: -9, t: 0, slot: 0, fallFrom: null, landed: 0 }); }
@@ -201,8 +247,10 @@ CC.Walker = class {
     const n = Math.hypot(mx, mz), water = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.5), Math.floor(this.pos[2])) === CB.WATER;
     let speed = this.flying ? CC.FLY : k.sprint && !this.heavy ? CC.SPRINT : CC.WALK; if (water && !this.flying) speed *= 0.55; if (this.heavy) speed *= 0.55;
     this.vel[0] = n ? (mx / n) * speed : 0; this.vel[2] = n ? (mz / n) * speed : 0;
-    if (this.flying) { this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
-    else { this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }
+    const ladder = [0.1, 1.0].some((dy) => this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + dy), Math.floor(this.pos[2])) === CB.LADDER);
+    if (ladder && !this.flying) { this.vel[1] = k.jump || k.fwd ? 3.2 : k.down || k.back ? -3.2 : -0.8; this.fallFrom = null; this.onLadder = true; }   // (up a ladder: Space or forward; down: back)
+    else if (this.flying) { this.onLadder = false; this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
+    else { this.onLadder = false; this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }
     for (let i = 0; i < 3; i++) {                                           // (an axis at a time: slide along walls)
       const np = this.pos.slice(); np[i] += this.vel[i] * dt;
       if (!this.boxHits(np[0], np[1], np[2])) this.pos = np;

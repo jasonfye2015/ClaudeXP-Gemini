@@ -4186,6 +4186,60 @@ test("Claudecraft (v12.1): ore breaks only with a pick from the bag that mines i
   assert.ok(g.bag.filter((i) => i.kind === "ore" && i.ore === "iron").length >= CM.SMELT_CHUNKS, "enough for the smelter");
 });
 
+test("Claudecraft (v12.2): every recipe takes its needs and gives what it makes; the workbench and the kiln must be within reach for theirs; the kiln's bar is the Smith's; the island's tools quicken breaking by tier, mine ore of their grade, wear and break, and stay on the island", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-m", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  g.bag = g.bag.filter((it) => it.kind !== "pick"); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker, S = cr.satchel;
+  for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  for (const r of CC.RECIPES) {                                               // each recipe, alone, with just its needs
+    S.slots.fill(null); for (const [b, n] of Object.entries(r.needs)) S.add(Number(b), n);
+    const st = { bench: r.at === "bench", kiln: r.at === "kiln" }; g.craftStations = () => st;
+    assert.ok(g.craftCan(r), r.id); assert.strictEqual(g.craftMake(r.id), "", r.id);
+    for (const b of Object.keys(r.needs)) assert.strictEqual(S.count(Number(b)), 0, `${r.id} took ${b}`);
+    assert.strictEqual(S.count(r.makes[0]), r.makes[1], `${r.id} made`);
+    if (r.at) { g.craftStations = () => ({ bench: false, kiln: false }); S.slots.fill(null); for (const [b, n] of Object.entries(r.needs)) S.add(Number(b), n); assert.ok(g.craftMake(r.id), `${r.id} wants its station`); }
+  }
+  delete g.craftStations;
+  assert.strictEqual(JSON.stringify(CC.toHome(112)), JSON.stringify(CM.metalBar("iron")), "the kiln's iron bar is the Smith's");
+  assert.strictEqual(JSON.stringify(CC.RECIPES.find((r) => r.id === "bar_iron").needs), JSON.stringify({ 102: CM.SMELT_CHUNKS, 106: 1 }));
+  // stations within reach, found in the world
+  S.slots.fill(null); S.add(B.WORKBENCH, 1); const [x, y, z] = [Math.floor(w.pos[0]) + 2, Math.floor(w.pos[1]), Math.floor(w.pos[2])];
+  assert.ok(!g.craftStations().bench); cr.world.set(x, y, z, B.WORKBENCH); assert.ok(g.craftStations().bench, "a workbench in reach"); cr.target = [[x, y, z], null]; assert.strictEqual(g.craftUse().kind, "bench");
+  // tools by tier; a stone pick takes copper, never silver; an axe quickens wood
+  S.slots.fill(null); const bare = g.craftBreakTime(B.STONE); S.add(121); const stoneT = g.craftBreakTime(B.STONE); S.add(124); const copT = g.craftBreakTime(B.STONE); S.add(127); const ironT = g.craftBreakTime(B.STONE);
+  assert.ok(bare > stoneT && stoneT > copT && copT > ironT, "faster by tier");
+  S.slots.fill(null); S.add(121); assert.ok(g.craftBreakTime(B.COPPER_ORE) < Infinity && g.craftBreakTime(B.SILVER_ORE) === Infinity, "a stone pick takes copper, not silver");
+  const wood = g.craftBreakTime(B.LOG); S.add(122); assert.ok(g.craftBreakTime(B.LOG) < wood, "an axe quickens wood");
+  const at = (v) => { cr.world.set(x, y + 3, z, v); cr.target = [[x, y + 3, z], null]; }; const pick = S.slots.findIndex((s2) => s2 && s2.b === 121), uses = S.slots[pick].d;
+  at(B.COPPER_ORE); assert.strictEqual(g.craftBreak(), B.COPPER_ORE); assert.strictEqual(S.slots[pick].d, uses - 1, "worn"); assert.strictEqual(S.count(101), 1);
+  S.slots[pick].d = 1; at(B.STONE); g.craftBreak(); assert.strictEqual(S.count(121), 0, "and broken at the last use");
+  // the tools stay; the bars go home
+  S.slots.fill(null); S.add(126); S.add(112, 2); S.add(107, 5);
+  const before = g.bag.length; g.leaveCraft(); const home = g.bag.slice(before); assert.strictEqual(home.length, 2); assert.ok(home.every((i) => i.kind === "bar" && i.bar === "iron"));
+  const K = g.village.craft.satchels[CM.craftKey(g.party[0])]; assert.ok(K.some((s2) => s2 && s2.b === 126 && s2.d === CC.TOOLS[126].uses), "the sword stays, its uses kept"); assert.ok(K.some((s2) => s2 && s2.b === 107));
+});
+
+test("Claudecraft (v12.2): a torch lights the dark round it (and its light is gone when it is taken); a ladder is climbed; a chest keeps what is put in it through a fall, and is only broken empty", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-t", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker, W = cr.world, S = cr.satchel; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  let dark = null; for (let x = 20; x < CC.SIZE - 20 && !dark; x++) for (let z = 20; z < CC.SIZE - 20 && !dark; z++) if (W.get(x, 6, z) === B.AIR && W.lightAt(x, 6, z) === 0) dark = [x, 6, z];
+  assert.ok(dark); W.set(dark[0], dark[1] + 1, dark[2], B.AIR); W.set(dark[0], dark[1] + 1, dark[2], B.TORCH); assert.ok(W.lightAt(...dark) > 0.7, "lit by the torch"); assert.ok(W.lightAt(dark[0] + 6, dark[1], dark[2]) > 0, "a little way off");
+  assert.ok(W.torches.has(`${dark[0]},${dark[1] + 1},${dark[2]}`)); W.set(dark[0], dark[1] + 1, dark[2], B.AIR); assert.strictEqual(W.lightAt(...dark), 0, "dark again");
+  const W2 = new CC.World(W.seed, W.edits).generate(); W.set(dark[0], dark[1] + 1, dark[2], B.TORCH); const W3 = new CC.World(W.seed, W.edits).generate(); assert.ok(W3.lightAt(...dark) > 0.7 && W2.torches.size === 0, "torches kept in the edits");
+  const [m] = W3.meshChunk(Math.floor(dark[0] / 16), Math.floor(dark[2] / 16)); assert.ok(m.length % 42 === 0);
+  // a ladder up a wall
+  const lx = Math.floor(w.pos[0]), ly = Math.floor(w.pos[1]), lz = Math.floor(w.pos[2]); for (let dy = 0; dy < 6; dy++) W.set(lx, ly + dy, lz, B.LADDER); w.pos = [lx + 0.5, ly + 0.01, lz + 0.5];
+  for (let k = 0; k < 60; k++) w.update(1 / 60, { jump: true }); assert.ok(w.pos[1] > ly + 2.5, `climbed to ${w.pos[1]}`); assert.ok(w.onLadder);
+  for (let dy = 0; dy < 6; dy++) W.set(lx, ly + dy, lz, B.AIR); w.pos = [lx + 0.5, W.top(lx, lz) + 1.01, lz + 0.5]; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  // a chest
+  const cx = lx + 2, cy = W.top(lx + 2, lz) + 1, key = `${cx},${cy},${lz}`; W.set(cx, cy, lz, B.CHEST); cr.target = [[cx, cy, lz], null]; assert.strictEqual(JSON.stringify(g.craftUse()), JSON.stringify({ kind: "chest", key }));
+  S.slots.fill(null); S.add(B.PLANKS, 20); S.add(123); const iP = S.slots.findIndex((s2) => s2 && s2.b === B.PLANKS), iS = S.slots.findIndex((s2) => s2 && s2.b === 123); S.slots[iS].d = 17;
+  assert.ok(g.craftChestMove(key, "satchel", iP)); assert.ok(g.craftChestMove(key, "satchel", iS)); assert.strictEqual(S.count(B.PLANKS), 0);
+  assert.ok(!g.craftBreak(), "not while full"); assert.strictEqual(W.get(cx, cy, lz), B.CHEST);
+  g.craftHurt(g.party[0].max * 3, "A fall"); const C = g.craftChest(key); assert.strictEqual(C.count(B.PLANKS), 20, "kept through a fall"); assert.strictEqual(C.slots.find((s2) => s2 && s2.b === 123).d, 17, "a tool's uses kept");
+  const ci = C.slots.findIndex((s2) => s2 && s2.b === B.PLANKS); assert.ok(g.craftChestMove(key, "chest", ci)); assert.strictEqual(S.count(B.PLANKS), 20);
+  g.craftChestMove(key, "chest", g.craftChest(key).slots.findIndex(Boolean)); cr.target = [[cx, cy, lz], null]; assert.strictEqual(g.craftBreak(), B.CHEST, "broken when empty"); assert.ok(!g.village.craft.chests[key]);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
