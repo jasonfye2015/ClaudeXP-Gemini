@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v13.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v13.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -786,6 +786,20 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .mahjong .mjwrap { display: flex; gap: 16px; align-items: flex-start; } .mahjong .mjcanvas { width: 620px; height: 520px; border-radius: 10px; border: 5px solid #3A2414; box-shadow: 0 8px 18px rgba(0,0,0,0.65); cursor: pointer; }
 .mahjong .mjside { flex: 1; min-width: 240px; } .mahjong .mjinfo { margin: 8px 0; padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); line-height: 1.8; }
 .mahjong .paytable tr.now td { background: rgba(240,208,112,0.3); color: #FFF; }
+
+/* The Hexed Wand (76m-hexwand.js) */
+.hexwand .hwwrap { display: flex; gap: 16px; align-items: flex-start; } .hexwand .hwcanvas { width: 620px; height: 420px; border-radius: 10px; border: 5px solid #2A1A10; box-shadow: 0 8px 18px rgba(0,0,0,0.7); }
+.hexwand .hwcharms { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 8px 0; } .hexwand .hwcharm { background: #4A1424; color: #F0D8A0; border: 2px solid #C8A040; border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+/* The Gilded Pit (76n-gildedpit.js): the lobby, and the room with its overlay */
+.pitlobby .pitwho { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .pitlobby .pitbook { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; } .pitlobby .pitbook span { padding: 3px 8px; border-radius: 10px; background: rgba(240,208,112,0.2); border: 1px solid #C8A040; font-size: 12px; } .pitlobby .pitbook span.locked { opacity: 0.4; border-style: dashed; }
+.pitroom .pitstage { position: relative; width: min(960px, 100%, calc((94vh - 290px) * 16 / 9)); margin: 0 auto; } .pitroom .pitcanvas { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 8px; border: 4px solid #1A1008; cursor: grab; background: #000; transition: filter 0.2s; }
+.pitroom .pithud { position: absolute; left: 10px; right: 10px; color: #F0E0B0; text-shadow: 0 1px 3px #000; pointer-events: none; } .pitroom .pithud button { pointer-events: auto; }
+.pitroom .pithud.top { top: 10px; font-size: 14px; } .pitroom .pithud.top .pitmsg { display: block; margin-top: 4px; color: #FFE8A0; font-style: italic; }
+.pitroom .pithud.charms { top: 54px; display: flex; flex-wrap: wrap; gap: 4px; } .pitroom .pithud.charms span { padding: 2px 8px; border-radius: 10px; background: rgba(40,20,10,0.75); border: 1px solid #C8A040; font-size: 11px; }
+.pitroom .pithud.bar { position: static; margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.pitroom .pitshop { position: absolute; right: 18px; top: 70px; width: 300px; padding: 12px; border-radius: 10px; background: rgba(16,10,6,0.94); border: 2px solid #C8A040; color: #F0E0B0; box-shadow: 0 8px 18px rgba(0,0,0,0.8); }
+.pitroom .pitshop h4 { margin: 0 0 6px; color: #FFE070; } .pitroom .pitshop .offer { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(200,160,64,0.3); } .pitroom .pitshop .offer small { grid-column: 1; opacity: 0.85; } .pitroom .pitshop .offer button { grid-row: 1 / span 2; grid-column: 2; }
+.cgtable.pitroom { overflow: visible; } .pitroom .pithud.bar { overflow: visible; min-height: 34px; background: none; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -795,7 +809,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "13.3", built: "2026-10-31" };
+const CM = window.CM = { version: "13.4", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -20201,6 +20215,213 @@ Object.assign(CM.Game.prototype, {
   },
 });
 
+// ---- 64w-hexwand.js ----
+"use strict";
+// The Hexed Wand (the twenty-fourth big update - v13.4): a duel across a table with the house's dealer. A wand is
+// loaded with charges - live hexes and duds, the counts told, the order not. On your turn point it at the dealer or at
+// yourself: a live hex snuffs one of the target's candles (two with a whetstone); a dud does nothing, and if you aimed
+// it at yourself the turn stays yours. When the wand is spent it is loaded again, and charms are dealt to both: a
+// seeing-glass (see the next charge), an unloading (throw the next charge out, seen), a whetstone (the next live hex
+// snuffs two), a stub of tallow (light a candle again) and a binding cord (the other side loses their next turn). The
+// dealer plays fair - it knows the counts, and what its own glass shows, and nothing else. Three rounds, more candles
+// each; the stake climbs a ladder with each round won (collect, or play on and risk it), cards at rounds 2 and 3; a
+// round lost loses the pot. The ladder is set from tools' measure of a fair player's odds. The window is 76m-hexwand.js.
+CM.HW = {
+  ROUNDS: [{ candles: 2, charms: 0 }, { candles: 4, charms: 2 }, { candles: 5, charms: 3 }], maxCharms: 6,
+  LADDER: [1.75, 3.6, 8.8], CARD: { 2: "common", 3: "rare" },
+  CHARMS: { glass: ["Seeing-glass", "See the next charge"], unload: ["Unloading", "Throw out the next charge, and see it"], whet: ["Whetstone", "The next live hex snuffs two"], tallow: ["Tallow", "Light one of your candles again"], cord: ["Binding cord", "The other side loses their next turn"] },
+};
+const HW = CM.HW;
+HW.Duel = class {
+  constructor(round, seed) {
+    const R = HW.ROUNDS[round - 1]; this.round = round; this.rnd = new CM.Random(seed); this.max = R.candles; this.you = { candles: R.candles, charms: [] }; this.dealer = { candles: R.candles, charms: [] };
+    this.turn = "you"; this.stage = "play"; this.log = []; this.events = []; this.whet = false; this.known = null; this.dealerKnows = null; this.bound = { you: false, dealer: false }; this.load();
+  }
+  side(w) { return w === "you" ? this.you : this.dealer; }
+  other(w) { return w === "you" ? "dealer" : "you"; }
+  // the wand loaded: two to eight charges, at least one of each; charms dealt
+  load() {
+    const R = this.rnd, n = R.int(2, 8), live = Math.max(1, Math.min(n - 1, Math.round(n * (0.35 + R.next() * 0.3)))); this.charges = []; for (let i = 0; i < n; i++) this.charges.push(i < live ? 1 : 0);
+    for (let i = n - 1; i > 0; i--) { const j = R.int(0, i); [this.charges[i], this.charges[j]] = [this.charges[j], this.charges[i]]; }
+    this.liveLeft = live; this.dudLeft = n - live; this.known = null; this.dealerKnows = null; this.whet = false;
+    const k = HW.ROUNDS[this.round - 1].charms, keys = Object.keys(HW.CHARMS);
+    for (const s of [this.you, this.dealer]) for (let i = 0; i < k && s.charms.length < HW.maxCharms; i++) s.charms.push(keys[R.int(0, keys.length - 1)]);
+    this.events.push({ kind: "load", live, dud: n - live });
+  }
+  // a charm used by whoever's turn it is
+  use(who, i) {
+    if (this.stage !== "play" || this.turn !== who) return null; const S = this.side(who), c = S.charms[i]; if (!c) return null;
+    if (c === "tallow" && S.candles >= this.max) return null; if (c === "whet" && this.whet) return null; if (c === "cord" && this.bound[this.other(who)]) return null;
+    S.charms.splice(i, 1); let seen = null;
+    if (c === "glass") { seen = this.charges[0]; if (who === "you") this.known = seen; else this.dealerKnows = seen; }
+    else if (c === "unload") { seen = this.charges.shift(); if (seen) this.liveLeft--; else this.dudLeft--; this.known = null; this.dealerKnows = null; }
+    else if (c === "whet") this.whet = true; else if (c === "tallow") S.candles += 1; else if (c === "cord") this.bound[this.other(who)] = true;
+    this.events.push({ kind: "charm", who, c, seen }); this.log.push(`${who === "you" ? "You use" : "The dealer uses"} ${HW.CHARMS[c][0].toLowerCase()}${seen !== null && seen !== undefined ? ` - ${seen ? "a live hex" : "a dud"}` : ""}.`);
+    if (!this.charges.length) this.load();
+    return { c, seen };
+  }
+  // the wand pointed and loosed
+  fire(who, at) {
+    if (this.stage !== "play" || this.turn !== who) return null; const live = this.charges.shift(), target = this.side(at), dmg = live ? (this.whet ? 2 : 1) : 0;
+    if (live) this.liveLeft--; else this.dudLeft--; this.whet = false; this.known = null; this.dealerKnows = null;
+    target.candles = Math.max(0, target.candles - dmg); this.events.push({ kind: "fire", who, at, live: !!live, dmg });
+    this.log.push(`${who === "you" ? "You point" : "The dealer points"} the wand at ${at === who ? (who === "you" ? "yourself" : "itself") : at === "you" ? "you" : "the dealer"}: ${live ? `a live hex${dmg > 1 ? ", doubled" : ""}!` : "a dud."}`);
+    if (target.candles <= 0) { this.stage = at === "you" ? "lost" : "won"; this.events.push({ kind: this.stage }); return { live: !!live }; }
+    if (!this.charges.length) this.load();
+    const keep = !live && at === who; if (!keep) { const nxt = this.other(who); if (this.bound[nxt]) { this.bound[nxt] = false; this.events.push({ kind: "bound", who: nxt }); } else this.turn = nxt; }
+    return { live: !!live };
+  }
+  // the dealer's turn, played fairly from the counts and its own glass
+  dealerAct() {
+    if (this.stage !== "play" || this.turn !== "dealer") return null; const D = this.dealer, p = this.liveLeft / Math.max(1, this.liveLeft + this.dudLeft), k = this.dealerKnows;
+    const has = (c) => D.charms.indexOf(c);
+    if (D.candles < this.max && has("tallow") >= 0) return this.use("dealer", has("tallow"));
+    if (k === null && has("glass") >= 0 && this.liveLeft && this.dudLeft) return this.use("dealer", has("glass"));
+    const likelyLive = k === 1 || (k === null && p > 0.5), surelyDud = k === 0 || this.liveLeft === 0;
+    if (likelyLive && !this.whet && has("whet") >= 0) return this.use("dealer", has("whet"));
+    if (likelyLive && !this.bound.you && has("cord") >= 0) return this.use("dealer", has("cord"));
+    if (!surelyDud && k === null && p <= 0.5 && has("unload") >= 0 && this.charges.length > 1) return this.use("dealer", has("unload"));
+    return this.fire("dealer", surelyDud || (k === null && p < 0.5) ? "dealer" : "you");
+  }
+};
+// a fair hand for the player, as the dealer plays: for the measure, and for the tests
+HW.fairMove = (D) => {
+  const Y = D.you, p = D.liveLeft / Math.max(1, D.liveLeft + D.dudLeft), k = D.known, has = (c) => Y.charms.indexOf(c);
+  if (Y.candles < D.max && has("tallow") >= 0) return ["use", has("tallow")];
+  if (k === null && has("glass") >= 0 && D.liveLeft && D.dudLeft) return ["use", has("glass")];
+  const likely = k === 1 || (k === null && p > 0.5), dud = k === 0 || D.liveLeft === 0;
+  if (likely && !D.whet && has("whet") >= 0) return ["use", has("whet")];
+  if (likely && !D.bound.dealer && has("cord") >= 0) return ["use", has("cord")];
+  return ["fire", dud || (k === null && p < 0.5) ? "you" : "dealer"];
+};
+
+Object.assign(CM.Game.prototype, {
+  hwState() { return this.cgStore().hw || null; },
+  hwDuel() { const S = this.hwState(); if (!S || S.stage !== "duel") return null; if (!this.hwLive || this.hwLive.key !== `${S.seed}:${S.round}`) { this.hwLive = new HW.Duel(S.round, CM.hashSeed(`${S.seed}:${S.round}`)); this.hwLive.key = `${S.seed}:${S.round}`; } return this.hwLive; },
+  hwStart(bet) {
+    const S0 = this.hwState(); if (S0 && (S0.stage === "duel" || S0.stage === "between")) return { error: "A duel is at the table." };
+    const why = this.cgStake("hexwand", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; F.hw = { stage: "duel", round: 1, bet: Math.floor(bet), pot: 0, cards: [], seed: `${this.seed}:hexwand:${F.n}` }; this.hwLive = null;
+    this.saveCasino && this.saveCasino(); return F.hw;
+  },
+  hwSettle() {
+    const S = this.hwState(), D = this.hwLive; if (!S || !D || D.stage === "play") return null;
+    if (D.stage === "won") { S.pot = Math.round(S.bet * HW.LADDER[S.round - 1]); const kind = HW.CARD[S.round]; let card = null; if (kind) { card = this.cgCard(kind === "rare", `The Hexed Wand, round ${S.round} won!`, new CM.Random(CM.hashSeed(`${S.seed}:card:${S.round}`))); if (card) S.cards.push(card); }
+      S.last = { round: S.round, won: true, pot: S.pot, card }; this.hwLive = null; if (S.round >= HW.ROUNDS.length) { this.cgPay("hexwand", S.pot); S.paid = S.pot; S.stage = "done"; } else S.stage = "between"; }
+    else { S.last = { round: S.round, won: false, lost: S.pot }; S.pot = 0; S.paid = 0; S.stage = "done"; this.hwLive = null; }
+    this.saveCasino && this.saveCasino(); this.emit("change"); return S.last;
+  },
+  hwCollect() { const S = this.hwState(); if (!S || S.stage !== "between") return 0; this.cgPay("hexwand", S.pot); S.paid = S.pot; S.stage = "done"; this.saveCasino && this.saveCasino(); this.emit("change"); return S.pot; },
+  hwOn() { const S = this.hwState(); if (!S || S.stage !== "between") return false; S.round += 1; S.stage = "duel"; this.hwLive = null; this.saveCasino && this.saveCasino(); return true; },
+});
+
+// ---- 64x-gildedpit.js ----
+"use strict";
+// The Gilded Pit (the twenty-fourth big update - v13.4): a room under the Gilded Joker, behind a door that locks. One
+// hero goes down with the stake as coins; in the room are an old slot machine (the Old Lucky), the house's deposit box,
+// a telephone and a trapdoor under the stool. Each deadline the house wants a debt paid into the box; the hero has so
+// many spins of the Old Lucky to raise it. Its five reels by three pay for lines of three, four and five of a kind,
+// for a column of three, for a diagonal, and ten times for a full grid alike; three of the Pit's eyes anywhere spoil a
+// spin. Pay the debt (early, for more tickets) and the telephone offers lucky charms for tickets - a horseshoe, a
+// four-leaf clover, a pocket watch... each bending the odds - and the hero may step out with the coins left or stay
+// for the next deadline, a bigger debt. Miss a deadline and the trapdoor opens: the hero comes back up to the party
+// with a tenth of their health, and the coins stay below. Charms are unlocked for good as deeper deadlines are
+// reached; cards at the third and fifth deadlines and for a full grid. The window, a room in 3D: 76n-gildedpit.js.
+CM.PT = {
+  COLS: 5, ROWS: 3, deadlines: 5, spins: 7,
+  SYMS: { lemon: [18, 2], cherry: [18, 2], clover: [14, 3], bell: [12, 3], diamond: [8, 5], chest: [8, 5], seven: [5, 7], eye: [3, 0] },
+  MULT: { 3: 1, 4: 2, 5: 3, col: 1, diag: 1, grid: 10 },
+  DEBT: [0.2, 0.45, 0.9, 1.6, 2.5], COST: [0.1, 0.13, 0.16, 0.2, 0.24],   
+  CARD: { 3: "common", 5: "rare" },
+  CHARMS: {
+    horseshoe: ["Horseshoe", "Clovers come up more often", 1], goldlemon: ["Golden Lemon", "Lemons and cherries are worth one more", 1], pocketwatch: ["Pocket Watch", "Two more spins every deadline", 2],
+    fourleaf: ["Four-Leaf Clover", "Clovers are worth three more", 1], amulet: ["Eye-Ward Amulet", "The Pit's eyes never come up", 2], magnet: ["Lodestone", "Diamonds and chests come up more often", 2],
+    abacus: ["Abacus", "A tenth of your coins again at each deadline", 2], bellrope: ["Bell-Rope", "Bells are worth three more", 1], redseven: ["Red Seven", "Sevens are worth double", 2],
+    mirror: ["Hand Mirror", "Diagonals pay double", 1], rabbitfoot: ["Rabbit's Foot", "Lines of four and five pay one more", 2], piggy: ["Piggy Bank", "A spin that pays nothing gives half its cost back", 2],
+  },
+  START: ["horseshoe", "goldlemon", "pocketwatch", "fourleaf"], UNLOCK: ["amulet", "magnet", "abacus", "bellrope", "redseven", "mirror", "rabbitfoot", "piggy"],
+};
+const PT = CM.PT;
+// the symbols' weights and worths, with the charms
+PT.table = (charms) => {
+  const has = (c) => charms.includes(c), w = {}, v = {};
+  for (const [s, [ww, vv]] of Object.entries(PT.SYMS)) { w[s] = ww; v[s] = vv; }
+  if (has("horseshoe")) w.clover += 8; if (has("magnet")) { w.diamond += 4; w.chest += 4; } if (has("amulet")) w.eye = 0;
+  if (has("goldlemon")) { v.lemon += 1; v.cherry += 1; } if (has("fourleaf")) v.clover += 3; if (has("bellrope")) v.bell += 3; if (has("redseven")) v.seven *= 2;
+  return { w, v };
+};
+// a grid's worth, as a multiple of the spin's cost: [total, the lines that paid]
+PT.score = (grid, charms) => {
+  const { v } = PT.table(charms), has = (c) => charms.includes(c), lines = [], C = PT.COLS, R = PT.ROWS, eyes = grid.flat().filter((s) => s === "eye").length;
+  if (eyes >= 3) return [0, [{ kind: "eyes" }]];
+  const flat = grid.flat(); if (flat.every((s) => s === flat[0]) && flat[0] !== "eye") return [v[flat[0]] * PT.MULT.grid * 5, [{ kind: "grid", s: flat[0] }]];
+  for (let r = 0; r < R; r++) { let c = 0; while (c < C) { const s = grid[r][c]; let e = c + 1; while (e < C && grid[r][e] === s) e++; const len = e - c; if (s !== "eye" && len >= 3) lines.push({ kind: "row", s, r, c, len, pay: v[s] * (PT.MULT[len] + (has("rabbitfoot") && len >= 4 ? 1 : 0)) }); c = e; } }
+  for (let c = 0; c < C; c++) { const s = grid[0][c]; if (s !== "eye" && grid[1][c] === s && grid[2][c] === s) lines.push({ kind: "col", s, c, pay: v[s] * PT.MULT.col }); }
+  for (let c = 0; c + 2 < C; c++) { for (const dir of [1, -1]) { const r0 = dir > 0 ? 0 : 2, s = grid[r0][c]; if (s !== "eye" && grid[r0 + dir][c + 1] === s && grid[r0 + 2 * dir][c + 2] === s) lines.push({ kind: "diag", s, c, dir, pay: v[s] * PT.MULT.diag * (has("mirror") ? 2 : 1) }); } }
+  return [lines.reduce((t, l) => t + l.pay, 0), lines];
+};
+PT.Run = class {
+  constructor(stake, seed, charms = []) { this.stake = stake; this.coins = stake; this.rnd = new CM.Random(seed); this.deadline = 1; this.charms = charms.slice(); this.tickets = 0; this.stage = "spin"; this.offers = []; this.spun = 0; this.newDeadline(); }
+  cost() { return Math.max(1, Math.round(this.stake * PT.COST[this.deadline - 1])); }
+  debt() { return Math.max(1, Math.round(this.stake * PT.DEBT[this.deadline - 1])); }
+  newDeadline() { this.spinsLeft = PT.spins + (this.charms.includes("pocketwatch") ? 2 : 0); if (this.deadline > 1 && this.charms.includes("abacus")) this.coins += Math.floor(this.coins / 10); }
+  roll() { const { w } = PT.table(this.charms), list = Object.entries(w), tot = list.reduce((t, [, x]) => t + x, 0); let r = this.rnd.next() * tot; for (const [s, x] of list) { if ((r -= x) < 0) return s; } return list[0][0]; }
+  // a spin: its cost, the grid, what it paid; the end of the deadline's spins without the debt drops the hero
+  spin() {
+    if (this.stage !== "spin") return { error: "Not now." }; const cost = this.cost(), can = this.coins >= this.debt();
+    if ((this.spinsLeft <= 0 || this.coins < cost) && !can) { this.stage = "dropped"; return { dropped: true, grid: null, lines: [], won: 0, cost: 0 }; }   // (no spin left to raise it, and not the debt: the trapdoor)
+    if (this.spinsLeft <= 0) return { error: "No spins left: pay the debt." }; if (this.coins < cost) return { error: "Not enough coins for a spin: pay the debt." };
+    this.coins -= cost; this.spinsLeft -= 1; this.spun += 1;
+    const grid = []; for (let r = 0; r < PT.ROWS; r++) { const row = []; for (let c = 0; c < PT.COLS; c++) row.push(this.roll()); grid.push(row); }
+    const [mult, lines] = PT.score(grid, this.charms); let won = mult * cost; if (!won && this.charms.includes("piggy")) won = Math.floor(cost / 2);
+    this.coins += won; const jackpot = lines.some((l) => l.kind === "grid");
+    const out = { grid, lines, won, cost, jackpot };
+    if (this.spinsLeft <= 0 && this.coins < this.debt()) { this.stage = "dropped"; out.dropped = true; }
+    else if (this.coins < this.cost() && this.coins < this.debt()) { this.stage = "dropped"; out.dropped = true; }
+    return out;
+  }
+  // the debt paid into the box: tickets (one, and one more for every three spins left), and the telephone rings
+  pay() {
+    if (this.stage !== "spin" || this.coins < this.debt()) return false; this.coins -= this.debt(); this.tickets += 1 + Math.floor(this.spinsLeft / 3); this.paidAt = this.deadline;
+    this.stage = this.deadline >= PT.deadlines ? "free" : "paid"; return true;
+  }
+  ring(pool) { const left = pool.filter((c) => !this.charms.includes(c)); this.offers = []; while (left.length && this.offers.length < 3) this.offers.push(left.splice(this.rnd.int(0, left.length - 1), 1)[0]); return this.offers; }
+  buy(c) { const C = PT.CHARMS[c]; if (this.stage !== "paid" || !this.offers.includes(c) || this.tickets < C[2]) return false; this.tickets -= C[2]; this.charms.push(c); this.offers = this.offers.filter((x) => x !== c); return true; }
+  next() { if (this.stage !== "paid") return false; this.deadline += 1; this.stage = "spin"; this.offers = []; this.newDeadline(); return true; }
+};
+Object.assign(CM.Game.prototype, {
+  pitStore() { const F = this.cgStore(); F.pit = F.pit || {}; const P = F.pit; P.unlocked = P.unlocked || PT.START.slice(); P.best = P.best || 0; P.plays = P.plays || 0; return P; },
+  pitRun() { const P = this.pitStore(); if (!P.run) return null; if (!this.pitLive || this.pitLive.__src !== P.run) { const R = new PT.Run(P.run.stake, 1); Object.assign(R, P.run); R.rnd = new CM.Random(CM.hashSeed(`${P.run.seed}:${P.run.spun}:${P.run.deadline}`)); this.pitLive = R; R.__src = P.run; } return this.pitLive; },
+  pitKeep() { const P = this.pitStore(), R = this.pitLive; if (!R) return; const d = {}; for (const k of ["stake", "coins", "deadline", "charms", "tickets", "stage", "offers", "spun", "spinsLeft", "seed", "hero", "paidAt"]) d[k] = R[k]; P.run = d; R.__src = d; this.saveCasino && this.saveCasino(); },
+  // one hero goes down
+  pitStart(heroIndex, bet) {
+    const P = this.pitStore(); if (P.run) return { error: "Someone is in the Pit already." }; const h = this.party[heroIndex]; if (!h || h.hp <= 0) return { error: "Choose a hero who can stand." };
+    const why = this.cgStake("pit", bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; const seed = `${this.seed}:pit:${F.n}`, R = new PT.Run(Math.floor(bet), CM.hashSeed(seed)); R.seed = seed; R.hero = heroIndex; this.pitLive = R; P.plays += 1; this.pitKeep(); return R;
+  },
+  pitSpin() {
+    const R = this.pitRun(); if (!R) return { error: "No one is in the Pit." }; R.rnd = new CM.Random(CM.hashSeed(`${R.seed}:${R.spun}:${R.deadline}`)); const out = R.spin(); if (out.error) return out;
+    if (out.jackpot) out.card = this.cgCard(true, "The Old Lucky shows a full grid!", new CM.Random(CM.hashSeed(`${R.seed}:jackpot:${R.spun}`)));
+    if (out.dropped) out.end = this.pitEnd("dropped"); else this.pitKeep(); return out;
+  },
+  pitPay() {
+    const R = this.pitRun(), P = this.pitStore(); if (!R || !R.pay()) return null; const d = R.paidAt, out = { deadline: d, unlocked: null, card: null };
+    if (d > P.best) { P.best = d; const u = PT.UNLOCK.find((c) => !P.unlocked.includes(c)); if (u) { P.unlocked.push(u); out.unlocked = u; } if (d >= 3) { const u2 = PT.UNLOCK.find((c) => !P.unlocked.includes(c)); if (u2) { P.unlocked.push(u2); out.unlocked2 = u2; } } }
+    const kind = PT.CARD[d]; if (kind) out.card = this.cgCard(kind === "rare", `The Gilded Pit's deadline ${d} paid!`, new CM.Random(CM.hashSeed(`${R.seed}:card:${d}`)));
+    if (R.stage === "paid") { R.rnd = new CM.Random(CM.hashSeed(`${R.seed}:ring:${d}`)); R.ring(P.unlocked); }
+    if (R.stage === "free") out.end = this.pitEnd("free"); else this.pitKeep(); return out;
+  },
+  pitBuy(c) { const R = this.pitRun(); if (!R || !R.buy(c)) return false; this.pitKeep(); return true; },
+  pitNext() { const R = this.pitRun(); if (!R || !R.next()) return false; this.pitKeep(); return true; },
+  // out of the Pit: stepping out (or free after the last debt) with the coins; or dropped through the trapdoor
+  pitEnd(how) {
+    const R = this.pitRun(), P = this.pitStore(); if (!R) return null; const h = this.party[R.hero]; let pay = 0;
+    if (how === "dropped") { if (h) h.hp = Math.max(1, Math.round(h.max * 0.1)); this.tally.pitDrops = (this.tally.pitDrops || 0) + 1; }
+    else { if (how === "leave" && R.stage !== "paid") return null; pay = R.coins; this.cgPay("pit", pay); }
+    P.run = null; P.last = { how, pay, deadline: R.deadline, hero: h ? h.name : "" }; this.pitLive = null; this.saveCasino && this.saveCasino(); this.saveRun && this.saveRun(); this.emit("change"); return P.last;
+  },
+});
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -26120,6 +26341,295 @@ CM.MJ_ART = { TW: 44, TH: 56, DX: 5, DY: 6 };
       else if (f === "season_autumn") { p.fillStyle = "#D06818"; p.beginPath(); p.moveTo(W / 2, 8); p.quadraticCurveTo(W - 4, H / 2, W / 2, H - 10); p.quadraticCurveTo(4, H / 2, W / 2, 8); p.fill(); p.strokeStyle = "#7A3A08"; p.beginPath(); p.moveTo(W / 2, 10); p.lineTo(W / 2, H - 4); p.stroke(); }
       if (f.startsWith("season_")) { p.fillStyle = "#6A4A20"; p.font = "8px Georgia, serif"; p.fillText(f.slice(7, 8).toUpperCase(), 2, 9); }
       this.mjFaces[f] = c; return c;
+    },
+  });
+}
+
+// ---- 76m-hexwand.js ----
+"use strict";
+// The Hexed Wand, the window's side (the twenty-fourth big update): the table under one lamp, the dealer in a hood
+// across it, a row of candles each side, the wand between - it swings to its mark, a live hex cracks across in red and
+// a candle gutters out in smoke, a dud puffs grey; the charges shown as they are loaded and then turned face down; the
+// charms as little cards; the dealer takes its turns a beat apart. The rules are 64w-hexwand.js.
+CM.CG_TABLES.push(["hexwand", "The Hexed Wand"]);
+{ const floor0 = CM.UI.prototype.renderFloor;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "hexwand") return this.cgHexWand(box); return floor0.call(this, box); },
+    cgHexWand(box) {
+      const g = this.game, HW = CM.HW, S = g.hwState(), D = g.hwDuel(), bet = S && S.stage !== "done" ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), between = S && S.stage === "between", mine = D && D.stage === "play" && D.turn === "you" && !this.hwBusy;
+      const ladder = HW.LADDER.map((m, i) => `<div class="rung${S && S.round === i + 1 && S.stage !== "done" ? " now" : ""}${S && (S.round > i + 1 || (between && S.round === i + 1)) ? " done" : ""}"><span>Round ${i + 1} <small>(${HW.ROUNDS[i].candles} candles)</small></span><b>${Math.round(bet * m)}</b>${HW.CARD[i + 1] ? `<i>${HW.CARD[i + 1] === "rare" ? "★" : "♦"}</i>` : ""}</div>`).reverse().join("");
+      const charms = D ? D.you.charms.map((c, i) => `<button class="hwcharm" data-hwc="${i}" title="${this.esc(HW.CHARMS[c][1])}" ${mine ? "" : "disabled"}>${HW.CHARMS[c][0]}</button>`).join("") : "";
+      box.innerHTML = `<div class="cgtable hexwand dash"><h3>The Hexed Wand</h3><div class="hwwrap"><canvas class="hwcanvas" width="620" height="420"></canvas><div class="dashside">
+        <div class="ladder">${ladder}</div><p class="lore">A round table, one lamp, and across it a dealer whose hood shows nothing. Between you lies a wand of black wood. "Hexes and duds," it says. "I tell you how many. Not which."</p>
+        ${S && (S.stage === "duel" || between) ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${S && S.last && S.last.card ? this.cgCardWon(S.last.card) : ""}
+        <div class="row">${D && D.stage === "play" ? `<button class="primary" data-hwf="dealer" ${mine ? "" : "disabled"}>Point it at the dealer</button><button data-hwf="you" ${mine ? "" : "disabled"}>Point it at yourself</button>` : between ? `<button class="primary" data-hwon>Play round ${S.round + 1}</button><button data-hwcollect>Collect ${S.pot} gold</button>` : `<button class="primary" data-hwstart>Sit down (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        ${charms ? `<div class="hwcharms"><span class="lbl">Your charms:</span>${charms}</div>` : ""}
+        <div class="small">A live hex snuffs a candle of whoever the wand points at; a dud does nothing - and if you pointed it at yourself, the turn stays yours. The dealer plays fair: it knows the counts and what its own glass shows.</div>${this.cgStats("hexwand")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-hwstart]")) q("[data-hwstart]").addEventListener("click", () => { const r = g.hwStart(bet); this.cgNote = r.error || "Round one. Your turn."; this.hwFx = []; this.cgSfx(r.error ? "miss" : "chain", 0.45); this.renderCasino(); });
+      if (q("[data-hwon]")) q("[data-hwon]").addEventListener("click", () => { g.hwOn(); this.cgNote = `Round ${g.hwState().round}.`; this.hwFx = []; this.cgSfx("tablebell", 0.4); this.renderCasino(); });
+      if (q("[data-hwcollect]")) q("[data-hwcollect]").addEventListener("click", () => { const n = g.hwCollect(); this.cgNote = `You take ${n} gold and stand.`; this.cgSfx("coin", 0.6); this.renderCasino(); this.cgCoins(this.$("#casino-body"), 12); });
+      box.querySelectorAll("[data-hwf]").forEach((b) => b.addEventListener("click", () => { const Dd = g.hwDuel(); if (!Dd || this.hwBusy) return; Dd.fire("you", b.dataset.hwf); this.hwAfter(); }));
+      box.querySelectorAll("[data-hwc]").forEach((b) => b.addEventListener("click", () => { const Dd = g.hwDuel(); if (!Dd || this.hwBusy) return; const r = Dd.use("you", Number(b.dataset.hwc)); if (!r) { this.cgNote = "Not now."; this.renderCasino(); return; } this.cgNote = r.seen !== null && r.seen !== undefined ? `It shows ${r.seen ? "a live hex" : "a dud"}.` : ""; this.hwAfter(); }));
+      this.hwCanvas = q(".hwcanvas");
+      if (!this.hwLoop) { const loop = (now) => { if (!this.hwCanvas || !this.hwCanvas.isConnected || this.cgView !== "hexwand") { this.hwLoop = null; return; } this.hwFrame(now); this.hwLoop = requestAnimationFrame(loop); }; this.hwLoop = requestAnimationFrame(loop); }
+      if (D && D.turn === "dealer" && D.stage === "play" && !this.hwBusy) this.hwAfter();
+    },
+    // after a move: the events played out, then the dealer's turns a beat apart, then the end of the round
+    hwAfter() {
+      const g = this.game, D = g.hwDuel(); if (!D) return; this.hwBusy = true; const ev = D.events.splice(0); let delay = 0;
+      for (const e of ev) { setTimeout(() => this.hwShow(e), delay); delay += e.kind === "fire" ? 900 : e.kind === "load" ? 1400 : 600; }
+      setTimeout(() => {
+        this.hwBusy = false;
+        if (D.stage !== "play") { const r = g.hwSettle(); this.cgNote = r.won ? (g.hwState().stage === "done" ? `The last round! ${r.pot} gold.` : `Round ${r.round} won: the pot is ${r.pot} gold. Collect, or play on.`) : `Your last candle is out. ${r.lost ? `The pot of ${r.lost} is lost.` : "The stake is the house's."}`; if (r.won) { this.cgSfx("victory", 0.55); if (r.card) this.cgSfx("cardwin", 0.5); } else this.cgSfx("cardlose", 0.5); this.renderCasino(); return; }
+        if (D.turn === "dealer") { setTimeout(() => { if (g.hwDuel() === D && D.turn === "dealer") { D.dealerAct(); this.hwAfter(); } }, 700); this.renderCasino(); return; }
+        this.renderCasino();
+      }, delay + 200);
+      this.renderCasino();
+    },
+    hwShow(e) {
+      const now = performance.now(); (this.hwFx = this.hwFx || []).push(Object.assign({ at: now }, e));
+      if (e.kind === "fire") { this.cgSfx("hinge", 0.3, 1.5); setTimeout(() => { if (e.live) { this.cgSfx("zap", 0.7); this.cgSfx(e.at === "you" ? "hurt" : "fallen", 0.5); } else this.cgSfx("miss", 0.45, 0.7); }, 420); }
+      else if (e.kind === "charm") this.cgSfx(e.c === "glass" ? "card" : e.c === "tallow" ? "heal" : e.c === "cord" ? "chain" : e.c === "whet" ? "grind" : "cardplace", 0.45);
+      else if (e.kind === "load") this.cgSfx("chain", 0.4); else if (e.kind === "bound") this.cgSfx("chain", 0.3, 0.8);
+      if (e.kind === "charm" && e.who === "dealer") this.cgNote = `The dealer uses ${CM.HW.CHARMS[e.c][0].toLowerCase()}${e.c === "unload" ? ` - ${e.seen ? "a live hex" : "a dud"} falls out` : ""}.`;
+      if (e.kind === "fire" && e.who === "dealer") this.cgNote = `The dealer points the wand at ${e.at === "dealer" ? "itself" : "you"}...`;
+    },
+    hwFrame(now) {
+      const g = this.game, D = g.hwDuel(), cv = this.hwCanvas, p = cv.getContext("2d"), W = 620, H = 420, fx = (this.hwFx || []).filter((f) => now - f.at < 2000); this.hwFx = fx;
+      const bg = p.createRadialGradient(W / 2, 120, 20, W / 2, 200, 420); bg.addColorStop(0, "#3A2A1C"); bg.addColorStop(1, "#050404"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      p.fillStyle = "#FFE6A0"; p.beginPath(); p.moveTo(W / 2 - 30, 0); p.lineTo(W / 2 + 30, 0); p.lineTo(W / 2 + 14, 30); p.lineTo(W / 2 - 14, 30); p.fill(); p.fillStyle = "rgba(255,230,160,0.06)"; p.beginPath(); p.moveTo(W / 2 - 14, 30); p.lineTo(W / 2 + 14, 30); p.lineTo(W - 40, H); p.lineTo(40, H); p.fill();
+      // the dealer
+      const sway = Math.sin(now / 900) * 3; p.fillStyle = "#16101A"; p.beginPath(); p.moveTo(W / 2 - 70, 230); p.quadraticCurveTo(W / 2 - 60, 60 + sway, W / 2, 50 + sway); p.quadraticCurveTo(W / 2 + 60, 60 + sway, W / 2 + 70, 230); p.fill();
+      p.fillStyle = "#000"; p.beginPath(); p.ellipse(W / 2, 120 + sway, 28, 34, 0, 0, Math.PI * 2); p.fill(); const blink = Math.floor(now / 3000) % 7 === 0 && now % 3000 < 160; if (!blink) { p.fillStyle = "#E0C060"; p.fillRect(W / 2 - 14, 116 + sway, 7, 3); p.fillRect(W / 2 + 7, 116 + sway, 7, 3); }
+      p.fillStyle = "#C8B8A0"; p.fillRect(W / 2 - 80, 222, 26, 10); p.fillRect(W / 2 + 54, 222, 26, 10);
+      // the table
+      p.fillStyle = "#2A1A10"; p.beginPath(); p.ellipse(W / 2, 300, 300, 110, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#1E5A3A"; p.beginPath(); p.ellipse(W / 2, 296, 284, 100, 0, 0, Math.PI * 2); p.fill();
+      if (!D) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; const S = g.hwState(); p.fillText(S && S.stage === "between" ? "The dealer waits." : "Sit down.", W / 2, 300); p.textAlign = "left"; return; }
+      // candles: the dealer's across the table, yours near
+      const candles = (n, max, y, scale) => { for (let i = 0; i < max; i++) { const x = W / 2 - (max - 1) * 18 * scale + i * 36 * scale, lit = i < n; p.fillStyle = "#E8E0C8"; p.fillRect(x - 5 * scale, y - 22 * scale, 10 * scale, 22 * scale); if (lit) { const fl = 1 + Math.sin(now / 90 + i * 2) * 0.15; p.fillStyle = "rgba(255,180,60,0.25)"; p.beginPath(); p.arc(x, y - 30 * scale, 12 * scale, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFC040"; p.beginPath(); p.ellipse(x, y - 28 * scale, 3.5 * scale, 7 * scale * fl, 0, 0, Math.PI * 2); p.fill(); } else { p.fillStyle = "#2A2A2A"; p.fillRect(x - 1, y - 26 * scale, 2, 4 * scale); } } };
+      candles(D.dealer.candles, D.max, 250, 0.8); candles(D.you.candles, D.max, 392, 1.1);
+      // the dealer's charms, face down; the loaded charges shown, then turned over
+      for (let i = 0; i < D.dealer.charms.length; i++) { p.fillStyle = "#6A1A2A"; p.fillRect(W / 2 + 110 + i * 18, 262, 14, 20); p.strokeStyle = "#C8A040"; p.strokeRect(W / 2 + 110 + i * 18 + 0.5, 262.5, 13, 19); }
+      const load = [...fx].reverse().find((f) => f.kind === "load"), lastFire = [...fx].reverse().find((f) => f.kind === "fire");
+      if (load && now - load.at < 1400 && !(lastFire && lastFire.at > load.at)) { const n = load.live + load.dud; for (let i = 0; i < n; i++) { const x = W / 2 - (n - 1) * 14 + i * 28, live = i < load.live; p.fillStyle = live ? "#C82020" : "#8A8A8A"; p.beginPath(); p.arc(x, 300, 10, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#000"; p.stroke(); } p.fillStyle = "#FFF"; p.font = "bold 14px Georgia, serif"; p.textAlign = "center"; p.fillText(`${load.live} live, ${load.dud} dud`, W / 2, 335); p.textAlign = "left"; }
+      else { p.fillStyle = "#E0D8C0"; p.font = "12px Georgia, serif"; p.textAlign = "center"; p.fillText(`${D.charges.length} in the wand - ${D.liveLeft} live, ${D.dudLeft} dud${D.known !== null ? ` - the next is ${D.known ? "LIVE" : "a dud"}` : ""}${D.whet ? " - whetted" : ""}`, W / 2, 352); p.textAlign = "left"; }
+      // the wand: lying between you, or swung to its mark
+      const shot = [...fx].reverse().find((f) => f.kind === "fire"), k = shot ? Math.min(1, (now - shot.at) / 400) : 0, aimUp = shot && shot.at === "dealer";
+      const rest = -0.15, ang = shot ? rest + (aimUp ? -1.45 : 1.45) * Math.min(1, k * 1.4) * (now - shot.at < 1400 ? 1 : Math.max(0, 1 - (now - shot.at - 1400) / 400)) : rest;
+      p.save(); p.translate(W / 2, 300); p.rotate(ang); p.fillStyle = "#1A1210"; p.fillRect(-70, -4, 140, 8); p.fillStyle = "#C8A040"; p.fillRect(-70, -5, 14, 10); p.fillStyle = "#A060FF"; p.beginPath(); p.arc(70, 0, 5, 0, Math.PI * 2); p.fill(); p.restore();
+      if (shot && now - shot.at > 400 && now - shot.at < 900) { const t = (now - shot.at - 400) / 500, ty = aimUp ? 130 : 395; if (shot.live) { p.strokeStyle = `rgba(255,${80 + 100 * (1 - t)},60,${1 - t})`; p.lineWidth = 4; p.beginPath(); p.moveTo(W / 2, 300); for (let s = 1; s <= 6; s++) p.lineTo(W / 2 + (Math.random() - 0.5) * 40, 300 + ((ty - 300) * s) / 6); p.stroke(); p.fillStyle = `rgba(255,60,40,${0.35 * (1 - t)})`; p.fillRect(0, 0, W, H); }
+        else { p.fillStyle = `rgba(180,180,180,${0.6 * (1 - t)})`; for (let s = 0; s < 6; s++) { p.beginPath(); p.arc(W / 2 + Math.cos(s) * 30 * t + (aimUp ? 0 : 0), 300 + (aimUp ? -1 : 1) * 60 * t + Math.sin(s * 2) * 10, 8 + 10 * t, 0, Math.PI * 2); p.fill(); } } }
+      if (shot && shot.live && now - shot.at > 800 && now - shot.at < 1800) { const t = (now - shot.at - 800) / 1000, y0 = shot.at === "dealer" ? 210 : 360; p.fillStyle = `rgba(120,120,120,${0.5 * (1 - t)})`; for (let s = 0; s < 4; s++) { p.beginPath(); p.arc(W / 2 + Math.sin(now / 200 + s) * 20, y0 - t * 60 - s * 8, 6 + s * 2, 0, Math.PI * 2); p.fill(); } }
+      p.fillStyle = D.turn === "you" ? "#FFE070" : "#C8B8A0"; p.font = "bold 15px Georgia, serif"; p.textAlign = "center"; p.fillText(D.stage !== "play" ? (D.stage === "won" ? "The dealer's last candle goes out." : "Your last candle goes out.") : D.turn === "you" ? "Your turn" : "The dealer's turn", W / 2, 24 + 380 * 0 + 380); p.textAlign = "left";
+      p.fillStyle = "#C8B8A0"; p.font = "12px Georgia, serif"; p.fillText(`Round ${D.round}`, 12, 20);
+    },
+  });
+}
+
+// ---- 76n-gildedpit.js ----
+"use strict";
+// The Gilded Pit, the window's side (the twenty-fourth big update): the room under the Joker in 3D, with its own
+// small WebGL - a box of a room papered in green, a bare bulb that flickers on its cord, the Old Lucky against the far
+// wall (its reels on a screen that spins, its lever that pulls down), the house's deposit box on the left wall with a
+// chalk board of what is owed, a black telephone on the right wall that shakes when it rings, the door behind, the
+// trapdoor under the stool. Drag to look about; click the lever (or the screen) to spin, the box to pay, the telephone
+// to answer, the door to step out. A drop: the trapdoor swings and the room falls away. Rules: 64x-gildedpit.js.
+CM.CG_TABLES.push(["pit", "The Gilded Pit"]);
+CM.PIT_SYM_ART = { lemon: "#F0D030", cherry: "#D02030", clover: "#30A040", bell: "#E0A820", diamond: "#60D0F0", chest: "#8A5A28", seven: "#E02020", eye: "#8030C0" };
+const PIT_VS = "attribute vec3 pos; attribute vec2 uv; attribute float shade; uniform mat4 mvp; varying vec2 vUv; varying float vShade; varying vec3 vPos; void main() { gl_Position = mvp * vec4(pos, 1.0); vUv = uv; vShade = shade; vPos = pos; }";
+const PIT_FS = "precision mediump float; uniform sampler2D tex; uniform vec3 bulb; uniform float glow; varying vec2 vUv; varying float vShade; varying vec3 vPos; void main() { vec4 c = texture2D(tex, vUv); if (c.a < 0.1) discard; if (vShade > 1.5) { gl_FragColor = vec4(c.rgb * (vShade - 1.0), c.a); return; } float d = distance(vPos, bulb); float l = glow * clamp(1.7 - d / 1.9, 0.10, 1.25); gl_FragColor = vec4(c.rgb * vShade * l * vec3(1.0, 0.93, 0.8), c.a); }";
+{ const floor0 = CM.UI.prototype.renderFloor;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "pit") return this.cgPit(box); return floor0.call(this, box); },
+    cgPit(box) {
+      const g = this.game, PT = CM.PT, P = g.pitStore(), R = g.pitRun() || (this.pitHold ? this.pitView : null), bet = this.cgBet === undefined ? 10 : this.cgBet;
+      if (!R) {
+        const last = P.last, book = PT.START.concat(PT.UNLOCK).map((c) => `<span class="${P.unlocked.includes(c) ? "" : "locked"}" title="${this.esc(PT.CHARMS[c][1])}">${P.unlocked.includes(c) ? PT.CHARMS[c][0] : "?"}</span>`).join("");
+        box.innerHTML = `<div class="cgtable pitlobby"><h3>The Gilded Pit</h3><p class="lore">A narrow stair behind the bar, and at the bottom a door with a peephole. "One goes down," says the dealer. "The house lends the room, and the Old Lucky. The house wants paying. If it isn't..." She taps the floor with her heel.</p>
+          <div class="list-title">Who goes down? (the stake goes with them, as coins)</div><div class="pitwho">${g.party.map((h, i) => `<button data-pith="${i}" class="${this.pitHero === i ? "primary" : ""}" ${h.hp <= 0 ? "disabled" : ""}>${this.esc(h.name)} the ${h.cls} <small>${h.hp}/${h.max}</small></button>`).join("")}</div>
+          ${this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || (last ? (last.how === "dropped" ? `${last.hero} came up through the trapdoor with a tenth of their health.` : `${last.hero} stepped out with ${last.pay} gold.`) : "")}</div>
+          <div class="row"><button class="primary" data-pitgo ${this.pitHero === undefined ? "disabled" : ""}>Go down</button><button data-leave>Leave</button></div>
+          <div class="list-title">The telephone's charms (unlocked ${P.unlocked.length} of ${PT.START.length + PT.UNLOCK.length} - more as deeper deadlines are reached)</div><div class="pitbook">${book}</div>
+          <div class="small">Five deadlines, each a debt to pay into the house's box within seven spins of the Old Lucky. Pay it and step out with what is left, or stay for the next. Miss one and the trapdoor drops the hero back to the party with a tenth of their health. Cards at the third and fifth deadlines, and for a full grid. Played ${P.plays}; deepest deadline ${P.best}.</div>${this.cgStats("pit")}</div>`;
+        this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
+        box.querySelectorAll("[data-pith]").forEach((b) => b.addEventListener("click", () => { this.pitHero = Number(b.dataset.pith); this.cgSfx("card", 0.3); this.renderCasino(); }));
+        box.querySelector("[data-pitgo]").addEventListener("click", () => { const r = g.pitStart(this.pitHero, bet); if (r.error) { this.cgNote = r.error; this.renderCasino(); return; } this.cgNote = ""; this.pitMsg = `${g.party[this.pitHero].name} goes down. The door locks.`; this.cgSfx("door", 0.6); this.cgSfx("chain", 0.4); this.pitGrid = null; this.renderCasino(); });
+        return;
+      }
+      const h = g.party[R.hero];
+      box.innerHTML = `<div class="cgtable pitroom"><div class="pitstage"><div class="pitcv"></div>
+        <div class="pithud top"><b>${this.esc(h ? h.name : "")}</b> in the Pit - deadline ${R.deadline} of ${PT.deadlines}<span class="pitmsg">${this.esc(this.pitMsg || "")}</span></div>
+        <div class="pithud charms">${R.charms.map((c) => `<span title="${this.esc(PT.CHARMS[c][1])}">${PT.CHARMS[c][0]}</span>`).join("") || "<small>No charms yet</small>"}</div>
+        ${this.pitShop && R.stage === "paid" ? `<div class="pitshop"><h4>The telephone</h4><p>A voice like a coin dropped down a well: "${R.offers.length ? "I have something for you. For tickets." : "Nothing more, today."}" - you have <b>${R.tickets}</b> ticket${R.tickets === 1 ? "" : "s"}.</p>${R.offers.map((c) => `<div class="offer"><b>${PT.CHARMS[c][0]}</b><small>${this.esc(PT.CHARMS[c][1])}</small><button data-pitbuy="${c}" ${R.tickets >= PT.CHARMS[c][2] ? "" : "disabled"}>${PT.CHARMS[c][2]} ticket${PT.CHARMS[c][2] > 1 ? "s" : ""}</button></div>`).join("")}<button data-pitshopclose>Hang up</button></div>` : ""}
+        <div class="pithud bar"><button class="primary" data-pit="spin" ${R.stage === "spin" && R.spinsLeft > 0 ? "" : "disabled"}>Pull the lever (${R.cost()} coins)</button><button data-pit="pay" ${R.stage === "spin" && R.coins >= R.debt() ? "" : "disabled"}>Pay the debt (${R.debt()})</button>${R.stage === "paid" ? `<button data-pit="phone">Answer the telephone</button><button data-pit="next">Stay for deadline ${R.deadline + 1}</button><button data-pit="leave">Step out with ${R.coins} gold</button>` : ""}</div></div>
+        <div class="small">Drag to look about the room; click the lever or the Old Lucky to spin, the box on the left wall to pay, the telephone to answer, the door to step out.</div></div>`;
+      const q = (s) => box.querySelector(s);
+      box.querySelectorAll("[data-pit]").forEach((b) => b.addEventListener("click", () => this.pitAct(b.dataset.pit)));
+      box.querySelectorAll("[data-pitbuy]").forEach((b) => b.addEventListener("click", () => { if (g.pitBuy(b.dataset.pitbuy)) { this.cgSfx("coin", 0.5); this.cgSfx("spell", 0.4); this.pitMsg = `${PT.CHARMS[b.dataset.pitbuy][0]}: ${PT.CHARMS[b.dataset.pitbuy][1].toLowerCase()}.`; } this.renderCasino(); }));
+      if (q("[data-pitshopclose]")) q("[data-pitshopclose]").addEventListener("click", () => { this.pitShop = false; this.cgSfx("cardplace", 0.4); this.renderCasino(); });
+      // one canvas and one GL for the room, kept between redraws (a browser keeps only so many)
+      if (!this.pitCanvasEl) { const c = document.createElement("canvas"); c.className = "pitcanvas"; c.width = 960; c.height = 540; this.pitCanvasEl = c; this.pitInit(c);
+        c.addEventListener("mousedown", (e) => { this.pitDrag = [e.clientX, e.clientY, this.pitYaw, this.pitPitch, false]; });
+        c.addEventListener("mousemove", (e) => { const d = this.pitDrag; if (!d) return; const dx = e.clientX - d[0], dy = e.clientY - d[1]; if (Math.abs(dx) + Math.abs(dy) > 4) d[4] = true; this.pitYaw = Math.max(-75, Math.min(75, d[2] - dx * 0.25)); this.pitPitch = Math.max(-35, Math.min(30, d[3] - dy * 0.25)); });
+        c.addEventListener("mouseup", (e) => { const d = this.pitDrag; this.pitDrag = null; if (d && !d[4]) this.pitClick(e); });
+        c.addEventListener("mouseleave", () => { this.pitDrag = null; }); }
+      q(".pitcv").appendChild(this.pitCanvasEl); this.pitCanvas = this.pitCanvasEl;
+      if (!this.pitLoop) { const loop = (now) => { if (!this.pitCanvas || !this.pitCanvas.isConnected || this.cgView !== "pit") { this.pitLoop = null; return; } this.pitFrame(now); this.pitLoop = requestAnimationFrame(loop); }; this.pitLoop = requestAnimationFrame(loop); }
+    },
+    pitAct(what) {
+      const g = this.game, PT = CM.PT, R = g.pitRun(); if (!R || this.pitSpinning || this.pitFalling || this.pitHold) return;
+      if (what === "spin") { this.pitView = R; const out = g.pitSpin(); if (out.dropped) this.pitHold = true; if (out.error) { this.pitMsg = out.error; this.cgSfx("miss", 0.3); this.renderCasino(); return; } this.pitLever = performance.now(); this.pitSpinning = { out, at: performance.now() }; this.cgSfx("hinge", 0.5, 0.8); this.renderCasino(); return; }
+      if (what === "pay") { const out = g.pitPay(); if (!out) return; this.cgSfx("coin", 0.6); this.cgSfx("chest", 0.4);
+        this.pitMsg = `The box takes the debt for deadline ${out.deadline}.${out.unlocked ? ` A new charm is unlocked: ${PT.CHARMS[out.unlocked][0]}${out.unlocked2 ? ` and ${PT.CHARMS[out.unlocked2][0]}` : ""}.` : ""}${out.card ? " A card falls out of the slot!" : ""}`;
+        if (out.card) { this.cgSfx("cardwin", 0.5); this.pitCard = out.card; } if (out.end) { this.cgNote = `Every debt paid: ${out.end.hero} walks out free with ${out.end.pay} gold.`; this.cgSfx("victory", 0.6); this.renderCasino(); this.cgCoins(this.$("#casino-body"), 20); return; }
+        this.pitRing = performance.now(); this.renderCasino(); return; }
+      if (what === "phone") { this.pitShop = true; this.cgSfx("tablebell", 0.5); this.renderCasino(); return; }
+      if (what === "next") { g.pitNext(); this.pitShop = false; this.pitMsg = `Deadline ${R.deadline}: the house wants ${R.debt()}.`; this.cgSfx("chain", 0.4); this.renderCasino(); return; }
+      if (what === "leave") { const r = g.pitEnd("leave"); if (r) { this.cgNote = `${r.hero} steps out with ${r.pay} gold.`; this.cgSfx("door", 0.6); this.cgSfx("coin", 0.5); this.pitShop = false; this.renderCasino(); this.cgCoins(this.$("#casino-body"), 14); } }
+    },
+    // ---- the room's GL ----
+    pitInit(cv) {
+      const gl = cv.getContext("webgl", { antialias: true }); this.pitGl = gl; if (!gl) return; this.pitYaw = this.pitYaw || 0; this.pitPitch = this.pitPitch === undefined ? -6 : this.pitPitch;
+      const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; }, pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, PIT_VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, PIT_FS)); gl.bindAttribLocation(pr, 0, "pos"); gl.bindAttribLocation(pr, 1, "uv"); gl.bindAttribLocation(pr, 2, "shade"); gl.linkProgram(pr); this.pitProg = pr;
+      const tex = (canvas, smooth) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, smooth ? gl.LINEAR : gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, smooth ? gl.LINEAR : gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+      this.pitAtlasTex = tex(this.pitAtlas(), true); this.pitScreenC = document.createElement("canvas"); this.pitScreenC.width = 512; this.pitScreenC.height = 320; this.pitScreenTex = tex(this.pitScreenC, true);
+      this.pitBoardC = document.createElement("canvas"); this.pitBoardC.width = 256; this.pitBoardC.height = 256; this.pitBoardTex = tex(this.pitBoardC, true);
+      const st = this.pitStatic(); this.pitBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.pitBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(st), gl.STATIC_DRAW); this.pitN = st.length / 6; this.pitDyn = gl.createBuffer();
+    },
+    // the atlas: 8 x 4 tiles of 128, painted in code
+    pitAtlas() {
+      const c = document.createElement("canvas"); c.width = 1024; c.height = 512; const p = c.getContext("2d"), R = new CM.Random(31), at = (i) => [(i % 8) * 128, Math.floor(i / 8) * 128];
+      const noise = (x, y, col, k) => { p.fillStyle = col; p.fillRect(x, y, 128, 128); for (let n = 0; n < 900; n++) { p.fillStyle = `rgba(0,0,0,${R.next() * k})`; p.fillRect(x + R.int(0, 127), y + R.int(0, 127), 2, 2); } };
+      let [x, y] = at(0); noise(x, y, "#244A30", 0.12); p.strokeStyle = "rgba(200,170,90,0.25)"; for (let k = 0; k < 4; k++) for (let j = 0; j < 4; j++) { p.beginPath(); p.ellipse(x + 16 + k * 32, y + 16 + j * 32, 9, 13, 0, 0, Math.PI * 2); p.stroke(); }
+      [x, y] = at(1); noise(x, y, "#4A3220", 0.18); p.fillStyle = "rgba(0,0,0,0.35)"; for (let k = 0; k < 128; k += 32) p.fillRect(x, y + k, 128, 2);
+      [x, y] = at(2); noise(x, y, "#2A2420", 0.15);
+      [x, y] = at(3); noise(x, y, "#8A1A1A", 0.1); p.strokeStyle = "#E0B040"; p.lineWidth = 6; p.strokeRect(x + 4, y + 4, 120, 120); p.fillStyle = "#E0B040"; for (let k = 0; k < 6; k++) p.fillRect(x + 12 + k * 20, y + 112, 8, 8);
+      [x, y] = at(4); noise(x, y, "#5A1010", 0.12); p.fillStyle = "#C89030"; p.fillRect(x, y, 128, 6); p.fillRect(x, y + 122, 128, 6);
+      [x, y] = at(5); p.fillStyle = "#1A0A08"; p.fillRect(x, y, 128, 128); p.fillStyle = "#FFD060"; p.font = "bold 22px Georgia, serif"; p.textAlign = "center"; p.fillText("THE OLD", x + 64, y + 52); p.fillText("LUCKY", x + 64, y + 84); for (let k = 0; k < 10; k++) { p.fillStyle = k % 2 ? "#FF6040" : "#FFE080"; p.beginPath(); p.arc(x + 8 + k * 12.5, y + 10, 4, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(x + 8 + k * 12.5, y + 118, 4, 0, Math.PI * 2); p.fill(); }
+      [x, y] = at(6); noise(x, y, "#3A3A40", 0.2); p.fillStyle = "#101010"; p.fillRect(x + 34, y + 56, 60, 10); p.fillStyle = "#C8A040"; p.font = "bold 16px Georgia, serif"; p.textAlign = "center"; p.fillText("THE HOUSE", x + 64, y + 36); p.font = "11px Georgia, serif"; p.fillText("deposits", x + 64, y + 90);
+      [x, y] = at(7); noise(x, y, "#4A4A52", 0.25);
+      [x, y] = at(8); noise(x, y, "#141414", 0.1); p.strokeStyle = "#C8C0B0"; p.lineWidth = 3; p.beginPath(); p.arc(x + 64, y + 70, 30, 0, Math.PI * 2); p.stroke(); for (let k = 0; k < 10; k++) { const a = k * 0.55 - 1.2; p.beginPath(); p.arc(x + 64 + Math.cos(a) * 20, y + 70 + Math.sin(a) * 20, 4, 0, Math.PI * 2); p.stroke(); }
+      [x, y] = at(9); noise(x, y, "#5A3A1E", 0.2); p.strokeStyle = "#2A1A0A"; p.lineWidth = 4; p.strokeRect(x + 12, y + 10, 104, 108); p.fillStyle = "#C8A040"; p.beginPath(); p.arc(x + 100, y + 70, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = "#101010"; p.beginPath(); p.arc(x + 64, y + 40, 6, 0, Math.PI * 2); p.fill();
+      [x, y] = at(10); noise(x, y, "#2A2A2E", 0.2); p.strokeStyle = "#6A6A70"; p.lineWidth = 4; for (let k = 8; k < 128; k += 16) { p.beginPath(); p.moveTo(x + k, y); p.lineTo(x + k, y + 128); p.stroke(); }
+      [x, y] = at(11); p.fillStyle = "#C81818"; p.fillRect(x, y, 128, 128); p.fillStyle = "rgba(255,255,255,0.4)"; p.beginPath(); p.arc(x + 44, y + 40, 22, 0, Math.PI * 2); p.fill();
+      [x, y] = at(12); p.fillStyle = "#FFF4C0"; p.fillRect(x, y, 128, 128);
+      [x, y] = at(13); noise(x, y, "#3A2414", 0.15); p.fillStyle = "#C8A040"; p.fillRect(x, y + 60, 128, 6);
+      [x, y] = at(14); noise(x, y, "#5A2A18", 0.15);
+      [x, y] = at(15); p.fillStyle = "#000"; p.fillRect(x, y, 128, 128);
+      return c;
+    },
+    // a box's six faces, a tile each (or a front tile): x, y, z, u, v, shade
+    pitBox(out, x0, y0, z0, x1, y1, z1, tile, front, opts = {}) {
+      const uv = (t) => { const u0 = (t % 8) / 8, v0 = Math.floor(t / 8) / 4; return [u0 + 0.002, v0 + 0.002, u0 + 1 / 8 - 0.002, v0 + 1 / 4 - 0.002]; };
+      const quad = (a, b, c2, d, t, s) => { const [u0, v0, u1, v1] = uv(t); for (const [P, U, V] of [[a, u0, v1], [b, u1, v1], [c2, u1, v0], [a, u0, v1], [c2, u1, v0], [d, u0, v0]]) out.push(P[0], P[1], P[2], U, V, s); };
+      const f = front === undefined ? tile : front, E = opts.emissive || 0;
+      quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], f, E || 0.95);        // (the front, toward +z)
+      quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], tile, 0.7);
+      quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], opts.left === undefined ? tile : opts.left, 0.8);
+      quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], opts.right === undefined ? tile : opts.right, 0.8);
+      quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], opts.top === undefined ? tile : opts.top, 1.0);
+      quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], tile, 0.6);
+    },
+    // the room: walls, floor, ceiling inward; the Old Lucky, the box, the telephone, the door, the trapdoor's frame
+    pitStatic() {
+      const o = [], B = (...a) => this.pitBox(o, ...a), quad = (pts, t, s) => { const u0 = (t % 8) / 8, v0 = Math.floor(t / 8) / 4, [a, b, c2, d] = pts; for (const [P, U, V] of [[a, u0, v0 + 0.25], [b, u0 + 0.125, v0 + 0.25], [c2, u0 + 0.125, v0], [a, u0, v0 + 0.25], [c2, u0 + 0.125, v0], [d, u0, v0]]) o.push(P[0], P[1], P[2], U, V, s); };
+      const X = 1.6, Z0 = -2.2, Z1 = 1.8, H = 2.6;
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 10; j++) { const x = -X + i * 0.4, z = Z0 + j * 0.4; if (!(i >= 3 && i <= 4 && j >= 7 && j <= 8)) quad([[x, 0, z + 0.4], [x + 0.4, 0, z + 0.4], [x + 0.4, 0, z], [x, 0, z]], 1, 0.9); quad([[x, H, z], [x + 0.4, H, z], [x + 0.4, H, z + 0.4], [x, H, z + 0.4]], 2, 0.6); }
+      for (let x = -X; x < X; x += 0.8) for (let y = 0; y < H; y += 0.65) { quad([[x, y, Z0], [x + 0.8, y, Z0], [x + 0.8, y + 0.65, Z0], [x, y + 0.65, Z0]], 0, 0.85); quad([[x + 0.8, y, Z1], [x, y, Z1], [x, y + 0.65, Z1], [x + 0.8, y + 0.65, Z1]], 0, 0.85); }
+      for (let z = Z0; z < Z1; z += 0.8) for (let y = 0; y < H; y += 0.65) { quad([[-X, y, z + 0.8], [-X, y, z], [-X, y + 0.65, z], [-X, y + 0.65, z + 0.8]], 0, 0.8); quad([[X, y, z], [X, y, z + 0.8], [X, y + 0.65, z + 0.8], [X, y + 0.65, z]], 0, 0.8); }
+      // the Old Lucky
+      B(-0.62, 0, -2.18, 0.62, 1.75, -1.5, 4, 3, { top: 4 }); B(-0.66, 1.75, -2.18, 0.66, 2.1, -1.6, 4, 5, { emissive: 1.9 }); B(-0.7, 0.62, -1.7, 0.7, 0.7, -1.3, 13, 13);
+      // the deposit box (left wall), the telephone (right wall), the door (behind), the stool
+      B(-X, 0.75, -1.05, -X + 0.22, 1.35, -0.45, 7, 7, { right: 6 }); B(X - 0.12, 1.0, -0.8, X, 1.35, -0.45, 8, 8, { left: 8 });
+      B(-0.55, 0, Z1 - 0.06, 0.55, 2.05, Z1, 9, 9); B(-0.22, 0.5, 0.82, 0.22, 0.56, 1.18, 14, 14);
+      return o;
+    },
+    pitMvp(aspect, eye) {
+      const f = 1 / Math.tan((68 * Math.PI) / 360), n = 0.05, fa = 30, P = [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (fa + n) / (n - fa), -1, 0, 0, (2 * fa * n) / (n - fa), 0];
+      const mul = (a, b) => { const o = new Array(16).fill(0); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = 0; k < 4; k++) o[j * 4 + i] += a[k * 4 + i] * b[j * 4 + k]; return o; };
+      const rx = (d) => { const a = (d * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return [1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]; }, ry = (d) => { const a = (d * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a); return [c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]; };
+      return mul(P, mul(rx(-this.pitPitch), mul(ry(-this.pitYaw), [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -eye[0], -eye[1], -eye[2], 1])));
+    },
+    pitEye(now) { const fall = this.pitFalling ? Math.min(1, (now - this.pitFalling) / 1400) : 0; return [Math.sin(now / 2300) * 0.01, 1.18 + Math.sin(now / 1700) * 0.008 - fall * fall * 4, 1.0]; },
+    // a click: which thing in the room the ray meets first
+    pitClick(e) {
+      const cv = this.pitCanvas, r = cv.getBoundingClientRect(), nx = ((e.clientX - r.left) / r.width) * 2 - 1, ny = 1 - ((e.clientY - r.top) / r.height) * 2, t = Math.tan((68 * Math.PI) / 360), aspect = cv.width / cv.height;
+      const yr = (this.pitYaw * Math.PI) / 180, pr = (this.pitPitch * Math.PI) / 180, fwd = [-Math.sin(yr) * Math.cos(pr), Math.sin(pr), -Math.cos(yr) * Math.cos(pr)], right = [Math.cos(yr), 0, -Math.sin(yr)], up = [right[1] * fwd[2] - right[2] * fwd[1], right[2] * fwd[0] - right[0] * fwd[2], right[0] * fwd[1] - right[1] * fwd[0]];
+      const d = [0, 1, 2].map((i) => fwd[i] + right[i] * nx * t * aspect + up[i] * ny * t), e0 = this.pitEye(performance.now());
+      const things = [["lever", [0.6, 0.8, -1.76], [0.8, 1.6, -1.5]], ["spin", [-0.62, 0, -2.18], [0.62, 2.1, -1.5]], ["pay", [-1.6, 0.75, -1.05], [-1.38, 1.35, -0.45]], ["phone", [1.48, 1.0, -0.8], [1.6, 1.35, -0.45]], ["door", [-0.55, 0, 1.74], [0.55, 2.05, 1.8]]];
+      let best = null, bt = 99; for (const [name, lo, hi] of things) { let t0 = 0, t1 = 99, ok = true; for (let i = 0; i < 3 && ok; i++) { if (Math.abs(d[i]) < 1e-9) { if (e0[i] < lo[i] || e0[i] > hi[i]) ok = false; continue; } let a = (lo[i] - e0[i]) / d[i], b = (hi[i] - e0[i]) / d[i]; if (a > b) [a, b] = [b, a]; t0 = Math.max(t0, a); t1 = Math.min(t1, b); if (t0 > t1) ok = false; } if (ok && t0 < bt) { bt = t0; best = name; } }
+      const R = this.game.pitRun(); if (!best || !R) return;
+      if (best === "lever" || best === "spin") this.pitAct("spin"); else if (best === "pay") { if (R.stage === "spin" && R.coins >= R.debt()) this.pitAct("pay"); else { this.pitMsg = `The box wants ${R.debt()}; you have ${R.coins}.`; this.renderCasino(); } }
+      else if (best === "phone") { if (R.stage === "paid") this.pitAct("phone"); else { this.pitMsg = "The telephone is silent. It rings when a debt is paid."; this.renderCasino(); } }
+      else if (best === "door") { if (R.stage === "paid") this.pitAct("leave"); else { this.pitMsg = "Locked. It opens when the debt is paid."; this.cgSfx("hinge", 0.3, 0.6); this.renderCasino(); } }
+    },
+    // the screen of the Old Lucky: five reels by three, spinning and stopping, the lines that pay lit
+    pitScreen(now) {
+      const p = this.pitScreenC.getContext("2d"), PT = CM.PT, S = this.pitSpinning, cw = 96, ch = 96, ox = 16, oy = 16; p.fillStyle = "#0A0806"; p.fillRect(0, 0, 512, 320);
+      const grid = (S && S.out.grid) || this.pitGrid || [["seven", "bell", "clover", "cherry", "lemon"], ["lemon", "seven", "bell", "clover", "cherry"], ["cherry", "lemon", "seven", "bell", "clover"]], syms = Object.keys(PT.SYMS);
+      for (let c = 0; c < 5; c++) { const stopAt = S ? S.at + 500 + c * 260 : 0, spinning = S && now < stopAt;
+        for (let r = 0; r < 3; r++) { const x = ox + c * cw, y = oy + r * ch; p.fillStyle = "#F4EEDC"; p.fillRect(x + 3, y + 3, cw - 6, ch - 6); const s = spinning ? syms[Math.floor(now / 50 + c * 3 + r) % syms.length] : grid[r][c]; this.pitSym(p, s, x + cw / 2, y + ch / 2 + (spinning ? ((now / 3) % 30) - 15 : 0), spinning); } }
+      p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(ox, oy, 480, 12); p.fillRect(ox, oy + 276, 480, 12);
+      if (S && now > S.at + 500 + 4 * 260) {
+        if (!S.done) { S.done = true; this.pitGrid = S.out.grid; this.pitAfterSpin(S.out); }
+        for (const L of S.out.lines) { p.strokeStyle = L.kind === "eyes" ? "#B040FF" : "#FFE040"; p.lineWidth = 6; p.shadowColor = p.strokeStyle; p.shadowBlur = 12; p.beginPath();
+          if (L.kind === "row") { p.moveTo(ox + L.c * cw + 10, oy + L.r * ch + ch / 2); p.lineTo(ox + (L.c + L.len) * cw - 10, oy + L.r * ch + ch / 2); }
+          else if (L.kind === "col") { p.moveTo(ox + L.c * cw + cw / 2, oy + 8); p.lineTo(ox + L.c * cw + cw / 2, oy + 3 * ch - 8); }
+          else if (L.kind === "diag") { const r0 = L.dir > 0 ? 0 : 2; p.moveTo(ox + L.c * cw + cw / 2, oy + r0 * ch + ch / 2); p.lineTo(ox + (L.c + 2) * cw + cw / 2, oy + (r0 + 2 * L.dir) * ch + ch / 2); }
+          else if (L.kind === "grid" || L.kind === "eyes") { p.rect(ox + 4, oy + 4, 472, 280); }
+          p.stroke(); p.shadowBlur = 0; }
+        if (S.out.won) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(150, 130, 212, 52); p.fillStyle = "#FFE060"; p.font = "bold 34px Georgia, serif"; p.textAlign = "center"; p.fillText(`+${S.out.won}`, 256, 168); p.textAlign = "left"; }
+        if (now > S.at + 3200) this.pitSpinning = null;
+      }
+    },
+    pitSym(p, s, x, y, blur) {
+      const col = CM.PIT_SYM_ART[s] || "#888"; p.save(); p.translate(x, y); if (blur) p.globalAlpha = 0.6; p.fillStyle = col;
+      if (s === "lemon") { p.beginPath(); p.ellipse(0, 0, 28, 20, 0.3, 0, Math.PI * 2); p.fill(); }
+      else if (s === "cherry") { p.strokeStyle = "#2A7A20"; p.lineWidth = 4; p.beginPath(); p.moveTo(-10, 6); p.quadraticCurveTo(0, -30, 12, -26); p.moveTo(12, 6); p.lineTo(12, -26); p.stroke(); p.beginPath(); p.arc(-12, 10, 13, 0, Math.PI * 2); p.arc(14, 10, 13, 0, Math.PI * 2); p.fill(); }
+      else if (s === "clover") { for (const [a, b] of [[-11, -11], [11, -11], [-11, 11], [11, 11]]) { p.beginPath(); p.arc(a, b, 13, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#1A6A20"; p.fillRect(-2, 8, 4, 24); }
+      else if (s === "bell") { p.beginPath(); p.moveTo(-26, 18); p.quadraticCurveTo(-24, -30, 0, -30); p.quadraticCurveTo(24, -30, 26, 18); p.closePath(); p.fill(); p.beginPath(); p.arc(0, 24, 7, 0, Math.PI * 2); p.fill(); }
+      else if (s === "diamond") { p.beginPath(); p.moveTo(0, -30); p.lineTo(26, -6); p.lineTo(0, 30); p.lineTo(-26, -6); p.closePath(); p.fill(); p.fillStyle = "rgba(255,255,255,0.5)"; p.beginPath(); p.moveTo(0, -30); p.lineTo(10, -6); p.lineTo(-10, -6); p.closePath(); p.fill(); }
+      else if (s === "chest") { p.fillRect(-28, -14, 56, 36); p.fillStyle = "#E0B040"; p.fillRect(-28, -4, 56, 6); p.fillRect(-5, -6, 10, 14); p.fillStyle = "#6A4018"; p.fillRect(-28, -24, 56, 12); }
+      else if (s === "seven") { p.font = "bold 70px Georgia, serif"; p.textAlign = "center"; p.fillText("7", 0, 26); }
+      else if (s === "eye") { p.beginPath(); p.ellipse(0, 0, 30, 16, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0E8FF"; p.beginPath(); p.arc(0, 0, 10, 0, Math.PI * 2); p.fill(); p.fillStyle = "#200830"; p.beginPath(); p.arc(0, 0, 5, 0, Math.PI * 2); p.fill(); }
+      p.restore();
+    },
+    pitAfterSpin(out) {
+      const g = this.game;
+      if (out.lines.some((l) => l.kind === "eyes")) { this.cgSfx("monster", 0.5); this.pitMsg = "Three of the Pit's eyes look back at you. Nothing."; }
+      else if (out.won) { this.cgSfx(out.won >= out.cost * 4 ? "victory" : "coin", 0.55); this.pitMsg = `${out.lines.length} line${out.lines.length > 1 ? "s" : ""}: +${out.won} coins.`; }
+      else { this.cgSfx("cardplace", 0.3, 0.7); this.pitMsg = "Nothing on the reels."; }
+      if (out.card) { this.cgSfx("cardwin", 0.6); this.pitCard = out.card; this.pitMsg += " A full grid! A card drops into the tray."; }
+      if (out.dropped) { this.pitFalling = performance.now(); this.cgSfx("hinge", 0.7, 0.5); setTimeout(() => this.cgSfx("fall", 0.7), 500); setTimeout(() => { this.pitFalling = null; this.pitHold = false; const L = g.pitStore().last; this.cgNote = `The trapdoor! ${L.hero} falls, and comes up again by the bar with a tenth of their health.`; this.renderCasino(); }, 1900); return; }
+      this.renderCasino();
+    },
+    pitBoard(R) {
+      const p = this.pitBoardC.getContext("2d"); p.fillStyle = "#1E2A22"; p.fillRect(0, 0, 256, 256); p.strokeStyle = "#7A5A30"; p.lineWidth = 12; p.strokeRect(0, 0, 256, 256);
+      p.fillStyle = "#E8E4D8"; p.font = "bold 22px Georgia, serif"; p.textAlign = "center"; p.fillText(`DEADLINE ${R.deadline}/${CM.PT.deadlines}`, 128, 44); p.font = "20px Georgia, serif";
+      p.fillText(`OWED  ${R.debt()}`, 128, 90); p.fillText(`COINS  ${R.coins}`, 128, 130); p.fillText(`SPINS  ${R.spinsLeft}`, 128, 170); p.fillText(`TICKETS  ${R.tickets}`, 128, 210); p.textAlign = "left";
+    },
+    pitFrame(now) {
+      const gl = this.pitGl, R = this.game.pitRun() || (this.pitHold ? this.pitView : null), cv = this.pitCanvas; if (!gl || !R) return;
+      const gl2 = gl; this.pitScreen(now); this.pitBoard(R);
+      gl2.bindTexture(gl2.TEXTURE_2D, this.pitScreenTex); gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA, gl2.RGBA, gl2.UNSIGNED_BYTE, this.pitScreenC); gl2.bindTexture(gl2.TEXTURE_2D, this.pitBoardTex); gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA, gl2.RGBA, gl2.UNSIGNED_BYTE, this.pitBoardC);
+      gl.viewport(0, 0, cv.width, cv.height); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.useProgram(this.pitProg);
+      const U = (n) => gl.getUniformLocation(this.pitProg, n), flick = 0.92 + 0.06 * Math.sin(now / 70) * Math.sin(now / 311) + (Math.random() < 0.01 ? -0.3 : 0), bulb = [Math.sin(now / 1300) * 0.05, 2.15, -0.5];
+      gl.uniformMatrix4fv(U("mvp"), false, new Float32Array(this.pitMvp(cv.width / cv.height, this.pitEye(now)))); gl.uniform3fv(U("bulb"), bulb); gl.uniform1f(U("glow"), this.pitFalling ? Math.max(0, 1 - (now - this.pitFalling) / 1200) : flick); gl.uniform1i(U("tex"), 0); gl.activeTexture(gl.TEXTURE0);
+      const draw = (buf, n) => { gl.bindBuffer(gl.ARRAY_BUFFER, buf); for (const a of [0, 1, 2]) gl.enableVertexAttribArray(a); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0); gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 24, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, 24, 20); gl.drawArrays(gl.TRIANGLES, 0, n); };
+      gl.bindTexture(gl.TEXTURE_2D, this.pitAtlasTex); draw(this.pitBuf, this.pitN);
+      // the moving things: the lever, the telephone, the bulb and its cord, the trapdoor
+      const dyn = [], B = (...a) => this.pitBox(dyn, ...a), pull = this.pitLever ? Math.max(0, 1 - Math.abs((now - this.pitLever) / 250 - 1)) : 0, ring = this.pitRing && R.stage === "paid" && !this.pitShop ? Math.sin(now / 30) * 0.012 * (Math.floor(now / 600) % 2) : 0;
+      B(0.62, 0.95 - pull * 0.35, -1.68, 0.68, 1.45 - pull * 0.35, -1.62, 7); B(0.58, 1.42 - pull * 0.35, -1.72, 0.74, 1.56 - pull * 0.35, -1.56, 11);
+      B(1.48 + ring, 1.12, -0.74, 1.56 + ring, 1.3, -0.5, 8);
+      B(bulb[0] - 0.005, 2.25, bulb[2] - 0.005, bulb[0] + 0.005, 2.6, bulb[2] + 0.005, 15); B(bulb[0] - 0.05, 2.12, bulb[2] - 0.05, bulb[0] + 0.05, 2.25, bulb[2] + 0.05, 12, 12, { emissive: 2.0, top: 12 });
+      const open = this.pitFalling ? Math.min(1, (now - this.pitFalling) / 400) : 0; if (open < 1) { const y = -open * 0.8; B(-0.4, y - 0.02, 0.6, 0.4, y, 1.4, 10, 10, { top: 10 }); } B(-0.4, -3, 0.6, 0.4, -2.99, 1.4, 15);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.pitDyn); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(dyn), gl.DYNAMIC_DRAW); draw(this.pitDyn, dyn.length / 6);
+      // the screen and the board, lit from within
+      const scr = [], quad = (out, a, b, c2, d, s) => { for (const [P, U2, V] of [[a, 0, 1], [b, 1, 1], [c2, 1, 0], [a, 0, 1], [c2, 1, 0], [d, 0, 0]]) out.push(P[0], P[1], P[2], U2, V, s); };
+      quad(scr, [-0.5, 0.82, -1.499], [0.5, 0.82, -1.499], [0.5, 1.45, -1.499], [-0.5, 1.45, -1.499], 1.95); gl.bindTexture(gl.TEXTURE_2D, this.pitScreenTex); gl.bindBuffer(gl.ARRAY_BUFFER, this.pitDyn); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(scr), gl.DYNAMIC_DRAW); draw(this.pitDyn, 6);
+      const brd = []; quad(brd, [-1.599, 1.45, 0.3], [-1.599, 1.45, -0.4], [-1.599, 2.15, -0.4], [-1.599, 2.15, 0.3], 0.95); gl.bindTexture(gl.TEXTURE_2D, this.pitBoardTex); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(brd), gl.DYNAMIC_DRAW); draw(this.pitDyn, 6);
+      if (this.pitFalling) { const k = Math.min(1, (now - this.pitFalling) / 1500); cv.style.filter = `brightness(${1 - k})`; } else cv.style.filter = "";
     },
   });
 }
