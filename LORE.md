@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The red portal (v11.6)
+
+Nobody built the red portal. It was simply standing in the Keep-yard one morning, turning, and the guards who went to
+look at it came back with a story about a village called Haven, a cathedral with no bottom, and something under it
+that calls itself undying. Haven is not anywhere on the Chronicler's maps. Its people are kind, a little grim, and sell
+for gold that spends perfectly well in Caer Duin, which the Merchant finds more unsettling than anything else about it.
+
 ## The Gilded Joker (v11.5)
 
 The house east of the Square was a cloth-merchant's until the merchant lost it at cards, to a woman who came up the

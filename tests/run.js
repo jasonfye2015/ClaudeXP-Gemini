@@ -4012,6 +4012,36 @@ test("the Gilded Joker: a wager paid at the table and a share back for every bli
   const g3 = new CM.Game(); g3.newGame("casino-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g3.village.casino = undefined; g3.gold = 500; const a3 = caBot(CM, g3, "Red Deck", 50, 4000, true); assert.ok(a3 >= 1 && g3.casino().blinds >= 1, `played through saves (ante ${a3})`);
 });
 
+test("Claudeablo through the red portal, its rules as the Timeline's game has them: Haven the same every time with its four townsfolk; fifty levels from the seed, every one joined, the stairs far apart, Vorthak's sanctum at fifty; loot white, blue and gold, scaled by its level, magic and rare unidentified; a hero's swing, a monster's fall and its experience; a death wakes in Haven with half the gold", () => {
+  const CM = load(), AB = CM.AB;
+  const t1 = AB.town(), t2 = AB.town(); assert.strictEqual(JSON.stringify(t1.grid), JSON.stringify(t2.grid)); assert.ok(t1.places.smith && t1.places.witch && t1.places.healer && t1.places.elder && t1.places.home, "Haven and its people, and the red portal home");
+  for (const d of [1, 12, 25, 38, 47]) {
+    const a = AB.generate(77, d), b = AB.generate(77, d); assert.strictEqual(JSON.stringify(a.grid), JSON.stringify(b.grid), "the seed's level");
+    const dist = a.distances(a.up); assert.ok(dist.has(`${a.down[0]},${a.down[1]}`) && dist.size === a.floors().length, `level ${d} all joined`); assert.ok(dist.get(`${a.down[0]},${a.down[1]}`) > 15, "the stairs apart");
+  }
+  assert.strictEqual(AB.generate(77, 50).theme, "sanctum");
+  const R = new AB.Rng(5), sw = AB.make("Long Sword", 20, "magic", R); assert.ok(sw.ident === false && sw.affixes.length >= 1, "a magic thing comes unidentified"); assert.ok(AB.damage(sw)[1] > AB.damage(AB.make("Long Sword", 1))[1], "deeper, harder");
+  const ring = AB.make("Ring", 3); assert.strictEqual(ring.rarity, "magic", "jewellery is never plain");
+  const pl = new AB.Player("warrior", "Test"), w = new AB.World(5, pl); assert.strictEqual(w.depth, 0); assert.strictEqual(w.npcs.length, 4);
+  w.enter(1, "up"); assert.ok(w.monsters.length > 5, "the cathedral peopled");
+  const m = w.monsters[0]; m.x = pl.x + 1; m.y = pl.y; m.hp = 1; m.ac = 0; pl.toHit = 1000; w.attack(m); for (let k = 0; k < 120 && !m.dead; k++) w.update(1 / 30); assert.ok(m.dead && w.xpGained > 0, "struck down, and experience");
+  pl.gold = 300; w.hurtPlayer(1e6, "phys", "a test"); assert.ok(w.dead); w.revive(); assert.strictEqual(pl.gold, 150, "half the gold lost in the dark"); assert.strictEqual(w.depth, 0);
+});
+
+test("the red portal: in the Keep-yard; any one of the party steps through, as the warrior, rogue or sorcerer their calling suggests, at their own level the first time; Haven's red portal brings them home with a share of the experience, the gold carried, and every piece of gear in the pack as a thing of the party's own (what is worn stays there); the character there is kept for next time", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("ablo-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.ablo = undefined;
+  assert.strictEqual(g.floor.things[CM.PORTAL_YARD.ablo.join(",")].to, "claudeablo"); let asked = false; g.on("claudeablo", () => { asked = true; }); g.floor.pos = CM.PORTAL_YARD.ablo.slice(); g.use(); assert.ok(asked, "the portal asks who goes");
+  const mage = g.party.findIndex((h) => h.cls === "Mage"), h = g.party[mage]; h.xp = CM.xpForLevel(5); g.checkLevels();
+  assert.strictEqual(g.enterClaudeablo(mage), ""); assert.strictEqual(g.mode, "ablo"); const w = g.abloWorld, pl = w.player;
+  assert.strictEqual(pl.cls, "sorcerer"); assert.strictEqual(pl.level, h.level, "as strong as they are here"); assert.ok(pl.spells.Firebolt);
+  const worn = pl.equip.weapon.base; pl.gold = w.goldIn + 420; w.xpGained = 1000; pl.addItem(CM.AB.make("War Hammer", 14, "rare", new CM.AB.Rng(9))); pl.addItem(CM.AB.make("Potion of Healing"));
+  const gold0 = g.gold, bag0 = g.bag.length, xp0 = h.xp; w.homeWanted = true; const out = g.leaveClaudeablo();
+  assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.gold, gold0 + 420, "the gold carried"); assert.strictEqual(out.xp, Math.round(1000 * CM.ABLO.xpShare)); assert.ok(h.xp > xp0, "the experience");
+  assert.strictEqual(g.bag.length, bag0 + 1, "the pack's gear, as the party's own"); const it = g.bag[g.bag.length - 1]; assert.strictEqual(it.kind, "weapon"); assert.ok(it.props.from === "Claudeablo" && it.name.length > 3);
+  const kept = g.village.ablo.heroes[CM.abloKey(h)]; assert.strictEqual(kept.equip.weapon.base, worn, "what is worn stays there"); assert.strictEqual(kept.gold, w.goldIn, "the purse they came with stays there"); assert.ok(kept.inv.some((x) => x && x.base === "Potion of Healing"), "and the potions");
+  g.floor.pos = CM.PORTAL_YARD.ablo.slice(); g.mode = "explore"; g.enterClaudeablo(mage); assert.strictEqual(g.abloWorld.player.level, kept.level, "the same character, next time");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

@@ -116,7 +116,9 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("magetower", () => ui.openMageTower());
   game.on("cabin", () => ui.openCabin());
   game.on("claudeita", () => ui.openClaudeita());
-  game.on("fortress", () => ui.openFortress());                         // (the Fortress: 76d-fortress.js)
+  game.on("fortress", () => ui.openFortress());
+  game.on("claudeablo", () => ui.openClaudeablo());                    // (the red portal: 76f-claudeablo.js)
+  game.on("ablo", () => { ui.abloStart(); ui.refresh(); });                         // (the Fortress: 76d-fortress.js)
   game.on("fortfloor", () => { fortIn = {}; ui.fortBg = null; ui.refresh(); });                      // (Claudeita's cave: 76c-cave.js)
   game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
@@ -455,7 +457,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
-      else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
+      else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
       else if (thing.type === "magedoor" || thing.type === "claudeita" || thing.type === "fortress") { /* the doors are the tower's own, the cave's mouth the crag's: in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
@@ -585,6 +587,9 @@ window.addEventListener("DOMContentLoaded", () => {
       if (e.code === K.use || e.code === "KeyE") { e.preventDefault(); if (game.towerUse) game.towerUse(); ui.refresh(); return; }
       if (e.code === "KeyL" && game.towerRun.atLadder()) { e.preventDefault(); game.towerClimb(true); ui.refresh(); return; }
       if (e.code !== "Escape") return;
+    }
+    if (game.mode === "ablo" && game.abloWorld && !ui.dialogOpen()) {   // Claudeablo (76f-claudeablo.js has its keys)
+      if (ui.abKey(e)) return;
     }
     if (game.mode === "fortress" && game.fortRun && !ui.dialogOpen()) { // the Fortress: real time (64j-fortress.js)
       const f = FORT_KEYS[e.code], run = game.fortRun; if (f) { e.preventDefault(); fortIn[f] = true; if (f !== "attack") fortMouse = false; return; }
@@ -735,7 +740,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const r = view.getBoundingClientRect();
     if (ui.tapView((e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)) e.preventDefault();
   });
-  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; });
+  window.addEventListener("keyup", (e) => { held.delete(e.code); const f = TOWER_KEYS[e.code]; if (f) towerIn[f] = false; const g = CAVE_KEYS[e.code]; if (g) caveIn[g] = false; const q = FORT_KEYS[e.code]; if (q) fortIn[q] = false; if (e.code === "AltLeft" || e.code === "AltRight") ui.abAlt = false; });
+  // ---- Claudeablo's mouse: on its canvas, every click is the game's ----
+  view.addEventListener("mousedown", (e) => { if (game.mode !== "ablo" || !e.target.closest("#ablocanvas")) return; e.preventDefault(); ui.abMouseDown(e, caveXY2(e, "#ablocanvas")); });
+  window.addEventListener("mouseup", (e) => { if (e.button === 0) ui.abLeft = false; });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "ablo" && ui.$("#ablocanvas")) ui.abMouse = caveXY2(e, "#ablocanvas"); });
+  view.addEventListener("contextmenu", (e) => { if (game.mode === "ablo") e.preventDefault(); });
+  view.addEventListener("wheel", (e) => { if (game.mode === "ablo" && ui.abShop) { e.preventDefault(); ui.abShop.scroll = Math.max(0, (ui.abShop.scroll || 0) + (e.deltaY > 0 ? 1 : -1)); } }, { passive: false });
   // ---- the Fortress's hands and feet: the mouse over its canvas aims the blade, and its button strikes ----
   view.addEventListener("mousedown", (e) => { if (game.mode !== "fortress" || !e.target.closest("#fortcanvas")) return; e.preventDefault(); fortMouse = true; fortAt = caveXY2(e, "#fortcanvas"); if (e.button === 0) fortIn.attack = true; else if (e.button === 2) fortIn.bomb = true; });
   window.addEventListener("mouseup", (e) => { if (e.button === 0 && game.mode === "fortress") fortIn.attack = false; });
@@ -763,7 +774,33 @@ window.addEventListener("DOMContentLoaded", () => {
   const CAVE_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", KeyW: "jump", ArrowUp: "jump", Space: "jump" };
   let caveIn = {}, caveFire = false, caveAcc = 0, caveSfx = {};
   const FORT_KEYS = { KeyW: "up", ArrowUp: "up", KeyS: "down", ArrowDown: "down", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "attack", KeyJ: "attack", KeyF: "attack" };
-  let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0;
+  let fortIn = {}, fortMouse = false, fortAt = null, fortT = 0, abloT = 0;
+  // a frame in Claudeablo: the world runs (not while a dialog is up), the held button keeps walking, its events become
+  // sounds; a townsperson spoken to opens their counter; Haven's red portal brings the hero home
+  function abloFrame(now, dt) {
+    const w = game.abloWorld; if (!w) return;
+    if (!ui.dialogOpen() && ui.screen === "play") {
+      w.update(Math.min(0.1, dt));
+      if (ui.abLeft && !w.dead) { ui.abWalkT = (ui.abWalkT || 0) - dt; if (ui.abWalkT <= 0) { ui.abWalkT = 0.3; ui.abClickWorld(w, ui.abMouse, true); } }
+    }
+    const sfx = (name, vol, gap = 0.06, rate = 1) => { if (now - (caveSfx[name] || 0) < gap * 1000) return; caveSfx[name] = now; try { CM.audio.play(name, vol, 0, rate); } catch (er) { /* quiet */ } };
+    for (const ev of w.events) {
+      if (ev.kind === "swing") sfx("miss", 0.2, 0.1); else if (ev.kind === "shoot") sfx("miss", 0.2, 0.1, 1.3); else if (ev.kind === "hit") sfx("hit", 0.3, 0.06);
+      else if (ev.kind === "kill") sfx(ev.boss ? "toll" : "monster", ev.boss ? 0.7 : 0.25, 0.08); else if (ev.kind === "hurt") { sfx("hurt", 0.35, 0.2); ui.tint("rgba(200,30,20,0.25)", 150); }
+      else if (ev.kind === "gold") sfx("coin", 0.35, 0.05); else if (ev.kind === "take" || ev.kind === "chest") sfx("chest", 0.4, 0.1); else if (ev.kind === "barrel") sfx("grind", 0.35, 0.1);
+      else if (ev.kind === "cast") sfx("spell", 0.35, 0.1); else if (ev.kind === "zap") sfx("zap", 0.4, 0.1); else if (ev.kind === "boom") sfx("wandboom", 0.5, 0.15);
+      else if (ev.kind === "drink") sfx("heal", 0.4, 0.2); else if (ev.kind === "level") sfx("level", 0.6, 0.5); else if (ev.kind === "stairs") sfx("stairs", 0.5, 0.3);
+      else if (ev.kind === "portal") sfx("teleport", 0.5, 0.3); else if (ev.kind === "shrine") sfx("spell", 0.5, 0.3, 0.7); else if (ev.kind === "bossspeaks") sfx("elite", 0.6, 1);
+      else if (ev.kind === "dead") sfx("death", 0.7, 1); else if (ev.kind === "block") sfx("bump", 0.3, 0.1); else if (ev.kind === "equip") sfx("card", 0.3, 0.1);
+      else if (ev.kind === "enter") game.abloKeep();
+      else if (ev.kind === "talk") { ui.abShop = { npc: w.talkTo, scroll: 0 }; ui.abPanels.delete("char"); ui.abPanels.delete("spells"); ui.abPanels.add("inv"); w.talkTo = null; }
+    }
+    w.events.length = 0;
+    if (w.homeWanted) { w.homeWanted = false; ui.abCloseAll(); game.leaveClaudeablo(); ui.refresh(); return; }
+    if (ui.abShop && Math.hypot(ui.abShop.npc.x - w.player.x, ui.abShop.npc.y - w.player.y) > 3) ui.abShop = null;
+    ui.drawAblo(w);
+    if ((abloT += dt) > 0.5) { abloT = 0; ui.refresh(); }
+  }
   // a frame in the Fortress: the run steps by real time, its events become sounds and numbers, the canvas is drawn; a
   // fall is shown a moment, then the fighter is outside
   function fortFrame(now, dt) {
@@ -875,6 +912,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (game.mode === "tower") towerFrame(now, dt);
       else if (game.mode === "cave") caveFrame(now, dt);
       else if (game.mode === "fortress") fortFrame(now, dt);
+      else if (game.mode === "ablo") abloFrame(now, dt);
       else if (game.mode === "title") {
         renderer.yaw += dt * 0.08;                                        // a slow look around
         renderer.light = 1; renderer.sky = null;
