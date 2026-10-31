@@ -97,7 +97,7 @@ Principles, kept throughout:
 - **Lairs** in the deepest caverns, as the Fortress has: they send monsters until broken, and leave a chest.
 - Tests: the finds are the seed's; chests pay by depth; four fragments make the map.
 
-## Phase 6 (v12.6): a home on the island
+## Phase 6 (v12.6): a home on the island - done
 - **A bedroll** (from wool-less island fibre: leaves and poles) placed in a room the party has walled and roofed
   makes it a **camp**: sleeping there passes the night, mends the party as resting does at home, and moves the
   party's return point there. A camp with a chest, a workbench and a kiln within reach is a **homestead**: the town's
