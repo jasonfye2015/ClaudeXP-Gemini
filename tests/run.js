@@ -5036,6 +5036,13 @@ test("Wyrmhold Pinball: the plunger sends the ball up the lane and round into th
   assert.strictEqual(owned(), o0 + 3);
 });
 
+test("the casino's gallery: every table on the floor has its line, its kind and its picture in the gallery", () => {
+  const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "js"), all = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
+  const ids = []; for (const m of all.matchAll(/CM\.CG_TABLES = \[(.*?)\];/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]); for (const m of all.matchAll(/CM\.CG_TABLES\.push\((.*?)\);/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]);
+  assert.ok(ids.length >= 27); const gal = fs.readFileSync(path.join(dir, "76ze-gallery.js"), "utf8"), info = gal.slice(gal.indexOf("CM.CG_INFO"), gal.indexOf("CM.CG_CATS")), thumbs = gal.slice(gal.indexOf("CM.CG_THUMB"));
+  for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

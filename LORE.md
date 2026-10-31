@@ -140,6 +140,11 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Gilded Joker's gallery (v14.8)
+
+When the floor passed two dozen tables the house gave up on the brass signs over each one and hung a gallery in the
+foyer instead: a painted card for every table, framed in gilt, twelve to a wall. Guests walk the walls and point.
+
 ## Wyrmhold Pinball (v14.7)
 
 A tinker from the deep camps built the table out of a dungeon door, a box of springs and a jar of glass marbles, and
