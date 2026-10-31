@@ -53,7 +53,15 @@ hour and mist lying in the clearing. The doors' dialog lists each hero, who may 
 - **Tests**: the portal yard is in the Keep-yard and the portal takes the party to the tower's front and back; the
   tower's clearing is the seed's and is reachable; the choice lists exactly the heroes who may go.
 
-## Phase 1 - The tower's floors - v10.2 (content; medium to large)
+## Phase 1 - The tower's floors - v10.2 (content; medium to large) - DONE
+
+As built (`61e-towerfloor.js`, `CM.makeTowerFloor(n, seed)`): floors 33 to 39 cells across, six to nine rooms of five to
+ten a side joined by halls two or three wide (a spanning tree and two loops), the start in the room nearest the
+south-west corner, the boss's room the farthest walk from it with the ladder in its far corner. The floor's spawns
+borrow the kinds of a shaft floor about 1.2 times as deep; the boss has a champion's word. The fortieth is an open hall
+with paired pillars and the King's dais. Doors were left out: the rooms open on their halls (Wolfenstein's doors would
+want sliding doors in the real-time loop; a later touch). The theme borrows the Palace's pictures in colder colours,
+with a violet torchlight. `CM.isTowerFloor` (CM.isTower was already the tower shield's).
 
 - **A generator of its own** (`CM.makeTowerFloor(n, seed)`): a square floor, larger than the shaft's (33 to 41 cells
   across), of big rooms (5 to 11 cells a side) joined by halls two and three cells wide, Wolfenstein's way: doors

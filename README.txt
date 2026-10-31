@@ -1400,6 +1400,10 @@ The Mage Tower (the twelfth big update - v10.1 to v11.0)
   about its foot (src/js/61d-magetower.js). A portal by its door goes home. At the doors the party chooses who goes in
   alone: a caster (Mage, Necromancer, Druid, Cleric, Bard, Artificer) or anyone with a bow or a crossbow.
 
+  The tower's floors (v10.2): forty floors made from the run's seed (src/js/61e-towerfloor.js) - large rooms and halls
+  two and three wide, the start in one corner and the ladder up in the farthest room, where the floor's boss waits;
+  the fortieth is the King's hall, open, with pillars to hide behind. Dark stone and violet torchlight.
+
 A world that moves (the eleventh big update - v9.3 to v10.0)
   UPGRADE_PLAN_9.md says what each phase does.
   Monsters that move (v9.3): a monster's pose is worked out from what happened to it and when (CM.motion in
@@ -1537,6 +1541,7 @@ The source
     64d-bestiary.js the Deep's ten more kinds, the Spore Mother's spawning and the Grave Lantern's light
     64c-undercroft.js the Undercroft: its floors, kinds, carvings, the Bell-Founder's Boy and the black door
     64b-people.js the followers and the townsfolk's errands
+    61e-towerfloor.js the Mage Tower's forty floors
     61d-magetower.js the Mage Tower outside: the portal yard, the tower in the Wood, who may go in
     61c-tower.js  the gate towers and their lookout, the east postern and the cliff path
     61b-lairs.js  the lairs and sleepers, the light's reach and the noise, shading the torch, the champions
