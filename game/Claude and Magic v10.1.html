@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v10.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v10.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -527,7 +527,7 @@ body.handheld #title .foot button, body.handheld #create .foot button { padding:
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "10.0", built: "2026-10-30" };
+const CM = window.CM = { version: "10.1", built: "2026-10-30" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -4467,6 +4467,7 @@ CM.makeTown = function (seed) {
   for (const [tx, ty] of CM.TOWN_TOWERS || []) kinds[key(tx, ty)] = "tower";   // the gate towers, their stairs at their feet, and the postern (61c-tower.js)
   for (const k of Object.keys(CM.TOWER_STAIRS || {})) if (!things[k]) things[k] = { type: "towerstair" };
   if (CM.TOWN_POSTERN && !things[key(...CM.TOWN_POSTERN)]) things[key(...CM.TOWN_POSTERN)] = { type: "postern" };
+  if (CM.layPortalYard) CM.layPortalYard({ things });                    // the portal yard by the shaft (61d-magetower.js)
   const seen = []; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) seen.push([x, y]);   // (daylight: the whole town is on the map)
   const [sx0, sy0, sx1, sy1] = CM.TOWN_SQUARE, [yx0, yy0, yx1, yy1] = CM.TOWN_YARD;
   return { number: 0, grid, pos: CM.TOWN_AT.home.slice(), facing: 1, things, features, dark: [], seen, decor: [], special: "town", solidDefault: "tree", kinds, ground,
@@ -4575,6 +4576,7 @@ CM.makeWood = function (seed) {
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground,
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
+  if (CM.layMageTower) CM.layMageTower(fl);                              // the Mage Tower's clearing (61d-magetower.js; laid last, so nothing the seed placed moves)
   CM.markCanopy(fl);
   CM.woodCache[seed] = JSON.stringify(fl);
   return JSON.parse(CM.woodCache[seed]);
@@ -4605,9 +4607,9 @@ CM.wayPlaces = function (game) {
   if (fl.number === 0) {
     for (const id of ["home", "tavern", "merchant", "smith", "garden", "library", "temple", "guildhall", "chronicler"]) add(CM.TOWN_PLOTS[id].name, ...CM.TOWN_AT[id], true);
     add("The well", ...CM.TOWN_AT.well, true); add("The shaft", ...CM.TOWN_AT.shaft, true); add("The West Gate", ...CM.TOWN_AT.woodgate, true);
-    add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
+    add("The portal yard", ...CM.PORTAL_YARD.tower, true); add("The gate tower's stair", ...Object.keys(CM.TOWER_STAIRS)[0].split(",").map(Number), true); if (CM.posternOpen(game)) add("The postern", ...CM.TOWN_POSTERN, true);
   } else {
-    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true);
+    add("The West Gate", ...CM.WOOD_GATE, true); if (CM.posternOpen(game)) add("The postern", ...CM.POSTERN_LAND, true); add("The Mage Tower", ...CM.MAGE_DOOR, true);
     const farm = Object.keys(fl.things).find((k) => fl.things[k].type === "farm");
     if (farm) add("The farm", ...farm.split(",").map(Number), true);
     add("The ford", ...fl.ford, true); if (fl.bridge) add("The bridge", ...fl.bridge, true); add("The First Glade", ...fl.glades[0], true);
@@ -4615,7 +4617,7 @@ CM.wayPlaces = function (game) {
   }
   return out;
 };
-CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
+CM.woodSafe = (fl, x, y) => ["the West Gate", "the farm", "the ford", "the bridge", "the road", "the cliff path", "the Mage Tower", "The Fields", "The First Glade"].includes(CM.woodPlace(fl, x, y));
 CM.woodCaveAt = (seed, n) => { const fl = CM.makeWood(seed); return Object.keys(fl.things).find((k) => fl.things[k].type === "cave" && fl.things[k].n === n) || CM.WOOD_GATE.join(","); };
 // a cave: a short floor of the first bands' kinds, carved as any floor of its own key, with the way out where the stair was;
 // the third cave has a troll under the hill at its far end
@@ -5045,7 +5047,8 @@ CM.SOLID = {
   shop: { face: "solid:shop", h: 1.6, roof: "solid:roof" },                       // a door, and the board over it
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
-  tower: { face: "solid:townwall", h: 2.3, tower: true },                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
+  tower: { face: "solid:townwall", h: 2.3, tower: true },
+  magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -5101,9 +5104,9 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
-CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
+CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
 // the trees by the season (the eleventh update, phase 3): the crown's colour, bare in winter, snow on the fir, blossom
 // on the oak in spring; the canopy over the paths with them. Pictures only: the mesh is the same in every season.
@@ -5306,6 +5309,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
     }
     for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
+      if (tkind === "magetower") { const [mx, my] = tk.split(",").map(Number); if (mx === CM.MAGE_TOWER.at[0] && my === CM.MAGE_TOWER.at[1]) { mageTower(mx, my); towers++; } continue; }
       if (tkind !== "tower") continue;
       const [tx, ty] = tk.split(",").map(Number), cx = tx + 0.5, cz = ty + 0.5, T = CM.TOWER, H = T.h, R = T.r, top = L("solid:townwall:top");
       const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
@@ -5323,6 +5327,28 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         walls++;
       }
       towers++;
+    }
+    // the Mage Tower: seven stories of black stone, a band at each, faint windows, a slate cone, two dark doors
+    function mageTower(tx, ty) {
+      const T = CM.MAGE_TOWER, cx = tx + 0.5, cz = ty + 0.5, R = T.r, H = T.h, story = H / T.stories, ms = L("solid:magestone"), win = index["window:arcane"], door = L("solid:magedoor");
+      const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
+      for (let i = 0; i < 8; i++) {
+        const [ax, az] = at(i, R), [bx, bz] = at(i + 1, R), na = (Math.PI / 4) * i + Math.PI / 4, nx = Math.cos(na), nz = Math.sin(na), shade = 0.62 + 0.3 * Math.abs(Math.cos(na + 0.6));
+        for (let s = 0; s < T.stories; s++) {
+          const y0 = s * story, y1 = (s + 1) * story;
+          poly([[ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]], [[0, 1], [1, 1], [1, 0], [0, 0]], ms, shade);
+          const q = 0.05; poly([[ax + nx * q, y1 - 0.08, az + nz * q], [bx + nx * q, y1 - 0.08, bz + nz * q], [bx + nx * q, y1, bz + nz * q], [ax + nx * q, y1, az + nz * q]], [[0, 0.1], [1, 0.1], [1, 0], [0, 0]], ms, shade * 0.6);   // (a band of darker stone at each story)
+          if (win !== undefined && s > 0 && CM.hashSeed(`magetower:win:${i}:${s}`) % 3 === 0) { const m0 = 0.42, m1 = 0.58, w0x = ax + (bx - ax) * m0, w0z = az + (bz - az) * m0, w1x = ax + (bx - ax) * m1, w1z = az + (bz - az) * m1, wy0 = y0 + story * 0.3, wy1 = y0 + story * 0.75, p = 0.01;
+            const P = [[w0x + nx * p, wy0, w0z + nz * p], [w1x + nx * p, wy0, w1z + nz * p], [w1x + nx * p, wy1, w1z + nz * p], [w0x + nx * p, wy1, w0z + nz * p]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+            for (const j of [0, 1, 2, 0, 2, 3]) out.push(...P[j], uv[j][0], uv[j][1], win, 1, 0, 1, 0.55); }   // (a narrow window, faintly lit)
+        }
+        if (i === 1) { const d0 = 0.16, d1 = 0.84, p = 0.025, top = 1.95, [x0d, z0d, x1d, z1d] = [ax + (bx - ax) * d0, az + (bz - az) * d0, ax + (bx - ax) * d1, az + (bz - az) * d1];   // the two doors, on the face that looks south down the path
+          poly([[x0d + nx * p, 0, z0d + nz * p], [x1d + nx * p, 0, z1d + nz * p], [x1d + nx * p, top, z1d + nz * p], [x0d + nx * p, top, z0d + nz * p]], [[0, 1], [1, 1], [1, 0], [0, 0]], door, 0.95); }
+        const [rx0, rz0] = at(i, R + 0.18), [rx1, rz1] = at(i + 1, R + 0.18);   // the slate cone
+        poly([[rx0, H, rz0], [rx1, H, rz1], [cx, H + T.roof, cz]], [[0, 1], [1, 1], [0.5, 0]], L("solid:roof"), 0.42 + 0.25 * Math.abs(Math.cos(na)));
+        poly([[ax, H, az], [bx, H, bz], [rx1, H, rz1], [rx0, H, rz0]], [[0, 0.1], [1, 0.1], [1, 0], [0, 0]], ms, 0.4);
+        walls++;
+      }
     }
     for (const C of CM.chimneysOf(fl)) {                                               // the chimneys: a stack of stone, and a cap
       const r = C.w / 2, x0 = C.x - r, x1 = C.x + r, z0 = C.z - r, z1 = C.z + r, uv = [[0, 1], [0.3, 1], [0.3, 0.3], [0, 0.3]];
@@ -5605,6 +5631,7 @@ CM.airKinds = function (env) {
   if (night && season === "summer" && weather !== "rain") add("firefly", 3);
   if (!night && weather !== "rain" && weather !== "snow") add("bird", 0.08);
   add("cloud", weather === "clear" ? 0.04 : 0.1);
+  if (env.towerNear) add("fog", 7);                                // (the Mage Tower's clearing)
   if (env.town) add("smoke", night || season === "winter" || season === "autumn" ? 4 : 1.5);
   if (!night && weather !== "rain") add("mote", 1.5);
   return out;
@@ -6872,6 +6899,47 @@ CM.art.ice = function () {
   p.strokeStyle = "rgba(70,100,130,0.6)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { let x = rnd.next() * S, y = rnd.next() * S; p.beginPath(); p.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd.next() - 0.5) * 60; y += (rnd.next() - 0.5) * 60; p.lineTo(x, y); } p.stroke(); }
   return c;
 };
+// the Mage Tower's pictures: black and grey stone in long blocks, two dark-brown doors with iron, a narrow window's
+// cold light, the portal's arch with the light turning in it, and a dark plinth waiting for its portal
+CM.art.mageStone = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(91);
+  p.fillStyle = "#16151A"; p.fillRect(0, 0, S, S);
+  const rows = 6, h = S / rows; for (let j = 0; j < rows; j++) { let x = j % 2 ? -S / 6 : 0; while (x < S) { const w = S / 3 + rnd.next() * S / 6, k = 0.75 + rnd.next() * 0.5, g = Math.round(46 * k); p.fillStyle = `rgb(${g},${g},${Math.round(g * 1.08)})`; p.fillRect(x + 3, j * h + 3, w - 6, h - 6); x += w; } }
+  speckle(p, rnd, S, S, 1400, "#5A5866", 0.25, 3); speckle(p, rnd, S, S, 600, "#0A0A0E", 0.35, 3);
+  return c;
+};
+CM.art.mageDoor = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(92);
+  p.fillStyle = "#1C1410"; p.fillRect(0, 0, S, S);
+  for (const x0 of [S * 0.04, S * 0.52]) { p.fillStyle = "#3E2A1A"; p.fillRect(x0, S * 0.04, S * 0.44, S * 0.96); p.fillStyle = "#2E1E12"; for (let i = 1; i < 5; i++) p.fillRect(x0 + i * S * 0.088, S * 0.04, 3, S * 0.96);
+    p.fillStyle = "#2A2A30"; for (const y of [0.2, 0.55, 0.85]) p.fillRect(x0, S * y, S * 0.44, S * 0.04); }   // (iron bands)
+  p.fillStyle = "#8A8478"; for (const x of [0.44, 0.56]) { p.beginPath(); p.arc(S * x, S * 0.5, 7, 0, Math.PI * 2); p.fill(); }
+  p.beginPath(); p.fillStyle = "#16151A"; p.moveTo(0, S * 0.04); p.quadraticCurveTo(S / 2, -S * 0.12, S, S * 0.04); p.lineTo(S, 0); p.lineTo(0, 0); p.fill();
+  speckle(p, rnd, S, S, 500, "#120C08", 0.4, 2);
+  return c;
+};
+CM.art.arcaneWindow = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createLinearGradient(0, 0, 0, S);
+  g.addColorStop(0, "#B8A0F0"); g.addColorStop(1, "#5A3AA0"); p.fillStyle = "#0E0C14"; p.fillRect(0, 0, S, S); p.fillStyle = g;
+  p.beginPath(); p.moveTo(S * 0.15, S); p.lineTo(S * 0.15, S * 0.3); p.quadraticCurveTo(S / 2, -S * 0.05, S * 0.85, S * 0.3); p.lineTo(S * 0.85, S); p.fill();
+  p.fillStyle = "#0E0C14"; p.fillRect(S / 2 - 4, S * 0.1, 8, S * 0.9);
+  return c;
+};
+CM.art.portal = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  const g = p.createRadialGradient(S / 2, S * 0.55, 4, S / 2, S * 0.55, S * 0.36); g.addColorStop(0, "#F4E8FF"); g.addColorStop(0.45, "#9A70E8"); g.addColorStop(1, "rgba(60,30,120,0.9)");
+  p.fillStyle = g; p.beginPath(); p.ellipse(S / 2, S * 0.56, S * 0.3, S * 0.4, 0, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = "rgba(240,230,255,0.7)"; p.lineWidth = 3; for (let i = 0; i < 4; i++) { p.beginPath(); p.arc(S / 2, S * 0.56, S * (0.08 + i * 0.06), i, i + 3.6); p.stroke(); }   // (the light, turning)
+  p.strokeStyle = "#4A4650"; p.lineWidth = S * 0.09; p.beginPath(); p.moveTo(S * 0.17, S); p.lineTo(S * 0.17, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.33, Math.PI, 0); p.lineTo(S * 0.83, S); p.stroke();
+  p.strokeStyle = "#6A6670"; p.lineWidth = 4; p.beginPath(); p.moveTo(S * 0.13, S); p.lineTo(S * 0.13, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.37, Math.PI, 0); p.lineTo(S * 0.87, S); p.stroke();
+  return c;
+};
+CM.art.plinth = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(93);
+  p.fillStyle = "#3A3840"; p.fillRect(S * 0.18, S * 0.35, S * 0.64, S * 0.65); p.fillStyle = "#4E4C56"; p.fillRect(S * 0.12, S * 0.3, S * 0.76, S * 0.08); p.fillRect(S * 0.12, S * 0.92, S * 0.76, S * 0.08);
+  speckle(p, rnd, S, S, 300, "#22202A", 0.4, 3); p.strokeStyle = "rgba(140,120,200,0.35)"; p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S * 0.65, S * 0.14, 0, Math.PI * 2); p.stroke();   // (a rune, unlit)
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -7049,6 +7117,8 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
+  out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
+  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));
@@ -8335,6 +8405,7 @@ CM.Air = class {
       case "snow": { const [x, z] = around(); return Object.assign(base, { x, z, y: 2.8, y: 1.2 + r() * 1.6, vy: -0.5 - r() * 0.3, swayAmp: 0.35, windy: 0.5, life: 7, size: 0.03 + r() * 0.035, glow: 2, top: 3.2 }); }
       case "cloud": { const a = r() * Math.PI * 2, d = 40 + r() * 30; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 22 + r() * 10, vx: 0.6, life: 160, size: 9 + r() * 7, h: 0.45, alpha: 0.85, glow: 2, far: true, top: 60 }); }
       case "bird": { const a = r() * Math.PI * 2, d = 35 + r() * 20, s = 3 + r() * 2; return Object.assign(base, { x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 12 + r() * 8, vx: -Math.sin(a) * s, vz: Math.cos(a) * s, life: 25, size: 0.7, far: true, top: 40, flap: true }); }
+      case "fog": { const [x, z] = around(); return Object.assign(base, { x, z, y: 0.05 + r() * 0.4, vy: 0.02, windy: 0.3, swayAmp: 0.08, life: 8 + r() * 5, size: 0.9 + r() * 0.7, grow: 0.05, alpha: 0.32, top: 2 }); }
       case "smoke": { const ch = (env.chimneys || [])[Math.floor(r() * (env.chimneys || []).length)]; if (!ch) return null; return Object.assign(base, { x: ch[0] + (r() - 0.5) * 0.1, z: ch[1] + (r() - 0.5) * 0.1, y: (ch[2] || 2.05) + 0.03, vy: 0.35, windy: 0.4, swayAmp: 0.1, life: 6, size: 0.3, grow: 0.18, alpha: 0.8, top: 6 }); }
       default: return null;
     }
@@ -8368,12 +8439,13 @@ CM.art.airPicture = function (id) {
     case "snow": dot("#FFFFFF", S * 0.34); break;
     case "cloud": { p.fillStyle = "#F2F4F8"; for (const [x, y, r] of [[0.3, 0.6, 0.22], [0.5, 0.45, 0.28], [0.7, 0.6, 0.22], [0.5, 0.68, 0.24], [0.18, 0.7, 0.14], [0.84, 0.7, 0.14]]) { p.beginPath(); p.arc(S * x, S * y, S * r, 0, Math.PI * 2); p.fill(); } p.fillStyle = "rgba(170,180,200,1)"; p.fillRect(S * 0.08, S * 0.78, S * 0.84, S * 0.06); break; }
     case "bird": p.strokeStyle = "#2A2A30"; p.lineWidth = 6; p.lineCap = "round"; p.beginPath(); p.moveTo(S * 0.08, S * 0.35); p.quadraticCurveTo(S * 0.3, S * 0.2, S / 2, S * 0.55); p.quadraticCurveTo(S * 0.7, S * 0.2, S * 0.92, S * 0.35); p.stroke(); break;
+    case "fog": { const g = p.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2); g.addColorStop(0, "rgba(170,172,186,0.9)"); g.addColorStop(1, "rgba(170,172,186,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); break; }
     case "smoke": { const rnd = new CM.Random(5), img = p.createImageData(S, S); for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const d = Math.hypot(x - S / 2, y - S / 2) / (S / 2), k = Math.max(0, 1 - d), i = (y * S + x) * 4; img.data[i] = 150; img.data[i + 1] = 150; img.data[i + 2] = 156; img.data[i + 3] = k > 0.45 || rnd.next() < k * 2.2 ? 255 : 0; } p.putImageData(img, 0, 0); break; }
     default: break;
   }
   return c;
 };
-CM.art.AIR = ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke"];
+CM.art.AIR = ["mote", "drip", "ember", "spore", "glitter", "leaf", "firefly", "rain", "snow", "cloud", "bird", "smoke", "fog"];
 
 // ---- 50-audio.js ----
 "use strict";
@@ -9516,7 +9588,8 @@ Object.assign(CM.Game.prototype, {
           farm: this.villageLevel("farm") >= 1 ? "The farm's gate, and the rows beyond it. (Space to work the farm)" : "A fallow field, fenced long ago. (Space to look it over)",
           woodgate: fl.number === 0 ? "The west gate, and the trees beyond it. (Space to go out into the Deep Wood)" : "The gate back to the town. (Space to go through)",
           cave: thing.type === "cave" ? (thing.n === CM.dayOf(this) % 3 ? "A cave mouth, open and breathing cold. (Space to go down)" : "A cave mouth, choked with fallen rock today.") : "",
-          caveexit: "The way out of the cave. (Space to climb out)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
+          caveexit: "The way out of the cave. (Space to climb out)", portal: thing.to === "magetower" ? "A portal: an arch of stone with light turning in it. (Space: to the Mage Tower)" : "The portal home, to the Keep-yard. (Space)", plinth: "A dark plinth. (Space to look)",
+          magedoor: "The Mage Tower's doors, dark and tall. One goes in alone. (Space)", ucstair: thing.hidden ? "" : "A stair of old cut stone, going down into cold and water. (Space to go down)", ucdown: "Steps down, deeper into the Undercroft. (Space)", ucup: "Steps up, toward the cave. (Space)",
           ucdoor: "A door of black oak in the bell-yard's wall. (Space)", ucback: "A flooded stair going down, and a black door at the bottom of it: the Undercroft. (Space)", vein: thing.type === "vein" ? `A vein of ${CM.ORES[thing.ore].name} in the rock${thing.left < CM.VEIN_SWINGS ? ", part worked" : ""}. (Space to mine it, with a pick that will)` : "", hut: "A hut of turf and poles, smoke from the roof. (Space to knock)", shrine: "A shrine with its roof in the grass. (Space to read the wall)", burner: "A charcoal burner's mound, smoking. (Space to speak to him)",
           signpost: "A signpost, its boards weathered. (Space to read it)",
           cross: "The market cross, on its three steps: the Square's oldest stone. (Space to read what is cut in it)",
@@ -9715,6 +9788,9 @@ Object.assign(CM.Game.prototype, {
     { const t0 = this.floor.things[keyOf(this.floor.pos[0], this.floor.pos[1])];   // the tower's stair, the postern (61c-tower.js)
       if (t0 && t0.type === "towerstair") { this.climbTower(keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
       if (t0 && t0.type === "postern") { this.postern(); return; }
+      if (t0 && t0.type === "portal") { this.usePortal(t0); return; }   // (the Mage Tower: 61d-magetower.js)
+      if (t0 && t0.type === "magedoor") { this.emit("magetower"); return; }
+      if (t0 && t0.type === "plinth") { this.say("A plinth of dark stone with a rune cut in it, unlit. Something will stand here one day."); return; }
       if (t0 && t0.type === "errand") { this.pickUpErrand(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; }
       if (t0 && ["ucstair", "ucdown", "ucup", "ucdoor", "ucback"].includes(t0.type) && !t0.hidden) { this.undercroftWay(t0, keyOf(this.floor.pos[0], this.floor.pos[1])); return; } }   // (the Undercroft: 64c-undercroft.js)   // (an errand's thing: 64b-people.js)
     const fl = this.floor, [x, y] = fl.pos, k = keyOf(x, y), here = fl.features[k], thing = fl.things[k];
@@ -10708,6 +10784,74 @@ Object.assign(CM.Game.prototype, {
     else { this.enterFloor(0, "rope", CM.TOWN_POSTERN.slice()); this.say("Up the cliff path and in at the postern: the Keep-yard, and the shaft."); }
     return true;
   },
+});
+
+// ---- 61d-magetower.js ----
+"use strict";
+// The Mage Tower (the twelfth update): its portal yard in the town, the tower itself in the Wood, and who may go in.
+// Phase 0 (v10.1): the portal yard in the Keep-yard beside the shaft - one lit portal, to the tower's front, and two
+// dark plinths for the challenges to come - and the tower in a clearing north of the fields: a great octagon of black
+// and grey stone many stories tall, two dark-brown doors on its front, dark shrubs and fog about its foot, and a portal
+// back to the town by its door. The tower and its clearing are laid on the land last (nothing the seed placed moves).
+CM.MAGE_TOWER = { at: [47, 12], r: 1.45, h: 10.5, stories: 7, roof: 3.6, clearing: [43, 9, 51, 16] };   // its middle cell, its size in squares
+CM.MAGE_DOOR = [47, 14];                                                   // the square before its doors (the party stands here)
+CM.MAGE_PORTAL_LAND = [45, 15];                                            // the portal home, by the door
+CM.MAGE_PATH = [47, 16, 47, 19];                                           // the path down to the fields
+CM.PORTAL_YARD = { tower: [33, 18], plinths: [[33, 22], [37, 22]] };       // in the Keep-yard: the lit portal and the dark plinths
+CM.TOWER_CASTERS = ["Mage", "Necromancer", "Druid", "Cleric", "Bard", "Artificer"];
+CM.isMageTowerCell = (x, y) => Math.abs(x - CM.MAGE_TOWER.at[0]) <= 1 && Math.abs(y - CM.MAGE_TOWER.at[1]) <= 1;
+// who may go into the tower: a caster, or anyone with a bow or a crossbow in hand; "" if they may, else why not
+CM.towerWhyNot = (h) => {
+  if (!h) return "No one.";
+  if (h.hp <= 0) return `${h.name} has fallen.`;
+  if (CM.TOWER_CASTERS.includes(h.cls)) return "";
+  const w = h.weapon, bow = w && w.props && w.props.bow;
+  if (bow) return "";
+  return `${h.name} the ${h.cls} has nothing that reaches across a room: the tower is for casters, and for a bow or a crossbow.`;
+};
+
+// the tower's clearing, laid on the land after everything else: the tower's nine squares, the ground round it, the door,
+// the portal home, the path to the fields, the dark shrubs
+CM.layMageTower = function (fl) {
+  const T = CM.MAGE_TOWER, [x0, y0, x1, y1] = T.clearing, key = (x, y) => `${x},${y}`;
+  const open = (x, y, g) => { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[key(x, y)]; (fl.ground = fl.ground || {})[key(x, y)] = g; };
+  const cx = T.at[0], cy = T.at[1];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const d = ((x - cx) / 4.6) ** 2 + ((y - cy - 0.5) / 4.2) ** 2;
+    if (d <= 1 && !CM.isMageTowerCell(x, y)) open(x, y, (x + y) % 3 ? "moss" : "dirt");
+  }
+  for (let y = cy - 1; y <= cy + 1; y++) for (let x = cx - 1; x <= cx + 1; x++) { fl.grid[y][x] = 1; (fl.kinds = fl.kinds || {})[key(x, y)] = "magetower"; if (fl.ground) delete fl.ground[key(x, y)]; }
+  const [px, py0, , py1] = CM.MAGE_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt");
+  fl.things[key(...CM.MAGE_DOOR)] = { type: "magedoor" };
+  fl.things[key(...CM.MAGE_PORTAL_LAND)] = { type: "portal", to: "town" };
+  fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {               // dark shrubs crowding the clearing's edge
+    if (fl.grid[y][x] !== 0 || fl.things[key(x, y)] || CM.isMageTowerCell(x, y)) continue;
+    const edge = CM.DIRS.some(([dx, dy]) => fl.grid[y + dy] && fl.grid[y + dy][x + dx] === 1 && !CM.isMageTowerCell(x + dx, y + dy));
+    if (edge && x !== px && CM.hashSeed(`magetower:shrub:${x},${y}`) % 3 !== 0) fl.decor.push({ kind: "darkshrub", x, y });
+  }
+  fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "the Mage Tower" });
+  for (let y = y0; y <= y1 + 3; y++) for (let x = x0; x <= x1; x++) if (!(fl.seen || []).some(([sx, sy]) => sx === x && sy === y)) (fl.seen = fl.seen || []).push([x, y]);   // (in sight from the fields)
+  return fl;
+};
+// the portal yard, laid in the town's Keep-yard
+CM.layPortalYard = function (fl) {
+  const P = CM.PORTAL_YARD, key = (x, y) => `${x},${y}`;
+  if (!fl.things[key(...P.tower)]) fl.things[key(...P.tower)] = { type: "portal", to: "magetower" };
+  for (const p of P.plinths) if (!fl.things[key(...p)]) fl.things[key(...p)] = { type: "plinth" };
+  return fl;
+};
+
+Object.assign(CM.Game.prototype, {
+  // a portal: the town's to the tower's front, the tower's back to the Keep-yard
+  usePortal(t) {
+    this.sound("spell");
+    if (t.to === "magetower") { this.enterFloor(-1, "rope", CM.MAGE_DOOR.slice()); this.floor.facing = 0; this.say("The portal takes you in a breath of cold light: the Deep Wood, a clearing in fog, and over you the Mage Tower, black against the sky."); return true; }
+    if (t.to === "town") { this.enterFloor(0, "rope", CM.PORTAL_YARD.tower.slice()); this.say("Light, and the Keep-yard: the portal yard by the shaft."); return true; }
+    return false;
+  },
+  // the tower's doors: the choice of who goes in (the dialog is the window's); the rules say who may
+  towerChoices() { return this.party.map((h, i) => ({ i, name: h.name, cls: h.cls, why: CM.towerWhyNot(h) })); },
 });
 
 // ---- 62-combat.js ----
@@ -16227,6 +16371,7 @@ CM.UI = class {
   <div class="end"><button class="close primary">Walk on</button></div></div></div>
 <div class="dialog" id="dlg-riddle"><div class="box"><h2>Runes on the door</h2><p id="riddle-q" class="lore"></p><div id="riddle-answers" class="answers"></div>
   <p class="small">The answer is carved somewhere above. A wrong one burns.</p><div class="end"><button class="close">Step back</button></div></div></div>
+<div class="dialog" id="dlg-magetower"><div class="box"><h2>The Mage Tower</h2><p class="lore">The doors are taller than three men, and warm to the touch. Whoever goes in, goes in alone: a caster, or someone with a bow.</p><div id="magetower-who"></div><div class="small" id="magetower-note"></div><div class="row"><button class="close">Not now</button></div></div></div>
 <div class="dialog" id="dlg-calendar"><div class="box journalbox calbox"><h2>The Calendar</h2><div id="calendar-body"></div><div class="row"><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-whereto"><div class="box journalbox"><h2>Where to?</h2><div class="small">The party walks there by what it knows, and stops for whatever it meets on the way. Any key stops it.</div><div id="whereto-list"></div><div class="row"><button class="close">Back</button></div></div></div>
 <div class="dialog" id="dlg-journal"><div class="box journalbox"><h2>Journal <span class="boards"><button data-page="journal" class="on" title="Everything read and heard this run, in the order it came">Journal</button><button data-page="codex" title="The story of Caer Duin, chapter by chapter: what has been read, and the blanks">Codex</button><button data-page="things" title="Every kind of thing the dungeon holds, and which you have found">Things</button><button data-page="errands" title="What the townsfolk have asked of you, and what they ask now">Errands</button></span></h2><div id="journal-list"></div>
@@ -17925,6 +18070,14 @@ Object.assign(CM.UI.prototype, {
     slot.title = `The moon: ${CM.MOON_NAMES[D.phase]}, day ${D.moonDay} of ${CM.CLOCK.moon}${CM.MOON_DOES[D.phase] ? ` - ${CM.MOON_DOES[D.phase]}` : ""}`;
     el.dataset.phase = D.phase; el.dataset.sky = D.sky;
   },
+  // the Mage Tower's doors: the heroes, who may go in and who may not (and why)
+  openMageTower() {
+    const g = this.game, box = this.$("#magetower-who"), note = this.$("#magetower-note");
+    box.innerHTML = g.towerChoices().map((c) => `<div class="recruit" style="grid-template-columns: 1fr auto"><div><b>${this.esc(c.name)}</b> the ${this.esc(c.cls)}${c.why ? `<br><small>${this.esc(c.why)}</small>` : ""}</div><div class="hire"><button data-tower-hero="${c.i}" ${c.why ? "disabled" : ""}>Go in</button></div></div>`).join("");
+    for (const b of box.querySelectorAll("[data-tower-hero]")) b.addEventListener("click", () => { const why = g.enterMageTower ? g.enterMageTower(Number(b.dataset.towerHero)) : "The doors stay shut. Inside, something is still being built."; note.textContent = why || ""; if (!why) { this.closeDialogs(); this.refresh(); } });
+    note.textContent = "";
+    this.openDialog("#dlg-magetower");
+  },
   // the Calendar: the moon's month, the seasons, the weather ahead and the year's festivals
   openCalendar() {
     const g = this.game, D = CM.dialOf(g), season = CM.season(g), f = CM.festival(g), month = new Date().getMonth(), today = CM.weather(g);
@@ -18629,6 +18782,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
   game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
+  game.on("magetower", () => ui.openMageTower());                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)
   game.on("moved", (x, y) => { const fl = game.floor; if (!fl || !(fl.decor || []).some((dc) => dc.kind === "water" && Math.abs(dc.x - x) + Math.abs(dc.y - y) <= 2) || Math.random() > 0.3) return; try { CM.audio.play("lap", 0.25); } catch (e) { /* quiet */ } });   // (water, near)   // something is coming: louder the nearer, from the side it is on
   game.on("floor", (fl) => CM.music.setDepth(((fl.number - 1) % 5) / 4));      // deeper into its band, the tune gains a voice
@@ -18850,7 +19004,8 @@ window.addEventListener("DOMContentLoaded", () => {
       if (fl.number === 0) chimneys = CM.chimneysOf(fl).map((c) => [c.x, c.z, c.top]); }   // (the smoke from the chimneys' own tops)
     const surface = fl.number === 0 || fl.number === -1, detail = Object.keys(CM.DETAIL).find((k) => CM.DETAIL[k] === renderer.density) || "medium";   // (the Detail in force, after any step-down)
     const budget = CM.AIR_BUDGET[detail] || 0, weather = surface ? CM.weather(game) : "clear";
-    const kinds = budget ? CM.airKinds({ surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
+    const towerNear = fl.number === -1 && Math.abs(fl.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(fl.pos[1] - CM.MAGE_TOWER.at[1]) <= 9;
+    const kinds = budget ? CM.airKinds({ towerNear, surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 }) : [];
     const scale = detail === "high" ? 1 : 0.6;
     air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
   }
@@ -18962,6 +19117,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal") out.push({ x, y, layer: "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
+      else if (thing.type === "plinth") out.push({ x, y, layer: "solid:plinth", w: 0.7, h: 0.6 });
+      else if (thing.type === "magedoor") { /* the doors are the tower's own, in the mesh */ }
       else if (thing.type === "errand") out.push({ x, y, layer: "key", w: 0.4, h: 0.4, glow: 0.6 + 0.3 * Math.sin(now / 400 + x) });   // (an errand's thing: it catches the light)
       else if (thing.type === "towerstair") { out.push({ x, y, layer: "stairs_up", w: 0.55, h: 0.9, shade: 0.8 }); const T = CM.TOWER_STAIRS[key]; if (T && !(game.perch && game.perch.from === key)) out.push({ x: T[0], y: T[1], dx: 0.3, dz: -0.25, layer: "npc:adventurer", w: 0.5, h: 0.55, lift: CM.TOWER.h }); }   // (the stair, and the watchman on the tower's top)
       else if (thing.type === "postern") out.push({ x, y, layer: CM.posternOpen(game) ? "door" : "door_locked", face: fl.number === 0 ? 0 : 1, w: 0.62, h: 0.86, lift: 0.07 });   // (a small door in the wall, or in the cliff)
@@ -19027,6 +19185,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (dc.kind === "fungus") out.push({ x: dc.x, y: dc.y, layer: "fungus", flat: true, w: 0.9, glow: 0.6 + 0.2 * Math.sin(now / 700 + dc.x + dc.y) });
       else if (dc.kind === "crystal") out.push({ x: dc.x, y: dc.y, layer: "crystal", w: 0.7, h: 0.9, glow: 0.55 + 0.25 * Math.sin(now / 500 + dc.x * 1.7) });
       else if (dc.kind === "root") out.push({ x: dc.x, y: dc.y, layer: "root", w: 0.9, h: 0.95 });
+      else if (dc.kind === "darkshrub") out.push({ x: dc.x, y: dc.y, dx: ((dc.x * 37 + dc.y * 11) % 30 - 15) / 100, dz: ((dc.x * 13 + dc.y * 29) % 30 - 15) / 100, layer: "prop:shrub", w: 1.0, h: 0.9, shade: 0.32 });   // (dark shrubs about the Mage Tower)
     }
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
@@ -19263,7 +19422,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
-        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && CM.weather(game) === "mist" ? 1 : 0;   // (snow lying, mist low: the seasons seen)
+        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && game.floor.number === 0;   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && game.floor.number === 0) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.lights = lightsNear(game.floor);

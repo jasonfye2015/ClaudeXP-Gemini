@@ -12,7 +12,8 @@ CM.SOLID = {
   shop: { face: "solid:shop", h: 1.6, roof: "solid:roof" },                       // a door, and the board over it
   frame: { face: "solid:frame", h: 1.2, see: true },                              // a house being built: posts and beams
   townwall: { face: "solid:townwall", h: 1.3, top: "solid:townwall:top" },        // the ring wall, with its walk
-  tower: { face: "solid:townwall", h: 2.3, tower: true },                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
+  tower: { face: "solid:townwall", h: 2.3, tower: true },
+  magetower: { face: "solid:magestone", h: 10.5, tower: true, mage: true },   // the Mage Tower's nine squares: one great octagon (61d-magetower.js)                        // a gate tower: an octagon of stone with merlons on its top (61c-tower.js)
   hedge: { face: "solid:hedge", h: 0.55, top: "solid:hedge", see: true },         // seen over
   fence: { face: "solid:fence", h: 0.5, see: true },                              // seen through
   cliff: { face: "solid:cliff", h: 2.2, top: "ground:grass" },                    // the hill's side
@@ -68,9 +69,9 @@ CM.chimneysOf = function (fl) {
   }
   return out;
 };
-CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
+CM.SOLID_COLOURS = { wall: "#3A3028", house: "#8A6A48", door: "#A0784A", shop: "#A0784A", frame: "#B09060", townwall: "#6E6A62", tower: "#5A564E", magetower: "#2A2830", hedge: "#5C8A3C", fence: "#A08860", cliff: "#4A4038", tree: "#3F6B32" };
 CM.GROUNDS = ["grass", "dirt", "cobbles", "flags", "planks", "tilled", "moss", "litter", "needles"];   // (litter and needles: under the trees, the trunk's shade at the middle)
-CM.UNDER = ["tree", "hedge", "fence", "frame"];                          // the solid kinds the ground runs under on the surface
+CM.UNDER = ["tree", "hedge", "fence", "frame", "tower", "magetower"];                          // the solid kinds the ground runs under on the surface
 CM.SKIRT = 40;                                                          // how far past the map's edge the ground runs, and the far silhouettes stand
 // the trees by the season (the eleventh update, phase 3): the crown's colour, bare in winter, snow on the fir, blossom
 // on the oak in spring; the canopy over the paths with them. Pictures only: the mesh is the same in every season.
@@ -273,6 +274,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
     }
     for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
+      if (tkind === "magetower") { const [mx, my] = tk.split(",").map(Number); if (mx === CM.MAGE_TOWER.at[0] && my === CM.MAGE_TOWER.at[1]) { mageTower(mx, my); towers++; } continue; }
       if (tkind !== "tower") continue;
       const [tx, ty] = tk.split(",").map(Number), cx = tx + 0.5, cz = ty + 0.5, T = CM.TOWER, H = T.h, R = T.r, top = L("solid:townwall:top");
       const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
@@ -290,6 +292,28 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         walls++;
       }
       towers++;
+    }
+    // the Mage Tower: seven stories of black stone, a band at each, faint windows, a slate cone, two dark doors
+    function mageTower(tx, ty) {
+      const T = CM.MAGE_TOWER, cx = tx + 0.5, cz = ty + 0.5, R = T.r, H = T.h, story = H / T.stories, ms = L("solid:magestone"), win = index["window:arcane"], door = L("solid:magedoor");
+      const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; };
+      for (let i = 0; i < 8; i++) {
+        const [ax, az] = at(i, R), [bx, bz] = at(i + 1, R), na = (Math.PI / 4) * i + Math.PI / 4, nx = Math.cos(na), nz = Math.sin(na), shade = 0.62 + 0.3 * Math.abs(Math.cos(na + 0.6));
+        for (let s = 0; s < T.stories; s++) {
+          const y0 = s * story, y1 = (s + 1) * story;
+          poly([[ax, y0, az], [bx, y0, bz], [bx, y1, bz], [ax, y1, az]], [[0, 1], [1, 1], [1, 0], [0, 0]], ms, shade);
+          const q = 0.05; poly([[ax + nx * q, y1 - 0.08, az + nz * q], [bx + nx * q, y1 - 0.08, bz + nz * q], [bx + nx * q, y1, bz + nz * q], [ax + nx * q, y1, az + nz * q]], [[0, 0.1], [1, 0.1], [1, 0], [0, 0]], ms, shade * 0.6);   // (a band of darker stone at each story)
+          if (win !== undefined && s > 0 && CM.hashSeed(`magetower:win:${i}:${s}`) % 3 === 0) { const m0 = 0.42, m1 = 0.58, w0x = ax + (bx - ax) * m0, w0z = az + (bz - az) * m0, w1x = ax + (bx - ax) * m1, w1z = az + (bz - az) * m1, wy0 = y0 + story * 0.3, wy1 = y0 + story * 0.75, p = 0.01;
+            const P = [[w0x + nx * p, wy0, w0z + nz * p], [w1x + nx * p, wy0, w1z + nz * p], [w1x + nx * p, wy1, w1z + nz * p], [w0x + nx * p, wy1, w0z + nz * p]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
+            for (const j of [0, 1, 2, 0, 2, 3]) out.push(...P[j], uv[j][0], uv[j][1], win, 1, 0, 1, 0.55); }   // (a narrow window, faintly lit)
+        }
+        if (i === 1) { const d0 = 0.16, d1 = 0.84, p = 0.025, top = 1.95, [x0d, z0d, x1d, z1d] = [ax + (bx - ax) * d0, az + (bz - az) * d0, ax + (bx - ax) * d1, az + (bz - az) * d1];   // the two doors, on the face that looks south down the path
+          poly([[x0d + nx * p, 0, z0d + nz * p], [x1d + nx * p, 0, z1d + nz * p], [x1d + nx * p, top, z1d + nz * p], [x0d + nx * p, top, z0d + nz * p]], [[0, 1], [1, 1], [1, 0], [0, 0]], door, 0.95); }
+        const [rx0, rz0] = at(i, R + 0.18), [rx1, rz1] = at(i + 1, R + 0.18);   // the slate cone
+        poly([[rx0, H, rz0], [rx1, H, rz1], [cx, H + T.roof, cz]], [[0, 1], [1, 1], [0.5, 0]], L("solid:roof"), 0.42 + 0.25 * Math.abs(Math.cos(na)));
+        poly([[ax, H, az], [bx, H, bz], [rx1, H, rz1], [rx0, H, rz0]], [[0, 0.1], [1, 0.1], [1, 0], [0, 0]], ms, 0.4);
+        walls++;
+      }
     }
     for (const C of CM.chimneysOf(fl)) {                                               // the chimneys: a stack of stone, and a cap
       const r = C.w / 2, x0 = C.x - r, x1 = C.x + r, z0 = C.z - r, z1 = C.z + r, uv = [[0, 1], [0.3, 1], [0.3, 0.3], [0, 0.3]];

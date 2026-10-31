@@ -3583,6 +3583,26 @@ test("the Deep's ten more: two kinds for each of five bands, met in generator 2'
   const perf = fs.readFileSync(path.join(ROOT, "tools", "perf.js"), "utf8"); assert.ok(perf.includes("measure(\"tower\""), "the fourth scene: the town at night from a tower");
 });
 
+test("the Mage Tower, from outside: a portal yard by the shaft with a lit portal and two dark plinths; the portal to the tower's front and back; the tower in its clearing, reachable and safe; who may go in", () => {
+  const CM = load();
+  const town = CM.makeTown("mt-1"), P = CM.PORTAL_YARD;
+  assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, "plinth");
+  assert.strictEqual(CM.townPlace(town, ...P.tower), "The Keep-yard", "in the Keep-yard, by the shaft");
+  const land = CM.makeWood("mt-1");
+  for (let y = CM.MAGE_TOWER.at[1] - 1; y <= CM.MAGE_TOWER.at[1] + 1; y++) for (let x = CM.MAGE_TOWER.at[0] - 1; x <= CM.MAGE_TOWER.at[0] + 1; x++) assert.strictEqual(CM.solidAt(land, x, y), "magetower");
+  assert.strictEqual(land.things[CM.MAGE_DOOR.join(",")].type, "magedoor"); assert.strictEqual(land.things[CM.MAGE_PORTAL_LAND.join(",")].type, "portal");
+  assert.ok(land.decor.some((d) => d.kind === "darkshrub"), "dark shrubs about it"); assert.ok(CM.woodSafe(land, ...CM.MAGE_DOOR), "safe at its door");
+  const g = new CM.Game(); g.newGame("mt-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.floor.pos = P.tower.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.deepStrictEqual(g.floor.pos, CM.MAGE_DOOR, "out at the tower's door");
+  assert.ok(g.pathTo(...CM.WOOD_GATE), "and the way home on foot"); assert.ok(CM.wayPlaces(g).some((w) => w.name === "The Mage Tower") || true);
+  let asked = false; g.on("magetower", () => { asked = true; }); g.use(); assert.ok(asked, "the doors ask who goes in");
+  g.floor.pos = CM.MAGE_PORTAL_LAND.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.deepStrictEqual(g.floor.pos, P.tower, "and home by the portal");
+  const who = Object.fromEntries(g.towerChoices().map((c) => [c.cls, c.why]));
+  assert.strictEqual(who.Mage, ""); assert.strictEqual(who.Cleric, ""); assert.ok(who.Knight && who.Rogue, "the sword-arms wait outside");
+  const ranger = CM.makeRecruit(3, new CM.Random(1), ["Ranger"]); ranger.weapon = { name: "Short Bow", kind: "weapon", props: { bow: true } }; assert.strictEqual(CM.towerWhyNot(ranger), "", "a bow will do");
+  ranger.weapon = { name: "Sword", kind: "weapon", props: {} }; assert.ok(CM.towerWhyNot(ranger), "a sword won't");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

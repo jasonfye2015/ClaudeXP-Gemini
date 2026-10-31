@@ -30,7 +30,13 @@ king who will not stand still.**
 - **Both looks, Low detail, reduced motion, a pad.** As everywhere else.
 - **Automatic does not climb the tower.** It is the player's challenge; Automatic stops at the door.
 
-## Phase 0 - The portal yard and the tower in the Wood - v10.1 (content and graphics; medium)
+## Phase 0 - The portal yard and the tower in the Wood - v10.1 (content and graphics; medium) - DONE
+
+As built (`61d-magetower.js`): the portal yard in the Keep-yard's free corners (the lit portal north-west, the
+two plinths south); the tower in a clearing north of the fields, laid after everything else on the land, nine squares
+of a `magetower` kind drawn as one octagon of black stone, seven stories with darker bands and narrow violet windows,
+a slate cone and two iron-banded doors facing the path south; dark shrubs at the clearing's edge, fog drifting at any
+hour and mist lying in the clearing. The doors' dialog lists each hero, who may go in and why not; going in is phase 2.
 
 - **The portal yard**, in the Keep-yard beside the shaft: a ring of standing stones with a paved floor, and in it one
   lit portal (an arch of stone with a turning light in it) and three dark plinths for challenges to come. Space at the

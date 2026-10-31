@@ -1123,6 +1123,47 @@ CM.art.ice = function () {
   p.strokeStyle = "rgba(70,100,130,0.6)"; p.lineWidth = 2; for (let i = 0; i < 7; i++) { let x = rnd.next() * S, y = rnd.next() * S; p.beginPath(); p.moveTo(x, y); for (let j = 0; j < 4; j++) { x += (rnd.next() - 0.5) * 60; y += (rnd.next() - 0.5) * 60; p.lineTo(x, y); } p.stroke(); }
   return c;
 };
+// the Mage Tower's pictures: black and grey stone in long blocks, two dark-brown doors with iron, a narrow window's
+// cold light, the portal's arch with the light turning in it, and a dark plinth waiting for its portal
+CM.art.mageStone = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(91);
+  p.fillStyle = "#16151A"; p.fillRect(0, 0, S, S);
+  const rows = 6, h = S / rows; for (let j = 0; j < rows; j++) { let x = j % 2 ? -S / 6 : 0; while (x < S) { const w = S / 3 + rnd.next() * S / 6, k = 0.75 + rnd.next() * 0.5, g = Math.round(46 * k); p.fillStyle = `rgb(${g},${g},${Math.round(g * 1.08)})`; p.fillRect(x + 3, j * h + 3, w - 6, h - 6); x += w; } }
+  speckle(p, rnd, S, S, 1400, "#5A5866", 0.25, 3); speckle(p, rnd, S, S, 600, "#0A0A0E", 0.35, 3);
+  return c;
+};
+CM.art.mageDoor = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(92);
+  p.fillStyle = "#1C1410"; p.fillRect(0, 0, S, S);
+  for (const x0 of [S * 0.04, S * 0.52]) { p.fillStyle = "#3E2A1A"; p.fillRect(x0, S * 0.04, S * 0.44, S * 0.96); p.fillStyle = "#2E1E12"; for (let i = 1; i < 5; i++) p.fillRect(x0 + i * S * 0.088, S * 0.04, 3, S * 0.96);
+    p.fillStyle = "#2A2A30"; for (const y of [0.2, 0.55, 0.85]) p.fillRect(x0, S * y, S * 0.44, S * 0.04); }   // (iron bands)
+  p.fillStyle = "#8A8478"; for (const x of [0.44, 0.56]) { p.beginPath(); p.arc(S * x, S * 0.5, 7, 0, Math.PI * 2); p.fill(); }
+  p.beginPath(); p.fillStyle = "#16151A"; p.moveTo(0, S * 0.04); p.quadraticCurveTo(S / 2, -S * 0.12, S, S * 0.04); p.lineTo(S, 0); p.lineTo(0, 0); p.fill();
+  speckle(p, rnd, S, S, 500, "#120C08", 0.4, 2);
+  return c;
+};
+CM.art.arcaneWindow = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, g = p.createLinearGradient(0, 0, 0, S);
+  g.addColorStop(0, "#B8A0F0"); g.addColorStop(1, "#5A3AA0"); p.fillStyle = "#0E0C14"; p.fillRect(0, 0, S, S); p.fillStyle = g;
+  p.beginPath(); p.moveTo(S * 0.15, S); p.lineTo(S * 0.15, S * 0.3); p.quadraticCurveTo(S / 2, -S * 0.05, S * 0.85, S * 0.3); p.lineTo(S * 0.85, S); p.fill();
+  p.fillStyle = "#0E0C14"; p.fillRect(S / 2 - 4, S * 0.1, 8, S * 0.9);
+  return c;
+};
+CM.art.portal = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE;
+  const g = p.createRadialGradient(S / 2, S * 0.55, 4, S / 2, S * 0.55, S * 0.36); g.addColorStop(0, "#F4E8FF"); g.addColorStop(0.45, "#9A70E8"); g.addColorStop(1, "rgba(60,30,120,0.9)");
+  p.fillStyle = g; p.beginPath(); p.ellipse(S / 2, S * 0.56, S * 0.3, S * 0.4, 0, 0, Math.PI * 2); p.fill();
+  p.strokeStyle = "rgba(240,230,255,0.7)"; p.lineWidth = 3; for (let i = 0; i < 4; i++) { p.beginPath(); p.arc(S / 2, S * 0.56, S * (0.08 + i * 0.06), i, i + 3.6); p.stroke(); }   // (the light, turning)
+  p.strokeStyle = "#4A4650"; p.lineWidth = S * 0.09; p.beginPath(); p.moveTo(S * 0.17, S); p.lineTo(S * 0.17, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.33, Math.PI, 0); p.lineTo(S * 0.83, S); p.stroke();
+  p.strokeStyle = "#6A6670"; p.lineWidth = 4; p.beginPath(); p.moveTo(S * 0.13, S); p.lineTo(S * 0.13, S * 0.42); p.arc(S / 2, S * 0.42, S * 0.37, Math.PI, 0); p.lineTo(S * 0.87, S); p.stroke();
+  return c;
+};
+CM.art.plinth = function () {
+  const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(93);
+  p.fillStyle = "#3A3840"; p.fillRect(S * 0.18, S * 0.35, S * 0.64, S * 0.65); p.fillStyle = "#4E4C56"; p.fillRect(S * 0.12, S * 0.3, S * 0.76, S * 0.08); p.fillRect(S * 0.12, S * 0.92, S * 0.76, S * 0.08);
+  speckle(p, rnd, S, S, 300, "#22202A", 0.4, 3); p.strokeStyle = "rgba(140,120,200,0.35)"; p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S * 0.65, S * 0.14, 0, Math.PI * 2); p.stroke();   // (a rune, unlit)
+  return c;
+};
 CM.art.townWall = function (top = false, seed = 1) {
   const c = artCanvas(), p = c.getContext("2d"), S = ART_SIZE, rnd = new CM.Random(CM.hashSeed(`townwall:${top}:${seed}`)), base = top ? [120, 116, 108] : [104, 100, 94];
   p.fillStyle = rgb(base, 0.55); p.fillRect(0, 0, S, S);
@@ -1300,6 +1341,8 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:shop"] = use("solid.shop", () => CM.art.facade("shop"));
   out["solid:gable"] = use("solid.gable", () => CM.art.facade("gable"));
   out["window:lit"] = use("window.lit", () => CM.art.litWindow());
+  out["solid:magestone"] = use("solid.magestone", () => CM.art.mageStone()); out["solid:magedoor"] = use("solid.magedoor", () => CM.art.mageDoor());   // (the Mage Tower: 61d-magetower.js)
+  out["window:arcane"] = use("window.arcane", () => CM.art.arcaneWindow()); out["solid:portal"] = use("solid.portal", () => CM.art.portal()); out["solid:plinth"] = use("solid.plinth", () => CM.art.plinth());
   out["solid:frame"] = use("solid.frame", () => CM.art.facade("frame"));
   out["solid:townwall"] = use("solid.townwall", () => CM.art.townWall(false));
   out["solid:townwall:top"] = use("solid.townwall.top", () => CM.art.townWall(true));

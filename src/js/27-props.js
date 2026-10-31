@@ -187,6 +187,7 @@ CM.airKinds = function (env) {
   if (night && season === "summer" && weather !== "rain") add("firefly", 3);
   if (!night && weather !== "rain" && weather !== "snow") add("bird", 0.08);
   add("cloud", weather === "clear" ? 0.04 : 0.1);
+  if (env.towerNear) add("fog", 7);                                // (the Mage Tower's clearing)
   if (env.town) add("smoke", night || season === "winter" || season === "autumn" ? 4 : 1.5);
   if (!night && weather !== "rain") add("mote", 1.5);
   return out;
