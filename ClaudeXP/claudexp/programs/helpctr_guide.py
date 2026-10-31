@@ -174,7 +174,7 @@ CATALOG = {
                              "a tenth guardian; the gate towers can be climbed. In a clearing of the Wood, reached by a portal by the shaft, "
                              "stands the Mage Tower: one caster or archer goes in alone to a fast real-time fight up forty floors, a "
                              "boss at every ladder and a teleporting King at the top. A second portal leads to Leshy's log cabin, where he "
-                             "plays Claudescryption against you - a deck of your own, built from cards found in chests and won from bosses. Monsters lunge and fall, doors swing, water ripples, "
+                             "plays Claudescryption against you - a deck of your own, built from cards found in chests and won from bosses; the cards are dealt, lunge, strike and fall with their own sounds. Monsters lunge and fall, doors swing, water ripples, "
                              "and the trees and snow follow the seasons. "
                              "The view is full of small things: grass, flowers and shrubs, bones and "
                              "rubble by band, the bottles and remains the party leaves behind, torchlight on the walls, and dust, "
