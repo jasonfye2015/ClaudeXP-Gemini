@@ -126,7 +126,7 @@ Object.assign(CM.Game.prototype, {
       this.cgPay("manamine", pay); S.won += pay; S.n += 1; S.best = Math.max(S.best || 0, n); this.saveCasino && this.saveCasino(); this.emit("change");
       this.mmLevel(); return { cleared: n, pay, card };
     }
-    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mmBest = Math.max(F.mmBest || 0, L.score); this.mmLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.mmBest = Math.max(F.mmBest || 0, L.score); this.cgRecord && this.cgRecord("manamine", L.score, S.last.level); this.mmLive = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
     return null;
   },
 });

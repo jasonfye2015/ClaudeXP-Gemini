@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Joker's Club (the thirty-ninth big update - v14.9)
+  Three things that tie the casino floor together (src/js/64zo-floorclub.js; 76zf-floorclub.js), reached from a strip
+  under the gallery's head:
+  - The Hall of Champions: a high-score board for each of the ten scoring tables (Runestack, Mana-Mine, the Glimmer
+    Maze, the Gloomwing Swarm, the Hexmarch, Shatterpane, Starstone Drift, Moatleap, Runestep Pyramid, Wyrmhold
+    Pinball) - the ten best games, how far each went, the day and who played; beating your own best is a record.
+  - The loyalty card: a stamp for each different table played (a stake laid, or gold from a free table); eight fill a
+    card, which pays gold and a Claudescryption card when collected, and full cards raise the membership - Bronze (1),
+    Silver (3), Gold (6), Platinum (10) - and with it the reward.
+  - Achievements: twenty-six, bronze (100 gold), silver (400 gold and a common card) and gold (1,500 gold and a rare
+    card), from the first chip to every table, the jackpot, the claw, the boards, the arcade and Platinum
+    membership - each paid once, when collected.
+  Stamps, places on boards, records and achievements show for a moment in the corner as they happen.
+
 The Gilded Joker's gallery (the thirty-eighth big update - v14.8)
   The casino floor opens on a gallery now (src/js/76ze-gallery.js) instead of a wall of buttons: a page of twelve
   cards, each with a little painted picture of its table, its name and a line on what it is; filters for cards and

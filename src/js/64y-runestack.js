@@ -74,7 +74,7 @@ Object.assign(CM.Game.prototype, {
         C[n] = card || true; if (card) S.cards.push(card); }
       this.cgPay("runestack", pay); S.won += pay; out.push({ level: n, pay, card, kind: card ? RS.cardKind(n) : null });
     }
-    if (W.stage === "over") { S.stage = "done"; S.last = { lines: W.lines, level: W.level, score: W.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rsBest = Math.max(F.rsBest || 0, W.score); this.rsLive = null; out.push({ over: true }); }
+    if (W.stage === "over") { S.stage = "done"; S.last = { lines: W.lines, level: W.level, score: W.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F.rsBest = Math.max(F.rsBest || 0, W.score); this.cgRecord && this.cgRecord("runestack", W.score, W.level); this.rsLive = null; out.push({ over: true }); }
     if (out.length) { this.saveCasino && this.saveCasino(); this.emit("change"); }
     return out;
   },
