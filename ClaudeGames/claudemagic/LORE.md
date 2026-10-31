@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Starstone Drift (v14.3)
+
+The scrying glass in the back room was meant to show the stars. Whoever ground it ground it wrong, and it shows a
+pocket of void instead, folded in on itself, with stones from a broken star drifting through - and a wand-ship the house
+says it found already floating there. The lanterns that wander that void are not friendly. The house pays by the wave
+to keep the glass clear.
+
 ## Shatterpane (v14.2)
 
 When the chapel on the hill fell in, the house bought its windows by the cartload - every saint and sun and star in

@@ -839,3 +839,4 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .swarm .swcanvas { width: 448px; height: 540px; border-radius: 6px; border: 6px solid #20203A; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 .hexmarch .hxcanvas { width: 448px; height: 540px; border-radius: 6px; border: 6px solid #2A2030; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 .shatterpane .pncanvas { width: 442px; height: 572px; border-radius: 6px; border: 6px solid #3A2C20; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; cursor: none; }
+.starstone .sdcanvas { width: 480px; height: 388px; border-radius: 6px; border: 6px solid #241C34; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
