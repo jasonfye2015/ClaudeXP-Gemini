@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Gilded Joker's gallery (the thirty-eighth big update - v14.8)
+  The casino floor opens on a gallery now (src/js/76ze-gallery.js) instead of a wall of buttons: a page of twelve
+  cards, each with a little painted picture of its table, its name and a line on what it is; filters for cards and
+  tables, arcade, puzzles, idle and builders, and prizes; pages turned with the arrows or the ← and → keys. Inside a
+  table, a slim bar takes the place of the old rows - back to all the games, the tables either side, the table's name
+  and the party's gold - so each table has more of the window.
+
 Wyrmhold Pinball (the thirty-seventh big update - v14.7)
   A pinball table on the Gilded Joker's floor (src/js/64zn-pinball.js; 76zd-pinball.js), painted with the dungeon:
   a plunger lane, a curved top with a deflector, three rune bumpers, two slingshots, inlanes and outlanes (a kickback in

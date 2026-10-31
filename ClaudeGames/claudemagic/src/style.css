@@ -853,3 +853,19 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .pinball .pbcanvas { width: 320px; height: 606px; border-radius: 10px; border: 8px solid #3A2A18; box-shadow: 0 8px 18px rgba(0,0,0,0.7); outline: none; }
 .pinball .pbbtns { justify-content: space-between; }
 .pinball .pbbtns button { user-select: none; }
+.cgbar { flex-wrap: nowrap; }
+.cgbar .cgname { font-family: Georgia, serif; font-weight: bold; color: #F0D070; font-size: 17px; padding: 0 6px; }
+.cggallery .cghead { display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid rgba(200,160,64,0.4); padding-bottom: 6px; margin-bottom: 8px; }
+.cggallery .cghead h3 { margin: 0; }
+.cggallery .cgsub { opacity: 0.7; font-style: italic; }
+.cggallery .cggold { margin-left: auto; color: #F0D070; font-weight: bold; }
+.cggallery .cgcats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.cggallery .cggrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.cggallery .cgcard { display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 6px 7px; text-align: left; background: linear-gradient(#2A2018, #1A140E); border: 1px solid rgba(200,160,64,0.45); border-radius: 8px; cursor: pointer; transition: transform 0.12s, border-color 0.12s, box-shadow 0.12s; min-height: 0; }
+.cggallery .cgcard:hover { transform: translateY(-2px); border-color: #F0C040; box-shadow: 0 6px 14px rgba(0,0,0,0.5); }
+.cggallery .cgcard canvas { width: 100%; height: auto; aspect-ratio: 176 / 82; border-radius: 5px; image-rendering: auto; }
+.cggallery .cgcard b { color: #F0D070; font-family: Georgia, serif; font-size: 15px; }
+.cggallery .cgcard span { font-size: 12px; opacity: 0.85; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cggallery .cgcard i { font-size: 11px; opacity: 0.55; }
+.cggallery .cgpager { display: flex; justify-content: center; align-items: center; gap: 16px; margin: 12px 0 6px; }
+@media (max-width: 900px) { .cggallery .cggrid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
