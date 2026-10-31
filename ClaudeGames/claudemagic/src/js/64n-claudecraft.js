@@ -8,27 +8,32 @@
 const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
 CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
-  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27 };
+  COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27,
+  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33 };
 const CB = CC.B;
 CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
   17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal",
   23: "Workbench", 24: "Kiln", 25: "Torch", 26: "Chest", 27: "Ladder", 107: "Pole", 111: "Copper bar", 112: "Iron bar", 113: "Silver bar", 114: "Gold bar", 115: "Star-iron bar",
+  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
   121: "Stone pick", 122: "Stone axe", 123: "Stone sword", 124: "Copper pick", 125: "Copper axe", 126: "Copper sword", 127: "Iron pick", 128: "Iron axe", 129: "Iron sword" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
 CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6 };
-CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN]);
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN, 28, 29, 30, 31, 33]);
 CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER]);
 // (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
 // main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
 CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
+// (v12.5) gems in the deep caverns' walls - the main game's own (CM.GEMS) - want a pick that would take silver
+CC.GEM_OF = { 28: "ruby", 29: "sapphire", 30: "sunstone", 31: "diamond" }; CC.GEM_PICK = "silver";
+CC.UNBREAKABLE.add(32);
 CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true }, 107: { pole: true },
-  111: { bar: "copper" }, 112: { bar: "iron" }, 113: { bar: "silver" }, 114: { bar: "gold" }, 115: { bar: "stariron" } };
+  111: { bar: "copper" }, 112: { bar: "iron" }, 113: { bar: "silver" }, 114: { bar: "gold" }, 115: { bar: "stariron" }, 141: { gem: "ruby" }, 142: { gem: "sapphire" }, 143: { gem: "sunstone" }, 144: { gem: "diamond" } };
 CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal", 107: "item_pole",
-  111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
+  111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 141: "item_ruby", 142: "item_sapphire", 143: "item_sunstone", 144: "item_diamond", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
 // (v12.2) the island's own tools, made at a workbench: they stay on the island. A pick quickens stone and mines ore of its
 // grade, an axe quickens wood, a sword adds to the hero's blows there; each has its uses, a block broken (or a blow) one.
 CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"], uses: 60 }, 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
@@ -36,8 +41,8 @@ CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"],
   127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
 CC.isItem = (b) => b > 100;
 CC.itemWeight = (b) => { const I = CC.ITEM[b]; return !I ? 0 : I.ore ? CM.WEIGHTS.ore : I.bar ? CM.WEIGHTS.bar : I.charcoal ? CM.WEIGHTS.charcoal : 0; };
-CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal)); };
-CC.toHome = (b) => { const I = CC.ITEM[b]; return !I ? null : I.ore ? CM.oreChunk(I.ore) : I.bar ? CM.metalBar(I.bar) : I.charcoal ? CM.charcoal() : null; };
+CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal || I.gem)); };
+CC.toHome = (b) => { const I = CC.ITEM[b]; return !I ? null : I.ore ? CM.oreChunk(I.ore) : I.bar ? CM.metalBar(I.bar) : I.charcoal ? CM.charcoal() : I.gem ? CM.gem(I.gem) : null; };
 // (v12.2) what the island makes: by hand, at a workbench or at a kiln within reach. A kiln's bar is the Smith's own sum.
 CC.REACH = 4;
 CC.RECIPES = [
@@ -54,7 +59,7 @@ for (const [i, ore] of ["copper", "iron", "silver", "gold", "stariron"].entries(
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106 };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0 };
 CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
@@ -83,15 +88,17 @@ CC.Satchel = class {
   // the best tool of a kind (picks: one that mines this ore, if one is asked), as [slot, tool]
   best(kind, ore) { let out = null; this.slots.forEach((s, i) => { const T = s && CC.TOOLS[s.b]; if (!T || T.kind !== kind || (ore && !(T.mines || []).includes(ore))) return; if (!out || (T.factor ? T.factor < out[1].factor : T.power > out[1].power)) out = [i, T]; }); return out; }
 };
-CC.ATLAS = 8; CC.ROWS = 8;                                                // (the atlas: 8 x 8 tiles of 16 x 16)
+CC.ATLAS = 8; CC.ROWS = 16;                                               // (the atlas: 8 x 16 tiles of 16 x 16)
 CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5, log_top: 6, leaves: 7, planks: 8, cobble: 9, water: 10, glass: 11, brick: 12, bedrock: 13, snow: 14, gravel: 15, basalt: 16, gate: 17, ore_copper: 18, ore_iron: 19, ore_silver: 20, ore_gold: 21, ore_stariron: 22, charstone: 23,
   item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29, workbench_top: 30, workbench_side: 31, kiln_side: 32, kiln_top: 33, torch: 34,
   chest_side: 35, chest_top: 36, ladder: 37, item_pole: 38, bar_copper: 39, bar_iron: 40, bar_silver: 41, bar_gold: 42, bar_stariron: 43, pick_stone: 44, axe_stone: 45, sword_stone: 46,
-  pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52 };
+  pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52, gem_ruby: 55, gem_sapphire: 56, gem_sunstone: 57, gem_diamond: 58, treasure_side: 59, treasure_top: 60, lair: 61,
+  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
   9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
   17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"],
-  23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"] };
+  23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"],
+  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -140,6 +147,7 @@ CC.World = class {
       for (let dy = -2; dy < 2; dy++) { const r = dy < 0 ? 2 : 1; for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) { if (Math.abs(dx) === r && Math.abs(dz) === r && (dy === 1 || R.next() < 0.5)) continue; if (this.get(x + dx, top + dy, z + dz) === CB.AIR) this.set(x + dx, top + dy, z + dz, CB.LEAVES, false); } }
       this.set(x, top + 1, z, CB.LEAVES, false);
     }
+    this.finds = []; this.places(new CM.Random(CM.hashSeed(`${s}:places`)));
     this.gate = this.buildGate();
     for (const [k, b] of Object.entries(this.edits)) { const [x, y, z] = k.split(",").map(Number); this.set(x, y, z, b, false); }
     for (let x = 0; x < S; x++) for (let z = 0; z < S; z++) this.roof[z * S + x] = this.roofAt(x, z);
@@ -164,6 +172,21 @@ CC.World = class {
         if (cut) bl[(y * S + z) * S + x] = CB.AIR;
       }
     }
+  }
+  // (v12.5) the island's finds, the seed's: gems in the deep caverns' walls, chests sunk in the sea, ruins on the hills
+  // with a chest each, lairs in the deepest caverns (broken, they leave a chest), and the vault's hill (phase 7)
+  places(R) {
+    const S = CC.SIZE, H = this.heights, airBy = (x, y, z) => [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([a, b, c]) => this.get(x + a, y + b, z + c) === CB.AIR);
+    for (let k = 0; k < 3000; k++) { const x = R.int(2, S - 3), y = R.int(2, 13), z = R.int(2, S - 3); if (this.get(x, y, z) !== CB.STONE || !airBy(x, y, z)) continue; const r = R.next(); this.set(x, y, z, r < 0.08 ? CB.DIAMOND : r < 0.4 ? CB.RUBY : r < 0.7 ? CB.SAPPHIRE : CB.SUNSTONE, false); }
+    let sunk = 0; for (let k = 0; k < 400 && sunk < 4; k++) { const x = R.int(4, S - 5), z = R.int(4, S - 5), h = H[x][z]; if (h > CC.SEA - 4 || this.finds.some((f) => Math.hypot(f.x - x, f.z - z) < 20)) continue; this.set(x, h + 1, z, CB.TREASURE, false); this.finds.push({ kind: "sunken", x, y: h + 1, z, depth: 8 }); sunk++; }
+    let ruins = 0; for (let k = 0; k < 600 && ruins < 3; k++) {
+      const x = R.int(14, S - 15), z = R.int(14, S - 15), h = H[x][z]; if (h < CC.SEA + 9) continue; let flat = true; for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) if (Math.abs(H[x + dx][z + dz] - h) > 2) flat = false; if (!flat || this.finds.some((f) => Math.hypot(f.x - x, f.z - z) < 24)) continue;
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) { for (let y = h + 1; y <= h + 4; y++) this.set(x + dx, y, z + dz, CB.AIR, false); this.set(x + dx, h, z + dz, R.chance(0.5) ? CB.COBBLE : CB.GRAVEL, false); if (Math.max(Math.abs(dx), Math.abs(dz)) === 3) { const tall = (dx + dz + 6) % 3 === 0 ? 1 : R.int(1, 3); for (let y = h + 1; y <= h + tall; y++) if (!(dx === 0 || dz === 0) || y > h + 2) this.set(x + dx, y, z + dz, R.chance(0.3) ? CB.BRICK : CB.COBBLE, false); } }
+      this.set(x, h + 1, z, CB.TREASURE, false); this.finds.push({ kind: "ruin", x, y: h + 1, z, depth: 6 }); ruins++;
+    }
+    let lairs = 0; for (let k = 0; k < 6000 && lairs < 3; k++) { const x = R.int(6, S - 7), y = R.int(2, 9), z = R.int(6, S - 7); if (this.get(x, y, z) !== CB.AIR || this.get(x, y + 1, z) !== CB.AIR || !CC.SOLID.has(this.get(x, y - 1, z)) || this.finds.some((f) => Math.hypot(f.x - x, f.z - z) < 20)) continue; this.set(x, y, z, CB.LAIR, false); this.finds.push({ kind: "lair", x, y, z, depth: 25 }); lairs++; }
+    let best = null; for (let x = 20; x < S - 20; x++) for (let z = 20; z < S - 20; z++) if (!best || H[x][z] > best.top) best = { x, z, top: H[x][z] };
+    this.vault = { x: best.x, z: best.z, top: best.top, y: 6 };
   }
   // (v12.1) ore in veins by depth (the deeper, the rarer), and charstone near the top - in the stone only
   veins(R) {

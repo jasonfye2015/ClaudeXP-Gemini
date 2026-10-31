@@ -42,7 +42,7 @@ Object.assign(CM.Game.prototype, {
   craftPick() { const picks = (this.bag || []).filter((it) => it.kind === "pick" && CM.PICKS[it.pick] && (it.points || 0) > 0); const order = Object.keys(CM.PICKS || {}); return picks.sort((a, b) => order.indexOf(b.pick) - order.indexOf(a.pick))[0] || null; },
   // the tool a block would be broken with: the quickest of the picks from home and the island's own tools
   craftToolFor(b) {
-    const cr = this.craft, ore = CM.CC.ORE_OF[b], S = cr && cr.satchel; let best = null;
+    const cr = this.craft, ore = CM.CC.ORE_OF[b] || (CM.CC.GEM_OF[b] ? CM.CC.GEM_PICK : null), S = cr && cr.satchel; let best = null;   
     const offer = (t) => { if (!best || t.factor < best.factor) best = t; };
     if (ore) { const i = CM.bestPick(this.bag || [], ore); if (i >= 0) offer({ home: i, factor: CM.CC.pickFactor(this.bag[i].pick) }); const own = S && S.best("pick", ore); if (own) offer({ slot: own[0], factor: own[1].factor }); return best; }
     if (CM.CC.STONY.has(b)) { const pick = this.craftPick(); if (pick) offer({ factor: CM.CC.pickFactor(pick.pick) }); const own = S && S.best("pick"); if (own) offer({ slot: own[0], factor: own[1].factor }); }
@@ -51,7 +51,7 @@ Object.assign(CM.Game.prototype, {
   },
   craftBreakTime(b) {
     const base = CM.CC.HARDNESS[b] || 1, tool = this.craftToolFor(b);
-    if (CM.CC.ORE_OF[b] && !tool) return Infinity;
+    if ((CM.CC.ORE_OF[b] || CM.CC.GEM_OF[b]) && !tool) return Infinity;
     return tool ? base * tool.factor : base;
   },
   // a use of an island tool: a point off its uses, and gone at none
@@ -78,7 +78,7 @@ Object.assign(CM.Game.prototype, {
     if (!st || !dst.put(st)) return false; src.slots[i] = null; K.chests[key] = chest.toJSON(); this.craftHeavy(); return true;
   },
   // the right button on a chest, a workbench or a kiln: use it, rather than build against it
-  craftUse() { const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return null; const b = cr.world.get(...hit), B = CM.CC.B; return b === B.CHEST ? { kind: "chest", key: hit.join(",") } : b === B.WORKBENCH ? { kind: "bench" } : b === B.KILN ? { kind: "kiln" } : null; },
+  craftUse() { const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return null; const b = cr.world.get(...hit), B = CM.CC.B; return b === B.TREASURE ? { kind: "treasure", key: hit.join(",") } : b === B.CHEST ? { kind: "chest", key: hit.join(",") } : b === B.WORKBENCH ? { kind: "bench" } : b === B.KILN ? { kind: "kiln" } : null; },
   // why an ore will not break: no pick, a blunt one, or one that will not bite it
   craftOreWhy(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
   // the light the hero carries into the dark: the party's lantern, glow stone or torch (a little of their own without)
@@ -92,8 +92,8 @@ Object.assign(CM.Game.prototype, {
     const cr = this.craft; if (!cr) return null; const hit = cr.target[0];
     if (!holding || !hit) { cr.dig = null; return null; }
     const key = hit.join(","), b = cr.world.get(...hit);
-    if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : "The gate's stone will not break."); } return null; }
-    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); }
+    if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : b === CM.CC.B.TREASURE ? "An old chest: open it with the right button." : "The gate's stone will not break."); } return null; }
+    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); else if (cr.dig.need === Infinity && CM.CC.GEM_OF[b]) this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); }
     if (cr.dig.need === Infinity) return null;
     cr.dig.t += dt;
     if (cr.dig.t >= cr.dig.need) { cr.dig = null; return this.craftBreak(); }
@@ -103,13 +103,14 @@ Object.assign(CM.Game.prototype, {
   craftBreak() {
     const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
     const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) return false;
-    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; }
+    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; } if (CM.CC.GEM_OF[b] && !tool) { this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); return false; }
     if (b === CM.CC.B.CHEST) { const K = this.craftStore(), key = hit.join(","), C = K.chests[key]; if (C && C.some(Boolean)) { this.craftSay("Empty the chest first."); return false; } delete K.chests[key]; }
     if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { this.craftSay("The island has had enough changes for now."); return false; }
     cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1;
     const drop = CM.CC.DROPS[b] === undefined ? b : CM.CC.DROPS[b];
     if (drop && !cr.satchel.add(drop, CM.CC.DROP_COUNT[b] || 1)) this.craftSay("The satchel is full: it falls at your feet and is lost.");
     if (ore) cr.ore = (cr.ore || 0) + (CM.CC.DROP_COUNT[b] || 1);
+    if (b === CM.CC.B.LAIR) { cr.world.set(...hit, CM.CC.B.TREASURE); this.craftSay("The lair breaks apart, and in its heart lies an old chest."); (this.craftLife().events = this.craftLife().events || []).push({ kind: "lairdown" }); }
     if (tool && tool.home !== undefined) {                                   // (a point off the pick from home, as a swing in the shaft's caves)
       const pick = this.bag[tool.home]; pick.points = Math.max(0, (pick.points || 0) - 1);
       this.craftSay(`${CM.CC.NAMES[drop]}${CM.CC.DROP_COUNT[b] ? ` x${CM.CC.DROP_COUNT[b]}` : ""} - the ${pick.name} has ${pick.points} point${pick.points === 1 ? "" : "s"} left.`);

@@ -4316,6 +4316,44 @@ test("Claudecraft (v12.4): home through the gate, each kind lands as the main ga
   assert.strictEqual(g.build(id), "", "built with the credit"); assert.strictEqual(g.builderCredit(), credit - used); assert.strictEqual(g.renown(), 0);
 });
 
+test("Claudecraft (v12.5): the finds are the seed's - gems on the deep caverns' walls, chests sunk in the sea, ruins on the hills, lairs in the deepest caverns, the vault's hill; an old chest pays gold and a thing by its depth and (but a lair's) a scrap of map; four scraps make the map; a lair sends the deep's kinds until broken and leaves a chest", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, a = new CC.World(99).generate(), b = new CC.World(99).generate();
+  assert.strictEqual(JSON.stringify(a.finds), JSON.stringify(b.finds), "the seed's finds"); assert.strictEqual(JSON.stringify(a.vault), JSON.stringify(b.vault));
+  const kinds = (k) => a.finds.filter((f) => f.kind === k);
+  assert.strictEqual(kinds("sunken").length, 4); assert.ok(kinds("ruin").length >= 2); assert.strictEqual(kinds("lair").length, 3);
+  for (const f of kinds("sunken")) { assert.strictEqual(a.get(f.x, f.y, f.z), B.TREASURE); assert.strictEqual(a.get(f.x, f.y + 1, f.z), B.WATER, "under the sea"); }
+  for (const f of kinds("ruin")) { assert.strictEqual(a.get(f.x, f.y, f.z), B.TREASURE); assert.ok(f.y > CC.SEA + 9, "on a hill"); }
+  for (const f of kinds("lair")) { assert.strictEqual(a.get(f.x, f.y, f.z), B.LAIR); assert.ok(f.y <= 9, "deep"); }
+  let gems = 0; for (let x = 0; x < CC.SIZE; x++) for (let z = 0; z < CC.SIZE; z++) for (let y = 1; y < 20; y++) { const v = a.get(x, y, z); if (CC.GEM_OF[v]) { gems++; assert.ok(y <= 13, "deep down"); assert.ok([[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].some(([dx, dy, dz]) => a.get(x + dx, y + dy, z + dz) === B.AIR), "on a cavern's wall"); } }
+  assert.ok(gems > 10, `gems: ${gems}`);
+  const g = new CM.Game(); g.newGame("craft-5", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.village.craft = undefined;
+  assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, W = cr.world, L = g.craftLife(), K = g.craftStore();
+  // old chests: gold and a thing, more for a deeper one; a scrap of map but from a lair
+  const sunk = W.finds.find((f) => f.kind === "sunken"), key = `${sunk.x},${sunk.y},${sunk.z}`; cr.target = [[sunk.x, sunk.y, sunk.z], null];
+  assert.strictEqual(g.craftUse().kind, "treasure"); assert.ok(!g.craftBreak(), "not broken, opened");
+  const got = g.craftOpenTreasure(key); assert.ok(got.gold > 0 && got.item && got.fragment); assert.strictEqual(W.get(sunk.x, sunk.y, sunk.z), B.CHEST, "an empty chest after"); assert.strictEqual(g.craftOpenTreasure(key), null, "once");
+  assert.strictEqual(K.fragments, 1); assert.strictEqual(L.gold, got.gold); assert.strictEqual(L.loot.length, 1);
+  assert.strictEqual(g.craftMap(), null, "no map yet");
+  for (const f of W.finds.filter((q) => q.kind !== "lair" && !(q.x === sunk.x && q.z === sunk.z)).slice(0, 3)) g.craftOpenTreasure(`${f.x},${f.y},${f.z}`);
+  assert.strictEqual(K.fragments, 4); assert.strictEqual(JSON.stringify(g.craftMap()), JSON.stringify(W.vault), "four scraps make the map");
+  // a lair: the deep's kinds while near; broken, a chest
+  const lair = W.finds.find((f) => f.kind === "lair"); cr.walker.pos = [lair.x + 3.5, lair.y, lair.z + 0.5]; L.mobs = [];
+  for (let k = 0; k < 40; k++) g.craftLairs(0.5); const brood = L.mobs.filter((o) => o.lair === `${lair.x},${lair.y},${lair.z}`); assert.ok(brood.length >= 1 && brood.length <= 4, `brood ${brood.length}`); assert.ok(brood.every((o) => CM.CL.DEEP.includes(o.kind)));
+  cr.target = [[lair.x, lair.y, lair.z], null]; assert.strictEqual(g.craftBreak(), B.LAIR); assert.strictEqual(W.get(lair.x, lair.y, lair.z), B.TREASURE, "it leaves a chest"); const n0 = L.mobs.length; for (let k = 0; k < 20; k++) g.craftLairs(0.5); assert.strictEqual(L.mobs.length, n0, "no more");
+  const deep = g.craftOpenTreasure(`${lair.x},${lair.y},${lair.z}`); assert.ok(!deep.fragment && deep.depth > sunk.depth && deep.gold > 0);
+});
+
+test("Claudecraft (v12.5): a gem wants a pick that would take silver and drops the main game's own gem; three like gems become a ring or an amulet at the Smith", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-6", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice();
+  g.bag = g.bag.filter((it) => it.kind !== "pick" && it.kind !== "gem"); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  const x = Math.floor(w.pos[0]) + 2, z = Math.floor(w.pos[2]), y = cr.world.top(x, z) + 3, at = (v) => { cr.world.set(x, y, z, v); cr.target = [[x, y, z], null]; };
+  at(B.RUBY); assert.strictEqual(g.craftBreakTime(B.RUBY), Infinity); assert.ok(!g.craftBreak());
+  g.bag.push(CM.pick("copper")); assert.strictEqual(g.craftBreakTime(B.RUBY), Infinity, "a copper pick will not take it");
+  g.bag.push(CM.pick("iron")); for (let k = 0; k < 3; k++) { at(B.RUBY); assert.strictEqual(g.craftBreak(), B.RUBY); } assert.strictEqual(cr.satchel.count(141), 3);
+  g.leaveCraft(); const rubies = g.bag.filter((i) => i.kind === "gem" && i.gem === "ruby"); assert.strictEqual(rubies.length, 3); const g0 = CM.gem("ruby"); assert.ok(["name", "kind", "gem", "value"].every((k) => rubies[0][k] === g0[k]), "the main game's own");
+  assert.ok(g.setGems("ruby", "amulet").startsWith("The Smith")); assert.strictEqual(g.bag.filter((i) => i.kind === "gem").length, 0); assert.ok(g.bag.some((i) => i.kind === "amulet")); assert.ok(g.setGems("ruby", "ring").startsWith("Three"), "not without three");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
