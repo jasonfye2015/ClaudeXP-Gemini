@@ -105,7 +105,7 @@ Principles, kept throughout:
 - **Signposts** to place and name; the HUD's compass shows them.
 - Tests: the camp needs walls and a roof; sleeping skips the night and heals; the homestead's renown.
 
-## Phase 7 (v12.7): the vault under the island, and errands
+## Phase 7 (v12.7): the vault under the island, and errands - done
 - **The vault**: under the island's highest hill, a sealed chamber of basalt reached by digging (the map shows it),
   three rooms of traps, lairs and a guardian - an original one, the Hollow Mason, a golem of the island's own blocks
   that pulls stone from the walls to mend itself. Its fall leaves a relic-grade thing and a title.

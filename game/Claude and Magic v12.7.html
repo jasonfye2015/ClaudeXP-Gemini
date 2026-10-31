@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v12.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v12.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -716,7 +716,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "12.6", built: "2026-10-31" };
+const CM = window.CM = { version: "12.7", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -11787,7 +11787,7 @@ Object.assign(CM.Game.prototype, {
   craftPick() { const picks = (this.bag || []).filter((it) => it.kind === "pick" && CM.PICKS[it.pick] && (it.points || 0) > 0); const order = Object.keys(CM.PICKS || {}); return picks.sort((a, b) => order.indexOf(b.pick) - order.indexOf(a.pick))[0] || null; },
   // the tool a block would be broken with: the quickest of the picks from home and the island's own tools
   craftToolFor(b) {
-    const cr = this.craft, ore = CM.CC.ORE_OF[b] || (CM.CC.GEM_OF[b] ? CM.CC.GEM_PICK : null), S = cr && cr.satchel; let best = null;   
+    const cr = this.craft, ore = CM.CC.ORE_OF[b] || (CM.CC.GEM_OF[b] ? CM.CC.GEM_PICK : null) || (CM.CC.PICK_FOR || {})[b], S = cr && cr.satchel; let best = null;   
     const offer = (t) => { if (!best || t.factor < best.factor) best = t; };
     if (ore) { const i = CM.bestPick(this.bag || [], ore); if (i >= 0) offer({ home: i, factor: CM.CC.pickFactor(this.bag[i].pick) }); const own = S && S.best("pick", ore); if (own) offer({ slot: own[0], factor: own[1].factor }); return best; }
     if (CM.CC.STONY.has(b)) { const pick = this.craftPick(); if (pick) offer({ factor: CM.CC.pickFactor(pick.pick) }); const own = S && S.best("pick"); if (own) offer({ slot: own[0], factor: own[1].factor }); }
@@ -11796,7 +11796,7 @@ Object.assign(CM.Game.prototype, {
   },
   craftBreakTime(b) {
     const base = CM.CC.HARDNESS[b] || 1, tool = this.craftToolFor(b);
-    if ((CM.CC.ORE_OF[b] || CM.CC.GEM_OF[b]) && !tool) return Infinity;
+    if ((CM.CC.ORE_OF[b] || CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b]) && !tool) return Infinity;
     return tool ? base * tool.factor : base;
   },
   // a use of an island tool: a point off its uses, and gone at none
@@ -11838,7 +11838,7 @@ Object.assign(CM.Game.prototype, {
     if (!holding || !hit) { cr.dig = null; return null; }
     const key = hit.join(","), b = cr.world.get(...hit);
     if (CM.CC.UNBREAKABLE.has(b)) { if (!cr.dig || cr.dig.key !== key) { cr.dig = { key, t: 0, b, need: Infinity }; this.craftSay(b === CM.CC.B.BEDROCK ? "Bedrock: nothing breaks it." : b === CM.CC.B.TREASURE ? "An old chest: open it with the right button." : "The gate's stone will not break."); } return null; }
-    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); else if (cr.dig.need === Infinity && CM.CC.GEM_OF[b]) this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); }
+    if (!cr.dig || cr.dig.key !== key || cr.dig.b !== b) { cr.dig = { key, t: 0, b, need: this.craftBreakTime(b) }; if (cr.dig.need === Infinity && CM.CC.ORE_OF[b]) this.craftSay(this.craftOreWhy(CM.CC.ORE_OF[b])); else if (cr.dig.need === Infinity && (CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b])) this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); }
     if (cr.dig.need === Infinity) return null;
     cr.dig.t += dt;
     if (cr.dig.t >= cr.dig.need) { cr.dig = null; return this.craftBreak(); }
@@ -11848,7 +11848,7 @@ Object.assign(CM.Game.prototype, {
   craftBreak() {
     const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return false;
     const b = cr.world.get(...hit); if (CM.CC.UNBREAKABLE.has(b)) return false;
-    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; } if (CM.CC.GEM_OF[b] && !tool) { this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); return false; }
+    const ore = CM.CC.ORE_OF[b], tool = this.craftToolFor(b); if (ore && !tool) { this.craftSay(this.craftOreWhy(ore)); return false; } if ((CM.CC.GEM_OF[b] || (CM.CC.PICK_FOR || {})[b]) && !tool) { this.craftSay(`${CM.CC.NAMES[b]}: it wants a pick that would take silver.`); return false; }
     if (b === CM.CC.B.CHEST) { const K = this.craftStore(), key = hit.join(","), C = K.chests[key]; if (C && C.some(Boolean)) { this.craftSay("Empty the chest first."); return false; } delete K.chests[key]; }
     if (Object.keys(cr.world.edits).length >= CM.CRAFT_EDITS_MAX) { this.craftSay("The island has had enough changes for now."); return false; }
     cr.world.set(...hit, CM.CC.B.AIR); cr.broken += 1;
@@ -18903,31 +18903,32 @@ const CC = CM.CC = { CHUNK: 16, CHUNKS: 10, HEIGHT: 64, SEA: 24 };
 CC.SIZE = CC.CHUNK * CC.CHUNKS;
 CC.B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES: 6, PLANKS: 7, COBBLE: 8, WATER: 9, GLASS: 10, BRICK: 11, BEDROCK: 12, SNOW: 13, GRAVEL: 14, BASALT: 15, GATE: 16,
   COPPER_ORE: 17, IRON_ORE: 18, SILVER_ORE: 19, GOLD_ORE: 20, STARIRON_ORE: 21, CHARSTONE: 22, WORKBENCH: 23, KILN: 24, TORCH: 25, CHEST: 26, LADDER: 27,
-  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33, BEDROLL: 34, DOOR: 35, DOOR_OPEN: 36, SIGN: 37 };
+  RUBY: 28, SAPPHIRE: 29, SUNSTONE: 30, DIAMOND: 31, TREASURE: 32, LAIR: 33, BEDROLL: 34, DOOR: 35, DOOR_OPEN: 36, SIGN: 37, VAULT: 38, TRAP: 39 };
 const CB = CC.B;
 CC.NAMES = { 1: "Grass", 2: "Dirt", 3: "Stone", 4: "Sand", 5: "Wood", 6: "Leaves", 7: "Planks", 8: "Cobblestone", 9: "Water", 10: "Glass", 11: "Bricks", 12: "Bedrock", 13: "Snow", 14: "Gravel", 15: "Basalt", 16: "The gate's light",
   17: "Copper ore", 18: "Iron ore", 19: "Silver ore", 20: "Gold ore", 21: "Star-iron ore", 22: "Charstone", 101: "Copper ore chunk", 102: "Iron ore chunk", 103: "Silver ore chunk", 104: "Gold ore chunk", 105: "Star-iron ore chunk", 106: "Charcoal",
   23: "Workbench", 24: "Kiln", 25: "Torch", 26: "Chest", 27: "Ladder", 107: "Pole", 111: "Copper bar", 112: "Iron bar", 113: "Silver bar", 114: "Gold bar", 115: "Star-iron bar",
-  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 34: "Bedroll", 35: "Door", 36: "Door", 37: "Signpost", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
+  28: "Ruby in the rock", 29: "Sapphire in the rock", 30: "Sunstone in the rock", 31: "Diamond in the rock", 32: "An old chest", 33: "A lair", 34: "Bedroll", 35: "Door", 36: "Door", 37: "Signpost", 38: "Rune-cut stone", 39: "Spikes", 150: "Rune-cut stone", 141: "Ruby", 142: "Sapphire", 143: "Sunstone", 144: "Diamond",
   121: "Stone pick", 122: "Stone axe", 123: "Stone sword", 124: "Copper pick", 125: "Copper axe", 126: "Copper sword", 127: "Iron pick", 128: "Iron axe", 129: "Iron sword" };
 CC.HOTBAR = [CB.GRASS, CB.DIRT, CB.STONE, CB.COBBLE, CB.PLANKS, CB.LOG, CB.GLASS, CB.BRICK, CB.SAND];
 CC.TRANSPARENT = new Set([CB.AIR, CB.WATER, CB.GLASS, CB.LEAVES, CB.GATE, CB.TORCH, CB.LADDER, 34, 36, 37]);
-CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33, 35]);
+CC.SOLID = new Set([1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 19, 20, 21, 22, 23, 24, 26, 28, 29, 30, 31, 32, 33, 35, 38, 39]);
 CC.UNBREAKABLE = new Set([CB.BEDROCK, CB.BASALT, CB.GATE]);
 // (v12.0) breaking takes time: seconds by bare hand; a pick from home quickens the stony ones by its grade
-CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6, 34: 0.4, 35: 1.2, 36: 1.2, 37: 0.6 };
-CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN, 28, 29, 30, 31, 33]);
+CC.HARDNESS = { 1: 0.6, 2: 0.5, 3: 2.5, 4: 0.5, 5: 1.2, 6: 0.2, 7: 1.2, 8: 2.5, 9: Infinity, 10: 0.4, 11: 2.5, 13: 0.3, 14: 0.6, 17: 3, 18: 3.5, 19: 4, 20: 4, 21: 5, 22: 2, 23: 1.5, 24: 2.5, 25: 0.1, 26: 1.5, 27: 0.6, 28: 4, 29: 4, 30: 4, 31: 6, 32: Infinity, 33: 6, 34: 0.4, 35: 1.2, 36: 1.2, 37: 0.6, 38: 8, 39: 2 };
+CC.STONY = new Set([CB.STONE, CB.COBBLE, CB.BRICK, 17, 18, 19, 20, 21, 22, CB.KILN, 28, 29, 30, 31, 33, 38, 39]);
 CC.WOODY = new Set([CB.LOG, CB.PLANKS, CB.WORKBENCH, CB.CHEST, CB.LADDER, 35, 36, 37]);
 // (v12.1) ore in the stone: only a pick from home that mines it breaks it (a point of wear a block), and it drops the
 // main game's own ore chunks; charstone breaks like stone and drops charcoal. Satchel ids over 100 are things, not blocks.
 CC.ORE_OF = { 17: "copper", 18: "iron", 19: "silver", 20: "gold", 21: "stariron" };
 // (v12.5) gems in the deep caverns' walls - the main game's own (CM.GEMS) - want a pick that would take silver
 CC.GEM_OF = { 28: "ruby", 29: "sapphire", 30: "sunstone", 31: "diamond" }; CC.GEM_PICK = "silver";
+CC.PICK_FOR = { 38: "silver" };   // (v12.7: the vault's rune-cut stone wants a pick that would take silver too)
 CC.UNBREAKABLE.add(32);
 CC.ITEM = { 101: { ore: "copper" }, 102: { ore: "iron" }, 103: { ore: "silver" }, 104: { ore: "gold" }, 105: { ore: "stariron" }, 106: { charcoal: true }, 107: { pole: true },
-  111: { bar: "copper" }, 112: { bar: "iron" }, 113: { bar: "silver" }, 114: { bar: "gold" }, 115: { bar: "stariron" }, 141: { gem: "ruby" }, 142: { gem: "sapphire" }, 143: { gem: "sunstone" }, 144: { gem: "diamond" } };
+  111: { bar: "copper" }, 112: { bar: "iron" }, 113: { bar: "silver" }, 114: { bar: "gold" }, 115: { bar: "stariron" }, 141: { gem: "ruby" }, 142: { gem: "sapphire" }, 143: { gem: "sunstone" }, 144: { gem: "diamond" }, 150: { rune: true } };
 CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: "item_gold", 105: "item_stariron", 106: "item_charcoal", 107: "item_pole",
-  111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 141: "item_ruby", 142: "item_sapphire", 143: "item_sunstone", 144: "item_diamond", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
+  111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 141: "item_ruby", 142: "item_sapphire", 143: "item_sunstone", 144: "item_diamond", 150: "item_rune", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
 // (v12.2) the island's own tools, made at a workbench: they stay on the island. A pick quickens stone and mines ore of its
 // grade, an axe quickens wood, a sword adds to the hero's blows there; each has its uses, a block broken (or a blow) one.
 CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"], uses: 60 }, 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
@@ -18935,8 +18936,8 @@ CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"],
   127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
 CC.isItem = (b) => b > 100;
 CC.itemWeight = (b) => { const I = CC.ITEM[b]; return !I ? 0 : I.ore ? CM.WEIGHTS.ore : I.bar ? CM.WEIGHTS.bar : I.charcoal ? CM.WEIGHTS.charcoal : 0; };
-CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal || I.gem)); };
-CC.toHome = (b) => { const I = CC.ITEM[b]; return !I ? null : I.ore ? CM.oreChunk(I.ore) : I.bar ? CM.metalBar(I.bar) : I.charcoal ? CM.charcoal() : I.gem ? CM.gem(I.gem) : null; };
+CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal || I.gem || I.rune)); };
+CC.toHome = (b) => { const I = CC.ITEM[b]; return !I ? null : I.ore ? CM.oreChunk(I.ore) : I.bar ? CM.metalBar(I.bar) : I.charcoal ? CM.charcoal() : I.gem ? CM.gem(I.gem) : I.rune ? { name: "Rune-cut stone", kind: "rune", power: 0, value: 30 } : null; };
 // (v12.2) what the island makes: by hand, at a workbench or at a kiln within reach. A kiln's bar is the Smith's own sum.
 CC.REACH = 4;
 CC.RECIPES = [
@@ -18954,7 +18955,7 @@ for (const [i, ore] of ["copper", "iron", "silver", "gold", "stariron"].entries(
 CC.PICK_FACTOR = { copper: 0.5, iron: 0.35, steel: 0.25 };
 CC.pickFactor = (grade) => CC.PICK_FACTOR[grade] || 0.5;
 // what a broken block drops into the satchel (0: nothing); the rest drop themselves
-CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0, 36: CB.DOOR };
+CC.DROPS = { 1: CB.DIRT, 3: CB.COBBLE, 9: 0, 10: 0, 17: 101, 18: 102, 19: 103, 20: 104, 21: 105, 22: 106, 28: 141, 29: 142, 30: 143, 31: 144, 33: 0, 36: CB.DOOR, 38: 150, 39: 0 };
 CC.DROP_COUNT = { 21: 2 };   // (a star-iron seam gives two chunks)
 CC.FALL_SAFE = 4;                                                          // (blocks: a fall longer than this hurts)
 CC.fallHurt = (dist, max) => dist > CC.FALL_SAFE ? Math.round((dist - 3) * 0.06 * max) : 0;
@@ -18988,12 +18989,12 @@ CC.TILE = { grass_top: 0, grass_side: 1, dirt: 2, stone: 3, sand: 4, log_side: 5
   item_copper: 24, item_iron: 25, item_silver: 26, item_gold: 27, item_stariron: 28, item_charcoal: 29, workbench_top: 30, workbench_side: 31, kiln_side: 32, kiln_top: 33, torch: 34,
   chest_side: 35, chest_top: 36, ladder: 37, item_pole: 38, bar_copper: 39, bar_iron: 40, bar_silver: 41, bar_gold: 42, bar_stariron: 43, pick_stone: 44, axe_stone: 45, sword_stone: 46,
   pick_copper: 47, axe_copper: 48, sword_copper: 49, pick_iron: 50, axe_iron: 51, sword_iron: 52, gem_ruby: 55, gem_sapphire: 56, gem_sunstone: 57, gem_diamond: 58, treasure_side: 59, treasure_top: 60, lair: 61,
-  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65, bedroll: 66, door: 67, sign: 68 };
+  item_ruby: 62, item_sapphire: 63, item_sunstone: 64, item_diamond: 65, bedroll: 66, door: 67, sign: 68, vault: 69, trap: 70, item_rune: 71 };
 CC.FACES = { 1: ["grass_top", "grass_side", "dirt"], 2: ["dirt", "dirt", "dirt"], 3: ["stone", "stone", "stone"], 4: ["sand", "sand", "sand"], 5: ["log_top", "log_side", "log_top"], 6: ["leaves", "leaves", "leaves"], 7: ["planks", "planks", "planks"], 8: ["cobble", "cobble", "cobble"],
   9: ["water", "water", "water"], 10: ["glass", "glass", "glass"], 11: ["brick", "brick", "brick"], 12: ["bedrock", "bedrock", "bedrock"], 13: ["snow", "snow", "dirt"], 14: ["gravel", "gravel", "gravel"], 15: ["basalt", "basalt", "basalt"], 16: ["gate", "gate", "gate"],
   17: ["ore_copper", "ore_copper", "ore_copper"], 18: ["ore_iron", "ore_iron", "ore_iron"], 19: ["ore_silver", "ore_silver", "ore_silver"], 20: ["ore_gold", "ore_gold", "ore_gold"], 21: ["ore_stariron", "ore_stariron", "ore_stariron"], 22: ["charstone", "charstone", "charstone"],
   23: ["workbench_top", "workbench_side", "planks"], 24: ["kiln_top", "kiln_side", "cobble"], 25: ["torch", "torch", "torch"], 26: ["chest_top", "chest_side", "planks"], 27: ["ladder", "ladder", "ladder"],
-  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"], 34: ["bedroll", "bedroll", "bedroll"], 35: ["door", "door", "door"], 36: ["door", "door", "door"], 37: ["sign", "sign", "sign"] };
+  28: ["gem_ruby", "gem_ruby", "gem_ruby"], 29: ["gem_sapphire", "gem_sapphire", "gem_sapphire"], 30: ["gem_sunstone", "gem_sunstone", "gem_sunstone"], 31: ["gem_diamond", "gem_diamond", "gem_diamond"], 32: ["treasure_top", "treasure_side", "planks"], 33: ["lair", "lair", "lair"], 34: ["bedroll", "bedroll", "bedroll"], 35: ["door", "door", "door"], 36: ["door", "door", "door"], 37: ["sign", "sign", "sign"], 38: ["vault", "vault", "vault"], 39: ["trap", "basalt", "basalt"] };
 // the six faces: normal, shade, six corners [dx, dy, dz, u, v] - two triangles
 CC.FACE_DEFS = [
   [[0, 1, 0], 1.0, [[0, 1, 0, 0, 0], [0, 1, 1, 0, 1], [1, 1, 1, 1, 1], [0, 1, 0, 0, 0], [1, 1, 1, 1, 1], [1, 1, 0, 1, 0]]],
@@ -19081,7 +19082,19 @@ CC.World = class {
     }
     let lairs = 0; for (let k = 0; k < 6000 && lairs < 3; k++) { const x = R.int(6, S - 7), y = R.int(2, 9), z = R.int(6, S - 7); if (this.get(x, y, z) !== CB.AIR || this.get(x, y + 1, z) !== CB.AIR || !CC.SOLID.has(this.get(x, y - 1, z)) || this.finds.some((f) => Math.hypot(f.x - x, f.z - z) < 20)) continue; this.set(x, y, z, CB.LAIR, false); this.finds.push({ kind: "lair", x, y, z, depth: 25 }); lairs++; }
     let best = null; for (let x = 20; x < S - 20; x++) for (let z = 20; z < S - 20; z++) if (!best || H[x][z] > best.top) best = { x, z, top: H[x][z] };
-    this.vault = { x: best.x, z: best.z, top: best.top, y: 6 };
+    this.vault = { x: Math.max(16, Math.min(S - 17, best.x)), z: Math.max(8, Math.min(S - 9, best.z)), top: best.top, y: 4 };
+    this.buildVault(R);
+  }
+  // (v12.7) the vault under the highest hill: a sealed shell of rune-cut stone, three rooms in a row - spikes, two
+  // lairs, and the Hollow Mason's hall - with doorways between; reached only by digging down to it
+  buildVault(R) {
+    const v = this.vault, y0 = v.y, x0 = v.x - 12, z0 = v.z - 4;
+    for (let dx = 0; dx < 25; dx++) for (let dz = 0; dz < 9; dz++) for (let dy = 0; dy < 6; dy++) { const shell = dx === 0 || dx === 24 || dx === 8 || dx === 16 || dz === 0 || dz === 8 || dy === 0 || dy === 5; this.set(x0 + dx, y0 + dy, z0 + dz, shell ? CB.VAULT : CB.AIR, false); }
+    for (const wx of [8, 16]) for (const dy of [1, 2]) this.set(x0 + wx, y0 + dy, v.z, CB.AIR, false);
+    for (let dx = 1; dx < 8; dx++) for (let dz = 1; dz < 8; dz++) if (R.chance(0.45) && !(dz === 4 && dx > 6)) this.set(x0 + dx, y0, z0 + dz, CB.TRAP, false);
+    for (const [dx, dz] of [[10, 2], [14, 6]]) { this.set(x0 + dx, y0 + 1, z0 + dz, CB.LAIR, false); this.finds.push({ kind: "lair", x: x0 + dx, y: y0 + 1, z: z0 + dz, depth: 28, vault: true }); }
+    for (const [dx, dz] of [[17, 1], [23, 1], [17, 7], [23, 7]]) this.set(x0 + dx, y0 + 1, z0 + dz, CB.TORCH, false);
+    v.guard = { x: x0 + 20 + 0.5, y: y0 + 1, z: v.z + 0.5 }; v.rooms = [[x0 + 1, x0 + 7], [x0 + 9, x0 + 15], [x0 + 17, x0 + 23]]; v.z0 = z0 + 1; v.z1 = z0 + 7;
   }
   // (v12.1) ore in veins by depth (the deeper, the rarer), and charstone near the top - in the stone only
   veins(R) {
@@ -19471,6 +19484,99 @@ CM.CAMP = { room: 400, renown: 40 };
     if (died && bed && this.craftBedOk(bed)) { const [x, y, z] = bed.split(",").map(Number); cr.walker.pos = [x + 0.5, y + 0.01, z + 0.5]; this.craftSay("...in the camp, on the bedroll, not by the gate."); }
     return died;
   };
+}
+
+// ---- 64r-craftvault.js ----
+"use strict";
+// The vault under the island, and errands from town (the nineteenth update, phase 7 - v12.7). Under the island's
+// highest hill (the map of four scraps marks it) lies a sealed vault of rune-cut stone (64n-claudecraft.js builds it):
+// a room of spikes, a room of two lairs, and the hall of its guardian - the Hollow Mason, a golem of the island's own
+// blocks (the game's own, not borrowed from anywhere), which pulls stones out of its hall's walls to mend itself. Its
+// fall leaves a relic, the Mason's Plumb, and an achievement's title. The vault's stone wants a pick that would take
+// silver, and breaks into rune-cut stone, which the Library asks for. Four errands from town want the island's things:
+// the Smith iron, the tavern's cook meat, the Library a rune, the Guildhall's builders stone for the wall.
+CM.MASON = { name: "The Hollow Mason", colour: "#8A8478", body: "wide", head: "helm", eyes: "#40E0FF", extras: ["shield"], skin: "stone", speed: 7 };
+CM.MASON_RELIC = () => ({ name: "The Mason's Plumb", kind: "amulet", slot: "amulet", power: 5, value: 1600, props: { relic: true, df: 3, stat: "con", resist: "stone" } });
+CM.VAULT = { level: 22, hp: 10, atk: 1.5, xp: 10, gold: 6, mendEvery: 6, mend: 0.1, trap: 0.12, trapEvery: 1 };
+CM.CL.EXTRA = ["The Hollow Mason"]; CM.CL.ART = { "The Hollow Mason": CM.MASON };
+Object.assign(CM.ACHIEVEMENTS, {
+  stariron: { name: "A Star in the Stone", what: "Mine star-iron on the Claudecraft island", title: "the Star-Miner" },
+  mason: { name: "The Hollow Mason Falls", what: "Fell the Hollow Mason in the vault under the island", title: "the Vaultbreaker" },
+  homestead: { name: "A Home Through the Gate", what: "Make a homestead on the Claudecraft island", title: "of the Island" },
+});
+// the island's errands, alongside the townsfolk's (64b-people.js)
+Object.assign(CM.ERRANDS, {
+  isleiron: { giver: "the smith", building: "smith", kind: "isleiron", n: 6, island: true,
+    ask: "\"They say the island through the Neather Gate has iron in its hills. Six chunks of it - or three bars, two chunks to a bar - and I'll pay you for the trouble.\"",
+    done: "\"Island iron. It rings different.\" He weighs a piece in his hand. \"Good, though. Here.\"", reward: { gold: 90, renown: 12 } },
+  islemeat: { giver: "the tavern's cook", building: "tavern", kind: "islemeat", n: 3, island: true,
+    ask: "\"Deer and boar on that island, I hear, fat on grass nobody's grazed. Three cuts of it for my pot and you'll not regret it.\"",
+    done: "\"Now that's meat.\" The pot is on before you've gone. \"Take this, and come by for a bowl.\"", reward: { gold: 50, renown: 10 } },
+  islerune: { giver: "the librarian", building: "library", kind: "islerune", n: 1, island: true,
+    ask: "\"Under the island's highest hill, they say, there is a vault cut with runes no one can read. Bring me a piece of its stone. Only a piece.\"",
+    done: "\"Oh.\" The librarian does not look up for a long time. \"Oh, I know this hand. Take this - and thank you.\"", reward: { gold: 60, renown: 20, thing: "tome" } },
+  islestone: { giver: "the Guildhall's builders", building: "guildhall", kind: "islestone", n: 128, island: true,
+    ask: "\"The town wall wants mending, and island stone is square to start with. Two stacks of it - a hundred and twenty-eight blocks - in your satchels.\"",
+    done: "\"Square as a die, every one.\" The foreman makes a mark. \"The wall thanks you, and so does the village.\"", reward: { gold: 30, renown: 25 } },
+});
+{ const P = CM.Game.prototype, B = CM.CC.B;
+  const left0 = P.errandLeft, hand0 = P.handInErrand, mob0 = P.craftMakeMob, fell0 = P.craftFell, tick0 = P.craftTick, home0 = P.craftHomestead, break0 = P.craftBreak;
+  const isleStone = new Set([B.STONE, B.COBBLE, B.BRICK]), meat = (i) => i.kind === "meat" && (i.meat === "Deer" || i.meat === "Boar");
+  Object.assign(P, {
+    errandLeft(giver) {
+      const t = this.errands().taken[giver], R = CM.ERRANDS[giver]; if (!t || !R || !R.island) return left0.call(this, giver);
+      if (R.kind === "isleiron") { const have = this.bag.filter((i) => i.kind === "ore" && i.ore === "iron").length + 2 * this.bag.filter((i) => i.kind === "bar" && i.bar === "iron").length; return have >= R.n ? "" : `${have} of ${R.n} island iron (a bar counts two)`; }
+      if (R.kind === "islemeat") { const have = this.bag.filter(meat).length; return have >= R.n ? "" : `${have} of ${R.n} cuts of island deer or boar`; }
+      if (R.kind === "islerune") return this.bag.some((i) => i.kind === "rune") ? "" : "a piece of the island vault's rune-cut stone";
+      if (R.kind === "islestone") { const have = this.islandStock(isleStone); return have >= R.n ? "" : `${have} of ${R.n} island stone in the satchels`; }
+      return "?";
+    },
+    handInErrand(giver) {
+      const R = CM.ERRANDS[giver], t = this.errands().taken[giver]; if (!t || !R || !R.island) return hand0.call(this, giver);
+      const why = hand0.call(this, giver); if (why) return why;
+      if (R.kind === "isleiron") { let n = R.n; while (n >= 2) { const i = this.bag.findIndex((x) => x.kind === "bar" && x.bar === "iron"); if (i < 0) break; this.bag.splice(i, 1); n -= 2; } while (n > 0) { const i = this.bag.findIndex((x) => x.kind === "ore" && x.ore === "iron"); if (i < 0) { const b = this.bag.findIndex((x) => x.kind === "bar" && x.bar === "iron"); if (b < 0) break; this.bag.splice(b, 1); n -= 2; continue; } this.bag.splice(i, 1); n -= 1; } }
+      if (R.kind === "islemeat") for (let n = 0; n < R.n; n++) { const i = this.bag.findIndex(meat); if (i >= 0) this.bag.splice(i, 1); }
+      if (R.kind === "islerune") { const i = this.bag.findIndex((x) => x.kind === "rune"); if (i >= 0) this.bag.splice(i, 1); }
+      if (R.kind === "islestone") this.islandTake(isleStone, R.n);
+      return "";
+    },
+    craftMakeMob(kind, x, y, z, level) {
+      if (kind !== CM.MASON.name) return mob0.call(this, kind, x, y, z, level);
+      const L = this.craftLife(), m = CM.makeMonster(CM.MASON, level, L.rnd), w = new CM.CC.Walker(this.craft.world, [x, y, z], 0, 0); w.canFly = false;
+      m.max = m.hp = m.max * CM.VAULT.hp; m.atk = Math.round(m.atk * CM.VAULT.atk); m.xp *= CM.VAULT.xp; m.gold *= CM.VAULT.gold;
+      return { id: ++L.ids, kind: CM.MASON.name, K: CM.MASON, m, w, r: 0.75, h: 2.6, level, wild: false, hostile: true, cd: 1, shotT: 99, hitAt: -9, fellAt: null, wanderT: 0, walk: false, stuck: 0, last: [x, z], mason: true, mendT: CM.VAULT.mendEvery };
+    },
+    craftFell(o) {
+      fell0.call(this, o); if (!o.mason) return; const K = this.craftStore(), L = this.craftLife();
+      K.masonDown = true; const relic = CM.MASON_RELIC(); L.loot.push(relic); this.tally.mason = true;
+      this.craftSay("The Hollow Mason comes apart, stone by stone, and is still. In what was its chest: the Mason's Plumb.");
+      if (this.achieve) this.achieve("mason"); this.saveVillage && this.saveVillage();
+    },
+    craftHomestead(key) { const first = !this.craftStore().homestead, ok = home0.call(this, key); if (ok && first && this.achieve) this.achieve("homestead"); return ok; },
+    craftBreak() { const cr = this.craft, hit = cr && cr.target[0], was = hit ? cr.world.get(...hit) : 0, b = break0.call(this); if (b && was === B.STARIRON_ORE && this.achieve) this.achieve("stariron"); return b; },
+    // the vault's life: the spikes underfoot, the Mason waking in its hall, and its mending from the walls
+    craftVault(dt) {
+      const cr = this.craft, W = cr.world, v = W.vault, L = this.craftLife(), K = this.craftStore(), p = cr.walker.pos, h = cr.hero; if (!v) return;
+      const under = W.get(Math.floor(p[0]), Math.floor(p[1] - 0.05), Math.floor(p[2]));
+      L.trapT = Math.max(0, (L.trapT || 0) - dt);
+      if (under === B.TRAP && cr.walker.onGround && L.trapT <= 0) { L.trapT = CM.VAULT.trapEvery; (L.events = L.events || []).push({ kind: "trap" }); this.craftHurt(Math.max(1, Math.round(h.max * CM.VAULT.trap)), "Spikes"); }
+      const [hx0, hx1] = v.rooms[2], inHall = p[0] >= hx0 && p[0] <= hx1 + 1 && p[2] >= v.z0 && p[2] <= v.z1 + 1 && Math.abs(p[1] - v.guard.y) < 3;
+      const mason = L.mobs.find((o) => o.mason && o.fellAt === null);
+      if (!K.masonDown && !mason && inHall) { const o = this.craftMakeMob(CM.MASON.name, v.guard.x, v.guard.y + 0.01, v.guard.z, CM.VAULT.level + Math.min(8, K.nights || 0)); L.mobs.push(o); (L.events = L.events || []).push({ kind: "mason" }); this.craftSay("The far wall shifts. Stone pulls free of stone, and stands up: the Hollow Mason."); }
+      if (mason) this.craftMend(mason, dt);
+    },
+    // the Mason mends: a stone pulled from its hall's walls, a tenth of its health back
+    craftMend(o, dt) {
+      if ((o.mendT -= dt) > 0) return false; o.mendT = CM.VAULT.mendEvery; if (o.m.hp >= o.m.max) return false;
+      const W = this.craft.world, v = W.vault, [x0, x1] = v.rooms[2], cand = [];
+      for (let x = x0 - 1; x <= x1 + 1; x++) for (let z = v.z0 - 1; z <= v.z1 + 1; z++) for (let y = v.guard.y; y <= v.guard.y + 3; y++) if (W.get(x, y, z) === B.VAULT && (x === x0 - 1 || x === x1 + 1 || z === v.z0 - 1 || z === v.z1 + 1)) cand.push([x, y, z]);
+      if (!cand.length) return false; const [x, y, z] = cand[this.craftLife().rnd.int(0, cand.length - 1)];
+      W.set(x, y, z, B.AIR); o.m.hp = Math.min(o.m.max, o.m.hp + Math.round(o.m.max * CM.VAULT.mend));
+      (this.craftLife().events = this.craftLife().events || []).push({ kind: "mend", at: [x, y, z] }); this.craftSay("The Mason tears a stone from the wall and presses it into itself.");
+      return [x, y, z];
+    },
+    craftTick(dt) { tick0.call(this, dt); if (this.craft) this.craftVault(dt); },
+  });
 }
 
 // ---- 65-village.js ----
@@ -24784,6 +24890,10 @@ Object.assign(CM.UI.prototype, {
     [x, y] = at("bedroll"); noisy(x, y, "#4A7A3A", 14); p.fillStyle = "#6A4A2A"; p.fillRect(x, y + 3, 16, 2); p.fillRect(x, y + 11, 16, 2); p.fillStyle = "#C8B080"; p.fillRect(x + 1, y + 6, 4, 4);
     [x, y] = at("door"); noisy(x, y, "#8A6436", 8); p.fillStyle = "#5A3E1E"; p.fillRect(x, y, 16, 1); p.fillRect(x, y + 15, 16, 1); p.fillRect(x, y, 1, 16); p.fillRect(x + 15, y, 1, 16); p.fillRect(x + 7, y, 2, 16); p.fillStyle = "#C8A040"; p.fillRect(x + 11, y + 8, 2, 2);
     [x, y] = at("sign"); noisy(x, y, "#B08D57", 8); p.fillStyle = "#5A3E1E"; for (const ly of [4, 7, 10]) p.fillRect(x + 3, y + ly, 10, 1);
+    // (v12.7) the vault's rune-cut stone, its spikes, and a piece of it in the satchel
+    [x, y] = at("vault"); noisy(x, y, "#34363E", 8); p.fillStyle = "#48C8C0"; for (const [rx, ry, rw, rh] of [[3, 3, 1, 10], [3, 3, 5, 1], [7, 3, 1, 5], [10, 6, 1, 7], [10, 12, 3, 1], [12, 2, 1, 4]]) p.fillRect(x + rx, y + ry, rw, rh); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(x, y + 15, 16, 1); p.fillRect(x + 15, y, 1, 16);
+    [x, y] = at("trap"); noisy(x, y, "#3A3A40", 10); p.fillStyle = "#B0B0B8"; for (let k = 0; k < 4; k++) for (let j = 0; j < 4; j++) { p.fillRect(x + 2 + k * 4, y + 2 + j * 4, 2, 2); p.fillStyle = "#E0E0E8"; p.fillRect(x + 2 + k * 4, y + 2 + j * 4, 1, 1); p.fillStyle = "#B0B0B8"; }
+    [x, y] = at("item_rune"); p.clearRect(x, y, 16, 16); p.fillStyle = "#34363E"; p.fillRect(x + 3, y + 3, 10, 10); p.fillStyle = "#48C8C0"; p.fillRect(x + 5, y + 5, 1, 6); p.fillRect(x + 5, y + 5, 4, 1); p.fillRect(x + 9, y + 7, 1, 4);
     this.ccAtlasC = c; return c;
   },
   ccStart(world) {
@@ -25839,6 +25949,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.kind === "shoot") CM.audio.play(e.shot === "arrow" ? "miss" : "zap", 0.5);
       else if (e.kind === "monshoot") CM.audio.play("miss", 0.35);
       else if (e.kind === "lairdown") CM.audio.play("shatter", 0.6);
+      else if (e.kind === "trap") { CM.audio.play("trap", 0.6); ui.ccHurtAt = now; }
+      else if (e.kind === "mason") CM.audio.play("slam", 0.8);
+      else if (e.kind === "mend") { CM.audio.play("grind", 0.6, 0, 0.7); ui.ccDirtyAt(e.at[0], e.at[2]); }
       else if (e.kind === "spawn") CM.audio.play("monster", 0.3);
     } catch (er) { /* */ } }
   }

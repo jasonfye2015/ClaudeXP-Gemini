@@ -832,6 +832,9 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (e.kind === "shoot") CM.audio.play(e.shot === "arrow" ? "miss" : "zap", 0.5);
       else if (e.kind === "monshoot") CM.audio.play("miss", 0.35);
       else if (e.kind === "lairdown") CM.audio.play("shatter", 0.6);
+      else if (e.kind === "trap") { CM.audio.play("trap", 0.6); ui.ccHurtAt = now; }
+      else if (e.kind === "mason") CM.audio.play("slam", 0.8);
+      else if (e.kind === "mend") { CM.audio.play("grind", 0.6, 0, 0.7); ui.ccDirtyAt(e.at[0], e.at[2]); }
       else if (e.kind === "spawn") CM.audio.play("monster", 0.3);
     } catch (er) { /* */ } }
   }

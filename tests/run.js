@@ -3500,7 +3500,7 @@ test("a fifth place: each follower's trade (the porter carries, the torchbearer'
 test("errands: six givers, three at a time, one each a season; a fetch errand's thing lies on its floor once and comes up in the pack; a reading, a champion, a load of ore; handed in in the town for the giver's own pay and a favour that lasts", () => {
   const CM = load();
   const g = new CM.Game(); g.newGame("errand-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.errands = { taken: {}, done: {} };
-  assert.strictEqual(Object.keys(CM.ERRANDS).length, 6);
+  assert.strictEqual(Object.keys(CM.ERRANDS).filter((k) => !CM.ERRANDS[k].island).length, 6, "six townsfolk (and the island's own beside them)");
   for (const id of ["merchant", "tavern", "temple"]) assert.strictEqual(g.takeErrand(id), "");
   assert.ok(!g.errandOffered("library"), "three at a time"); assert.ok(g.takeErrand("library").includes("isn't to be had"));
   const t = g.errands().taken.merchant; assert.ok(t.floor >= CM.ERRANDS.merchant.floors[0] && t.floor <= CM.ERRANDS.merchant.floors[1]);
@@ -4224,7 +4224,7 @@ test("Claudecraft (v12.2): a torch lights the dark round it (and its light is go
   let dark = null; for (let x = 20; x < CC.SIZE - 20 && !dark; x++) for (let z = 20; z < CC.SIZE - 20 && !dark; z++) if (W.get(x, 6, z) === B.AIR && W.lightAt(x, 6, z) === 0) dark = [x, 6, z];
   assert.ok(dark); W.set(dark[0], dark[1] + 1, dark[2], B.AIR); W.set(dark[0], dark[1] + 1, dark[2], B.TORCH); assert.ok(W.lightAt(...dark) > 0.7, "lit by the torch"); assert.ok(W.lightAt(dark[0] + 6, dark[1], dark[2]) > 0, "a little way off");
   assert.ok(W.torches.has(`${dark[0]},${dark[1] + 1},${dark[2]}`)); W.set(dark[0], dark[1] + 1, dark[2], B.AIR); assert.strictEqual(W.lightAt(...dark), 0, "dark again");
-  const W2 = new CC.World(W.seed, W.edits).generate(); W.set(dark[0], dark[1] + 1, dark[2], B.TORCH); const W3 = new CC.World(W.seed, W.edits).generate(); assert.ok(W3.lightAt(...dark) > 0.7 && W2.torches.size === 0, "torches kept in the edits");
+  const W2 = new CC.World(W.seed, W.edits).generate(); W.set(dark[0], dark[1] + 1, dark[2], B.TORCH); const W3 = new CC.World(W.seed, W.edits).generate(); assert.ok(W3.lightAt(...dark) > 0.7 && !W2.torches.has(`${dark[0]},${dark[1] + 1},${dark[2]}`), "torches kept in the edits");
   const [m] = W3.meshChunk(Math.floor(dark[0] / 16), Math.floor(dark[2] / 16)); assert.ok(m.length % 42 === 0);
   // a ladder up a wall
   const lx = Math.floor(w.pos[0]), ly = Math.floor(w.pos[1]), lz = Math.floor(w.pos[2]); for (let dy = 0; dy < 6; dy++) W.set(lx, ly + dy, lz, B.LADDER); w.pos = [lx + 0.5, ly + 0.01, lz + 0.5];
@@ -4319,7 +4319,7 @@ test("Claudecraft (v12.4): home through the gate, each kind lands as the main ga
 test("Claudecraft (v12.5): the finds are the seed's - gems on the deep caverns' walls, chests sunk in the sea, ruins on the hills, lairs in the deepest caverns, the vault's hill; an old chest pays gold and a thing by its depth and (but a lair's) a scrap of map; four scraps make the map; a lair sends the deep's kinds until broken and leaves a chest", () => {
   const CM = load(), CC = CM.CC, B = CC.B, a = new CC.World(99).generate(), b = new CC.World(99).generate();
   assert.strictEqual(JSON.stringify(a.finds), JSON.stringify(b.finds), "the seed's finds"); assert.strictEqual(JSON.stringify(a.vault), JSON.stringify(b.vault));
-  const kinds = (k) => a.finds.filter((f) => f.kind === k);
+  const kinds = (k) => a.finds.filter((f) => f.kind === k && !f.vault);
   assert.strictEqual(kinds("sunken").length, 4); assert.ok(kinds("ruin").length >= 2); assert.strictEqual(kinds("lair").length, 3);
   for (const f of kinds("sunken")) { assert.strictEqual(a.get(f.x, f.y, f.z), B.TREASURE); assert.strictEqual(a.get(f.x, f.y + 1, f.z), B.WATER, "under the sea"); }
   for (const f of kinds("ruin")) { assert.strictEqual(a.get(f.x, f.y, f.z), B.TREASURE); assert.ok(f.y > CC.SEA + 9, "on a hill"); }
@@ -4388,6 +4388,45 @@ test("Claudecraft (v12.6): a camp wants walls and a roof (a shut door is wall); 
   assert.ok(g.craftNameSign(asked, "The old well")); assert.strictEqual(K.signs.find((q) => q.x === sx).name, "The old well");
   cr.target = [[sx, sy, sz], null]; assert.strictEqual(g.craftBreak(), B.SIGN); assert.strictEqual((K.signs || []).length, 0);
   cr.target = [[bx, by + 1, bz], null]; g.craftBreak(); assert.ok(!K.beds[CM.craftKey(h)], "no bed to wake on");
+});
+
+test("Claudecraft (v12.7): the vault under the highest hill is the seed's - a shell of rune-cut stone, spikes, two lairs and the guardian's hall; the Hollow Mason wakes in its hall, mends by pulling stones from the walls, and falls to leave the Mason's Plumb and a title; the spikes hurt; the stone wants a pick that would take silver and breaks into rune-cut stone", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, a = new CC.World(4242).generate(), b = new CC.World(4242).generate(), v = a.vault;
+  assert.strictEqual(JSON.stringify(v), JSON.stringify(b.vault), "the seed's vault"); assert.ok(v.top >= Math.max(...a.heights.slice(20, CC.SIZE - 20).map((r) => Math.max(...r.slice(20, CC.SIZE - 20)))) - 0, "under the highest hill");
+  assert.strictEqual(a.get(v.x - 12, v.y + 2, v.z), B.VAULT, "the shell"); assert.strictEqual(a.get(Math.floor(v.guard.x), v.guard.y, Math.floor(v.guard.z)), B.AIR, "the hall");
+  assert.strictEqual(a.get(v.x - 4, v.y + 1, v.z), B.AIR, "a doorway"); assert.ok(a.finds.filter((f) => f.vault && f.kind === "lair").length === 2);
+  let spikes = 0; for (let x = v.rooms[0][0]; x <= v.rooms[0][1]; x++) for (let z = v.z0; z <= v.z1; z++) if (a.get(x, v.y, z) === B.TRAP) spikes++; assert.ok(spikes > 5, `spikes ${spikes}`);
+  const g = new CM.Game(); g.newGame("craft-7", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.village.craft = undefined;
+  g.bag = g.bag.filter((it) => it.kind !== "pick"); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, W = cr.world, V = W.vault, L = g.craftLife(), K = g.craftStore(), w = cr.walker, h = cr.hero;
+  // the spikes
+  const sx = V.rooms[0][0] + 1, sz = V.z0 + 1; W.set(sx, V.y, sz, B.TRAP); w.pos = [sx + 0.5, V.y + 1.01, sz + 0.5]; w.onGround = true; const hp0 = h.hp; g.craftVault(0.1); assert.ok(h.hp < hp0, "spiked");
+  // the stone
+  const sh = [V.x - 12, V.y + 2, V.z]; cr.target = [sh, null]; assert.strictEqual(g.craftBreakTime(B.VAULT), Infinity); assert.ok(!g.craftBreak()); g.bag.push(CM.pick("iron")); assert.strictEqual(g.craftBreak(), B.VAULT); assert.strictEqual(cr.satchel.count(150), 1, "rune-cut stone");
+  // the Mason: wakes in its hall
+  h.hp = h.max; w.pos = [V.guard.x - 2, V.guard.y + 0.01, V.guard.z]; g.craftVault(0.1); const M = L.mobs.find((o) => o.mason); assert.ok(M, "it wakes"); assert.ok(M.m.max > 100 && M.h > 2); g.craftVault(0.1); assert.strictEqual(L.mobs.filter((o) => o.mason).length, 1, "one");
+  // mends from the walls
+  M.m.hp = Math.round(M.m.max / 2); const before = M.m.hp; M.mendT = 0; const took = g.craftMend(M, 0.01); assert.ok(took, "a stone pulled"); assert.strictEqual(W.get(...took), B.AIR); assert.ok(M.m.hp > before, "mended");
+  M.m.hp = M.m.max; M.mendT = 0; assert.strictEqual(g.craftMend(M, 0.01), false, "not when whole");
+  // falls: the relic and the title
+  const xp0 = h.xp; M.m.hp = 0; g.craftFell(M); assert.ok(K.masonDown); assert.ok(L.loot.some((it) => it.name === "The Mason's Plumb" && it.props.relic)); assert.ok(g.achievements.mason, "a title"); assert.ok(h.xp > xp0);
+  L.mobs = []; g.craftVault(0.1); assert.ok(!L.mobs.some((o) => o.mason), "once");
+  const out = g.leaveCraft(); assert.ok(g.bag.some((it) => it.name === "The Mason's Plumb")); assert.ok(g.bag.some((it) => it.kind === "rune")); void out;
+});
+
+test("Claudecraft (v12.7): the island's errands - the Smith's iron (a bar counts two), the cook's meat, the Library's rune, the builders' stone - each handed in for its pay; the first star-iron and a homestead are achievements", () => {
+  const CM = load(), CC = CM.CC, B = CC.B, g = new CM.Game(); g.newGame("craft-e", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const E = g.errands(); E.taken = {}; E.done = {};
+  for (const id of ["isleiron", "islemeat", "islerune"]) assert.strictEqual(g.takeErrand(id), "", id);
+  assert.ok(g.errandLeft("isleiron")); g.bag.push(CM.oreChunk("iron"), CM.oreChunk("iron"), CM.metalBar("iron"), CM.metalBar("iron")); assert.strictEqual(g.errandLeft("isleiron"), "");
+  const gold0 = g.gold; assert.strictEqual(g.handInErrand("isleiron"), ""); assert.strictEqual(g.gold - gold0, CM.ERRANDS.isleiron.reward.gold); assert.ok(!g.bag.some((i) => (i.kind === "ore" && i.ore === "iron") || (i.kind === "bar" && i.bar === "iron")), "taken");
+  g.bag.push(CM.meat("Deer"), CM.meat("Boar")); assert.ok(g.errandLeft("islemeat")); g.bag.push(CM.meat("Deer")); assert.strictEqual(g.handInErrand("islemeat"), ""); assert.ok(!g.bag.some((i) => i.kind === "meat"));
+  g.bag.push(CC.toHome(150)); const r0 = g.village.renown || 0; assert.strictEqual(g.handInErrand("islerune"), ""); assert.strictEqual(g.village.renown - r0, CM.ERRANDS.islerune.reward.renown);
+  assert.strictEqual(g.takeErrand("islestone"), ""); const K = g.craftStore(); K.satchels.x = [{ b: B.COBBLE, n: 64 }, { b: B.STONE, n: 64 }, { b: B.BRICK, n: 10 }]; assert.strictEqual(g.errandLeft("islestone"), "");
+  assert.strictEqual(g.handInErrand("islestone"), ""); assert.strictEqual(g.islandStock(new Set([B.STONE, B.COBBLE, B.BRICK])), 10, "a hundred and twenty-eight taken");
+  // achievements: star-iron, and a homestead
+  g.floor.pos = CM.PORTAL_YARD.gate.slice(); g.bag.push(CM.pick("steel")); assert.strictEqual(g.enterCraft(0), ""); const cr = g.craft, w = cr.walker; for (let k = 0; k < 60; k++) w.update(1 / 60, {});
+  const x = Math.floor(w.pos[0]) + 2, z = Math.floor(w.pos[2]), y = cr.world.top(x, z) + 3; cr.world.set(x, y, z, B.STARIRON_ORE); cr.target = [[x, y, z], null]; assert.ok(!g.achievements.stariron); g.craftBreak(); assert.ok(g.achievements.stariron, "star-iron");
+  assert.ok(CM.ACHIEVEMENTS.homestead && CM.ACHIEVEMENTS.mason);
 });
 
 (async () => {
