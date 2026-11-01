@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1053,6 +1053,32 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .cgprizes .tkprize b { color: #F0D070; font-family: Georgia, serif; font-size: 14px; } .cgprizes .tkprize span { font-size: 11px; opacity: 0.8; }
 .cgprizes .tkprize button { margin-top: 3px; }
 .cgprizes .tkout { margin: 10px 0; padding: 8px 12px; border: 1px solid rgba(240,192,64,0.5); border-radius: 8px; background: rgba(0,0,0,0.3); color: #F0E0B0; }
+/* ---- v15.7: Bones, the Tavern Board, Rune-Roll, the Patience Table, the Trapfinder's Grid ---- */
+.crapstbl .crfelt { position: relative; padding: 12px; border-radius: 18px; background: radial-gradient(ellipse at 50% 30%, #2A8A50, #0E4A2A); box-shadow: inset 0 0 0 8px #5A3A1A, inset 0 0 0 11px #C8A040, inset 0 0 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 6px; }
+.crapstbl .crtop { display: grid; grid-template-columns: 1.2fr repeat(6, 1fr); gap: 4px; }
+.crapstbl .crnum, .crapstbl .crdc { position: relative; padding: 10px 4px; text-align: center; border: 2px solid rgba(240,224,176,0.7); border-radius: 6px; color: #F0E0B0; font-family: Georgia, serif; font-weight: bold; font-size: 18px; }
+.crapstbl .crdc { font-size: 11px; }
+.crapstbl .crnum.pt { background: rgba(255,255,255,0.12); }
+.crapstbl .puck { position: absolute; top: -10px; right: -8px; width: 30px; height: 30px; border-radius: 50%; font-size: 9px; line-height: 30px; text-align: center; box-shadow: 0 3px 6px rgba(0,0,0,0.6); animation: crpuck 0.4s ease-out; }
+.crapstbl .puck.on { background: #F8F8F0; color: #101010; } .crapstbl .puck.off { background: #101010; color: #F0F0F0; border: 2px solid #F0F0F0; }
+@keyframes crpuck { from { transform: translateY(-20px) scale(1.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.crapstbl .crmid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+.crapstbl .crspot { position: relative; padding: 10px; text-align: center; border: 2px solid rgba(240,224,176,0.7); border-radius: 8px; color: #F8ECC8; font-family: Georgia, serif; font-weight: bold; cursor: pointer; user-select: none; transition: background 0.15s; }
+.crapstbl .crspot small { display: block; font-weight: normal; font-size: 11px; opacity: 0.85; } .crapstbl .crspot:hover { background: rgba(255,255,255,0.08); }
+.crapstbl .crspot.red { color: #FF9090; border-color: #E06060; } .crapstbl .crspot.field { color: #FFE070; } .crapstbl .crspot.pass { border-radius: 8px 8px 40px 40px; font-size: 20px; letter-spacing: 4px; } .crapstbl .crspot.dont { font-size: 13px; } .crapstbl .crspot.odds.off { opacity: 0.4; }
+.crapstbl .crspot.fl-win { animation: crwin 0.5s ease-in-out 4; } .crapstbl .crspot.fl-lose { animation: crlose 0.6s ease-out; }
+@keyframes crwin { 50% { background: rgba(240,208,112,0.45); box-shadow: 0 0 14px #F0D070; } } @keyframes crlose { from { background: rgba(200,40,40,0.5); } }
+.crapstbl .crchip { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); min-width: 26px; height: 26px; line-height: 26px; border-radius: 50%; font-style: normal; font-size: 11px; color: #201400; background: radial-gradient(circle, #F0D070 55%, #B08A30 56%, #F0D070 72%); border: 2px dashed rgba(60,40,10,0.5); box-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+.crapstbl .crdice { width: 100%; max-width: 640px; height: auto; margin: 8px 0; border-radius: 8px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+.dartstbl .dtcanvas, .skeetbl .skcanvas { border-radius: 8px; border: 6px solid #3A2414; box-shadow: 0 8px 18px rgba(0,0,0,0.7); }
+.dartstbl .dtchalk { background: #1E2420; color: #E8E8E0; font-family: Georgia, cursive; border: 6px solid #6A4A28; border-collapse: collapse; margin: 6px 0; min-width: 260px; }
+.dartstbl .dtchalk td, .dartstbl .dtchalk th { padding: 2px 8px; border-bottom: 1px dashed rgba(255,255,255,0.15); } .dartstbl .dtchalk .tot td { font-weight: bold; color: #FFE070; }
+.skeetbl .skballs { display: flex; gap: 6px; margin: 6px 0; } .skeetbl .skballs span { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #F0D8A8, #8A5A28); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #2A1A08; }
+.skeetbl .skballs span.used { opacity: 0.55; background: #3A2A20; color: #FFE070; } .skeetbl .sktotal { font-size: 18px; margin-bottom: 6px; } .skeetbl .sktotal b { color: #FFE070; }
+.dartstbl .paytable tr.won td, .skeetbl .paytable tr.won td { background: rgba(240,192,64,0.2); color: #FFE070; }
+.patience .ptcanvas { width: 100%; max-width: 760px; height: auto; border-radius: 10px; border: 8px solid #4A2A14; box-shadow: 0 8px 18px rgba(0,0,0,0.7); display: block; }
+.traps .tfwrap { display: flex; justify-content: center; margin: 8px 0; } .traps .tfcanvas { border-radius: 6px; border: 6px solid #2A2018; box-shadow: 0 8px 18px rgba(0,0,0,0.7); }
+.traps .tfsizes { flex-wrap: wrap; gap: 6px; }
 </style>
 </head>
 <body>
@@ -1062,7 +1088,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.6", built: "2026-10-31" };
+const CM = window.CM = { version: "15.7", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22954,6 +22980,254 @@ CM.GP = { COLS: 9, ROWS: 14, R: 16, lives: 3, speed: 620 };
   CM.ARC.add("glimmerpop", { name: "Glimmerpop", Level: GP.Level, marks: [3, 5, 7] });
 }
 
+// ---- 64zy-craps.js ----
+"use strict";
+// Bones (v15.7): the Gilded Joker's dice table - craps, at the true casino odds. The shooter throws two dice. On the
+// come-out roll a 7 or 11 wins the pass line, 2, 3 or 12 loses it; any other number becomes the point, and the shooter
+// throws on until the point comes again (the pass line wins) or a 7 (it loses - a seven-out). Don't Pass is the other
+// side (12 on the come-out is a push). Behind a pass bet, once the point is on, the odds pay true - 2 to 1 on 4 and 10,
+// 3 to 2 on 5 and 9, 6 to 5 on 6 and 8 - up to three times the pass bet. The Field pays on 2, 3, 4, 9, 10, 11 and 12
+// (double on 2, triple on 12) for one roll; Place 6 and Place 8 pay 7 to 6 each time their number comes while the point
+// is on, until a seven; Any Seven pays 4 to 1 for one roll. A shooter who makes four points before sevening out wins a
+// Claudescryption card. Window: 76zp-craps.js.
+CM.CRAPS = {
+  BETS: { pass: "Pass Line", dont: "Don't Pass", odds: "Odds", field: "Field", place6: "Place 6", place8: "Place 8", seven: "Any Seven" },
+  ODDS: { 4: [2, 1], 10: [2, 1], 5: [3, 2], 9: [3, 2], 6: [6, 5], 8: [6, 5] }, hotHand: 4,
+};
+{ const CR = CM.CRAPS;
+  Object.assign(CM.Game.prototype, {
+    crapsState() { const F = this.cgStore(); F.craps = F.craps || { point: 0, bets: {}, made: 0, rolls: 0, last: null }; return F.craps; },
+    // a chip on a spot: what is allowed when
+    crapsBet(type, amount) {
+      const K = this.crapsState(), B = K.bets; amount = Math.floor(amount || 0); if (!CR.BETS[type] || amount < 1) return "Choose a chip first.";
+      if ((type === "pass" || type === "dont") && K.point) return "The line takes bets on the come-out roll only.";
+      if (type === "odds") { if (!K.point || !B.pass) return "Odds go behind a pass bet, once the point is on."; if ((B.odds || 0) + amount > B.pass * 3) return `The odds take up to three times the pass bet (${B.pass * 3}).`; }
+      if ((type === "place6" || type === "place8") && amount % 6) return "Place bets go in sixes, to pay 7 to 6.";
+      const why = this.cgStake("craps", amount); if (why) return why; B[type] = (B[type] || 0) + amount; this.saveCasino && this.saveCasino(); return "";
+    },
+    crapsTakeDown(type) { const K = this.crapsState(), B = K.bets; if (!(type === "place6" || type === "place8") || !B[type]) return 0; const v = B[type]; delete B[type]; this.gold += v; this.saveCasino && this.saveCasino(); return v; },
+    crapsRoll() {
+      const K = this.crapsState(), B = K.bets; if (!Object.values(B).some((v) => v > 0)) return { error: "Put a bet on the table first." };
+      const R = this.cgRnd("craps"), d = [R.int(1, 6), R.int(1, 6)], s = d[0] + d[1], res = []; let back = 0, card = null; K.rolls += 1;
+      const win = (type, mult) => { const v = B[type], w = Math.floor(v * mult); back += v + w; res.push({ type, won: v + w }); delete B[type]; }, lose = (type) => { res.push({ type, lost: B[type] }); delete B[type]; }, push = (type) => { back += B[type]; res.push({ type, push: B[type] }); delete B[type]; };
+      // one-roll bets
+      if (B.field) { if (s === 2) win("field", 2); else if (s === 12) win("field", 3); else if ([3, 4, 9, 10, 11].includes(s)) win("field", 1); else lose("field"); }
+      if (B.seven) { if (s === 7) win("seven", 4); else lose("seven"); }
+      const was = K.point;
+      if (!K.point) {
+        if (s === 7 || s === 11) { if (B.pass) win("pass", 1); if (B.dont) lose("dont"); }
+        else if (s === 2 || s === 3) { if (B.pass) lose("pass"); if (B.dont) win("dont", 1); }
+        else if (s === 12) { if (B.pass) lose("pass"); if (B.dont) push("dont"); }
+        else K.point = s;
+      } else {
+        for (const t of ["place6", "place8"]) if (B[t] && s === Number(t.slice(5))) { const w = Math.floor(B[t] * 7 / 6); back += w; res.push({ type: t, won: w, stays: true }); }
+        if (s === K.point) { if (B.pass) win("pass", 1); if (B.odds) { const [a, b] = CR.ODDS[s]; win("odds", a / b); } if (B.dont) lose("dont"); K.made += 1; K.point = 0; if (K.made === CR.hotHand) card = this.cgCard(false, "A hot shooter at Bones: four points made!", R); }
+        else if (s === 7) { for (const t of ["pass", "odds", "place6", "place8"]) if (B[t]) lose(t); if (B.dont) win("dont", 1); K.point = 0; K.made = 0; }
+      }
+      if (back) this.cgPay("craps", back); K.last = { d, s, back, point: K.point, was };
+      this.saveCasino && this.saveCasino(); this.emit("change"); return { dice: d, sum: s, res, back, point: K.point, was, sevenOut: was && s === 7, made: was && s === was, card };
+    },
+  });
+}
+
+// ---- 64zz-fair.js ----
+"use strict";
+// The fairground games (v15.7): the Tavern Board and Rune-Roll, games of aim on the Gilded Joker's floor. Both take a
+// stake and pay back by the score - gold on a table that rises with it, and prize tickets for every point (a ticket a
+// twenty at darts, a ticket a ten at skee) - and give a Claudescryption card the first time ever each high mark is
+// passed. The scores go on the high-score boards.
+// - The Tavern Board: darts - eight rounds of three, at a board of twenty numbered wedges with the doubles ring, the
+//   trebles ring, the outer bull (25) and the bull (50). The hand wavers as it aims, and each dart flies a little wide.
+// - Rune-Roll: skee-ball - nine wooden balls rolled up a lane to hop into the rings of the target: 10 the outer, then
+//   20, 30, 40, 50 at the heart and 100 in the two little corner cups. Aim with where the ball is let go and power with
+//   how long it is held.
+// The windows are 76zq-darts.js and 76zr-runeroll.js.
+CM.FAIR = {
+  darts: { name: "The Tavern Board", rounds: 8, per: 3, scatter: 0.075, ticketPer: 20, MARKS: [500, 700, 900], PAY: [[400, 0.2], [500, 0.35], [600, 0.55], [700, 0.75], [800, 0.95], [900, 1.1]], waver: 0.16 },
+  skee: { name: "Rune-Roll", balls: 9, ticketPer: 10, MARKS: [380, 500, 640], PAY: [[300, 0.25], [380, 0.45], [440, 0.7], [500, 0.95], [560, 1.25], [640, 1.6], [720, 2.2]] },
+  ORDER: [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5],
+  // board radii as a share of the doubles' outer edge
+  RING: { bull: 0.037, outer: 0.094, tIn: 0.582, tOut: 0.629, dIn: 0.953 },
+};
+{ const FA = CM.FAIR;
+  FA.dartScore = (x, y) => { const r = Math.hypot(x, y), R = FA.RING; if (r > 1) return { pts: 0, label: "Miss" }; if (r < R.bull) return { pts: 50, label: "Bull" }; if (r < R.outer) return { pts: 25, label: "25" };
+    const a = (Math.atan2(x, -y) + Math.PI * 2 + Math.PI / 20) % (Math.PI * 2), n = FA.ORDER[Math.floor(a / (Math.PI / 10))]; if (r >= R.dIn) return { pts: 2 * n, label: `D${n}` }; if (r >= R.tIn && r < R.tOut) return { pts: 3 * n, label: `T${n}` }; return { pts: n, label: String(n) }; };
+  // where a skee ball lands on the target (x across from -1 to 1, y up from 0 at the lip), and what it scores
+  FA.skeeAt = (aim, power, R) => { const g = () => (R.next() + R.next() + R.next() - 1.5) * 0.7; return [aim * 0.85 + g() * (0.07 + 0.1 * power), 0.08 + power * 1.12 + g() * (0.05 + 0.12 * power)]; };
+  FA.skeeScore = (x, y) => { if (y < 0.12) return { pts: 0, label: "Gutter" }; for (const cx of [-0.58, 0.58]) if (Math.hypot(x - cx, y - 1.02) < 0.065) return { pts: 100, label: "100" };
+    const d = Math.hypot(x, y - 0.6); if (d < 0.1) return { pts: 50, label: "50" }; if (d < 0.2) return { pts: 40, label: "40" }; if (d < 0.31) return { pts: 30, label: "30" }; if (d < 0.43) return { pts: 20, label: "20" }; return { pts: 10, label: "10" }; };
+  if (CM.CLUB) for (const k of ["darts", "skee"]) if (!CM.CLUB.BOARDS.includes(k)) CM.CLUB.BOARDS.push(k);
+  if (CM.DAILY) { CM.DAILY.MARKS.darts = [5, 6, 8]; CM.DAILY.MARKS.skee = [3, 4, 5]; }
+  FA.pay = (kind, score) => { let m = 0; for (const [s, k] of FA[kind].PAY) if (score >= s) m = k; return m; };
+  Object.assign(CM.Game.prototype, {
+    faState(kind) { return this.cgStore()[`fa_${kind}`] || null; },
+    faStart(kind, bet) { const S0 = this.faState(kind); if (S0 && S0.stage === "play") return { error: "A game is on." }; const why = this.cgStake(kind, bet); if (why) return { error: why };
+      const F = this.cgStore(); F.n += 1; F[`fa_${kind}`] = { stage: "play", bet: Math.floor(bet), seed: `${this.seed}:${kind}:${F.n}`, throws: [], score: 0 }; this.saveCasino && this.saveCasino(); return F[`fa_${kind}`]; },
+    // a dart at where the hand was when it let go; a ball let go at an aim with a power
+    faThrow(kind, a, b) {
+      const S = this.faState(kind), K = FA[kind]; if (!S || S.stage !== "play") return { error: "No game on." }; const R = new CM.Random(CM.hashSeed(`${S.seed}:${S.throws.length}`));
+      let x, y, sc; if (kind === "darts") { const g = () => (R.next() + R.next() + R.next() - 1.5) * 0.8; x = a + g() * K.scatter; y = b + g() * K.scatter; sc = FA.dartScore(x, y); } else { [x, y] = FA.skeeAt(CM.ARC.clamp(a, -1, 1), CM.ARC.clamp(b, 0, 1), R); sc = FA.skeeScore(x, y); }
+      S.throws.push({ x, y, pts: sc.pts, label: sc.label }); S.score += sc.pts; const total = kind === "darts" ? K.rounds * K.per : K.balls, out = { x, y, ...sc, score: S.score, n: S.throws.length };
+      if (S.throws.length >= total) Object.assign(out, this.faEnd(kind)); this.saveCasino && this.saveCasino(); return out;
+    },
+    faEnd(kind) {
+      const S = this.faState(kind), K = FA[kind], F = this.cgStore(), gold = Math.round(S.bet * FA.pay(kind, S.score)), tickets = Math.floor(S.score / K.ticketPer); S.stage = "done";
+      if (gold) this.cgPay(kind, gold); if (this.tkAdd) this.tkAdd(tickets, kind); const C = F[`fa_${kind}_cards`] = F[`fa_${kind}_cards`] || {}, cards = [];
+      K.MARKS.forEach((m, i) => { if (S.score >= m && !C[m]) { const c = this.cgTierCard(["common", "better", "rare"][i], `${K.name}: ${m} points!`, new CM.Random(CM.hashSeed(`${this.seed}:${kind}:card:${m}`))); C[m] = c || true; if (c) cards.push(c); } });
+      F[`fa_${kind}_best`] = Math.max(F[`fa_${kind}_best`] || 0, S.score); this.cgRecord && this.cgRecord(kind, S.score, Math.floor(S.score / 100)); S.last = { score: S.score, gold, tickets, cards }; this.emit("change");
+      return { over: true, gold, tickets, cards };
+    },
+  });
+}
+
+// ---- 64zza-bard.js ----
+"use strict";
+// The Bard's Stage (v15.7): a rhythm game on the tavern stage. Each level is a tune - its notes falling down four lanes
+// to the strike line, to be struck as they cross it (D F J K, or the arrows). Struck on the beat is Perfect, near it
+// Good, missed is a Miss; a run of strikes builds a combo that multiplies the score. The crowd's cheer is a bar: misses
+// drain it, strikes fill it; play the tune through with any cheer left to clear the level - empty it and the bard is
+// booed off (a life). Each level a quicker tempo, more notes, and from the fourth, chords. Three lives. The tune itself
+// is made from the level's seed, and plays as it is struck. Window: 76zs-bard.js.
+CM.BD = { lanes: 4, perfect: 0.05, good: 0.11, late: 0.16, lives: 3, lead: 1.6 };
+{ const BD = CM.BD;
+  BD.Level = class {
+    constructor(n, seed, keep) {
+      const R = this.rnd = new CM.Random(seed); this.n = n; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: BD.lives });
+      this.bpm = Math.min(168, 92 + 7 * n); this.beat = 60 / this.bpm; this.len = Math.min(52, 30 + 2 * n); this.key = R.int(0, 6); this.reset();
+    }
+    reset() {
+      const R = new CM.Random(CM.hashSeed(`${this.key}:${this.bpm}:${this.n}`)), notes = [], dens = Math.min(0.85, 0.42 + 0.05 * this.n), half = this.beat / 2; let lane = 1, deg = 0;
+      for (let t = 2; t < this.len; t += half) { const onBeat = Math.abs((t - 2) / this.beat - Math.round((t - 2) / this.beat)) < 0.01; if (!(onBeat ? R.chance(Math.min(0.95, dens + 0.25)) : R.chance(dens * 0.55))) continue;
+        lane = CM.ARC.clamp(lane + R.int(-1, 1) * (R.chance(0.3) ? 2 : 1), 0, 3); deg = CM.ARC.clamp(deg + R.int(-2, 2), -3, 9); notes.push({ t, lane, deg, hit: null });
+        if (this.n >= 4 && onBeat && R.chance(0.12 + 0.02 * this.n)) notes.push({ t, lane: (lane + 2) % 4, deg: deg + 4, hit: null }); }
+      this.notes = notes; this.t = -BD.lead; this.cheer = 60; this.combo = 0; this.best = 0; this.counts = { perfect: 0, good: 0, miss: 0 }; this.dead = 0;
+    }
+    strike(lane) {
+      if (this.stage !== "play" || this.dead) return; let best = null, bd = 9; for (const N of this.notes) { if (N.hit || N.lane !== lane) continue; const d = Math.abs(N.t - this.t); if (d < bd) { bd = d; best = N; } if (N.t - this.t > BD.late) break; }
+      if (!best || bd > BD.late) { this.events.push({ kind: "empty", lane }); return; }
+      if (bd <= BD.good) { const perf = bd <= BD.perfect; best.hit = perf ? "perfect" : "good"; this.counts[best.hit] += 1; this.combo += 1; this.best = Math.max(this.best, this.combo); const pts = (perf ? 300 : 100) * (1 + Math.min(3, Math.floor(this.combo / 10))); this.score += pts; this.cheer = Math.min(100, this.cheer + (perf ? 3 : 1.5)); this.events.push({ kind: "hit", lane, how: best.hit, deg: best.deg, pts }); }
+      else { best.hit = "miss"; this.miss(best); }
+    }
+    miss(N) { this.counts.miss += 1; this.combo = 0; this.cheer -= 7 + this.n * 0.6; this.events.push({ kind: "miss", lane: N.lane }); if (this.cheer <= 0) { this.lives -= 1; this.dead = 1.8; this.events.push({ kind: "boo" }); } }
+    update(dt) {
+      if (this.stage !== "play") return;
+      if (this.dead) { this.dead -= dt; if (this.dead <= 0) { this.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else this.reset(); } return; }
+      const was = this.t; this.t += dt; if (Math.floor((was + 1e3) / this.beat) !== Math.floor((this.t + 1e3) / this.beat) && this.t > 0) this.events.push({ kind: "beat", n: Math.floor(this.t / this.beat) });
+      for (const N of this.notes) { if (N.hit) continue; if (this.t - N.t > BD.late) { N.hit = "miss"; this.miss(N); if (this.dead) return; } else if (N.t > this.t) break; }
+      if (this.t > this.len + 1) { const tot = this.notes.length || 1, acc = (this.counts.perfect + this.counts.good * 0.5) / tot, bonus = Math.round(acc * 2000 * this.n); this.score += bonus; this.stage = "clear"; this.events.push({ kind: "done", acc, bonus }); }
+    }
+  };
+  CM.ARC.add("bard", { name: "The Bard's Stage", Level: BD.Level, marks: [2, 4, 6] });
+}
+
+// ---- 64zzb-patience.js ----
+"use strict";
+// The Patience Table (v15.7): two games of patience for one, free to sit at. Klondike - seven columns dealt with their
+// top cards face up, the rest of the pack in a stock turned one at a time (round again as often as you like); build the
+// columns down in alternating colours (only a king on an empty one) and the four foundations up from the aces by suit.
+// FreeCell - all fifty-two dealt face up in eight columns, with four free cells to hold a card each; the same building,
+// any card on an empty column, and a run moves only as far as the free cells and empty columns allow. A game won pays
+// gold and prize tickets, and the house gives a Claudescryption card at the first win, the fifth, the fifteenth and the
+// fortieth (a common, a common, a stronger one, a rare). Moves can be taken back. The game is kept between visits.
+// Window: 76zt-patience.js.
+CM.PAT = { gold: { klondike: 30, freecell: 20 }, tickets: { klondike: 6, freecell: 4 }, MARKS: [[1, "common"], [5, "common"], [15, "better"], [40, "rare"]] };
+{ const PAT = CM.PAT, red = (c) => c.s === 1 || c.s === 2;
+  PAT.Deal = class {
+    constructor(mode, seed, data) {
+      if (data) { Object.assign(this, data); return; } this.mode = mode; this.moves = 0; this.hist = [];
+      const R = new CM.Random(seed), deck = []; for (let s = 0; s < 4; s++) for (let r = 1; r <= 13; r++) deck.push({ s, r, up: mode === "freecell" }); for (let i = deck.length - 1; i > 0; i--) { const j = R.int(0, i); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+      this.found = [[], [], [], []];
+      if (mode === "klondike") { this.tab = Array.from({ length: 7 }, (_, i) => { const col = deck.splice(0, i + 1); col[col.length - 1].up = true; return col; }); this.stock = deck; this.waste = []; }
+      else { this.tab = Array.from({ length: 8 }, () => []); deck.forEach((c, i) => this.tab[i % 8].push(c)); this.cells = [null, null, null, null]; }
+    }
+    snap() { return JSON.stringify({ found: this.found, tab: this.tab, stock: this.stock, waste: this.waste, cells: this.cells, moves: this.moves }); }
+    push() { this.hist.push(this.snap()); if (this.hist.length > 300) this.hist.shift(); }
+    undo() { const s = this.hist.pop(); if (!s) return false; Object.assign(this, JSON.parse(s)); return true; }
+    won() { return this.found.every((f) => f.length === 13); }
+    // the cards a move would lift: from a pile reference
+    lift(from) { if (from.pile === "waste") return this.waste.length ? [this.waste[this.waste.length - 1]] : []; if (from.pile === "cell") return this.cells[from.i] ? [this.cells[from.i]] : [];
+      if (from.pile === "found") { const f = this.found[from.i]; return f.length ? [f[f.length - 1]] : []; } const col = this.tab[from.i]; return from.k >= 0 && from.k < col.length && col[from.k].up ? col.slice(from.k) : []; }
+    run(cards) { for (let i = 1; i < cards.length; i++) if (red(cards[i]) === red(cards[i - 1]) || cards[i].r !== cards[i - 1].r - 1) return false; return true; }
+    room(toEmptyCol) { if (this.mode !== "freecell") return 99; const free = this.cells.filter((c) => !c).length, empty = this.tab.filter((c) => !c.length).length - (toEmptyCol ? 1 : 0); return (free + 1) * Math.pow(2, Math.max(0, empty)); }
+    canPut(cards, to) {
+      if (!cards.length) return false; const c = cards[0];
+      if (to.pile === "found") { if (cards.length !== 1) return false; const f = this.found[to.i]; return f.length ? f[f.length - 1].s === c.s && f[f.length - 1].r === c.r - 1 : c.r === 1; }
+      if (to.pile === "cell") return cards.length === 1 && !this.cells[to.i];
+      if (to.pile === "tab") { const col = this.tab[to.i]; if (!this.run(cards) || cards.length > this.room(!col.length)) return false; if (!col.length) return this.mode === "freecell" || c.r === 13; const top = col[col.length - 1]; return top.up && red(top) !== red(c) && top.r === c.r + 1; }
+      return false;
+    }
+    move(from, to) {
+      const cards = this.lift(from); if (!this.canPut(cards, to) || (from.pile === to.pile && from.i === to.i)) return false; this.push();
+      if (from.pile === "waste") this.waste.pop(); else if (from.pile === "cell") this.cells[from.i] = null; else if (from.pile === "found") this.found[from.i].pop(); else { this.tab[from.i].splice(from.k); const col = this.tab[from.i]; if (col.length && !col[col.length - 1].up) col[col.length - 1].up = true; }
+      if (to.pile === "found") this.found[to.i].push(cards[0]); else if (to.pile === "cell") this.cells[to.i] = cards[0]; else this.tab[to.i].push(...cards);
+      this.moves += 1; return true;
+    }
+    draw() { if (this.mode !== "klondike") return false; this.push(); if (this.stock.length) { const c = this.stock.pop(); c.up = true; this.waste.push(c); } else if (this.waste.length) { this.stock = this.waste.reverse().map((c) => ({ ...c, up: false })); this.waste = []; } else { this.hist.pop(); return false; } this.moves += 1; return true; }
+    // the best place for a card sent on its way (a double-click): a foundation, else a column, else a cell
+    sendHome(from) { const cards = this.lift(from); if (!cards.length) return false; if (cards.length === 1) for (let i = 0; i < 4; i++) if (this.move(from, { pile: "found", i })) return true;
+      for (let i = 0; i < this.tab.length; i++) if (this.tab[i].length && this.move(from, { pile: "tab", i })) return true; for (let i = 0; i < this.tab.length; i++) if (!this.tab[i].length && this.move(from, { pile: "tab", i })) return true;
+      if (this.mode === "freecell" && cards.length === 1 && from.pile === "tab") for (let i = 0; i < 4; i++) if (this.move(from, { pile: "cell", i })) return true; return false; }
+    // every card that can go up safely, up (both colours of the rank below already there)
+    autoUp() { let n = 0, moved = true;
+      while (moved) { moved = false; const srcs = this.tab.map((col, i) => ({ pile: "tab", i, k: col.length - 1 })); if (this.mode === "klondike") srcs.push({ pile: "waste" }); else this.cells.forEach((c, i) => srcs.push({ pile: "cell", i }));
+        for (const fr of srcs) { const cs = this.lift(fr); if (cs.length !== 1) continue; const c = cs[0], opp = this.found.filter((f) => f.length && red(f[0]) !== red(c)).map((f) => f.length), safe = c.r <= 2 || (opp.length === 2 && Math.min(...opp) >= c.r - 1); if (!safe) continue; for (let i = 0; i < 4; i++) if (this.move(fr, { pile: "found", i })) { this.hist.pop(); n += 1; moved = true; break; } } }
+      return n; }
+    // when everything is face up and the stock is spent, the rest can be played off
+    canFinish() { return this.mode === "klondike" ? !this.stock.length && !this.waste.length && this.tab.every((c) => c.every((x) => x.up)) : false; }
+  };
+  Object.assign(CM.Game.prototype, {
+    ptStore() { const F = this.cgStore(); F.pt = F.pt || { wins: { klondike: 0, freecell: 0 }, played: { klondike: 0, freecell: 0 }, deal: null, n: 0, paid: {} }; return F.pt; },
+    ptDeal() { const P = this.ptStore(); if (!P.deal) return null; if (!this.ptLive || this.ptLive.__src !== P.deal) { this.ptLive = new PAT.Deal(null, 0, JSON.parse(P.deal)); this.ptLive.__src = P.deal; } return this.ptLive; },
+    ptKeep() { const P = this.ptStore(), D = this.ptLive; if (!D) return; const d = { ...D, hist: D.hist.slice(-30) }; delete d.__src; P.deal = JSON.stringify(d); D.__src = P.deal; this.saveCasino && this.saveCasino(); },
+    ptNew(mode) { const P = this.ptStore(); P.n += 1; P.played[mode] += 1; this.ptLive = new PAT.Deal(mode, CM.hashSeed(`${this.seed}:patience:${mode}:${P.n}`)); this.ptLive.done = false; this.ptKeep(); if (this.cgStamp) this.cgStamp("patience"); return this.ptLive; },
+    // a deal won: gold, tickets, and a card at the marks
+    ptWin() {
+      const P = this.ptStore(), D = this.ptLive; if (!D || !D.won() || D.done) return null; D.done = true; const m = D.mode; P.wins[m] += 1; const total = P.wins.klondike + P.wins.freecell, gold = PAT.gold[m];
+      this.cgPay("patience", gold); if (this.tkAdd) this.tkAdd(PAT.tickets[m], "patience"); let card = null; const mk = PAT.MARKS.find(([n]) => n === total);
+      if (mk && !P.paid[total]) { P.paid[total] = true; card = this.cgTierCard(mk[1], `The Patience Table: ${total} game${total > 1 ? "s" : ""} won!`, new CM.Random(CM.hashSeed(`${this.seed}:patience:card:${total}`))); }
+      this.ptKeep(); this.emit("change"); return { gold, tickets: PAT.tickets[m], card, moves: D.moves };
+    },
+  });
+}
+
+// ---- 64zzc-traps.js ----
+"use strict";
+// The Trapfinder's Grid (v15.7): a minesweeper game on a flagstone floor full of hidden traps, free to play. Lift a
+// stone (a click): a trap below ends the game; otherwise the stone shows how many of its eight neighbours hide traps,
+// and an empty one lifts all around it. Mark a stone you are sure of with a pennant (a right-click). Click a number whose
+// pennants are all down to lift the rest around it. The first stone lifted is always safe, with its neighbours. Lift
+// every safe stone to win: three floors - the Cellar (9 by 9, 10 traps), the Crypt (16 by 16, 40) and the Catacomb (24
+// by 16, 80); a win pays gold and prize tickets, more for the larger, and a Claudescryption card the first time each is
+// cleared (common, stronger, rare). Best times are kept. Window: 76zu-traps.js.
+CM.TRP = { SIZES: { cellar: { w: 9, h: 9, n: 10, gold: 12, tickets: 3, card: "common", name: "the Cellar" }, crypt: { w: 16, h: 16, n: 40, gold: 40, tickets: 10, card: "better", name: "the Crypt" }, catacomb: { w: 24, h: 16, n: 80, gold: 110, tickets: 25, card: "rare", name: "the Catacomb" } } };
+{ const TRP = CM.TRP;
+  TRP.Board = class {
+    constructor(size, seed) { const S = TRP.SIZES[size]; this.size = size; this.w = S.w; this.h = S.h; this.n = S.n; this.seed = seed; this.mine = null; this.open = Array.from({ length: S.h }, () => Array(S.w).fill(false)); this.flag = Array.from({ length: S.h }, () => Array(S.w).fill(false)); this.stage = "play"; this.t = 0; this.started = false; this.events = []; }
+    nb(x, y) { const o = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const a = x + dx, b = y + dy; if (a >= 0 && b >= 0 && a < this.w && b < this.h) o.push([a, b]); } return o; }
+    lay(sx, sy) { const R = new CM.Random(this.seed), safe = new Set([`${sx},${sy}`, ...this.nb(sx, sy).map(([a, b]) => `${a},${b}`)]); this.mine = Array.from({ length: this.h }, () => Array(this.w).fill(false)); let k = 0; while (k < this.n) { const x = R.int(0, this.w - 1), y = R.int(0, this.h - 1); if (this.mine[y][x] || safe.has(`${x},${y}`)) continue; this.mine[y][x] = true; k++; } }
+    count(x, y) { return this.nb(x, y).filter(([a, b]) => this.mine[b][a]).length; }
+    reveal(x, y) {
+      if (this.stage !== "play" || this.flag[y][x] || this.open[y][x]) return 0; if (!this.mine) { this.lay(x, y); this.started = true; }
+      if (this.mine[y][x]) { this.open[y][x] = true; this.stage = "lost"; this.boom = [x, y]; this.events.push({ kind: "boom", x, y }); return 0; }
+      let n = 0; const q = [[x, y]]; this.open[y][x] = true; while (q.length) { const [a, b] = q.shift(); n++; if (this.count(a, b) === 0) for (const [c, d] of this.nb(a, b)) if (!this.open[d][c] && !this.flag[d][c]) { this.open[d][c] = true; q.push([c, d]); } }
+      this.events.push({ kind: "lift", x, y, n }); this.check(); return n;
+    }
+    toggle(x, y) { if (this.stage !== "play" || this.open[y][x]) return; this.flag[y][x] = !this.flag[y][x]; this.events.push({ kind: this.flag[y][x] ? "flag" : "unflag", x, y }); }
+    chord(x, y) { if (!this.open[y][x] || !this.mine) return; const c = this.count(x, y), nb = this.nb(x, y); if (nb.filter(([a, b]) => this.flag[b][a]).length !== c) return; for (const [a, b] of nb) if (!this.flag[b][a] && !this.open[b][a]) this.reveal(a, b); }
+    left() { let k = 0; for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) if (!this.open[y][x]) k++; return k - this.n; }
+    flags() { return this.flag.flat().filter(Boolean).length; }
+    check() { if (this.stage === "play" && this.left() === 0) { this.stage = "won"; for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++) if (this.mine[y][x]) this.flag[y][x] = true; this.events.push({ kind: "won" }); } }
+    update(dt) { if (this.stage === "play" && this.started) this.t += dt; }
+  };
+  Object.assign(CM.Game.prototype, {
+    tfStore() { const F = this.cgStore(); F.tf = F.tf || { wins: {}, played: {}, best: {}, n: 0, cards: {} }; return F.tf; },
+    tfNew(size) { const T = this.tfStore(); T.n += 1; T.played[size] = (T.played[size] || 0) + 1; this.tfLive = new TRP.Board(size, CM.hashSeed(`${this.seed}:traps:${size}:${T.n}`)); if (this.cgStamp) this.cgStamp("traps"); this.saveCasino && this.saveCasino(); return this.tfLive; },
+    tfWin() { const B = this.tfLive; if (!B || B.stage !== "won" || B.paid) return null; B.paid = true; const T = this.tfStore(), S = TRP.SIZES[B.size], time = Math.round(B.t); T.wins[B.size] = (T.wins[B.size] || 0) + 1; const rec = !T.best[B.size] || time < T.best[B.size]; if (rec) T.best[B.size] = time;
+      this.cgPay("traps", S.gold); if (this.tkAdd) this.tkAdd(S.tickets, "traps"); let card = null; if (!T.cards[B.size]) { card = this.cgTierCard(S.card, `The Trapfinder's Grid: ${S.name} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:traps:card:${B.size}`))); T.cards[B.size] = card || true; }
+      this.saveCasino && this.saveCasino(); this.emit("change"); return { gold: S.gold, tickets: S.tickets, card, time, record: rec }; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -30714,8 +30988,14 @@ CM.CG_INFO = {
   lander: { cat: "arcade", line: "Set the sky-skiff down gently on a lit pad." },
   rampart: { cat: "arcade", line: "Burst the falling embers before they reach the town." },
   glimmerpop: { cat: "arcade", line: "Shoot coloured bubbles; three of a kind pop." },
+  craps: { cat: "tables", line: "Dice at the true odds: the line, the field, the place bets." },
+  darts: { cat: "fair", line: "Eight rounds of three darts at the tavern board." },
+  skee: { cat: "fair", line: "Roll nine balls up the lane into the rings." },
+  bard: { cat: "arcade", line: "Strike the notes on the beat; keep the crowd cheering." },
+  patience: { cat: "puzzles", line: "Klondike and FreeCell, free to play." },
+  traps: { cat: "puzzles", line: "Lift the safe stones; the numbers tell of traps." },
 };
-CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["prizes", "Prizes"]];
+CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["fair", "Fairground"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
 CM.CG_THUMB = (() => {
   const bg = (p, w, h, a, b) => { const g = p.createLinearGradient(0, 0, 0, h); g.addColorStop(0, a); g.addColorStop(1, b); p.fillStyle = g; p.fillRect(0, 0, w, h); };
@@ -30754,6 +31034,12 @@ CM.CG_THUMB = (() => {
     lander: (p, w, h) => { bg(p, w, h, "#2A1A4A", "#F0A050"); p.fillStyle = "#3A2E3A"; p.beginPath(); p.moveTo(0, h); p.lineTo(0, 60); p.lineTo(30, 50); p.lineTo(60, 64); p.lineTo(90, 64); p.lineTo(120, 44); p.lineTo(w, 58); p.lineTo(w, h); p.fill(); p.fillStyle = "#C8A060"; p.fillRect(60, 62, 30, 3); circ(p, 76, 24, 7, "#E0C080"); p.fillStyle = "#FFB040"; p.beginPath(); p.moveTo(73, 34); p.lineTo(76, 44); p.lineTo(79, 34); p.fill(); },
     rampart: (p, w, h) => { bg(p, w, h, "#060818", "#1A1A3A"); p.strokeStyle = "rgba(255,140,60,0.7)"; for (const [x0, x1] of [[20, 50], [90, 70], [150, 120]]) { p.beginPath(); p.moveTo(x0, 0); p.lineTo(x1, 50); p.stroke(); } const g = p.createRadialGradient(100, 40, 0, 100, 40, 16); g.addColorStop(0, "#FFF"); g.addColorStop(1, "rgba(120,180,255,0)"); p.fillStyle = g; p.fillRect(80, 20, 40, 40); p.fillStyle = "#3A3440"; p.fillRect(0, h - 12, w, 12); for (let k = 0; k < 6; k++) { p.fillStyle = "#8A3A2A"; p.fillRect(14 + k * 26, h - 20, 12, 8); } },
     glimmerpop: (p, w, h) => { bg(p, w, h, "#1A2830", "#0A1014"); const c = ["#E04050", "#40A0F0", "#50C060", "#F0C030", "#B060E0"]; for (let r = 0; r < 3; r++) for (let k = 0; k < 9; k++) circ(p, 14 + k * 18 + (r % 2) * 9, 12 + r * 15, 8, c[(k + r * 2) % 5]); circ(p, w / 2, h - 12, 8, "#40A0F0"); },
+    craps: (p, w, h) => { bg(p, w, h, "#1E6A40", "#0E4A2A"); for (const [x, y, r, f] of [[60, 44, 0.3, 5], [104, 52, -0.2, 2]]) { p.save(); p.translate(x, y); p.rotate(r); p.fillStyle = "#D02030"; p.fillRect(-16, -16, 32, 32); p.fillStyle = "#FFF"; const pp = { 5: [[-8, -8], [8, -8], [0, 0], [-8, 8], [8, 8]], 2: [[-8, -8], [8, 8]] }[f]; for (const [a, b] of pp) { p.beginPath(); p.arc(a, b, 3, 0, Math.PI * 2); p.fill(); } p.restore(); } p.fillStyle = "#F0E0B0"; p.font = "bold 10px Georgia"; p.fillText("PASS LINE", 10, h - 8); },
+    darts: (p, w, h) => { bg(p, w, h, "#3A2414", "#5A3A20"); const cx = w / 2, cy = h / 2; for (let i = 0; i < 20; i++) { const a = (i * Math.PI) / 10; p.fillStyle = i % 2 ? "#E8DCC0" : "#1A1A1A"; p.beginPath(); p.moveTo(cx, cy); p.arc(cx, cy, 34, a, a + Math.PI / 10); p.fill(); } p.strokeStyle = "#C02828"; p.lineWidth = 3; p.beginPath(); p.arc(cx, cy, 21, 0, Math.PI * 2); p.stroke(); p.beginPath(); p.arc(cx, cy, 33, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; circ(p, cx, cy, 4, "#C02828"); p.fillStyle = "#C03030"; p.fillRect(cx + 8, cy - 14, 18, 3); },
+    skee: (p, w, h) => { bg(p, w, h, "#1A1210", "#3A2418"); for (const [r, c] of [[30, "#6A4A2A"], [21, "#7A3A2A"], [13, "#5A3A6A"], [6, "#101010"]]) { p.fillStyle = c; p.beginPath(); p.ellipse(w / 2, 30, r * 1.3, r * 0.8, 0, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#6A4A28"; p.beginPath(); p.moveTo(w / 2 - 20, 56); p.lineTo(w / 2 + 20, 56); p.lineTo(w / 2 + 50, h); p.lineTo(w / 2 - 50, h); p.fill(); circ(p, w / 2 + 6, h - 12, 6, "#E0C090"); },
+    bard: (p, w, h) => { bg(p, w, h, "#1A0A14", "#3A1A1A"); const c = ["#E05050", "#50B0F0", "#60D070", "#F0C040"]; for (let i = 0; i < 4; i++) { p.fillStyle = c[i] + "33"; p.fillRect(40 + i * 24, 0, 20, h - 16); circ(p, 50 + i * 24, h - 16, 8, c[i]); circ(p, 50 + i * 24, 14 + ((i * 23) % 40), 6, c[i]); } },
+    patience: (p, w, h) => { bg(p, w, h, "#2A7A4A", "#0E3A20"); for (let i = 0; i < 6; i++) { const x = 12 + i * 26; for (let k = 0; k <= i % 4; k++) { p.fillStyle = k === i % 4 ? "#FBF6E8" : "#7A1A2A"; p.fillRect(x, 26 + k * 8, 22, 30); p.strokeStyle = "rgba(0,0,0,0.3)"; p.strokeRect(x, 26 + k * 8, 22, 30); } } p.fillStyle = "#C02030"; p.font = "bold 12px Georgia"; p.fillText("A♥", 120, 50); },
+    traps: (p, w, h) => { bg(p, w, h, "#1A140E", "#1A140E"); const N = ["", "#4A80F0", "#40B050", "#E04040"]; for (let y = 0; y < 4; y++) for (let x = 0; x < 8; x++) { const X = 6 + x * 20, Y = 4 + y * 20, open = (x + y * 3) % 4 === 0 || (x > 3 && y > 1); p.fillStyle = open ? "#3A2E22" : "#8A7E70"; p.fillRect(X, Y, 18, 18); if (open && (x + y) % 3) { p.fillStyle = N[(x + y) % 3 + 1]; p.font = "bold 12px Georgia"; p.fillText(String((x + y) % 3), X + 5, Y + 14); } } p.fillStyle = "#C02830"; p.beginPath(); p.moveTo(30, 30); p.lineTo(40, 34); p.lineTo(30, 38); p.fill(); },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();
@@ -30822,7 +31108,7 @@ CM.CG_THUMB = (() => {
     cgHall(box) {
       const F = this.game.cgStore(), B = F.boards || {};
       box.innerHTML = `<div class="cghall"><p class="lore">On the wall by the bar, ten boards in gilt frames, the house's chalk-boy keeping them. "Beat your own name," he says, "and I'll write it larger."</p><div class="cghallgrid">${CLUB.BOARDS.map((id) => { const rows = B[id] || [];
-        return `<div class="cgboard"><div class="cgbhead"><canvas width="88" height="44" data-cgbt="${id}"></canvas><b>${nameOf(id)}</b><button data-cgplay="${id}">Play</button></div><ol>${rows.length ? rows.map((e, k) => `<li class="${k === 0 ? "top" : ""}"><span class="sc">${e.score.toLocaleString("en")}</span><span class="lv">${id === "pinball" ? `${e.level} mark${e.level === 1 ? "" : "s"}` : `level ${e.level}`}</span><span class="who">${e.who}</span><span class="at">${e.at || ""}</span></li>`).join("") : `<li class="none">No scores yet.</li>`}</ol></div>`; }).join("")}</div><div class="small">Records broken: ${F.records || 0}.</div></div>`;
+        return `<div class="cgboard"><div class="cgbhead"><canvas width="88" height="44" data-cgbt="${id}"></canvas><b>${nameOf(id)}</b><button data-cgplay="${id}">Play</button></div><ol>${rows.length ? rows.map((e, k) => `<li class="${k === 0 ? "top" : ""}"><span class="sc">${e.score.toLocaleString("en")}</span><span class="lv">${id === "pinball" ? `${e.level} mark${e.level === 1 ? "" : "s"}` : id === "darts" || id === "skee" ? "" : `level ${e.level}`}</span><span class="who">${e.who}</span><span class="at">${e.at || ""}</span></li>`).join("") : `<li class="none">No scores yet.</li>`}</ol></div>`; }).join("")}</div><div class="small">Records broken: ${F.records || 0}.</div></div>`;
       this.cgClubHead(box, "Hall of Champions");
       box.querySelectorAll("[data-cgbt]").forEach((c) => thumbInto(c, c.dataset.cgbt));
       box.querySelectorAll("[data-cgplay]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.cgplay; this.cgNote = ""; this.caSfx("cardplace", 0.35); this.renderCasino(); }));
@@ -30871,7 +31157,7 @@ CM.CG_THUMB = (() => {
 // rules are 64zp-daily.js.
 { const gal1 = CM.UI.prototype.cgGallery, nav1 = CM.UI.prototype.cgNav, r3 = CM.UI.prototype.renderCasino, DAILY = CM.DAILY, MED = ["#C88A50", "#C8D0D8", "#F0C040"], TIER = ["Bronze", "Silver", "Gold"];
   const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id;
-  const what = (t, m) => (t === "pinball" ? `pass ${m} score marks` : `reach level ${m}`);
+  const what = (t, m) => (t === "pinball" ? `pass ${m} score marks` : t === "darts" || t === "skee" ? `score ${m * 100}` : `reach level ${m}`);
   Object.assign(CM.UI.prototype, {
     renderCasino() { if (this.cgView === "dailypast") { this.cgDailyPast(this.$("#casino-body")); this.cgToasts && this.cgToasts(); return; } return r3.call(this); },
     cgGallery(box) {
@@ -31294,6 +31580,406 @@ CM.CG_TABLES.push(["glimmerpop", "Glimmerpop"]);
       p.fillStyle = "#E0D0B0"; p.font = "10px Georgia"; p.fillText("next", W / 2 + 40, H - 34); this.bubble(p, W / 2 + 52, H - 18, L.next, now, GP.R * 0.7);
       p.fillStyle = "#C0D8E0"; p.font = "bold 11px monospace"; p.fillText(`DROP IN ${L.every - (L.shots % L.every)}`, 8, H - 8);
     },
+  });
+}
+
+// ---- 76zp-craps.js ----
+"use strict";
+// Bones, the window's side: a craps table in green felt with a padded rail - the point numbers along the top (the puck
+// on the point, white ON, or black OFF in the Don't Come corner), the Place 6 and 8, the Field with its numbers, Any
+// Seven in the middle, the Don't Pass bar and the Pass Line curving round the bottom with the Odds behind it; chips
+// stacked on each spot. A throw: the dice tumble across a canvas strip of felt, spinning and bouncing off the far wall,
+// their shadows under them, and settle; then the winning spots flash and the chips go. The rules are 64zy-craps.js.
+CM.CG_TABLES.push(["craps", "Bones"]);
+{ const floor0 = CM.UI.prototype.renderFloor, CR = CM.CRAPS;
+  const pips = { 1: [[0.5, 0.5]], 2: [[0.28, 0.28], [0.72, 0.72]], 3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]], 4: [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]], 5: [[0.27, 0.27], [0.73, 0.27], [0.5, 0.5], [0.27, 0.73], [0.73, 0.73]], 6: [[0.28, 0.24], [0.72, 0.24], [0.28, 0.5], [0.72, 0.5], [0.28, 0.76], [0.72, 0.76]] };
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "craps") return this.cgCraps(box); return floor0.call(this, box); },
+    cgCraps(box) {
+      const g = this.game, K = g.crapsState(), B = K.bets, on = !!K.point, flash = this.crFlash || {}, chip = (t) => (B[t] ? `<i class="crchip">${B[t]}</i>` : ""), spot = (t, label, cls = "") => `<div class="crspot ${cls}${flash[t] ? ` fl-${flash[t]}` : ""}" data-crb="${t}">${label}${chip(t)}</div>`;
+      const nums = [4, 5, 6, 8, 9, 10].map((n) => `<div class="crnum${K.point === n ? " pt" : ""}">${n === 6 ? "SIX" : n === 9 ? "NINE" : n}${K.point === n ? `<span class="puck on">ON</span>` : ""}</div>`).join("");
+      box.innerHTML = `<div class="cgtable crapstbl"><h3>Bones</h3><p class="lore">A long table with a padded rail and a stickman in a waistcoat. "New shooter coming out," he calls, and pushes the dice across with his hooked stick. "Bets on the line."</p>
+        <div class="crfelt"><div class="crtop"><div class="crdc">${on ? "" : `<span class="puck off">OFF</span>`}DON'T COME</div>${nums}</div>
+        <div class="crmid">${spot("place6", "PLACE 6<small>pays 7 to 6</small>")}${spot("seven", "ANY SEVEN<small>4 to 1</small>", "red")}${spot("place8", "PLACE 8<small>pays 7 to 6</small>")}</div>
+        ${spot("field", `FIELD<small><b>2</b> 3 4 9 10 11 <b>12</b> - 2 pays double, 12 pays triple</small>`, "field")}
+        ${spot("dont", "DON'T PASS BAR <small>12 pushes</small>", "dont")}${spot("pass", "PASS LINE", "pass")}${spot("odds", "ODDS<small>true odds, up to 3×</small>", `odds${on && B.pass ? "" : " off"}`)}</div>
+        <canvas class="crdice" width="640" height="120"></canvas>
+        ${this.cgBetRow("The chip")}<div class="cgnote">${this.cgNote || ""}</div>${this.crCard ? this.cgCardWon(this.crCard) : ""}
+        <div class="row"><button class="primary" data-crroll ${Object.values(B).some((v) => v > 0) && !this.cgBusy ? "" : "disabled"}>Throw the dice</button>${B.place6 || B.place8 ? `<button data-crdown>Take down the place bets</button>` : ""}<button data-leave>Leave</button></div>
+        <div class="small">Click a spot to put the chip on it. The line bets go down on the come-out roll; the odds behind a pass bet once the point is on. Place bets go in sixes and stay up until a seven (they rest on the come-out). Pass and Don't Pass give back 98.6%, the odds 100%, Place 6 and 8 98.5%, the Field 97.2%, Any Seven 83.3%. A shooter who makes four points in a row wins a card. Points made by this shooter: ${K.made}.</div>${this.cgStats("craps")}</div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll("[data-crb]").forEach((el) => el.addEventListener("click", () => { if (this.cgBusy) return; const why = g.crapsBet(el.dataset.crb, this.cgBet || 0); this.cgNote = why; this.crFlash = {}; this.crCard = null; this.cgSfx(why ? "miss" : "coin", why ? 0.3 : 0.25, 1.3); this.renderCasino(); }));
+      if (q("[data-crdown]")) q("[data-crdown]").addEventListener("click", () => { const v = g.crapsTakeDown("place6") + g.crapsTakeDown("place8"); this.cgNote = `${v} gold taken down.`; this.renderCasino(); });
+      const cv = q(".crdice"); this.crDraw(cv, this.crShown || (K.last ? K.last.d : [5, 2]), null);
+      q("[data-crroll]").addEventListener("click", () => {
+        if (this.cgBusy) return; const r = g.crapsRoll(); if (r.error) { this.cgNote = r.error; this.renderCasino(); return; } this.cgBusy = true; q("[data-crroll]").disabled = true; this.cgSfx("chain", 0.45, 1.4);
+        const t0 = performance.now(), dur = 1300, R = Math.random, paths = [0, 1].map((i) => ({ x0: 40, y0: 30 + i * 40, vx: 520 + R() * 120, vy: (R() - 0.5) * 160, spin: 8 + R() * 6 }));
+        const step = (now) => { const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 2.4); this.crDraw(cv, t < 0.92 ? [1 + Math.floor(R() * 6), 1 + Math.floor(R() * 6)] : r.dice, paths.map((P, i) => { let x = P.x0 + P.vx * e * 1.1, y = P.y0 + P.vy * e; if (x > 600) x = 1200 - x; y = Math.max(14, Math.min(106, y)); return { x: t >= 1 ? 470 + i * 70 : x, y: t >= 1 ? 60 : y, a: (1 - e) * P.spin, h: Math.abs(Math.sin(e * Math.PI * 3)) * (1 - e) * 16 }; }));
+          if (t > 0.3 && Math.random() < 0.08 && t < 0.9) this.cgSfx("step", 0.15, 2);
+          if (t < 1) { requestAnimationFrame(step); return; }
+          this.crShown = r.dice; this.cgBusy = false; this.cgSfx("cardplace", 0.5, 0.8); const fl = this.crFlash = {}; for (const x of r.res) fl[x.type] = x.lost ? "lose" : "win"; this.crCard = r.card;
+          this.cgNote = `${r.sum}${r.sum === 7 && r.sevenOut ? " - seven out!" : r.made ? " - the point is made!" : !r.was && r.point ? ` - the point is ${r.point}` : r.sum === 2 || r.sum === 3 || r.sum === 12 ? (r.was ? "" : " - craps!") : r.sum === 11 && !r.was ? " - yo-leven!" : ""}${r.back ? `. ${r.back} gold back.` : "."}`;
+          this.renderCasino(); const b2 = this.$("#casino-body"); if (r.back) { this.cgSfx("coin", 0.5); this.cgCoins(b2, Math.min(24, 4 + Math.round(r.back / 20))); } if (r.card) this.cgSfx("cardwin", 0.6); if (r.sevenOut) this.cgSfx("cardlose", 0.4); };
+        requestAnimationFrame(step);
+      });
+    },
+    // the dice on their strip of felt
+    crDraw(cv, faces, at) {
+      const p = cv.getContext("2d"), W = cv.width, H = cv.height, felt = p.createLinearGradient(0, 0, 0, H); felt.addColorStop(0, "#1E6A40"); felt.addColorStop(1, "#0E4A2A"); p.fillStyle = felt; p.fillRect(0, 0, W, H);
+      p.fillStyle = "rgba(255,255,255,0.03)"; for (let k = 0; k < 120; k++) p.fillRect((k * 53) % W, (k * 29) % H, 1, 1); p.fillStyle = "#3A2210"; p.fillRect(W - 8, 0, 8, H); for (let y = 0; y < H; y += 10) { p.fillStyle = y % 20 ? "#5A3A20" : "#7A5030"; p.fillRect(W - 8, y, 8, 5); }
+      const pos = at || [{ x: 470, y: 60, a: 0.1, h: 0 }, { x: 540, y: 60, a: -0.15, h: 0 }];
+      faces.forEach((f, i) => { const P = pos[i], s = 40; p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(P.x + 4, P.y + 18, 22, 7, 0, 0, Math.PI * 2); p.fill(); p.save(); p.translate(P.x, P.y - P.h); p.rotate(P.a);
+        const g2 = p.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2); g2.addColorStop(0, "#F02838"); g2.addColorStop(1, "#A01020"); p.fillStyle = g2; p.beginPath(); p.roundRect ? p.roundRect(-s / 2, -s / 2, s, s, 8) : p.rect(-s / 2, -s / 2, s, s); p.fill(); p.fillStyle = "rgba(255,255,255,0.25)"; p.fillRect(-s / 2 + 5, -s / 2 + 4, s - 10, 4);
+        p.fillStyle = "#FFF8F0"; for (const [x, y] of pips[f]) { p.beginPath(); p.arc(-s / 2 + x * s, -s / 2 + y * s, 4, 0, Math.PI * 2); p.fill(); } p.restore(); });
+    },
+  });
+}
+
+// ---- 76zq-darts.js ----
+"use strict";
+// The Tavern Board, the window's side: a dartboard hung on the tavern's timber wall under a lamp - its wedges in black
+// and cream, the doubles and trebles rings in red and green, the bull, the wire, the numbers round the rim - and the
+// hand's crosshair wavering where the mouse is (a slow drift that never quite settles). A click: the dart flies in from
+// below and thuds into the board, wobbling as it stops, its score floating up; three darts a round, then they are
+// pulled. A chalk-board beside keeps the rounds. The rules are 64zz-fair.js.
+CM.CG_TABLES.push(["darts", "The Tavern Board"]);
+{ const floor0 = CM.UI.prototype.renderFloor, FA = CM.FAIR, K = FA.darts, S = 420, BR = 180, CX = S / 2, CY = S / 2;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "darts") return this.cgDarts(box); return floor0.call(this, box); },
+    cgDarts(box) {
+      const g = this.game, St = g.faState("darts"), live = St && St.stage === "play", bet = live ? St.bet : (this.cgBet === undefined ? 5 : this.cgBet), F = g.cgStore(), C = F.fa_darts_cards || {}, last = St && St.stage === "done" ? St.last : null;
+      const rounds = []; if (St) for (let r = 0; r < K.rounds; r++) { const ts = St.throws.slice(r * 3, r * 3 + 3); rounds.push(`<tr><td>${r + 1}</td><td>${ts.map((t) => t.label).join(" · ") || "-"}</td><td>${ts.reduce((a, t) => a + t.pts, 0) || ""}</td></tr>`); }
+      box.innerHTML = `<div class="cgtable dartstbl runestack dash"><h3>The Tavern Board</h3><div class="rswrap"><canvas class="dtcanvas" width="${S}" height="${S}"></canvas>
+        <div class="dashside"><p class="lore">In the taproom corner a dartboard hangs under a lamp, its cork pocked by a thousand evenings. "Eight rounds of three," says the barman, chalk in hand. "The house pays on the total. A steady hand helps; a tankard does not."</p>
+        <table class="dtchalk"><tr><th>Round</th><th>Darts</th><th>Score</th></tr>${rounds.join("")}<tr class="tot"><td colspan="2">Total</td><td>${St ? St.score : 0}</td></tr></table>
+        <table class="paytable"><tr><th>Score</th><th>Pays</th></tr>${K.PAY.map(([s, m]) => `<tr class="${St && St.score >= s ? "won" : ""}"><td>${s}+</td><td>${Math.round(bet * m)} gold</td></tr>`).join("")}</table>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? "" : `<button class="primary" data-dtstart>Chalk up (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Aim with the mouse and click to throw - the hand wavers, so wait for it. Treble ring triples, the outer ring doubles, the outer bull is 25 and the bull 50. A ticket for every ${K.ticketPer} points; a card the first time ever past ${K.MARKS.join(", ")}${K.MARKS.map((m) => (C[m] ? " ✓" : "")).join("")}. Best ${F.fa_darts_best || 0}.</div>${this.cgStats("darts")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-dtstart]")) q("[data-dtstart]").addEventListener("click", () => { const r = g.faStart("darts", bet); this.cgNote = r.error || "Round 1 - three darts."; this.dtStuck = []; this.cgSfx(r.error ? "miss" : "door", 0.4); this.renderCasino(); });
+      const cv = this.dtCanvas = q(".dtcanvas");
+      cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(); this.dtMouse = [((e.clientX - r.left) / r.width) * S, ((e.clientY - r.top) / r.height) * S]; });
+      cv.addEventListener("mousedown", () => {
+        const St2 = g.faState("darts"); if (!St2 || St2.stage !== "play" || this.dtFly) return; const [mx, my] = this.dtAim || [CX, CY], bx = (mx - CX) / BR, by = (my - CY) / BR, out = g.faThrow("darts", bx, by); if (out.error) return;
+        this.dtFly = { at: performance.now(), x: CX + out.x * BR, y: CY + out.y * BR, out }; this.cgSfx("zap", 0.2, 2.2);
+      });
+      cv.style.cursor = "none";
+      if (!this.dtLoop) { let prev = performance.now(); const loop = (now) => { if (!this.dtCanvas || !this.dtCanvas.isConnected || this.cgView !== "darts") { this.dtLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.dtFrame(dt, now); this.dtLoop = requestAnimationFrame(loop); }; this.dtLoop = requestAnimationFrame(loop); }
+    },
+    dtFrame(dt, now) {
+      const g = this.game, St = g.faState("darts"), live = St && St.stage === "play", p = this.dtCanvas.getContext("2d");
+      // the waver: a drift pulled back to the middle, kicked about at random
+      const W = this.dtW = this.dtW || { x: 0, y: 0, vx: 0, vy: 0 }; const k = 9, sd = K.waver * BR; W.vx += (-k * W.x * 3 + (Math.random() - 0.5) * sd * 60) * dt; W.vy += (-k * W.y * 3 + (Math.random() - 0.5) * sd * 60) * dt; W.vx *= 1 - 3 * dt; W.vy *= 1 - 3 * dt; W.x += W.vx * dt; W.y += W.vy * dt;
+      const m = this.dtMouse || [CX, CY]; this.dtAim = [m[0] + W.x, m[1] + W.y];
+      // the wall and the board
+      const wall = p.createLinearGradient(0, 0, S, 0); wall.addColorStop(0, "#3A2414"); wall.addColorStop(0.5, "#5A3A20"); wall.addColorStop(1, "#3A2414"); p.fillStyle = wall; p.fillRect(0, 0, S, S); p.strokeStyle = "rgba(0,0,0,0.3)"; for (let x = 0; x < S; x += 42) { p.beginPath(); p.moveTo(x, 0); p.lineTo(x, S); p.stroke(); }
+      const lamp = p.createRadialGradient(CX, 0, 10, CX, CY, S * 0.7); lamp.addColorStop(0, "rgba(255,220,150,0.25)"); lamp.addColorStop(1, "rgba(0,0,0,0.3)"); p.fillStyle = lamp; p.fillRect(0, 0, S, S);
+      p.fillStyle = "rgba(0,0,0,0.4)"; p.beginPath(); p.arc(CX + 6, CY + 8, BR * 1.16, 0, Math.PI * 2); p.fill(); p.fillStyle = "#1A1410"; p.beginPath(); p.arc(CX, CY, BR * 1.16, 0, Math.PI * 2); p.fill();
+      const R = FA.RING, ring = (r0, r1, a0, a1, c) => { p.fillStyle = c; p.beginPath(); p.arc(CX, CY, r1 * BR, a0, a1); p.arc(CX, CY, r0 * BR, a1, a0, true); p.closePath(); p.fill(); };
+      for (let i = 0; i < 20; i++) { const a0 = -Math.PI / 2 - Math.PI / 20 + (i * Math.PI) / 10, a1 = a0 + Math.PI / 10, dark = i % 2 === 0; ring(R.outer, R.tIn, a0, a1, dark ? "#1A1A1A" : "#E8DCC0"); ring(R.tIn, R.tOut, a0, a1, dark ? "#C02828" : "#208040"); ring(R.tOut, R.dIn, a0, a1, dark ? "#1A1A1A" : "#E8DCC0"); ring(R.dIn, 1, a0, a1, dark ? "#C02828" : "#208040");
+        const am = (a0 + a1) / 2; p.fillStyle = "#F0E8D0"; p.font = "bold 15px Georgia"; p.textAlign = "center"; p.fillText(String(FA.ORDER[i]), CX + Math.cos(am) * BR * 1.08, CY + Math.sin(am) * BR * 1.08 + 5); }
+      p.textAlign = "left"; p.fillStyle = "#208040"; p.beginPath(); p.arc(CX, CY, R.outer * BR, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C02828"; p.beginPath(); p.arc(CX, CY, R.bull * BR, 0, Math.PI * 2); p.fill();
+      p.strokeStyle = "rgba(200,200,210,0.55)"; p.lineWidth = 0.8; for (const r of [R.outer, R.tIn, R.tOut, R.dIn, 1]) { p.beginPath(); p.arc(CX, CY, r * BR, 0, Math.PI * 2); p.stroke(); } for (let i = 0; i < 20; i++) { const a = -Math.PI / 2 - Math.PI / 20 + (i * Math.PI) / 10; p.beginPath(); p.moveTo(CX + Math.cos(a) * R.outer * BR, CY + Math.sin(a) * R.outer * BR); p.lineTo(CX + Math.cos(a) * BR, CY + Math.sin(a) * BR); p.stroke(); } p.lineWidth = 1;
+      const dart = (x, y, wob) => { p.save(); p.translate(x, y); p.rotate(-0.5 + wob); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(4, 4, 24, 3); p.fillStyle = "#C0C0C8"; p.fillRect(0, -1, 8, 2); p.fillStyle = "#8A5A20"; p.fillRect(8, -2.5, 12, 5); p.fillStyle = "#C03030"; p.beginPath(); p.moveTo(20, 0); p.lineTo(30, -7); p.lineTo(28, 0); p.lineTo(30, 7); p.fill(); p.restore(); };
+      for (const d of this.dtStuck || []) dart(d.x, d.y, Math.sin((now - d.at) / 40) * Math.max(0, 1 - (now - d.at) / 500) * 0.3);
+      // a dart in flight
+      if (this.dtFly) { const F2 = this.dtFly, t = Math.min(1, (now - F2.at) / 220), sx = CX + 60, sy = S + 40, x = sx + (F2.x - sx) * t, y = sy + (F2.y - sy) * t - Math.sin(t * Math.PI) * 60; dart(x, y, 0);
+        if (t >= 1) { this.dtFly = null; const o = F2.out; (this.dtStuck = this.dtStuck || []).push({ x: F2.x, y: F2.y, at: now }); (this.dtPts = this.dtPts || []).push({ x: F2.x, y: F2.y - 14, text: o.pts ? o.label : "Miss", at: now, big: o.pts >= 40 });
+          this.cgSfx(o.pts ? "bump" : "step", 0.5, o.pts ? 1.4 : 0.7); if (o.pts >= 50 || o.label.startsWith("T")) this.cgSfx("coin", 0.4, 1.5);
+          if (o.over) { this.cgNote = `${o.score} points: ${o.gold ? `${o.gold} gold back` : "nothing back"}, and ${o.tickets} tickets.`; if (o.gold) this.cgCoins(this.$("#casino-body"), 10); if (o.cards.length) this.cgSfx("cardwin", 0.5); setTimeout(() => this.renderCasino(), 500); }
+          else if (o.n % 3 === 0) { this.cgNote = `Round ${o.n / 3} done - ${o.score} so far. Round ${o.n / 3 + 1}.`; setTimeout(() => { this.dtStuck = []; this.renderCasino(); }, 650); } else this.renderCasino(); } }
+      this.dtPts = (this.dtPts || []).filter((q) => now - q.at < 900); for (const q of this.dtPts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = q.big ? "#FFE070" : "#FFFFFF"; p.strokeStyle = "#000"; p.lineWidth = 3; p.font = `bold ${q.big ? 22 : 16}px Georgia`; p.textAlign = "center"; p.strokeText(q.text, q.x, q.y - (now - q.at) / 30); p.fillText(q.text, q.x, q.y - (now - q.at) / 30); p.textAlign = "left"; } p.globalAlpha = 1; p.lineWidth = 1;
+      if (live && !this.dtFly) { const [ax, ay] = this.dtAim; p.strokeStyle = "rgba(255,255,255,0.9)"; p.lineWidth = 1.5; p.beginPath(); p.arc(ax, ay, 10, 0, Math.PI * 2); p.moveTo(ax - 16, ay); p.lineTo(ax - 5, ay); p.moveTo(ax + 5, ay); p.lineTo(ax + 16, ay); p.moveTo(ax, ay - 16); p.lineTo(ax, ay - 5); p.moveTo(ax, ay + 5); p.lineTo(ax, ay + 16); p.stroke(); p.lineWidth = 1; p.fillStyle = "#FF4040"; p.fillRect(ax - 1, ay - 1, 2, 2);
+        p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(8, S - 30, 150, 22); p.fillStyle = "#FFE070"; p.font = "bold 13px monospace"; p.fillText(`ROUND ${Math.min(8, Math.floor(St.throws.length / 3) + 1)}  DART ${St.throws.length % 3 + 1}`, 14, S - 14); }
+      if (!live && !this.dtFly) { p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(0, S - 40, S, 40); p.fillStyle = "#F0E0B0"; p.font = "15px Georgia"; p.textAlign = "center"; p.fillText(St && St.last ? `Last game: ${St.last.score} points` : "Set a stake and chalk up", CX, S - 15); p.textAlign = "left"; }
+    },
+  });
+}
+
+// ---- 76zr-runeroll.js ----
+"use strict";
+// Rune-Roll, the window's side: a skee lane in perspective - polished boards running up to a ramp and the target, its
+// rings carved with runes and numbered (10 to 50), the two little 100 cups high in the corners, a lit marquee over it
+// all and a ticket slot that spits a strip of pink tickets at the end. Move the mouse to aim (a ghost ball shows where
+// it will go), hold the button to wind up the power (the meter climbs and falls back), let go to roll: the ball rattles
+// up the lane, hops the ramp, arcs and drops into its ring with a glow. The rules are 64zz-fair.js.
+CM.CG_TABLES.push(["skee", "Rune-Roll"]);
+{ const floor0 = CM.UI.prototype.renderFloor, FA = CM.FAIR, K = FA.skee, W = 420, H = 560, TX = W / 2, TY = 120, TS = 140;
+  // the target plane: x -1..1, y 0..1.2 (up), to the canvas
+  const tgt = (x, y) => [TX + x * TS, TY + 110 - y * 100];
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "skee") return this.cgSkee(box); return floor0.call(this, box); },
+    cgSkee(box) {
+      const g = this.game, St = g.faState("skee"), live = St && St.stage === "play", bet = live ? St.bet : (this.cgBet === undefined ? 5 : this.cgBet), F = g.cgStore(), C = F.fa_skee_cards || {}, last = St && St.stage === "done" ? St.last : null;
+      box.innerHTML = `<div class="cgtable skeetbl runestack dash"><h3>Rune-Roll</h3><div class="rswrap"><canvas class="skcanvas" width="${W}" height="${H}"></canvas>
+        <div class="dashside"><p class="lore">A row of long wooden lanes at the back of the arcade wing, each ending in a target of carved rings. "Nine balls," says the attendant, setting them clacking into the trough. "Roll them up, not throw them. The little cups at the top are worth a hundred - if you can find them."</p>
+        <div class="skballs">${Array.from({ length: K.balls }, (_, i) => { const t = St && St.throws[i]; return `<span class="${t ? "used" : ""}">${t ? t.pts : ""}</span>`; }).join("")}</div><div class="sktotal">Score <b>${St ? St.score : 0}</b></div>
+        <table class="paytable"><tr><th>Score</th><th>Pays</th></tr>${K.PAY.map(([s, m]) => `<tr class="${St && St.score >= s ? "won" : ""}"><td>${s}+</td><td>${Math.round(bet * m)} gold</td></tr>`).join("")}</table>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? "" : `<button class="primary" data-skstart>Drop the balls (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">Move the mouse across the lane to aim; hold the button to wind up and let go to roll. A soft roll stops in the lower rings, a hard one reaches the top - and strays more. A ticket for every ${K.ticketPer} points; a card the first time ever past ${K.MARKS.join(", ")}${K.MARKS.map((m) => (C[m] ? " ✓" : "")).join("")}. Best ${F.fa_skee_best || 0}.</div>${this.cgStats("skee")}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-skstart]")) q("[data-skstart]").addEventListener("click", () => { const r = g.faStart("skee", bet); this.cgNote = r.error || "Nine balls - roll them up."; this.skIn = []; this.cgSfx(r.error ? "miss" : "chain", 0.4); this.renderCasino(); });
+      const cv = this.skCanvas = q(".skcanvas");
+      cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(); this.skAim = CM.ARC.clamp((((e.clientX - r.left) / r.width) * W - TX) / TS, -1, 1); });
+      cv.addEventListener("mousedown", () => { const S2 = g.faState("skee"); if (!S2 || S2.stage !== "play" || this.skBall) return; this.skHold = performance.now(); });
+      const let_go = () => { if (!this.skHold) return; const S2 = g.faState("skee"), pw = this.skPower || 0; this.skHold = 0; if (!S2 || S2.stage !== "play") return; const out = g.faThrow("skee", this.skAim || 0, pw); if (out.error) return; this.skBall = { at: performance.now(), out, aim: this.skAim || 0 }; this.cgSfx("grind", 0.35, 1.4); };
+      cv.addEventListener("mouseup", let_go); cv.addEventListener("mouseleave", let_go);
+      if (!this.skLoop) { const loop = (now) => { if (!this.skCanvas || !this.skCanvas.isConnected || this.cgView !== "skee") { this.skLoop = null; return; } this.skFrame(now); this.skLoop = requestAnimationFrame(loop); }; this.skLoop = requestAnimationFrame(loop); }
+    },
+    skFrame(now) {
+      const g = this.game, St = g.faState("skee"), live = St && St.stage === "play", p = this.skCanvas.getContext("2d");
+      if (this.skHold) { const t = ((now - this.skHold) / 1300) % 2; this.skPower = t < 1 ? t : 2 - t; }
+      p.fillStyle = "#1A1210"; p.fillRect(0, 0, W, H);
+      // the marquee
+      p.fillStyle = "#4A1A30"; p.fillRect(30, 6, W - 60, 34); p.strokeStyle = "#F0C040"; p.lineWidth = 2; p.strokeRect(30, 6, W - 60, 34); p.lineWidth = 1; for (let k = 0; k < 16; k++) { p.fillStyle = (Math.floor(now / 160) + k) % 3 ? "#7A5A20" : "#FFF0A0"; p.beginPath(); p.arc(40 + k * ((W - 80) / 15), 44, 3, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#FFE070"; p.font = "bold 18px Georgia"; p.textAlign = "center"; p.fillText("RUNE · ROLL", TX, 30); p.textAlign = "left";
+      // the target
+      p.fillStyle = "#3A2418"; p.beginPath(); p.moveTo(TX - TS - 20, TY + 130); p.lineTo(TX - TS - 10, TY - 30); p.lineTo(TX + TS + 10, TY - 30); p.lineTo(TX + TS + 20, TY + 130); p.fill();
+      const [cx, cy] = tgt(0, 0.6); [[0.43, "#6A4A2A", "10"], [0.31, "#7A3A2A", "20"], [0.2, "#5A3A6A", "30"], [0.1, "#3A5A7A", "40"]].forEach(([r, c, t]) => { p.fillStyle = c; p.beginPath(); p.ellipse(cx, cy, r * TS, r * 100, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#C8A040"; p.stroke(); p.fillStyle = "#F0D070"; p.font = "bold 11px Georgia"; p.fillText(t, cx - 6, cy - r * 100 + 13); });
+      p.fillStyle = "#101010"; p.beginPath(); p.ellipse(cx, cy, 0.1 * TS * 0.7, 7, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFE070"; p.font = "bold 12px Georgia"; p.fillText("50", cx - 7, cy + 22);
+      for (const sx of [-0.58, 0.58]) { const [hx, hy] = tgt(sx, 1.02); p.fillStyle = "#101010"; p.beginPath(); p.ellipse(hx, hy, 0.065 * TS, 6, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#F0C040"; p.stroke(); p.fillStyle = "#FFE070"; p.font = "bold 11px Georgia"; p.fillText("100", hx - 10, hy - 9); }
+      const glow = p.createRadialGradient(cx, cy, 10, cx, cy, 160); glow.addColorStop(0, "rgba(255,220,140,0.12)"); glow.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = glow; p.fillRect(0, 0, W, 300);
+      for (const b of this.skIn || []) { const [x, y] = tgt(b.x, b.y), k = Math.max(0, 1 - (now - b.at) / 700); if (k > 0) { p.fillStyle = `rgba(255,240,160,${k * 0.6})`; p.beginPath(); p.arc(x, y, 14 + (1 - k) * 20, 0, Math.PI * 2); p.fill(); } }
+      // the lane, in perspective
+      const ramp = TY + 150, laneTop = ramp + 10, laneBot = H - 20; p.fillStyle = "#6A4A28"; p.beginPath(); p.moveTo(TX - 70, laneTop); p.lineTo(TX + 70, laneTop); p.lineTo(TX + 170, laneBot); p.lineTo(TX - 170, laneBot); p.fill();
+      p.strokeStyle = "rgba(0,0,0,0.25)"; for (let k = -4; k <= 4; k++) { p.beginPath(); p.moveTo(TX + k * 15, laneTop); p.lineTo(TX + k * 37, laneBot); p.stroke(); } p.fillStyle = "rgba(255,240,200,0.06)"; p.beginPath(); p.moveTo(TX - 30, laneTop); p.lineTo(TX + 10, laneTop); p.lineTo(TX + 30, laneBot); p.lineTo(TX - 80, laneBot); p.fill();
+      p.fillStyle = "#8A5A30"; p.beginPath(); p.moveTo(TX - 70, laneTop); p.lineTo(TX + 70, laneTop); p.lineTo(TX + 64, ramp - 6); p.lineTo(TX - 64, ramp - 6); p.fill();
+      const ball = (x, y, r) => { const gr = p.createRadialGradient(x - r * 0.35, y - r * 0.35, 1, x, y, r); gr.addColorStop(0, "#F0D8A8"); gr.addColorStop(1, "#8A5A28"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); };
+      // the roll
+      if (this.skBall) { const B = this.skBall, t = (now - B.at) / 1000, o = B.out, startX = TX + B.aim * 150;
+        if (t < 0.55) { const k = t / 0.55, y = laneBot - 20 - (laneBot - 20 - ramp) * k, x = startX + (TX + B.aim * 62 - startX) * k + Math.sin(t * 60) * 1.2; ball(x, y, 12 - k * 6); }
+        else if (t < 1.05) { const k = (t - 0.55) / 0.5, [ex, ey] = tgt(o.x, o.y), x0 = TX + B.aim * 62, y0 = ramp - 6, x = x0 + (ex - x0) * k, y = y0 + (ey - y0) * k - Math.sin(k * Math.PI) * 70; p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(x, y0 + (ey - y0) * k + 4, 6, 2, 0, 0, Math.PI * 2); p.fill(); ball(x, y, 6); }
+        else { this.skBall = null; (this.skIn = this.skIn || []).push({ x: o.x, y: o.y, at: now }); (this.skPts = this.skPts || []).push({ ...o, at: now }); this.cgSfx(o.pts >= 100 ? "cardwin" : o.pts >= 40 ? "coin" : o.pts ? "bump" : "miss", 0.45, o.pts ? 1 + o.pts / 200 : 0.7);
+          if (o.over) { this.cgNote = `${o.score} points: ${o.gold ? `${o.gold} gold back` : "nothing back"}, and ${o.tickets} tickets.`; this.skTickets = { at: now, n: o.tickets }; if (o.gold) this.cgCoins(this.$("#casino-body"), 10); if (o.cards.length) this.cgSfx("cardwin", 0.5); setTimeout(() => this.renderCasino(), 1600); } else this.renderCasino(); } }
+      this.skPts = (this.skPts || []).filter((q) => now - q.at < 1000); for (const q of this.skPts) { const [x, y] = tgt(q.x, q.y); p.globalAlpha = 1 - (now - q.at) / 1000; p.fillStyle = q.pts >= 100 ? "#FFE070" : "#FFFFFF"; p.strokeStyle = "#000"; p.lineWidth = 3; p.font = `bold ${q.pts >= 50 ? 22 : 16}px Georgia`; p.textAlign = "center"; p.strokeText(q.label, x, y - 16 - (now - q.at) / 30); p.fillText(q.label, x, y - 16 - (now - q.at) / 30); p.textAlign = "left"; } p.globalAlpha = 1; p.lineWidth = 1;
+      // aiming: the ghost ball and the power
+      if (live && !this.skBall) { const a = this.skAim || 0; p.globalAlpha = 0.45; ball(TX + a * 150, laneBot - 20, 12); p.globalAlpha = 1; p.strokeStyle = "rgba(255,255,255,0.25)"; p.setLineDash([4, 6]); p.beginPath(); p.moveTo(TX + a * 150, laneBot - 30); p.lineTo(TX + a * 62, ramp); p.stroke(); p.setLineDash([]);
+        const pw = this.skHold ? this.skPower || 0 : 0; p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(W - 34, laneTop, 20, laneBot - laneTop); const pg = p.createLinearGradient(0, laneBot, 0, laneTop); pg.addColorStop(0, "#40C060"); pg.addColorStop(0.6, "#F0C040"); pg.addColorStop(1, "#E04030"); p.fillStyle = pg; p.fillRect(W - 32, laneBot - (laneBot - laneTop) * pw, 16, (laneBot - laneTop) * pw); p.fillStyle = "#F0E0B0"; p.font = "10px Georgia"; p.fillText("POWER", W - 46, laneTop - 4); }
+      if (this.skTickets && now - this.skTickets.at < 2500) { const k = Math.min(1, (now - this.skTickets.at) / 1500), len = 20 + k * 120; p.fillStyle = "#E04080"; p.fillRect(18, H - 30 - len, 26, len); p.fillStyle = "#FFD0E8"; for (let y = H - 30 - len + 6; y < H - 30; y += 12) p.fillRect(22, y, 18, 1); p.fillStyle = "#FFF"; p.font = "bold 12px monospace"; p.fillText(`${this.skTickets.n}`, 50, H - 34); }
+      if (!live && !this.skBall) { p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(0, H - 50, W, 50); p.fillStyle = "#F0E0B0"; p.font = "15px Georgia"; p.textAlign = "center"; p.fillText(St && St.last ? `Last game: ${St.last.score} points` : "Set a stake and drop the balls", TX, H - 22); p.textAlign = "left"; }
+    },
+  });
+}
+
+// ---- 76zs-bard.js ----
+"use strict";
+// The Bard's Stage, the window's side: the tavern stage under footlights - curtains at the sides, a crowd of heads
+// bobbing to the beat at the bottom, four lanes of light ending in four rune-stones on the strike line (they glow and
+// press down when struck); notes falling as glowing gems in each lane's colour, chords side by side; Perfect, Good and
+// Miss flashing over the line, the combo counting up, the cheer bar at the side going from red to gold. The music:
+// a kick and a hat on the beat, and each struck note sung by a little plucked voice, all made here with the Web Audio
+// clock. D F J K (or the arrows) to strike. The rules are 64zza-bard.js.
+CM.CG_TABLES.push(["bard", "The Bard's Stage"]);
+{ const BD = CM.BD, W = 380, H = 500, LINE = 430, LW = 62, LX = W / 2 - LW * 2, PX = 150, COL = ["#E05050", "#50B0F0", "#60D070", "#F0C040"], KEYS = { KeyD: 0, KeyF: 1, KeyJ: 2, KeyK: 3, ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
+  const scale = [0, 2, 4, 5, 7, 9, 11];
+  Object.assign(CM.ARC.reg.bard, {
+    ui: { W, H, scale: 1.05, frame: "#5A1A28", start: "Take the stage", go: "Level 1. Play!", over: "The bard is booed off",
+      lore: "The tavern stage at the back of the Joker has a lute on a stand and a crowd that knows what it likes. \"Strike each note as it reaches the line,\" says the landlady. \"Keep them cheering and the house pays by the tune.\"",
+      help: "D F J K (or ← ↓ ↑ →) to strike the four lanes as the notes cross the line: Perfect 300, Good 100, a combo of ten or more multiplies. Misses drain the crowd's cheer; empty it and you are booed off (a life). Finish the tune for a bonus by accuracy.",
+      keys: Object.keys(KEYS) },
+    press(L, code, ui) { const lane = KEYS[code]; if (lane === undefined) return; L.strike(lane); (ui.bdPress = ui.bdPress || [0, 0, 0, 0])[lane] = performance.now(); },
+    click(L, x, y, ui) { const lane = Math.floor((x - LX) / LW); if (lane >= 0 && lane < 4) { L.strike(lane); (ui.bdPress = ui.bdPress || [0, 0, 0, 0])[lane] = performance.now(); } },
+    lifeIcon(p, x, y) { p.fillStyle = "#C08040"; p.beginPath(); p.ellipse(x, y + 1, 4, 5, 0, 0, Math.PI * 2); p.fill(); p.fillRect(x - 1, y - 8, 2, 6); },
+    // a little synth on the page's audio clock
+    audio() { if (this.ac === undefined) { try { const A = window.AudioContext || window.webkitAudioContext; this.ac = A ? new A() : null; } catch (e) { this.ac = null; } } if (this.ac && this.ac.state === "suspended") this.ac.resume(); return this.ac; },
+    tone(freq, dur, type, vol) { const ac = this.audio(); if (!ac) return; const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = freq; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02); },
+    kick() { const ac = this.audio(); if (!ac) return; const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.15); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2); o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.22); },
+    event(ui, e, now, L, fx) {
+      const fl = this.flash = this.flash || [];
+      if (e.kind === "beat") { if (e.n % 2 === 0) this.kick(); else this.tone(6000, 0.03, "square", 0.03); }
+      else if (e.kind === "hit") { const d = e.deg, semi = scale[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7), f = 261.6 * Math.pow(2, (semi + L.key) / 12); this.tone(f, 0.35, "triangle", 0.18); this.tone(f * 2, 0.12, "sine", 0.05); fl.push({ lane: e.lane, text: e.how === "perfect" ? "PERFECT" : "GOOD", c: e.how === "perfect" ? "#FFE070" : "#A0E0FF", at: now }); ui.arcBurst(fx, LX + e.lane * LW + LW / 2, LINE, [COL[e.lane], "#FFFFFF"], e.how === "perfect" ? 12 : 6, 120, 200); }
+      else if (e.kind === "miss") { fl.push({ lane: e.lane, text: "MISS", c: "#FF7060", at: now }); this.tone(110, 0.15, "sawtooth", 0.05); } else if (e.kind === "empty") this.tone(180, 0.05, "square", 0.02);
+      else if (e.kind === "boo") { ui.cgSfx("cardlose", 0.5); fx.shake = 0.3; } else if (e.kind === "done") { ui.cgSfx("victory", 0.5); ui.cgNote = `The tune is done: ${Math.round(e.acc * 100)}% struck, a bonus of ${e.bonus}.`; }
+    },
+    draw(p, L, now) {
+      const bg = p.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#1A0A14"); bg.addColorStop(1, "#3A1A1A"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      for (const sx of [0, W]) { const cg = p.createLinearGradient(sx, 0, sx === 0 ? 40 : W - 40, 0); cg.addColorStop(0, "#8A1A28"); cg.addColorStop(1, "#4A0A14"); p.fillStyle = cg; p.fillRect(sx === 0 ? 0 : W - 40, 0, 40, H); p.strokeStyle = "rgba(0,0,0,0.3)"; for (let k = 0; k < 4; k++) { const x = sx === 0 ? 8 + k * 9 : W - 8 - k * 9; p.beginPath(); p.moveTo(x, 0); p.lineTo(x, H); p.stroke(); } }
+      // lanes
+      const beatK = L ? 1 - (((L.t % L.beat) + L.beat) % L.beat) / L.beat : 0;
+      for (let i = 0; i < 4; i++) { const x = LX + i * LW, lg = p.createLinearGradient(0, 0, 0, LINE); lg.addColorStop(0, "rgba(255,255,255,0)"); lg.addColorStop(1, `${COL[i]}33`); p.fillStyle = lg; p.fillRect(x + 2, 0, LW - 4, LINE); p.strokeStyle = "rgba(255,255,255,0.08)"; p.strokeRect(x + 2.5, -1, LW - 5, LINE + 2); }
+      if (L) for (let b = Math.ceil(L.t / L.beat); b * L.beat < L.t + 1.6; b++) { const y = LINE - (b * L.beat - L.t) * PX * (L.bpm / 100); p.strokeStyle = b % 4 ? "rgba(255,255,255,0.05)" : "rgba(255,220,150,0.12)"; p.beginPath(); p.moveTo(LX, y); p.lineTo(LX + 4 * LW, y); p.stroke(); }
+      // the strike line and the stones
+      p.fillStyle = `rgba(255,230,160,${0.25 + beatK * 0.25})`; p.fillRect(LX, LINE - 2, LW * 4, 4);
+
+      for (let i = 0; i < 4; i++) { const x = LX + i * LW + LW / 2, k = Math.max(0, 1 - (now - (CM.ui && CM.ui.bdPress ? CM.ui.bdPress[i] : 0)) / 160); p.save(); if (k) { p.shadowColor = COL[i]; p.shadowBlur = 20 * k; } p.fillStyle = k ? COL[i] : "#2A2030"; p.beginPath(); p.ellipse(x, LINE + 4 * k, 22, 12, 0, 0, Math.PI * 2); p.fill(); p.restore(); p.strokeStyle = COL[i]; p.lineWidth = 2; p.beginPath(); p.ellipse(x, LINE + 4 * k, 22, 12, 0, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; p.fillStyle = "#F0E0D0"; p.font = "bold 12px monospace"; p.textAlign = "center"; p.fillText("DFJK"[i], x, LINE + 26); p.textAlign = "left"; }
+
+      if (L) { // notes
+        const sp = PX * (L.bpm / 100); for (const N of L.notes) { if (N.hit && N.hit !== "miss") continue; const y = LINE - (N.t - L.t) * sp; if (y < -20) break; if (y > H + 20) continue; const x = LX + N.lane * LW + LW / 2, missed = N.hit === "miss"; p.save(); p.globalAlpha = missed ? 0.3 : 1; p.shadowColor = COL[N.lane]; p.shadowBlur = missed ? 0 : 10; const g2 = p.createRadialGradient(x - 5, y - 4, 1, x, y, 16); g2.addColorStop(0, "#FFFFFF"); g2.addColorStop(1, COL[N.lane]); p.fillStyle = g2; p.beginPath(); p.moveTo(x, y - 12); p.lineTo(x + 18, y); p.lineTo(x, y + 12); p.lineTo(x - 18, y); p.closePath(); p.fill(); p.restore(); }
+        // calls
+        this.flash = (this.flash || []).filter((q) => now - q.at < 500); for (const q of this.flash) { const k = (now - q.at) / 500; p.globalAlpha = 1 - k; p.fillStyle = q.c; p.font = "bold 14px Georgia"; p.textAlign = "center"; p.fillText(q.text, LX + q.lane * LW + LW / 2, LINE - 30 - k * 20); p.textAlign = "left"; } p.globalAlpha = 1;
+        if (L.combo >= 5) { p.fillStyle = "#FFE070"; p.font = `bold ${22 + Math.min(10, L.combo / 5)}px Georgia`; p.textAlign = "center"; p.fillText(`${L.combo}`, W / 2, 70); p.font = "11px Georgia"; p.fillText(`COMBO${L.combo >= 10 ? ` ×${1 + Math.min(3, Math.floor(L.combo / 10))}` : ""}`, W / 2, 86); p.textAlign = "left"; }
+        // cheer
+        const ch = Math.max(0, L.cheer) / 100; p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(W - 30, 30, 12, 300); const cg = p.createLinearGradient(0, 330, 0, 30); cg.addColorStop(0, "#E04030"); cg.addColorStop(0.5, "#F0C040"); cg.addColorStop(1, "#80F080"); p.fillStyle = cg; p.fillRect(W - 28, 330 - 296 * ch, 8, 296 * ch); p.fillStyle = "#F0E0B0"; p.font = "9px Georgia"; p.fillText("CHEER", W - 38, 344);
+        const prog = CM.ARC.clamp(L.t / L.len, 0, 1); p.fillStyle = "rgba(255,255,255,0.15)"; p.fillRect(LX, 8, LW * 4, 4); p.fillStyle = "#F0C040"; p.fillRect(LX, 8, LW * 4 * prog, 4);
+        if (L.t < 0) { p.fillStyle = "#FFE070"; p.font = "bold 40px Georgia"; p.textAlign = "center"; p.fillText(String(Math.ceil(-L.t / L.beat)), W / 2, 220); p.textAlign = "left"; } }
+      // the crowd
+      for (let k = 0; k < 14; k++) { const x = 20 + k * 26, bob = L && !L.dead ? Math.abs(Math.sin((L.t / L.beat) * Math.PI + k)) * 5 * (L.cheer / 100) : 0, y = H - 12 - bob; p.fillStyle = ["#3A2A20", "#2A2030", "#4A3020"][k % 3]; p.beginPath(); p.arc(x, y, 11, Math.PI, 0); p.fill(); p.beginPath(); p.arc(x, y - 14, 7, 0, Math.PI * 2); p.fill(); if (L && L.cheer > 70 && k % 4 === 1) { p.strokeStyle = "#3A2A20"; p.lineWidth = 3; p.beginPath(); p.moveTo(x + 6, y - 8); p.lineTo(x + 10, y - 26 - bob); p.stroke(); p.lineWidth = 1; } }
+      const fl = p.createLinearGradient(0, H - 40, 0, H); fl.addColorStop(0, "rgba(255,200,120,0)"); fl.addColorStop(1, "rgba(255,200,120,0.12)"); p.fillStyle = fl; p.fillRect(0, H - 40, W, 40);
+    },
+  });
+}
+
+// ---- 76zt-patience.js ----
+"use strict";
+// The Patience Table, the window's side: a green baize table under a lamp, the cards drawn with the house's own face -
+// rounded ivory with the rank and suit in the corners, pips or a crowned court figure in the middle, backs in claret
+// with a gold Joker's diamond - sliding to wherever they go; empty places outlined (an A on a foundation, a K on an
+// empty Klondike column). Drag a card (or a run) to move it, or click it and then click where it goes; double-click to
+// send it home; click the stock to turn a card. When the last card goes up, the cards bounce away down the table in the
+// old way. The rules are 64zzb-patience.js.
+CM.CG_TABLES.push(["patience", "The Patience Table"]);
+{ const floor0 = CM.UI.prototype.renderFloor, CW = 70, CH = 98, GAP = 14, W = 760, H = 560, TOPY = 16, TABY = 136, SUIT = ["♠", "♥", "♦", "♣"], RANK = ["", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  const id = (c) => c.s * 13 + c.r;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "patience") return this.cgPatience(box); return floor0.call(this, box); },
+    cgPatience(box) {
+      const g = this.game, P = g.ptStore(), D = g.ptDeal(), total = P.wins.klondike + P.wins.freecell, next = CM.PAT.MARKS.find(([n]) => n > total);
+      box.innerHTML = `<div class="cgtable patience"><h3>The Patience Table</h3><p class="lore">A quiet table in the corner, green baize under a lamp, and two packs laid ready. "Patience is free," says the attendant, "and the house rewards it."</p>
+        <canvas class="ptcanvas" width="${W}" height="${H}"></canvas>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.ptCard ? this.cgCardWon(this.ptCard) : ""}
+        <div class="row"><button class="${!D || D.mode === "klondike" ? "primary" : ""}" data-ptnew="klondike">New Klondike</button><button class="${D && D.mode === "freecell" ? "primary" : ""}" data-ptnew="freecell">New FreeCell</button>${D && !D.done ? `<button data-ptundo ${D.hist.length ? "" : "disabled"}>Take back</button><button data-ptauto>Put up what's safe</button>` : ""}<button data-leave>Leave</button></div>
+        <div class="small">Drag a card or a run to move it, or click it then click where it goes; double-click sends a card home; click the stock to turn a card (and again to turn the pile over). Build columns down in alternating colours, foundations up by suit from the ace. A Klondike win pays ${CM.PAT.gold.klondike} gold and ${CM.PAT.tickets.klondike} tickets, FreeCell ${CM.PAT.gold.freecell} gold and ${CM.PAT.tickets.freecell}; cards at the 1st, 5th, 15th and 40th win${next ? ` (next at ${next[0]})` : ""}. Won: Klondike ${P.wins.klondike} of ${P.played.klondike}, FreeCell ${P.wins.freecell} of ${P.played.freecell}.</div></div>`;
+      const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll("[data-ptnew]").forEach((b) => b.addEventListener("click", () => { const Dd = g.ptDeal(); if (Dd && !Dd.done && Dd.moves > 0 && !(this.ptAsk && performance.now() - this.ptAsk < 4000)) { this.ptAsk = performance.now(); this.cgNote = "Leave this deal unfinished? Click again to deal a new one."; this.renderCasino(); return; } this.ptAsk = 0; g.ptNew(b.dataset.ptnew); this.ptPos = {}; this.ptSel = null; this.ptCard = null; this.ptWinFx = null; this.cgNote = ""; this.cgSfx("chain", 0.4); this.renderCasino(); }));
+      if (q("[data-ptundo]")) q("[data-ptundo]").addEventListener("click", () => { if (g.ptDeal().undo()) { g.ptKeep(); this.cgSfx("card", 0.3, 0.8); this.renderCasino(); } });
+      if (q("[data-ptauto]")) q("[data-ptauto]").addEventListener("click", () => { const Dd = g.ptDeal(); Dd.push(); const n = Dd.canFinish() ? this.ptFinish(Dd) : Dd.autoUp(); if (!n) Dd.hist.pop(); this.ptAfter(n ? "up" : null); });
+      const cv = this.ptCanvas = q(".ptcanvas"), pos = (e) => { const r = cv.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H]; };
+      cv.addEventListener("mousedown", (e) => { const Dd = g.ptDeal(); if (!Dd || Dd.done) return; const [x, y] = pos(e), hit = this.ptHit(Dd, x, y); if (!hit) { this.ptSel = null; return; }
+        if (hit.pile === "stock") { Dd.draw(); this.ptAfter("draw"); return; } const cards = hit.pile === "empty" ? [] : Dd.lift(hit); if (cards.length) this.ptDrag = { from: hit, cards, x0: x, y0: y, x, y, moved: false }; else if (this.ptSel && hit.pile !== "stock") this.ptTry(Dd, this.ptSel, hit.pile === "empty" ? hit.to : hit); });
+      cv.addEventListener("mousemove", (e) => { if (!this.ptDrag) return; const [x, y] = pos(e); this.ptDrag.x = x; this.ptDrag.y = y; if (Math.hypot(x - this.ptDrag.x0, y - this.ptDrag.y0) > 6) this.ptDrag.moved = true; });
+      cv.addEventListener("mouseup", (e) => { const Dd = g.ptDeal(), Dg = this.ptDrag; this.ptDrag = null; if (!Dd || !Dg) return; const [x, y] = pos(e);
+        if (Dg.moved) { const to = this.ptDrop(Dd, x - (Dg.x0 - this.ptCardXY(Dd, Dg.from)[0]) + CW / 2, y); if (!to || !Dd.move(Dg.from, to)) this.cgSfx("miss", 0.2); else this.ptAfter("move"); return; }
+        if (this.ptSel && !(this.ptSel.pile === Dg.from.pile && this.ptSel.i === Dg.from.i)) { const t = { pile: Dg.from.pile === "tab" ? "tab" : Dg.from.pile, i: Dg.from.i }; if (Dd.move(this.ptSel, t)) { this.ptSel = null; this.ptAfter("move"); return; } }
+        this.ptSel = Dg.from; this.cgSfx("card", 0.2, 1.4); });
+      cv.addEventListener("dblclick", (e) => { const Dd = g.ptDeal(); if (!Dd || Dd.done) return; const [x, y] = pos(e), hit = this.ptHit(Dd, x, y); if (hit && hit.pile !== "stock" && hit.pile !== "empty") { if (hit.pile === "tab") hit.k = Dd.tab[hit.i].length - 1; if (Dd.sendHome(hit)) { this.ptSel = null; this.ptAfter("move"); } } });
+      if (!this.ptLoop) { let prev = performance.now(); const loop = (now) => { if (!this.ptCanvas || !this.ptCanvas.isConnected || this.cgView !== "patience") { this.ptLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.ptFrame(dt, now); this.ptLoop = requestAnimationFrame(loop); }; this.ptLoop = requestAnimationFrame(loop); }
+    },
+    ptTry(Dd, from, to) { if (Dd.move(from, to)) { this.ptSel = null; this.ptAfter("move"); } else { this.cgSfx("miss", 0.2); this.ptSel = null; } },
+    ptFinish(Dd) { let n = 0, moved = true; while (moved) { moved = false; for (let i = 0; i < Dd.tab.length && !moved; i++) { const col = Dd.tab[i]; if (!col.length) continue; for (let f = 0; f < 4; f++) if (Dd.move({ pile: "tab", i, k: col.length - 1 }, { pile: "found", i: f })) { Dd.hist.pop(); n++; moved = true; break; } } } return n; },
+    ptAfter(kind) {
+      const g = this.game, Dd = g.ptDeal(); if (kind === "move" || kind === "up") { const n = Dd.autoUp(); this.cgSfx("cardplace", 0.35, 1 + Math.random() * 0.3); if (n) setTimeout(() => this.cgSfx("card", 0.3, 1.5), 120); } else if (kind === "draw") this.cgSfx("card", 0.3, 1.2);
+      g.ptKeep(); if (Dd.won()) { const r = g.ptWin(); if (r) { this.cgNote = `Won in ${r.moves} moves: ${r.gold} gold and ${r.tickets} tickets${r.card ? `, and a card - ${r.card}` : ""}!`; this.ptCard = r.card; this.ptWinFx = { at: performance.now(), cards: [] }; this.cgSfx("victory", 0.6); if (r.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 400); } }
+      else if (Dd.canFinish() && !this.ptOffered) { this.ptOffered = true; this.cgNote = "Every card is showing - \"Put up what's safe\" will play the rest off."; }
+      this.renderCasino();
+    },
+    // where things sit on the table
+    ptSlots(Dd) { const kl = Dd.mode === "klondike", cols = Dd.tab.length, tw = cols * (CW + GAP) - GAP, x0 = (W - tw) / 2, slot = { tab: [], found: [], cell: [] };
+      for (let i = 0; i < cols; i++) slot.tab.push([x0 + i * (CW + GAP), TABY]);
+      if (kl) { slot.stock = [x0, TOPY]; slot.waste = [x0 + CW + GAP, TOPY]; for (let i = 0; i < 4; i++) slot.found.push([x0 + (3 + i) * (CW + GAP), TOPY]); }
+      else { for (let i = 0; i < 4; i++) slot.cell.push([x0 + i * (CW + GAP), TOPY]); for (let i = 0; i < 4; i++) slot.found.push([x0 + (4 + i) * (CW + GAP), TOPY]); }
+      return slot; },
+    ptFan(col) { const n = col.length, room = H - TABY - CH - 10; let dn = 10, up = 26; const need = col.reduce((t, c, i) => (i === n - 1 ? t : t + (c.up ? up : dn)), 0); if (need > room) { const k = room / need; dn *= k; up *= k; } return [dn, up]; },
+    ptCardXY(Dd, from) { const S = this.ptSlots(Dd); if (from.pile === "tab") { const col = Dd.tab[from.i], [dn, up] = this.ptFan(col); let y = S.tab[from.i][1]; for (let k = 0; k < from.k; k++) y += col[k].up ? up : dn; return [S.tab[from.i][0], y]; } return from.pile === "waste" ? S.waste : from.pile === "cell" ? S.cell[from.i] : S.found[from.i]; },
+    ptHit(Dd, x, y) { const S = this.ptSlots(Dd), inn = ([sx, sy], h = CH) => x >= sx && x < sx + CW && y >= sy && y < sy + h;
+      if (S.stock && inn(S.stock)) return { pile: "stock" }; if (S.waste && inn(S.waste) && Dd.waste.length) return { pile: "waste" };
+      for (let i = 0; i < 4; i++) { if (S.cell[i] && inn(S.cell[i])) return Dd.cells[i] ? { pile: "cell", i } : { pile: "empty", to: { pile: "cell", i } }; if (inn(S.found[i])) return Dd.found[i].length ? { pile: "found", i } : { pile: "empty", to: { pile: "found", i } }; }
+      for (let i = 0; i < Dd.tab.length; i++) { const col = Dd.tab[i]; if (!col.length) { if (inn(S.tab[i])) return { pile: "empty", to: { pile: "tab", i } }; continue; } for (let k = col.length - 1; k >= 0; k--) { const [cx, cy] = this.ptCardXY(Dd, { pile: "tab", i, k }); if (x >= cx && x < cx + CW && y >= cy && y < cy + CH) return { pile: "tab", i, k }; } }
+      return null; },
+    // where a dragged card is let go: the nearest place it may go
+    ptDrop(Dd, x, y) { const S = this.ptSlots(Dd), cand = []; S.tab.forEach(([sx], i) => cand.push([{ pile: "tab", i }, Math.abs(sx + CW / 2 - x) + (y < TABY - 20 ? 200 : 0)])); S.found.forEach(([sx, sy], i) => cand.push([{ pile: "found", i }, Math.abs(sx + CW / 2 - x) + Math.abs(sy + CH / 2 - y)])); S.cell.forEach(([sx, sy], i) => cand.push([{ pile: "cell", i }, Math.abs(sx + CW / 2 - x) + Math.abs(sy + CH / 2 - y)]));
+      cand.sort((a, b) => a[1] - b[1]); return cand[0][1] < CW * 1.2 ? cand[0][0] : null; },
+    ptFrame(dt, now) {
+      const g = this.game, Dd = g.ptDeal(), p = this.ptCanvas.getContext("2d"), baize = p.createRadialGradient(W / 2, H * 0.4, 40, W / 2, H / 2, W * 0.7); baize.addColorStop(0, "#2A7A4A"); baize.addColorStop(1, "#0E3A20"); p.fillStyle = baize; p.fillRect(0, 0, W, H);
+      p.fillStyle = "rgba(255,255,255,0.025)"; for (let k = 0; k < 400; k++) p.fillRect((k * 97) % W, (k * 61) % H, 1, 1);
+      if (!Dd) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 26px Georgia"; p.textAlign = "center"; p.fillText("Deal a game of Klondike or FreeCell", W / 2, H / 2); p.textAlign = "left"; return; }
+      const S = this.ptSlots(Dd), outline = ([x, y], t) => { p.strokeStyle = "rgba(255,255,255,0.25)"; p.lineWidth = 2; p.beginPath(); p.roundRect ? p.roundRect(x, y, CW, CH, 7) : p.rect(x, y, CW, CH); p.stroke(); p.lineWidth = 1; if (t) { p.fillStyle = "rgba(255,255,255,0.22)"; p.font = "bold 26px Georgia"; p.textAlign = "center"; p.fillText(t, x + CW / 2, y + CH / 2 + 9); p.textAlign = "left"; } };
+      if (S.stock) { outline(S.stock, "↻"); outline(S.waste); } S.found.forEach((s, i) => outline(s, Dd.found[i].length ? "" : "A")); S.cell.forEach((s) => outline(s)); S.tab.forEach((s) => outline(s, Dd.mode === "klondike" ? "K" : ""));
+      // every card's target, eased toward
+      const tgt = []; const dragIds = new Set(this.ptDrag && this.ptDrag.moved ? this.ptDrag.cards.map(id) : []), selIds = new Set(this.ptSel ? Dd.lift(this.ptSel).map(id) : []);
+      if (S.stock) Dd.stock.forEach((c, k) => tgt.push([c, S.stock[0] - Math.min(k, 6) * 0.6, S.stock[1] - Math.min(k, 6) * 0.6])); if (S.waste) Dd.waste.forEach((c, k) => tgt.push([c, S.waste[0] + Math.max(0, k - Dd.waste.length + 3) * 14, S.waste[1]]));
+      Dd.found.forEach((f, i) => f.forEach((c) => tgt.push([c, ...S.found[i]]))); (Dd.cells || []).forEach((c, i) => c && tgt.push([c, ...S.cell[i]]));
+      Dd.tab.forEach((col, i) => col.forEach((c, k) => tgt.push([c, ...this.ptCardXY(Dd, { pile: "tab", i, k })])));
+      const P = this.ptPos = this.ptPos || {}, win = this.ptWinFx;
+      if (win) { // the old way: one by one off the foundations, bouncing down the table
+        const t = (now - win.at) / 1000; if (win.cards.length < 52 && t > win.cards.length * 0.12) { const f = win.cards.length % 4, top = Dd.found[f][12 - Math.floor(win.cards.length / 4)]; if (top) win.cards.push({ c: top, x: S.found[f][0], y: S.found[f][1], vx: (Math.random() < 0.5 ? -1 : 1) * (120 + Math.random() * 160), vy: -Math.random() * 200 }); }
+        for (const w of win.cards) { w.vy += 900 * dt; w.x += w.vx * dt; w.y += w.vy * dt; if (w.y > H - CH) { w.y = H - CH; w.vy = -w.vy * 0.75; } (win.trail = win.trail || []).push([w.c, w.x, w.y]); }
+        if (!win.bg) { win.bg = document.createElement("canvas"); win.bg.width = W; win.bg.height = H; } const bp = win.bg.getContext("2d"); for (const [c, x, y] of win.trail || []) this.ptCardDraw(bp, c, x, y, false); win.trail = []; p.drawImage(win.bg, 0, 0);
+        const gone = new Set(win.cards.map((w) => id(w.c))); for (const [c, x, y] of tgt) if (c.up && !gone.has(id(c))) this.ptCardDraw(p, c, x, y, false); return; }
+      for (const [c, x, y] of tgt) { const k = id(c), cur = P[k] || (P[k] = { x, y }); cur.x += (x - cur.x) * Math.min(1, dt * 14); cur.y += (y - cur.y) * Math.min(1, dt * 14); if (Math.abs(x - cur.x) + Math.abs(y - cur.y) < 0.5) { cur.x = x; cur.y = y; } }
+      const moving = tgt.filter(([c]) => { const cur = P[id(c)]; return Math.abs(cur.x - tgt.find(([d]) => d === c)[1]) > 1 || dragIds.has(id(c)); });
+      for (const [c] of tgt) { if (dragIds.has(id(c)) || moving.some(([d]) => d === c)) continue; this.ptCardDraw(p, c, P[id(c)].x, P[id(c)].y - (selIds.has(id(c)) ? 4 : 0), selIds.has(id(c))); }
+      for (const [c] of moving) { if (dragIds.has(id(c))) continue; this.ptCardDraw(p, c, P[id(c)].x, P[id(c)].y, false, true); }
+      if (this.ptDrag && this.ptDrag.moved) { const Dg = this.ptDrag, [bx, by] = this.ptCardXY(Dd, Dg.from), dx = Dg.x - Dg.x0, dy = Dg.y - Dg.y0; Dg.cards.forEach((c, k) => this.ptCardDraw(p, c, bx + dx, by + dy + k * 26, true, true)); }
+      p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(W - 150, H - 26, 146, 20); p.fillStyle = "#F0E0B0"; p.font = "12px monospace"; p.fillText(`${Dd.mode === "klondike" ? "KLONDIKE" : "FREECELL"}  MOVES ${Dd.moves}`, W - 144, H - 12);
+    },
+    ptCardDraw(p, c, x, y, lit, lifted) {
+      const rr = (r) => { p.beginPath(); p.roundRect ? p.roundRect(x, y, CW, CH, r) : p.rect(x, y, CW, CH); };
+      p.fillStyle = `rgba(0,0,0,${lifted ? 0.4 : 0.25})`; p.beginPath(); p.roundRect ? p.roundRect(x + (lifted ? 6 : 2), y + (lifted ? 8 : 3), CW, CH, 7) : p.rect(x + 2, y + 3, CW, CH); p.fill();
+      if (!c.up) { const bg = p.createLinearGradient(x, y, x + CW, y + CH); bg.addColorStop(0, "#7A1A2A"); bg.addColorStop(1, "#4A0A18"); p.fillStyle = bg; rr(7); p.fill(); p.strokeStyle = "#E0B860"; p.lineWidth = 1.5; p.beginPath(); p.roundRect ? p.roundRect(x + 5, y + 5, CW - 10, CH - 10, 4) : p.rect(x + 5, y + 5, CW - 10, CH - 10); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E0B860"; p.beginPath(); p.moveTo(x + CW / 2, y + CH / 2 - 14); p.lineTo(x + CW / 2 + 10, y + CH / 2); p.lineTo(x + CW / 2, y + CH / 2 + 14); p.lineTo(x + CW / 2 - 10, y + CH / 2); p.fill(); return; }
+      p.fillStyle = "#FBF6E8"; rr(7); p.fill(); p.strokeStyle = lit ? "#F0B020" : "rgba(60,40,20,0.4)"; p.lineWidth = lit ? 3 : 1; rr(7); p.stroke(); p.lineWidth = 1;
+      const col = c.s === 1 || c.s === 2 ? "#C02030" : "#1A1A22", sy = SUIT[c.s], rk = RANK[c.r]; p.fillStyle = col; p.font = "bold 15px Georgia"; p.fillText(rk, x + 5, y + 17); p.font = "13px Georgia"; p.fillText(sy, x + 5, y + 31);
+      p.save(); p.translate(x + CW - 5, y + CH - 5); p.rotate(Math.PI); p.font = "bold 15px Georgia"; p.fillText(rk, 0, 12); p.restore();
+      if (c.r > 10) { p.fillStyle = col === "#C02030" ? "rgba(192,32,48,0.12)" : "rgba(30,30,40,0.1)"; p.fillRect(x + 16, y + 20, CW - 32, CH - 40); p.strokeStyle = "#C8962A"; p.strokeRect(x + 16, y + 20, CW - 32, CH - 40); p.fillStyle = "#C8962A"; p.beginPath(); p.moveTo(x + CW / 2 - 10, y + 40); p.lineTo(x + CW / 2 - 10, y + 30); p.lineTo(x + CW / 2 - 5, y + 36); p.lineTo(x + CW / 2, y + 28); p.lineTo(x + CW / 2 + 5, y + 36); p.lineTo(x + CW / 2 + 10, y + 30); p.lineTo(x + CW / 2 + 10, y + 40); p.fill(); p.fillStyle = col; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.fillText(rk, x + CW / 2, y + 66); p.textAlign = "left"; }
+      else { p.font = `${c.r === 1 ? 34 : 18}px Georgia`; p.textAlign = "center"; if (c.r === 1) p.fillText(sy, x + CW / 2, y + CH / 2 + 12); else { const rows = Math.ceil(c.r / 2); for (let i = 0; i < c.r; i++) { const colx = c.r <= 3 ? 0.5 : i % 2 ? 0.68 : 0.32, row = c.r <= 3 ? i : Math.floor(i / 2), ry = c.r <= 3 ? c.r : rows; p.fillText(sy, x + CW * colx, y + 30 + (row + 0.5) * ((CH - 44) / ry)); } } p.textAlign = "left"; }
+    },
+  });
+}
+
+// ---- 76zu-traps.js ----
+"use strict";
+// The Trapfinder's Grid, the window's side: a floor of worn flagstones lit by a lantern that follows the mouse; a stone
+// lifted flips up and away to show the earth below with its number carved in a rune-colour (1 blue, 2 green, 3 red ...),
+// pennants on their little poles flutter on marked stones, and a trap struck springs its spikes with a flash and the
+// floor shakes - the others then show where they were, and the wrongly marked ones crossed. A floor cleared: the traps
+// marked in gold and the stones glint. Left-click to lift, right-click to mark, click a number to lift around it.
+// The rules are 64zzc-traps.js.
+CM.CG_TABLES.push(["traps", "The Trapfinder's Grid"]);
+{ const floor0 = CM.UI.prototype.renderFloor, TRP = CM.TRP, NUM = ["", "#4A80F0", "#40B050", "#E04040", "#8040C0", "#C06020", "#30A0A0", "#E0E0E0", "#A0A0A0"];
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "traps") return this.cgTraps(box); return floor0.call(this, box); },
+    cgTraps(box) {
+      const g = this.game, T = g.tfStore(), B = g.tfLive, size = (B && B.size) || this.tfSize || "cellar", S = TRP.SIZES[size];
+      box.innerHTML = `<div class="cgtable traps"><h3>The Trapfinder's Grid</h3><p class="lore">Down a stair behind the Joker's kitchens there are floors the old masons trapped. The house would like them made safe. "Lift every stone that hides nothing," says the old trapfinder, handing over a lantern and a bundle of pennants. "The numbers tell you how many traps lie next to them."</p>
+        <div class="row tfsizes">${Object.entries(TRP.SIZES).map(([k, s]) => `<button data-tfnew="${k}" class="${k === size ? "primary" : ""}">${s.name[4].toUpperCase() + s.name.slice(5)} - ${s.w}×${s.h}, ${s.n} traps${T.cards[k] ? " ✓" : ""}</button>`).join("")}</div>
+        <div class="tfwrap"><canvas class="tfcanvas"></canvas></div>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.tfCard ? this.cgCardWon(this.tfCard) : ""}
+        <div class="small">Left-click to lift a stone, right-click to plant or pull a pennant, click a number whose pennants are all down to lift the rest around it. The first stone is always safe. ${S.name[0].toUpperCase() + S.name.slice(1)} pays ${S.gold} gold and ${S.tickets} tickets; its card the first time. Best times: ${Object.keys(TRP.SIZES).map((k) => `${k} ${T.best[k] ? `${T.best[k]}s` : "-"}`).join(", ")}. Won ${Object.keys(TRP.SIZES).map((k) => `${T.wins[k] || 0}/${T.played[k] || 0}`).join(", ")}.</div><div class="row"><button data-leave>Leave</button></div></div>`;
+      const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll("[data-tfnew]").forEach((b) => b.addEventListener("click", () => { this.tfSize = b.dataset.tfnew; g.tfNew(this.tfSize); this.tfFx = { flips: [], at: performance.now() }; this.tfCard = null; this.cgNote = "Lift a stone - the first is always safe."; this.cgSfx("door", 0.35); this.renderCasino(); }));
+      const cv = this.tfCanvas = q(".tfcanvas"), Bd = B || { w: S.w, h: S.h }, cs = Math.min(40, Math.floor(Math.min(720 / Bd.w, 480 / Bd.h))); cv.width = Bd.w * cs; cv.height = Bd.h * cs; this.tfCs = cs;
+      const cell = (e) => { const r = cv.getBoundingClientRect(); return [Math.floor(((e.clientX - r.left) / r.width) * Bd.w), Math.floor(((e.clientY - r.top) / r.height) * Bd.h)]; };
+      cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(); this.tfMouse = [((e.clientX - r.left) / r.width) * cv.width, ((e.clientY - r.top) / r.height) * cv.height]; });
+      cv.addEventListener("contextmenu", (e) => e.preventDefault());
+      cv.addEventListener("mousedown", (e) => { const Bl = g.tfLive; if (!Bl || Bl.stage !== "play") return; const [x, y] = cell(e); if (x < 0 || y < 0 || x >= Bl.w || y >= Bl.h) return;
+        if (e.button === 2) Bl.toggle(x, y); else if (Bl.open[y][x]) Bl.chord(x, y); else Bl.reveal(x, y); this.tfAfter(); });
+      if (!this.tfLoop) { let prev = performance.now(); const loop = (now) => { if (!this.tfCanvas || !this.tfCanvas.isConnected || this.cgView !== "traps") { this.tfLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.tfFrame(dt, now); this.tfLoop = requestAnimationFrame(loop); }; this.tfLoop = requestAnimationFrame(loop); }
+    },
+    tfAfter() {
+      const g = this.game, B = g.tfLive, fx = this.tfFx = this.tfFx || { flips: [] }, now = performance.now(); let re = false;
+      for (const e of B.events.splice(0)) {
+        if (e.kind === "lift") { this.cgSfx("step", 0.3, 1.2 + Math.min(0.8, e.n / 40)); for (let y = 0; y < B.h; y++) for (let x = 0; x < B.w; x++) if (B.open[y][x] && !(fx.seen && fx.seen[y * 100 + x])) { (fx.seen = fx.seen || {})[y * 100 + x] = 1; fx.flips.push({ x, y, at: now + Math.hypot(x - e.x, y - e.y) * 25 }); } }
+        else if (e.kind === "flag") this.cgSfx("card", 0.3, 1.5); else if (e.kind === "unflag") this.cgSfx("card", 0.2, 1.1);
+        else if (e.kind === "boom") { this.cgSfx("slam", 0.6, 0.8); this.cgSfx("hurt", 0.4); fx.boom = now; this.cgNote = `A trap! The floor is lost after ${Math.round(B.t)} seconds.`; re = true; }
+        else if (e.kind === "won") { const r = g.tfWin(); if (r) { this.cgNote = `${TRP.SIZES[B.size].name[0].toUpperCase() + TRP.SIZES[B.size].name.slice(1)} made safe in ${r.time}s${r.record ? " - a best time!" : ""}: ${r.gold} gold and ${r.tickets} tickets${r.card ? `, and a card - ${r.card}` : ""}.`; this.tfCard = r.card; this.cgSfx("victory", 0.6); if (r.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 400); fx.won = now; re = true; } }
+      }
+      if (re) setTimeout(() => this.renderCasino(), 30);
+    },
+    tfFrame(dt, now) {
+      const g = this.game, B = g.tfLive, cv = this.tfCanvas, p = cv.getContext("2d"), cs = this.tfCs, fx = this.tfFx = this.tfFx || { flips: [] }; if (B) B.update(dt);
+      const W = cv.width, H = cv.height, sh = fx.boom && now - fx.boom < 500 ? (1 - (now - fx.boom) / 500) * 8 : 0; p.save(); p.translate((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh);
+      p.fillStyle = "#1A140E"; p.fillRect(-10, -10, W + 20, H + 20); const w = B ? B.w : W / cs, h = B ? B.h : H / cs;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const X = x * cs, Y = y * cs, open = B && B.open[y][x], f = fx.flips.find((q) => q.x === x && q.y === y), k = f ? CM.ARC.clamp((now - f.at) / 180, 0, 1) : 1;
+        if (open && k > 0) { p.fillStyle = (x + y) % 2 ? "#3A2E22" : "#40342A"; p.fillRect(X, Y, cs, cs); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(X, Y, cs, 3); p.fillRect(X, Y, 3, cs);
+          if (B.mine && B.mine[y][x]) { const hit = B.boom && B.boom[0] === x && B.boom[1] === y; if (hit) { p.fillStyle = "#802010"; p.fillRect(X, Y, cs, cs); } this.tfTrap(p, X, Y, cs, hit ? now - fx.boom : 999); }
+          else { const n = B.count(x, y); if (n) { p.fillStyle = NUM[n]; p.font = `bold ${Math.round(cs * 0.55)}px Georgia`; p.textAlign = "center"; p.fillText(String(n), X + cs / 2, Y + cs * 0.7); p.textAlign = "left"; } } }
+        if (!open || k < 1) { const lift = open ? k : 0; p.save(); p.translate(X + cs / 2, Y + cs / 2 - lift * cs * 0.6); p.scale(1 - lift * 0.4, 1 - lift * 0.7); p.globalAlpha = 1 - lift;
+          const st = p.createLinearGradient(-cs / 2, -cs / 2, cs / 2, cs / 2), shade = 100 + ((x * 37 + y * 53) % 23); st.addColorStop(0, `rgb(${shade + 30},${shade + 22},${shade + 10})`); st.addColorStop(1, `rgb(${shade - 20},${shade - 26},${shade - 34})`); p.fillStyle = st; p.fillRect(-cs / 2 + 1, -cs / 2 + 1, cs - 2, cs - 2);
+          p.fillStyle = "rgba(255,255,255,0.14)"; p.fillRect(-cs / 2 + 1, -cs / 2 + 1, cs - 2, 2); p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(-cs / 2 + 1, cs / 2 - 3, cs - 2, 2); if ((x * 7 + y * 3) % 5 === 0) { p.strokeStyle = "rgba(0,0,0,0.25)"; p.beginPath(); p.moveTo(-cs / 4, -cs / 5); p.lineTo(cs / 8, cs / 6); p.stroke(); }
+          p.restore();
+          if (B && B.flag[y][x] && !open) { const wv = Math.sin(now / 200 + x + y) * 2, wrong = B.stage === "lost" && !B.mine[y][x], gold = B.stage === "won"; p.strokeStyle = "#3A2A1A"; p.lineWidth = 2; p.beginPath(); p.moveTo(X + cs * 0.35, Y + cs * 0.82); p.lineTo(X + cs * 0.35, Y + cs * 0.2); p.stroke(); p.lineWidth = 1; p.fillStyle = gold ? "#F0C040" : "#C02830"; p.beginPath(); p.moveTo(X + cs * 0.37, Y + cs * 0.2); p.lineTo(X + cs * 0.75, Y + cs * 0.32 + wv); p.lineTo(X + cs * 0.37, Y + cs * 0.46); p.fill();
+            if (wrong) { p.strokeStyle = "#FF4040"; p.lineWidth = 3; p.beginPath(); p.moveTo(X + 5, Y + 5); p.lineTo(X + cs - 5, Y + cs - 5); p.moveTo(X + cs - 5, Y + 5); p.lineTo(X + 5, Y + cs - 5); p.stroke(); p.lineWidth = 1; } }
+          if (B && B.stage === "lost" && B.mine[y][x] && !B.flag[y][x] && !open) { p.globalAlpha = 0.85; this.tfTrap(p, X, Y, cs, 999); p.globalAlpha = 1; } } }
+      // the lantern
+      if (this.tfMouse) { const [mx, my] = this.tfMouse, lg = p.createRadialGradient(mx, my, 10, mx, my, cs * 5); lg.addColorStop(0, "rgba(255,220,150,0.14)"); lg.addColorStop(1, "rgba(0,0,0,0.22)"); p.fillStyle = lg; p.fillRect(0, 0, W, H); } else { p.fillStyle = "rgba(0,0,0,0.12)"; p.fillRect(0, 0, W, H); }
+      if (fx.won && now - fx.won < 1500) { const k = (now - fx.won) / 1500; p.fillStyle = `rgba(255,230,140,${0.35 * (1 - k)})`; p.fillRect(0, 0, W, H); }
+      p.restore();
+      if (B) { p.fillStyle = "rgba(0,0,0,0.55)"; p.fillRect(4, 4, 150, 20); p.fillStyle = "#FFE070"; p.font = "bold 12px monospace"; p.fillText(`⚑ ${B.n - B.flags()}   ⏱ ${Math.round(B.t)}s`, 10, 18); }
+      else { p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(0, H / 2 - 20, W, 40); p.fillStyle = "#F0E0B0"; p.font = "16px Georgia"; p.textAlign = "center"; p.fillText("Choose a floor to search", W / 2, H / 2 + 6); p.textAlign = "left"; }
+    },
+    // a spike trap, sprung over a short while
+    tfTrap(p, X, Y, cs, age) { const k = CM.ARC.clamp(age / 160, 0, 1); p.fillStyle = "#2A2A30"; p.fillRect(X + cs * 0.15, Y + cs * 0.7, cs * 0.7, cs * 0.12); p.fillStyle = "#B8C0C8"; for (let i = 0; i < 4; i++) { const sx = X + cs * (0.2 + i * 0.18); p.beginPath(); p.moveTo(sx, Y + cs * 0.72); p.lineTo(sx + cs * 0.07, Y + cs * (0.72 - 0.5 * k)); p.lineTo(sx + cs * 0.14, Y + cs * 0.72); p.fill(); }
+      if (age < 300) { p.fillStyle = `rgba(255,200,80,${1 - age / 300})`; p.beginPath(); p.arc(X + cs / 2, Y + cs / 2, cs * (0.3 + age / 200), 0, Math.PI * 2); p.fill(); } },
   });
 }
 

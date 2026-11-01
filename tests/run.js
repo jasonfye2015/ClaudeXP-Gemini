@@ -5040,7 +5040,7 @@ test("the casino's gallery: every table on the floor has its line, its kind and 
   const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "js"), all = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
   const ids = []; for (const m of all.matchAll(/CM\.CG_TABLES = \[(.*?)\];/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]); for (const m of all.matchAll(/CM\.CG_TABLES\.push\((.*?)\);/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]);
   assert.ok(ids.length >= 27); const gal = fs.readFileSync(path.join(dir, "76ze-gallery.js"), "utf8"), info = gal.slice(gal.indexOf("CM.CG_INFO"), gal.indexOf("CM.CG_CATS")), thumbs = gal.slice(gal.indexOf("CM.CG_THUMB"));
-  for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
+  for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes|fair)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
 });
 
 test("the Joker's Club: boards keep the ten best and count records broken; a game's end puts its score on its board; the loyalty card stamps each different table, fills at eight, and pays when collected with membership rising; achievements unlock from the floor's records and pay once, when collected", () => {
@@ -5128,6 +5128,50 @@ test("the Barrow Crawler, the Belfry Climb, the Skyreach Landing, the Rampart Ba
   R.embers.push({ x0: 90, y0: 0, x: 90, y: 367, tx: 90, ty: 368, vx: 0, vy: 50, split: 0 }); R.bursts = []; R.update(0.05); assert.strictEqual(R.cottages.filter(Boolean).length, 5);
   // glimmerpop: three of a colour pop, what hangs from them falls
   const G = new CM.GP.Level(1, 10); G.grid = G.grid.map((r) => r.map(() => -1)); G.grid[0][0] = 1; G.grid[0][1] = 1; G.grid[1][0] = 2; G.grid[0][4] = 3; const [x, y] = CM.GP.pos(0, 2, 0); G.land({ x, y, k: 1 }); assert.strictEqual(G.grid[0][0], -1); assert.strictEqual(G.grid[1][0], -1, "fell"); assert.strictEqual(G.grid[0][4], 3);
+});
+
+test("Bones: the come-out, the point made and the seven-out pay as craps does; the field, any seven and the odds pay their odds; line bets only on the come-out", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("cr-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 10000; const K = g.crapsState();
+  const rig = (a, b) => { g.cgRnd = () => { let k = 0; return { int: () => (k++ ? b : a), next: () => 0.5, chance: () => false, pick: (x) => x[0] }; }; };
+  assert.strictEqual(g.crapsBet("pass", 10), ""); rig(3, 4); let r = g.crapsRoll(); assert.strictEqual(r.back, 20, "a natural");
+  g.crapsBet("pass", 10); g.crapsBet("field", 10); rig(2, 2); r = g.crapsRoll(); assert.strictEqual(K.point, 4); assert.strictEqual(r.back, 20, "the field on 4");
+  assert.ok(g.crapsBet("pass", 10), "no line bets with the point on"); assert.strictEqual(g.crapsBet("odds", 20), ""); assert.ok(g.crapsBet("odds", 20), "three times at most");
+  assert.strictEqual(g.crapsBet("place6", 12), ""); assert.ok(g.crapsBet("place8", 10), "in sixes"); rig(3, 3); r = g.crapsRoll(); assert.strictEqual(r.back, 14, "place 6 pays 7 to 6 and stays"); assert.ok(K.bets.place6);
+  rig(1, 3); r = g.crapsRoll(); assert.strictEqual(r.back, 20 + 60, "pass even, odds 2 to 1 on 4"); assert.strictEqual(K.point, 0);
+  g.crapsBet("pass", 10); rig(4, 4); g.crapsRoll(); rig(3, 4); r = g.crapsRoll(); assert.ok(r.sevenOut); assert.strictEqual(r.back, 0); assert.ok(!K.bets.place6, "the place bet goes too");
+  g.crapsBet("seven", 10); rig(5, 2); r = g.crapsRoll(); assert.strictEqual(r.back, 50, "any seven 4 to 1");
+});
+
+test("the Tavern Board and Rune-Roll: the board scores wedges, rings and bulls; nine balls or twenty-four darts end the game; gold by the table, tickets by the score, a card once at each mark", () => {
+  const CM = load(), FA = CM.FAIR; assert.strictEqual(FA.dartScore(0, 0).pts, 50); assert.strictEqual(FA.dartScore(0, -0.06).pts, 25); assert.strictEqual(FA.dartScore(0, -0.6).label, "T20"); assert.strictEqual(FA.dartScore(0, -0.97).label, "D20"); assert.strictEqual(FA.dartScore(0, -0.4).pts, 20); assert.strictEqual(FA.dartScore(0, 1.2).pts, 0);
+  assert.strictEqual(FA.dartScore(0.6, 0).label, "T6"); assert.strictEqual(FA.skeeScore(0, 0.6).pts, 50); assert.strictEqual(FA.skeeScore(0.58, 1.02).pts, 100); assert.strictEqual(FA.skeeScore(0, 0.05).pts, 0);
+  const g = new CM.Game(); g.newGame("fa-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const tk0 = g.tkStore().n;
+  assert.ok(!g.faStart("darts", 50).error); let out; for (let k = 0; k < 24; k++) out = g.faThrow("darts", 0, -0.605); assert.ok(out.over); assert.strictEqual(out.gold, Math.round(50 * FA.pay("darts", out.score))); assert.ok(g.tkStore().n - tk0 >= Math.floor(out.score / 20));
+  assert.ok(g.faThrow("darts", 0, 0).error, "the game is over"); assert.ok(!g.faStart("skee", 50).error); for (let k = 0; k < 9; k++) out = g.faThrow("skee", 0, 0.47); assert.ok(out.over && out.score > 0);
+  const C = g.cgStore().fa_skee_cards || {}; for (const m of FA.skee.MARKS) assert.strictEqual(!!C[m], out.score >= m);
+});
+
+test("the Bard's Stage: notes struck on the line score and build the combo; misses drain the cheer and an empty cheer costs a life; a tune played through clears the level", () => {
+  const CM = load(), BD = CM.BD, L = new BD.Level(1, 3), N = L.notes[0]; L.update(N.t - L.t); L.strike(N.lane); assert.strictEqual(N.hit, "perfect"); assert.strictEqual(L.combo, 1); assert.ok(L.score >= 300);
+  const M = new BD.Level(1, 4); M.cheer = 5; M.update(M.notes[0].t - M.t + 0.3); assert.strictEqual(M.lives, 2, "booed off");
+  const P = new BD.Level(1, 5); for (let k = 0; k < 6000 && P.stage === "play"; k++) { P.update(1 / 120); for (const n of P.notes) if (!n.hit && Math.abs(n.t - P.t) < 0.01) P.strike(n.lane); } assert.strictEqual(P.stage, "clear"); assert.strictEqual(P.counts.miss, 0);
+});
+
+test("the Patience Table: Klondike and FreeCell deal and keep their rules - alternating colours down, kings to empty Klondike columns, suits up from the ace, runs by the free cells; moves taken back; a win pays and the first win brings a card", () => {
+  const CM = load(), PT = CM.PAT, D = new PT.Deal("klondike", 7); assert.strictEqual(D.tab.map((c) => c.length).join(","), "1,2,3,4,5,6,7");
+  const c = (s, r) => ({ s, r, up: true }); D.tab[0] = [c(0, 8)]; D.tab[1] = [c(1, 7)]; D.tab[2] = [c(2, 7)]; D.tab[3] = [];
+  assert.ok(D.move({ pile: "tab", i: 1, k: 0 }, { pile: "tab", i: 0 }), "red 7 on black 8"); assert.ok(!D.move({ pile: "tab", i: 0, k: 0 }, { pile: "tab", i: 3 }), "only a king to an empty column"); assert.ok(D.undo()); assert.strictEqual(D.tab[0].length, 1);
+  D.tab[4] = [c(3, 1)]; assert.ok(D.move({ pile: "tab", i: 4, k: 0 }, { pile: "found", i: 0 })); D.tab[5] = [c(3, 3)]; assert.ok(!D.move({ pile: "tab", i: 5, k: 0 }, { pile: "found", i: 0 }), "the 2 first");
+  const F = new PT.Deal("freecell", 8); assert.strictEqual(F.tab.flat().length, 52); assert.ok(F.tab.flat().every((x) => x.up)); F.cells = [c(0, 1), c(0, 2), c(0, 3), null]; assert.strictEqual(F.room(false), 2);
+  const g = new CM.Game(); g.newGame("pt-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const G = g.ptNew("freecell"); G.found = [0, 1, 2, 3].map((s) => Array.from({ length: 13 }, (_, r) => c(s, r + 1))); G.tab = G.tab.map(() => []); G.cells = [null, null, null, null];
+  const gold0 = g.gold, r = g.ptWin(); assert.strictEqual(r.gold, PT.gold.freecell); assert.strictEqual(g.gold - gold0, r.gold); assert.ok(r.card, "the first win's card"); assert.strictEqual(g.ptWin(), null, "paid once");
+});
+
+test("the Trapfinder's Grid: the first stone is safe with its neighbours; empty stones open their surroundings; pennants and lifting round a number; a trap ends it; every safe stone lifted wins, paying and a card the first time", () => {
+  const CM = load(), TF = CM.TRP, B = new TF.Board("cellar", 5); B.reveal(4, 4); assert.ok(!B.mine[4][4] && B.nb(4, 4).every(([x, y]) => !B.mine[y][x])); assert.strictEqual(B.mine.flat().filter(Boolean).length, 10); assert.ok(B.open.flat().filter(Boolean).length > 1, "opened round the empty stone");
+  let tx, ty; for (let y = 0; y < 9 && tx === undefined; y++) for (let x = 0; x < 9; x++) if (B.mine[y][x]) { tx = x; ty = y; break; } B.toggle(tx, ty); assert.ok(B.flag[ty][tx]); B.reveal(tx, ty); assert.strictEqual(B.stage, "play", "a pennant guards it"); B.toggle(tx, ty); B.reveal(tx, ty); assert.strictEqual(B.stage, "lost");
+  const g = new CM.Game(); g.newGame("tf-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const W = g.tfNew("cellar"); W.reveal(0, 0); for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) if (!W.mine[y][x]) W.reveal(x, y); assert.strictEqual(W.stage, "won");
+  const gold0 = g.gold, r = g.tfWin(); assert.strictEqual(g.gold - gold0, TF.SIZES.cellar.gold); assert.ok(r.card); assert.strictEqual(g.tfWin(), null);
 });
 
 (async () => {

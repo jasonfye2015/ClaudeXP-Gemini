@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Bones, the fair and the quiet corners (v15.7)
+
+A dice table came in from a river-boat that sank with everything but the table. The taproom got its dartboard back and
+the arcade wing a row of skee lanes; the tavern stage got a bard, or the bard got the stage. And for the guests who do
+not like noise, the house set out a patience table under a lamp and opened the trapped floors below the kitchens.
+
 ## The arcade wing (v15.6)
 
 The house knocked through into the old coaching inn next door and filled it with cabinets: a wyrm in a garden bed,
