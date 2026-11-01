@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Fast and auto (the fifty-seventh big update - v17.1)
+  (src/js/76zzu-speed.js)
+  - Fast: at the tables where the waiting is only watching (the reels, roulette, blackjack, video poker, the dice, the
+    wheels, the slips, the Pin Garden, the Drop Board, the lottery's draw, bingo, hold'em, the Hexed Wand, the Pit,
+    Claudeatro, the coin pusher), "Fast" on the bar runs the window's animations and pauses 2.5 times quicker. The
+    results and pays are the same; it's remembered; it isn't offered where timing is the game.
+  - Auto: at the reels, roulette, the Joker's Wheel, the Drop Board and the slips, "Auto" plays 10, 25, 50 or 100 in a
+    row with the bet on the board, stopping on a big win (10 times the stake, if asked), when the purse runs short, on
+    any key or click, or on leaving the table.
+
 How to play, and practice (the fifty-sixth big update - v17.0)
   (src/js/64zzp-practice.js, 76zzt-howto.js)
   - Every one of the 55 tables has a How to play card: its picture large, what it's for, three or four steps, its keys

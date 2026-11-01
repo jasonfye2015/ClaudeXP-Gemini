@@ -1002,7 +1002,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
     last = now;
     if (renderer.ok) {
-      if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold) autoScale(dt);
+      if (game.mode !== "title" && document.visibilityState !== "hidden" && !CM.perf.hold && !(CM.SPEED && CM.SPEED.rateNow() > 1)) autoScale(dt);   // (not while the Joker runs fast: its clock isn't the frame rate)
       renderer.resize();
       if (ui.splashOn) { const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []; if (pads.some((p) => p.buttons.some((b) => b.pressed))) ui.leaveSplash(); }   // (a pad button goes on from the title card)
       if (game.mode === "tower") towerFrame(now, dt);
