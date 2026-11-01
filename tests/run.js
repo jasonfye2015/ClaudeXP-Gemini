@@ -5718,6 +5718,15 @@ test("the Glyph Deep, measured: traps hidden till sprung (a dart, a pit that hol
   const { play } = require("../tools/glyphbot.js"); let ok = 0; for (let s = 0; s < 4; s++) if (play(CM, 3, 3, s, { potions: 2, weapon: true }).ok) ok++; assert.ok(ok >= 3, `level 3 for a level-3 hero: ${ok} of 4`);
 });
 
+test("the Glyph Deep's portals: a green one in the Keep-yard to the cabinet's clearing, and one there home to the yard", () => {
+  const CM = load(); const g = new CM.Game(); g.newGame("gp-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const P = CM.PORTAL_YARD.glyph, t = g.floor.things[P.join(",")]; assert.ok(t && t.type === "portal" && t.to === "glyph", "in the yard"); assert.ok(CM.isOpen(g.floor, P[0], P[1]));
+  for (const [k, q] of Object.entries(CM.PORTAL_YARD)) if (k !== "glyph" && k !== "plinths") assert.notStrictEqual(q.join(","), P.join(","), `not on the ${k}'s square`);
+  g.floor.pos = P.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify([CM.GLYPH_AT[0], CM.GLYPH_AT[1] + 1]), "by the cabinet");
+  const back = g.floor.things[CM.GLYPH_PORTAL.join(",")]; assert.ok(back && back.to === "town"); g.floor.pos = CM.GLYPH_PORTAL.slice(); g.use();
+  assert.strictEqual(g.floor.number, 0); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(P), "home to the green portal");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

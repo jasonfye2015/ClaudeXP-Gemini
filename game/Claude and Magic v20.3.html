@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v20.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v20.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1453,7 +1453,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "20.2", built: "2026-11-01" };
+const CM = window.CM = { version: "20.3", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -27494,12 +27494,14 @@ Object.assign(CM.Game.prototype, {
 //   What comes home is the main game's own: weapons, armour, rings, amulets, potions, rations and seeds as they are;
 //   the inscription cards as Claudescryption cards; the tickets as the Joker's; unread scrolls sold back for gold.
 { const GD = CM.GLYPH; CM.GLYPH_AT = [28, 28]; GD.clearing = [26, 27, 30, 29];
+  // (v20.3) a green portal on the Keep-yard's south row (off the walk to the shaft), and its twin in the cabinet's clearing
+  CM.PORTAL_YARD.glyph = [36, 22]; CM.GLYPH_PORTAL = [26, 28];
   GD.reward = (L) => ({ tickets: 10 + 4 * L, gold: 20 * L });
   GD.PRIZE = { tickets: 500, gold: 3000, items: 3, cards: 2, seeds: 3 };
   // the cabinet laid on the Wood
   { const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed), [x0, y0, x1, y1] = GD.clearing, k = (x, y) => `${x},${y}`;
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[k(x, y)]; (fl.ground = fl.ground || {})[k(x, y)] = (x + y) % 3 ? "dirt" : "grass"; delete fl.things[k(x, y)]; }
-      fl.things[k(...CM.GLYPH_AT)] = { type: "glyphcab" }; fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
+      fl.things[k(...CM.GLYPH_AT)] = { type: "glyphcab" }; fl.things[k(...CM.GLYPH_PORTAL)] = { type: "portal", to: "town" }; fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
       fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "the arcade cabinet" }); return fl; }; }
   const G = CM.Game.prototype;
   Object.assign(G, {
@@ -27549,6 +27551,12 @@ Object.assign(CM.Game.prototype, {
       return ""; },
   });
   CM.ACHIEVEMENTS.unwritten = { name: "Unwritten", what: "Beat the Unwritten on the twentieth level of the Glyph Deep", title: "of the Glyph Deep" };
+  // the portals: the yard's to the cabinet, the clearing's home to the yard
+  { const ly0 = CM.layPortalYard; CM.layPortalYard = function (fl) { const out = ly0.call(this, fl), P = CM.PORTAL_YARD.glyph, k = `${P[0]},${P[1]}`; if (!fl.things[k] || fl.things[k].to !== "glyph") fl.things[k] = { type: "portal", to: "glyph" }; return out; }; }
+  { const up0 = G.usePortal; G.usePortal = function (t) {
+      if (t && t.to === "glyph") { this.sound && this.sound("spell"); this.enterFloor(-1, "rope", [CM.GLYPH_AT[0], CM.GLYPH_AT[1] + 1]); this.floor.facing = 0; this.say("The green portal sets you down in a little clearing by the road. An arcade cabinet hums under its roof of planks, letters crawling on its screen."); return true; }
+      const fl = this.floor; if (t && t.to === "town" && fl && fl.number === -1 && Math.abs(fl.pos[0] - CM.GLYPH_PORTAL[0]) + Math.abs(fl.pos[1] - CM.GLYPH_PORTAL[1]) <= 1) { this.sound && this.sound("spell"); this.enterFloor(0, "rope", CM.PORTAL_YARD.glyph.slice()); this.say("Green light, and the Keep-yard: the portal yard by the shaft."); return true; }
+      return up0.call(this, t); }; }
   // Space at the cabinet
   { const use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
       if (t && t.type === "glyphcab") { this.logAct && this.logAct("use"); this.say("An arcade cabinet stands under a little roof of planks, humming. Green letters crawl across its screen: THE GLYPH DEEP - INSERT COIN."); this.emit("glyphcab"); return; }
@@ -37334,7 +37342,9 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     ["|....@.|", "|.g..$.|", "--+-----"].forEach((t, i) => p.fillText(t, 21 * u, (24 + i * 5) * u));
     p.fillStyle = "#2A1A10"; p.fillRect(16 * u, 38 * u, 32 * u, 8 * u); p.fillStyle = "#C03030"; p.beginPath(); p.arc(26 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3060C0"; p.beginPath(); p.arc(36 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill();
     p.fillStyle = "#C0A040"; p.fillRect(30 * u, 50 * u, 4 * u, 6 * u); p.fillStyle = "#6A4A2A"; p.fillRect(8 * u, 2 * u, 48 * u, 4 * u); return c; };
-  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.glyphcab = set.layers.length; set.layers.push(CM.art.glyphCabinet(set.size)); return set; }; }
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.glyphcab = set.layers.length; set.layers.push(CM.art.glyphCabinet(set.size));
+      { const src = CM.art.portal(), c = document.createElement("canvas"); c.width = c.height = set.size; const p = c.getContext("2d"); p.filter = "hue-rotate(250deg) saturate(1.5)"; p.drawImage(src, 0, 0, set.size, set.size); set.index["solid:glyphportal"] = set.layers.length; set.layers.push(c); }   // (v20.3: the green portals)
+      return set; }; }
   const ensure = (ui) => { if (ui.$("#dlg-glyph")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-glyph";
     d.innerHTML = `<div class="box glyphbox"><h2 class="gdtitle">THE GLYPH DEEP</h2><div id="gd-body"></div><div class="note" id="gd-note"></div><div class="row"><button data-gdclose>Walk away</button></div></div>`;
     (ui.root || document.body).appendChild(d); d.querySelector("[data-gdclose]").addEventListener("click", () => ui.closeDialogs()); };
@@ -37995,6 +38005,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal" && (thing.to === "glyph" || (thing.to === "town" && CM.GLYPH_PORTAL && key === CM.GLYPH_PORTAL.join(","))) && renderer.index["solid:glyphportal"] !== undefined) out.push({ x, y, layer: "solid:glyphportal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 380) });   // (the Glyph Deep's green portals)
       else if (thing.type === "portal" && thing.to === "claudecraft") out.push({ x, y, layer: "solid:neathergate", w: 1.0, h: 1.35, glow: 0.4 + 0.2 * Math.sin(now / 420) });   // (the Neather Gate: 61k-gate.js)
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "pipe") out.push({ x, y, layer: "solid:pipe", w: 0.95, h: 1.05 });   // (the pipe in the Square: 61j-pipe.js)

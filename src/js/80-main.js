@@ -471,6 +471,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal" && (thing.to === "glyph" || (thing.to === "town" && CM.GLYPH_PORTAL && key === CM.GLYPH_PORTAL.join(","))) && renderer.index["solid:glyphportal"] !== undefined) out.push({ x, y, layer: "solid:glyphportal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 380) });   // (the Glyph Deep's green portals)
       else if (thing.type === "portal" && thing.to === "claudecraft") out.push({ x, y, layer: "solid:neathergate", w: 1.0, h: 1.35, glow: 0.4 + 0.2 * Math.sin(now / 420) });   // (the Neather Gate: 61k-gate.js)
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)
       else if (thing.type === "pipe") out.push({ x, y, layer: "solid:pipe", w: 0.95, h: 1.05 });   // (the pipe in the Square: 61j-pipe.js)
