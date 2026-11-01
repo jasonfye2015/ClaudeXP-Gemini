@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The world on one page (the seventy-first big update - v18.5)
+  (src/js/69f-worldmap.js, 76zzzg-worldmap.js)
+  - The world map (the World map button): a painted map of Caer Duin on its hill and the Keep-yard, the Deep Wood with
+    the farm, the cabin, the Mage Tower, the Fortress and Claudeita's crag. Every place is a pin; pointed at, it says
+    what's there, and a gold mark with a count shows where something waits - requests at the well, rewards at the
+    Joker, a boon or skill points at home, a building the village can now afford at the guildhall.
+  - Fast travel: clicking a pin takes the party there from anywhere in the town or the Wood (not from below - the
+    shaft and the portals bring you back up), facing the way in; a door that opens is opened.
+  - Goals, a new first page in the Journal: every part of the game and what's next in it - the town's requests and
+    next build, the heroes' choices, the dungeon, Leshy's table, Haven, the island, the pipe and the Joker - each with
+    a Go button to the place.
+
 The town's asking (the seventieth big update - v18.4)
   (src/js/69e-requests.js, 76zzzf-requests.js)
   - The request board at the well (the town's Requests button): three notes a day from the residents, each wanting

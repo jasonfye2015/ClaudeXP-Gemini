@@ -5501,6 +5501,18 @@ test("the town's asking: three requests a day from three different places; a thi
   assert.ok(/3 metal bars/.test(CM.matsNote(g, "smith", 1)) || CM.matsNote(g, "smith", 1) === "" || true); assert.strictEqual(g.build("shrine"), "", "the first levels want only renown");
 });
 
+test("the world on one page: every place on the map can be gone to from the town or the Wood, not from below; the marks and the goals know what's waiting", () => {
+  const CM = load(), WM = CM.WORLDMAP; const g = new CM.Game(); g.newGame("wm-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(g.floor.number, 0); assert.strictEqual(g.wmCanTravel(), "");
+  for (const P of WM.PLACES) { g.mode = "explore"; const at = P[3](); assert.ok(at, `${P[0]} has a square`); const e = g.wmTravel(P[0]); assert.strictEqual(e, "", `${P[0]}: ${e}`);
+    assert.strictEqual(g.floor.number, P[2], `${P[0]}'s floor`); assert.deepStrictEqual(g.floor.pos.slice(), at.slice(), `${P[0]}'s square`); }
+  g.mode = "explore"; g.enterFloor(1, "stairs"); assert.ok(g.wmCanTravel(), "not from the dungeon"); assert.ok(g.wmTravel("home"));
+  g.mode = "explore"; g.enterFloor(0, "rope", CM.TOWN_AT.shaft.slice()); g.party[0].pending = true;
+  const M = g.wmMarks(); assert.ok(M.home && M.home.some((x) => /boon/.test(x))); assert.ok(M.well, "the requests at the well");
+  const G = g.wmGoals(); assert.ok(G.length >= 6); for (const a of ["The town", "The heroes", "The dungeon", "The pipe"]) assert.ok(G.some((x) => x.area === a), a);
+  assert.ok(G.every((x) => !x.go || WM.byId[x.go]), "every Go names a place");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

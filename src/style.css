@@ -1366,3 +1366,14 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .rqnote .pin { position: absolute; top: 4px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #80B0FF, #1040A0); }
 .rqnote b { font-family: Georgia, serif; } .rqgiver { font-size: 11px; font-style: italic; color: #6A5030; } .rqplace { font-size: 12px; color: #5A2A10; } .rqpay { font-size: 12px; color: #4A3A10; font-weight: bold; } .rqnote .small { color: #5A4A30; }
 .rqnote.ready { box-shadow: 0 0 0 3px #80C040, 0 4px 12px rgba(0,0,0,0.45); } .rqnote.done { background: #EAF2D8; opacity: 0.8; }
+/* the world map (v18.5) */
+.wmbox { max-width: 900px; } .wmwrap { position: relative; width: 100%; aspect-ratio: 860 / 480; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 30px rgba(60,40,10,0.5); }
+.wmwrap canvas { width: 100%; height: 100%; display: block; } .wmmarks { position: absolute; inset: 0; }
+.wmpin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; padding: 0; border-radius: 50%; border: 2px solid #3A2A14; background: #F0E0B0; cursor: pointer; min-width: 0; }
+.wmpin i { position: absolute; inset: 4px; border-radius: 50%; background: #7A1A28; } .wmpin:hover, .wmpin:focus-visible { transform: scale(1.25); z-index: 2; }
+.wmpin.has { border-color: #F0C040; box-shadow: 0 0 0 3px rgba(240,192,64,0.45); animation: wmglow 1.6s ease-in-out infinite; }
+.wmpin b { position: absolute; top: -10px; right: -12px; min-width: 16px; padding: 0 3px; border-radius: 8px; background: #F0C040; color: #2A1A08; font: bold 11px/16px sans-serif; }
+@keyframes wmglow { 50% { box-shadow: 0 0 0 6px rgba(240,192,64,0.15); } }
+.wmtip { position: absolute; transform: translate(-50%, calc(-100% - 18px)); max-width: 260px; padding: 6px 9px; border-radius: 6px; background: rgba(30,20,10,0.92); color: #F4E8D0; font-size: 13px; pointer-events: none; z-index: 3; display: flex; flex-direction: column; gap: 2px; }
+.wmtip span { opacity: 0.8; } .wmtip em { color: #F0C040; font-style: normal; }
+.entry.goal { display: flex; align-items: center; gap: 10px; justify-content: space-between; } .entry.goal p { margin: 4px 0; flex: 1; }

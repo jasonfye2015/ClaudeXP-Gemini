@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v18.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v18.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1379,6 +1379,17 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .rqnote .pin { position: absolute; top: 4px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #80B0FF, #1040A0); }
 .rqnote b { font-family: Georgia, serif; } .rqgiver { font-size: 11px; font-style: italic; color: #6A5030; } .rqplace { font-size: 12px; color: #5A2A10; } .rqpay { font-size: 12px; color: #4A3A10; font-weight: bold; } .rqnote .small { color: #5A4A30; }
 .rqnote.ready { box-shadow: 0 0 0 3px #80C040, 0 4px 12px rgba(0,0,0,0.45); } .rqnote.done { background: #EAF2D8; opacity: 0.8; }
+/* the world map (v18.5) */
+.wmbox { max-width: 900px; } .wmwrap { position: relative; width: 100%; aspect-ratio: 860 / 480; border-radius: 8px; overflow: hidden; box-shadow: inset 0 0 30px rgba(60,40,10,0.5); }
+.wmwrap canvas { width: 100%; height: 100%; display: block; } .wmmarks { position: absolute; inset: 0; }
+.wmpin { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; padding: 0; border-radius: 50%; border: 2px solid #3A2A14; background: #F0E0B0; cursor: pointer; min-width: 0; }
+.wmpin i { position: absolute; inset: 4px; border-radius: 50%; background: #7A1A28; } .wmpin:hover, .wmpin:focus-visible { transform: scale(1.25); z-index: 2; }
+.wmpin.has { border-color: #F0C040; box-shadow: 0 0 0 3px rgba(240,192,64,0.45); animation: wmglow 1.6s ease-in-out infinite; }
+.wmpin b { position: absolute; top: -10px; right: -12px; min-width: 16px; padding: 0 3px; border-radius: 8px; background: #F0C040; color: #2A1A08; font: bold 11px/16px sans-serif; }
+@keyframes wmglow { 50% { box-shadow: 0 0 0 6px rgba(240,192,64,0.15); } }
+.wmtip { position: absolute; transform: translate(-50%, calc(-100% - 18px)); max-width: 260px; padding: 6px 9px; border-radius: 6px; background: rgba(30,20,10,0.92); color: #F4E8D0; font-size: 13px; pointer-events: none; z-index: 3; display: flex; flex-direction: column; gap: 2px; }
+.wmtip span { opacity: 0.8; } .wmtip em { color: #F0C040; font-style: normal; }
+.entry.goal { display: flex; align-items: center; gap: 10px; justify-content: space-between; } .entry.goal p { margin: 4px 0; flex: 1; }
 </style>
 </head>
 <body>
@@ -1388,7 +1399,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "18.4", built: "2026-11-01" };
+const CM = window.CM = { version: "18.5", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -26521,6 +26532,59 @@ Object.assign(CM.Game.prototype, {
   { const lb = P.leaveBros; P.leaveBros = function (how) { if (this.brosRun) this.tally.brosTrips = (this.tally.brosTrips || 0) + 1; return lb.call(this, how); }; }
 }
 
+// ---- 69f-worldmap.js ----
+"use strict";
+// The world, on one page (v18.5): every place the party can go - the town's doors, the Keep-yard's portals and the
+// shaft, the pipe, the Joker, and out in the Wood the farm, the cabin, the Mage Tower, the Fortress and Claudeita's
+// crag - with fast travel between them from anywhere above ground (the town or the Wood), and what's waiting at each:
+// requests at the well, rewards at the Joker, a hero with a boon or skill points to spend, a build the village can
+// afford. And the goals, gathered: for every part of the game, what's next. The window is 76zzzg-worldmap.js.
+{ const WM = CM.WORLDMAP = {};
+  // [id, name, floor, cell, what, open it on arrival]
+  WM.PLACES = [
+    ["home", "Your house", 0, () => CM.TOWN_AT.home, "rest, the hearth, the larder", true], ["well", "The well and the request board", 0, () => CM.TOWN_AT.well, "the village's requests", false],
+    ["tavern", "The Hanged Lantern", 0, () => CM.TOWN_AT.tavern, "a round, the regular's gossip", true], ["merchant", "The Merchant's House", 0, () => CM.TOWN_AT.merchant, "buy, sell, commissions", true],
+    ["smith", "The Smith's forge", 0, () => CM.TOWN_AT.smith, "enchanting, tempering, the smelter", true], ["temple", "The temple", 0, () => CM.TOWN_AT.temple, "healing, candles, the vigil", true],
+    ["library", "The library", 0, () => CM.TOWN_AT.library, "tomes and lost pages", true], ["guildhall", "The guildhall", 0, () => CM.TOWN_AT.guildhall, "trainers, contracts, the roster", true],
+    ["casino", "The Gilded Joker", 0, () => CM.TOWN_AT.casino, "the casino, the arcade, the fair", true], ["pipe", "The pipe in the Square", 0, () => CM.TOWN_PIPE, "Super Claude Bros", false],
+    ["shaft", "The shaft", 0, () => CM.TOWN_AT.shaft, "down into the dungeon", false], ["haven", "The red portal", 0, () => CM.PORTAL_YARD.ablo, "Claudeablo's Haven", false],
+    ["gate", "The Neather Gate", 0, () => CM.PORTAL_YARD.gate, "the island (Claudecraft)", false], ["yard", "The Keep-yard's portals", 0, () => CM.PORTAL_YARD.tower, "the Mage Tower, the cabin, the cave, the Fortress", false],
+    ["farm", "The farm", -1, () => CM.FARM_AT, "the fields", false], ["cabin", "Leshy's cabin", -1, () => CM.CABIN && CM.CABIN.front, "the card table", false],
+    ["fortress", "The Fortress", -1, () => CM.FORTRESS && CM.FORTRESS.front, "real-time siege", false], ["crag", "Claudeita's crag", -1, () => CM.CLAUDEITA && CM.CLAUDEITA.front, "the cave of wands", false],
+    ["woodgate", "The Deep Wood", -1, () => CM.WOOD_GATE, "the land west of the town", false],
+  ];
+  WM.byId = Object.fromEntries(WM.PLACES.map((p) => [p[0], p]));
+  Object.assign(CM.Game.prototype, {
+    wmCanTravel() { if (this.mode !== "explore" || !this.floor) return "Fast travel goes from the town or the Wood."; if (this.floor.number !== 0 && this.floor.number !== -1 && !(CM.isJokerFloor && CM.isJokerFloor(this.floor.number))) return "Fast travel goes from the town or the Wood - the shaft and the portals bring you back up."; return ""; },
+    // there in a step: onto the place's square, facing a way out; a door that opens, opened
+    wmTravel(id) { const P = WM.byId[id]; if (!P) return "No such place."; const why = this.wmCanTravel(); if (why) return why; const at = P[3](); if (!at) return "That place isn't there.";
+      if (this.floor.special === "joker" && this.jfLeave) this.jfLeave();
+      this.logAct && this.logAct("wmTravel", id); this.stopTravel && this.travel && this.stopTravel(); this.enterFloor(P[2], "rope", at.slice()); const fl = this.floor; fl.pos = at.slice();
+      const open = CM.openNeighbours ? CM.openNeighbours(fl, at[0], at[1]) : []; if (open.length && CM.DIRS.indexOf(open[0]) >= 0) fl.facing = CM.DIRS.indexOf(open[0]);
+      this.look && this.look(); this.emit("moved", at[0], at[1]); this.emit("floor", fl); this.emit("change"); this.say(`To ${P[1].replace(/^The /, "the ")}.`);
+      if (P[5] && fl.things[`${at[0]},${at[1]}`]) this.use(); return ""; },
+    // what's waiting where, for the map's marks
+    wmMarks() { const m = {}, add = (id, n, what) => { (m[id] = m[id] || []).push(what); };
+      try { const L = this.rqList(); const ready = L.filter((q) => !q.done && this.rqProgress(q) >= q.n).length, open = L.filter((q) => !q.done).length; if (ready) add("well", ready, `${ready} request${ready > 1 ? "s" : ""} ready to hand in`); else if (open) add("well", open, `${open} request${open > 1 ? "s" : ""} posted`); } catch (e) { /* */ }
+      try { if (this.alInfo && this.alInfo().waiting.length) add("casino", 1, "Almanac steps to collect"); if (this.jkWaiting && (this.jkWaiting().levels.length || this.jkWaiting().tickets)) add("casino", 1, "Joker level rewards"); if (this.flQuests && this.flQuests().some((q) => q.got >= q.n)) add("casino", 1, "a casino quest done"); } catch (e) { /* */ }
+      if (this.party.some((h) => h.pending)) add("home", 1, "a boon to choose"); if (this.party.some((h) => CM.SKILLTREE && CM.SKILLTREE.points(h) > CM.SKILLTREE.spent(h))) add("home", 1, "skill points to spend"); if (this.party.some((h) => CM.needsPath && CM.needsPath(h))) add("home", 1, "a path to choose");
+      const afford = Object.entries(CM.VILLAGE || {}).filter(([id, V]) => { const lvl = this.villageLevel(id); return lvl < V.costs.length && this.renown() >= V.costs[lvl] && (CM.villageNeeds ? CM.villageNeeds(id, lvl) : []).every(([k, n]) => CM.TOWNREQ.byId[k].have(this) >= n); }).map(([, V]) => V.name);
+      if (afford.length) add("guildhall", 1, `can be built: ${afford.join(", ")}`); return m; },
+    // every part of the game, and what's next in it
+    wmGoals() { const out = [], row = (area, text, go) => out.push({ area, text, go }), deepest = Math.max(0, ...((this.fame || []).map((e) => e.floor || 0)), ...((this.trail || []).map(([n]) => n)));
+      try { const L = this.rqList(); for (const q of L) if (!q.done) row("The town", `${q.giver.charAt(0).toUpperCase() + q.giver.slice(1)} wants ${this.rqWords(q)} (${Math.min(q.n, this.rqProgress(q))} of ${q.n})`, "well"); } catch (e) { /* */ }
+      { const next = Object.entries(CM.VILLAGE || {}).map(([id, V]) => [id, V, this.villageLevel(id)]).filter(([, V, l]) => l < V.costs.length).sort((a, b) => a[1].costs[a[2]] - b[1].costs[b[2]])[0]; if (next) row("The town", `Next build: ${next[1].name} to level ${next[2] + 1} - ${next[1].costs[next[2]]} renown (you have ${this.renown()})${CM.matsNote ? CM.matsNote(this, next[0], next[2]) : ""}`, "guildhall"); }
+      for (const h of this.party) { if (h.pending) row("The heroes", `${h.name} has a boon to choose`, "home"); if (CM.needsPath && CM.needsPath(h)) row("The heroes", `${h.name} can choose a path`, "home"); const sp = CM.SKILLTREE ? CM.SKILLTREE.points(h) - CM.SKILLTREE.spent(h) : 0; if (sp > 0) row("The heroes", `${h.name} has ${sp} skill point${sp > 1 ? "s" : ""} to spend`, "home"); }
+      row("The dungeon", deepest ? `Deepest so far: floor ${deepest}. ${(this.tally.guardians || []).length} of the guardians slain this run.` : "Down the shaft: the first floor waits.", "shaft");
+      try { const K = this.cards(), T = (CM.CARD_TABLES || []).find((t) => !K.beaten[t.id] && this.cardTableOpen(t)); row("Leshy's cabin", T ? `Next at the table: ${T.name} (${T.gold} gold, a ${T.pick} card)` : "Every game at the table won.", "cabin"); } catch (e) { /* */ }
+      try { const A = this.abloStore(); row("Haven", `Through the red portal: ${A.visits || 0} visit${A.visits === 1 ? "" : "s"} so far${this.tally.abloDeepest ? `, deepest ${this.tally.abloDeepest}` : ""}. What's found there comes home.`, "haven"); } catch (e) { /* */ }
+      try { const K = this.craftStore(); row("The island", `Through the Neather Gate: ${K.visits || 0} visit${K.visits === 1 ? "" : "s"}. Its ore, bars and gems feed the smith; its timber and stone the builders.`, "gate"); } catch (e) { /* */ }
+      row("The pipe", this.tally.brosBest ? `Best so far: level 1-${this.tally.brosBest}.` : "Down the pipe in the Square: four levels and a Brass Warden.", "pipe");
+      try { if (this.cgStore) { const J = this.jkInfo(), A = this.alInfo(), W = this.wkInfo(); row("The Joker", `Joker level ${J.level}; the Almanac at step ${A.reached} of 30${A.waiting.length ? ` (${A.waiting.length} to collect)` : ""}; the week's game is ${((CM.CG_TABLES || []).find(([k]) => k === W.id) || [])[1] || W.id}${this.stFinalReady && this.stFinalReady() ? "; the Final Night is ready" : ""}.`, "casino"); } } catch (e) { /* */ }
+      return out; },
+  });
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -28161,7 +28225,7 @@ Object.assign(CM.UI.prototype, {
     }
     const sets = {
       explore: [["◄ Turn", () => g.turn(-1)], ["▲ Forward", () => g.move(0)], ["▼ Back", () => g.move(2)], ["Turn ►", () => g.turn(1)],
-        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), ...(g.floor && g.floor.number === 0 && this.openRequests ? [["Requests", () => this.openRequests()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
+        ["Use (Space)", () => g.use()], ["Explore (X)", () => (g.travel ? g.stopTravel() : g.explore())], ...(g.floor && g.floor.number <= 0 && g.floor.number % 1 === 0 && !CM.isUndercroft(g.floor.number) ? [["Where to? (G)", () => this.openWhereTo()]] : []), ...(g.floor && g.floor.number === 0 && this.openRequests ? [["Requests", () => this.openRequests()]] : []), ...(this.openWorldMap ? [["World map", () => this.openWorldMap()]] : []), [g.autoOn() ? "Automatic: on (Z)" : "Automatic (Z)", () => g.autoPlay()], ...(g.floor && CM.isDeep(g.floor.number) && (g.light.kind || g.lightOut) ? [[g.lightOut ? "Light (T)" : "Douse (T)", () => { g.douse(); this.refresh(); }]] : []), ["Cast (C)", () => this.outsideCast()], ["Inventory (I)", () => g.openBag()], ["Journal (J)", () => this.openJournal()], ["Map (Tab)", () => this.toggleBigMap()],
         ["Menu (Esc)", () => this.openDialog("#dlg-pause")]],
       camp: [["Merchant", () => g.openBag(true)], ["Rest (20 gold)", () => g.rest()], ["Temple", () => this.openDialog("#dlg-temple")], [CM.t("camp.bounty"), () => { const note = g.bounty ? (g.bountyDone() ? g.claimBounty() : g.takeBounty()) : g.takeBounty(); if (note) g.say(note); this.refresh(); }],
         ["Tavern", () => this.openTavern()], ["Smith", () => this.openSmith()], ["Alchemist", () => this.openAlchemist()], ["Vault", () => this.openVault()], ["Waystone", () => this.openWaystone()], ["Guild", () => this.openSecond()], ["Cast (C)", () => this.outsideCast()], ["Inventory", () => g.openBag()], ["Journal (J)", () => this.openJournal()],
@@ -35973,6 +36037,72 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
           <button class="${ok ? "primary" : ""}" data-rqdone="${i}" ${ok ? "" : "disabled"}>${q.done ? "Done" : K.deed ? "Report it" : "Hand it over"}</button></div>`; }).join("")}</div>
         <div class="note" id="rq-note">${this.rqNote || ""}</div><p class="small">Requests answered: ${S.done}. The village has ${g.renown()} renown to build with.</p>`;
       box.querySelectorAll("[data-rqdone]").forEach((b) => b.addEventListener("click", () => { const r = g.rqDone(Number(b.dataset.rqdone)); this.rqNote = r.error || `${r.giver.charAt(0).toUpperCase() + r.giver.slice(1)} thanks you: ${r.renown} renown and ${r.gold} gold.`; this.renderRequests(); this.refresh && this.refresh(); })); },
+  });
+}
+
+// ---- 76zzzg-worldmap.js ----
+"use strict";
+// The world, on one page - the window's side. The world map (the "World map" button in the
+// menu, from anywhere): a painted map of Caer Duin's hill with its walls and doors, the Keep-yard with its portals and the shaft,
+// the Deep Wood to the west with the farm, the river, the cabin, the Mage Tower's clearing, the Fortress to the north and
+// Claudeita's crag to the south, and beyond the portals the places they open on (Haven, the island, the pipe's
+// world). Every place is a marker - pointed at, it says what's there; clicked, the party goes there - and a gold mark
+// with a count where something waits. And a "Goals" page in the Journal: every part of the game, and what's next in
+// it, each with the way there. The rules are 69f-worldmap.js.
+{ const WM = CM.WORLDMAP, W = 860, H = 480;
+  // where each place sits on the painted map
+  const AT = { home: [600, 300], well: [640, 262], tavern: [624, 236], merchant: [668, 236], smith: [620, 330], temple: [648, 168], library: [630, 196], guildhall: [672, 318], casino: [700, 214],
+    pipe: [678, 290], shaft: [752, 262], haven: [748, 220], gate: [782, 254], yard: [762, 300], farm: [330, 330], cabin: [210, 210], fortress: [330, 70], crag: [340, 430], woodgate: [470, 268] };
+  const TZ = 1.25, CX = 670, CY = 255;   // (the town, drawn larger than the Wood so its doors don't crowd)
+  for (const id of ["home", "well", "tavern", "merchant", "smith", "temple", "library", "guildhall", "casino", "pipe", "shaft", "haven", "gate", "yard"]) { const [x, y] = AT[id]; AT[id] = [CX + (x - 670) * TZ, CY + (y - 255) * TZ]; }
+  const paint = (p, now) => { const t = now / 1000;
+    const sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#D8C8A0"); sky.addColorStop(1, "#C8B488"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
+    p.strokeStyle = "rgba(90,60,20,0.15)"; for (let k = 0; k < 40; k++) { p.beginPath(); p.moveTo(0, k * 12); p.lineTo(W, k * 12 + 4); p.stroke(); }
+    // the Wood
+    p.fillStyle = "#6A8A4A"; p.beginPath(); p.moveTo(20, 40); p.bezierCurveTo(200, 10, 420, 20, 520, 60); p.lineTo(540, 440); p.bezierCurveTo(380, 470, 140, 470, 20, 440); p.closePath(); p.fill();
+    const R = new CM.Random(31); for (let k = 0; k < 170; k++) { const x = 30 + R.next() * 490, y = 50 + R.next() * 390; if (Math.hypot(x - 330, y - 330) < 60 || Math.hypot(x - 260, y - 140) < 40) continue; p.fillStyle = R.chance(0.5) ? "#3E6A30" : "#4E7A38"; p.beginPath(); p.moveTo(x, y - 10); p.lineTo(x + 7, y + 5); p.lineTo(x - 7, y + 5); p.fill(); }
+    p.strokeStyle = "#5A8AC0"; p.lineWidth = 6; p.beginPath(); p.moveTo(120, 30); p.bezierCurveTo(180, 160, 90, 280, 150, 460); p.stroke(); p.lineWidth = 1;   // (the river)
+    p.fillStyle = "#C8B060"; for (let r = 0; r < 4; r++) p.fillRect(290, 300 + r * 14, 80, 9);   // (the fields)
+    p.fillStyle = "#8A8070"; p.beginPath(); p.arc(260, 140, 16, 0, Math.PI * 2); p.fill(); p.fillStyle = "#5A4A80"; p.fillRect(254, 104, 12, 36); p.beginPath(); p.moveTo(250, 104); p.lineTo(260, 84); p.lineTo(270, 104); p.fill();   // (the Mage Tower)
+    p.fillStyle = "#6A6A70"; p.fillRect(300, 46, 60, 22); for (let k = 0; k < 6; k++) p.fillRect(300 + k * 11, 40, 6, 6);   // (the Fortress)
+    p.fillStyle = "#7A6A5A"; p.beginPath(); p.moveTo(300, 450); p.lineTo(340, 405); p.lineTo(380, 450); p.fill(); p.fillStyle = "#1A1410"; p.beginPath(); p.arc(340, 440, 7, Math.PI, 0); p.fill();   // (the crag)
+    p.fillStyle = "#6A4A28"; p.fillRect(200, 200, 22, 14); p.fillStyle = "#4A2A18"; p.beginPath(); p.moveTo(196, 200); p.lineTo(211, 188); p.lineTo(226, 200); p.fill(); p.fillStyle = `rgba(160,160,170,${0.4 + 0.2 * Math.sin(t)})`; p.beginPath(); p.arc(218, 182 - (t % 2) * 6, 4, 0, Math.PI * 2); p.fill();   // (the cabin's smoke)
+    // the road up the hill to the town
+    p.strokeStyle = "#A08A60"; p.lineWidth = 5; p.beginPath(); p.moveTo(470, 268); p.bezierCurveTo(500, 270, 510, 268, 528, 262); p.stroke(); p.lineWidth = 1;
+    p.save(); p.translate(CX, CY); p.scale(TZ, TZ); p.translate(-670, -255);
+    // the town on its hill, inside its wall
+    p.fillStyle = "#B8A070"; p.beginPath(); p.ellipse(670, 255, 150, 125, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E0D4B4"; p.beginPath(); p.ellipse(670, 255, 118, 100, 0, 0, Math.PI * 2); p.fill();
+    p.strokeStyle = "#7A6A50"; p.lineWidth = 5; p.beginPath(); p.ellipse(670, 255, 118, 100, 0, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1;
+    p.fillStyle = "#8A6A4A"; for (const [x, y] of [[600, 220], [610, 280], [690, 200], [640, 300], [700, 300], [660, 190], [600, 250]]) { p.fillRect(x - 10, y - 8, 20, 14); p.fillStyle = "#A04030"; p.beginPath(); p.moveTo(x - 12, y - 8); p.lineTo(x, y - 18); p.lineTo(x + 12, y - 8); p.fill(); p.fillStyle = "#8A6A4A"; }
+    p.fillStyle = "#7A1A28"; p.fillRect(690, 200, 24, 18); p.fillStyle = "#F0C040"; p.fillRect(690, 196, 24, 4);   // (the Joker, red and gold)
+    p.strokeStyle = "#6A5A40"; p.lineWidth = 3; p.strokeRect(732, 230, 64, 82); p.lineWidth = 1;   // (the Keep-yard)
+    p.fillStyle = "#1A1410"; p.beginPath(); p.arc(752, 262, 8, 0, Math.PI * 2); p.fill();   // (the shaft)
+    for (const [x, y, c] of [[748, 220, "#E03030"], [782, 254, "#8060D0"], [762, 300, "#60A0F0"]]) { p.fillStyle = c; p.globalAlpha = 0.6 + 0.3 * Math.sin(t * 2 + x); p.beginPath(); p.ellipse(x, y, 7, 11, 0, 0, Math.PI * 2); p.fill(); p.globalAlpha = 1; }
+    p.fillStyle = "#3A5A3A"; p.fillRect(674, 284, 8, 12);   // (the pipe)
+    p.fillStyle = "#5A4A30"; p.font = "italic 15px Georgia"; p.fillText("The Deep Wood", 160, 260); p.font = "italic 17px Georgia"; p.fillText("Caer Duin", 632, 125 + 8); p.font = "italic 12px Georgia"; p.fillText("the Keep-yard", 730, 326); p.restore();
+    // the compass
+    p.save(); p.translate(60, 410); p.strokeStyle = "#5A4A30"; p.beginPath(); p.arc(0, 0, 22, 0, Math.PI * 2); p.stroke(); p.fillStyle = "#5A4A30"; p.beginPath(); p.moveTo(0, -22); p.lineTo(5, 0); p.lineTo(0, 22); p.lineTo(-5, 0); p.fill(); p.font = "bold 11px Georgia"; p.textAlign = "center"; p.fillText("N", 0, -26); p.textAlign = "left"; p.restore(); };
+  const init0 = CM.UI.prototype.openJournal;
+  Object.assign(CM.UI.prototype, {
+    openWorldMap() { if (!this.$("#dlg-worldmap")) { const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-worldmap"; d.innerHTML = `<div class="box wmbox"><h2>The world</h2><div class="wmwrap"><canvas width="${W}" height="${H}"></canvas><div class="wmmarks"></div><div class="wmtip" hidden></div></div><div class="note" id="wm-note"></div><div class="row"><button data-wmgoals>Goals</button><button data-wmclose>Close</button></div></div>`;
+        (this.root || document.body).appendChild(d); d.querySelector("[data-wmclose]").addEventListener("click", () => this.closeDialogs()); d.querySelector("[data-wmgoals]").addEventListener("click", () => { this.journalPage = "goals"; this.closeDialogs(); this.openJournal(); }); }
+      const g = this.game, d = this.$("#dlg-worldmap"), marks = d.querySelector(".wmmarks"), tip = d.querySelector(".wmtip"), M = g.wmMarks(), why = g.wmCanTravel(), here = g.floor ? g.floor.number : null;
+      d.querySelector("#wm-note").textContent = why ? `${why} (the map still shows what's waiting where)` : "Click a place to go there.";
+      marks.innerHTML = WM.PLACES.map(([id, name, , , what]) => { const [x, y] = AT[id], m = M[id]; return `<button class="wmpin${m ? " has" : ""}" data-wm="${id}" style="left:${(100 * x) / W}%;top:${(100 * y) / H}%" aria-label="${this.esc(name)}"><i></i>${m ? `<b>${m.length}</b>` : ""}</button>`; }).join("");
+      marks.querySelectorAll("[data-wm]").forEach((b) => { const P = WM.byId[b.dataset.wm], m = M[P[0]];
+        b.addEventListener("mouseenter", () => { tip.hidden = false; tip.innerHTML = `<b>${this.esc(P[1])}</b><span>${this.esc(P[4])}</span>${m ? m.map((x) => `<em>${this.esc(x)}</em>`).join("") : ""}`; tip.style.left = b.style.left; tip.style.top = b.style.top; });
+        b.addEventListener("mouseleave", () => { tip.hidden = true; });
+        b.addEventListener("click", () => { const r = g.wmCanTravel(); if (r) { d.querySelector("#wm-note").textContent = r; return; } this.closeDialogs(); const e = g.wmTravel(P[0]); if (e) g.say(e); if (P[0] === "well" && this.openRequests) this.openRequests(); this.refresh && this.refresh(); }); });
+      const cv = d.querySelector("canvas"), loop = (now) => { if (!d.classList.contains("on") && this.wmDrawn) return; this.wmDrawn = true; paint(cv.getContext("2d"), now); requestAnimationFrame(loop); }; this.wmDrawn = false; this.openDialog("#dlg-worldmap"); requestAnimationFrame(loop); },
+    // the Journal's Goals page
+    openJournal() { const j = this.$("#dlg-journal"), boards = j && j.querySelector(".boards"); if (boards && !boards.querySelector('[data-page="goals"]')) { const b = document.createElement("button"); b.dataset.page = "goals"; b.textContent = "Goals"; boards.prepend(b); b.addEventListener("click", () => { this.journalPage = "goals"; this.openJournal(); }); }
+      if (this.journalPage !== "goals") { if (boards) { const gb = boards.querySelector('[data-page="goals"]'); if (gb) gb.classList.remove("on"); } return init0.call(this); }
+      const g = this.game, box = this.$("#journal-list"), goals = g.wmGoals(), areas = [...new Set(goals.map((x) => x.area))], can = !g.wmCanTravel();
+      for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.classList.toggle("on", b.dataset.page === "goals");
+      box.innerHTML = `<div class="small">Every part of the world, and what's next in it.${can ? " Go takes you straight there." : " (Go works from the town or the Wood.)"} <button data-wmopen>The world map</button></div>` + areas.map((a) => `<div class="list-title">${this.esc(a)}</div>${goals.filter((x) => x.area === a).map((x) => `<div class="entry goal"><p>${this.esc(x.text)}</p>${x.go ? `<button data-goto="${x.go}" ${can ? "" : "disabled"}>Go</button>` : ""}</div>`).join("")}`).join("");
+      box.querySelector("[data-wmopen]").addEventListener("click", () => { this.closeDialogs(); this.openWorldMap(); });
+      box.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => { this.closeDialogs(); const e = g.wmTravel(b.dataset.goto); if (e) g.say(e); if (b.dataset.goto === "well" && this.openRequests) this.openRequests(); this.refresh && this.refresh(); }));
+      this.openDialog("#dlg-journal"); },
   });
 }
 
