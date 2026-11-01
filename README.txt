@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The South Fields, finished (the eightieth big update - v19.5, UPGRADE_PLAN_14.md phase 5 - the plan complete)
+  (src/js/76zzzo-fieldlife.js; the hands painted in 36c-cropart.js; tools/fieldbot.js and FIELDS.md)
+  - The field through the year: frost on bare turned plots in winter, blossom along the rows in spring, fallen leaves
+    in autumn.
+  - The crew at work: the hands hired stand among the crops in straw hats - one with a hoe, one a watering can, one a
+    basket - somewhere new every hour, and go home at night.
+  - The books: tools/fieldbot.js works out what a plot makes a day for every crop over a season and writes FIELDS.md.
+    It found the crops that fruit again earning five times the one-harvest crops; the prices were evened out (the
+    regrowers a little down, the one-harvest crops up, the big ones' seed cheaper): the shed's crops now make about
+    4.6 to 10.3 gold a plot a day at two stars, the found ones more.
+  - LORE.md has the fields' history.
+
 What the fields are for (the seventy-ninth big update - v19.4, UPGRADE_PLAN_14.md phase 4)
   (src/js/69n-fielduse.js, 76zzzn-fielduse.js)
   - The market stall in the Square: the fields' produce sells at its full worth, stars and all, and three crops a day

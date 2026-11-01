@@ -17,9 +17,9 @@
 // that remembers its stars - a plot sown from it never picks worse.
 { const FD = CM.SOUTHFIELDS, FC = CM.FIELDCARE, FS = CM.FIELDSEEDS = { on: true, cutting: 0.34, fightChance: 0.06, woodChance: 0.2 };   // (on: false in the older tests, which count the pack)
   const RARE = [
-    ["rhubarb", "Rhubarb", ["spring"], 6, 3, 4, 18], ["asparagus", "Asparagus", ["spring"], 7, 2, 4, 22], ["artichoke", "Artichoke", ["summer"], 7, 2, 0, 28],
+    ["rhubarb", "Rhubarb", ["spring"], 6, 3, 4, 18], ["asparagus", "Asparagus", ["spring"], 7, 2, 4, 22], ["artichoke", "Artichoke", ["summer"], 7, 2, 0, 34],
     ["blackberry", "Blackberries", ["summer"], 6, 4, 3, 9], ["raspberry", "Raspberries", ["summer"], 6, 4, 3, 9], ["coffee", "Coffee", ["summer"], 8, 3, 3, 20],
-    ["pineapple", "Pineapple", ["summer"], 10, 1, 0, 60], ["kiwi", "Kiwi", ["autumn"], 7, 3, 3, 14],
+    ["pineapple", "Pineapple", ["summer"], 10, 1, 0, 90], ["kiwi", "Kiwi", ["autumn"], 7, 3, 3, 14],
   ];
   // the charmed ones: [id, name, seasons, days, yield, regrows, price, the crop pack's frames they borrow, glow colour]
   const CHARMED = [
