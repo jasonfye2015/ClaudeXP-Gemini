@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Joker's own air (the fifty-third big update - v16.7)
+  Sound and season on the floor (src/js/76zzq-atmos.js):
+  - The Joker's music: a lounge tune in the music engine (Mixolydian, 104 to the minute) with a walking bass and swung
+    brushes, while the party is inside; the tune it came in with comes back when it leaves.
+  - The floor's air: a crowd's murmur (shaped noise, rising and falling), full in the gallery and softer at a table,
+    and now and then a bell from the reels, coins in a tray, chips clacking or a cheer.
+  - The season, from the game's calendar: a painted banner over the gallery (spring's blossom and lanterns,
+    Midsummer's lanterns and maypole, the Harvest Fair's striped stalls with pumpkins, apples and sheaves, the midwinter
+    Joker in his fur-trimmed cap with holly and candles), the season's colour on the window's frame, and its weather
+    drifting over the floor (petals, fireflies, leaves, snow - still with reduced motion). The week's festival, if one
+    is on, is named on the banner.
+
 One way to play (the fifty-second big update - v16.6)
   The same controls and the same result at every table (src/js/64zzm-result.js, 76zzp-controls.js):
   - Keys everywhere on the floor: Space or Enter does the table's main action (the arcade cabinets keep their own

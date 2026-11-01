@@ -17,7 +17,7 @@
       if (dlg && dlg.classList.contains("on") && !this.cgElsewhere && !this.cgLeaving && g.cgVisit && this.cgView !== "summary") { const s = g.cgVisitEnd(Date.now(), true); if (s && !s.quiet && !this.cgBusy) { this.cgSummary = s; this.cgSummaryFrom = this.cgView; this.cgView = "summary"; this.renderCasino(); return; } }
       if (dlg && dlg.classList.contains("on") && !this.cgElsewhere && g.cgVisit) g.cgVisitEnd();
       return close8.call(this); },
-    cgLeave() { this.cgLeaving = true; try { this.game.cgVisitEnd(); this.cgView = "gallery"; close8.call(this); } finally { this.cgLeaving = false; } },
+    cgLeave() { this.cgLeaving = true; try { this.game.cgVisitEnd(); this.cgView = "gallery"; this.closeDialogs(); } finally { this.cgLeaving = false; } },   // (through every door-keeper: the music, the air)
     renderCasino() { const v = this.cgView, g = this.game, box = this.$("#casino-body");
       if (isTable(v) && this.lbLastView !== v && g.lbTouch) g.lbTouch(v); this.lbLastView = v;
       if (v === "stats") { this.cgTableStats(box); this.cgFwFlush && this.cgFwFlush(); return; } if (v === "summary") { this.cgVisitBill(box); return; } return r8.call(this); },
