@@ -5307,6 +5307,21 @@ test("the floor's big nights: the progressive jackpot grows with every stake and
   const gb = g.gold, b1 = g.txBuy(100); assert.strictEqual(gb - g.gold, Math.ceil(100 * r.buy)); assert.strictEqual(T.n, 1000); assert.ok(b1.gold > s1.gold, "round the loop loses"); assert.ok(g.txBuy(TX.buyMax).error, "the day's limit"); assert.ok(g.txSell(5000).error, "more than you hold");
 });
 
+test("the floor made easier: a table opened is tried and goes to the front of the recent row (eight at most); favourites star and unstar; a table never tried is new; the figures count its plays, stakes, return, tickets and best score; sorting by most played, tickets and name; a visit counts its time, gold, tickets, cards and best moment, and a quiet one is quiet", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("lb-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 10000; const L = g.lbStore();
+  assert.ok(g.lbIsNew("slots")); g.lbTouch("slots", 1000); assert.ok(!g.lbIsNew("slots")); for (const id of ["roulette", "craps", "darts", "skee", "rings", "pond", "lottery", "plinko", "slots"]) g.lbTouch(id, 2000);
+  assert.strictEqual(L.recent.length, CM.LOBBY.recent); assert.strictEqual(L.recent[0], "slots"); assert.strictEqual(L.recent.filter((k) => k === "slots").length, 1); assert.strictEqual(L.first.slots, 1000); assert.strictEqual(L.last.slots, 2000);
+  assert.ok(g.lbFav("bingo")); assert.ok(g.lbIsFav("bingo")); assert.ok(!g.lbFav("bingo")); assert.ok(!g.lbIsFav("bingo"));
+  const V0 = g.cgVisitStart(0); assert.ok(V0); assert.ok(g.cgVisitEnd(5000, true).quiet, "nothing done yet"); assert.ok(g.cgVisit, "a peek leaves the visit on");
+  for (let k = 0; k < 4; k++) g.slotSpin(10); g.cgStake("craps", 50); g.cgPay("craps", 120); g.cgCelebrate(2, "HUGE at craps"); g.cgRecord("darts", 640, 6); g.tkAdd(30, "darts");
+  const S = g.lbStats("slots"); assert.strictEqual(S.played, 4); assert.strictEqual(S.wagered, 40); assert.strictEqual(S.ret, S.paid / 40); const C = g.lbStats("craps"); assert.strictEqual(C.net, 70); assert.ok(g.lbStats("darts").best.score >= 640); assert.ok(g.lbStats("darts").tickets >= 30);
+  const list = CM.CG_TABLES ? CM.CG_TABLES : [["slots", "The Gilded Reels"], ["craps", "Bones"], ["darts", "The Tavern Board"], ["bingo", "The Bell Hall"]];
+  const az = g.lbSort([["slots", "The Gilded Reels"], ["craps", "Bones"], ["darts", "The Tavern Board"], ["bingo", "The Bell Hall"]], "az").map(([k]) => k); same(az, ["bingo", "craps", "slots", "darts"], "by name, 'The' aside");
+  const pl = g.lbSort([["bingo", "B"], ["craps", "C"], ["slots", "S"]], "played").map(([k]) => k); assert.strictEqual(pl[0], "slots"); const tk = g.lbSort([["slots", "S"], ["darts", "D"]], "tickets").map(([k]) => k); assert.strictEqual(tk[0], "darts"); assert.ok(list);
+  const out = g.cgVisitEnd(65000); assert.ok(!g.cgVisit); assert.strictEqual(out.secs, 65); assert.ok(!out.quiet); assert.strictEqual(out.staked, 90); assert.strictEqual(out.best, "HUGE at craps"); assert.ok(out.tables.includes("craps") && out.tables.includes("slots")); assert.ok(out.tickets >= 30); assert.strictEqual(out.after, g.gold);
+  g.cgVisitStart(0); g.cgStake("roulette", 20); g.cgPay("roulette", 40); assert.strictEqual(g.cgVisitEnd(1000).best, "40 gold at roulette", "no celebration: the biggest payout");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

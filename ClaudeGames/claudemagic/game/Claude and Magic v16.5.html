@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v16.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1200,6 +1200,29 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* ---- v16.4: the sweep - on a narrow window, every table's side panel drops under its picture instead of running off the edge ---- */
 .cgtable :is(.rswrap, div):has(> :is(.dashside, .gtside, .mjside, .cside, .shside)) { flex-wrap: wrap; }
 .cgtable :is(.dashside, .gtside, .mjside, .cside, .shside) { min-width: min(260px, 100%); max-width: 100%; }
+/* ---- v16.5: search, sort, favourites, recent, new; a table's figures; the reckoning at the door ---- */
+.cggallery .cgcard { position: relative; color: inherit; } .cggallery .cgcard:focus-visible { outline: 2px solid #F0C040; outline-offset: 2px; }
+.cgfind { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 8px; } .cgfind label { font-size: 13px; color: #E8D8B0; }
+.cgsearch { flex: 1; min-width: 180px; padding: 6px 12px; border-radius: 16px; border: 1px solid #C89A30; background: #1A140E; color: #F8F0E0; font: 14px Georgia, serif; }
+.cgsearch:focus { outline: none; box-shadow: 0 0 0 2px rgba(240,192,64,0.5); } .cgsort { margin-left: 6px; padding: 4px 8px; border-radius: 6px; border: 1px solid #C89A30; background: #1A140E; color: #F8F0E0; font: 13px Georgia, serif; }
+.cgrecent { margin: 0 0 10px; } .cgrecent h4 { margin: 0 0 4px; color: #F0D070; font-size: 13px; } .cgrecent > div { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.cgmini { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: 0 0 auto; width: 98px; padding: 4px; border-radius: 6px; background: linear-gradient(#2A2018, #1A140E); border: 1px solid rgba(200,160,64,0.45); color: inherit; cursor: pointer; }
+.cgmini:hover { border-color: #F0C040; } .cgmini canvas { width: 88px; height: 41px; border-radius: 4px; } .cgmini span { font-size: 10px; line-height: 1.2; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 90px; }
+.cgcard .cgstar, .cgnavtools .cgstar, .lbstats .cgstar { cursor: pointer; } .cggallery .cgcard .cgstar { position: absolute; top: 9px; right: 10px; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: rgba(10,6,4,0.7); border: 1px solid rgba(240,192,64,0.5); color: #E8D8B0; font-size: 15px; line-height: 1; }
+.cgstar.on { color: #FFD840 !important; text-shadow: 0 0 6px rgba(255,216,64,0.7); } .cggallery .cgcard .cgstar:hover { transform: scale(1.12); }
+.cggallery .cgcard .cginfo { position: absolute; top: 9px; right: 40px; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: rgba(10,6,4,0.7); border: 1px solid rgba(240,192,64,0.5); color: #E8D8B0; font: italic bold 13px Georgia, serif; }
+.cggallery .cgcard .cgnew { position: absolute; top: 8px; left: -4px; padding: 1px 8px; border-radius: 0 3px 3px 0; background: #3A9A50; color: #FFF; font: bold 10px Georgia, serif; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.cggallery .cgcard.hhcard .cgnew { top: 30px; } .cgnone { grid-column: 1 / -1; padding: 20px; text-align: center; }
+.cgnavtools { display: inline-flex; gap: 4px; margin-left: 4px; } .cgnavtools button { padding: 2px 8px; font-size: 12px; } .cgnavtools .cgstar { font-size: 15px; padding: 0 6px; color: #E8D8B0; }
+.lbstats .lbtop { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin: 6px 0 12px; } .lbstats .lbtop canvas { border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.6); max-width: 100%; } .lbstats h3 { margin: 0 0 4px; }
+.lbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; } .lbcell { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(200,160,64,0.25); }
+.lbcell span { font-size: 11px; color: #C8B890; text-transform: uppercase; letter-spacing: 1px; } .lbcell b { font: bold 20px Georgia, serif; color: #F8F0E0; } .lbcell.up b { color: #80E080; } .lbcell.down b { color: #F09080; } .lbcell.dim b { font-size: 14px; opacity: 0.7; }
+.lbbar { position: relative; height: 22px; margin: 12px 0 4px; border-radius: 11px; background: rgba(0,0,0,0.4); overflow: hidden; } .lbbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #C89A30, #FFE070); }
+.lbbar em { position: absolute; top: 0; bottom: 0; width: 2px; background: #FFF; } .lbbar span { position: absolute; left: 10px; top: 3px; font-size: 12px; color: #FFF; text-shadow: 0 1px 2px #000; }
+.lbbill { display: flex; justify-content: center; padding: 10px 0; } .lbpaper { width: min(520px, 100%); padding: 18px 22px; border-radius: 4px; background: #FBF4E0 repeating-linear-gradient(transparent 0 23px, rgba(160,120,60,0.12) 23px 24px); color: #2A2010; box-shadow: 0 10px 30px rgba(0,0,0,0.7); animation: bgstamp 0.4s ease-out; }
+.lbpaper h3 { margin: 0 0 4px; color: #5A2A10; text-align: center; font-family: Georgia, serif; } .lbpaper .lore { color: #6A5030; text-align: center; } .lbpaper table { width: 100%; border-collapse: collapse; margin: 8px 0; font-family: Georgia, serif; }
+.lbpaper td { padding: 5px 4px; border-bottom: 1px dotted rgba(90,60,20,0.35); } .lbpaper td:last-child { text-align: right; font-weight: bold; } .lbpaper td small { font-weight: normal; color: #6A5030; }
+.lbpaper tr.up td:last-child { color: #2A7A2A; } .lbpaper tr.down td:last-child { color: #A02A20; } .lbpaper .tkcount { color: #7A1A30; } .lbpaper .row { justify-content: center; } .lbpaper .cgprize { color: #F8F0E0; }
 </style>
 </head>
 <body>
@@ -1209,7 +1232,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "16.4", built: "2026-11-01" };
+const CM = window.CM = { version: "16.5", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24124,6 +24147,41 @@ CM.LUCK = {
   });
 }
 
+// ---- 64zzl-lobby.js ----
+"use strict";
+// The floor, easier to find your way round (v16.5): the party's favourite tables (starred), the tables it played
+// lately, and which it has never tried (a "new" ribbon in the gallery); each table's own figures (times played, gold
+// laid and paid back, the return so far, tickets won there, the best score on its board, when first and last
+// played); the gallery sorted by most played, most tickets or by name. And a visit, counted from the door: how long,
+// gold laid and paid back, the purse before and after, tickets won, the best moment (the biggest celebration, or
+// failing that the biggest payout) and the cards won - shown when the party leaves. The window is 76zzo-lobby.js.
+{ const LB = CM.LOBBY = { recent: 8 };
+  const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
+  const st0 = CM.Game.prototype.cgStake, pay0 = CM.Game.prototype.cgPay, cel0 = CM.Game.prototype.cgCelebrate;
+  Object.assign(CM.Game.prototype, {
+    lbStore() { const F = this.cgStore(); F.lobby = F.lobby || { fav: {}, recent: [], tried: {}, first: {}, last: {} }; return F.lobby; },
+    // a table opened: tried, and to the front of the recent row
+    lbTouch(id, now) { now = now === undefined ? Date.now() : now; const L = this.lbStore(); L.tried[id] = true; L.first[id] = L.first[id] || now; L.last[id] = now; L.recent = [id].concat(L.recent.filter((k) => k !== id)).slice(0, LB.recent); this.saveCasino && this.saveCasino(); },
+    lbFav(id) { const L = this.lbStore(); if (L.fav[id]) delete L.fav[id]; else L.fav[id] = true; this.saveCasino && this.saveCasino(); return !!L.fav[id]; },
+    lbIsFav(id) { return !!this.lbStore().fav[id]; },
+    lbIsNew(id) { const F = this.cgStore(); return !this.lbStore().tried[id] && !F.played[id]; },
+    lbBest(id) { const F = this.cgStore(), B = (F.boards || {})[id]; if (B && B.length) return { score: B[0].score, level: B[0].level }; const fa = F[`fa_${id}_best`]; return fa ? { score: fa } : null; },
+    lbStats(id) { const F = this.cgStore(), L = this.lbStore(), T = this.tkStore ? this.tkStore() : { by: {} }, w = F.wagered[id] || 0, p = F.paid[id] || 0;
+      return { played: F.played[id] || 0, wagered: w, paid: p, ret: w ? p / w : null, net: p - w, tickets: (T.by || {})[id] || 0, best: this.lbBest(id), first: L.first[id] || null, last: L.last[id] || null, fav: !!L.fav[id] }; },
+    lbSort(list, how) { const F = this.cgStore(), T = this.tkStore ? this.tkStore() : { by: {} }, L = this.lbStore(), by = T.by || {};
+      const key = how === "played" ? (id) => -((F.played[id] || 0) * 1000 + (L.last[id] ? 1 : 0)) : how === "tickets" ? (id) => -(by[id] || 0) : null;
+      const out = list.slice(); if (how === "az") out.sort((a, b) => a[1].replace(/^The /, "").localeCompare(b[1].replace(/^The /, ""))); else if (key) out.sort((a, b) => key(a[0]) - key(b[0])); return out; },
+    // ---- a visit to the Joker, counted from the door ----
+    cgVisitStart(now) { const F = this.cgStore(), T = this.tkStore ? this.tkStore() : { earned: 0 }; this.cgVisit = { at: now === undefined ? Date.now() : now, gold: this.gold, tk: T.earned || 0, cards: F.cards.length, wag: sum(F.wagered), paid: sum(F.paid), best: null, top: null, tables: {} }; return this.cgVisit; },
+    cgVisitEnd(now, peek) { const V = this.cgVisit; if (!V) return null; const F = this.cgStore(), T = this.tkStore ? this.tkStore() : { earned: 0 }; if (!peek) this.cgVisit = null;
+      const out = { secs: Math.max(0, Math.round(((now === undefined ? Date.now() : now) - V.at) / 1000)), staked: sum(F.wagered) - V.wag, paid: sum(F.paid) - V.paid, before: V.gold, after: this.gold, tickets: (T.earned || 0) - V.tk, cards: F.cards.slice(V.cards), tables: Object.keys(V.tables) };
+      out.best = V.best ? V.best.text : V.top ? `${V.top.n.toLocaleString("en")} gold at ${V.top.game}` : null; out.quiet = !out.staked && !out.paid && !out.tickets && !out.cards.length; return out; },
+    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why && this.cgVisit) this.cgVisit.tables[game] = true; return why; },
+    cgPay(game, amount) { const n = pay0.call(this, game, amount), V = this.cgVisit; if (V && n > 0) { V.tables[game] = true; if (!V.top || n > V.top.n) V.top = { n, game }; } return n; },
+    cgCelebrate(tier, text) { cel0.call(this, tier, text); const V = this.cgVisit; if (V && (!V.best || tier > V.best.tier)) V.best = { tier, text }; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -31907,7 +31965,7 @@ CM.CG_INFO = {
   plinko: { cat: "luck", line: "Plinko: one big chip down twelve rows of pegs." },
   pond: { cat: "fair", line: "Cast, strike and play the fish in; some bite only at night." },
 };
-CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["luck", "Luck"], ["fair", "Fairground"], ["prizes", "Prizes"]];
+CM.CG_CATS = [["all", "All"], ["fav", "★ Favourites"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["luck", "Luck"], ["fair", "Fairground"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
 CM.CG_THUMB = (() => {
   const bg = (p, w, h, a, b) => { const g = p.createLinearGradient(0, 0, 0, h); g.addColorStop(0, a); g.addColorStop(1, b); p.fillStyle = g; p.fillRect(0, 0, w, h); };
@@ -31995,18 +32053,27 @@ CM.CG_THUMB = (() => {
       nav.querySelectorAll("[data-cgv]").forEach((b) => b.addEventListener("click", () => { if (this.cgBusy) return; this.cgView = b.dataset.cgv; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); }));
     },
     cgGallery(box) {
-      const cat = this.cgCat || "all", all = CM.CG_TABLES.filter(([id]) => cat === "all" || (CM.CG_INFO[id] || {}).cat === cat), pages = Math.max(1, Math.ceil(all.length / PER)), page = this.cgPage = Math.max(0, Math.min(pages - 1, this.cgPage || 0)), shown = all.slice(page * PER, page * PER + PER), F = this.game.cgStore();
+      const g = this.game, q = (this.cgSearch || "").trim().toLowerCase(), cat = this.cgCat || "all", sort = this.cgSort || "floor", lb = !!g.lbStore;
+      let all = CM.CG_TABLES.filter(([id, nm]) => (cat === "all" || (cat === "fav" ? lb && g.lbIsFav(id) : (CM.CG_INFO[id] || {}).cat === cat)) && (!q || nm.toLowerCase().includes(q) || ((CM.CG_INFO[id] || {}).line || "").toLowerCase().includes(q)));
+      if (lb && sort !== "floor") all = g.lbSort(all, sort); const recent = lb && !q && cat === "all" ? g.lbStore().recent.filter((id) => CM.CG_TABLES.some(([k]) => k === id)) : [];
+      const pages = Math.max(1, Math.ceil(all.length / PER)), page = this.cgPage = Math.max(0, Math.min(pages - 1, this.cgPage || 0)), shown = all.slice(page * PER, page * PER + PER), F = this.game.cgStore();
       box.innerHTML = `<div class="cggallery"><div class="cghead"><h3>The Gilded Joker</h3><span class="cgsub">${CM.CG_TABLES.length} tables on the floor</span><span class="cggold">${this.game.gold} gold</span></div>
+        <div class="cgfind"><input type="search" class="cgsearch" placeholder="Search the floor..." value="${(this.cgSearch || "").replace(/"/g, "&quot;")}" aria-label="Search the games"><label>Sort <select class="cgsort">${[["floor", "As on the floor"], ["played", "Most played"], ["tickets", "Most tickets won"], ["az", "A to Z"]].map(([k, n]) => `<option value="${k}" ${k === sort ? "selected" : ""}>${n}</option>`).join("")}</select></label></div>
         <div class="cgcats">${CM.CG_CATS.map(([k, n]) => `<button data-cgcat="${k}" class="${k === cat ? "primary" : ""}">${n}</button>`).join("")}</div>
-        <div class="cggrid">${shown.map(([id, name]) => { const info = CM.CG_INFO[id] || { line: "" }, played = (F.played || {})[id]; return `<button class="cgcard" data-cgopen="${id}"><canvas width="176" height="82" data-cgthumb="${id}"></canvas><b>${name}</b><span>${info.line}</span>${played ? `<i>played ${played}</i>` : ""}</button>`; }).join("")}</div>
+        ${recent.length && page === 0 ? `<div class="cgrecent"><h4>Recently played</h4><div>${recent.map((id) => `<button class="cgmini" data-cgopen="${id}" title="${(CM.CG_TABLES.find(([k]) => k === id) || [])[1]}"><canvas width="88" height="41" data-cgthumb="${id}"></canvas><span>${(CM.CG_TABLES.find(([k]) => k === id) || [])[1]}</span></button>`).join("")}</div></div>` : ""}
+        <div class="cggrid">${shown.map(([id, name]) => { const info = CM.CG_INFO[id] || { line: "" }, played = (F.played || {})[id], fav = lb && g.lbIsFav(id), nw = lb && g.lbIsNew(id); return `<div class="cgcard" role="button" tabindex="0" data-cgopen="${id}"><canvas width="176" height="82" data-cgthumb="${id}"></canvas><b>${name}</b><span>${info.line}</span>${played ? `<i>played ${played}</i>` : ""}${nw ? `<em class="cgnew">New</em>` : ""}${lb ? `<button class="cgstar${fav ? " on" : ""}" data-cgfav="${id}" title="${fav ? "Unstar" : "Star as a favourite"}">${fav ? "★" : "☆"}</button><button class="cginfo" data-cgstats="${id}" title="This table's figures">i</button>` : ""}</div>`; }).join("") || `<p class="small cgnone">${cat === "fav" && !q ? "No favourites yet - star a table with ☆ to keep it here." : "Nothing on the floor matches that."}</p>`}</div>
         <div class="cgpager"><button data-cgpg="-1" ${page === 0 ? "disabled" : ""}>◀ Back</button><span>Page ${page + 1} of ${pages}</span><button data-cgpg="1" ${page >= pages - 1 ? "disabled" : ""}>Next ▶</button></div>
         <div class="row"><button data-leave>Leave the Joker</button></div></div>`;
       box.querySelectorAll("[data-cgthumb]").forEach((c) => { const f = CM.CG_THUMB[c.dataset.cgthumb], p = c.getContext("2d"); if (f) f(p, c.width, c.height); else { p.fillStyle = "#2A1A30"; p.fillRect(0, 0, c.width, c.height); p.fillStyle = "#F0C040"; p.font = "bold 28px Georgia"; p.textAlign = "center"; p.fillText("?", c.width / 2, c.height / 2 + 10); } });
-      box.querySelectorAll("[data-cgopen]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.cgopen; this.cgNote = ""; this.caSfx("cardplace", 0.35); this.renderCasino(); }));
+      box.querySelectorAll("[data-cgopen]").forEach((b) => { const go = () => { this.cgView = b.dataset.cgopen; this.cgNote = ""; this.caSfx("cardplace", 0.35); this.renderCasino(); }; b.addEventListener("click", go); b.addEventListener("keydown", (e) => { if (e.target === b && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); go(); } }); });
+      box.querySelectorAll("[data-cgfav]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); const on = g.lbFav(b.dataset.cgfav); this.caSfx(on ? "coin" : "card", 0.3, 1.4); this.renderCasino(); }));
+      box.querySelectorAll("[data-cgstats]").forEach((b) => b.addEventListener("click", (e) => { e.stopPropagation(); this.cgStatsFor = b.dataset.cgstats; this.cgStatsBack = "gallery"; this.cgView = "stats"; this.caSfx("cardplace", 0.3); this.renderCasino(); }));
+      const sIn = box.querySelector(".cgsearch"); if (sIn) { sIn.addEventListener("input", () => { this.cgSearch = sIn.value; this.cgPage = 0; const at = sIn.selectionStart; this.renderCasino(); const n = this.$("#casino-body .cgsearch"); if (n) { n.focus(); n.setSelectionRange(at, at); } }); if (this.cgSearchFocus) { sIn.focus(); this.cgSearchFocus = false; } }
+      const sSel = box.querySelector(".cgsort"); if (sSel) sSel.addEventListener("change", () => { this.cgSort = sSel.value; this.cgPage = 0; this.caSfx("card", 0.25); this.renderCasino(); });
       box.querySelectorAll("[data-cgcat]").forEach((b) => b.addEventListener("click", () => { this.cgCat = b.dataset.cgcat; this.cgPage = 0; this.caSfx("card", 0.25); this.renderCasino(); }));
       box.querySelectorAll("[data-cgpg]").forEach((b) => b.addEventListener("click", () => { this.cgPage = page + Number(b.dataset.cgpg); this.caSfx("card", 0.3, 1.2); this.renderCasino(); }));
       box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
-      if (!this.cgGalKeys) { this.cgGalKeys = (e) => { if (this.cgView !== "gallery" || !this.dialogOpen() || !this.$("#casino-body .cggallery")) return; const d = e.code === "ArrowRight" ? 1 : e.code === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); this.cgPage = (this.cgPage || 0) + d; this.renderCasino(); }; window.addEventListener("keydown", this.cgGalKeys); }
+      if (!this.cgGalKeys) { this.cgGalKeys = (e) => { if (this.cgView !== "gallery" || !this.dialogOpen() || !this.$("#casino-body .cggallery")) return; if (e.target && e.target.closest && e.target.closest("input, select, textarea")) return; const d = e.code === "ArrowRight" ? 1 : e.code === "ArrowLeft" ? -1 : 0; if (!d) return; e.preventDefault(); this.cgPage = (this.cgPage || 0) + d; this.renderCasino(); }; window.addEventListener("keydown", this.cgGalKeys); }
     },
   });
 }
@@ -34159,6 +34226,57 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
       if (q("[data-hrgo]")) q("[data-hrgo]").addEventListener("click", () => { this.cgView = C.kind; this.cgNote = C.kind === "holdem" ? `Heads up against ${P.name} - ${C.wager} gold a side.` : `The high-roller's challenge: beat ${C.target}.`; this.caSfx("cardplace", 0.3); this.renderCasino(); });
       const draw = (now) => { if (!cv.isConnected) return; portrait(cv.getContext("2d"), cv.width, cv.height, C.who, now); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
     },
+  });
+}
+
+// ---- 76zzo-lobby.js ----
+"use strict";
+// The floor, easier to find your way round - the window's side: the gallery's search, sort, favourites, recent row
+// and "new" ribbons are in 76ze-gallery.js; here, a star and a figures button on every table's bar, the figures page
+// for a table (a ledger of what it has given and taken, its best score, when first and last played), the table marked
+// as tried and recent when it's opened, and the reckoning at the door: leaving the Joker after a busy visit shows a
+// bill of the evening - the time, the tables, gold laid and paid back, the purse before and after, tickets, the best
+// moment and the cards won - with the way out or back to the floor. The rules are 64zzl-lobby.js.
+{ const r8 = CM.UI.prototype.renderCasino, nav8 = CM.UI.prototype.cgNav, open8 = CM.UI.prototype.openCasino, close8 = CM.UI.prototype.closeDialogs, od8 = CM.UI.prototype.openDialog;
+  const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id, isTable = (id) => CM.CG_TABLES.some(([k]) => k === id), money = (n) => Math.floor(n).toLocaleString("en");
+  const ago = (t) => { if (!t) return "never"; const s = (Date.now() - t) / 1000; return s < 90 ? "just now" : s < 3600 ? `${Math.round(s / 60)} minutes ago` : s < 86400 * 2 ? `${Math.round(s / 3600)} hours ago` : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+  const span = (s) => (s < 60 ? `${s} seconds` : s < 3600 ? `${Math.round(s / 60)} minute${Math.round(s / 60) === 1 ? "" : "s"}` : `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} m`);
+  Object.assign(CM.UI.prototype, {
+    openCasino() { if (this.game.cgVisitStart && !this.game.cgVisit) this.game.cgVisitStart(); return open8.call(this); },
+    openDialog(sel) { this.cgElsewhere = true; try { return od8.call(this, sel); } finally { this.cgElsewhere = false; } },
+    // leaving the Joker: the reckoning first, if there's anything to reckon
+    closeDialogs() { const g = this.game, dlg = this.$("#dlg-casino");
+      if (dlg && dlg.classList.contains("on") && !this.cgElsewhere && !this.cgLeaving && g.cgVisit && this.cgView !== "summary") { const s = g.cgVisitEnd(Date.now(), true); if (s && !s.quiet && !this.cgBusy) { this.cgSummary = s; this.cgSummaryFrom = this.cgView; this.cgView = "summary"; this.renderCasino(); return; } }
+      if (dlg && dlg.classList.contains("on") && !this.cgElsewhere && g.cgVisit) g.cgVisitEnd();
+      return close8.call(this); },
+    cgLeave() { this.cgLeaving = true; try { this.game.cgVisitEnd(); this.cgView = "gallery"; close8.call(this); } finally { this.cgLeaving = false; } },
+    renderCasino() { const v = this.cgView, g = this.game, box = this.$("#casino-body");
+      if (isTable(v) && this.lbLastView !== v && g.lbTouch) g.lbTouch(v); this.lbLastView = v;
+      if (v === "stats") { this.cgTableStats(box); this.cgFwFlush && this.cgFwFlush(); return; } if (v === "summary") { this.cgVisitBill(box); return; } return r8.call(this); },
+    cgNav(box) { nav8.call(this, box); const g = this.game, nav = box.querySelector(".cgnav"), id = this.cgView; if (!nav || !g.lbStore || !isTable(id)) return; const name = nav.querySelector(".cgname"); if (!name) return;
+      const fav = g.lbIsFav(id), b = document.createElement("span"); b.className = "cgnavtools"; b.innerHTML = `<button class="cgstar${fav ? " on" : ""}" data-navfav title="${fav ? "Unstar" : "Star as a favourite"}">${fav ? "★" : "☆"}</button><button data-navstats title="This table's figures">Figures</button>`; name.after(b);
+      b.querySelector("[data-navfav]").addEventListener("click", () => { const on = g.lbFav(id); this.caSfx(on ? "coin" : "card", 0.3, 1.4); const s = b.querySelector("[data-navfav]"); s.textContent = on ? "★" : "☆"; s.classList.toggle("on", on); });
+      b.querySelector("[data-navstats]").addEventListener("click", () => { if (this.cgBusy) return; this.cgStatsFor = id; this.cgStatsBack = id; this.cgView = "stats"; this.caSfx("cardplace", 0.3); this.renderCasino(); }); },
+    // ---- a table's figures ----
+    cgTableStats(box) { const g = this.game, id = this.cgStatsFor, S = g.lbStats(id), info = CM.CG_INFO[id] || { line: "" }, free = !S.wagered, cell = (k, v, cls) => `<div class="lbcell ${cls || ""}"><span>${k}</span><b>${v}</b></div>`;
+      box.innerHTML = `<div class="lbstats"><div class="lbtop"><canvas width="264" height="123" data-lbthumb></canvas><div><h3>${nameOf(id)}</h3><p class="lore">${info.line}</p><div class="row"><button class="primary" data-lbplay>Play</button><button class="cgstar${S.fav ? " on" : ""}" data-lbfav>${S.fav ? "★ A favourite" : "☆ Star it"}</button><button data-lbback>${this.cgStatsBack === "gallery" ? "Back to the gallery" : "Back to the table"}</button></div></div></div>
+        <div class="lbgrid">${cell("Times played", money(S.played))}${free ? cell("Gold laid", "free to play", "dim") : cell("Gold laid", money(S.wagered))}${cell("Gold paid back", money(S.paid))}${free ? "" : cell("Your return so far", S.ret === null ? "-" : `${Math.round(S.ret * 100)}%`, S.ret === null ? "" : S.ret >= 1 ? "up" : "down")}${free ? "" : cell("Up or down", `${S.net >= 0 ? "+" : "-"}${money(Math.abs(S.net))} gold`, S.net >= 0 ? "up" : "down")}
+        ${cell("Tickets won here", `<span class="tkcount"><i class="tkt"></i>${money(S.tickets)}</span>`)}${cell("Best score", S.best ? `${money(S.best.score)}${S.best.level ? ` <small>(level ${S.best.level})</small>` : ""}` : "none yet")}${cell("First played", ago(S.first))}${cell("Last played", ago(S.last))}</div>
+        ${!free && S.ret !== null ? `<div class="lbbar" title="Gold paid back against gold laid"><i style="width:${Math.min(100, Math.round(S.ret * 50))}%"></i><em style="left:50%"></em><span>Paid back ${Math.round(S.ret * 100)}% of what was laid (the line is break-even)</span></div>` : ""}</div>`;
+      this.cgClubHead(box, `Figures: ${nameOf(id)}`); const q = (s) => box.querySelector(s), f = CM.CG_THUMB[id], c = q("[data-lbthumb]"); if (f && c) { const p = c.getContext("2d"); p.scale(1.5, 1.5); f(p, 176, 82); }
+      q("[data-lbplay]").addEventListener("click", () => { this.cgView = id; this.cgNote = ""; this.caSfx("cardplace", 0.35); this.renderCasino(); });
+      q("[data-lbback]").addEventListener("click", () => { this.cgView = this.cgStatsBack || "gallery"; this.caSfx("cardplace", 0.3); this.renderCasino(); });
+      q("[data-lbfav]").addEventListener("click", () => { g.lbFav(id); this.caSfx("coin", 0.3, 1.4); this.renderCasino(); }); },
+    // ---- the reckoning at the door ----
+    cgVisitBill(box) { const S = this.cgSummary || {}, net = (S.after || 0) - (S.before || 0), row = (k, v, cls) => `<tr class="${cls || ""}"><td>${k}</td><td>${v}</td></tr>`;
+      box.innerHTML = `<div class="lbbill"><div class="lbpaper"><h3>Your evening at the Gilded Joker</h3><p class="lore">The doorman hands you your coat, and with it a slip in the house's copperplate.</p>
+        <table>${row("Time on the floor", span(S.secs || 0))}${row("Tables played", S.tables && S.tables.length ? `${S.tables.length} <small>(${S.tables.slice(0, 6).map(nameOf).join(", ")}${S.tables.length > 6 ? ", ..." : ""})</small>` : "none")}
+        ${row("Gold laid", money(S.staked || 0))}${row("Gold paid back", money(S.paid || 0))}${row("Purse when you came in", `${money(S.before || 0)} gold`)}${row("Purse now", `${money(S.after || 0)} gold`)}${row("Up or down", `${net >= 0 ? "+" : "-"}${money(Math.abs(net))} gold`, net >= 0 ? "up" : "down")}
+        ${row("Tickets won", `<span class="tkcount"><i class="tkt"></i>${money(S.tickets || 0)}</span>`)}${row("The best moment", S.best || "a quiet night")}${row("Cards won", S.cards && S.cards.length ? S.cards.length : "none")}</table>
+        ${(S.cards || []).map((c) => this.cgCardWon(c)).join("")}<div class="row"><button class="primary" data-lbout>Leave the Joker</button><button data-lbstay>Back to the floor</button></div></div></div>`;
+      const q = (s) => box.querySelector(s); this.cgSfx(net >= 0 ? "coin" : "cardplace", 0.4);
+      q("[data-lbout]").addEventListener("click", () => this.cgLeave());
+      q("[data-lbstay]").addEventListener("click", () => { this.cgView = this.cgSummaryFrom && this.cgSummaryFrom !== "summary" ? this.cgSummaryFrom : "gallery"; this.renderCasino(); }); },
   });
 }
 
