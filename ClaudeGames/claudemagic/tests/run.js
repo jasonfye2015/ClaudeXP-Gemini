@@ -5442,6 +5442,17 @@ test("the Joker's story: chapters open by Joker level; the Final Night waits for
   assert.ok(g.stBegin().error, "once"); const fl = CM.makeFloor(CM.JOKER_FLOOR, "x"); assert.strictEqual(fl.things["20,24"].view, "story");
 });
 
+test("the floor's spoils: tickets played for teach every hero (by the party's highest level) and turn up wearable gear at that depth every fifty; handed-over tickets and practice don't count; the pace is held to a dungeon's whatever the stakes", () => {
+  const CM = load(), SP = CM.SPOILS, g = new CM.Game(); g.newGame("sp-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6;
+  for (const h of g.party) h.xp = 0; g.party[2].level = 6; const S = g.spStore(); S.bucket = SP.cap; S.at = 0;
+  const bag0 = g.bag.length; g.tkAdd(60, "darts"); const want = Math.round(60 * SP.xp(6)); assert.ok(g.party.every((h) => h.xp === want || h.level > 1), "every hero, by the highest level"); assert.strictEqual(g.bag.length - bag0, 1, "a piece at fifty");
+  const it = g.bag[g.bag.length - 1]; assert.ok(["weapon", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak"].includes(it.kind), `wearable: ${it.kind}`);
+  const x0 = g.party[0].xp; g.tkAdd(40, "almanac"); g.tkAdd(40, "joker"); assert.strictEqual(g.party[0].xp, x0, "handed-over tickets don't count");
+  g.prStart("slots"); g.tkAdd(40, "slots"); g.prEnd(); assert.strictEqual(g.party[0].xp, x0, "nor practice");
+  const t = 1e12, S2 = g.spStore(); S2.bucket = 0; S2.at = t; g.spEarn(500, t); assert.strictEqual(g.party[0].xp, x0, "the bucket is empty"); g.spEarn(500, t + 60000); assert.strictEqual(g.party[0].xp, x0 + Math.round(SP.rate * SP.xp(g.spLevel())), "a minute's worth");
+  const R = g.cgTakeResult(); assert.ok(R && R.xp > 0 && R.items.length >= 1, "the spoils on the result");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
