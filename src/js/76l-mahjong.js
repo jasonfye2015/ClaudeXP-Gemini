@@ -29,6 +29,9 @@ CM.MJ_ART = { TW: 44, TH: 56, DX: 5, DY: 6 };
       if (q("[data-mjleave]")) q("[data-mjleave]").addEventListener("click", () => { if (!this.mjAsk || performance.now() - this.mjAsk > 4000) { this.mjAsk = performance.now(); this.cgNote = "Give up this table? Click again: a little back for what was cleared."; this.renderCasino(); return; } this.mjAsk = 0; this.mjEnd(); });
       const cv = q(".mjcanvas"); this.mjCanvas = cv;
       cv.addEventListener("click", (e) => { const r = cv.getBoundingClientRect(), Tb = g.mjTable(), k = Tb ? this.mjK(Tb) : 1; this.mjClick(310 + ((e.clientX - r.left) * (620 / r.width) - 310) / k, 260 + ((e.clientY - r.top) * (520 / r.height) - 260) / k); });
+      cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(), Tb = g.mjTable(); if (!Tb) return; const k = this.mjK(Tb), px = 310 + ((e.clientX - r.left) * (620 / r.width) - 310) / k, py = 260 + ((e.clientY - r.top) * (520 / r.height) - 260) / k, A = CM.MJ_ART;
+        const hit = this.mjOrder(Tb).reverse().find((t) => { if (t.gone) return false; const [x, y] = this.mjPos(Tb, t); return px >= x && px < x + A.TW && py >= y && py < y + A.TH; }); this.mjHover = hit && Tb.isFree(hit) ? hit.i : null; cv.style.cursor = this.mjHover !== null ? "pointer" : "default"; });
+      cv.addEventListener("mouseleave", () => { this.mjHover = null; });
       if (!this.mjLoop) { const loop = (now) => { if (!this.mjCanvas || !this.mjCanvas.isConnected || this.cgView !== "mahjong") { this.mjLoop = null; return; } this.mjFrame(now); this.mjLoop = requestAnimationFrame(loop); }; this.mjLoop = requestAnimationFrame(loop); }
     },
     mjEnd() { const r = this.game.mjSettle(); if (!r) return; this.cgNote = r.won ? `Cleared${r.clean ? " without a shuffle" : ` with ${r.used} shuffle${r.used > 1 ? "s" : ""}`}: ${r.pay} gold.` : `${r.removed} of 144 cleared: ${r.pay} gold back.`; if (r.won) { this.cgSfx("victory", 0.6); if (r.card) this.cgSfx("cardwin", 0.5); } else this.cgSfx("cardlose", 0.4); this.renderCasino(); if (r.won) this.cgCoins(this.$("#casino-body"), 18); },
@@ -54,15 +57,21 @@ CM.MJ_ART = { TW: 44, TH: 56, DX: 5, DY: 6 };
     mjRefreshInfo(T) { const b = this.mjCanvas && this.mjCanvas.parentElement; if (!b) return; const q = (s) => b.querySelector(s); if (q(".mjleft")) q(".mjleft").textContent = T.live().length; if (q(".mjopen")) q(".mjopen").textContent = T.pairsOpen().length; },
     mjFrame(now) {
       const g = this.game, T = g.mjTable(), cv = this.mjCanvas, p = cv.getContext("2d"), A = CM.MJ_ART;
-      const bg = p.createRadialGradient(310, 240, 60, 310, 260, 420); bg.addColorStop(0, "#2A1A12"); bg.addColorStop(1, "#0C0806"); p.fillStyle = bg; p.fillRect(0, 0, 620, 520);
+      const bg = p.createRadialGradient(310, 220, 60, 310, 260, 440); bg.addColorStop(0, "#4A1414"); bg.addColorStop(0.55, "#2A0A0A"); bg.addColorStop(1, "#0C0404"); p.fillStyle = bg; p.fillRect(0, 0, 620, 520);
+      p.strokeStyle = "rgba(220,170,70,0.6)"; p.lineWidth = 2; p.strokeRect(10, 10, 600, 500); p.strokeStyle = "rgba(220,170,70,0.25)"; p.strokeRect(16, 16, 588, 488); p.lineWidth = 1;
+      p.strokeStyle = "rgba(220,170,70,0.09)"; p.lineWidth = 2; for (const [cx, cy, s] of [[90, 90, 1], [520, 420, 1.2], [540, 110, 0.8], [80, 430, 0.9]]) { p.beginPath(); for (let k = 0; k < 3; k++) p.arc(cx + k * 22 * s, cy, 14 * s, Math.PI, 0); p.stroke(); p.beginPath(); p.arc(cx + 22 * s, cy + 12 * s, 14 * s, Math.PI, 0); p.stroke(); } p.lineWidth = 1;
+      const gl = p.createLinearGradient(0, 0, 620, 520); gl.addColorStop(0, "rgba(255,255,255,0.06)"); gl.addColorStop(0.4, "rgba(255,255,255,0)"); p.fillStyle = gl; p.fillRect(0, 0, 620, 520);
       if (!T) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 28px Georgia, serif"; p.textAlign = "center"; const S = g.mjState(); p.fillText(S && S.stage === "done" ? (S.last && S.last.won ? "The table is cleared!" : "The table is put away") : "The Tilewright's Table", 310, 250); p.textAlign = "left"; return; }
       const k0 = this.mjK(T); p.save(); p.translate(310, 260); p.scale(k0, k0); p.translate(-310, -260);
       const order = this.mjOrder(T), live = T.live(), hint = this.mjHint && now - this.mjHintAt < 2500 ? this.mjHint : null, fresh = this.mjShufAt && now - this.mjShufAt < 500;
       for (const t of order) {
         if (t.gone) continue; let [x, y] = this.mjPos(T, t); if (this.mjShake && this.mjShake.i === t.i && now - this.mjShake.at < 260) x += Math.sin((now - this.mjShake.at) / 20) * 3;
-        const sel = this.mjSel === t.i, lit = hint && hint.includes(t.i), free = T.isFree(t, live); if (sel) y -= 4;
-        p.fillStyle = "#6A5A40"; p.fillRect(x + A.DX, y + A.DY, A.TW, A.TH); p.fillStyle = "#B8A880"; p.fillRect(x + 2, y + 2, A.TW, A.TH);
-        p.fillStyle = free ? "#FBF6E6" : "#D8D0BC"; p.fillRect(x, y, A.TW - 2, A.TH - 2); p.strokeStyle = sel ? "#F0B020" : lit ? "#40E0A0" : "rgba(80,60,30,0.6)"; p.lineWidth = sel || lit ? 3 : 1; p.strokeRect(x + 0.5, y + 0.5, A.TW - 3, A.TH - 3);
+        const sel = this.mjSel === t.i, lit = hint && hint.includes(t.i), free = T.isFree(t, live), hov = free && this.mjHover === t.i && !sel; if (sel) y -= 4; else if (hov) y -= 2;
+        const rr = (x0, y0, w, h, r) => { p.beginPath(); p.roundRect ? p.roundRect(x0, y0, w, h, r) : p.rect(x0, y0, w, h); };
+        p.fillStyle = "rgba(0,0,0,0.22)"; rr(x + A.DX + 3, y + A.DY + 4, A.TW, A.TH, 5); p.fill();
+        p.fillStyle = "#5A4A30"; rr(x + A.DX, y + A.DY, A.TW, A.TH, 5); p.fill(); p.fillStyle = "#3A8A6A"; rr(x + 3, y + 3, A.TW - 1, A.TH - 1, 5); p.fill(); p.fillStyle = "#C8B890"; rr(x + 1.5, y + 1.5, A.TW - 1, A.TH - 1, 5); p.fill();
+        const fg = p.createLinearGradient(x, y, x + A.TW, y + A.TH); fg.addColorStop(0, free ? "#FFFDF4" : "#E0D8C4"); fg.addColorStop(1, free ? "#EDE4CC" : "#C8C0AC"); p.fillStyle = fg; if (sel || hov) { p.shadowColor = sel ? "#F0B020" : "#FFF0C0"; p.shadowBlur = sel ? 14 : 8; } rr(x, y, A.TW - 2, A.TH - 2, 4); p.fill(); p.shadowBlur = 0;
+        p.strokeStyle = sel ? "#F0B020" : lit ? "#40E0A0" : "rgba(80,60,30,0.5)"; p.lineWidth = sel || lit ? 3 : 1; rr(x + 0.5, y + 0.5, A.TW - 3, A.TH - 3, 4); p.stroke();
         if (fresh) p.globalAlpha = Math.min(1, (now - this.mjShufAt) / 500); p.drawImage(this.mjFace(t.f), x + 3, y + 3); p.globalAlpha = 1;
         if (!free) { p.fillStyle = "rgba(40,30,20,0.18)"; p.fillRect(x, y, A.TW - 2, A.TH - 2); }
       }

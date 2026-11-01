@@ -999,3 +999,18 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .vpslot:hover .pc { transform: translateY(-3px); }
 .vpslot.held .tag { color: #201400; background: #F0C040; border-radius: 4px; padding: 0 6px; animation: cgheld 0.25s ease-out; }
 @keyframes cgheld { from { transform: scale(1.6); } to { transform: none; } }
+
+/* ---- v15.2 polish: the Lexicon Engine, the Gilded Mint ---- */
+.lexicon .crt::after { content: ""; position: absolute; right: 26px; bottom: 5px; width: 7px; height: 7px; border-radius: 50%; background: #60FF90; box-shadow: 0 0 6px #40FF80; animation: lxled 3.2s ease-in-out infinite; }
+@keyframes lxled { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+.lexicon .crtscreen { animation: lxflick 7s steps(1) infinite; }
+@keyframes lxflick { 0%, 96%, 100% { opacity: 1; } 97% { opacity: 0.82; } 98% { opacity: 1; } 99% { opacity: 0.9; } }
+.lexicon .crtscan::after { content: ""; position: absolute; left: 0; right: 0; height: 60px; background: linear-gradient(rgba(120,255,160,0), rgba(120,255,160,0.06), rgba(120,255,160,0)); animation: lxband 6s linear infinite; }
+@keyframes lxband { from { top: -60px; } to { top: 100%; } }
+.lexicon .crtglass { position: relative; }
+.lexicon .crtglass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(ellipse at 30% 15%, rgba(255,255,255,0.08), rgba(255,255,255,0) 45%); pointer-events: none; z-index: 2; }
+.mint .mnpress::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(115deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.45) 50%, rgba(255,255,255,0) 60%) no-repeat; background-size: 300% 100%; background-position: 100% 0; animation: mnshine 4.5s ease-in-out infinite; pointer-events: none; }
+@keyframes mnshine { 0%, 60% { background-position: 100% 0; } 85%, 100% { background-position: 0% 0; } }
+.mint .mnpress::after { animation: mnstar 12s linear infinite; }
+@keyframes mnstar { to { transform: rotate(360deg); } }
+.mint .mnpress { box-shadow: 0 0 0 4px #5A3A10, 0 0 0 7px #C8A040, 0 10px 22px rgba(0,0,0,0.6), 0 0 30px rgba(255,200,80,0.25); }

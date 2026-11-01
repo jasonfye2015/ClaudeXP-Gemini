@@ -41,7 +41,7 @@ CM.GT_ART = { ruby: ["#E02838", "#FF90A0", "hex"], sapphire: ["#2850E0", "#A0C0F
     gtFrame(dt, now) {
       const g = this.game, T = g.gtTray(), GT = CM.GT, cv = this.gtCanvas, p = cv.getContext("2d");
       p.fillStyle = "#1A0E14"; p.fillRect(0, 0, 512, 512);
-      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { p.fillStyle = (x + y) % 2 ? "#3A1828" : "#44202F"; p.fillRect(x * 64, y * 64, 64, 64); }
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { p.fillStyle = (x + y) % 2 ? "#3A1828" : "#44202F"; p.fillRect(x * 64, y * 64, 64, 64); p.fillStyle = "rgba(255,255,255,0.025)"; p.beginPath(); p.moveTo(x * 64 + 32, y * 64 + 6); p.lineTo(x * 64 + 58, y * 64 + 32); p.lineTo(x * 64 + 32, y * 64 + 58); p.lineTo(x * 64 + 6, y * 64 + 32); p.fill(); }
       const lamp = p.createRadialGradient(256, 160, 40, 256, 256, 420); lamp.addColorStop(0, "rgba(255,230,170,0.12)"); lamp.addColorStop(1, "rgba(0,0,0,0.35)"); p.fillStyle = lamp; p.fillRect(0, 0, 512, 512);
       if (!T) { p.fillStyle = "rgba(255,240,200,0.85)"; p.font = "bold 28px Georgia, serif"; p.textAlign = "center"; const S = g.gtState(); p.fillText(S && S.stage === "done" ? (S.cleared ? "Five trays cut!" : "The run is over") : "The Gemcutter's Tray", 256, 256); p.textAlign = "left"; return; }
       if (!this.gtDisp || this.gtKey !== T.key) { this.gtSync(T); this.gtQueue = []; this.gtPhase = null; this.gtParts = []; }
@@ -55,6 +55,10 @@ CM.GT_ART = { ruby: ["#E02838", "#FF90A0", "hex"], sapphire: ["#2850E0", "#A0C0F
       for (const [id, d] of D) { if (d.dead) { d.pop += dt * 4.5; if (d.pop >= 1) D.delete(id); continue; } const dx = d.tx - d.x; d.x += Math.sign(dx) * Math.min(Math.abs(dx), dt * 7); if (d.ty > d.y) { d.vy += dt * 40; d.y = Math.min(d.ty, d.y + d.vy * dt); if (d.y >= d.ty) { if (d.vy > 4) d.land = 0.12; d.vy = 0; } } else { const dy = d.ty - d.y; d.y += Math.sign(dy) * Math.min(Math.abs(dy), dt * 7); } if (d.land) d.land = Math.max(0, d.land - dt); if (d.grow !== undefined && d.grow < 1) d.grow = Math.min(1, d.grow + dt * 4); }
       const hint = this.gtHint && now - this.gtHintAt < 3000 ? this.gtHint : null;
       for (const [, d] of D) this.gtDrawGem(p, d, now, (this.gtSel && this.gtSel[0] === Math.round(d.tx) && this.gtSel[1] === Math.round(d.ty) && !d.dead) || (hint && ((hint[0] === d.tx && hint[1] === d.ty) || (hint[2] === d.tx && hint[3] === d.ty))));
+      // glints: now and then a stone catches the lamp
+      if (Math.random() < dt * 2.5 && D.size) { const ds = [...D.values()].filter((d) => !d.dead), d = ds[Math.floor(Math.random() * ds.length)]; if (d) (this.gtGlints = this.gtGlints || []).push({ x: d.tx * 64 + 32 - 8 + Math.random() * 10, y: d.ty * 64 + 32 - 12 + Math.random() * 8, at: now }); }
+      this.gtGlints = (this.gtGlints || []).filter((q) => now - q.at < 600); for (const q of this.gtGlints) { const k = (now - q.at) / 600, r = Math.sin(k * Math.PI) * 9; p.save(); p.globalAlpha = Math.sin(k * Math.PI); p.fillStyle = "#FFFFFF"; p.translate(q.x, q.y); p.rotate(k); p.beginPath(); p.moveTo(0, -r); p.lineTo(r * 0.18, 0); p.lineTo(0, r); p.lineTo(-r * 0.18, 0); p.closePath(); p.moveTo(-r, 0); p.lineTo(0, r * 0.18); p.lineTo(r, 0); p.lineTo(0, -r * 0.18); p.closePath(); p.fill(); p.restore(); }
+      this.gtRings = (this.gtRings || []).filter((r) => now - r.at < 380); for (const r of this.gtRings) { const k = (now - r.at) / 380; p.strokeStyle = r.c; p.globalAlpha = 1 - k; p.lineWidth = 3 * (1 - k) + 0.5; p.beginPath(); p.arc(r.x, r.y, 14 + k * 30, 0, Math.PI * 2); p.stroke(); } p.globalAlpha = 1; p.lineWidth = 1;
       // sparks
       this.gtParts = (this.gtParts || []).filter((q) => (q.life -= dt) > 0); for (const q of this.gtParts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 260 * dt; p.globalAlpha = Math.min(1, q.life * 2); p.fillStyle = q.c; p.fillRect(q.x - 1.5, q.y - 1.5, 3, 3); } p.globalAlpha = 1;
       // the cascade's call
@@ -66,7 +70,7 @@ CM.GT_ART = { ruby: ["#E02838", "#FF90A0", "hex"], sapphire: ["#2850E0", "#A0C0F
     gtBegin(P, now) {
       const D = this.gtDisp;
       if (P.kind === "shake") { for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { const s = P.grid[y][x], d = D.get(s.id); if (d) { d.tx = x; d.ty = y; } } this.cgSfx("chain", 0.45); this.gtCall = { text: "Shaken up", n: 0, at: now }; this.gtPhase = { kind: "shake", t: 0.4 }; return; }
-      for (const c of P.cut) { const d = D.get(c.id); if (d) { d.dead = true; d.pop = 0; } const [col] = CM.GT_ART[CM.GT.KINDS[c.k]] || ["#FFF"]; for (let k = 0; k < 7; k++) this.gtParts.push({ x: c.x * 64 + 32, y: c.y * 64 + 32, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 220, life: 0.6 + Math.random() * 0.3, c: k % 2 ? "#FFF6D0" : col }); }
+      for (const c of P.cut) { const d = D.get(c.id); if (d) { d.dead = true; d.pop = 0; } const [col] = CM.GT_ART[CM.GT.KINDS[c.k]] || ["#FFF"]; (this.gtRings = this.gtRings || []).push({ x: c.x * 64 + 32, y: c.y * 64 + 32, at: now, c: col }); for (let k = 0; k < 7; k++) this.gtParts.push({ x: c.x * 64 + 32, y: c.y * 64 + 32, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 220, life: 0.6 + Math.random() * 0.3, c: k % 2 ? "#FFF6D0" : col }); }
       for (const m of P.placed) D.set(m.id, { x: m.x, y: m.y, tx: m.x, ty: m.y, vy: 0, k: m.k, sp: m.sp, pop: 0, grow: 0 });
       for (const f of P.falls) { const d = D.get(f.id); if (f.fresh) D.set(f.id, { x: f.x, y: f.from, tx: f.x, ty: f.to, vy: 0, k: f.k, sp: null, pop: 0 }); else if (d) d.ty = f.to; }
       this.gtShown = P.score;
@@ -82,7 +86,8 @@ CM.GT_ART = { ruby: ["#E02838", "#FF90A0", "hex"], sapphire: ["#2850E0", "#A0C0F
         setTimeout(() => { this.gtSettling = false; const r = this.game.gtSettle(); if (!r) return; this.cgNote = r.won ? `Tray ${r.n} done: ${r.pay} gold back.${this.game.gtState().stage === "done" ? " Every tray cut!" : " On to the next."}` : `Out of moves at ${r.score}. ${r.pay ? `${r.pay} gold back for the score.` : ""}`; this.gtDisp = null; this.renderCasino(); if (r.won) this.cgCoins(this.$("#casino-body"), 12); }, 1100); }
     },
     gtDrawGem(p, d, now, lit) {
-      const A = CM.GT_ART[CM.GT.KINDS[d.k]] || CM.GT_ART.pearl, [c0, c1, shape] = A, cx = d.x * 64 + 32, cy = d.y * 64 + 32 + (d.land ? Math.sin(d.land * 26) * 2 : 0), s = (d.dead ? 1 + d.pop * 0.6 : d.grow !== undefined ? d.grow : 1) * 24;
+      const A = CM.GT_ART[CM.GT.KINDS[d.k]] || CM.GT_ART.pearl, [c0, c1, shape] = A, cx = d.x * 64 + 32, cy = d.y * 64 + 32 + (d.land ? Math.sin(d.land * 26) * 2 : 0), s = (d.dead ? 1 + d.pop * 0.6 : d.grow !== undefined ? d.grow : 1) * 24 * (lit && !d.dead ? 1 + 0.06 * Math.sin(now / 110) : 1);
+      if (!d.dead) { p.fillStyle = "rgba(0,0,0,0.28)"; p.beginPath(); p.ellipse(cx + 3, cy + s * 0.92, s * 0.75, s * 0.2, 0, 0, Math.PI * 2); p.fill(); }
       p.save(); p.globalAlpha = d.dead ? Math.max(0, 1 - d.pop) : 1; p.translate(cx, cy);
       if (lit) { p.shadowColor = "#FFF0A0"; p.shadowBlur = 18 + 6 * Math.sin(now / 120); }
       if (d.sp === "star") { const n = 5, rot = now / 700; p.rotate(rot); const gr = p.createLinearGradient(-s, -s, s, s); ["#FF5060", "#FFC040", "#60E080", "#60A0FF", "#C070FF"].forEach((c, i) => gr.addColorStop(i / 4, c)); p.fillStyle = gr; p.beginPath(); for (let i = 0; i < n * 2; i++) { const r = i % 2 ? s * 0.45 : s, a = (i / (n * 2)) * Math.PI * 2; p.lineTo(Math.sin(a) * r, -Math.cos(a) * r); } p.closePath(); p.fill(); p.strokeStyle = "#FFF"; p.lineWidth = 2; p.stroke(); p.restore(); return; }

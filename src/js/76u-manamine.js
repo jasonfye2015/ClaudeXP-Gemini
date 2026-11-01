@@ -42,8 +42,10 @@ CM.CG_TABLES.push(["manamine", "Mana-Mine"]);
         if (y < MM.SKY) { p.fillStyle = y ? "#5A8AD0" : "#4A7AC0"; p.fillRect(X, Y, C, C); continue; }
         const b = Math.min(3, Math.floor(((y - MM.SKY) / (MM.H - MM.SKY)) * 4)); p.fillStyle = band[b]; p.fillRect(X, Y, C, C);
         const h = (x * 73 + y * 151) % 17; p.fillStyle = "rgba(0,0,0,0.18)"; p.fillRect(X + (h % 5) * 5 + 2, Y + (h % 7) * 4 + 3, 4, 3); if (h < 3) { p.fillStyle = b > 1 ? "#60C0F0" : "#E0C080"; p.fillRect(X + 18, Y + 20, 3, 3); }
-        if (Lv && Lv.dug[y][x]) { p.fillStyle = "#140C08"; p.fillRect(X + 2, Y + 2, C - 4, C - 4); if (y > MM.SKY && Lv.dug[y - 1][x]) p.fillRect(X + 2, Y - 2, C - 4, 6); if (x > 0 && Lv.dug[y][x - 1]) p.fillRect(X - 2, Y + 2, 6, C - 4); } }
-      p.fillStyle = "#4A8A2A"; p.fillRect(0, MM.SKY * C - 4, cv.width, 4);
+        if (Lv && Lv.dug[y][x]) { p.fillStyle = "rgba(20,12,8,0.5)"; p.fillRect(X, Y, C, C); p.fillStyle = "#140C08"; p.fillRect(X + 2, Y + 2, C - 4, C - 4); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(X + 2, Y + 2, C - 4, 3); if (y > MM.SKY && Lv.dug[y - 1][x]) p.fillRect(X + 2, Y - 2, C - 4, 6); if (x > 0 && Lv.dug[y][x - 1]) p.fillRect(X - 2, Y + 2, 6, C - 4); } }
+      { const sg = p.createRadialGradient(cv.width - 140, 18, 4, cv.width - 140, 18, 60); sg.addColorStop(0, "rgba(255,240,170,0.9)"); sg.addColorStop(0.25, "rgba(255,230,140,0.45)"); sg.addColorStop(1, "rgba(255,230,140,0)"); p.fillStyle = sg; p.fillRect(cv.width - 200, 0, 120, MM.SKY * C); p.fillStyle = "#FFF4C0"; p.beginPath(); p.arc(cv.width - 140, 18, 9, 0, Math.PI * 2); p.fill();
+        p.fillStyle = "rgba(255,255,255,0.85)"; for (let k = 0; k < 3; k++) { const cx = ((now / (90 + k * 30) + k * 170) % (cv.width + 120)) - 60, cy = 14 + k * 14; for (const [dx, dy, r] of [[0, 0, 9], [10, -4, 11], [22, 0, 9], [11, 4, 9]]) { p.beginPath(); p.arc(cx + dx, cy + dy, r * 0.8, 0, Math.PI * 2); p.fill(); } } }
+      p.fillStyle = "#4A8A2A"; p.fillRect(0, MM.SKY * C - 4, cv.width, 4); p.fillStyle = "#5AA036"; for (let x = 0; x < cv.width; x += 4) p.fillRect(x, MM.SKY * C - 6 - ((x * 7) % 3), 2, 3);
       p.fillStyle = "#8A2030"; p.fillRect(cv.width - 92, 6, 84, 22); p.fillStyle = "#FFE070"; p.font = "bold 10px Georgia, serif"; p.fillText("THE GILDED", cv.width - 86, 16); p.fillText("JOKER", cv.width - 70, 26);
       if (!Lv) { p.restore(); p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("Mana-Mine", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
       // the miner's lamp light
@@ -63,7 +65,7 @@ CM.CG_TABLES.push(["manamine", "Mana-Mine"]);
     },
     mmEvent(e, now) {
       const fx = this.mmFx, C2 = C;
-      if (e.kind === "dig") { if (Math.random() < 0.3) this.cgSfx("step", 0.12, 0.7 + Math.random() * 0.3); }
+      if (e.kind === "dig") { if (Math.random() < 0.3) this.cgSfx("step", 0.12, 0.7 + Math.random() * 0.3); const band = ["#C89A5A", "#B07A3A", "#8A5A2A", "#6A3A1E"], b = Math.min(3, Math.floor(((e.y - CM.MM.SKY) / (CM.MM.H - CM.MM.SKY)) * 4)); for (let k = 0; k < 5; k++) fx.parts.push({ x: e.x * C2 + 16, y: e.y * C2 + 16, vx: (Math.random() - 0.5) * 90, vy: -Math.random() * 90, life: 0.4, c: band[Math.max(0, b)] }); }
       else if (e.kind === "beam") this.cgSfx("zap", 0.25, 1.6); else if (e.kind === "latch") this.cgSfx("zap", 0.35, 1.2);
       else if (e.kind === "pump") this.cgSfx("card", 0.35, 0.9 + e.stage * 0.25);
       else if (e.kind === "pop" || e.kind === "crush") { this.cgSfx(e.kind === "pop" ? "shatter" : "slam", 0.5, 1.2); const m = e.m; for (let k = 0; k < 14; k++) fx.parts.push({ x: m.fx * C2 + 16, y: m.fy * C2 + 16, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 200, life: 0.6, c: m.kind === "newt" ? (k % 2 ? "#60C040" : "#F08030") : (k % 2 ? "#C84040" : "#F0D0A0") }); if (e.pts) (fx.pts = fx.pts || []).push({ x: m.fx * C2, y: m.fy * C2, n: e.pts, at: now }); }

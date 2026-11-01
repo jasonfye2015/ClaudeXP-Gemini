@@ -1395,6 +1395,26 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
 The polish pass (v15.1 onward)
   Going through the casino's tables one by one for their looks: more polish and more animation, the games as they
   were.
+  - v15.2, sixteen tables more, from Runefall to the Hexmarch:
+    Runefall lit by two flickering torches, its embers smouldering, a ring where each rune is struck, the
+    Well's water moving and the slate's edges in shadow. Lantern Lane Dash at night: pools of lamplight round
+    the posts, the carts' lamps and the hero's own lantern, dust on each hop, a splash or a crash when caught.
+    The Gemcutter's Tray: stones that cast shadows and catch the lamp in glints, the chosen one breathing, a
+    ring where stones are cut, a nap to the velvet. The Tilewright's Table lacquered red with a gilt border and
+    clouds, the tiles rounded ivory on jade with soft shadows, and the free tile under the mouse lifted.
+    The Hexed Wand: dust drifting in the lamp's beam, a grained wooden rim with a brass edge, the felt lit from
+    above. The Gilded Pit's screen given a glass sheen and its winning lines pulsing. Runestack: light rippling on
+    the water's surface, bubbles rising, the column under the falling stone lit, a streak where a stone is
+    slammed down. The Gilded Cascade: a shimmer across the glass, light running along the pusher, the tray
+    glowing as coins land. The Lexicon Engine's screen flickers now and then, a scan band rolls down it and a
+    lamp breathes on the case. The Mana Conduit's slate grained and chipped, brass rivets at its corners, the
+    font's light cast about it, sparks along the wet pipe. The Gilded Mint's coin with a passing gleam, its star
+    turning, a gilt rim. Mana Shelter under a sky with drifting clouds, the earth banded, with stones, roots and
+    deep crystals. Mana-Mine's sky with a sun and drifting clouds, grass along the top, tunnels with shadowed
+    edges and dust where the miner digs. The Glimmer Maze's motes twinkle, the hedges flower and the slime
+    leaves a faint trail. The Gloomwing Swarm's sky has nebulae, a crescent moon and rushing near stars, and a
+    flash at the mast when it fires. The Hexmarch's cellar lit by two torches, a glow along the floor and a
+    flash at the cannon's mouth.
   - v15.1, the Gilded Reels, Roulette, Blackjack and Jacks or Better:
     The Gilded Reels in a red-and-gilt cabinet with a neon marquee, chasing bulbs and a lever that swings;
     the reels blur as they spin, winning symbols pulse on a glowing payline, and the joker is drawn in
