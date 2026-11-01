@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Gear score and auto-manage (the sixty-seventh big update - v18.1)
+  (src/js/64zzy-automanage.js; the pack's button and figures in 70-ui.js and 75-bag.js)
+  - Gear score: each thing worn scores by its power (weighted by slot: the weapon most, then armour, off hand, helm,
+    then boots, cloak, rings, amulets, trinkets), its worth and its rarity (cursed much less; a weapon a hero isn't at
+    home with counts for less in their hands). Each hero's is the sum of what they wear - on their sheet - and the
+    party's the sum of all four, shown in the pack with a bar for each hero.
+  - "Auto-manage: Y/N" in the pack (kept in the settings): when Y, known gear coming into the pack (loot, chests, the
+    casino's spoils) - and everything there when it's switched on - goes to the first hero, left to right, whom it
+    betters by gear score; what they took off returns to the pack and may suit the next hero along. Unknown and cursed
+    things are left alone, nothing moves in a fight, and a film plays the changes back as they were made.
+
 A level gained (the sixty-sixth big update - v18.0)
   (src/js/76zzzc-levelup.js; 62-combat.js and 64-meta.js mark a real level gained, 64l-claudeablo.js calls it too)
   Every level gained - in a fight, at camp, home from the Mage Tower, the cave or the Fortress, at the Joker's tables,

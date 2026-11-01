@@ -1337,3 +1337,9 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 @property --lva { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 @keyframes lvrun { to { --lva: 360deg; } } @keyframes lvpulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,224,112,0); } 50% { box-shadow: 0 0 22px 6px rgba(255,224,112,0.75); } }
 @media (prefers-reduced-motion: reduce) { .member.lvup, .member.lvup::after { animation: none; box-shadow: 0 0 14px 4px rgba(255,224,112,0.7); } }
+/* ---- v18.1: gear score and auto-manage ---- */
+#btn-automanage.on { background: #2A5A2A; border-color: #80E080; color: #FFF; }
+.bag-gs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0; font-size: 12px; } .bag-gs .gs-total b { color: #FFE070; font-size: 15px; }
+.bag-gs .gs-hero { position: relative; display: inline-flex; gap: 6px; align-items: center; min-width: 120px; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.3); overflow: hidden; }
+.bag-gs .gs-hero i { position: absolute; inset: 0 auto 0 0; background: rgba(232,184,74,0.22); } .bag-gs .gs-hero em, .bag-gs .gs-hero b { position: relative; font-style: normal; } .bag-gs .gs-hero b { margin-left: auto; color: #FFE8A0; }
+.gs-chip { margin-left: 8px; padding: 0 8px; border-radius: 8px; background: rgba(232,184,74,0.2); border: 1px solid rgba(232,184,74,0.5); color: #FFE8A0; font-size: 12px; font-weight: normal; }
