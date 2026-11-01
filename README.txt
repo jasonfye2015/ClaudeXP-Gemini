@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Your history (the sixtieth big update - v17.4)
+  (src/js/64zzs-history.js, 76zzx-history.js)
+  Each visit with anything in it is written into the floor's books when the party leaves (the last 200 kept): when,
+  how long, gold laid and paid back, up or down, tickets, the tables, the best moment, the Joker level. "Your history"
+  on the club strip shows the record: five figures (visits, time on the floor, up or down in all, tickets won, the
+  Joker level), each visit's up or down as a bar, the running total, the most played tables, tickets by month and the
+  Joker level over the visits - point at a mark for its figures, or show it all as a table.
+
 Life on the floor (the fifty-ninth big update - v17.3)
   (src/js/64zzr-week.js, 76zzw-floorlife.js)
   - The residents are about: over the gallery a band of the floor at night where the six residents and a few

@@ -1285,3 +1285,13 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .wkwait { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: rgba(240,192,64,0.12); border: 1px dashed rgba(240,192,64,0.5); } .wkwait div { margin: 2px 0; }
 /* (the bar grew: on a narrow window it takes a second line rather than run off the edge) */
 .cgnav.cgbar { flex-wrap: wrap; row-gap: 4px; }
+/* ---- v17.4: your history ---- */
+.cgclub .histbtn { background: linear-gradient(#1A2A2A, #0E1818); border-color: #70B0A0; }
+.hstiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; } .hstile { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(200,160,64,0.25); }
+.hstile span { font-size: 11px; color: #C8B890; text-transform: uppercase; letter-spacing: 1px; } .hstile b { font: bold 22px Georgia, serif; color: #F8F0E0; } .hstile.up b, .hsroom .up { color: #4FB389; } .hstile.down b, .hsroom .down { color: #E07060; }
+.hsgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; } .hscard { padding: 10px 12px; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(200,160,64,0.2); } .hscard.wide { grid-column: 1 / -1; } .hscard h4 { margin: 0 0 6px; color: #F0D070; }
+.hsplot { position: relative; } .hsplot canvas { display: block; width: 100%; height: auto; } .hstip { position: absolute; z-index: 5; width: 180px; padding: 6px 10px; border-radius: 6px; background: #1E160E; border: 1px solid #C89A30; font-size: 12px; color: #F0E6D0; pointer-events: none; box-shadow: 0 6px 14px rgba(0,0,0,0.6); }
+.hslegend { display: flex; gap: 14px; font-size: 12px; margin-bottom: 4px; } .hslegend i { display: inline-block; width: 12px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.hsbars div { display: grid; grid-template-columns: 150px 1fr 50px; gap: 8px; align-items: center; margin: 3px 0; font-size: 12px; } .hsbars span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } .hsbars i { display: block; height: 10px; border-radius: 0 4px 4px 0; background: #D8A840; } .hsbars b { text-align: right; color: #F0E6D0; }
+.hstable { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; } .hstable th { text-align: left; color: #C8B890; font-weight: normal; border-bottom: 1px solid rgba(240,192,64,0.4); padding: 3px 6px; } .hstable td { padding: 3px 6px; border-bottom: 1px dotted rgba(255,255,255,0.1); }
+@media (max-width: 900px) { .hsgrid { grid-template-columns: 1fr; } }
