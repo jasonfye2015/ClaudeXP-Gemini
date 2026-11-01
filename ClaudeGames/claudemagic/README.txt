@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Seeds from everywhere (the seventy-eighth big update - v19.3, UPGRADE_PLAN_14.md phase 3)
+  (src/js/69m-fieldseeds.js, 76zzzm-fieldseeds.js)
+  - Eight rare crops (rhubarb, asparagus, artichoke, blackberries, raspberries, coffee, pineapple, kiwi) and six
+    charmed ones that glow in the field and fetch a high price (mana-blossom, frost-berries, ember pepper, moon-melon,
+    coin-bean, the Joker's rose). None is on the shed's shelf or the merchant's: each place has its own -
+    the dungeon's spoils by depth, the Wood's forage nodes (berry canes), a game won at Leshy's (kiwi or another),
+    the Mage Tower (mana-blossom for floors climbed), Haven's cold gardens (frost-berries), the island's warm side
+    (coffee, pineapple, kiwi), Claudeita's cave (moon-melon), the Fortress (ember peppers), the pipe (a coin-bean for
+    every level cleared), and "A rare seed" at the Joker's prize counter (60 tickets).
+  - Cuttings: a crop picked at three stars or better sometimes gives a cutting - a seed that remembers its stars, so
+    the plot sown from it never picks worse.
+
 The village's hands (the seventy-seventh big update - v19.2, UPGRADE_PLAN_14.md phase 2)
   (src/js/69l-fieldhands.js, 76zzzl-fieldhands.js; the kit painted in 36c-cropart.js)
   - Sprinklers, made at the shed's workbench from a bar and gold and set on a plot: copper waters the four plots

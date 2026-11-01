@@ -5637,6 +5637,26 @@ test("the South Fields' hands: sprinklers from bars water their reach at dawn; a
   assert.strictEqual(g.fieldTendAll(), ""); assert.strictEqual(F.plots["27,36"].crop, "carrot"); assert.ok(F.plots["27,36"].w); assert.ok(!F.plots["26,36"].ripe); assert.ok(!F.plots["25,36"].weed); CM.weatherOf = wx;
 });
 
+test("seeds from everywhere: rare and charmed crops, not on the shed's shelf or the merchant's; found in the dungeon's spoils by depth, down the pipe and at the Joker's counter; a cutting keeps its stars", () => {
+  const CM = load(), FS = CM.FIELDSEEDS, FD = CM.SOUTHFIELDS; FS.on = true; CM.FIELDCARE.weedChance = 0; const g = new CM.Game(); g.newGame("fs-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "summer";
+  assert.strictEqual(FS.ALL.length, 14); for (const c of FS.ALL) { assert.ok(CM.CROPS[c].rare && !CM.CROPS[c].seedPrice, c); assert.ok(CM.cropPack.frames[c], `${c} has pictures`); }
+  g.village.renown = 2000; g.build("fields"); g.village.levels.fields = 4; g.fieldsApply(); g.floor.pos = FD.shed.slice(); assert.ok(!g.shedSeeds().some((c) => FS.ALL.includes(c)), "not on the shelf");
+  // the dungeon's spoils
+  g.enterFloor(5, "stairs"); FS.fightChance = 1; const b0 = g.bag.length; g.gain([{ name: "Rusty knife", kind: "weapon", power: 1, value: 1 }], "foe"); const sd = g.bag.slice(b0).find((i) => i.kind === "seed"); assert.ok(sd && ["rhubarb", "asparagus", "artichoke"].includes(sd.crop), "a shallow floor's seed");
+  g.enterFloor(40, "stairs"); const b1 = g.bag.length; g.gain([], "foe"); assert.ok(["emberpepper", "pineapple", "coffee"].includes(g.bag.slice(b1).find((i) => i.kind === "seed").crop), "the deep's");
+  // the pipe, the Joker
+  g.enterFloor(0, "rope", CM.TOWN_PIPE.slice()); g.mode = "explore"; assert.strictEqual(g.enterBros(1), ""); g.brosRun.li = 2; g.brosRun.cleared = false; const b2 = g.bag.length; g.leaveBros("fell");
+  assert.strictEqual(g.bag.slice(b2).filter((i) => i.kind === "seed" && i.crop === "coinbean").length, 2, "a coin-bean a level cleared");
+  const T = g.tkStore(); T.n = 500; const r = g.tkBuy("seeds"); assert.ok(!r.error, r.error); assert.ok(g.bag.some((i) => i.kind === "seed" && FS.ALL.includes(i.crop)), "the counter's rare seed");
+  // charmed crops grow like any other
+  g.floor.pos = FD.shed.slice(); g.mode = "explore"; g.enterFloor(0, "rope", FD.shed.slice()); g.mode = "explore"; const F = g.fields(); F.can = true; F.water = 99; g._fieldTill("12,32"); g.bag.push(CM.seed("coinbean")); assert.strictEqual(g.fieldSow("12,32", "coinbean"), "");
+  // a cutting: picked at three stars or more, sometimes a seed that remembers
+  FS.cutting = 1; F.plots["13,32"] = { t: 1, last: "beet" }; g.bag.push(CM.seed("radish")); g.season = "spring"; g.fieldSow("13,32", "radish"); F.plots["13,32"].comp = true; F.plots["13,32"].ripe = true; F.plots["13,32"].g = 3;
+  const b3 = g.bag.length; assert.strictEqual(g.fieldPick("13,32"), ""); const cut = g.bag.slice(b3).find((i) => i.kind === "seed" && i.q); assert.ok(cut && cut.q >= 4 && /cutting/.test(cut.name), cut && cut.name);
+  g._fieldTill("14,32"); const i = g.bag.indexOf(cut); g._fieldSow("14,32", "radish", i); F.plots["14,32"].everDry = true; assert.ok(CM.FIELDCARE.quality(g, "14,32") >= cut.q, "never worse than its cutting");
+  const v = g.village; v.levels.farm = 1; g.stock = []; g.season = "summer"; if (g.restock) g.restock(); assert.ok(!(g.stock || []).some((it) => it.kind === "seed" && FS.ALL.includes(it.crop)), "nor at the merchant's");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

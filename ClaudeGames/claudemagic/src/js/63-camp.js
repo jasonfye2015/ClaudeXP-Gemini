@@ -22,7 +22,7 @@ Object.assign(CM.Game.prototype, {
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
       if (this.floor.number === 0 && CM.festivalIs(this, "letter")) for (const it of this.stock) if (it.kind === "pick") it.value = Math.ceil(it.value / 2);   // (the Dwarves' Letter)
       if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
-      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c)) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
+      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c) && !CM.CROPS[c].rare) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
       if (this.floor.number === 0) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
