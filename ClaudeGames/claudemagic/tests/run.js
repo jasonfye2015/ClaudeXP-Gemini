@@ -5738,6 +5738,19 @@ test("the Portal Court: the yard grown to 7x9 inside, every portal in its place 
     g.enterFloor(-1, "rope", back.slice()); g.mode = "explore"; g.floor.pos = back.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.strictEqual(g.floor.pos.join(","), CM.PORTAL_YARD[k].join(","), `${k}'s twin home to its own portal`); }
 });
 
+test("the Wayfarer's Stone: a stone in the court and its twin by the Wood's road; it knows the gate and the glade, and every other place once walked to; a touch takes the party there, and the Wood's stone home to the court", () => {
+  const CM = load(), WS = CM.WAYSTONE; const g = new CM.Game(); g.newGame("ws-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.strictEqual(g.floor.things[WS.court.join(",")].type, "wayfarer"); assert.ok(/hand laid/.test(g.wsTravel("glade")), "only at the stone");
+  g.floor.pos = WS.court.slice(); let asked = 0; g.on("wayfarer", () => asked++); g.use(); assert.strictEqual(asked, 1);
+  assert.deepStrictEqual([...g.wsKnown()].sort(), ["glade", "woodgate"]); assert.ok(/walk there once/.test(g.wsTravel("cabin")));
+  assert.strictEqual(g.wsTravel("glade"), ""); assert.strictEqual(g.floor.number, -1); assert.strictEqual(g.floor.pos.join(","), "18,33");
+  g.floor.pos = [CM.CABIN.front[0], CM.CABIN.front[1] + 2]; g.look(); assert.ok(g.wsKnown().includes("cabin"), "found on foot");
+  g.floor.pos = WS.wood.slice(); assert.strictEqual(g.floor.things[WS.wood.join(",")].type, "wayfarer"); assert.strictEqual(g.wsTravel("court"), ""); assert.strictEqual(g.floor.number, 0);
+  g.floor.pos = WS.court.slice(); assert.strictEqual(g.wsTravel("cabin"), ""); assert.strictEqual(g.floor.pos.join(","), "32,18");
+  for (const [id, , , land] of WS.PLACES) assert.ok(CM.isOpen(g.floor, land[0], land[1]), `${id}'s landing is open ground`);
+  const v = CM.store.get("village", {}); assert.ok(v.waystone.known.cabin, "kept with the village");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

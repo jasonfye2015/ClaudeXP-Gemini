@@ -11,7 +11,7 @@ Wood's portals the same arch in different tints, nothing saying where each goes 
 - A name stone at each portal's foot and a brazier either side in its own colour; a ring of runes on the floor before
   it.
 
-## v21.1 - the Waystone
+## v21.1 - the Wayfarer's Stone ("the Waystone"; named apart from the dungeon camps' waystones)
 - A waystone on a dais by the opening: it takes the party to any place in the Wood they've already walked to - the
   Wood gate, the First Glade, the farm, the Mage Tower's clearing, Leshy's cabin, Claudeita's crag, the Fortress, the
   Glyph Deep's cabinet - and its twin by the Wood's road takes them back to the court. New places join by being found.

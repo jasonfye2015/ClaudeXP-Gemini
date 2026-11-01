@@ -1431,3 +1431,6 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.inglyph #view .compass, body.inglyph #view .hint { display: none; }
 .glyphbox { max-width: 720px; background: #050805; border-color: #2A6A3A; } .gdtitle { font-family: Consolas, "Courier New", monospace; color: #60F080; letter-spacing: 0.2em; text-shadow: 0 0 8px rgba(96,240,128,0.6); }
 .gdattract { font: 13px/1.4 Consolas, "Courier New", monospace; color: #60F080; background: #000; padding: 8px 10px; border-radius: 4px; overflow-x: auto; }
+/* the Waystone (v21.1) */
+.wsbox { max-width: 640px; } .wsgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; } @media (max-width: 560px) { .wsgrid { grid-template-columns: 1fr; } }
+.wsgo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; text-align: left; } .wsgo small { opacity: 0.75; font-size: 12px; } .wsgo.off { opacity: 0.45; border: 1px dashed rgba(240,192,64,0.3); border-radius: 6px; }

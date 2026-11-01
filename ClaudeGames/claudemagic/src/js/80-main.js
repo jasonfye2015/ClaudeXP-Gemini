@@ -124,6 +124,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("fields", (k) => ui.openFields && ui.openFields(k));   // (the South Fields: 76zzzj-fields.js)
   game.on("glyphcab", () => ui.openGlyphCab && ui.openGlyphCab());     // (the Glyph Deep: 76zzzp-glyph.js)
   game.on("glyphend", (E) => ui.glyphEnd && ui.glyphEnd(E));
+  game.on("wayfarer", () => ui.openWayfarer && ui.openWayfarer());     // (the Wayfarer's Stone: 76zzzr-waystone.js)
   game.on("craftgate", () => ui.openCraftGate());
   game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
@@ -496,6 +497,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
       else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
       else if (thing.type === "silo") out.push({ x, y, layer: "silo", w: 1.0, h: 1.5 });
+      else if (thing.type === "wayfarer") out.push({ x, y, layer: "wayfarer", w: 0.85, h: 1.3, glow: 0.2 + 0.12 * Math.sin(now / 700) });
       else if (thing.type === "glyphcab") out.push({ x, y, layer: "glyphcab", w: 0.85, h: 1.3, glow: 0.25 + 0.08 * Math.sin(now / 300) });   // (the Glyph Deep's cabinet)
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
