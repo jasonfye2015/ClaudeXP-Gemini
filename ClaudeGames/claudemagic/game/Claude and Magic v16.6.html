@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v16.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1223,6 +1223,18 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .lbpaper h3 { margin: 0 0 4px; color: #5A2A10; text-align: center; font-family: Georgia, serif; } .lbpaper .lore { color: #6A5030; text-align: center; } .lbpaper table { width: 100%; border-collapse: collapse; margin: 8px 0; font-family: Georgia, serif; }
 .lbpaper td { padding: 5px 4px; border-bottom: 1px dotted rgba(90,60,20,0.35); } .lbpaper td:last-child { text-align: right; font-weight: bold; } .lbpaper td small { font-weight: normal; color: #6A5030; }
 .lbpaper tr.up td:last-child { color: #2A7A2A; } .lbpaper tr.down td:last-child { color: #A02A20; } .lbpaper .tkcount { color: #7A1A30; } .lbpaper .row { justify-content: center; } .lbpaper .cgprize { color: #F8F0E0; }
+/* ---- v16.6: one set of keys and one result card at every table ---- */
+.cgnav .cgkeys { margin-left: auto; margin-right: 10px; font-size: 11px; color: #C8B890; white-space: nowrap; } .cgnav .jptick + .cgkeys, .cgnav .cgkeys + .jptick { margin-left: 0; }
+.cgkeys kbd { display: inline-block; min-width: 14px; padding: 0 4px; border-radius: 3px; background: #2A2018; border: 1px solid #8A6A30; border-bottom-width: 2px; color: #F0E0C0; font: 10px "Courier New", monospace; text-align: center; }
+@media (max-width: 900px) { .cgnav .cgkeys { display: none; } }
+.casinobox { position: relative; }
+.cgresult { position: absolute; left: 50%; bottom: 18px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px; max-width: 86%; padding: 10px 20px; border-radius: 14px;
+  background: linear-gradient(#3A2A10, #1E1408); border: 2px solid #C89A30; box-shadow: 0 10px 28px rgba(0,0,0,0.7), inset 0 0 18px rgba(240,192,64,0.18); color: #F8F0E0; pointer-events: none;
+  transform: translate(-50%, 140%); opacity: 0; transition: transform 0.35s cubic-bezier(.2,1.4,.4,1), opacity 0.3s; }
+.cgresult.on { transform: translate(-50%, 0); opacity: 1; } .cgresult.big { border-color: #FFE070; box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 22px rgba(255,210,80,0.45), inset 0 0 18px rgba(240,192,64,0.25); }
+.cgresult .cgrtitle { font: bold 15px Georgia, serif; color: #FFE070; letter-spacing: 1px; text-transform: uppercase; } .cgresult span { display: inline-flex; align-items: center; gap: 5px; font: 16px Georgia, serif; }
+.cgresult em { font: bold 22px Georgia, serif; font-style: normal; color: #FFF; } .cgresult .cgrcoin { display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF4C0, #F0C040 50%, #8A5A10); }
+.cgresult .cgrcards { font-size: 13px; color: #E8D8FF; } .cgresult .cgrcards i { font-style: normal; margin-right: 3px; }
 </style>
 </head>
 <body>
@@ -1232,7 +1244,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "16.5", built: "2026-11-01" };
+const CM = window.CM = { version: "16.6", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24182,6 +24194,24 @@ CM.LUCK = {
   });
 }
 
+// ---- 64zzm-result.js ----
+"use strict";
+// One way of telling a result (v16.6): whatever a table pays - gold, tickets, a card - is gathered here as it is paid,
+// and the window shows it the same way at every table when the play is done (76zzp-controls.js). Tickets that come
+// with laying a stake are not a win and aren't gathered; nor are chips cashed out at the residents' table.
+{ const st0 = CM.Game.prototype.cgStake, pay0 = CM.Game.prototype.cgPay, tk0 = CM.Game.prototype.tkAdd, card0 = CM.Game.prototype.cgCard, tier0 = CM.Game.prototype.cgTierCard, CASH = ["holdem"];
+  const res = (g) => (g.cgRes = g.cgRes || { gold: 0, tickets: 0, cards: [] });
+  Object.assign(CM.Game.prototype, {
+    cgStake(game, bet) { this.cgStaking = true; try { return st0.call(this, game, bet); } finally { this.cgStaking = false; } },
+    cgPay(game, amount) { const n = pay0.call(this, game, amount); if (n > 0 && !CASH.includes(game)) { const R = res(this); R.gold += n; R.game = game; } return n; },
+    tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0 && !this.cgStaking) res(this).tickets += k; return k; },
+    cgCard(rare, why, rnd) { const c = card0.call(this, rare, why, rnd); if (c && !this.cgTiering) res(this).cards.push(c); return c; },
+    cgTierCard(tier, why, R) { this.cgTiering = true; let c; try { c = tier0.call(this, tier, why, R); } finally { this.cgTiering = false; } if (c) res(this).cards.push(c); return c; },
+    // what has been won since last asked
+    cgTakeResult() { const R = this.cgRes; this.cgRes = null; return R && (R.gold || R.tickets || R.cards.length) ? R : null; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -34277,6 +34307,44 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
       const q = (s) => box.querySelector(s); this.cgSfx(net >= 0 ? "coin" : "cardplace", 0.4);
       q("[data-lbout]").addEventListener("click", () => this.cgLeave());
       q("[data-lbstay]").addEventListener("click", () => { this.cgView = this.cgSummaryFrom && this.cgSummaryFrom !== "summary" ? this.cgSummaryFrom : "gallery"; this.renderCasino(); }); },
+  });
+}
+
+// ---- 76zzp-controls.js ----
+"use strict";
+// One set of controls and one result card, at every table (v16.6). The keys, the same everywhere on the floor:
+// Space or Enter for the table's main action (Spin, Deal, Drop, Throw... - left to the arcade cabinets, which have their
+// own keys), Esc back to the gallery (and from the gallery, out of the door), [ and ] for the table before and after.
+// The keys are written on every table's bar. And whatever a play wins - gold, tickets, a card - comes up the same way at
+// every table when the play is done: a card at the foot of the window, counting up, staying a moment (a run of wins
+// close together adds up on the one card). The rules are 64zzm-result.js.
+{ const r9 = CM.UI.prototype.renderCasino, nav9 = CM.UI.prototype.cgNav;
+  const isTable = (id) => CM.CG_TABLES.some(([k]) => k === id), keyed = (id) => (CM.CG_INFO[id] || {}).cat === "arcade" || ["pit", "pachinko", "pond", "mint", "shelter", "cascade", "claw"].includes(id);
+  const money = (n) => Math.floor(n).toLocaleString("en");
+  Object.assign(CM.UI.prototype, {
+    renderCasino() { const out = r9.call(this); this.cgResultFlush(); this.cgKeysOn(); return out; },
+    cgNav(box) { nav9.call(this, box); const nav = box.querySelector(".cgnav"); if (!nav || nav.querySelector(".cgkeys")) return; const k = document.createElement("span"); k.className = "cgkeys";
+      k.innerHTML = `${keyed(this.cgView) ? "" : "<kbd>Space</kbd> play · "}<kbd>Esc</kbd> back · <kbd>[</kbd> <kbd>]</kbd> tables`; k.title = keyed(this.cgView) ? "This cabinet has its own keys - see its instructions." : "Space or Enter does the table's main action."; const g = nav.querySelector(".cggold"); if (g) g.before(k); else nav.appendChild(k); },
+    // ---- the result card ----
+    cgResultFlush() { const g = this.game; if (this.cgBusy || this.cgView === "summary" || !g.cgTakeResult) return; const R = g.cgTakeResult(); if (!R) return; this.cgResultShow(R); },
+    cgResultShow(R) {
+      const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) return; const host = dlg.querySelector(".casinobox") || dlg; let C = this.cgResCard;
+      if (!C || !C.el.isConnected) { const el = document.createElement("div"); el.className = "cgresult"; el.setAttribute("role", "status"); host.appendChild(el); C = this.cgResCard = { el, gold: 0, tickets: 0, cards: [], shown: { gold: 0, tickets: 0 } }; }
+      C.gold += R.gold; C.tickets += R.tickets; C.cards = C.cards.concat(R.cards); const big = C.gold >= 200 || C.cards.length;
+      C.el.className = `cgresult on${big ? " big" : ""}`; C.el.innerHTML = `<b class="cgrtitle">${big ? "A fine win!" : "You win"}</b><span class="cgrgold" ${C.gold ? "" : "hidden"}><i class="cgrcoin"></i><em>+0</em> gold</span><span class="cgrtk" ${C.tickets ? "" : "hidden"}><i class="tkt"></i><em>+0</em> tickets</span>${C.cards.length ? `<span class="cgrcards">${C.cards.slice(-3).map((c) => `<i>${(CM.CARDS[c] || ["🂠"])[0]}</i>${this.esc ? this.esc(c) : c}`).join(", ")}</span>` : ""}`;
+      const eg = C.el.querySelector(".cgrgold em"), et = C.el.querySelector(".cgrtk em"), from = { ...C.shown }, t0 = performance.now(), dur = 650;
+      const tick = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); C.shown.gold = Math.round(from.gold + (C.gold - from.gold) * e); C.shown.tickets = Math.round(from.tickets + (C.tickets - from.tickets) * e); if (eg) eg.textContent = `+${money(C.shown.gold)}`; if (et) et.textContent = `+${money(C.shown.tickets)}`; if (k < 1 && C.el.isConnected) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick); clearTimeout(C.timer); C.timer = setTimeout(() => { C.el.classList.remove("on"); setTimeout(() => { if (C === this.cgResCard) { C.el.remove(); this.cgResCard = null; } }, 400); }, big ? 4200 : 3000);
+    },
+    // ---- the keys ----
+    cgKeysOn() { if (this.cgKeyFn) return; this.cgKeyFn = (e) => {
+        const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) return; if (e.target && e.target.closest && e.target.closest("input, select, textarea")) return; const v = this.cgView;
+        if (e.code === "Escape") { if (v === "gallery" || v === "summary") return; e.preventDefault(); e.stopPropagation(); if (this.cgBusy) return; this.cgView = "gallery"; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); return; }
+        if ((e.key === "[" || e.key === "]") && isTable(v)) { e.preventDefault(); e.stopPropagation(); if (this.cgBusy) return; const L = CM.CG_TABLES, i = L.findIndex(([k]) => k === v), j = (i + (e.key === "]" ? 1 : -1) + L.length) % L.length; this.cgView = L[j][0]; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); return; }
+        if ((e.code === "Space" || e.code === "Enter") && isTable(v) && !keyed(v) && !e.repeat) { const box = this.$("#casino-body"), skip = /^(leave|clear|cash out|get up|sell all|let it go)/i;
+          if (e.target && e.target.closest && e.target.closest("button") && box.contains(e.target)) return;   // (a focused button: the key presses it, as ever)
+          const b = [...box.querySelectorAll("button.primary")].find((x) => !x.disabled && x.offsetParent && !x.closest(".cgnav") && !x.closest(".cgcats") && !skip.test(x.textContent.trim())); if (!b) return; e.preventDefault(); e.stopPropagation(); b.click(); } };
+      window.addEventListener("keydown", this.cgKeyFn, true); },
   });
 }
 

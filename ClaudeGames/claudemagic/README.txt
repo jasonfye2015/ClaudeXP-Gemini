@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+One way to play (the fifty-second big update - v16.6)
+  The same controls and the same result at every table (src/js/64zzm-result.js, 76zzp-controls.js):
+  - Keys everywhere on the floor: Space or Enter does the table's main action (the arcade cabinets keep their own
+    keys), Esc goes back to the gallery (and from the gallery, out of the door), [ and ] step to the table before or
+    after. The keys are written on every table's bar.
+  - Whatever a play wins - gold, tickets, a card - comes up on one card at the foot of the window when the play is
+    done, counting up; wins close together add up on the same card. A stake's tickets and Hold'em cash-outs aren't
+    counted as wins.
+
 Finding your way round (the fifty-first big update - v16.5)
   The gallery and the door (src/js/64zzl-lobby.js, 76zzo-lobby.js; the gallery's own changes in 76ze-gallery.js):
   - A search box (names and descriptions), a sort (as on the floor, most played, most tickets won, A to Z), a

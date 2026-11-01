@@ -1210,3 +1210,15 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .lbpaper h3 { margin: 0 0 4px; color: #5A2A10; text-align: center; font-family: Georgia, serif; } .lbpaper .lore { color: #6A5030; text-align: center; } .lbpaper table { width: 100%; border-collapse: collapse; margin: 8px 0; font-family: Georgia, serif; }
 .lbpaper td { padding: 5px 4px; border-bottom: 1px dotted rgba(90,60,20,0.35); } .lbpaper td:last-child { text-align: right; font-weight: bold; } .lbpaper td small { font-weight: normal; color: #6A5030; }
 .lbpaper tr.up td:last-child { color: #2A7A2A; } .lbpaper tr.down td:last-child { color: #A02A20; } .lbpaper .tkcount { color: #7A1A30; } .lbpaper .row { justify-content: center; } .lbpaper .cgprize { color: #F8F0E0; }
+/* ---- v16.6: one set of keys and one result card at every table ---- */
+.cgnav .cgkeys { margin-left: auto; margin-right: 10px; font-size: 11px; color: #C8B890; white-space: nowrap; } .cgnav .jptick + .cgkeys, .cgnav .cgkeys + .jptick { margin-left: 0; }
+.cgkeys kbd { display: inline-block; min-width: 14px; padding: 0 4px; border-radius: 3px; background: #2A2018; border: 1px solid #8A6A30; border-bottom-width: 2px; color: #F0E0C0; font: 10px "Courier New", monospace; text-align: center; }
+@media (max-width: 900px) { .cgnav .cgkeys { display: none; } }
+.casinobox { position: relative; }
+.cgresult { position: absolute; left: 50%; bottom: 18px; z-index: 30; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 16px; max-width: 86%; padding: 10px 20px; border-radius: 14px;
+  background: linear-gradient(#3A2A10, #1E1408); border: 2px solid #C89A30; box-shadow: 0 10px 28px rgba(0,0,0,0.7), inset 0 0 18px rgba(240,192,64,0.18); color: #F8F0E0; pointer-events: none;
+  transform: translate(-50%, 140%); opacity: 0; transition: transform 0.35s cubic-bezier(.2,1.4,.4,1), opacity 0.3s; }
+.cgresult.on { transform: translate(-50%, 0); opacity: 1; } .cgresult.big { border-color: #FFE070; box-shadow: 0 10px 28px rgba(0,0,0,0.7), 0 0 22px rgba(255,210,80,0.45), inset 0 0 18px rgba(240,192,64,0.25); }
+.cgresult .cgrtitle { font: bold 15px Georgia, serif; color: #FFE070; letter-spacing: 1px; text-transform: uppercase; } .cgresult span { display: inline-flex; align-items: center; gap: 5px; font: 16px Georgia, serif; }
+.cgresult em { font: bold 22px Georgia, serif; font-style: normal; color: #FFF; } .cgresult .cgrcoin { display: inline-block; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF4C0, #F0C040 50%, #8A5A10); }
+.cgresult .cgrcards { font-size: 13px; color: #E8D8FF; } .cgresult .cgrcards i { font-style: normal; margin-right: 3px; }
