@@ -1378,3 +1378,11 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .wmtip span { opacity: 0.8; } .wmtip em { color: #F0C040; font-style: normal; }
 .entry.goal { display: flex; align-items: center; gap: 10px; justify-content: space-between; } .entry.goal p { margin: 4px 0; flex: 1; }
 .tsalone { margin-top: 10px; padding: 8px 10px; border-radius: 6px; background: rgba(240,192,64,0.08); border: 1px solid rgba(240,192,64,0.25); font-size: 13px; }
+/* the renown level (v18.7) */
+.rlbox { margin: 8px 0 10px; padding: 10px 12px; border-radius: 8px; background: rgba(240,192,64,0.07); border: 1px solid rgba(240,192,64,0.3); }
+.rlhead { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; } .rlhead .flbar { margin-top: 5px; }
+.rllv { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FFE8A0, #C89020 70%); color: #3A2408; font-size: 19px; box-shadow: 0 0 0 2px #6A4A14; }
+.rlcols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; } @media (max-width: 700px) { .rlcols { grid-template-columns: 1fr; } }
+.rlrow { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dotted rgba(240,192,64,0.15); font-size: 13px; } .rlrow i { opacity: 0.6; font-style: normal; }
+.rlrow span:first-child { min-width: 42px; } .rlrow:not(.have) { opacity: 0.6; } .rlcols > div:first-child .rlrow { opacity: 1; } .rlrow.have span:first-child { color: #F0C040; }
+.rlcols > div:last-child .rlrow { justify-content: flex-start; }

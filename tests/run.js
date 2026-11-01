@@ -5530,6 +5530,21 @@ test("the tree goes with them: weak spots and a kill's spoils in the Fortress, t
   const hp0 = hb.hp; br.hurt(0.25); assert.strictEqual(hp0 - hb.hp, Math.max(1, Math.round(hb.max * 0.25 * 0.88)), "the tree's defence takes the sting out");
 });
 
+test("one name across the world: every part of the world adds renown once from its best, the renown ever earned makes one level, and its perks reach the fights, the stats and Haven", () => {
+  const CM = load(), RL = CM.RENOWNLV, g = new CM.Game(); g.newGame("rl-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(RL.levelOf(0), 1); assert.strictEqual(RL.levelOf(29), 1); assert.strictEqual(RL.levelOf(30), 2); assert.strictEqual(RL.levelOf(1350), 10); assert.strictEqual(RL.levelOf(1e9), 30);
+  g.village.renown = 0; g.village.spent = 0; g.rlSync(); const r0 = g.village.renown;
+  g.tower = { cleared: 4, best: 4 }; g.fort = { cleared: 2, best: 2 }; g.cards().beaten = { a: 1, b: 1 }; g.tally.brosBest = 3;
+  assert.strictEqual(g.rlSync(), 12 + 10 + 24 + 30, "the tower, the Fortress, the cabin and the pipe"); assert.strictEqual(g.village.renown - r0, 76); assert.strictEqual(g.rlSync(), 0, "never twice");
+  g.tower.cleared = 1; assert.strictEqual(g.rlSync(), 0, "a new run's tower doesn't take it back, or pay again"); g.tower.cleared = 6; assert.strictEqual(g.rlSync(), 6, "only past the best");
+  g.village.spent = 80; assert.strictEqual(g.rlInfo().level, RL.levelOf(g.village.renown), "spending never lowers it");
+  const h = g.party[0], luck0 = g.stat(h, "luck"), atk0 = g.effective(h).atk; let said = 0; g.on("renownlevel", () => { said++; });
+  g.village.renown = RL.need(20); g.rlSync(); assert.strictEqual(said, 1, "one flourish for a jump"); assert.strictEqual(g.rlInfo().level, 20);
+  assert.strictEqual(g.stat(h, "luck"), luck0 + 2, "+1 Luck at 6, +1 every stat at 16"); assert.strictEqual(g.effective(h).atk, atk0 + 1, "+1 attack at 20");
+  assert.ok(CM.gearProp(h, "xpBonus") >= 0.03 && CM.gearProp(h, "crit") >= 0.03, "the fights' perks"); assert.ok(CM.SOLOEDGE.ablo(h).life >= 15, "Haven's Life");
+  assert.ok(g.wmGoals()[0].area === "Renown");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
