@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Joker's charms (the sixty-second big update - v17.6)
+  (src/js/64zzu-charms.js, 76zzz-charms.js; 62-combat.js asks chPhoenix when a hero would fall)
+  Eleven charms, kept with the floor's books and worn into the world - one at a time, two from Joker level 20, three
+  from 40 - from the Charms door on the club strip.
+  - Earned, the floor's capstones: the Loaded Die (level 10 at five cabinets: 5% more hits), the Joker's Wink (900 at
+    the Tavern Board: 5% more criticals), the Phoenix Card (the residents' table cleared at a 500-gold buy-in: once an
+    expedition a falling hero stands at 1), the Cartographer's Ace (three collection books full: each new dungeon
+    floor's walls mapped on arrival), the Night Owl (the golden carp and the whole creel book: 10% more experience from
+    fights), the Gambler's Purse (the progressive jackpot won: 10% more gold from fights) and the Crown of the Week
+    (first in a Joker's Week: 2% hits, 2% criticals, 3% gold).
+  - Bought with tickets: the Lucky Coin (1,500: once a floor a sprung trap fails), the Rabbit's Foot (2,000: once a
+    floor a flight can't fail), the Wanderer's Token (1,200: a camp rest mends a quarter more) and the Golden Ticket
+    (2,500: 15% more tickets on the Joker's floor).
+
 The Almanac and the visit calendar (the sixty-first big update - v17.5)
   (src/js/64zzt-almanac.js, 76zzy-almanac.js)
   - The Joker's Almanac: thirty steps a real month, named for the month's festival, turned by the JXP earned anywhere on

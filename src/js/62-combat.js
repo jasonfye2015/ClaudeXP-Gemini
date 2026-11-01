@@ -490,6 +490,7 @@ Object.assign(CM.Game.prototype, {
     dmg = Math.max(1, dmg);
     h.hp -= dmg;
     if (h.hp <= 0 && CM.trait(h, "undying") && !h.undied) { h.undied = true; h.hp = 1; this.say(`${h.name} does not fall. Not this once.`); }
+    if (h.hp <= 0 && this.chPhoenix) this.chPhoenix(h);                    // (the Joker's Phoenix Card: 64zzu-charms.js)
     if ((h.status || {}).sleep) delete h.status.sleep;                   // (a blow wakes)
     const thorns = CM.gearProp(h, "thorns");
     if (thorns > 0 && by && by.hp > 0 && !opts.noTouch && by.ability !== "ranged") { by.hp -= thorns; this.say(`${CM.The(by)} is torn on ${h.name}'s spikes (-${thorns}).`); this.emit("fx", { kind: "hit", foe: by, amount: thorns }); }

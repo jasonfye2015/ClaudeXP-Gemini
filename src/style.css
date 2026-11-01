@@ -1305,3 +1305,10 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .vccard { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 6px 0; } .vccard i { display: flex; align-items: center; justify-content: center; height: 28px; border-radius: 50%; border: 2px dashed rgba(240,192,64,0.4); font: 11px Georgia, serif; font-style: normal; color: #C8B890; }
 .vccard i.big { border-style: solid; border-color: #E0B850; } .vccard i.on { background: #8A1A28; border: 2px solid #E0B850; color: #FFE070; font-size: 15px; } .vccard i.now { animation: bgstamp 0.6s ease-out; box-shadow: 0 0 12px #FFE070; }
 .vcwelcome .cghtcard { max-width: 440px; }
+/* ---- v17.6: the Joker's charms ---- */
+.cgclub .chbtn { background: linear-gradient(#2A1A3A, #140A20); border-color: #C080F0; }
+.chslots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; } .chslot { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 10px; border-radius: 10px; border: 2px dashed rgba(240,192,64,0.5); background: rgba(0,0,0,0.3); }
+.chslot span { font-size: 26px; } .chslot b { color: #FFE8A0; } .chslot i { opacity: 0.7; } .chslot.shut { opacity: 0.5; border-style: solid; border-color: rgba(255,255,255,0.15); }
+.chroom h4 { margin: 12px 0 6px; color: #F0D070; } .chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.chcard { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 10px; background: linear-gradient(#1A1018, #0E080E); border: 1px solid rgba(255,255,255,0.12); opacity: 0.75; } .chcard.own { opacity: 1; border-color: #C89A30; } .chcard.on { border: 2px solid #FFE070; box-shadow: 0 0 14px rgba(255,224,112,0.4); }
+.chcard .chicon { font-size: 30px; } .chcard b { color: #FFE8A0; font-family: Georgia, serif; } .chcard p { margin: 0; font-size: 13px; } .chcard i { color: #D0B0FF; } .chlock { font-size: 18px; opacity: 0.6; }

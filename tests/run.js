@@ -5409,6 +5409,17 @@ test("the Almanac and the visit calendar: JXP turns the month's steps (not in pr
   for (let k = 1; k < VC.stamps; k++) g.vcStamp(d1 + k * 86400000 * 2); assert.strictEqual(g.vcStore().card, 2, "a full card starts a new one"); assert.strictEqual(g.vcStore().n, 0);
 });
 
+test("the Joker's charms: earned ones read from the floor's books, bought ones for tickets; worn in the slots the Joker level gives; out in the world they lift the hit and the crit, stop a trap once a floor, stand a falling hero once an expedition, add gold, and map a new floor", () => {
+  const CM = load(), CH = CM.CHARMS, g = new CM.Game(); g.newGame("ch-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const T = g.tkStore();
+  assert.ok(!g.chOwned("wink")); assert.ok(g.chWear("wink").error); g.cgStore().fa_darts_best = 900; g.chMemo = null; assert.ok(g.chOwned("wink"));
+  assert.ok(g.chBuy("coin").error, "short of tickets"); T.n = 5000; assert.ok(!g.chBuy("coin").error); assert.ok(g.chBuy("coin").error, "once");
+  const h = g.party[0], c0 = g.critChance(h); assert.ok(!g.chWear("wink").error); assert.ok(Math.abs(g.critChance(h) - Math.min(0.75, c0 + 0.05)) < 1e-9); assert.ok(g.chWear("coin").error, "one slot at level 1");
+  g.chWear("wink"); assert.ok(!g.chWear("coin").error); const hp = g.party.map((x) => x.hp); g.floor.number = 3; g.springTrap("blade", "1,1"); same(g.party.map((x) => x.hp), hp, "the coin stops the first trap"); g.springTrap("blade", "1,1"); assert.ok(g.party[0].hp < hp[0] || g.party[0].hp === 1, "not the second");
+  g.chStore().worn = []; g.chStore().bought.rabbit = true; g.heStore().cleared = { 500: true }; g.chMemo = null; g.chWear("phoenix"); const x = g.party[1]; x.hp = -5; g.chPhoenix(x); assert.strictEqual(x.hp, 1); x.hp = -5; g.chPhoenix(x); assert.strictEqual(x.hp, -5, "once an expedition");
+  g.chStore().worn = []; g.jpStore().wins.push({ gold: 1000, game: "slots", day: "x" }); g.chMemo = null; const m0 = g.jkMul("gold"); g.chWear("purse"); assert.ok(Math.abs(g.jkMul("gold") - m0 - 0.1) < 1e-9);
+  assert.strictEqual(CH.slots(1), 1); assert.strictEqual(CH.slots(20), 2); assert.strictEqual(CH.slots(45), 3);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
