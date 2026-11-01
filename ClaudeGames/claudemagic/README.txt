@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Joker's story (the sixty-fourth big update - v17.8)
+  (src/js/64zzw-story.js, 76zzzb-story.js)
+  - Five chapters told by the Joker himself - in his alcove at the end of the foyer on his floor, or from the story's
+    door on the club strip - opened at Joker levels 3, 7, 12, 17 and 22: the card that floated when the lower town
+    drowned, the girl who picked him up, the house she built on a laugh, why the floor goes back so far, and what he
+    wants from the party.
+  - The Final Night (Joker level 25, every chapter heard): the Joker plays the party at five of his games in turn -
+    three alike within 15 pulls at the reels, three blackjack hands won before three lost, more than 600 at the Tavern
+    Board, 8 times the chip or better on the high Drop Board within 12 drops, two pair or better twice in 6 deals at
+    Jacks or Better. A round lost starts over; practice doesn't count. Winning all five ends the story: 5,000 gold,
+    1,000 tickets, a rare card, the charm the Joker's Own (3% hits, 3% criticals, 5% gold and experience from fights)
+    and the golden crown for his card.
+
 Into the Joker (the sixty-third big update - v17.7)
   (src/js/64zzv-jokerfloor.js, 76zzza-walk.js; hooks in 60-game.js, 61-explore.js, 70-ui.js, 73-play.js, 80-main.js)
   - The street door now asks: "Enter the Joker" or "See the games" (the gallery, as it was).

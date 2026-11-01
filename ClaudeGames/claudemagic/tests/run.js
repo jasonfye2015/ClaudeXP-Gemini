@@ -5423,12 +5423,23 @@ test("the Joker's charms: earned ones read from the floor's books, bought ones f
 test("into the Joker: floor -9 is made the same every time, with every table, the house's counters, the residents and the street door; the party walks in from the town and out to the street outside the casino's door; a table underfoot says its name; its theme is the Joker's", () => {
   const CM = load(); CM.CG_TABLES = CM.CG_TABLES || [["slots", "The Gilded Reels"], ["darts", "The Tavern Board"], ["bigwheel", "The Joker's Wheel"], ["plinko", "The Drop Board"], ["bingo", "The Bell Hall"], ["lottery", "The Town Lottery"], ["pond", "The Fishing Pond"]]; CM.CG_INFO = CM.CG_INFO || { slots: { cat: "luck", line: "Reels" }, darts: { cat: "fair", line: "Darts" } };
   const a = CM.makeFloor(CM.JOKER_FLOOR, "x"), b = CM.makeFloor(CM.JOKER_FLOOR, "y"); same(a.grid, b.grid, "the same for every seed"); assert.strictEqual(CM.themeFor(CM.JOKER_FLOOR).name, "The Gilded Joker");
-  const T = Object.values(a.things); for (const [id] of CM.CG_TABLES) assert.ok(T.some((t) => t.type === "cgtable" && t.id === id), `${id} has its place`); assert.strictEqual(T.filter((t) => t.type === "cgservice").length, CM.JOKER_SERVICES.length); assert.ok(T.some((t) => t.type === "jokerexit")); assert.ok(T.some((t) => t.type === "cgresident"));
+  const T = Object.values(a.things); for (const [id] of CM.CG_TABLES) assert.ok(T.some((t) => t.type === "cgtable" && t.id === id), `${id} has its place`); assert.strictEqual(T.filter((t) => t.type === "cgservice" && t.view !== "story").length, CM.JOKER_SERVICES.length, "the counters (and the Joker's alcove besides)"); assert.ok(T.some((t) => t.type === "jokerexit")); assert.ok(T.some((t) => t.type === "cgresident"));
   for (const [k, t] of Object.entries(a.things)) { const [x, y] = k.split(",").map(Number); assert.strictEqual(a.grid[y][x], 0, `${t.type} stands on the floor`); }
   const g = new CM.Game(); g.newGame("jf-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.strictEqual(g.floor.number, 0); assert.strictEqual(g.jfEnter(), ""); assert.strictEqual(g.floor.number, CM.JOKER_FLOOR); same(g.floor.pos, a.start);
   const at = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "cgtable"); assert.ok(/^at /.test(CM.placeOf(g.floor, ...at.split(",").map(Number))));
   g.jfLeave(); assert.strictEqual(g.floor.number, 0); const d = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "building" && g.floor.things[k].id === "casino").split(",").map(Number); assert.strictEqual(Math.abs(g.floor.pos[0] - d[0]) + Math.abs(g.floor.pos[1] - d[1]), 1, "on the street by the door");
   assert.ok(g.jfLeave === undefined || g.floor.number === 0); g.floor.number = 5; assert.ok(g.jfEnter(), "only from the town"); g.floor.number = 0;
+});
+
+test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
+  const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
+  assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
+  g.prStart("slots"); for (let k = 0; k < 40; k++) g.slotSpin(1); g.prEnd(); assert.strictEqual(g.stStore().final.c, 0, "practice doesn't count");
+  let guard = 0; while (g.stRound() && g.stRound().id === "reels" && guard++ < 3000) g.slotSpin(1); assert.strictEqual(g.stRound().id, "cards", "the reels won in the end"); assert.ok(g.stStore().final.tries >= 0);
+  const F = g.stStore().final; F.round = 2; F.won = ["reels", "cards"]; g.faStart("darts", 5); for (let k = 0; k < 24; k++) g.faThrow("darts", 0, -0.605); assert.strictEqual(g.stRound().id, "drop", "a steady hand beats 600");
+  guard = 0; while (g.stRound() && g.stRound().id === "drop" && guard++ < 3000) g.pkDrop(1, "high"); assert.strictEqual(g.stRound().id, "hand");
+  const gold0 = g.gold; guard = 0; while (g.stRound() && guard++ < 3000) { g.vpDeal(1); g.vpDraw(); } assert.ok(g.stStore().done); assert.ok(g.gold - gold0 >= ST.REWARD.gold - 6000); g.chMemo = null; assert.ok(g.chOwned("own")); assert.ok(g.wdOpen("hat", "goldcrown"));
+  assert.ok(g.stBegin().error, "once"); const fl = CM.makeFloor(CM.JOKER_FLOOR, "x"); assert.strictEqual(fl.things["20,24"].view, "story");
 });
 
 (async () => {
