@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.9 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1103,6 +1103,22 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .vault .vrlevels { flex-wrap: wrap; gap: 4px; } .vault .vrlevels button { min-width: 44px; } .vault .vrlevels button.done { border-color: #C89A30; }
 .vault .vrwrap { display: flex; justify-content: center; margin: 6px 0; } .vault .vrcanvas { border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); cursor: pointer; }
 .bastion .arccanvas { cursor: crosshair; }
+/* ---- v16.0: the Residents' Game and the Bell Hall ---- */
+.holdem .hecanvas { display: block; max-width: 100%; border-radius: 14px; box-shadow: 0 8px 22px rgba(0,0,0,0.7); }
+.holdem .hectl .row { min-height: 34px; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .holdem .hebuy button, .holdem .heact button { min-width: 110px; }
+.bingo .bgtop { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; } .bingo .bgcage { border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.6); }
+.bingo .bgside { flex: 1; min-width: 300px; } .bingo .bgrow { display: flex; gap: 2px; margin-bottom: 2px; }
+.bingo .bgrow b { width: 22px; text-align: center; color: #FFF; border-radius: 3px; font-weight: normal; } .bingo .bgrow span { flex: 1; min-width: 18px; text-align: center; font-size: 10px; font-family: monospace; padding: 2px 0; background: rgba(0,0,0,0.35); color: rgba(240,224,176,0.35); border-radius: 3px; }
+.bingo .bgrow span.on { background: #6A5020; color: #FFF0B0; } .bingo .bgrow span.last { background: #F0C040; color: #2A1A08; animation: crwin 0.5s ease-in-out 3; }
+.bingo .bgpatrow { display: flex; gap: 10px; align-items: center; margin-top: 6px; } .bingo .bgpat { display: grid; grid-template-columns: repeat(5, 9px); gap: 2px; padding: 4px; background: #FBF4E0; border-radius: 4px; }
+.bingo .bgpat i { width: 9px; height: 9px; background: #D8D0B8; border-radius: 2px; } .bingo .bgpat i.on { background: #C02020; }
+.bingo .bgcards { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; } .bingo .bgcard { background: #FBF4E0; border-radius: 8px; padding: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: box-shadow 0.3s; }
+.bingo .bgcard.done { box-shadow: 0 0 0 3px #F0C040, 0 0 18px #F0C040; } .bingo .bgcard.won { box-shadow: 0 0 0 3px #60E060, 0 0 22px #60E060; }
+.bingo .bghead, .bingo .bggrid { display: grid; grid-template-columns: repeat(5, 30px); gap: 2px; } .bingo .bghead b { text-align: center; color: #FFF; border-radius: 3px; font-weight: normal; }
+.bingo .bggrid span { position: relative; height: 26px; line-height: 26px; text-align: center; font: bold 13px Georgia, serif; color: #2A2010; border: 1px solid #D8CCA8; border-radius: 3px; cursor: pointer; user-select: none; }
+.bingo .bggrid span.d::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: rgba(200,30,40,0.38); box-shadow: inset 0 0 0 2px rgba(170,20,30,0.7); } .bingo .bggrid span.free { color: #C08020; } .bingo .bggrid span.stamp::after { animation: bgstamp 0.25s ease-out; }
+@keyframes bgstamp { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.bingo .bgcall.ready { animation: crwin 0.6s ease-in-out infinite; background: #F0C040; color: #2A1A08; }
 </style>
 </head>
 <body>
@@ -1112,7 +1128,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.9", built: "2026-10-31" };
+const CM = window.CM = { version: "16.0", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22557,7 +22573,7 @@ const DAILY = CM.DAILY;
 DAILY.key = (d) => { d = d || new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 DAILY.prev = (key) => { const [y, m, d] = key.split("-").map(Number), t = new Date(y, m - 1, d - 1); return DAILY.key(t); };
 // what the house chalks up for a day: the same for everyone
-DAILY.pick = (key) => { const R = new CM.Random(CM.hashSeed(`gilded-joker-daily:${key}`)), table = CM.CLUB.BOARDS[R.int(0, CM.CLUB.BOARDS.length - 1)], [y, m, d] = key.split("-").map(Number), wd = new Date(y, m - 1, d).getDay(), bump = wd === 0 || wd === 6 ? 1 : 0;
+DAILY.pick = (key) => { const R = new CM.Random(CM.hashSeed(`gilded-joker-daily:${key}`)), pool = CM.CLUB.BOARDS.filter((b) => DAILY.MARKS[b]), table = pool[R.int(0, pool.length - 1)], [y, m, d] = key.split("-").map(Number), wd = new Date(y, m - 1, d).getDay(), bump = wd === 0 || wd === 6 ? 1 : 0;
   return { day: key, table, marks: DAILY.MARKS[table].map((x) => x + bump), weekend: !!bump }; };
 { const rec0 = CM.Game.prototype.cgRecord;
   Object.assign(CM.Game.prototype, {
@@ -23525,6 +23541,206 @@ CM.LUCK = {
       if (first) { S.done[n] = true; out.gold = VR.gold(n); this.cgPay("vault", out.gold); if (n % 3 === 0) out.card = this.cgTierCard(CM.cardTierFor(n), `The Vault Runes: vault ${n} opened!`, new CM.Random(CM.hashSeed(`${this.seed}:vault:card:${n}`))); }
       this.saveCasino && this.saveCasino(); this.emit("change"); return out; },
   });
+}
+
+// ---- 64zzg-holdem.js ----
+"use strict";
+// The Residents' Game (v16.0): fixed-limit Texas hold'em at the back table of the Gilded Joker against four of the
+// village's six residents - the tavern-keeper, the merchant, the smith, the librarian, the priest and the farmer's
+// hand - each with a way of playing of their own (loose or tight, timid or pushy, given to bluffing or not), judged by
+// how often their cards would win (a quick count of a hundred deals) against what the pot asks. A buy-in (50 to 500
+// gold) is the stake; the blinds are a fiftieth and a hundredth of it; bets are one big blind before the turn and two
+// after, four to a street. Pots are the party's to win off the residents, side pots and all; leave between hands to
+// cash the chips back to gold. Tickets: those of the stake, plus a few for a pot won with a straight or better and for
+// each resident sent home; a royal flush brings a rare card, and sending the whole table home a card the first time
+// at each buy-in (tickets after). The table is kept between visits as plain state. The window is 76zzg-holdem.js.
+{ const HE = CM.HE = { BUYINS: [50, 100, 250, 500], cap: 4, sims: 100,
+    RES: {
+      tavern: { name: "the tavern-keeper", short: "Tavern-keeper", style: "calls anything", loose: 0.85, aggr: 0.25, bluff: 0.05, col: "#C07A40", hair: "#8A3A20",
+        say: { win: "\"That's the round paid for.\"", fold: "\"Not with these.\"", raise: "\"Bit more in the pot, love.\"", bust: "\"Well, that's me back behind the bar.\"" } },
+      merchant: { name: "the merchant", short: "Merchant", style: "counts the odds", loose: 0.45, aggr: 0.5, bluff: 0.1, col: "#3A6AA0", hair: "#3A3030",
+        say: { win: "\"A fair return.\"", fold: "\"The price is wrong.\"", raise: "\"Let's see what it's worth to you.\"", bust: "\"I'll put it down as a loss.\"" } },
+      smith: { name: "the smith", short: "Smith", style: "plays few, plays hard", loose: 0.3, aggr: 0.8, bluff: 0.08, col: "#6A6A70", hair: "#202020",
+        say: { win: "\"Hammered.\"", fold: "\"Hm.\"", raise: "\"Raise.\"", bust: "\"Back to the forge.\"" } },
+      library: { name: "the librarian", short: "Librarian", style: "a careful rock", loose: 0.2, aggr: 0.2, bluff: 0.02, col: "#5A4A7A", hair: "#B0A090",
+        say: { win: "\"As the odds said.\"", fold: "\"I'll pass, thank you.\"", raise: "\"I believe I'll raise.\"", bust: "\"I should have stayed with my books.\"" } },
+      priest: { name: "the priest", short: "Priest", style: "steady, a little hopeful", loose: 0.55, aggr: 0.4, bluff: 0.06, col: "#E8E0C8", hair: "#909090",
+        say: { win: "\"Blessings on the house.\"", fold: "\"Not this time.\"", raise: "\"Have a little faith.\"", bust: "\"The collection plate will have to wait.\"" } },
+      farm: { name: "the farmer's hand", short: "Farmer's hand", style: "wild and fearless", loose: 0.75, aggr: 0.85, bluff: 0.3, col: "#6A8A30", hair: "#D0A040",
+        say: { win: "\"Ha! Told you!\"", fold: "\"Aw.\"", raise: "\"All the way up!\"", bust: "\"Easy come, easy go.\"" } },
+    } };
+  HE.RANKS = "  23456789TJQKA"; HE.SUITS = "♠♥♦♣";
+  HE.CATS = ["High card", "Pair", "Two pair", "Three of a kind", "Straight", "Flush", "Full house", "Four of a kind", "Straight flush"];
+  // the best five of any number of cards, as one number (higher wins)
+  HE.score = (cs) => {
+    const byS = [[], [], [], []], cnt = Array(15).fill(0); for (const c of cs) { byS[c.s].push(c.r); cnt[c.r] += 1; }
+    const high = (rs) => { const has = new Set(rs); if (has.has(14)) has.add(1); for (let h = 14; h >= 5; h--) { let ok = true; for (let k = 0; k < 5; k++) if (!has.has(h - k)) { ok = false; break; } if (ok) return h; } return 0; };
+    const pack = (cat, ks) => { let v = cat; for (let i = 0; i < 5; i++) v = v * 15 + (ks[i] || 0); return v; };
+    for (const f of byS) if (f.length >= 5) { const h = high(f); if (h) return pack(8, [h]); }
+    const gs = []; for (let r = 14; r >= 2; r--) if (cnt[r]) gs.push([cnt[r], r]); gs.sort((a, b) => b[0] - a[0] || b[1] - a[1]);
+    const rest = (ex) => gs.filter((g) => !ex.includes(g[1])).map((g) => g[1]).sort((a, b) => b - a);
+    if (gs[0][0] === 4) return pack(7, [gs[0][1], rest([gs[0][1]])[0]]);
+    if (gs[0][0] === 3 && gs[1] && gs[1][0] >= 2) return pack(6, [gs[0][1], gs[1][1]]);
+    for (const f of byS) if (f.length >= 5) return pack(5, f.sort((a, b) => b - a).slice(0, 5));
+    const h = high(cs.map((c) => c.r)); if (h) return pack(4, [h]);
+    if (gs[0][0] === 3) return pack(3, [gs[0][1], ...rest([gs[0][1]]).slice(0, 2)]);
+    if (gs[0][0] === 2 && gs[1] && gs[1][0] === 2) return pack(2, [gs[0][1], gs[1][1], rest([gs[0][1], gs[1][1]])[0]]);
+    if (gs[0][0] === 2) return pack(1, [gs[0][1], ...rest([gs[0][1]]).slice(0, 3)]);
+    return pack(0, rest([]).slice(0, 5));
+  };
+  HE.cat = (v) => Math.floor(v / 759375);
+  HE.royal = (v) => HE.cat(v) === 8 && Math.floor(v / 50625) % 15 === 14;
+  HE.name = (c) => HE.RANKS[c.r] + HE.SUITS[c.s];
+  // how often these cards win against so many random hands, by a quick count
+  HE.equity = (hole, board, nOpp, R, sims = HE.sims) => {
+    const used = new Set(hole.concat(board).map((c) => c.r * 4 + c.s)), deck = []; for (let r = 2; r <= 14; r++) for (let s = 0; s < 4; s++) if (!used.has(r * 4 + s)) deck.push({ r, s });
+    const need = nOpp * 2 + 5 - board.length; let won = 0;
+    for (let k = 0; k < sims; k++) { for (let i = 0; i < need; i++) { const j = i + Math.floor(R.next() * (deck.length - i)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+      const b = board.concat(deck.slice(nOpp * 2, need)), me = HE.score(hole.concat(b)); let ties = 0, lost = false;
+      for (let o = 0; o < nOpp && !lost; o++) { const v = HE.score([deck[o * 2], deck[o * 2 + 1]].concat(b)); if (v > me) lost = true; else if (v === me) ties += 1; }
+      if (!lost) won += 1 / (ties + 1); }
+    return won / sims;
+  };
+  // ---- the table, as plain state ----
+  const inHand = (S) => S.cards && !S.folded, canAct = (S) => inHand(S) && !S.allin;
+  HE.newTable = (seed, buyin, who) => { const bb = Math.max(2, Math.round(buyin / 50)); return { rs: CM.hashSeed(seed) >>> 0, buyin, bb, sb: Math.floor(bb / 2), seats: [{ id: "you", stack: buyin }].concat(who.map((id) => ({ id, stack: buyin }))), button: who.length, hand: 0, stage: "between", board: [], events: [] }; };
+  HE.pot = (T) => T.seats.reduce((a, S) => a + (S.put || 0), 0);
+  HE.next = (T, i, ok) => { for (let k = 1; k <= T.seats.length; k++) { const j = (i + k) % T.seats.length; if (ok(T.seats[j])) return j; } return -1; };
+  const pay = (T, i, amt) => { const S = T.seats[i], n = Math.min(amt, S.stack); S.stack -= n; S.bet += n; S.put += n; if (S.stack === 0) S.allin = true; return n; };
+  HE.deal = (T) => {
+    if (T.stage === "hand") return "A hand is on.";
+    if (T.seats[0].stack <= 0) { T.stage = "over"; return "You have no chips."; } if (T.seats.filter((S) => S.stack > 0).length < 2) { T.stage = "over"; return "Nobody left to play."; }
+    const R = new CM.Random(T.rs); for (const S of T.seats) Object.assign(S, { cards: null, bet: 0, put: 0, folded: false, allin: false, acted: false, last: "" });
+    const deck = []; for (let r = 2; r <= 14; r++) for (let s = 0; s < 4; s++) deck.push({ r, s }); R.shuffle(deck); T.deck = deck; T.board = []; T.rs = R.s;
+    const has = (S) => S.stack > 0; T.button = HE.next(T, T.button, has); const n = T.seats.filter(has).length;
+    for (let k = 0, i = T.button; k < n; k++) { i = HE.next(T, i, has); T.seats[i].cards = [T.deck.pop(), T.deck.pop()]; }
+    const sbI = n === 2 ? T.button : HE.next(T, T.button, has), bbI = HE.next(T, sbI, has); pay(T, sbI, T.sb); pay(T, bbI, T.bb); T.sbI = sbI; T.bbI = bbI;
+    T.stage = "hand"; T.street = 0; T.cur = T.bb; T.raises = 1; T.hand += 1; T.events.push({ kind: "deal", hand: T.hand, button: T.button, sb: sbI, bb: bbI });
+    T.toAct = HE.next(T, bbI, canAct); if (T.toAct < 0 || (T.seats.filter(canAct).length < 2 && T.seats[T.toAct].bet >= T.cur)) HE.endStreet(T); return "";
+  };
+  HE.toCall = (T, i) => Math.max(0, T.cur - T.seats[i].bet);
+  HE.betSize = (T) => (T.street < 2 ? T.bb : T.bb * 2);
+  HE.act = (T, i, a) => {
+    if (T.stage !== "hand" || T.toAct !== i) return "Not your turn."; const S = T.seats[i], owe = HE.toCall(T, i);
+    if (a === "raise" && (T.raises >= HE.cap || S.stack <= owe)) a = "call"; if (a === "fold" && owe === 0) a = "call";
+    if (a === "fold") { S.folded = true; S.last = "fold"; }
+    else if (a === "call") { pay(T, i, owe); S.last = owe ? (S.allin ? "all in" : "call") : "check"; }
+    else { pay(T, i, owe + HE.betSize(T)); T.cur = Math.max(T.cur, S.bet); T.raises += 1; for (const O of T.seats) if (O !== S) O.acted = false; S.last = S.allin ? "all in" : T.raises === 1 ? "bet" : "raise"; }
+    S.acted = true; T.events.push({ kind: "act", seat: i, what: S.last, amount: S.bet });
+    const left = T.seats.filter(inHand); if (left.length === 1) { HE.award(T, false); return ""; }
+    const nx = HE.next(T, i, (O) => canAct(O) && (!O.acted || O.bet < T.cur)); if (nx >= 0) T.toAct = nx; else HE.endStreet(T); return "";
+  };
+  HE.endStreet = (T) => {
+    for (;;) { for (const S of T.seats) { S.bet = 0; S.acted = false; } T.cur = 0; T.raises = 0;
+      if (T.street >= 3) { HE.award(T, true); return; } T.street += 1; T.deck.pop(); const k = T.street === 1 ? 3 : 1; for (let j = 0; j < k; j++) T.board.push(T.deck.pop()); T.events.push({ kind: "street", street: T.street, board: T.board.slice() });
+      if (T.seats.filter(canAct).length >= 2) { T.toAct = HE.next(T, T.button, canAct); return; } }
+  };
+  // the pots, layer by layer, to the best hands that reached them
+  HE.award = (T, show) => {
+    const ins = T.seats.map((S, i) => [S, i]).filter(([S]) => inHand(S)), val = {}; if (show) for (const [S, i] of ins) { val[i] = HE.score(S.cards.concat(T.board)); T.events.push({ kind: "show", seat: i, cards: S.cards, cat: HE.cat(val[i]) }); }
+    const levels = [...new Set(T.seats.filter((S) => S.put > 0 && inHand(S)).map((S) => S.put))].sort((a, b) => a - b); let prev = 0; const won = {};
+    for (const lv of levels) { let part = 0; for (const S of T.seats) part += Math.max(0, Math.min(S.put, lv) - prev); const elig = ins.filter(([S]) => S.put >= lv);
+      const best = show ? Math.max(...elig.map(([, i]) => val[i])) : null, ws = show ? elig.filter(([, i]) => val[i] === best) : elig, each = Math.floor(part / ws.length); let odd = part - each * ws.length;
+      for (const [S, i] of ws) { const n = each + (odd > 0 ? 1 : 0); odd -= 1; S.stack += n; won[i] = (won[i] || 0) + n; } prev = lv; }
+    // chips put in above anyone's reach go back
+    for (const S of T.seats) if (S.put > prev) { S.stack += S.put - prev; }
+    for (const i of Object.keys(won)) T.events.push({ kind: "win", seat: Number(i), amount: won[i], cat: show ? HE.cat(val[i]) : -1, royal: show && HE.royal(val[i]), pot: HE.pot(T) });
+    T.stage = "between"; T.toAct = -1; for (const S of T.seats) { S.put = 0; S.bet = 0; }
+    T.seats.forEach((S, i) => { if (i && S.stack <= 0 && !S.out) { S.out = true; T.events.push({ kind: "bust", seat: i, id: S.id }); } });
+    if (T.seats[0].stack <= 0) { T.stage = "over"; T.events.push({ kind: "broke" }); } else if (T.seats.every((S, i) => !i || S.out)) { T.stage = "over"; T.events.push({ kind: "cleared" }); }
+  };
+  // a resident's turn: their chance of winning against the pot's price, as their nature bends it
+  HE.decide = (T, i) => {
+    const S = T.seats[i], P = HE.RES[S.id], R = new CM.Random(T.rs), opp = T.seats.filter((O) => O !== S && inHand(O)).length, eq = HE.equity(S.cards, T.board, opp, R, T.street ? HE.sims : 60);
+    const owe = HE.toCall(T, i), pot = HE.pot(T), odds = owe / (pot + owe), fair = 1 / (opp + 1), adj = eq + (P.loose - 0.5) * 0.12 * (T.street ? 0.6 : 1), roll = R.next(); let a;
+    if (owe === 0) a = adj > fair + 0.12 + (1 - P.aggr) * 0.15 && roll < 0.35 + P.aggr * 0.6 ? "raise" : roll < P.bluff ? "raise" : "call";
+    else if (adj > fair + 0.18 + (1 - P.aggr) * 0.15 && roll < P.aggr) a = "raise";
+    else if (adj >= odds - (P.loose - 0.5) * 0.08 || (T.street === 0 && adj > fair * 0.8 + (0.5 - P.loose) * 0.25)) a = "call";
+    else a = roll < P.bluff * 0.5 ? "raise" : "fold";
+    T.rs = R.s; return a;
+  };
+  HE.aiStep = (T) => { if (T.stage !== "hand" || T.toAct <= 0) return false; HE.act(T, T.toAct, HE.decide(T, T.toAct)); return true; };
+  // ---- the party at the table ----
+  const ROYAL_WHY = "A royal flush at the Residents' Game!";
+  Object.assign(CM.Game.prototype, {
+    heStore() { const F = this.cgStore(); F.he = F.he || { cleared: {}, hands: 0, pots: 0, best: 0, sent: 0 }; return F.he; },
+    heTable() { return this.heStore().live || null; },
+    heWho(n) { const R = new CM.Random(CM.hashSeed(`${this.seed}:he:who:${n}`)); return R.shuffle(Object.keys(HE.RES)).slice(0, 4); },
+    heSit(buyin) { const H = this.heStore(); if (H.live) return { error: "You're already at the table." }; if (!HE.BUYINS.includes(buyin)) return { error: "Pick a buy-in." };
+      const why = this.cgStake("holdem", buyin); if (why) return { error: why }; const F = this.cgStore(); F.n += 1; H.live = HE.newTable(`${this.seed}:he:${F.n}`, buyin, this.heWho(F.n)); if (this.cgStamp) this.cgStamp("holdem"); HE.deal(H.live); this.saveCasino && this.saveCasino(); return { table: H.live }; },
+    // the events since last asked, with the house's rewards worked in
+    heEvents() { const T = this.heTable(); if (!T) return []; const out = T.events.splice(0), H = this.heStore();
+      for (const e of out) {
+        if (e.kind === "deal") H.hands += 1;
+        if (e.kind === "win" && e.seat === 0) { H.pots += 1; H.best = Math.max(H.best, e.amount); const tk = e.cat >= 4 ? [0, 0, 0, 0, 1, 2, 3, 5, 10][e.cat] : 0; if (tk && this.tkAdd) { this.tkAdd(tk, "holdem"); e.tickets = tk; } if (e.royal) e.card = this.cgCard(true, ROYAL_WHY, this.cgRnd("herc")); }
+        if (e.kind === "bust") { H.sent += 1; if (this.tkAdd) { this.tkAdd(2, "holdem"); e.tickets = 2; } }
+        if (e.kind === "cleared") { const k = T.buyin; if (!H.cleared[k]) { H.cleared[k] = true; e.card = this.cgTierCard(T.buyin >= 250 ? "rare" : T.buyin >= 100 ? "better" : "common", `The Residents' Game: the whole table sent home at ${k} gold!`, new CM.Random(CM.hashSeed(`${this.seed}:he:card:${k}`))); } else if (this.tkAdd) { this.tkAdd(10, "holdem"); e.tickets = 10; } }
+      }
+      this.saveCasino && this.saveCasino(); return out; },
+    heAct(a) { const T = this.heTable(); if (!T) return "Not at the table."; const why = HE.act(T, 0, a); this.saveCasino && this.saveCasino(); return why; },
+    heAi() { const T = this.heTable(); const did = T ? HE.aiStep(T) : false; if (did) this.saveCasino && this.saveCasino(); return did; },
+    heDeal() { const T = this.heTable(); if (!T) return "Not at the table."; const why = HE.deal(T); this.saveCasino && this.saveCasino(); return why; },
+    // up from the table: the chips back to gold (between hands only)
+    heLeave() { const H = this.heStore(), T = H.live; if (!T) return { error: "Not at the table." }; if (T.stage === "hand") return { error: "Finish the hand first." };
+      const chips = T.seats[0].stack; delete H.live; if (chips > 0) this.cgPay("holdem", chips); if (chips > T.buyin && this.cgRecord) this.cgRecord("holdem", chips - T.buyin, 0); this.saveCasino && this.saveCasino(); this.emit("change"); return { chips, net: chips - T.buyin }; },
+  });
+  if (CM.CLUB && !CM.CLUB.BOARDS.includes("holdem")) CM.CLUB.BOARDS.push("holdem");
+}
+
+// ---- 64zzh-bingo.js ----
+"use strict";
+// The Bell Hall (v16.0): bingo of seventy-five balls in the Joker's old chapel, with half the village in the pews.
+// Cards of five columns (ᛒ ᛁ ᚾ ᚷ ᛟ, fifteen numbers each) and a free middle; up to four cards a game, bought in one of
+// three rooms (2, 10 or 50 gold a card). Each game has its pattern, in turn: any line, the four corners, the X, the
+// frame and the coverall. The priest draws; the hall's cards (twelve to twenty-four, the villagers') call the moment
+// they're done; the party's must be daubed (by hand, or by the hall's dauber) and called with "Bingo!" - when anyone
+// calls, the caller checks every card, and all that are done share the pot: 85 in every 100 gold the hall took. A
+// win pays tickets too; a coverall won the first time brings a card. The window is 76zzh-bingo.js.
+{ const BGO = CM.BGO = { ROOMS: { copper: { name: "the Copper Room", price: 2 }, silver: { name: "the Silver Room", price: 10 }, gold: { name: "the Gold Room", price: 50 } }, share: 0.85, max: 4,
+    RUNES: ["ᛒ", "ᛁ", "ᚾ", "ᚷ", "ᛟ"],
+    FOLK: ["the miller's wife", "old Tamsin", "the tavern-keeper", "the twins", "the priest's sister", "a carter", "the baker", "the librarian", "the farmer's hand", "a dwarf from the caves", "the guard captain", "the smith", "the merchant", "the herb-woman", "a pedlar", "the ferryman"] };
+  const ROW = [0, 1, 2, 3, 4], at = (x, y) => y * 5 + x;
+  BGO.PATTERNS = [
+    { id: "line", name: "Any line", ok: (m) => ROW.some((y) => ROW.every((x) => m[at(x, y)])) || ROW.some((x) => ROW.every((y) => m[at(x, y)])) || ROW.every((k) => m[at(k, k)]) || ROW.every((k) => m[at(4 - k, k)]) },
+    { id: "corners", name: "Four corners", ok: (m) => m[0] && m[4] && m[20] && m[24] },
+    { id: "x", name: "The X", ok: (m) => ROW.every((k) => m[at(k, k)] && m[at(4 - k, k)]) },
+    { id: "frame", name: "The frame", ok: (m) => ROW.every((k) => m[at(k, 0)] && m[at(k, 4)] && m[at(0, k)] && m[at(4, k)]) },
+    { id: "full", name: "Coverall", ok: (m) => m.every(Boolean) },
+  ];
+  // a card: 25 numbers by row, the middle 0 (free)
+  BGO.card = (R) => { const cols = ROW.map((c) => R.shuffle(Array.from({ length: 15 }, (_, k) => c * 15 + k + 1)).slice(0, 5)); const out = []; for (let y = 0; y < 5; y++) for (let x = 0; x < 5; x++) out.push(x === 2 && y === 2 ? 0 : cols[x][y]); return out; };
+  BGO.marks = (card, called) => card.map((n) => n === 0 || called.has(n));
+  // after how many balls a card is done
+  BGO.doneAt = (card, balls, pat) => { const called = new Set(); for (let k = 0; k < balls.length; k++) { called.add(balls[k]); if (pat.ok(BGO.marks(card, called))) return k + 1; } return 99; };
+  BGO.letter = (n) => BGO.RUNES[Math.floor((n - 1) / 15)];
+  Object.assign(CM.Game.prototype, {
+    bgStore() { const F = this.cgStore(); F.bg = F.bg || { n: 0, games: 0, wins: 0, full: false, best: 0 }; return F.bg; },
+    bgPattern() { return BGO.PATTERNS[this.bgStore().n % BGO.PATTERNS.length]; },
+    bgBuy(room, count, auto) { const B = this.bgStore(), Rm = BGO.ROOMS[room]; if (B.live && B.live.stage === "play") return { error: "A game is on." }; if (!Rm) return { error: "Pick a room." }; count = Math.max(1, Math.min(BGO.max, Math.floor(count) || 1));
+      const why = this.cgStake("bingo", count * Rm.price); if (why) return { error: why }; const R = new CM.Random(CM.hashSeed(`${this.seed}:bingo:${B.n}:${this.cgStore().n}`)), pat = this.bgPattern();
+      const balls = R.shuffle(Array.from({ length: 75 }, (_, k) => k + 1)), folk = R.shuffle(BGO.FOLK.slice()), hall = []; const nHall = 12 + R.int(0, 12); for (let k = 0; k < nHall; k++) { const card = BGO.card(R); hall.push({ who: folk[k % folk.length], at: BGO.doneAt(card, balls, pat) }); }
+      B.n += 1; B.games += 1; if (this.cgStamp) this.cgStamp("bingo");
+      const G = B.live = { room, price: Rm.price, pat: pat.id, cards: Array.from({ length: count }, () => BGO.card(R)), daub: [], balls, drawn: 0, hall, hallAt: Math.min(...hall.map((h) => h.at)), auto: !!auto, stage: "play" };
+      G.daub = G.cards.map((c) => c.map((n) => n === 0)); this.saveCasino && this.saveCasino(); return G; },
+    bgGame() { return this.bgStore().live || null; },
+    bgCalled(G) { return new Set(G.balls.slice(0, G.drawn)); },
+    bgDone(G, extra) { const pat = BGO.PATTERNS.find((p) => p.id === G.pat); return G.daub.map((d, i) => pat.ok(d.map((v, k) => v || (extra && G.cards[i][k] === extra)))); },
+    // the next ball: the hall's cards call at once
+    bgDraw() { const G = this.bgGame(); if (!G || G.stage !== "play") return null; const ball = G.balls[G.drawn]; G.drawn += 1;
+      if (G.auto) G.cards.forEach((c, i) => c.forEach((n, k) => { if (n === ball) G.daub[i][k] = true; }));
+      let out = { ball, letter: BGO.letter(ball) }; if (G.hallAt <= G.drawn) out = Object.assign(out, this.bgEnd(G, ball, G.hall.filter((h) => h.at === G.drawn).map((h) => h.who)));
+      this.saveCasino && this.saveCasino(); return out; },
+    bgDaub(i, k) { const G = this.bgGame(); if (!G || G.stage !== "play") return false; const n = G.cards[i][k]; if (!n || !this.bgCalled(G).has(n) || G.daub[i][k]) return false; G.daub[i][k] = true; this.saveCasino && this.saveCasino(); return true; },
+    bgCall() { const G = this.bgGame(); if (!G || G.stage !== "play") return { error: "No game on." }; if (!this.bgDone(G).some(Boolean)) return { error: "Not yet - the caller checks your card and shakes her head." }; const r = this.bgEnd(G, 0, []); this.saveCasino && this.saveCasino(); return r; },
+    // someone called: every card that's done shares the pot
+    bgEnd(G, ball, hallWho) { const B = this.bgStore(), mine = this.bgDone(G, ball), myN = mine.filter(Boolean).length, n = myN + hallWho.length, pool = Math.floor((G.cards.length + G.hall.length) * G.price * BGO.share);
+      const won = n ? Math.floor((pool * myN) / n) : 0; G.stage = "done"; const res = G.result = { won, mine, hallWho, pool, balls: G.drawn, pattern: G.pat };
+      if (won > 0) { this.cgPay("bingo", won); B.wins += 1; B.best = Math.max(B.best, won); const tk = 3 + Math.floor(won / 10); if (this.tkAdd) this.tkAdd(tk, "bingo"); res.tickets = tk;
+        if (G.pat === "full") { if (!B.full) { B.full = true; res.card = this.cgTierCard("better", "The Bell Hall: a coverall!", new CM.Random(CM.hashSeed(`${this.seed}:bingo:card`))); } else if (this.tkAdd) { this.tkAdd(10, "bingo"); res.tickets += 10; } }
+        if (this.cgRecord) this.cgRecord("bingo", won, G.drawn); }
+      this.emit("change"); return res; },
+  });
+  if (CM.CLUB && !CM.CLUB.BOARDS.includes("bingo")) CM.CLUB.BOARDS.push("bingo");
 }
 
 // ---- 65-village.js ----
@@ -31304,6 +31520,8 @@ CM.CG_INFO = {
   sprint: { cat: "arcade", line: "Run the undercroft: jump, slide, gather coins." },
   bastion: { cat: "arcade", line: "Set fire, frost and arcane runes by the goblins' road." },
   vault: { cat: "puzzles", line: "Light every rune to open the vault. Free." },
+  holdem: { cat: "tables", line: "Limit hold'em against the village's residents." },
+  bingo: { cat: "luck", line: "Eyes down in the old chapel; every finished card shares." },
 };
 CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["luck", "Luck"], ["fair", "Fairground"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
@@ -31361,6 +31579,8 @@ CM.CG_THUMB = (() => {
     sprint: (p, w, h) => { bg(p, w, h, "#0E0C14", "#2A2634"); p.fillStyle = "#4A4250"; p.fillRect(0, h - 18, w, 18); p.fillStyle = "#000"; p.fillRect(w * 0.6, h - 18, 24, 18); p.fillStyle = "#2A2634"; p.fillRect(30, 6, 14, h - 24); circ(p, 37, 22, 4, "#FFB040"); p.fillStyle = "#3A4A6A"; p.beginPath(); p.ellipse(w * 0.35, h - 36, 5, 9, 0.2, 0, Math.PI * 2); p.fill(); circ(p, w * 0.36, h - 48, 5, "#2A3450"); p.strokeStyle = "#C03030"; p.lineWidth = 2; p.beginPath(); p.moveTo(w * 0.34, h - 44); p.lineTo(w * 0.24, h - 40); p.stroke(); p.lineWidth = 1; for (let k = 0; k < 3; k++) circ(p, w * 0.5 + k * 14, h - 34, 3.5, "#F0C040"); },
     bastion: (p, w, h) => { bg(p, w, h, "#4F9040", "#3A7A30"); p.fillStyle = "#B8956A"; p.fillRect(0, 18, w * 0.6, 12); p.fillRect(w * 0.6 - 12, 18, 12, h - 18); p.fillStyle = "#7A7480"; p.fillRect(w * 0.6 - 22, h - 14, 32, 14); p.fillStyle = "#F06030"; p.beginPath(); p.moveTo(30, 48); p.quadraticCurveTo(36, 30, 42, 48); p.fill(); p.fillStyle = "#A0E0FF"; p.beginPath(); p.moveTo(70, 34); p.lineTo(76, 46); p.lineTo(70, 52); p.lineTo(64, 46); p.fill(); p.fillStyle = "#4A3A60"; p.fillRect(w - 40, 34, 8, 22); circ(p, w - 36, 32, 3, "#B070F0"); circ(p, 20, 24, 4, "#5A9A40"); circ(p, 40, 24, 4, "#5A9A40"); },
     vault: (p, w, h) => { bg(p, w, h, "#3A3430", "#141010"); circ(p, w / 2, h / 2, 34, "#3A3840"); p.strokeStyle = "#7A7680"; p.lineWidth = 3; p.beginPath(); p.arc(w / 2, h / 2, 34, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { p.fillStyle = (x + y) % 2 ? "#2E2C34" : "#C89A30"; p.fillRect(w / 2 - 22 + x * 15, h / 2 - 22 + y * 15, 13, 13); } },
+    holdem: (p, w, h) => { bg(p, w, h, "#3A2214", "#160E0A"); p.fillStyle = "#1E6A36"; p.beginPath(); p.ellipse(w / 2, h / 2 + 6, w / 2 - 12, h / 2 - 12, 0, 0, Math.PI * 2); p.fill(); for (let k = 0; k < 5; k++) { p.fillStyle = k < 3 ? "#FBF8F0" : "#7A1A24"; p.fillRect(w / 2 - 44 + k * 18, h / 2 - 4, 14, 20); } p.fillStyle = "#C02028"; p.font = "bold 10px Georgia"; p.fillText("A♥", w / 2 - 43, h / 2 + 10); p.fillStyle = "#1A1A22"; p.fillText("K♠", w / 2 - 25, h / 2 + 10); circ(p, 22, 20, 8, "#E8C8A0"); circ(p, w - 22, 20, 8, "#E8C8A0"); circ(p, w / 2, h / 2 + 26, 4, "#E0B040"); },
+    bingo: (p, w, h) => { bg(p, w, h, "#3A2A40", "#1A1218"); const c = ["#C03838", "#E0A030", "#3A9A50", "#3070C0", "#8A50C0"]; for (let x = 0; x < 5; x++) { p.fillStyle = c[x]; p.fillRect(w / 2 - 6 + x * 12, 8, 11, 8); for (let y = 0; y < 4; y++) { p.fillStyle = (x * 3 + y) % 4 === 0 ? "#C02020" : "#FBF4E0"; p.fillRect(w / 2 - 6 + x * 12, 18 + y * 11, 11, 10); } } p.strokeStyle = "#E0B860"; p.beginPath(); p.arc(34, h / 2 + 4, 22, 0, Math.PI * 2); p.stroke(); for (let k = 0; k < 6; k++) circ(p, 26 + (k % 3) * 8, h / 2 + (k > 2 ? 10 : 0), 4, c[k % 5]); },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();
@@ -32879,6 +33099,171 @@ CM.CG_TABLES.push(["vault", "The Vault Runes"]);
         p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(cx - 70, y0 + Lv.h * cs + 10, 140, 20); p.fillStyle = "#F0E0B0"; p.font = "12px Georgia"; p.textAlign = "center"; p.fillText(`Vault ${Lv.n} · ${Lv.moves} touch${Lv.moves === 1 ? "" : "es"} (keeper ${Lv.par})`, cx, y0 + Lv.h * cs + 24); p.textAlign = "left"; }
       else { p.fillStyle = "#F0E0B0"; p.font = "18px Georgia"; p.textAlign = "center"; p.fillText("A sealed vault", cx, cy); p.font = "13px Georgia"; p.fillText("Try the lock", cx, cy + 22); p.textAlign = "left"; }
       p.restore();
+    },
+  });
+}
+
+// ---- 76zzg-holdem.js ----
+"use strict";
+// The Residents' Game, the window's side: an oval table of green baize with a dark wood rail under a hanging lamp,
+// the party's seat at the front and four of the village's residents round it - each drawn with their trade (a mug,
+// a purse, a hammer, a book, a holy sign, a pitchfork), their chips stacked before them, their own way of talking in a
+// bubble when they bet or fold or win. Cards fly from the dealer's place to the seats, the board turns over card by
+// card, chips slide to the pot and from it to the winner; at the showdown the hands turn up and the winning hand's
+// name rides over it. Fold, check or call, bet or raise below; deal the next hand, or cash out between hands. The rules
+// are 64zzg-holdem.js.
+CM.CG_TABLES.push(["holdem", "The Residents' Game"]);
+{ const floor0 = CM.UI.prototype.renderFloor, HE = CM.HE, W = 720, H = 430, CX = 360, CY = 196;
+  const SEAT = [[360, 352], [92, 222], [214, 72], [506, 72], [628, 222]];
+  const card = (p, x, y, c, up, s = 1) => { const w = 34 * s, h = 48 * s; p.save(); p.translate(x, y); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(-w / 2 + 2, -h / 2 + 3, w, h);
+    const r = 4 * s; p.beginPath(); p.moveTo(-w / 2 + r, -h / 2); p.arcTo(w / 2, -h / 2, w / 2, h / 2, r); p.arcTo(w / 2, h / 2, -w / 2, h / 2, r); p.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r); p.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r); p.closePath();
+    if (up && c) { p.fillStyle = "#FBF8F0"; p.fill(); p.strokeStyle = "#B8B0A0"; p.stroke(); const red = c.s === 1 || c.s === 2; p.fillStyle = red ? "#C02028" : "#1A1A22"; p.font = `bold ${Math.round(15 * s)}px Georgia`; p.textAlign = "center"; p.fillText(HE.RANKS[c.r] === "T" ? "10" : HE.RANKS[c.r], 0, -3 * s); p.font = `${Math.round(17 * s)}px serif`; p.fillText(HE.SUITS[c.s], 0, 16 * s); p.textAlign = "left"; }
+    else { p.fillStyle = "#7A1A24"; p.fill(); p.strokeStyle = "#E0B860"; p.lineWidth = 1.5; p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(224,184,96,0.5)"; p.strokeRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w - 8 * s, h - 8 * s); p.beginPath(); p.arc(0, 0, 7 * s, 0, Math.PI * 2); p.stroke(); }
+    p.restore(); };
+  const chips = (p, x, y, n) => { const k = Math.min(8, Math.ceil(Math.log2(n + 1))); for (let i = 0; i < k; i++) { p.fillStyle = ["#C03030", "#3060C0", "#30A050", "#E0B040", "#202020"][i % 5]; p.beginPath(); p.ellipse(x, y - i * 3, 9, 4, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(255,255,255,0.6)"; p.setLineDash([2, 3]); p.stroke(); p.setLineDash([]); } };
+  const face = (p, x, y, id, now, dim) => { const P = id === "you" ? { col: "#2A5A8A", hair: "#5A3A20" } : HE.RES[id]; p.save(); p.globalAlpha = dim ? 0.35 : 1;
+    p.fillStyle = P.col; p.beginPath(); p.ellipse(x, y + 26, 24, 16, 0, Math.PI, 0); p.fill(); p.fillStyle = "#E8C8A0"; p.beginPath(); p.arc(x, y, 15, 0, Math.PI * 2); p.fill(); p.fillStyle = P.hair; p.beginPath(); p.arc(x, y - 4, 15, Math.PI * 1.05, Math.PI * 1.95); p.fill();
+    const blink = Math.floor(now / 3000 + x) % 7 === 0 && now % 3000 < 140; p.fillStyle = "#2A2020"; if (!blink) { p.fillRect(x - 6, y - 1, 3, 3); p.fillRect(x + 3, y - 1, 3, 3); } else { p.fillRect(x - 6, y, 3, 1); p.fillRect(x + 3, y, 3, 1); } p.fillRect(x - 3, y + 7, 6, 1.5);
+    p.fillStyle = "#F0E0B0"; p.strokeStyle = "#5A4020";
+    if (id === "tavern") { p.fillStyle = "#C8A060"; p.fillRect(x + 18, y + 12, 9, 12); p.fillStyle = "#FFF8E0"; p.fillRect(x + 18, y + 10, 9, 3); }
+    else if (id === "merchant") { p.fillStyle = "#806020"; p.beginPath(); p.arc(x + 22, y + 18, 6, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0C040"; p.fillRect(x + 21, y + 11, 2, 3); }
+    else if (id === "smith") { p.fillStyle = "#6A4A2A"; p.fillRect(x + 21, y + 8, 2, 16); p.fillStyle = "#909098"; p.fillRect(x + 17, y + 6, 10, 5); }
+    else if (id === "library") { p.fillStyle = "#6A2A2A"; p.fillRect(x + 16, y + 12, 12, 9); p.fillStyle = "#F0E6CC"; p.fillRect(x + 17, y + 13, 10, 2); p.strokeStyle = "#202020"; p.strokeRect(x - 8, y - 3, 6, 5); p.strokeRect(x + 2, y - 3, 6, 5); }
+    else if (id === "priest") { p.fillStyle = "#F0C040"; p.fillRect(x - 1, y + 14, 2, 10); p.fillRect(x - 4, y + 17, 8, 2); }
+    else if (id === "farm") { p.strokeStyle = "#8A6A40"; p.lineWidth = 2; p.beginPath(); p.moveTo(x + 22, y + 26); p.lineTo(x + 22, y - 6); p.stroke(); p.lineWidth = 1; p.strokeStyle = "#A0A0A8"; for (let k = -1; k <= 1; k++) { p.beginPath(); p.moveTo(x + 22 + k * 3, y - 6); p.lineTo(x + 22 + k * 3, y - 14); p.stroke(); } }
+    p.restore(); };
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "holdem") return this.cgHoldem(box); return floor0.call(this, box); },
+    cgHoldem(box) {
+      const g = this.game, Hs = g.heStore(), T = g.heTable(), seated = !!T;
+      box.innerHTML = `<div class="cgtable holdem"><h3>The Residents' Game</h3><p class="lore">Through a curtain at the back of the floor there's a round table where the village's own sit down of an evening - the tavern-keeper, the merchant, the smith, the librarian, the priest and the farmer's hand, four at a time. "Limit hold'em," says the dealer, a quiet woman with very quick hands. "Buy in, and it's you against them. The house only deals."</p>
+        <canvas class="hecanvas" width="${W}" height="${H}"></canvas><div class="hectl"></div>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.heCard ? this.cgCardWon(this.heCard) : ""}
+        <div class="small">Fixed-limit Texas hold'em: two cards each and five on the board; the best five of seven wins. Blinds are a hundredth and a fiftieth of the buy-in; bets are a big blind before the turn and two after, four to a street. Each resident plays their own way - ${Object.values(HE.RES).map((P) => `${P.name} ${P.style}`).join(", ")}. Cash out between hands for gold. Tickets for the buy-in, and for a pot won with a straight (1), flush (2), full house (3), four of a kind (5) or straight flush (10), and 2 for each resident sent home; a royal flush brings a rare card; sending the whole table home, a card the first time at each buy-in. Hands played ${Hs.hands}, pots won ${Hs.pots}, biggest pot ${Hs.best}.</div>${this.cgStats("holdem")}</div>`;
+      this.heCanvas = box.querySelector(".hecanvas"); this.heAnim = this.heAnim || { bub: {}, shown: {}, flips: {}, flights: [], deal: 0, win: null }; this.heCtl(); this.hePump();
+      if (!this.heLoop) { const loop = (now) => { if (!this.heCanvas || !this.heCanvas.isConnected || this.cgView !== "holdem") { this.heLoop = null; return; } this.heTick(now); this.heFrame(now); this.heLoop = requestAnimationFrame(loop); }; this.heLoop = requestAnimationFrame(loop); }
+      if (!seated) this.heAnim = { bub: {}, shown: {}, flips: {}, flights: [], deal: 0, win: null };
+    },
+    heCtl() {
+      const g = this.game, T = g.heTable(), el = this.$("#casino-body .hectl"); if (!el) return; let html;
+      if (!T) html = `<div class="row hebuy">${HE.BUYINS.map((b) => `<button class="primary" data-hesit="${b}">Buy in for ${b} gold${g.heStore().cleared[b] ? " ✓" : ""}</button>`).join("")}<button data-leave>Leave</button></div>`;
+      else if (T.stage === "hand" && T.toAct === 0) { const owe = HE.toCall(T, 0), size = HE.betSize(T), S = T.seats[0], capped = T.raises >= HE.cap || S.stack <= owe;
+        html = `<div class="row heact">${owe ? `<button data-hea="fold">Fold</button>` : ""}<button class="primary" data-hea="call">${owe ? `Call ${Math.min(owe, S.stack)}` : "Check"}</button>${capped ? "" : `<button class="primary" data-hea="raise">${T.cur ? `Raise to ${T.cur + size}` : `Bet ${size}`}</button>`}</div>`; }
+      else if (T.stage === "hand") html = `<div class="row heact"><span class="small">${HE.RES[T.seats[T.toAct].id].short} to act…</span></div>`;
+      else html = `<div class="row heact">${T.stage === "over" ? "" : `<button class="primary" data-hedeal>Deal the next hand</button>`}<button data-heleave>${T.stage === "over" && T.seats[0].stack <= 0 ? "Get up from the table" : `Cash out ${T.seats[0].stack} chips`}</button></div>`;
+      el.innerHTML = html; const q = (s) => el.querySelector(s);
+      if (q("[data-leave]")) q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      el.querySelectorAll("[data-hesit]").forEach((b) => b.addEventListener("click", () => { const r = g.heSit(Number(b.dataset.hesit)); this.cgNote = r.error || `You buy in for ${b.dataset.hesit}. The dealer shuffles.`; this.heCard = null; this.heAnim = { bub: {}, shown: {}, flips: {}, flights: [], deal: 0, win: null }; this.cgSfx(r.error ? "miss" : "card", 0.4); this.renderCasino(); }));
+      el.querySelectorAll("[data-hea]").forEach((b) => b.addEventListener("click", () => { g.heAct(b.dataset.hea); this.heNext = performance.now() + 650; this.hePump(); this.heCtl(); }));
+      if (q("[data-hedeal]")) q("[data-hedeal]").addEventListener("click", () => { this.cgNote = ""; g.heDeal(); this.hePump(); this.heCtl(); });
+      if (q("[data-heleave]")) q("[data-heleave]").addEventListener("click", () => { const r = g.heLeave(); if (r.error) { this.cgNote = r.error; } else { this.cgNote = r.chips ? `You cash out ${r.chips} gold - ${r.net >= 0 ? `${r.net} up` : `${-r.net} down`} on the night.` : "You get up from the table with empty pockets."; if (r.net > 0) this.cgCoins(this.$("#casino-body"), 14); } this.renderCasino(); });
+    },
+    // the residents' turns, one at a time, at a talking pace; a new hand after a pause
+    heTick(now) { const g = this.game, T = g.heTable(); if (!T) return;
+      if (T.stage === "hand" && T.toAct > 0 && now > (this.heNext || 0)) { g.heAi(); this.heNext = now + 700 + Math.random() * 500; this.hePump(); this.heCtl(); } },
+    hePump() { const g = this.game, T = g.heTable(), A = this.heAnim, now = performance.now(); if (!T || !A) return; let delay = 0;
+      for (const e of g.heEvents()) {
+        if (e.kind === "deal") { A.shown = {}; A.flips = {}; A.win = null; A.bub = {}; A.deal = now; A.hand = e.hand; this.cgSfx("card", 0.35, 1.2); }
+        else if (e.kind === "act") { const P = HE.RES[T.seats[e.seat].id]; A.bub[e.seat] = { text: e.what === "fold" && P && Math.random() < 0.4 ? P.say.fold : e.what === "raise" && P && Math.random() < 0.4 ? P.say.raise : e.what[0].toUpperCase() + e.what.slice(1) + (e.what === "call" || e.what === "bet" || e.what === "raise" ? ` (${e.amount})` : ""), at: now };
+          this.cgSfx(e.what === "fold" ? "card" : e.what === "check" ? "step" : "coin", 0.25, e.what === "raise" || e.what === "bet" ? 1.1 : 1.4); if (e.what !== "fold" && e.what !== "check") A.flights.push({ from: SEAT[e.seat], to: [CX, CY + 58], at: now, n: e.amount }); }
+        else if (e.kind === "street") { delay += 250; for (let k = 0; k < e.board.length; k++) if (!A.flips[k]) A.flips[k] = now + delay + k * 160; this.cgSfx("card", 0.3, 1.0); A.bub = {}; }
+        else if (e.kind === "show") { A.shown[e.seat] = now + delay + 300; A.cats = A.cats || {}; A.cats[e.seat] = e.cat; }
+        else if (e.kind === "win") { delay += 600; const S = T.seats[e.seat], P = HE.RES[S.id], who = P ? P.short : "You"; A.win = { seat: e.seat, at: now + delay, text: `${who} ${P ? "wins" : "win"} ${e.amount}${e.cat >= 0 ? ` - ${HE.CATS[e.cat].toLowerCase()}` : ""}` }; A.flights.push({ from: [CX, CY + 58], to: SEAT[e.seat], at: now + delay, n: e.amount });
+          setTimeout(() => this.cgSfx(e.seat === 0 ? "victory" : "coin", e.seat === 0 ? 0.4 : 0.3), delay); if (P && Math.random() < 0.5) A.bub[e.seat] = { text: P.say.win, at: now + delay };
+          if (e.seat === 0) this.cgNote = `You win ${e.amount}${e.cat >= 0 ? ` with ${HE.CATS[e.cat].toLowerCase()}` : ""}${e.tickets ? ` - ${e.tickets} ticket${e.tickets > 1 ? "s" : ""}` : ""}${e.card ? `, and a card - ${e.card}!` : "."}`; else this.cgNote = A.win.text + "."; if (e.card) { this.heCard = e.card; setTimeout(() => this.cgSfx("cardwin", 0.5), delay + 400); } }
+        else if (e.kind === "bust") { const P = HE.RES[e.id]; A.bub[e.seat] = { text: P.say.bust, at: now + delay + 900 }; this.cgNote += ` ${P.short} is out of chips and goes home${e.tickets ? ` (+${e.tickets} tickets)` : ""}.`; }
+        else if (e.kind === "cleared") { this.cgNote += e.card ? ` You've sent the whole table home - a card: ${e.card}!` : ` You've sent the whole table home${e.tickets ? ` (+${e.tickets} tickets)` : ""}!`; if (e.card) this.heCard = e.card; setTimeout(() => this.renderCasino(), delay + 1500); }
+        else if (e.kind === "broke") this.cgNote += " You're out of chips.";
+      }
+      const note = this.$("#casino-body .holdem .cgnote"); if (note) note.textContent = this.cgNote || ""; },
+    heFrame(now) {
+      const p = this.heCanvas.getContext("2d"), T = this.game.heTable(), A = this.heAnim;
+      const bg = p.createRadialGradient(CX, 0, 30, CX, CY, 520); bg.addColorStop(0, "#5A4630"); bg.addColorStop(1, "#160E0A"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      p.fillStyle = "#3A2214"; p.beginPath(); p.ellipse(CX, CY + 20, 318, 168, 0, 0, Math.PI * 2); p.fill(); const felt = p.createRadialGradient(CX, CY, 20, CX, CY + 20, 300); felt.addColorStop(0, "#2E8A4A"); felt.addColorStop(1, "#14502A"); p.fillStyle = felt; p.beginPath(); p.ellipse(CX, CY + 20, 296, 148, 0, 0, Math.PI * 2); p.fill();
+      p.strokeStyle = "rgba(240,210,120,0.35)"; p.lineWidth = 2; p.beginPath(); p.ellipse(CX, CY + 20, 240, 110, 0, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; p.fillStyle = "rgba(240,210,120,0.12)"; p.font = "italic 16px Georgia"; p.textAlign = "center"; p.fillText("The Gilded Joker", CX, CY + 104); p.textAlign = "left";
+      const lamp = p.createRadialGradient(CX, CY, 10, CX, CY, 300); lamp.addColorStop(0, "rgba(255,230,160,0.14)"); lamp.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = lamp; p.fillRect(0, 0, W, H);
+      if (!T) { p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.fillText("Choose a buy-in and sit down", CX, CY + 24); p.textAlign = "left"; const who = Object.keys(HE.RES); who.forEach((id, k) => face(p, 120 + k * 96, 330, id, now, false)); return; }
+      // the board and the pot
+      for (let k = 0; k < 5; k++) { const c = T.board[k], f = A.flips[k], x = CX - 92 + k * 46; if (!c || (f && now < f)) { p.strokeStyle = "rgba(255,255,255,0.12)"; p.strokeRect(x - 17, CY - 24, 34, 48); continue; } const t = f ? Math.min(1, (now - f) / 220) : 1; p.save(); p.translate(x, CY); p.scale(Math.abs(Math.cos(t * Math.PI)) * 0.98 + 0.02, 1); card(p, 0, 0, c, t > 0.5); p.restore(); }
+      const pot = HE.pot(T) + 0; if (pot > 0) { chips(p, CX - 26, CY + 62, pot); p.fillStyle = "#FFE8A0"; p.font = "bold 13px monospace"; p.fillText(`POT ${pot}`, CX - 10, CY + 66); }
+      // the seats
+      T.seats.forEach((S, i) => { const [x, y] = SEAT[i], out = S.out || (i && S.stack <= 0 && T.stage !== "hand"); if (i) face(p, x, y - 20, S.id, now, out || S.folded);
+        const bx = i === 0 ? x - 140 : x - 46, by = i === 0 ? y + 28 : y + 18; p.fillStyle = T.toAct === i && T.stage === "hand" ? "rgba(255,224,112,0.9)" : "rgba(0,0,0,0.6)"; p.fillRect(bx, by, 92, 30); p.fillStyle = T.toAct === i && T.stage === "hand" ? "#2A1A08" : "#F0E0B0"; p.font = "bold 11px Georgia"; p.fillText(i ? HE.RES[S.id].short : "You", bx + 5, by + 12); p.font = "11px monospace"; p.fillText(`${S.stack}`, bx + 5, by + 25);
+        if (T.button === i && T.stage !== "between" || (T.button === i && T.hand)) { p.fillStyle = "#F8F8F0"; p.beginPath(); p.arc(bx + 82, by + 15, 8, 0, Math.PI * 2); p.fill(); p.fillStyle = "#202020"; p.font = "bold 9px sans-serif"; p.fillText("D", bx + 79, by + 18); }
+        if (S.cards && !S.folded) { const t = Math.min(1, (now - A.deal) / 300 - i * 0.15), up = i === 0 || (A.shown[i] && now >= A.shown[i]), cx = i === 0 ? x : x + (x < CX ? 52 : x > CX ? -52 : 0), cy = i === 0 ? y - 12 : y + (y < 150 ? 50 : 6);
+          for (let k = 0; k < 2; k++) { if (t <= 0) break; const tx = i === 0 ? cx - 20 + k * 40 : cx - 9 + k * 20, ty = cy, fx = CX + (tx - CX) * t, fy = CY - 120 + (ty - CY + 120) * t; card(p, fx, fy, S.cards[k], up && t >= 1, i === 0 ? 1.05 : 0.8); }
+          if (A.cats && A.cats[i] !== undefined && up) { p.fillStyle = "rgba(0,0,0,0.65)"; p.fillRect(cx - 50, cy + 24, 100, 16); p.fillStyle = A.win && A.win.seat === i ? "#FFE070" : "#E0E0E0"; p.font = "bold 10px Georgia"; p.textAlign = "center"; p.fillText(HE.CATS[A.cats[i]], cx, cy + 36); p.textAlign = "left"; } }
+        if (S.bet > 0 && T.stage === "hand") { const tx = x + (CX - x) * 0.35, ty = y + (CY - y) * 0.35 + 10; chips(p, tx, ty, S.bet); p.fillStyle = "#FFF0C0"; p.font = "10px monospace"; p.fillText(String(S.bet), tx + 12, ty + 4); }
+        const B = A.bub[i]; if (B && now >= B.at && now - B.at < 2600) { const a = Math.min(1, (2600 - (now - B.at)) / 400); p.globalAlpha = a; p.font = "12px Georgia"; const w = Math.min(220, p.measureText(B.text).width + 16), bx2 = Math.max(4, Math.min(W - w - 4, x - w / 2)), by2 = i === 0 ? y - 90 : y - 72; p.fillStyle = "#FBF4E0"; p.beginPath(); p.moveTo(bx2 + 6, by2); p.arcTo(bx2 + w, by2, bx2 + w, by2 + 22, 6); p.arcTo(bx2 + w, by2 + 22, bx2, by2 + 22, 6); p.lineTo(x + 6, by2 + 22); p.lineTo(x, by2 + 30); p.lineTo(x - 4, by2 + 22); p.arcTo(bx2, by2 + 22, bx2, by2, 6); p.arcTo(bx2, by2, bx2 + w, by2, 6); p.fill(); p.fillStyle = "#2A2010"; p.fillText(B.text, bx2 + 8, by2 + 15, w - 12); p.globalAlpha = 1; } });
+      // chips in flight
+      A.flights = A.flights.filter((f) => now - f.at < 600); for (const f of A.flights) { const t = (now - f.at) / 600; if (t < 0) continue; const e = 1 - (1 - t) * (1 - t); chips(p, f.from[0] + (f.to[0] - f.from[0]) * e, f.from[1] + (f.to[1] - f.from[1]) * e - Math.sin(t * Math.PI) * 30, Math.min(f.n, 40)); }
+      if (A.win && now >= A.win.at && now - A.win.at < 2800) { const t = (now - A.win.at) / 2800; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : 1; p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(CX - 170, CY + 80, 340, 30); p.fillStyle = A.win.seat === 0 ? "#FFE070" : "#F0E0B0"; p.font = "bold 16px Georgia"; p.textAlign = "center"; p.fillText(A.win.text, CX, CY + 101); p.textAlign = "left"; p.globalAlpha = 1;
+        if (A.win.seat === 0 && t < 0.5) for (let k = 0; k < 12; k++) { const a = k * 0.52 + now / 300, r = 40 + t * 120; p.fillStyle = k % 2 ? "#FFE070" : "#FFFFFF"; p.fillRect(SEAT[0][0] + Math.cos(a) * r, SEAT[0][1] - 20 + Math.sin(a) * r * 0.5, 3, 3); } }
+      p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(8, 8, 190, 20); p.fillStyle = "#F0E0B0"; p.font = "11px monospace"; p.fillText(`Hand ${T.hand}  Blinds ${T.sb}/${T.bb}  Buy-in ${T.buyin}`, 14, 22);
+    },
+  });
+}
+
+// ---- 76zzh-bingo.js ----
+"use strict";
+// The Bell Hall, the window's side: the old chapel's nave with the priest at a brass cage on the altar step - the
+// cage turns, the balls tumble in it, and each drawn ball rolls out big with its rune and number while she calls it;
+// the board of all seventy-five behind lights each number called; the party's cards below, a stamp of red ink thumped
+// on each number daubed (the hall's dauber does it if asked); the pattern of the game shown in a little card of its
+// own; "Bingo!" to call. When anyone calls: the bell rings, the winners are read out, and the pot shared. The rules
+// are 64zzh-bingo.js.
+CM.CG_TABLES.push(["bingo", "The Bell Hall"]);
+{ const floor0 = CM.UI.prototype.renderFloor, BGO = CM.BGO, CW = 340, CH = 210, COLS = ["#C03838", "#E0A030", "#3A9A50", "#3070C0", "#8A50C0"];
+  // the pattern's little picture
+  const patCells = (id) => { const m = Array(25).fill(false);
+    if (id === "line") for (let x = 0; x < 5; x++) m[10 + x] = true; else if (id === "corners") [0, 4, 20, 24].forEach((k) => { m[k] = true; }); else if (id === "x") for (let k = 0; k < 5; k++) { m[k * 6] = true; m[(k + 1) * 4] = true; } else if (id === "frame") for (let k = 0; k < 25; k++) m[k] = k < 5 || k >= 20 || k % 5 === 0 || k % 5 === 4; else m.fill(true); return m; };
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "bingo") return this.cgBingo(box); return floor0.call(this, box); },
+    cgBingo(box) {
+      const g = this.game, B = g.bgStore(), G = g.bgGame(), live = G && G.stage === "play", room = this.bgRoom || "copper", count = this.bgCount || 2, auto = this.bgAuto !== false, pat = G ? BGO.PATTERNS.find((p) => p.id === G.pat) : g.bgPattern(), called = G ? g.bgCalled(G) : new Set(), last = G && G.drawn ? G.balls[G.drawn - 1] : 0;
+      const pm = patCells(pat.id), mini = `<div class="bgpat" title="${pat.name}">${pm.map((v) => `<i class="${v ? "on" : ""}"></i>`).join("")}</div>`;
+      const board = BGO.RUNES.map((r, c) => `<div class="bgrow"><b style="background:${COLS[c]}">${r}</b>${Array.from({ length: 15 }, (_, k) => c * 15 + k + 1).map((n) => `<span class="${called.has(n) ? "on" : ""}${n === last ? " last" : ""}">${n}</span>`).join("")}</div>`).join("");
+      const done = G ? g.bgDone(G) : [];
+      const cards = G ? G.cards.map((cd, i) => `<div class="bgcard${done[i] ? " done" : ""}${G.result && G.result.mine[i] ? " won" : ""}"><div class="bghead">${BGO.RUNES.map((r, c) => `<b style="background:${COLS[c]}">${r}</b>`).join("")}</div><div class="bggrid">${cd.map((n, k) => `<span data-bgd="${i}:${k}" class="${G.daub[i][k] ? "d" : ""}${n === 0 ? " free" : ""}">${n || "★"}</span>`).join("")}</div></div>`).join("") : "";
+      box.innerHTML = `<div class="cgtable bingo"><h3>The Bell Hall</h3><p class="lore">The Joker bought the old chapel next door and kept the bell. Of an evening the pews fill with half the village and their cards, and the priest's sister turns the brass cage on the altar step. "Eyes down," she says, "for ${pat.name.toLowerCase()}."</p>
+        <div class="bgtop"><canvas class="bgcage" width="${CW}" height="${CH}"></canvas><div class="bgside"><div class="bgboard">${board}</div><div class="bgpatrow">${mini}<div><b>${pat.name}</b><br><span class="small">${G ? `${G.hall.length} cards in the hall · pot ${Math.floor((G.cards.length + G.hall.length) * G.price * BGO.share)} gold · ball ${G.drawn}` : "the next game's pattern"}</span></div></div></div></div>
+        <div class="bgcards">${cards}</div>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.bgCard ? this.cgCardWon(this.bgCard) : ""}
+        <div class="row">${live ? `<button class="primary bgcall${done.some(Boolean) ? " ready" : ""}" data-bgcall>Bingo!</button><button data-bgfast>${this.bgFast ? "Slower" : "Faster"}</button>` : `${Object.entries(BGO.ROOMS).map(([k, R]) => `<button data-bgroom="${k}" class="${k === room ? "primary" : ""}">${R.name[4].toUpperCase() + R.name.slice(5)} - ${R.price} a card</button>`).join("")}`}</div>
+        ${live ? "" : `<div class="row"><span>Cards:</span>${[1, 2, 3, 4].map((n) => `<button data-bgn="${n}" class="${n === count ? "primary" : ""}">${n}</button>`).join("")}<label><input type="checkbox" data-bgauto ${auto ? "checked" : ""}> the hall's dauber</label><button class="primary" data-bgbuy>Buy ${count} card${count > 1 ? "s" : ""} (${count * BGO.ROOMS[room].price} gold)</button><button data-leave>Leave</button></div>`}
+        <div class="small">Daub each number called on your cards (click it) - or let the hall's dauber do it - and call Bingo! when the game's pattern is done. When anyone calls, every finished card shares the pot: 85 in every 100 gold the hall took. A win pays tickets too (3, and one for each 10 gold); a coverall won the first time brings a card. Patterns in turn: ${BGO.PATTERNS.map((p) => p.name.toLowerCase()).join(", ")}. Games ${B.games}, won ${B.wins}, best ${B.best} gold.</div>${this.cgStats("bingo")}</div>`;
+      const q = (s) => box.querySelector(s); if (q("[data-leave]")) q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      box.querySelectorAll("[data-bgroom]").forEach((b) => b.addEventListener("click", () => { this.bgRoom = b.dataset.bgroom; this.renderCasino(); }));
+      box.querySelectorAll("[data-bgn]").forEach((b) => b.addEventListener("click", () => { this.bgCount = Number(b.dataset.bgn); this.renderCasino(); }));
+      if (q("[data-bgauto]")) q("[data-bgauto]").addEventListener("change", (e) => { this.bgAuto = e.target.checked; });
+      if (q("[data-bgbuy]")) q("[data-bgbuy]").addEventListener("click", () => { const r = g.bgBuy(room, count, auto); this.cgNote = r.error || `Eyes down for ${BGO.PATTERNS.find((p) => p.id === r.pat).name.toLowerCase()}!`; this.bgCard = null; this.bgNextAt = performance.now() + 1500; this.cgSfx(r.error ? "miss" : "door", 0.4); this.renderCasino(); });
+      if (q("[data-bgfast]")) q("[data-bgfast]").addEventListener("click", () => { this.bgFast = !this.bgFast; this.renderCasino(); });
+      if (q("[data-bgcall]")) q("[data-bgcall]").addEventListener("click", () => { const r = g.bgCall(); if (r.error) { this.cgNote = r.error; this.cgSfx("miss", 0.3); const n = q(".cgnote"); if (n) n.textContent = r.error; return; } this.bgResult(r); });
+      box.querySelectorAll("[data-bgd]").forEach((el) => el.addEventListener("click", () => { const [i, k] = el.dataset.bgd.split(":").map(Number); if (g.bgDaub(i, k)) { el.classList.add("d", "stamp"); this.cgSfx("slam", 0.2, 1.6); const G2 = g.bgGame(); if (G2 && g.bgDone(G2)[i]) { el.closest(".bgcard").classList.add("done"); const c = q("[data-bgcall]"); if (c) c.classList.add("ready"); } } else this.cgSfx("miss", 0.15, 1.5); }));
+      this.bgCanvas = q(".bgcage");
+      if (!this.bgLoop) { const loop = (now) => { if (!this.bgCanvas || !this.bgCanvas.isConnected || this.cgView !== "bingo") { this.bgLoop = null; return; } this.bgTick(now); this.bgFrame(now); this.bgLoop = requestAnimationFrame(loop); }; this.bgLoop = requestAnimationFrame(loop); }
+    },
+    bgTick(now) { const g = this.game, G = g.bgGame(); if (!G || G.stage !== "play" || now < (this.bgNextAt || 0)) return; this.bgNextAt = now + (this.bgFast ? 1100 : 2200);
+      const r = g.bgDraw(); if (!r) return; this.bgBall = { n: r.ball, at: now }; this.cgSfx("chain", 0.25, 1.6); this.cgNote = `${r.letter} - ${r.ball}.`;
+      if (r.won !== undefined) { setTimeout(() => this.bgResult(r), 900); this.bgNextAt = 1e15; } else this.renderCasino(); },
+    bgResult(r) { const who = r.hallWho.length ? r.hallWho.slice(0, 3).join(", ") + (r.hallWho.length > 3 ? ` and ${r.hallWho.length - 3} more` : "") : "";
+      this.cgNote = r.won ? `BINGO! ${who ? `You share it with ${who}: ` : "Yours alone: "}${r.won} gold of the ${r.pool} pot after ${r.balls} balls${r.tickets ? `, and ${r.tickets} tickets` : ""}${r.card ? `, and a card - ${r.card}` : ""}.` : `"Bingo!" - ${who} ${r.hallWho.length > 1 ? "share" : "takes"} the ${r.pool}-gold pot after ${r.balls} balls.`;
+      this.bgBell = performance.now(); this.cgSfx("tablebell", 0.5, 0.7); setTimeout(() => this.cgSfx("tablebell", 0.4, 0.7), 350); if (r.won) { this.cgSfx("victory", 0.5); if (r.card) { this.bgCard = r.card; setTimeout(() => this.cgSfx("cardwin", 0.5), 500); } } this.renderCasino(); if (r.won) this.cgCoins(this.$("#casino-body"), 12); },
+    bgFrame(now) {
+      const p = this.bgCanvas.getContext("2d"), G = this.game.bgGame(), live = G && G.stage === "play";
+      const bg = p.createLinearGradient(0, 0, 0, CH); bg.addColorStop(0, "#3A2A40"); bg.addColorStop(1, "#1A1218"); p.fillStyle = bg; p.fillRect(0, 0, CW, CH);
+      for (let k = 0; k < 3; k++) { const x = 40 + k * 130; p.fillStyle = "rgba(255,220,150,0.08)"; p.beginPath(); p.moveTo(x, 0); p.lineTo(x + 30, 0); p.lineTo(x + 70, CH); p.lineTo(x - 20, CH); p.fill(); p.fillStyle = k === 1 ? "#5A3A6A" : "#3A5A8A"; p.beginPath(); p.moveTo(x, 40); p.arc(x + 15, 40, 15, Math.PI, 0); p.lineTo(x + 30, 80); p.lineTo(x, 80); p.fill(); }
+      if (this.bgBell && now - this.bgBell < 1500) { const t = (now - this.bgBell) / 1500; p.save(); p.translate(CW - 40, 30); p.rotate(Math.sin(t * 20) * 0.5 * (1 - t)); p.fillStyle = "#D8A840"; p.beginPath(); p.moveTo(-14, 18); p.quadraticCurveTo(-12, -16, 0, -16); p.quadraticCurveTo(12, -16, 14, 18); p.fill(); p.restore(); }
+      // the cage
+      const cx = 100, cy = 110, R = 62, spin = live ? now / 250 : now / 1500; p.fillStyle = "#4A3020"; p.fillRect(cx - 50, cy + R - 4, 100, 12); p.fillRect(cx - 4, cy, 8, R);
+      for (let k = 0; k < 22; k++) { const a = spin * (0.7 + (k % 5) * 0.13) + k * 1.7, r = (k % 4) * 11 + 10, bx = cx + Math.cos(a) * r, by = cy + 18 + Math.sin(a * 1.3) * (R - 30) * 0.6 + (live ? Math.abs(Math.sin(now / 90 + k)) * -12 : 10); p.fillStyle = COLS[k % 5]; p.beginPath(); p.arc(bx, by, 7, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFFFFF"; p.beginPath(); p.arc(bx - 1, by - 1, 3, 0, Math.PI * 2); p.fill(); }
+      p.strokeStyle = "#E0B860"; p.lineWidth = 2; p.beginPath(); p.arc(cx, cy, R, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; for (let k = 0; k < 8; k++) { const a = spin + (k * Math.PI) / 8; p.strokeStyle = "rgba(224,184,96,0.55)"; p.beginPath(); p.ellipse(cx, cy, Math.abs(Math.cos(a)) * R, R, 0, 0, Math.PI * 2); p.stroke(); }
+      p.strokeStyle = "#B08840"; p.lineWidth = 3; p.beginPath(); p.moveTo(cx + R, cy); p.lineTo(cx + R + 14 + Math.cos(spin * 2) * 8, cy + Math.sin(spin * 2) * 8); p.stroke(); p.lineWidth = 1;
+      // the ball drawn
+      const Bb = this.bgBall; if (Bb && G) { const t = Math.min(1, (now - Bb.at) / 700), x = cx + R + (250 - cx - R) * t, y = cy + 40 - Math.sin(t * Math.PI) * 50 - 20 * t, rr = 10 + 36 * t, c = Math.floor((Bb.n - 1) / 15); p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(x + 4, cy + 72, rr, rr * 0.25, 0, 0, Math.PI * 2); p.fill();
+        const gr = p.createRadialGradient(x - rr * 0.3, y - rr * 0.3, 2, x, y, rr); gr.addColorStop(0, "#FFFFFF"); gr.addColorStop(0.25, COLS[c]); gr.addColorStop(1, "#1A1A1A"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, rr, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FBF4E0"; p.beginPath(); p.arc(x, y, rr * 0.6, 0, Math.PI * 2); p.fill();
+        p.fillStyle = "#1A1A22"; p.textAlign = "center"; p.font = `bold ${Math.round(rr * 0.5)}px Georgia`; p.fillText(String(Bb.n), x, y + rr * 0.32); p.font = `${Math.round(rr * 0.32)}px serif`; p.fillText(BGO.RUNES[c], x, y - rr * 0.2); p.textAlign = "left"; }
+      else { p.fillStyle = "#F0E0B0"; p.font = "14px Georgia"; p.fillText(live ? "Eyes down…" : "Buy cards to play", 190, 115); }
     },
   });
 }

@@ -18,7 +18,7 @@ const DAILY = CM.DAILY;
 DAILY.key = (d) => { d = d || new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 DAILY.prev = (key) => { const [y, m, d] = key.split("-").map(Number), t = new Date(y, m - 1, d - 1); return DAILY.key(t); };
 // what the house chalks up for a day: the same for everyone
-DAILY.pick = (key) => { const R = new CM.Random(CM.hashSeed(`gilded-joker-daily:${key}`)), table = CM.CLUB.BOARDS[R.int(0, CM.CLUB.BOARDS.length - 1)], [y, m, d] = key.split("-").map(Number), wd = new Date(y, m - 1, d).getDay(), bump = wd === 0 || wd === 6 ? 1 : 0;
+DAILY.pick = (key) => { const R = new CM.Random(CM.hashSeed(`gilded-joker-daily:${key}`)), pool = CM.CLUB.BOARDS.filter((b) => DAILY.MARKS[b]), table = pool[R.int(0, pool.length - 1)], [y, m, d] = key.split("-").map(Number), wd = new Date(y, m - 1, d).getDay(), bump = wd === 0 || wd === 6 ? 1 : 0;
   return { day: key, table, marks: DAILY.MARKS[table].map((x) => x + bump), weekend: !!bump }; };
 { const rec0 = CM.Game.prototype.cgRecord;
   Object.assign(CM.Game.prototype, {

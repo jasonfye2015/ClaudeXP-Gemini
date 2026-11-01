@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The residents' table and the Bell Hall (the forty-sixth big update - v16.0)
+  Two social games on the Gilded Joker's floor (src/js/64zzg-holdem.js, 64zzh-bingo.js; 76zzg-76zzh):
+  - The Residents' Game: fixed-limit Texas hold'em against four of the village's six residents - the tavern-keeper
+    (calls anything), the merchant (counts the odds), the smith (plays few, plays hard), the librarian (a careful
+    rock), the priest (steady, a little hopeful) and the farmer's hand (wild and fearless) - each judging their cards
+    by a quick count of a hundred deals against the pot's price, bent by their nature. Buy in for 50 to 500 gold, play
+    as many hands as you like, cash out between hands; side pots handled. Tickets for strong winning hands and for each
+    resident sent home; a royal flush brings a rare card, clearing the table a card the first time at each buy-in.
+  - The Bell Hall: 75-ball bingo in the old chapel - up to four cards in the Copper, Silver or Gold Room (2, 10 or 50
+    gold a card), a pattern each game in turn (any line, corners, the X, the frame, coverall), daubing by hand or by the
+    hall's dauber, "Bingo!" to call; every finished card shares 85% of what the hall took. Tickets on a win; a card for
+    the first coverall.
+
 Four cabinets and a vault (the forty-fifth big update - v15.9)
   Four more arcade cabinets on the common works and a free puzzle (src/js/64zzf-arc2.js; 76zzb-76zzf):
   - Gryphon Joust: gryphon riders over a lava lake - flap and steer; the higher lance unhorses, the lower falls; catch

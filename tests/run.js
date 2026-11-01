@@ -5220,6 +5220,31 @@ test("the Rune Bastion: the road is one joined line; runes go only on the grass 
   for (const n of [2, 3]) { h.vrNew(n); for (const [x, y] of solve(h.vrLive)) r = h.vrTouch(x, y); } assert.ok(r.open && r.card, "a card at the third vault"); assert.strictEqual(h.vrNew(9).n, 4);
 });
 
+test("the Residents' Game: hands rank right (the wheel, flush over straight, two trips a full house, the royal); side pots go to who reached them; a night of hands keeps every chip, the residents act by turn, and cashing out pays the stack", () => {
+  const CM = load(), HE = CM.HE, C = (t) => t.split(" ").map((x) => ({ r: "  23456789TJQKA".indexOf(x[0]), s: "shdc".indexOf(x[1]) }));
+  const v = (t) => HE.score(C(t)); assert.strictEqual(HE.cat(v("As 2d 3c 4h 5s 9d Kc")), 4); assert.ok(v("2h 5h 9h Jh Kh Qs Qd") > v("9c Td Jh Qs Ks 2d 3c"));
+  assert.strictEqual(HE.cat(v("7s 7d 7c 9h 9s 9d 2c")), 6); assert.ok(HE.royal(v("Ts Js Qs Ks As 2d 2c"))); assert.ok(!HE.royal(v("9s Ts Js Qs Ks 2d 2c")));
+  assert.ok(v("Ah Ad Kc Qs 9h 4d 2c") > v("Kh Kd Ac Qs 9h 4d 2c")); assert.strictEqual(v("Ah Ad Kc Qs 9h 4d 2c"), v("As Ac Kh Qd 9s 4h 2d"));
+  const T = HE.newTable("side", 100, ["smith", "priest"]); T.board = C("2s 7d 9c Jh 3d"); T.stage = "hand";
+  T.seats[0] = Object.assign(T.seats[0], { cards: C("As Ah"), put: 20, stack: 0, folded: false }); T.seats[1] = Object.assign(T.seats[1], { cards: C("Ks Kh"), put: 60, stack: 40, folded: false }); T.seats[2] = Object.assign(T.seats[2], { cards: C("Qs Qh"), put: 60, stack: 40, folded: false });
+  HE.award(T, true); assert.strictEqual(T.seats[0].stack, 60, "the main pot"); assert.strictEqual(T.seats[1].stack, 120, "the side pot"); assert.strictEqual(T.seats[2].stack, 40);
+  const g = new CM.Game(); g.newGame("he-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const gold0 = g.gold;
+  assert.ok(g.heSit(77).error); assert.ok(!g.heSit(100).error); assert.strictEqual(g.gold, gold0 - 100); assert.ok(g.heSit(100).error, "already sat");
+  const Tb = g.heTable(), total = () => Tb.seats.reduce((a, S) => a + S.stack + (S.put || 0), 0); assert.strictEqual(Tb.seats.length, 5); let hands = 0;
+  for (let step = 0; step < 4000 && Tb.stage !== "over" && hands < 25; step++) { if (Tb.stage === "between") { hands++; g.heDeal(); } else if (Tb.toAct === 0) g.heAct(step % 7 === 0 ? "raise" : "call"); else assert.ok(g.heAi()); g.heEvents(); assert.strictEqual(total(), 500, "no chip lost or made"); }
+  assert.ok(hands >= 10, `hands ${hands}`); if (Tb.stage === "hand") { while (Tb.stage === "hand") { if (Tb.toAct === 0) g.heAct("fold"); else g.heAi(); } }
+  const chips = Tb.seats[0].stack, r = g.heLeave(); assert.strictEqual(r.chips, chips); assert.strictEqual(g.gold, gold0 - 100 + chips); assert.strictEqual(g.heTable(), null);
+});
+
+test("the Bell Hall: a card's numbers sit in their columns with a free middle; the patterns check right; the hall's dauber marks the calls and the hall's cards call when done; a false call is refused; over many games the pot gives back about 85 in 100", () => {
+  const CM = load(), BGO = CM.BGO, R = new CM.Random(4), card = BGO.card(R); assert.strictEqual(card[12], 0); card.forEach((n, k) => { if (k !== 12) assert.strictEqual(Math.floor((n - 1) / 15), k % 5); });
+  const P = (id) => BGO.PATTERNS.find((q) => q.id === id), m = Array(25).fill(false); m[12] = true; assert.ok(!P("line").ok(m)); for (let k = 0; k < 5; k++) m[k * 5 + 2] = true; assert.ok(P("line").ok(m)); assert.ok(!P("corners").ok(m));
+  const g = new CM.Game(); g.newGame("bg-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6;
+  const G = g.bgBuy("copper", 1, false); assert.ok(g.bgCall().error, "nothing daubed"); assert.ok(g.bgBuy("copper", 1, false).error, "one game at a time"); let r; do { r = g.bgDraw(); } while (r.won === undefined); assert.strictEqual(G.stage, "done"); assert.ok(r.hallWho.length >= 1, "an undaubed card can't win");
+  let spent = 0, back = 0; for (let k = 0; k < 600; k++) { const H = g.bgBuy("silver", 2, true); spent += 2 * H.price; let out; for (;;) { out = g.bgDraw(); if (out.won !== undefined) break; if (g.bgDone(H).some(Boolean)) { out = g.bgCall(); break; } } back += out.won; }
+  assert.ok(back / spent > 0.7 && back / spent < 1.0, `bingo returns ${back / spent}`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
