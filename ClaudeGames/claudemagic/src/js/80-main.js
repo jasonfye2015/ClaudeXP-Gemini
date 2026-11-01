@@ -402,7 +402,8 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);
     const night = CM.isNight(game);
     for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && night)) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
-    return out.sort((a, b) => a.d - b.d).slice(0, 12);
+    if (CM.extraLights) CM.extraLights(game, fl, out, renderer);       // (v22.0: the court, the cabinet, the stones, the lit windows, a spell's flare: 76zzzu-light.js)
+    return out.sort((a, b) => a.d - b.d).slice(0, 24);
   }
 
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the

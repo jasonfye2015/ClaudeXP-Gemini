@@ -3136,15 +3136,15 @@ test("walls, floors and ceilings with variation: squares turned by hash, corners
   assert.deepStrictEqual(CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data, CM.floorMesh(CM.makeFloor(13, "vary-1"), CM.THEMES[2], index).data);
 });
 
-test("light and shadow: every band has a slight grade; the glowing props are lights; the shader takes twelve lights and the sun's direction", () => {
+test("light and shadow: every band has a slight grade; the glowing props are lights; the shader takes twenty-four lights and the sun's direction", () => {
   const CM = load();
   for (let i = 0; i < CM.THEMES.length; i++) { const g = CM.THEMES[i].grade; assert.ok(g && g.length === 3 && g.every((c) => c > 0.85 && c < 1.15), `band ${i}: ${g}`); }
   assert.ok(!CM.TOWN_THEME.grade && !CM.WOOD_THEME.grade, "the surface ungraded");
   for (const id of ["candle", "candelabra", "fungi", "shard", "slag"]) assert.ok(CM.PROPS[id].glow, id);
   assert.ok(CM.PROPS.lamp.night);
   const src = fs.readFileSync(path.join(ROOT, "src", "js", "40-render.js"), "utf8");
-  assert.ok(/uLightPos\[12\]/.test(src) && /uLightCol\[12\]/.test(src) && /uSun\b/.test(src) && /uGrade\b/.test(src), "the shader's lights, sun and grade");
-  assert.ok(/slice\(0, 12\)/.test(fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8")), "no more than twelve lights a frame");
+  assert.ok(/uLightPos\[24\]/.test(src) && /uLightCol\[24\]/.test(src) && /uSun\b/.test(src) && /uGrade\b/.test(src), "the shader's lights, sun and grade");
+  assert.ok(/slice\(0, 24\)/.test(fs.readFileSync(path.join(ROOT, "src", "js", "80-main.js"), "utf8")), "no more than twenty-four lights a frame");
 });
 
 test("the pack's weight only slows: walking, Explore and Where to? work at any weight; a warning once when the pack goes over; bulk selling at the merchant keeps what a run needs; Automatic goes home by Homecoming to sell, and back", () => {

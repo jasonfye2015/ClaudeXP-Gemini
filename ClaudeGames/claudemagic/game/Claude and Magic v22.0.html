@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v21.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v22.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1464,7 +1464,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "21.4", built: "2026-11-01" };
+const CM = window.CM = { version: "22.0", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6211,7 +6211,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
-  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0;
+  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
@@ -6235,7 +6235,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
             const P = [[ax0 + dx * q, y0, az0 + dy * q], [ax1 + dx * q, y0, az1 + dy * q], [ax1 + dx * q, y1, az1 + dy * q], [ax0 + dx * q, y1, az0 + dy * q]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
             for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], index["window:lit"], 1, 0, 1, 1);
-            litWindows++; }
+            litWindows++; windows.push([(ax0 + ax1) / 2 + dx * 0.35, (y0 + y1) / 2, (az0 + az1) / 2 + dy * 0.35]); }
         }
         const o = 0.035, ox = dx * o, oz = dy * o, ft = 0.16;                        // the footing: a course of stone, standing a little proud
         poly([[a[0] + ox, 0, a[1] + oz], [b[0] + ox, 0, b[1] + oz], [b[0] + ox, ft, b[1] + oz], [a[0] + ox, ft, a[1] + oz]], [[0, 1], [1, 1], [1, 1 - ft], [0, 1 - ft]], stone, shade * 0.8);
@@ -6404,7 +6404,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 27-props.js ----
@@ -8994,7 +8994,8 @@ in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
-uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
+uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
+uniform vec3 uTorchPos;                                                         // (v22.0) where the party's torch is held: a little to the side and up
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
 uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
@@ -9020,12 +9021,13 @@ void main() {
     fragColor = vec4(wc, 0.86 * vFx.y); return;
   }
   float r2 = uReach * uReach;
-  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
   if (dot(n, uEye - vWorld) < 0.0) n = -n;
+  vec3 tl = uTorchPos - vWorld; float tface = 0.5 + 0.5 * max(dot(n, tl / max(length(tl), 0.001)), 0.0);   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
+  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n.y), 0.7));   // walls facing the sun lit, the others in shade
   vec3 extra = vec3(0.0);
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 24; i++) {
     if (i >= uLights) break;
     vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
     float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
@@ -9086,7 +9088,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -9105,7 +9107,7 @@ CM.Renderer = class {
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
     this.standing = [];                // the floor's standing props, for the frame's billboards
-    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (12 at most)
+    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (24 at most since v22.0)
     this.season = "summer";           // the run's season, for what grows
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
@@ -9225,6 +9227,7 @@ CM.Renderer = class {
     this.standing = props.filter((p) => p.how === "stand");
     const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
+    this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
@@ -9398,9 +9401,10 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);
-    const lights = this.lights.slice(0, 12), pos = new Float32Array(48), col = new Float32Array(36);
+    const lights = this.lights.slice(0, 24), pos = new Float32Array(96), col = new Float32Array(72);
     lights.forEach((l, i) => { const f = l.flicker ? 0.85 + 0.15 * Math.sin(this.time * (6 + i) + i * 1.7) : 1; pos.set([l.x, l.y, l.z, l.reach], i * 4); col.set(l.colour.map((c) => c * f), i * 3); });
     gl.uniform1i(this.loc.uLights, lights.length); gl.uniform4fv(this.loc.uLightPos, pos); gl.uniform3fv(this.loc.uLightCol, col);
+    { const E2 = this.inspect ? this.inspect.eye : eye; gl.uniform3fv(this.loc.uTorchPos, [E2[0] + right[0] * 0.28 + fwd[0] * 0.15, E2[1] + 0.12, E2[2] + right[2] * 0.28 + fwd[2] * 0.15]); }   // (v22.0: held in the right hand, a little up)
     if (sky && (sky.sun !== null || sky.moon !== null)) {                // the light's direction: where the sun is on its arc (or, at night, the moon)
       const t = sky.sun !== null && sky.light > 0.15 ? sky.sun : sky.moon !== null ? sky.moon : 0.5, a = Math.PI * t, el = Math.sin(a) * 0.5;
       const v = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)], m = Math.hypot(...v);
@@ -37808,6 +37812,34 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       if (t && t.type === "ladder" && (this.camps || []).length && !this.replaying && CM.ui && CM.ui.game === this) { CM.ui.openShaftLift(); return; } return use0.apply(this, a); }; }
 }
 
+// ---- 76zzzu-light.js ----
+"use strict";
+// Light (v22.0, UPGRADE_PLAN_17.md): more of the world gives light. In the town, the Portal Court's portals and their
+// braziers in their own colours, the Wayfarer's Stone's runes; after dark, the lit windows on the street. In the Wood,
+// the Glyph Deep's cabinet and the stone. Everywhere, a spell or a blast flares where it lands - fire orange, frost
+// blue, lightning white, holy light gold, a blink violet - and dies away. The nearest 24 of all of them reach the
+// renderer each frame (80-main.js lightsNear calls CM.extraLights).
+{ const FLARE = { fire: [[1.0, 0.5, 0.15], 3.4, 0.45], fireball: [[1.0, 0.45, 0.12], 4.2, 0.6], firebolt: [[1.0, 0.5, 0.15], 3.2, 0.4], sear: [[1.0, 0.55, 0.2], 3.0, 0.4], cold: [[0.5, 0.75, 1.0], 3.0, 0.45], frost: [[0.5, 0.78, 1.0], 3.2, 0.5],
+    lightning: [[0.85, 0.9, 1.0], 4.5, 0.25], calllightning: [[0.85, 0.9, 1.0], 5.0, 0.3], smite: [[1.0, 0.9, 0.55], 3.2, 0.45], turn: [[1.0, 0.92, 0.6], 3.6, 0.6], light: [[1.0, 0.9, 0.6], 4.0, 0.8], bless: [[1.0, 0.88, 0.55], 2.6, 0.5],
+    sanctuary: [[1.0, 0.92, 0.65], 3.0, 0.7], mend: [[0.7, 1.0, 0.7], 2.4, 0.5], ward: [[0.6, 0.8, 1.0], 2.6, 0.5], teleport: [[0.75, 0.5, 1.0], 3.0, 0.5], blink: [[0.75, 0.5, 1.0], 2.6, 0.4], sparkle: [[1.0, 0.85, 0.4], 1.8, 0.5],
+    shatter: [[0.7, 0.85, 1.0], 2.2, 0.3], missile: [[0.8, 0.6, 1.0], 2.6, 0.35], summon: [[0.7, 0.4, 1.0], 3.0, 0.6], rise: [[0.6, 1.0, 0.7], 3.6, 0.8], relic: [[1.0, 0.85, 0.45], 3.0, 0.6] };
+  const flares = [];
+  CM.lightFlare = (renderer, kind, at) => { const F = FLARE[kind]; if (!F || !renderer) return; let x, y, z;
+    if (at) { x = at[0] + 0.5; z = at[1] + 0.5; y = 0.6; } else { const e = renderer.eye || [0, 0.5, 0], yaw = renderer.yaw || 0; x = e[0] + Math.sin(yaw) * 1.4; z = e[2] - Math.cos(yaw) * 1.4; y = 0.7; }   // (no square named: in front of the party, where a fight is)
+    flares.push({ x, y, z, reach: F[1], colour: F[0], born: performance.now(), life: F[2] * 1000 }); if (flares.length > 8) flares.shift(); };
+  const near = (fl, x, z, max = 10) => Math.abs(x - fl.pos[0] - 0.5) + Math.abs(z - fl.pos[1] - 0.5) <= max;
+  CM.extraLights = (game, fl, out, renderer) => { const night = CM.isNight && CM.isNight(game), add = (x, y, z, reach, colour, flicker) => { if (near(fl, x, z)) out.push({ x, y, z, reach, colour, flicker, d: Math.abs(x - fl.pos[0] - 0.5) + Math.abs(z - fl.pos[1] - 0.5) }); };
+    const hex = (c) => { const n = parseInt(c.slice(1), 16); return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+    if (fl.number === 0 && CM.PORTALCOURT) for (const [, at, , col] of CM.PORTALCOURT.PORTALS) { const c = hex(col); add(at[0] + 0.5, 0.75, at[1] + 0.5, night ? 3.0 : 2.0, c.map((v) => v * (night ? 0.9 : 0.55)), true); }
+    if (CM.WAYSTONE) { const at = fl.number === 0 ? CM.WAYSTONE.court : fl.number === -1 ? CM.WAYSTONE.wood : null; if (at) add(at[0] + 0.5, 0.8, at[1] + 0.5, 1.8, [0.35, 0.6, 1.0].map((v) => v * (night ? 0.8 : 0.4)), false); }
+    if (fl.number === -1 && CM.GLYPH_AT) add(CM.GLYPH_AT[0] + 0.5, 0.7, CM.GLYPH_AT[1] + 0.5, 2.0, [0.3, 1.0, 0.45].map((v) => v * (night ? 0.7 : 0.35)), false);
+    if (night && renderer && renderer.windowLights) { const ws = renderer.windowLights.filter(([x, , z]) => near(fl, x, z, 8)).sort((a, b) => (Math.abs(a[0] - fl.pos[0]) + Math.abs(a[2] - fl.pos[1])) - (Math.abs(b[0] - fl.pos[0]) + Math.abs(b[2] - fl.pos[1]))).slice(0, 8);
+      for (const [x, y, z] of ws) add(x, y, z, 2.2, [1.0, 0.68, 0.32].map((v) => v * 0.75), false); }
+    const now = performance.now(); for (let i = flares.length - 1; i >= 0; i--) { const F = flares[i], k = 1 - (now - F.born) / F.life; if (k <= 0) { flares.splice(i, 1); continue; } out.push({ x: F.x, y: F.y, z: F.z, reach: F.reach, colour: F.colour.map((v) => v * 1.4 * k * k), flicker: false, d: -1 }); } };
+  // a flare for every spell and blast the game shows (bound once the window and the renderer are up)
+  { const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.lightBound && this.game && this.game.on && CM.renderer) { this.lightBound = true; this.game.on("fx", (e) => { if (e && FLARE[e.kind]) CM.lightFlare(CM.renderer, e.kind, e.at); }); } return rf0.apply(this, a); }; }
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -38293,7 +38325,8 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);
     const night = CM.isNight(game);
     for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && night)) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
-    return out.sort((a, b) => a.d - b.d).slice(0, 12);
+    if (CM.extraLights) CM.extraLights(game, fl, out, renderer);       // (v22.0: the court, the cabinet, the stones, the lit windows, a spell's flare: 76zzzu-light.js)
+    return out.sort((a, b) => a.d - b.d).slice(0, 24);
   }
 
   // the living dungeon: torches on some walls (never over a lever or carving, never on a secret door) and, in the

@@ -18,7 +18,8 @@ in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
-uniform int uLights; uniform vec4 uLightPos[12]; uniform vec3 uLightCol[12];   // the lights about the party: xyz, reach in w; colour
+uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
+uniform vec3 uTorchPos;                                                         // (v22.0) where the party's torch is held: a little to the side and up
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
 uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
@@ -44,12 +45,13 @@ void main() {
     fragColor = vec4(wc, 0.86 * vFx.y); return;
   }
   float r2 = uReach * uReach;
-  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d);
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
   if (dot(n, uEye - vWorld) < 0.0) n = -n;
+  vec3 tl = uTorchPos - vWorld; float tface = 0.5 + 0.5 * max(dot(n, tl / max(length(tl), 0.001)), 0.0);   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
+  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n.y), 0.7));   // walls facing the sun lit, the others in shade
   vec3 extra = vec3(0.0);
-  for (int i = 0; i < 12; i++) {
+  for (int i = 0; i < 24; i++) {
     if (i >= uLights) break;
     vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
     float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
@@ -110,7 +112,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -129,7 +131,7 @@ CM.Renderer = class {
     this.sky = null;                   // on the surface: CM.sky(game) this frame (the colours, the light, the sun and the moon); null below
     this.seed = ""; this.density = CM.DETAIL.medium; this.sub = {};   // the props: the run's seed and how many (the Detail setting), and where each sits in its layer
     this.standing = [];                // the floor's standing props, for the frame's billboards
-    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (12 at most)
+    this.lights = [];                  // [{x, y, z, reach, colour [r, g, b], flicker}]: what lights the walls about the party this frame (24 at most since v22.0)
     this.season = "summer";           // the run's season, for what grows
     this.lightNow = 1;                 // (eased towards it)
     this.ok = true;
@@ -249,6 +251,7 @@ CM.Renderer = class {
     this.standing = props.filter((p) => p.how === "stand");
     const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
+    this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
@@ -422,9 +425,10 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);
-    const lights = this.lights.slice(0, 12), pos = new Float32Array(48), col = new Float32Array(36);
+    const lights = this.lights.slice(0, 24), pos = new Float32Array(96), col = new Float32Array(72);
     lights.forEach((l, i) => { const f = l.flicker ? 0.85 + 0.15 * Math.sin(this.time * (6 + i) + i * 1.7) : 1; pos.set([l.x, l.y, l.z, l.reach], i * 4); col.set(l.colour.map((c) => c * f), i * 3); });
     gl.uniform1i(this.loc.uLights, lights.length); gl.uniform4fv(this.loc.uLightPos, pos); gl.uniform3fv(this.loc.uLightCol, col);
+    { const E2 = this.inspect ? this.inspect.eye : eye; gl.uniform3fv(this.loc.uTorchPos, [E2[0] + right[0] * 0.28 + fwd[0] * 0.15, E2[1] + 0.12, E2[2] + right[2] * 0.28 + fwd[2] * 0.15]); }   // (v22.0: held in the right hand, a little up)
     if (sky && (sky.sun !== null || sky.moon !== null)) {                // the light's direction: where the sun is on its arc (or, at night, the moon)
       const t = sky.sun !== null && sky.light > 0.15 ? sky.sun : sky.moon !== null ? sky.moon : 0.5, a = Math.PI * t, el = Math.sin(a) * 0.5;
       const v = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)], m = Math.hypot(...v);
