@@ -318,7 +318,7 @@ CM.Renderer = class {
     if (CM.seasonTurn && CM.game) { this.turnK = CM.seasonTurn(CM.game); this.leafK = CM.leafFall(CM.game); }   // (v24.2: how far the season has come in)
     const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night), turn: this.turnK === undefined ? 1 : this.turnK });   // (at night the town's windows are lit)
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: this.night || 0, turn: this.turnK === undefined ? 1 : this.turnK });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
     const gl = this.gl;
