@@ -125,6 +125,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("glyphcab", () => ui.openGlyphCab && ui.openGlyphCab());     // (the Glyph Deep: 76zzzp-glyph.js)
   game.on("glyphend", (E) => ui.glyphEnd && ui.glyphEnd(E));
   game.on("wayfarer", () => ui.openWayfarer && ui.openWayfarer());     // (the Wayfarer's Stone: 76zzzr-waystone.js)
+  game.on("portalfx", (k) => ui.portalFx && ui.portalFx(k));
   game.on("craftgate", () => ui.openCraftGate());
   game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
@@ -473,6 +474,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if (thing.type === "ucdoor") out.push({ x, y, layer: CM.undercroftDoorOpen(game) || (game.tally.guardians || []).includes("bell") ? "door" : "door_locked", w: 0.7, h: 0.95, shade: 0.7 });
+      else if (thing.type === "portal" && CM.portalLook && CM.portalLook(game, key, thing) && renderer.index[CM.portalLook(game, key, thing)] !== undefined) out.push({ x, y, layer: CM.portalLook(game, key, thing), w: 0.95, h: 1.3, glow: 0.3 + 0.12 * Math.sin(now / 420 + x) });   // (each portal its own look: 76zzzs-portallooks.js)
       else if (thing.type === "portal" && (thing.to === "glyph" || (thing.to === "town" && CM.GLYPH_PORTAL && key === CM.GLYPH_PORTAL.join(","))) && renderer.index["solid:glyphportal"] !== undefined) out.push({ x, y, layer: "solid:glyphportal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 380) });   // (the Glyph Deep's green portals)
       else if (thing.type === "portal" && thing.to === "claudecraft") out.push({ x, y, layer: "solid:neathergate", w: 1.0, h: 1.35, glow: 0.4 + 0.2 * Math.sin(now / 420) });   // (the Neather Gate: 61k-gate.js)
       else if (thing.type === "portal") out.push({ x, y, layer: thing.to === "claudeablo" && renderer.index["solid:redportal"] !== undefined ? "solid:redportal" : "solid:portal", w: 0.95, h: 1.25, glow: 0.45 + 0.15 * Math.sin(now / 500) });   // (the Mage Tower: 61d-magetower.js)

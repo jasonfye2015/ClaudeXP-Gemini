@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The portals' own looks (the eighty-sixth big update - v21.2, UPGRADE_PLAN_16.md phase 2)
+  (src/js/69r-portallooks.js, 76zzzs-portallooks.js)
+  - Every portal drawn as its own place: the Mage Tower's rune-cut violet stone, Leshy's roots and antlers, Claudeita's
+    rough rock with sand running down it, the Fortress's black stone bound in iron, Haven's red gothic arch, the Glyph
+    Deep's green letters falling (the Neather Gate keeps its basalt) - and in each swirl a glimpse of the far side,
+    by day or by night: the tower's lit window, the cabin's, the crag's mouth, the keep, the cathedral, the letters.
+  - The twins in the Wood wear the same faces, so each pair is plain to see.
+  - A badge over each arch: one figure for one hero, four for the whole party. Standing at a portal, the hint line
+    names it, what's waiting there (the next floor, the next table, the levels paid) and who may pass.
+  - Crossing: a swirl in the portal's colour over the view and a fade, and each portal its own note; near one, its hum.
+
 The Wayfarer's Stone (the eighty-fifth big update - v21.1, UPGRADE_PLAN_16.md phase 1)
   (src/js/69q-waystone.js, 76zzzr-waystone.js; named apart from the dungeon camps' waystones)
   - A tall rune-cut stone on a dais in the Portal Court's south-west corner, and its twin by the Wood's road east of the fields.

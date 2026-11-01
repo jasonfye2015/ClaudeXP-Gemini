@@ -5751,6 +5751,16 @@ test("the Wayfarer's Stone: a stone in the court and its twin by the Wood's road
   const v = CM.store.get("village", {}); assert.ok(v.waystone.known.cabin, "kept with the village");
 });
 
+test("the portals' own looks, the rules: standing at a court portal it says where it goes, what's waiting and who may pass; the Wood's twins know whose they are; stepping through tells the window which", () => {
+  const CM = load(), PC = CM.PORTALCOURT, PL = CM.PORTALLOOKS; const g = new CM.Game(); g.newGame("pl-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  for (const [k, at, name] of PC.PORTALS) { const w = PL.words(g, ...at); assert.ok(w.startsWith(name) && /Who may pass/.test(w), `${k}: ${w}`); assert.ok(PL.status(g, k), `${k} has a status`); }
+  g.fort = { cleared: 6, best: 6 }; assert.ok(/floor 7 of 20 next/.test(PL.words(g, ...CM.PORTAL_YARD.fortress)));
+  assert.strictEqual(PL.twinAt(...CM.CABIN.portal), "cabin"); assert.strictEqual(PL.twinAt(...CM.GLYPH_PORTAL), "glyph"); assert.strictEqual(PL.twinAt(...CM.MAGE_PORTAL_LAND), "tower");
+  g.enterFloor(-1, "rope", CM.FORTRESS.portal.slice()); assert.ok(/twin/.test(PL.words(g, ...CM.FORTRESS.portal)));
+  const seen = []; g.on("portalfx", (k) => seen.push(k)); g.enterFloor(0, "rope", CM.PORTAL_YARD.fortress.slice()); g.mode = "explore"; g.use(); assert.strictEqual(g.floor.number, -1); assert.ok(seen.includes("fortress"), "the crossing named");
+  g.mode = "explore"; g.floor.pos = CM.FORTRESS.portal.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.strictEqual(seen.filter((k) => k === "fortress").length, 2, "and home again");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
