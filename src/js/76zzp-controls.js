@@ -25,7 +25,7 @@
     },
     // ---- the keys ----
     cgKeysOn() { if (this.cgKeyFn) return; this.cgKeyFn = (e) => {
-        const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) return; if (e.target && e.target.closest && e.target.closest("input, select, textarea")) return; const v = this.cgView;
+        const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on") || dlg.querySelector(".cghowto")) return; if (e.target && e.target.closest && e.target.closest("input, select, textarea")) return; const v = this.cgView;
         if (e.code === "Escape") { if (v === "gallery" || v === "summary") return; e.preventDefault(); e.stopPropagation(); if (this.cgBusy) return; this.cgView = "gallery"; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); return; }
         if ((e.key === "[" || e.key === "]") && isTable(v)) { e.preventDefault(); e.stopPropagation(); if (this.cgBusy) return; const L = CM.CG_TABLES, i = L.findIndex(([k]) => k === v), j = (i + (e.key === "]" ? 1 : -1) + L.length) % L.length; this.cgView = L[j][0]; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); return; }
         if ((e.code === "Space" || e.code === "Enter") && isTable(v) && !keyed(v) && !e.repeat) { const box = this.$("#casino-body"), skip = /^(leave|clear|cash out|get up|sell all|let it go)/i;

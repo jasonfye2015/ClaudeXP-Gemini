@@ -5354,6 +5354,18 @@ test("the house's books (tools/balance.js, 64zzo-odds.js): every game of chance 
   const t1 = run(1), t5 = run(5); assert.ok(t1 * 4 <= t5, `a 1-gold game's tickets (${t1}) are a fifth of a 5-gold game's (${t5})`);
 });
 
+test("practice and how to play: a table played in practice lays nothing and pays nothing - no gold, tickets, cards, JXP or board - and the purse is put back when it ends; the free tables don't offer it; every table on the floor has its How to play card", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("pr-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 500; const T = g.tkStore(), F = g.cgStore();
+  assert.ok(g.prStart("vault").error, "a free table"); assert.ok(!g.prStart("slots").error); const jx = g.jkStore().jxp, played = F.played.slots || 0, n0 = T.n, cards = F.cards.length;
+  for (let k = 0; k < 200; k++) assert.ok(!g.slotSpin(100).error); assert.strictEqual(g.gold, 500, "nothing laid or paid"); assert.strictEqual(T.n, n0); assert.strictEqual(F.played.slots || 0, played); assert.strictEqual(g.jkStore().jxp, jx); assert.strictEqual(F.cards.length, cards);
+  g.faStart("darts", 10); for (let k = 0; k < 24; k++) g.faThrow("darts", 0, -0.6); assert.ok(!((F.boards || {}).darts || []).length, "nothing on the board"); g.pdBuy("worms"); g.pcBuy(300); assert.ok(g.pdStore().left > 0 && g.pcState().balls >= 300); g.gold += 37; g.prEnd(); assert.strictEqual(g.gold, 500, "the purse put back"); assert.strictEqual(g.pdStore().left, 0, "practice bait gone"); assert.strictEqual(g.pcState().balls, 0, "practice balls gone");
+  assert.ok(!g.prOn()); g.slotSpin(10); assert.strictEqual(g.gold <= 500 + 10 * 1000 && g.cgStore().played.slots === played + 1, true, "out of practice it counts again");
+  const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "js"), all = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n"), how = fs.readFileSync(path.join(dir, "76zzt-howto.js"), "utf8");
+  const ids = []; for (const m of all.matchAll(/CM\.CG_TABLES = \[(.*?)\];/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]); for (const m of all.matchAll(/CM\.CG_TABLES\.push\((.*?)\);/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]);
+  for (const id of ids) assert.ok(how.includes(`
+  ${id}: ["`), `${id} has its How to play`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
