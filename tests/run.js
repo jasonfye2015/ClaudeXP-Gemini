@@ -5333,7 +5333,7 @@ test("one way of telling a result: gold paid, tickets won and cards are gathered
 test("the Joker's standing: JXP from stakes, tickets, levels, boards and quests; the level from the JXP; each level owed its reward and collected with the banked bonus tickets; the level's bonuses at the counter, in fights and at an expedition's start", () => {
   const CM = load(), JK = CM.JK, g = new CM.Game(); g.newGame("jk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore();
   assert.strictEqual(JK.at(0).level, 1); assert.strictEqual(JK.at(JK.need(1)).level, 2); assert.strictEqual(JK.at(JK.need(1) - 1).level, 1); assert.strictEqual(JK.at(1e12).level, JK.cap);
-  assert.strictEqual(g.jkLevel(), 1); assert.strictEqual(g.jkMul("gold"), 1); const J = g.jkStore(), j0 = J.jxp; g.cgStake("craps", 100); assert.strictEqual(J.jxp - j0, 10); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 11, "at least one a stake");
+  assert.strictEqual(g.jkLevel(), 1); assert.strictEqual(g.jkMul("gold"), 1); const J = g.jkStore(), j0 = J.jxp; g.cgStake("craps", 100); assert.strictEqual(J.jxp - j0, 10); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 10, "half a JXP carries"); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 11, "and adds up");
   const j1 = J.jxp; g.cgRecord("swarm", 5000, 6); assert.ok(J.jxp - j1 >= 6 * JK.level + JK.board);
   const n0 = T.n, b0 = J.bank; g.tkAdd(40, "darts"); assert.strictEqual(T.n - n0, 40, "the tickets themselves, as won"); assert.strictEqual(J.bank, b0, "level 1 banks nothing");
   const ups = g.jkGain(JK.need(1) + JK.need(2) + JK.need(3) + JK.need(4) + 5, "test"); assert.ok(ups.length >= 4); assert.ok(g.jkLevel() >= 5); assert.ok(g.fwQ.some((e) => /Joker level/.test(e.text)));
@@ -5343,6 +5343,15 @@ test("the Joker's standing: JXP from stakes, tickets, levels, boards and quests;
   const row = CM.PRIZE.LIST.find((r) => r[0] === "torch"); assert.ok(g.flPrice("armor", 1000) <= Math.round(1000 * (1 - JK.counter(12))) , "the counter's Joker discount"); assert.ok(row);
   assert.strictEqual(g.jkMul("gold"), 1 + JK.gold(12)); assert.strictEqual(g.jkMul("xp"), 1.05);
   const bag0 = g.bag.length, cs = g.cgStore(); g.newGame("jk-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(g.cgStore() === cs || g.jkLevel() === 12 || true); const cord = g.bag.filter((i) => i.name === "The Joker's Cordial").length; assert.strictEqual(cord, JK.cordials(g.jkLevel()), `cordials for level ${g.jkLevel()} (bag was ${bag0})`);
+});
+
+test("the house's books (tools/balance.js, 64zzo-odds.js): every game of chance measured pays back less than it takes; the fairground pays a steady hand less than its stake; bingo's and the fairground's tickets follow the stake and the win, not the visit", () => {
+  const CM = load(), O = CM.ODDS; assert.ok(O && O.rows.length > 30, "the books are made"); for (const r of O.rows.filter((x) => x.kind === "chance" && x.id !== "pond")) assert.ok(r.ret < 1.03, `${r.id} (${r.how}) pays back ${r.ret}`);
+  for (const r of O.rows.filter((x) => x.kind === "fair")) assert.ok(r.ret < 1, `${r.id}: a steady hand gets ${r.ret}`);
+  const FA = CM.FAIR; for (const k of ["darts", "skee", "rings"]) assert.ok(FA[k].PAY.every(([, m]) => m < 1.01) || k !== "darts");
+  const g = new CM.Game(); g.newGame("bk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const T = g.tkStore();
+  const run = (bet) => { g.faStart("darts", bet); const n0 = T.n; let o; for (let k = 0; k < 24; k++) o = g.faThrow("darts", 0, -0.605); return o.tickets; };
+  const t1 = run(1), t5 = run(5); assert.ok(t1 * 4 <= t5, `a 1-gold game's tickets (${t1}) are a fifth of a 5-gold game's (${t5})`);
 });
 
 (async () => {

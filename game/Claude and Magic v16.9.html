@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v16.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1256,6 +1256,13 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .jkperks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; } .jkperks li { padding: 5px 10px; border-radius: 6px; background: rgba(0,0,0,0.25); opacity: 0.6; } .jkperks li.on { opacity: 1; background: rgba(240,192,64,0.15); }
 .jkperks li b { display: inline-block; min-width: 64px; color: #FFE070; } .jkhow { display: flex; flex-wrap: wrap; gap: 20px; } .jkhow > div { flex: 1; min-width: 260px; } .jkhow ul { margin: 0; padding-left: 18px; font-size: 13px; }
 .jkby { border-collapse: collapse; font-size: 13px; } .jkby td { padding: 2px 10px 2px 0; border-bottom: 1px dotted rgba(255,255,255,0.15); } .jkby td:last-child { text-align: right; color: #FFE8A0; }
+/* ---- v16.9: the house's books, open to the floor ---- */
+.cgclub .oddsbtn { background: linear-gradient(#1A2A3A, #0E1620); border-color: #80A8D0; }
+.odroom h4 { margin: 12px 0 4px; color: #F0D070; } .odtable { width: 100%; border-collapse: collapse; font-size: 13px; } .odtable th { text-align: left; padding: 4px 6px; color: #C8B890; font-weight: normal; border-bottom: 1px solid rgba(240,192,64,0.4); }
+.odtable td { padding: 3px 6px; border-bottom: 1px dotted rgba(255,255,255,0.1); } .odtable tr.alt td { opacity: 0.8; font-size: 12px; } .odtable b { color: #FFE8A0; } .odtable small { opacity: 0.7; } .odtable .up { color: #80E080; } .odtable .down { color: #F09080; }
+.odgo { padding: 1px 8px; font-size: 12px; } .odbar { position: relative; display: inline-block; width: 110px; height: 8px; border-radius: 4px; background: rgba(0,0,0,0.45); overflow: hidden; vertical-align: middle; } .odbar > i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #FFE070); } .odbar em { position: absolute; top: 0; bottom: 0; width: 2px; background: #FFF; }
+.odskill { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 12px; font-size: 13px; } .odskill div { display: flex; gap: 8px; align-items: baseline; } .odskill span { opacity: 0.85; }
+.lbcell.lbhouse { grid-column: span 2; } .lbcell.lbhouse b { font-size: 16px; color: #FFE8A0; } .lbcell.lbhouse small { font-size: 11px; opacity: 0.75; }
 </style>
 </head>
 <body>
@@ -1265,7 +1272,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "16.8", built: "2026-11-01" };
+const CM = window.CM = { version: "16.9", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22837,7 +22844,7 @@ Object.assign(CM.Game.prototype, {
     if (L.stage === "clear") {
       const n = S.n, pay = Math.round(S.bet * def.pay(n)), C = this.arcClaimed(id); let card = null;
       if (n % def.cardEvery === 0 && !C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `${def.name}, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:${id}:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
-      this.cgPay(id, pay); const tk = this.tkAdd ? this.tkAdd(n, id) : 0; S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.cgPay(id, pay); const tk = this.tkAdd ? this.tkAdd(Math.floor(n * Math.min(1, S.bet / 5)), id) : 0; /* full tickets from a 5-gold stake: the books, v16.9 */ S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.arcLevel(id); return { cleared: n, pay, card, tickets: tk };
     }
     if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F[`ar_${id}_best`] = Math.max(F[`ar_${id}_best`] || 0, L.score); this.cgRecord && this.cgRecord(id, L.score, S.n); this.arcLive[id] = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
@@ -23221,7 +23228,8 @@ CM.CRAPS = {
 //   how long it is held.
 // The windows are 76zq-darts.js and 76zr-runeroll.js.
 CM.FAIR = {
-  darts: { name: "The Tavern Board", rounds: 8, per: 3, scatter: 0.075, ticketPer: 20, MARKS: [500, 700, 900], PAY: [[400, 0.2], [500, 0.35], [600, 0.55], [700, 0.75], [800, 0.95], [900, 1.1]], waver: 0.16 },
+  fullTickets: 5,
+  darts: { name: "The Tavern Board", rounds: 8, per: 3, scatter: 0.075, ticketPer: 20, MARKS: [500, 700, 900], PAY: [[400, 0.2], [500, 0.35], [600, 0.5], [700, 0.68], [800, 0.85], [900, 0.98]], waver: 0.16 },   // (the top trimmed: a perfect hand made 108%; the books, v16.9)
   skee: { name: "Rune-Roll", balls: 9, ticketPer: 10, MARKS: [380, 500, 640], PAY: [[300, 0.25], [380, 0.45], [440, 0.7], [500, 0.95], [560, 1.25], [640, 1.6], [720, 2.2]] },
   ORDER: [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5],
   // board radii as a share of the doubles' outer edge
@@ -23249,7 +23257,7 @@ CM.FAIR = {
       if (S.throws.length >= total) Object.assign(out, this.faEnd(kind)); this.saveCasino && this.saveCasino(); return out;
     },
     faEnd(kind) {
-      const S = this.faState(kind), K = FA[kind], F = this.cgStore(), gold = Math.round(S.bet * FA.pay(kind, S.score)), tickets = Math.floor(S.score / K.ticketPer); S.stage = "done";
+      const S = this.faState(kind), K = FA[kind], F = this.cgStore(), gold = Math.floor(S.bet * FA.pay(kind, S.score)), tickets = Math.floor((S.score / K.ticketPer) * Math.min(1, S.bet / FA.fullTickets)); /* full tickets from a 5-gold stake: the books, v16.9 */ S.stage = "done";
       if (gold) this.cgPay(kind, gold); if (this.tkAdd) this.tkAdd(tickets, kind); const C = F[`fa_${kind}_cards`] = F[`fa_${kind}_cards`] || {}, cards = [];
       K.MARKS.forEach((m, i) => { if (S.score >= m && !C[m]) { const c = this.cgTierCard(["common", "better", "rare"][i], `${K.name}: ${m} points!`, new CM.Random(CM.hashSeed(`${this.seed}:${kind}:card:${m}`))); C[m] = c || true; if (c) cards.push(c); } });
       F[`fa_${kind}_best`] = Math.max(F[`fa_${kind}_best`] || 0, S.score); this.cgRecord && this.cgRecord(kind, S.score, Math.floor(S.score / 100)); S.last = { score: S.score, gold, tickets, cards }; this.emit("change");
@@ -23873,7 +23881,7 @@ CM.LUCK = {
     // someone called: every card that's done shares the pot
     bgEnd(G, ball, hallWho) { const B = this.bgStore(), mine = this.bgDone(G, ball), myN = mine.filter(Boolean).length, n = myN + hallWho.length, pool = Math.floor((G.cards.length + G.hall.length) * G.price * BGO.share);
       const won = n ? Math.floor((pool * myN) / n) : 0; G.stage = "done"; const res = G.result = { won, mine, hallWho, pool, balls: G.drawn, pattern: G.pat };
-      if (won > 0) { this.cgPay("bingo", won); B.wins += 1; B.best = Math.max(B.best, won); const tk = 3 + Math.floor(won / 10); if (this.tkAdd) this.tkAdd(tk, "bingo"); res.tickets = tk;
+      if (won > 0) { this.cgPay("bingo", won); B.wins += 1; B.best = Math.max(B.best, won); const tk = Math.floor(won / 25); /* tickets by the win: the books, v16.9 */ if (this.tkAdd) this.tkAdd(tk, "bingo"); res.tickets = tk;
         if (G.pat === "full") { if (!B.full) { B.full = true; res.card = this.cgTierCard("better", "The Bell Hall: a coverall!", new CM.Random(CM.hashSeed(`${this.seed}:bingo:card`))); } else if (this.tkAdd) { this.tkAdd(10, "bingo"); res.tickets += 10; } }
         if (this.cgRecord) this.cgRecord("bingo", won, G.drawn); }
       this.emit("change"); return res; },
@@ -24275,9 +24283,10 @@ CM.LUCK = {
       J.owed = []; this.gold += out.gold; if (out.tickets) { J.bank -= out.tickets; tk0.call(this, out.tickets, "joker"); } this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); return out; },
     // a multiplier out in the world: "gold" from fights, "xp" from fights
     jkMul(kind) { const L = this.jkLevel ? this.jkLevel() : 1; return 1 + (kind === "gold" ? JK.gold(L) : kind === "xp" ? JK.xp(L) : 0); },
-    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why) this.jkGain(Math.min(JK.stakeMax, Math.max(1, Math.floor(bet / JK.stakePer))), game); return why; },
+    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why) { const J = this.jkStore(); J.sf = (J.sf || 0) + Math.min(JK.stakeMax, Math.floor(bet) / JK.stakePer); const n = Math.floor(J.sf + 1e-9); J.sf -= n; this.jkGain(n, game); } return why; },   // (a part of a JXP carries: small stakes add up, and don't count for more)
     tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0 && why !== "joker") { const J = this.jkStore(); J.bank += k * JK.tickets(J.level); J.tk += k; const g = Math.floor(J.tk / JK.ticketPer); J.tk -= g * JK.ticketPer; this.jkGain(g, why); } return k; },
-    cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec0.call(this, table, score, level); let n = (level || 0) * JK.level; if (r > 0) n += JK.board; if ((F.records || 0) > before) n += JK.record; this.jkGain(n, table); return r; },
+    cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec0.call(this, table, score, level); let n = (CM.FAIR && CM.FAIR[table]) || table === "bingo" ? 0 : (level || 0) * JK.level;   // (only a cabinet's levels are levels: bingo sends its balls, the fairground its hundreds)
+      if (r > 0) n += JK.board; if ((F.records || 0) > before) n += JK.record; this.jkGain(n, table); return r; },
     flQuestCollect(i) { const out = q0.call(this, i); if (out && !out.error) this.jkGain(JK.quest, "quests"); return out; },
     flTourSettle() { const N = this.flTour(), done = !!N.settled, out = tour0.call(this); if (!done && out && !out.error) this.jkGain(out.place <= 3 ? JK.tourTop : JK.tour, "tournament"); return out; },
     hrSettle(win, detail) { const out = hr0.call(this, win, detail); if (out && win) this.jkGain(JK.roller, "highroller"); return out; },
@@ -24286,6 +24295,11 @@ CM.LUCK = {
     newGame(...a) { const out = new0.apply(this, a); try { const L = this.cgStore && this.jkLevel(), n = L ? JK.cordials(L) : 0; for (let k = 0; k < n; k++) this.bag.push(cordial(L)); } catch (e) { /* no books yet */ } return out; },
   });
 }
+
+// ---- 64zzo-odds.js ----
+"use strict";
+// The house's books, as last measured by tools/balance.js (2026-11-01) - read by the House odds page (76zzs-odds.js). Made, not written: run the tool again after changing a table.
+CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold a pull","kind":"chance","ret":0.94,"exact":false,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"roulette","how":"10 gold on red","kind":"chance","ret":0.973,"exact":true,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"roulette","how":"10 gold on one number","kind":"chance","ret":0.973,"exact":true,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":true},{"id":"blackjack","how":"draw to 17, never double","kind":"chance","ret":0.943,"exact":false,"tk":3.3,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"poker","how":"hold pairs and better","kind":"chance","ret":0.9,"exact":false,"tk":3.6,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"craps","how":"10 gold on the pass line","kind":"chance","ret":0.986,"exact":true,"tk":3.3,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"bigwheel","how":"10 gold on the 1","kind":"chance","ret":0.889,"exact":true,"tk":3.7,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"bigwheel","how":"10 gold on the Joker","kind":"chance","ret":0.759,"exact":true,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":true},{"id":"scratch","how":"copper slips","kind":"chance","ret":0.724,"exact":false,"tk":3.3,"jxp":10.8,"even":null,"note":"","alt":true},{"id":"scratch","how":"silver slips","kind":"chance","ret":0.77,"exact":false,"tk":3.4,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"scratch","how":"gold slips","kind":"chance","ret":0.773,"exact":false,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":true},{"id":"plinko","how":"low board, 10 gold","kind":"chance","ret":0.964,"exact":true,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":true},{"id":"plinko","how":"med board, 10 gold","kind":"chance","ret":0.965,"exact":true,"tk":3.5,"jxp":10.8,"even":null,"note":"","alt":false},{"id":"plinko","how":"high board, 10 gold","kind":"chance","ret":0.964,"exact":true,"tk":4.6,"jxp":11.1,"even":null,"note":"","alt":true},{"id":"pachinko","how":"the handle at 80","kind":"chance","ret":0.84,"exact":false,"tk":13,"jxp":13.3,"even":null,"note":"","alt":false},{"id":"bingo","how":"four cards, Copper Room","kind":"chance","ret":0.812,"exact":false,"tk":11.5,"jxp":14.5,"even":null,"note":"","alt":false},{"id":"lottery","how":"quick picks (jackpot at its start)","kind":"chance","ret":0.651,"exact":false,"tk":0,"jxp":0,"even":null,"note":"more when the jackpot has grown","alt":false},{"id":"pond","how":"worms by day, cast well out","kind":"chance","ret":0.808,"exact":false,"tk":61.1,"jxp":0,"even":null,"note":"landing most fish","alt":false},{"id":"pond","how":"worms at night, cast well out","kind":"chance","ret":0.956,"exact":false,"tk":70.2,"jxp":0,"even":null,"note":"landing most fish","alt":true},{"id":"pond","how":"spinners by day, cast well out","kind":"chance","ret":0.823,"exact":false,"tk":60.3,"jxp":0,"even":null,"note":"landing most fish","alt":true},{"id":"pond","how":"spinners at night, cast well out","kind":"chance","ret":0.984,"exact":false,"tk":69.2,"jxp":0,"even":null,"note":"landing most fish","alt":true},{"id":"darts","how":"a steady hand, aiming high","kind":"fair","ret":0.885,"exact":false,"tk":506.9,"jxp":138.5,"even":null,"note":"never quite pays the stake back (98% at 900 points) - the tickets are the prize","alt":false},{"id":"skee","how":"a steady hand, aiming high","kind":"fair","ret":0.692,"exact":false,"tk":451.1,"jxp":123.1,"even":560,"note":"pays the stake back from 560 points","alt":false},{"id":"rings","how":"a steady hand, aiming high","kind":"fair","ret":0.797,"exact":false,"tk":138.8,"jxp":46.1,"even":20,"note":"pays the stake back from 20 points","alt":false},{"id":"wyrm","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"crawler","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"belfry","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"lander","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"rampart","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"glimmerpop","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"bard","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"range","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"joust","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"courier","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"sprint","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"bastion","how":"by the level reached","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":7,"note":"the stake comes back once level 7 is cleared","alt":false},{"id":"holdem","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"against the residents: the house only deals and takes nothing","alt":false},{"id":"claudeatro","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"a run of poker hands against blinds - skill and jokers","alt":false},{"id":"pit","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"a hero sent down the pit - pays by how deep","alt":false},{"id":"hexwand","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"a duel of charges against the dealer - skill","alt":false},{"id":"cascade","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"a coin pusher - prizes over the edge","alt":false},{"id":"claw","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"a claw machine - skill, with real prizes","alt":false},{"id":"mint","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"idle - free to play","alt":false},{"id":"shelter","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"idle - free to play","alt":false},{"id":"gemtray","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"match-three - pays by the score","alt":false},{"id":"mahjong","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play","alt":false},{"id":"lexicon","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play","alt":false},{"id":"conduit","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play","alt":false},{"id":"patience","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play","alt":false},{"id":"traps","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play","alt":false},{"id":"vault","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free to play - tickets every vault","alt":false},{"id":"prizewheel","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"free - a spin a day","alt":false},{"id":"runestack","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"pays by the level reached","alt":false},{"id":"pinball","how":"","kind":"skill","ret":null,"exact":false,"tk":null,"jxp":null,"even":null,"note":"pays by the marks made","alt":false}]};
 
 // ---- 65-village.js ----
 "use strict";
@@ -34543,11 +34557,43 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
         <div class="cgnote">${this.cgNote || ""}</div>${(this.jkGot || []).map((c) => this.cgCardWon(c)).join("")}</div></div>
         <h4>What your level gives now</h4><div class="jknow">${now.map(([a, b]) => `<div><b>${a}</b><span>${b}</span></div>`).join("")}</div>
         <h4>The Joker's perks</h4><ul class="jkperks">${JK.PERKS.map(([at, txt]) => `<li class="${L >= at ? "on" : ""}"><b>${L >= at ? "✓" : `Level ${at}`}</b> ${txt}</li>`).join("")}<li class="${L >= 5 ? "on" : ""}"><b>Every level</b> ${money(20)} gold for each level number, and a card at every fifth (a stronger one from 15, a rare one from 25)</li></ul>
-        <div class="jkhow"><div><h4>How JXP is earned</h4><ul><li>1 for every ${JK.stakePer} gold laid (up to ${JK.stakeMax} a stake)</li><li>1 for every ${JK.ticketPer} tickets won</li><li>${JK.level} for each level reached at a cabinet</li><li>${JK.board} for a place on a board, ${JK.record} more for a record</li><li>${JK.quest} for a quest, ${JK.tour} for a tournament night (${JK.tourTop} in the top three), ${JK.roller} for beating a high-roller</li></ul></div>
+        <div class="jkhow"><div><h4>How JXP is earned</h4><ul><li>1 for every ${JK.stakePer} gold laid (small stakes add up; up to ${JK.stakeMax} a stake)</li><li>1 for every ${JK.ticketPer} tickets won</li><li>${JK.level} for each level reached at a cabinet</li><li>${JK.board} for a place on a board, ${JK.record} more for a record</li><li>${JK.quest} for a quest, ${JK.tour} for a tournament night (${JK.tourTop} in the top three), ${JK.roller} for beating a high-roller</li></ul></div>
         <div><h4>Where yours came from</h4>${by.length ? `<table class="jkby">${by.map(([k, v]) => `<tr><td>${nameOf(k)}</td><td>${money(v)}</td></tr>`).join("")}</table>` : `<p class="small">Nothing yet - play anything.</p>`}</div></div></div>`;
       this.cgClubHead(box, "Joker standing"); const q = (s) => box.querySelector(s), cv = q("[data-jkcard]");
       const draw = (t) => { if (!cv.isConnected) return; card(cv.getContext("2d"), cv.width, cv.height, L, t); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
       if (q("[data-jkget]")) q("[data-jkget]").addEventListener("click", () => { const o = g.jkCollect(); this.jkGot = o.cards; this.cgNote = `The cashier counts it out: ${[o.gold ? `${money(o.gold)} gold` : "", o.tickets ? `${money(o.tickets)} tickets` : "", o.cards.length ? `${o.cards.length} card${o.cards.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(", ")}.`; this.cgSfx("cardwin", 0.5); if (o.gold) this.cgCoins(this.$("#casino-body"), Math.min(30, 6 + o.gold / 40)); this.renderCasino(); this.jkGot = null; });
+    },
+  });
+}
+
+// ---- 76zzs-odds.js ----
+"use strict";
+// The House odds (v16.9): the house's own books, open to the floor - a board by the cashier's cage with what each game
+// of chance pays back of every hundred gold laid (as measured by tools/balance.js, played many thousands of times
+// a plain, sensible way), the tickets and JXP it gives for each hundred, and beside each the party's own return so far;
+// the games of skill with their terms (the level or score that wins the stake back). The same figure on each table's
+// Figures page. The figures are 64zzo-odds.js, made by the tool.
+{ const r12 = CM.UI.prototype.renderCasino, gal12 = CM.UI.prototype.cgGallery, st12 = CM.UI.prototype.cgTableStats;
+  const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id, pc = (x) => `${(x * 100).toFixed(1)}%`;
+  const houseOf = (id) => (CM.ODDS ? CM.ODDS.rows.filter((r) => r.id === id) : []);
+  Object.assign(CM.UI.prototype, {
+    renderCasino() { if (this.cgView === "odds") { this.cgOdds(this.$("#casino-body")); this.cgFwFlush && this.cgFwFlush(); return; } return r12.call(this); },
+    cgGallery(box) { gal12.call(this, box); const strip = box.querySelector(".cgclub"); if (!strip || !CM.ODDS) return; const b = document.createElement("button"); b.className = "flbtn oddsbtn"; b.textContent = "House odds"; strip.appendChild(b);
+      b.addEventListener("click", () => { this.cgView = "odds"; this.caSfx("cardplace", 0.3); this.renderCasino(); }); },
+    cgTableStats(box) { st12.call(this, box); const rows = houseOf(this.cgStatsFor), grid = box.querySelector(".lbgrid"); if (!rows.length || !grid) return; const main = rows.find((r) => !r.alt) || rows[0], d = document.createElement("div"); d.className = "lbcell lbhouse";
+      d.innerHTML = `<span>The house's books</span><b>${main.ret !== null && main.kind !== "skill" ? `pays back ${pc(main.ret)}` : "a game of skill"}</b><small>${main.kind === "skill" ? main.note : `played as ${main.how}${main.note ? ` - ${main.note}` : ""}`}</small>`; grid.appendChild(d); },
+    cgOdds(box) {
+      const g = this.game, F = g.cgStore(), O = CM.ODDS, mine = (id) => { const w = F.wagered[id] || 0; return w ? (F.paid[id] || 0) / w : null; };
+      const order = [], chance = []; for (const r of O.rows) if ((r.kind === "chance" || r.kind === "fair") && !order.includes(r.id)) order.push(r.id); for (const id of order) { const R = O.rows.filter((r) => r.id === id && (r.kind === "chance" || r.kind === "fair")); chance.push(...R.filter((r) => !r.alt), ...R.filter((r) => r.alt)); } const skill = O.rows.filter((r) => r.kind === "skill");
+      const bar = (x) => `<i class="odbar"><i style="width:${Math.min(100, Math.round(x * 80))}%"></i><em style="left:80%"></em></i>`;
+      box.innerHTML = `<div class="odroom"><p class="lore">By the cashier's cage hangs a long board in the house's copperplate: THE HOUSE'S BOOKS, OPEN TO ALL. "The Joker likes a fair game," says the cashier. "Fair enough, anyway. Every number up there is what the tables really do - played ten thousand times and more."</p>
+        <h4>Games of chance <span class="small">- of every 100 gold laid</span></h4>
+        <table class="odtable"><tr><th>Game</th><th>Played as</th><th>Pays back</th><th></th><th>Tickets</th><th>JXP</th><th>Your return so far</th></tr>
+        ${chance.map((r) => { const m = r.alt ? null : mine(r.id); return `<tr class="${r.alt ? "alt" : ""}"><td>${r.alt ? "" : `<button class="odgo" data-odgo="${r.id}">${nameOf(r.id)}</button>`}</td><td>${r.how}${r.note ? `<small> - ${r.note}</small>` : ""}</td><td><b>${pc(r.ret)}</b>${r.exact ? `<small title="worked out exactly"> exact</small>` : ""}</td><td>${bar(r.ret)}</td><td>${r.tk}</td><td>${r.jxp}</td><td>${m === null ? (r.alt ? "" : "<span class='small'>not played</span>") : `<span class="${m >= r.ret ? "up" : "down"}">${pc(m)}</span>`}</td></tr>`; }).join("")}</table>
+        <p class="small">The white line on each bar is break-even; "exact" marks a figure worked out from the game's own odds rather than measured. Tables that pay back near 100% keep your gold longest; the luckiest-looking games (the slips, the Joker on the wheel) give the least back on average but the biggest wins. Your own return wanders above and below the house's figure - that's luck, and it evens out over many plays.</p>
+        <h4>Games of skill</h4><div class="odskill">${skill.map((r) => `<div><button class="odgo" data-odgo="${r.id}">${nameOf(r.id)}</button><span>${r.note}</span></div>`).join("")}</div>
+        <p class="small">The books were last made on ${O.made}. The floor's run of tickets is about ${O.tkRun} for every 100 gold laid at the tables; the fairground and the cabinets pay their tickets by the score and the level instead.</p></div>`;
+      this.cgClubHead(box, "House odds"); box.querySelectorAll("[data-odgo]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.odgo; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); }));
     },
   });
 }

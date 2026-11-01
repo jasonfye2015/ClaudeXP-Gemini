@@ -1392,9 +1392,24 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The house's books (the fifty-fifth big update - v16.9)
+  tools/balance.js plays every game of chance many thousands of times (a plain, sensible way of playing each) and
+  reads the games of skill from their pay tables; it writes BALANCE.md and the figures for the House odds page
+  (src/js/64zzo-odds.js, read by 76zzs-odds.js) - a new door on the club strip, with each game's return, tickets and
+  JXP for every 100 gold, the party's own return beside it, and each table's Figures page showing the house's figure.
+  Exact figures are worked out where the odds are known (roulette, the Joker's Wheel, the Drop Board, the pass line).
+  What the books found, and the changes made:
+  - The Tavern Board paid a perfectly steady hand 108%: its top pays are trimmed (85% at 800, 98% at 900) and the
+    fairground's pays now round down.
+  - The fairground and the arcade cabinets paid the same tickets on a 1-gold stake as on a 5-gold one: full tickets
+    now need a 5-gold stake (less in proportion below).
+  - The Bell Hall paid 3 tickets on every win whatever the room: its tickets now come by the gold won (one per 25).
+  - Small stakes counted a whole JXP each: a part of a JXP now carries, so they add up instead; bingo's balls and the
+    fairground's hundreds no longer count as levels for JXP.
+
 Joker standing (the fifty-fourth big update - v16.8)
   The party's standing with the Joker (src/js/64zzn-joker.js, 76zzr-joker.js; fights read it in 62-combat.js):
-  - JXP (Joker experience) from play anywhere on the floor: 1 for every 10 gold laid (up to 50 a stake), 1 for every
+  - JXP (Joker experience) from play anywhere on the floor: 1 for every 10 gold laid (small stakes add up; up to 50 a stake), 1 for every
     4 tickets won, 3 for each level reached at a cabinet, 10 for a place on a board and 25 more for a record, 40 for a
     quest, 30 for a tournament night (60 in the top three), 80 for beating a high-roller.
   - The Joker level, 1 to 50, kept with the floor's books so it carries from expedition to expedition. Each level owes
