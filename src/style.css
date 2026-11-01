@@ -206,6 +206,14 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
 #view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
 #view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+#view .turnstrip { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); max-width: 94%; display: flex; justify-content: center; align-items: center; gap: 3px; padding: 3px 6px; background: rgba(14,10,6,0.7); border: 1px solid rgba(232,200,112,0.35); border-radius: 6px; font: 11px var(--serif); color: #cfc3a0; pointer-events: none; flex-wrap: nowrap; white-space: nowrap; opacity: 0; transition: opacity 0.3s; z-index: 5; }   /* (v23.3) who's next */
+#view .turnstrip.on { opacity: 1; }
+#view .turnstrip .rd { color: var(--gold); font-weight: bold; margin-right: 4px; }
+#view .turnstrip .t { padding: 1px 5px; border-radius: 4px; border: 1px solid transparent; white-space: nowrap; transition: all 0.25s; }
+#view .turnstrip .hero { color: #bcd4ff; border-color: rgba(120,160,230,0.4); } #view .turnstrip .foe { color: #ffb8a8; border-color: rgba(220,100,80,0.4); }
+#view .turnstrip .now { background: rgba(232,200,112,0.9); color: #1a1208; border-color: #fff3c0; font-weight: bold; transform: scale(1.12); box-shadow: 0 0 10px rgba(232,200,112,0.7); }
+#view .turnstrip .done { opacity: 0.45; } #view .turnstrip .dead { text-decoration: line-through; opacity: 0.35; } #view .turnstrip .hid { font-style: italic; }
+#view.staging .turnstrip { opacity: 0; }
 #view .letterbox { position: absolute; inset: 0; pointer-events: none; z-index: 6; }   /* (v23.2) a boss's entrance */
 #view .letterbox::before, #view .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
 #view .letterbox::before { top: 0; } #view .letterbox::after { bottom: 0; }
@@ -263,12 +271,12 @@ body.intower #towerhud { display: block; } body.intower #view .sky, body.intower
 #log { height: 118px; flex: 0 0 118px; background: var(--pit); border: 2px solid var(--edge); padding: 4px 8px; font: 12px/15px var(--mono); overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
 #log div { color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #log div:last-child { color: var(--ink); }
-#actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+#actions { display: flex; gap: 6px; justify-content: center; }
 #actions.combat { flex-direction: column; align-items: center; gap: 5px; }
 #actions .turn { font: bold 13px var(--serif); color: var(--gold); }
 #actions .turn small { color: var(--dim); font-weight: normal; }
 #actions .ground { font: italic 12px var(--serif); color: #B0C8D8; }
-#actions .menu, #actions .targets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+#actions .menu, #actions .targets { display: flex; gap: 6px; justify-content: center; }
 #actions .targets button { font-weight: normal; }
 #actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
