@@ -206,6 +206,14 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
 #view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
 #view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+#view .letterbox { position: absolute; inset: 0; pointer-events: none; z-index: 6; }   /* (v23.2) a boss's entrance */
+#view .letterbox::before, #view .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
+#view .letterbox::before { top: 0; } #view .letterbox::after { bottom: 0; }
+#view .letterbox.on { pointer-events: auto; cursor: pointer; } #view .letterbox.on::before, #view .letterbox.on::after { height: 12%; }
+#view .letterbox .skip { position: absolute; right: 12px; bottom: 3%; font: italic 12px var(--serif); color: #bbb; opacity: 0; transition: opacity 0.4s 0.8s; }
+#view .letterbox.on .skip { opacity: 0.8; }
+#view .sky, #view #hud { transition: opacity 0.4s; } #view.staging .sky, #view.staging #hud { opacity: 0; }
+#view .titlecard.staged b { font-size: 46px; letter-spacing: 6px; } #view .titlecard.staged { z-index: 7; }
 @keyframes titlecard { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { #view .titlecard.on { animation: titlecard-still 2.6s linear forwards; } }
 @keyframes titlecard-still { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }

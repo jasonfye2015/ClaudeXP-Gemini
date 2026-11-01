@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v23.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v23.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -219,6 +219,14 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .titlecard b { display: block; font: bold 38px var(--serif); color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 24px rgba(232,200,112,0.6), 0 2px 0 #000, 0 0 8px #000; }
 #view .titlecard small { display: block; font: italic 16px var(--serif); color: var(--ink); text-shadow: 0 1px 2px #000, 0 0 8px #000; margin-top: 4px; }
 #view .titlecard.on { animation: titlecard 2.6s ease-out forwards; }
+#view .letterbox { position: absolute; inset: 0; pointer-events: none; z-index: 6; }   /* (v23.2) a boss's entrance */
+#view .letterbox::before, #view .letterbox::after { content: ""; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
+#view .letterbox::before { top: 0; } #view .letterbox::after { bottom: 0; }
+#view .letterbox.on { pointer-events: auto; cursor: pointer; } #view .letterbox.on::before, #view .letterbox.on::after { height: 12%; }
+#view .letterbox .skip { position: absolute; right: 12px; bottom: 3%; font: italic 12px var(--serif); color: #bbb; opacity: 0; transition: opacity 0.4s 0.8s; }
+#view .letterbox.on .skip { opacity: 0.8; }
+#view .sky, #view #hud { transition: opacity 0.4s; } #view.staging .sky, #view.staging #hud { opacity: 0; }
+#view .titlecard.staged b { font-size: 46px; letter-spacing: 6px; } #view .titlecard.staged { z-index: 7; }
 @keyframes titlecard { 0% { opacity: 0; transform: scale(0.9); } 15% { opacity: 1; transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.04); } }
 @media (prefers-reduced-motion: reduce) { #view .titlecard.on { animation: titlecard-still 2.6s linear forwards; } }
 @keyframes titlecard-still { 0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; } }
@@ -1466,7 +1474,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "23.1", built: "2026-11-01" };
+const CM = window.CM = { version: "23.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -38145,6 +38153,52 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.blowBound && this.game && this.game.on && CM.fxKit) { this.blowBound = true; this.game.on("fx", (e) => CM.blowFx(CM.fxKit, e)); } return rf0.apply(this, a); };
 }
 
+// ---- 76zzzza-stage.js ----
+"use strict";
+// Entrances (v23.2, UPGRADE_PLAN_18.md): a boss or a guardian enters on a stage. Black bars close in from above and
+// below, the camera leans in on it while it rises from the floor, its name comes up in a banner with where it rules,
+// and a sting of music sounds. Any key or a click skips it; the fight waits (the automatic hand too, by holdUntil)
+// until it is done. Settings > Combat speed sets how long: Cinematic longer, Quick shorter, As good as instant only the
+// banner. 80-main.js's "intro" asks here first (CM.bossStage).
+{ let ending = null;
+  CM.STAGE_MS = 2600;
+  CM.bossStage = (K, fx) => {
+    const foe = fx.foe; if (!foe || !K || !K.renderer || !K.renderer.ok) return false;
+    const G = foe.guardian ? CM.GUARDIANS[foe.guardian] : null, sub = G ? (foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace";
+    const quick = CM.fxSpeed || 1, card = K.ui.$("#view .titlecard");
+    if (card) card.classList.add("staged");
+    K.ui.titleCard(foe.name, sub);
+    if (CM.music && CM.music.motif) CM.music.motif("entrance");
+    if (quick >= 6 || CM.reducedMotion) { K.renderer.punch(); return true; }   // (instant, or motion reduced: the banner and the sting only)
+    if (ending) ending();
+    const view = K.ui.$("#view"); let bars = view.querySelector(".letterbox");
+    if (!bars) { bars = document.createElement("div"); bars.className = "letterbox"; bars.innerHTML = '<span class="skip">any key or a click to go on</span>'; view.appendChild(bars); }
+    const ms = CM.STAGE_MS * (CM.cinematic ? 1.4 : 1) / (quick >= 2 ? 1.6 : 1), t0 = performance.now();
+    K.fxs.holdUntil = Math.max(K.fxs.holdUntil, t0 + ms);
+    K.renderer.zoomTo(0.8, ms * 0.85); K.renderer.shake(0.3);
+    setTimeout(() => { if (ending === end) { K.renderer.shake(0.45); K.renderer.punch(); } }, ms * 0.35);
+    void bars.offsetWidth; bars.classList.add("on"); view.classList.add("staging");
+    const key = (e) => { e.preventDefault(); e.stopPropagation(); end(); };
+    const end = () => { if (ending !== end) return; ending = null; bars.classList.remove("on"); view.classList.remove("staging"); window.removeEventListener("keydown", key, true); bars.removeEventListener("pointerdown", key);
+      clearTimeout(timer); K.fxs.holdUntil = performance.now(); if (K.renderer.zoomAnim) { K.renderer.zoomAnim = null; K.renderer.zoomNow = 1; } if (card) setTimeout(() => card.classList.remove("staged"), 900); };
+    ending = end;
+    window.addEventListener("keydown", key, true); bars.addEventListener("pointerdown", key);
+    const timer = setTimeout(end, ms);
+    return true;
+  };
+  CM.bossStaging = () => Boolean(ending);
+  // the sting: a low drum and a rising minor chord in brass-ish saws, under the banner
+  const m0 = CM.music && CM.music.motif;
+  if (m0) CM.music.motif = function (name) {
+    if (name !== "entrance") return m0.call(this, name);
+    if (!this.enabled || !this._ensure()) return false;
+    const ctx = CM.audio.ctx, at = ctx.currentTime + 0.05, dest = this.master;
+    this._osc("sine", 55, at, at + 0.9, 0.35, 400, dest); this._osc("sine", 41.2, at + 0.5, at + 1.6, 0.3, 300, dest);
+    [[0, 0], [3, 0.18], [7, 0.36], [12, 0.62]].forEach(([semi, dt]) => { const hz = 146.8 * Math.pow(2, semi / 12); this._osc("sawtooth", hz, at + dt, at + 1.9, 0.07, 1400, dest); this._osc("square", hz / 2, at + dt, at + 1.9, 0.035, 700, dest); });
+    return true;
+  };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -38516,7 +38570,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
-      case "intro": if (fx.foe) rising.set(fx.foe, now); break;
+      case "intro": {                                                    // (v23.2: one case - a second one below it never ran, so the title card had stopped showing)
+        if (fx.foe) rising.set(fx.foe, now);
+        if (CM.bossStage && CM.bossStage(fxKit, fx)) break;             // (staged: bars, the camera, a banner, a sting - 76zzzza-stage.js)
+        const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break;
+      }
       case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, fx.crit ? fx.amount + "!" : String(fx.amount), fx.crit ? "crit" : fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
@@ -38563,7 +38621,6 @@ window.addEventListener("DOMContentLoaded", () => {
       case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
       case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
       case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
-      case "intro": { const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break; }
       default: break;
     }
   }
