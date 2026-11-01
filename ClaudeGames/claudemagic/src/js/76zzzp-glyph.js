@@ -19,7 +19,9 @@
     ["|....@.|", "|.g..$.|", "--+-----"].forEach((t, i) => p.fillText(t, 21 * u, (24 + i * 5) * u));
     p.fillStyle = "#2A1A10"; p.fillRect(16 * u, 38 * u, 32 * u, 8 * u); p.fillStyle = "#C03030"; p.beginPath(); p.arc(26 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3060C0"; p.beginPath(); p.arc(36 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill();
     p.fillStyle = "#C0A040"; p.fillRect(30 * u, 50 * u, 4 * u, 6 * u); p.fillStyle = "#6A4A2A"; p.fillRect(8 * u, 2 * u, 48 * u, 4 * u); return c; };
-  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.glyphcab = set.layers.length; set.layers.push(CM.art.glyphCabinet(set.size)); return set; }; }
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.glyphcab = set.layers.length; set.layers.push(CM.art.glyphCabinet(set.size));
+      { const src = CM.art.portal(), c = document.createElement("canvas"); c.width = c.height = set.size; const p = c.getContext("2d"); p.filter = "hue-rotate(250deg) saturate(1.5)"; p.drawImage(src, 0, 0, set.size, set.size); set.index["solid:glyphportal"] = set.layers.length; set.layers.push(c); }   // (v20.3: the green portals)
+      return set; }; }
   const ensure = (ui) => { if (ui.$("#dlg-glyph")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-glyph";
     d.innerHTML = `<div class="box glyphbox"><h2 class="gdtitle">THE GLYPH DEEP</h2><div id="gd-body"></div><div class="note" id="gd-note"></div><div class="row"><button data-gdclose>Walk away</button></div></div>`;
     (ui.root || document.body).appendChild(d); d.querySelector("[data-gdclose]").addEventListener("click", () => ui.closeDialogs()); };

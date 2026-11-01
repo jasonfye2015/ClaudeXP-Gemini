@@ -10,12 +10,14 @@
 //   What comes home is the main game's own: weapons, armour, rings, amulets, potions, rations and seeds as they are;
 //   the inscription cards as Claudescryption cards; the tickets as the Joker's; unread scrolls sold back for gold.
 { const GD = CM.GLYPH; CM.GLYPH_AT = [28, 28]; GD.clearing = [26, 27, 30, 29];
+  // (v20.3) a green portal on the Keep-yard's south row (off the walk to the shaft), and its twin in the cabinet's clearing
+  CM.PORTAL_YARD.glyph = [36, 22]; CM.GLYPH_PORTAL = [26, 28];
   GD.reward = (L) => ({ tickets: 10 + 4 * L, gold: 20 * L });
   GD.PRIZE = { tickets: 500, gold: 3000, items: 3, cards: 2, seeds: 3 };
   // the cabinet laid on the Wood
   { const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed), [x0, y0, x1, y1] = GD.clearing, k = (x, y) => `${x},${y}`;
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[k(x, y)]; (fl.ground = fl.ground || {})[k(x, y)] = (x + y) % 3 ? "dirt" : "grass"; delete fl.things[k(x, y)]; }
-      fl.things[k(...CM.GLYPH_AT)] = { type: "glyphcab" }; fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
+      fl.things[k(...CM.GLYPH_AT)] = { type: "glyphcab" }; fl.things[k(...CM.GLYPH_PORTAL)] = { type: "portal", to: "town" }; fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
       fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "the arcade cabinet" }); return fl; }; }
   const G = CM.Game.prototype;
   Object.assign(G, {
@@ -65,6 +67,12 @@
       return ""; },
   });
   CM.ACHIEVEMENTS.unwritten = { name: "Unwritten", what: "Beat the Unwritten on the twentieth level of the Glyph Deep", title: "of the Glyph Deep" };
+  // the portals: the yard's to the cabinet, the clearing's home to the yard
+  { const ly0 = CM.layPortalYard; CM.layPortalYard = function (fl) { const out = ly0.call(this, fl), P = CM.PORTAL_YARD.glyph, k = `${P[0]},${P[1]}`; if (!fl.things[k] || fl.things[k].to !== "glyph") fl.things[k] = { type: "portal", to: "glyph" }; return out; }; }
+  { const up0 = G.usePortal; G.usePortal = function (t) {
+      if (t && t.to === "glyph") { this.sound && this.sound("spell"); this.enterFloor(-1, "rope", [CM.GLYPH_AT[0], CM.GLYPH_AT[1] + 1]); this.floor.facing = 0; this.say("The green portal sets you down in a little clearing by the road. An arcade cabinet hums under its roof of planks, letters crawling on its screen."); return true; }
+      const fl = this.floor; if (t && t.to === "town" && fl && fl.number === -1 && Math.abs(fl.pos[0] - CM.GLYPH_PORTAL[0]) + Math.abs(fl.pos[1] - CM.GLYPH_PORTAL[1]) <= 1) { this.sound && this.sound("spell"); this.enterFloor(0, "rope", CM.PORTAL_YARD.glyph.slice()); this.say("Green light, and the Keep-yard: the portal yard by the shaft."); return true; }
+      return up0.call(this, t); }; }
   // Space at the cabinet
   { const use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
       if (t && t.type === "glyphcab") { this.logAct && this.logAct("use"); this.say("An arcade cabinet stands under a little roof of planks, humming. Green letters crawl across its screen: THE GLYPH DEEP - INSERT COIN."); this.emit("glyphcab"); return; }

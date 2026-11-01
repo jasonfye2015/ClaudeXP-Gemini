@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Glyph Deep's portals (v20.3)
+  (src/js/69o-glyphdeep.js; the green picture in 76zzzp-glyph.js)
+  - A green portal on the Keep-yard's south row (between the Fortress's portal and Claudeita's) sets the party down by
+    the cabinet; its twin in the cabinet's clearing takes them back to the yard.
+
 The Glyph Deep, finished (the eighty-third big update - v20.2, UPGRADE_PLAN_15.md phase 2 - the plan complete)
   (src/js/76zzzp-glyph.js, 69o-glyphdeep.js)
   - The end of a game on the cabinet's screen: a tombstone with the hero's name, the level and what killed them; a
