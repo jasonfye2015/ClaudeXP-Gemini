@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The arcade wing (v15.6)
+
+The house knocked through into the old coaching inn next door and filled it with cabinets: a wyrm in a garden bed,
+something long in a barrow, a troll in the bell tower, a sky-skiff on a tether, the town wall on a bad night and a
+still that will not stop bubbling. Each has a little brass plate that says what it pays, and a chalk-board for the
+names of those who have beaten it.
+
 ## The Prize Counter (v15.4)
 
 Gold on the tables, tickets in the hand: the house had pink paper tickets printed by the thousand and set a glass

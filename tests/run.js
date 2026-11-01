@@ -5095,6 +5095,41 @@ test("the Prize Counter: tokens for stakes, payouts (the free tables too), board
   const best = Math.max(...PRIZE.LIST.filter((r) => r[1] === "gold").map((r) => Number(r[4].split(" ")[0]) / r[3])); assert.ok(best / PRIZE.perStake < 1 - PRIZE.bestReturn, "tokens cannot turn the tables' odds");
 });
 
+test("the arcade cabinets: each registers with the house; a level cleared pays gold every game, tickets by the level and a card each third level once; the end goes on the high-score board", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("arc-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000;
+  for (const id of ["wyrm", "crawler", "belfry", "lander", "rampart", "glimmerpop"]) { const D = CM.ARC.reg[id]; assert.ok(D && D.Level && CM.CLUB.BOARDS.includes(id) && CM.DAILY.MARKS[id], id);
+    for (let play = 0; play < 2; play++) { assert.ok(!g.arcStart(id, 30).error, id); const gold0 = g.gold, tk0 = g.tkStore().n; let cards = 0;
+      for (let n = 1; n <= 3; n++) { const L = g.arcLevel(id); assert.strictEqual(L.n, n); L.stage = "clear"; const out = g.arcCheck(id); assert.strictEqual(out.pay, Math.round(30 * D.pay(n))); if (out.card) cards++; }
+      assert.strictEqual(cards, play === 0 ? 1 : 0, `${id}: level 3's card once`); assert.strictEqual(g.gold - gold0, [1, 2, 3].reduce((t, n) => t + Math.round(30 * D.pay(n)), 0)); assert.ok(g.tkStore().n - tk0 >= 6, "tickets by level");
+      const L = g.arcLevel(id); L.score = 1234 + play; L.stage = "over"; assert.ok(g.arcCheck(id).over); assert.strictEqual(g.arcLevel(id), null); }
+    assert.ok(g.cgStore().boards[id].length >= 2, `${id} on the board`); }
+});
+
+test("the Wyrm's Feast: it moves a square at a time, will not turn back on itself, grows by a berry, and a wall costs a life; the level clears at its share", () => {
+  const CM = load(), WY = CM.WY, L = new WY.Level(1, 3); L.berry = [10, 10]; const len = L.body.length; L.turn(-1, 0); assert.strictEqual(L.queue.length, 0, "no turning back");
+  L.update(L.tick + 0.001); assert.strictEqual(L.body[0][0], 7); L.berry = [L.body[0][0] + 1, L.body[0][1]]; L.update(L.tick); assert.strictEqual(L.body.length, len + 1); assert.strictEqual(L.eaten, 1);
+  L.eaten = L.need - 1; L.berry = [L.body[0][0] + 1, L.body[0][1]]; L.update(L.tick); assert.strictEqual(L.stage, "clear");
+  const M = new WY.Level(1, 4); M.berry = [1, 1]; M.turn(0, -1); for (let k = 0; k < 40 && M.lives === 3; k++) M.update(M.tick); assert.strictEqual(M.lives, 2, "the wall");
+});
+
+test("the Barrow Crawler, the Belfry Climb, the Skyreach Landing, the Rampart Battery and Glimmerpop: their rules hold", () => {
+  const CM = load();
+  // crawler: a spark on a segment splits it and leaves a toadstool
+  const B = new CM.BC.Level(1, 5), s = B.segs[3]; s.fx = s.x; s.fy = s.y; B.bolt = { x: s.x + 0.5, y: s.y + 0.6 }; const n0 = B.segs.length; B.mush.clear(); B.acc = -9; B.update(0.001); assert.strictEqual(B.segs.length, n0 - 1); assert.ok(B.mush.has(`${s.x},${s.y}`)); assert.ok(B.segs[3].head, "the next one a head");
+  // belfry: no kegs, a climber can climb every ladder to the bell
+  const F = new CM.BF.Level(1, 6); F.kegT = 1e9; const order = [[23], [17], [12], [15], [10]]; for (const [lx] of order) { for (let k = 0; k < 600 && Math.abs(F.p.x - lx) > 0.2 && !F.p.lad; k++) { F.input(Math.sign(lx - F.p.x), 0); F.update(1 / 60); } F.input(0, -1); for (let k = 0; k < 300 && F.stage === "play" && (F.p.lad || F.ladderAt(F.p.x, F.p.beam, true)); k++) F.update(1 / 60); F.input(0, 0); if (F.stage !== "play") break; }
+  assert.strictEqual(F.stage, "clear", "rang the bell");
+  const K = new CM.BF.Level(1, 7); K.kegT = 1e9; K.kegs.push({ x: K.p.x + 0.3, beam: 5, y: K.p.y, fall: 0, lad: null, rot: 0, id: 1 }); K.update(1 / 60); assert.strictEqual(K.lives, 2, "a keg");
+  // lander: soft and upright on a pad lands; hard crashes
+  const D = new CM.LD.Level(1, 8), P = D.pads[0]; Object.assign(D.s, { x: (P.x0 + P.x1) / 2, y: P.y - 1, vx: 0, vy: 1, a: 0 }); for (let k = 0; k < 200 && D.stage === "play"; k++) D.update(1 / 60); assert.strictEqual(D.stage, "clear");
+  const E = new CM.LD.Level(1, 8); Object.assign(E.s, { x: (P.x0 + P.x1) / 2, y: P.y - 1, vx: 0, vy: 8, a: 0 }); E.update(1 / 30); E.update(1 / 30); assert.strictEqual(E.lives, 2);
+  // rampart: a burst puts out an ember; an ember reaching a cottage burns it
+  const R = new CM.RB.Level(1, 9); R.toSend = 0; R.embers.push({ x0: 100, y0: 0, x: 100, y: 200, tx: 100, ty: 368, vx: 0, vy: 0, split: 0 }); R.bursts.push({ x: 100, y: 200, t: 0.3 }); R.update(0.01); assert.strictEqual(R.embers.length, 0); assert.strictEqual(R.score, 25);
+  R.embers.push({ x0: 90, y0: 0, x: 90, y: 367, tx: 90, ty: 368, vx: 0, vy: 50, split: 0 }); R.bursts = []; R.update(0.05); assert.strictEqual(R.cottages.filter(Boolean).length, 5);
+  // glimmerpop: three of a colour pop, what hangs from them falls
+  const G = new CM.GP.Level(1, 10); G.grid = G.grid.map((r) => r.map(() => -1)); G.grid[0][0] = 1; G.grid[0][1] = 1; G.grid[1][0] = 2; G.grid[0][4] = 3; const [x, y] = CM.GP.pos(0, 2, 0); G.land({ x, y, k: 1 }); assert.strictEqual(G.grid[0][0], -1); assert.strictEqual(G.grid[1][0], -1, "fell"); assert.strictEqual(G.grid[0][4], 3);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
