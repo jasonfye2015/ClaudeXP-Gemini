@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Grade and hour (v22.4, UPGRADE_PLAN_17.md phase 4)
+  (src/js/76zzzx-grade.js; 40-render.js, 80-main.js)
+  - Each band its own grade - a lift in the shadows, a contrast, a saturation - not only a tint: the Lich King's
+    Palace cold and hard, the Drowned Town soft and blue, the Ossuary drained, the Crystal Caverns vivid, the Foundry
+    and the Root of the World hot.
+  - On the surface the hour colours everything: gold at dawn and dusk, blue in the hour after sunset and before dawn,
+    the colours drained at night.
+  - Winter mornings frost the walls, thickest low and in patches, gone by mid-morning.
+
 Air (v22.3, UPGRADE_PLAN_17.md phase 3)
   (src/js/76zzzw-air.js; 40-render.js, 80-main.js)
   - The air below has a body, each band its own: the Drowned Town and the Undercroft thick and drifting, the Foundry
