@@ -45,8 +45,13 @@ void main() {
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
-    vec2 p = vWorld.xz; float tm = uTime;
-    vec3 wn = normalize(vec3(0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3), 1.0, 0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9)));
+    vec2 p = vWorld.xz; float tm = uTime, flow = vFx.x;                  // (v24.1: vFx.x on water is its current - the river's; 0 still)
+    if (flow > 0.0) p.y -= tm * 0.6 * flow;                                 // (the ripples carried downstream)
+    float amp = flow > 0.0 ? 1.0 + 0.4 * flow : 0.3 + 0.7 * uWet;           // (still water lies calm and mirrors the sky; rain or a current stirs it)
+    vec3 wn = normalize(vec3(amp * (0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3)), 1.0, amp * (0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9))));
+    if (uWet > 0.0) { vec2 g = vWorld.xz * 2.5, id = floor(g), f = fract(g) - 0.5, c = (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.6, q = f - c;   // (v24.1: the rain's rings, one a cell, each in its own time)
+      float ph = fract(tm * 0.8 + hash(id)), rd = length(q), ring = exp(-pow((rd - ph * 0.45) * 28.0, 2.0)) * (1.0 - ph) * uWet;
+      wn = normalize(wn + vec3(q.x, 0.0, q.y) / max(rd, 0.001) * ring * 0.7); }
     vec3 v = normalize(uEye - vWorld), r = reflect(-v, wn);
     float fr = 0.12 + 0.5 * pow(1.0 - max(dot(v, wn), 0.0), 3.0);
     float r2w = uReach * uReach, lw = uAmbient + uFlicker * r2w / (r2w + 2.2 * d * d + 0.4 * d);
