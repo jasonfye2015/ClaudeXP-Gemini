@@ -10,6 +10,9 @@
 //                                               messages; run.over is "dead" when the hero falls.
 //   run.atDown() / run.atUp()                -> standing on the stairs
 { const GD = CM.GLYPH = { W: 80, H: 21, levels: 20, xpShare: 0.6, regenEvery: 9 };
+  // the tuning (tools/glyphbot.js measured it): a monster's level by the level, how many, the Unwritten's level and health
+  GD.TRAPS = ["dart", "pit", "teleport", "gong"];
+  Object.assign(GD, { monLevel: (L) => Math.max(1, Math.round(L * 0.85)), monCount: (L) => 3 + Math.floor(L / 3), bossLevel: 21, bossHp: 3.2, bossAtk: 0.75, bossWrites: 6, lastCrowd: 4, minionLevel: 10 });
   // the deep's monsters: [letter, name, colour, the main game's kind for its numbers, speed, first level, last level, ways]
   GD.MONSTERS = [
     ["r", "cellar rat", "#B08A60", "Giant Rat", 1, 1, 6, ""], ["b", "cave bat", "#A080C0", "Giant Rat", 2, 1, 7, "erratic"], ["j", "grey ooze", "#90B090", "Sporeling", 0.5, 1, 8, ""],
@@ -61,7 +64,15 @@
       else for (const r of real) if (r !== start) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const d = dist.get(key(x, y)); if (d !== undefined && (!far || d > far[2])) far = [x, y, d]; }
       if (!far) far = this.spot(start); this.down = [far[0], far[1]]; g[this.down[1]][this.down[0]] = ">";
       this.seen = new Set(); this.things = new Map(); this.mons = [];
-      this.stock(start); this.see(); }
+      this.stock(start); this.layTraps(); this.see(); }
+    // traps (v20.1): hidden in the floor until stepped on - a dart, a pit, a teleport, a gong that wakes the level
+    layTraps() { const R = this.rnd; this.traps = new Map(); const n = 1 + Math.floor(this.L / 4);
+      for (let i = 0; i < n; i++) { const r = R.pick(this.rooms.filter((q) => q.room)), [x, y] = this.spot(r); if ((x === this.x && y === this.y) || this.tile(x, y) !== ".") continue; this.traps.set(key(x, y), { kind: R.pick(GD.TRAPS), found: false }); } }
+    spring(x, y) { const T = this.traps && this.traps.get(key(x, y)); if (!T) return; T.found = true; const R = this.rnd, L = this.L;
+      if (T.kind === "dart") this.hurt(R.int(2, 5) + L * 2, "A little dart shoots out at you!");
+      else if (T.kind === "pit") { this.stuck = 2; this.hurt(R.int(3, 6) + L, "You fall into a pit!"); }
+      else if (T.kind === "teleport") { const r = R.pick(this.rooms.filter((q) => q.room)), [nx, ny] = this.spot(r); this.x = nx; this.y = ny; this.say("A trap door of light: you are somewhere else."); }
+      else { for (const m of this.mons) m.asleep = false; this.say("A gong sounds deep in the floor. Everything on the level wakes."); } }
     join(a, b) { const g = this.grid, R = this.rnd; let p, q;
       if (a.cy === b.cy) { const [l, r] = a.cx < b.cx ? [a, b] : [b, a]; p = l.room ? [l.x1 + 1, R.int(l.y0, l.y1)] : [l.x0, l.y0]; q = r.room ? [r.x0 - 1, R.int(r.y0, r.y1)] : [r.x0, r.y0];
         if (l.room) g[p[1]][p[0]] = "+"; if (r.room) g[q[1]][q[0]] = "+"; const mx = R.int(Math.min(p[0] + 1, q[0] - 1), Math.max(p[0] + 1, q[0] - 1));
@@ -73,9 +84,9 @@
     spot(r) { for (let t = 0; t < 80; t++) { const x = this.rnd.int(r.x0, r.x1), y = this.rnd.int(r.y0, r.y1); if (this.grid[y][x] === "." && !this.thingAt(x, y) && !(this.mons || []).some((m) => m.x === x && m.y === y)) return [x, y]; } return [r.x0, r.y0]; }
     // what's put about: the monsters, the gold, the things
     stock(start) { const R = this.rnd, L = this.L, real = this.rooms.filter((r) => r.room), others = real.filter((r) => r !== start);
-      const kinds = GD.MONSTERS.filter((m) => L >= m[5] && L <= m[6]); const n = 3 + Math.floor(L / 2) + R.int(0, 2);
+      const kinds = GD.MONSTERS.filter((m) => L >= m[5] && L <= m[6]); const n = L === GD.levels ? GD.lastCrowd : GD.monCount(L) + R.int(0, 2);
       for (let i = 0; i < n && kinds.length; i++) { const r = R.pick(others.length ? others : real), [x, y] = this.spot(r); if (x === this.x && y === this.y) continue; this.addMon(R.pick(kinds), x, y, R.chance(0.45)); }
-      if (L === GD.levels) { const B = this.rooms.find((r) => r.cx === 1 && r.cy === 1); this.addMon(GD.BOSS, Math.floor((B.x0 + B.x1) / 2), Math.floor((B.y0 + B.y1) / 2), false); }
+      if (L === GD.levels) { const B = this.rooms.find((r) => r.cx === 1 && r.cy === 1); this.addMon(GD.BOSS, Math.floor((B.x0 + B.x1) / 2), Math.floor((B.y0 + B.y1) / 2), false); for (let k = 0; k < 2; k++) { const [x, y] = this.spot(B); this.put(x, y, { name: "Healing Potion", kind: "heal", power: 20 + L * 4, value: 20 + L }); } }
       for (let i = 0, k = R.int(3, 5); i < k; i++) { const [x, y] = this.spot(R.pick(real)); this.put(x, y, { kind: "ggold", n: R.int(4, 10) + L * R.int(3, 7), name: "gold" }); }
       for (let i = 0, k = R.int(3, 5) + Math.floor(L / 5); i < k; i++) { const [x, y] = this.spot(R.pick(real)); this.put(x, y, this.makeThing()); } }
     makeThing() { const R = this.rnd, L = this.L, d = GD.depthOf(L), roll = R.next();
@@ -89,8 +100,8 @@
       return { name: "a roll of prize tickets", kind: "gtickets", n: 5 + L * 2 + R.int(0, L), power: 0, value: 0 }; }
     put(x, y, it) { const k = key(x, y); if (!this.things.has(k)) this.things.set(k, []); this.things.get(k).push(it); }
     thingAt(x, y) { const t = this.things && this.things.get(key(x, y)); return t && t.length ? t[t.length - 1] : null; }
-    addMon(def, x, y, asleep) { const [ch, name, col, kind, speed, , , ways] = def, K = CM.monsterKind(kind) || CM.monsterKind("Goblin"), lvl = def === GD.BOSS ? 26 : Math.max(1, this.L + Math.floor(this.L / 4));
-      const M = CM.makeMonster(K, lvl, this.rnd); if (def === GD.BOSS) { M.max = M.hp = Math.round(M.max * 6); M.atk = Math.round(M.atk * 1.3); }
+    addMon(def, x, y, asleep) { const [ch, name, col, kind, speed, , , ways] = def, K = CM.monsterKind(kind) || CM.monsterKind("Goblin"), lvl = def === GD.BOSS ? GD.bossLevel : def === GD.MINION ? GD.minionLevel : GD.monLevel(this.L);
+      const M = CM.makeMonster(K, lvl, this.rnd); if (def === GD.BOSS) { M.max = M.hp = Math.round(M.max * GD.bossHp); M.atk = Math.round(M.atk * GD.bossAtk); }
       const m = { ch, name, col, x, y, hp: M.hp, max: M.max, atk: M.atk, df: M.df, xp: M.xp, level: lvl, speed, energy: 0, asleep, ways, boss: def === GD.BOSS, cool: 0 }; if (ways === "mimic") m.hidden = true; this.mons.push(m); return m; }
     // ---- the map's rules ----
     tile(x, y) { return y >= 0 && y < GD.H && x >= 0 && x < GD.W ? this.grid[y][x] : " "; }
@@ -119,7 +130,8 @@
         if (m && !(m.ways === "mimic" && m.hidden)) { this.strike(m); return true; }
         if (m && m.ways === "mimic") { m.hidden = false; this.say("The gold grows teeth! It was a mimic."); return true; }
         if (!this.canStep(this.x, this.y, dx, dy)) { if (dx && dy && this.open(nx, ny)) this.say("You can't squeeze diagonally through a doorway."); return false; }
-        this.x = nx; this.y = ny; const t = this.thingAt(nx, ny); if (t) { const all = this.things.get(key(nx, ny)); this.say(all.length > 1 ? `There are ${all.length} things here.` : `You see here ${t.kind === "ggold" ? `${t.n} gold` : t.name}.`); }
+        if (this.stuck) { this.stuck--; this.say("You are still climbing out of the pit."); return true; }
+        this.x = nx; this.y = ny; this.spring(nx, ny); if (this.over) return true; const t = this.thingAt(nx, ny); if (t) { const all = this.things.get(key(nx, ny)); this.say(all.length > 1 ? `There are ${all.length} things here.` : `You see here ${t.kind === "ggold" ? `${t.n} gold` : t.name}.`); }
         if (this.atDown()) this.say(this.L === GD.levels && !this.bossDown() ? "The way down is sealed while the Unwritten stands." : "There is a staircase down here. (>)"); return true; }
       if (cmd === "wait") return true;
       if (cmd === "pick") { const all = this.things.get(key(this.x, this.y)); if (!all || !all.length) { this.say("There is nothing here to pick up."); return false; }
@@ -154,7 +166,7 @@
         if (m.hidden && Math.max(Math.abs(m.x - this.x), Math.abs(m.y - this.y)) > 1) continue;
         m.energy += m.speed; while (m.energy >= 1 && m.hp > 0 && !this.over) { m.energy -= 1; this.monAct(m, hd); } } }
     monAct(m, hd) { const R = this.rnd, near = Math.max(Math.abs(m.x - this.x), Math.abs(m.y - this.y));
-      if (m.boss) { m.cool = Math.max(0, m.cool - 1); if (m.cool === 0 && this.mons.filter((q) => q.hp > 0 && q.ch === "?").length < 6) { m.cool = 5; let n = 0; for (const [dx, dy] of DIRS8) { if (n >= 2) break; const x = m.x + dx, y = m.y + dy; if (this.open(x, y) && !this.monAt(x, y) && !(x === this.x && y === this.y)) { this.addMon(GD.MINION, x, y, false); n++; } } if (n) this.say("The Unwritten writes, and loose glyphs crawl off its page."); }
+      if (m.boss) { m.cool = Math.max(0, m.cool - 1); if (m.cool === 0 && near <= 8 && this.mons.filter((q) => q.hp > 0 && q.ch === "?").length < 4) { m.cool = GD.bossWrites; let n = 0; for (const [dx, dy] of DIRS8) { if (n >= 1) break; const x = m.x + dx, y = m.y + dy; if (this.open(x, y) && !this.monAt(x, y) && !(x === this.x && y === this.y)) { this.addMon(GD.MINION, x, y, false); n++; } } if (n) this.say("The Unwritten writes, and loose glyphs crawl off its page."); }
         if (!m.blinked && m.hp < m.max / 2) { m.blinked = true; const r = this.roomOf(m.x, m.y); if (r) { const [x, y] = this.spot(r); m.x = x; m.y = y; this.say("The Unwritten smears itself across the room."); return; } } }
       if (near <= 1 && this.canStep(m.x, m.y, this.x - m.x, this.y - m.y)) { this.bite(m); return; }
       if (m.ways === "breath" && m.cool-- <= 0 && near <= 6 && (m.x === this.x || m.y === this.y || Math.abs(m.x - this.x) === Math.abs(m.y - this.y)) && this.visible(m.x, m.y)) { m.cool = 4; const d = Math.max(1, Math.round(m.atk * 0.8) - Math.floor(this.heroDf() / 3)); this.hurt(d, `The ${m.name} breathes fire! (${d})`); return; }

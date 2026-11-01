@@ -70,6 +70,7 @@
       const put = (x, y, t, col, bg) => { if (bg) { p.fillStyle = bg; p.fillRect(x * cw, (y + TOP) * ch, cw, ch); } p.fillStyle = col; p.fillText(t, x * cw + cw / 2, (y + TOP) * ch + ch / 2 + 1); };
       for (let y = 0; y < GD.H; y++) for (let x = 0; x < GD.W; x++) { const k = `${x},${y}`; if (!r.seen.has(k)) continue; const t = r.tile(x, y); if (t === " ") continue; const vis = r.visible(x, y); put(x, y, t, vis ? TILE_COL[t] || "#AAA" : "#33333C"); }
       for (const [k, list] of r.things) { if (!list.length || !r.seen.has(k)) continue; const [x, y] = k.split(",").map(Number); if (!r.visible(x, y) && !r.seen.has(k)) continue; const it = list[list.length - 1]; put(x, y, GD.glyphOf(it), r.visible(x, y) ? GD.colourOf(it) : "#44444C"); }
+      if (r.traps) for (const [k, T] of r.traps) if (T.found && r.seen.has(k)) { const [x, y] = k.split(",").map(Number); put(x, y, "^", r.visible(x, y) ? "#E05050" : "#55333A"); }
       for (const m of r.mons) if (m.hp > 0 && r.visible(m.x, m.y)) put(m.x, m.y, m.hidden ? "$" : m.ch, m.hidden ? "#F0D040" : m.col, m.boss ? "#2A002A" : null);
       put(r.x, r.y, "@", "#FFFFFF", "#203040");
       // the messages
