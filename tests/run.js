@@ -5465,6 +5465,21 @@ test("gear score and auto-manage: a thing's score grows with its power, worth an
   const gs0 = CM.partyGearScore(g.party); let it = CM.makeItem(10, R, "armor"); it.unknown = false; g.gain([it], "test"); assert.ok(CM.partyGearScore(g.party) >= gs0); g.amSet(false); assert.ok(!g.amOn()); same(before.length, 4);
 });
 
+test("the skill trees: a point a level gained; tiers open by points in the branch, the last at level 15; a rank's gift reaches the stat, attack, defence, health, the gear-kind bonuses and the traits; casters' trees lean on spells; the other path's traits as capstones; unlearned only in town", () => {
+  const CM = load(), ST = CM.SKILLTREE, g = new CM.Game(); g.newGame("ts-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  for (const cls of CM.ALL_CLASSES) { const B = ST.branches(cls); assert.strictEqual(B.length, 3); for (const br of B) assert.strictEqual(br.nodes.length, 5); }
+  assert.ok(ST.branches("Mage")[0].nodes.some((n) => n[4].prop && n[4].prop.spellPower), "a caster's first branch has spell power"); assert.ok(ST.branches("Knight")[0].nodes.some((n) => n[4].atk), "a warrior's has attack");
+  const h = g.party[0]; assert.strictEqual(ST.points(h), h.level - 1); assert.ok(g.tsLearn(h, "a1"), "no points at level 1");
+  h.level = 16; h.xp = CM.xpForLevel(16); CM.recompute(h); const atk0 = h.atk, str0 = CM.heroStat(h, "str"), crit0 = g.critChance(h);
+  assert.strictEqual(g.tsLearn(h, "a2"), "Spend 2 points in this branch to reach it.");
+  assert.strictEqual(g.tsLearn(h, "a1"), ""); assert.strictEqual(CM.heroStat(h, "str"), str0 + 1); g.tsLearn(h, "a1"); assert.ok(!g.tsLearn(h, "a2")); CM.recompute(h); assert.ok(h.atk >= atk0 + 1, "attack from the tree (and the strength)");
+  g.tsLearn(h, "a2"); g.tsLearn(h, "a2"); assert.ok(!g.tsLearn(h, "a3")); assert.ok(g.critChance(h) > crit0, "weak spots, as a gear bonus would");
+  g.tsLearn(h, "a3"); g.tsLearn(h, "a4"); assert.ok(g.tsLearn(h, "a5"), "the capstone wants a path");
+  g.choosePath(h, Object.keys(CM.PATHS[h.cls])[0]); const other = CM.PATHS[h.cls][Object.keys(CM.PATHS[h.cls])[1]].t1.id; assert.ok(!CM.trait(h, other)); assert.strictEqual(g.tsLearn(h, "a5"), ""); assert.ok(CM.trait(h, other), "the other path's trait");
+  const hp0 = h.max; for (const k of ["b1", "b1", "b2", "b2", "b3"]) g.tsLearn(h, k); assert.ok(h.max >= hp0 + 6);
+  assert.strictEqual(ST.spent(h), 14); g.floor.number = 3; assert.ok(g.tsReset(h), "not in the dungeon"); g.floor.number = 0; assert.strictEqual(g.tsReset(h), ""); assert.strictEqual(ST.spent(h), 0); assert.ok(!CM.trait(h, other));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

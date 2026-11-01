@@ -96,7 +96,7 @@ Object.assign(CM.UI.prototype, {
       div.classList.toggle("fallen", dead);
       div.classList.toggle("front", m.row === "front");
       div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
-        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "");
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "") + (CM.SKILLTREE && CM.SKILLTREE.points(m) > CM.SKILLTREE.spent(m) ? ` <span class="boon-badge skill-badge" title="Skill points to spend: open the hero's sheet">Skill!</span>` : "");
       div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
       const ail = div.querySelector(".ail");
       ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");

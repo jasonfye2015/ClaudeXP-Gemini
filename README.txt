@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Skill trees (the sixty-eighth big update - v18.2)
+  (src/js/64zzz-skilltree.js, 76zzzd-skilltree.js)
+  Every calling has a tree of three branches, each its own names (the Knight's Blade, Shield and Banner; the Mage's
+  Flame, Ward-runes and Library; ...), five tiers and fifteen ranks a branch. A skill point comes with every level
+  gained (heroes already levelled have theirs waiting); a tier opens with two more points spent in its branch, the
+  capstones at level 15. The first branch is blows for the warriors (their key stat, attack, weak spots, to hit) and
+  spells for the casters (their key stat, spell power, magic, magic from each kill); the second standing up to it
+  (Constitution, defence, health, mending each round); the third luck and the spoils (Luck, experience, gold,
+  quickness). Two capstones teach the traits of the path the hero didn't choose at level 5; the third steadies the
+  whole party (+1 defence) and adds 1 to every stat. Every rank works through the game's own reckonings, the same as a
+  ring or a blade. "Skill tree" on a hero's sheet opens it; the party card says "Skill!" while points wait; a tree is
+  unlearned for nothing in town.
+
 Gear score and auto-manage (the sixty-seventh big update - v18.1)
   (src/js/64zzy-automanage.js; the pack's button and figures in 70-ui.js and 75-bag.js)
   - Gear score: each thing worn scores by its power (weighted by slot: the weapon most, then armour, off hand, helm,
