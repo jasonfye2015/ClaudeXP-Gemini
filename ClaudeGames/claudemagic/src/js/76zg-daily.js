@@ -6,7 +6,7 @@
 // rules are 64zp-daily.js.
 { const gal1 = CM.UI.prototype.cgGallery, nav1 = CM.UI.prototype.cgNav, r3 = CM.UI.prototype.renderCasino, DAILY = CM.DAILY, MED = ["#C88A50", "#C8D0D8", "#F0C040"], TIER = ["Bronze", "Silver", "Gold"];
   const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id;
-  const what = (t, m) => (t === "pinball" ? `pass ${m} score marks` : `reach level ${m}`);
+  const what = (t, m) => (t === "pinball" ? `pass ${m} score marks` : t === "darts" || t === "skee" ? `score ${m * 100}` : `reach level ${m}`);
   Object.assign(CM.UI.prototype, {
     renderCasino() { if (this.cgView === "dailypast") { this.cgDailyPast(this.$("#casino-body")); this.cgToasts && this.cgToasts(); return; } return r3.call(this); },
     cgGallery(box) {

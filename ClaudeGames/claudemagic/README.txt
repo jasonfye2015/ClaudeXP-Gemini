@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Six more tables (the forty-third big update - v15.7)
+  - Bones (64zy-craps.js; 76zp): craps at the true odds - Pass and Don't Pass, the Odds behind (2:1, 3:2, 6:5), the
+    Field, Place 6 and 8 at 7:6 and Any Seven at 4:1; tumbling dice; a card for a shooter who makes four points.
+  - The Tavern Board and Rune-Roll (64zz-fair.js; 76zq, 76zr), under a new Fairground shelf: darts (eight rounds of
+    three with a wavering hand) and skee-ball (nine balls, aim and power) - a stake a game, gold by the score, a ticket
+    a 20 (darts) or a 10 (skee), a card the first time each high mark is passed, high-score boards.
+  - The Bard's Stage (64zza-bard.js; 76zs): a rhythm game - strike notes on four lanes to a tune made from the level's
+    seed and played with Web Audio; a combo multiplier and a crowd's cheer; chords from level 4.
+  - The Patience Table (64zzb-patience.js; 76zt): Klondike and FreeCell, free - drag or click, double-click home,
+    moves taken back, safe cards put up, the bouncing-cards finish; gold and tickets a win, cards at the 1st, 5th,
+    15th and 40th.
+  - The Trapfinder's Grid (64zzc-traps.js; 76zu): minesweeper on a trapped flagstone floor, free - the Cellar, the
+    Crypt and the Catacomb, pennants, lifting round a number, a lantern; gold, tickets and a card the first time each.
+
 Six new arcade cabinets (the forty-second big update - v15.6)
   A common works for level-by-level cabinets (src/js/64zr-arcfw.js; 76zi-arcfw.js) - one stake a game, gold for every
   level cleared every game, prize tickets by the level's number, a card every third level the first time, a high-score
