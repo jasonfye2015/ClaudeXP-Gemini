@@ -17,7 +17,19 @@
       add(name, c); }
     return sub; };
   { const build0 = CM.art.build; CM.art.build = function (theme, look) { const set = build0.call(this, theme, look); if (!CM.art.crops.ready) return set;
-      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); add("scarecrow", CM.art.scarecrow(set.size)); for (const k of ["copper", "iron", "star"]) add(`sprinkler:${k}`, CM.art.sprinkler(set.size, k)); add("cloche", CM.art.cloche(set.size)); add("silo", CM.art.silo(set.size)); return set; }; }
+      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); add("scarecrow", CM.art.scarecrow(set.size)); for (const k of ["copper", "iron", "star"]) add(`sprinkler:${k}`, CM.art.sprinkler(set.size, k)); add("cloche", CM.art.cloche(set.size)); add("silo", CM.art.silo(set.size)); for (let v = 0; v < 3; v++) add(`npc:fieldhand${v}`, CM.art.fieldhand(set.size, v)); return set; }; }
+  // a field hand (v19.5): straw hat, shirt and overalls, sleeves rolled; one with a hoe, one a watering can, one a basket
+  CM.art.fieldhand = function (size, v) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64;
+    const shirt = ["#C84A3A", "#E0D0A0", "#5A8AC0"][v], over = ["#3A5A8A", "#6A4A2A", "#4A6A3A"][v], skin = ["#E8C0A0", "#B88060", "#D8A880"][v], R = (x, y, w, h, col) => { p.fillStyle = col; p.fillRect(x * u, y * u, w * u, h * u); };
+    R(25, 46, 6, 16, over); R(33, 46, 6, 16, over); R(24, 61, 7, 3, "#3A2A1A"); R(33, 61, 7, 3, "#3A2A1A");                        // (legs, boots)
+    R(22, 28, 20, 20, shirt); R(25, 34, 14, 14, over); R(26, 28, 3, 7, over); R(35, 28, 3, 7, over);                              // (shirt, the bib and its straps)
+    R(17, 29, 5, 13, shirt); R(42, 29, 5, 13, shirt); R(17, 41, 5, 4, skin); R(42, 41, 5, 4, skin);                                // (arms, rolled sleeves)
+    p.fillStyle = skin; p.beginPath(); p.arc(32 * u, 21 * u, 7 * u, 0, Math.PI * 2); p.fill(); R(29, 20, 2, 2, "#2A1A10"); R(34, 20, 2, 2, "#2A1A10");
+    R(21, 14, 22, 3, "#D8B860"); R(26, 8, 12, 7, "#E0C470"); R(26, 12, 12, 2, "#8A3A2A");                                          // (the straw hat and its band)
+    if (v === 0) { R(46, 14, 2, 38, "#7A5A30"); R(43, 12, 8, 4, "#9AA0A8"); }                                                    // (a hoe)
+    else if (v === 1) { R(44, 40, 12, 9, "#8A9098"); R(55, 38, 6, 2, "#8A9098"); R(46, 37, 7, 3, "#6A7078"); }                    // (a watering can)
+    else { R(8, 40, 13, 9, "#A07A40"); R(9, 37, 11, 3, "#C83A30"); R(12, 36, 3, 2, "#40A040"); }                                // (a basket of tomatoes)
+    return c; };
   // the fields' kit (v19.2): a sprinkler (a post, a head, three arms throwing water), a glass cloche, a round silo
   CM.art.sprinkler = function (size, kind) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64, col = { copper: ["#C87838", "#8A4A20"], iron: ["#9AA0A8", "#5A6068"], star: ["#90A0E8", "#4A58A0"] }[kind];
     p.fillStyle = col[1]; p.fillRect(30 * u, 40 * u, 4 * u, 24 * u); p.fillStyle = col[0]; p.fillRect(26 * u, 36 * u, 12 * u, 6 * u); p.beginPath(); p.arc(32 * u, 35 * u, 5 * u, 0, Math.PI * 2); p.fill();

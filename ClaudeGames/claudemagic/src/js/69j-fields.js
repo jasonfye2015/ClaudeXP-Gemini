@@ -21,17 +21,17 @@
   if (CM.VILLAGE_MATS) CM.VILLAGE_MATS.fields = { 2: [["timber", 24]], 3: [["stone", 32], ["timber", 16]], 4: [["stone", 48], ["bars", 2]] };
   // the crops: the Glade farm's six, given days and prices, and the fields' own. [id, name, sow seasons, days, yield, regrows (days), price, seed price]
   const C = [
-    ["wheat", "Wheat", ["spring"], 4, 3, 0, 6, 8], ["barley", "Barley", ["spring"], 4, 3, 0, 6, 8], ["beans", "Beans", ["spring", "autumn"], 4, 4, 2, 6, 10], ["cabbage", "Cabbage", ["spring", "autumn"], 4, 2, 0, 12, 10],
-    ["turnip", "Turnip", ["spring", "summer", "autumn"], 4, 3, 0, 7, 8], ["hops", "Hops", ["summer"], 4, 2, 3, 14, 12],
-    ["potato", "Potato", ["spring"], 5, 3, 0, 9, 10], ["carrot", "Carrot", ["spring", "autumn"], 4, 3, 0, 8, 8], ["radish", "Radish", ["spring", "autumn"], 3, 2, 0, 7, 6], ["lettuce", "Lettuce", ["spring", "autumn"], 3, 2, 0, 8, 6],
-    ["peas", "Peas", ["spring"], 5, 3, 2, 7, 10], ["strawberry", "Strawberry", ["spring"], 6, 2, 3, 16, 20], ["onion", "Onion", ["spring"], 5, 3, 0, 8, 8], ["beet", "Beet", ["spring", "autumn"], 4, 2, 0, 9, 8],
-    ["parsnip", "Parsnip", ["spring"], 4, 2, 0, 10, 8], ["cauliflower", "Cauliflower", ["spring"], 6, 1, 0, 34, 24], ["tulip", "Tulip", ["spring"], 4, 1, 0, 22, 14], ["rose", "Rose", ["spring", "summer"], 5, 1, 4, 26, 18],
-    ["tomato", "Tomato", ["summer"], 6, 3, 3, 10, 16], ["pepper", "Pepper", ["summer"], 6, 2, 3, 13, 16], ["chili", "Chili", ["summer"], 5, 3, 3, 9, 14], ["corn", "Corn", ["summer"], 7, 2, 4, 11, 16],
-    ["watermelon", "Watermelon", ["summer"], 8, 1, 0, 48, 30], ["melon", "Melon", ["summer"], 7, 1, 0, 40, 26], ["cucumber", "Cucumber", ["summer"], 5, 3, 2, 8, 12], ["eggplant", "Eggplant", ["summer"], 6, 2, 3, 12, 14],
-    ["zucchini", "Zucchini", ["summer"], 5, 3, 2, 7, 10], ["sunflower", "Sunflower", ["summer"], 6, 2, 0, 15, 12], ["blueberry", "Blueberries", ["summer"], 7, 4, 3, 8, 24], ["sweetpotato", "Sweet potato", ["summer"], 6, 3, 0, 10, 12],
-    ["pumpkin", "Pumpkin", ["autumn"], 8, 1, 0, 52, 30], ["squash", "Squash", ["autumn"], 6, 2, 0, 16, 14], ["broccoli", "Broccoli", ["autumn"], 5, 2, 0, 14, 12], ["redcabbage", "Red cabbage", ["autumn"], 5, 2, 0, 15, 12],
-    ["grapes", "Grapes", ["autumn"], 7, 3, 3, 14, 24], ["celery", "Celery", ["autumn"], 5, 2, 0, 11, 10],
-    ["leek", "Leek", ["autumn", "winter"], 6, 2, 0, 14, 12], ["garlic", "Garlic", ["autumn", "winter"], 6, 3, 0, 12, 12], ["kale", "Kale", ["autumn", "winter"], 4, 2, 3, 10, 10],
+    ["wheat", "Wheat", ["spring"], 4, 3, 0, 8, 8], ["barley", "Barley", ["spring"], 4, 3, 0, 8, 8], ["beans", "Beans", ["spring", "autumn"], 4, 4, 2, 4, 10], ["cabbage", "Cabbage", ["spring", "autumn"], 4, 2, 0, 12, 10],
+    ["turnip", "Turnip", ["spring", "summer", "autumn"], 4, 3, 0, 7, 8], ["hops", "Hops", ["summer"], 4, 2, 3, 11, 12],
+    ["potato", "Potato", ["spring"], 5, 3, 0, 12, 10], ["carrot", "Carrot", ["spring", "autumn"], 4, 3, 0, 8, 8], ["radish", "Radish", ["spring", "autumn"], 3, 2, 0, 9, 6], ["lettuce", "Lettuce", ["spring", "autumn"], 3, 2, 0, 10, 6],
+    ["peas", "Peas", ["spring"], 5, 3, 2, 6, 10], ["strawberry", "Strawberry", ["spring"], 6, 2, 3, 14, 20], ["onion", "Onion", ["spring"], 5, 3, 0, 10, 8], ["beet", "Beet", ["spring", "autumn"], 4, 2, 0, 11, 8],
+    ["parsnip", "Parsnip", ["spring"], 4, 2, 0, 13, 8], ["cauliflower", "Cauliflower", ["spring"], 6, 1, 0, 48, 16], ["tulip", "Tulip", ["spring"], 4, 1, 0, 28, 14], ["rose", "Rose", ["spring", "summer"], 5, 1, 4, 26, 18],
+    ["tomato", "Tomato", ["summer"], 6, 3, 3, 9, 16], ["pepper", "Pepper", ["summer"], 6, 2, 3, 13, 16], ["chili", "Chili", ["summer"], 5, 3, 3, 9, 14], ["corn", "Corn", ["summer"], 7, 2, 4, 11, 16],
+    ["watermelon", "Watermelon", ["summer"], 8, 1, 0, 64, 24], ["melon", "Melon", ["summer"], 7, 1, 0, 52, 20], ["cucumber", "Cucumber", ["summer"], 5, 3, 2, 6, 12], ["eggplant", "Eggplant", ["summer"], 6, 2, 3, 12, 14],
+    ["zucchini", "Zucchini", ["summer"], 5, 3, 2, 6, 10], ["sunflower", "Sunflower", ["summer"], 6, 2, 0, 18, 12], ["blueberry", "Blueberries", ["summer"], 7, 4, 3, 7, 24], ["sweetpotato", "Sweet potato", ["summer"], 6, 3, 0, 13, 12],
+    ["pumpkin", "Pumpkin", ["autumn"], 8, 1, 0, 70, 24], ["squash", "Squash", ["autumn"], 6, 2, 0, 20, 14], ["broccoli", "Broccoli", ["autumn"], 5, 2, 0, 17, 12], ["redcabbage", "Red cabbage", ["autumn"], 5, 2, 0, 18, 12],
+    ["grapes", "Grapes", ["autumn"], 7, 3, 3, 10, 24], ["celery", "Celery", ["autumn"], 5, 2, 0, 14, 10],
+    ["leek", "Leek", ["autumn", "winter"], 6, 2, 0, 18, 12], ["garlic", "Garlic", ["autumn", "winter"], 6, 3, 0, 14, 12], ["kale", "Kale", ["autumn", "winter"], 4, 2, 3, 10, 10],
   ];
   for (const [id, name, sow, days, yields, regrow, price, seed] of C) {
     CM.CROPS[id] = Object.assign(CM.CROPS[id] || {}, { name, sow, yields, days, regrow, price, seedPrice: seed, winter: sow.includes("winter") });

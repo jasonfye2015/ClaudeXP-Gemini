@@ -131,6 +131,16 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## The South Fields (v19.0 - v19.5)
+
+The bowl under the south wall was the city's kitchen garden when the city was a city: the palace's cooks grew there,
+and the stone edges of the old beds are still under the grass. It went to grass the year the king stopped eating
+(Ysolde can tell you which year, if anyone asks her). Turning it again is the first thing the hill has grown for
+itself since. The farmer's hand says the earth there is the best on the hill, "because nobody's taken anything out of
+it for two hundred years", and the field hands he sends up from the Glade say the same and then argue about the
+rhubarb. The seeds the party brings back from below grow there as if they'd been waiting: the Root dreams in the
+city's stuff, and some of the city's stuff was always seed.
+
 ## The tongue of the last bell (v18.8)
 
 The thread that runs through every place. The portals in the Keep-yard stand round the shaft's mouth, and they do not
