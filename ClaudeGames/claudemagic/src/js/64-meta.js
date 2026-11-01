@@ -601,8 +601,7 @@ Object.assign(CM.Game.prototype, {
         CM.upgradeHero(hero);
         CM.recompute(hero);
         hero.pending += 1;
-        this.sound("level");
-        this.emit("fx", { kind: "levelup", hero });
+        this.emit("fx", { kind: "levelup", hero, level: hero.level, real: true });   // (its own jingle and fireworks: 76zzzc-levelup.js)
         this.say(`${hero.name} reaches level ${hero.level}! A boon is theirs to choose (press ${this.party.indexOf(hero) + 1}).`);
       }
     }

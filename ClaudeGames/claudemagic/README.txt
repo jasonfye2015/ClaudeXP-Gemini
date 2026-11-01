@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A level gained (the sixty-sixth big update - v18.0)
+  (src/js/76zzzc-levelup.js; 62-combat.js and 64-meta.js mark a real level gained, 64l-claudeablo.js calls it too)
+  Every level gained - in a fight, at camp, home from the Mage Tower, the cave or the Fortress, at the Joker's tables,
+  or in Claudeablo - has its own seven-tone jingle (G C E G, E G, a high C held with a shimmer, on a bell voice) and
+  its own fireworks on the hero's card: small rockets behind it in gold and the hero's colour, sparks off its edges, the
+  border running with light, and "Level N!" rising off it. No window to close. Heroes levelling together take turns
+  under one jingle; when the party bar isn't showing, the burst goes up at the top of the view. Reduced motion: the
+  border glows only.
+
 The floor's spoils (the sixty-fifth big update - v17.9)
   (src/js/64zzx-spoils.js; shown on the result card, 76zzp-controls.js)
   Time at the tables now counts like time in the dungeon. Every play (worth two tickets) and every ticket won by

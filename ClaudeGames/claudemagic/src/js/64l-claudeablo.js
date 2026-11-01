@@ -491,7 +491,7 @@ AB.World = class {
     m.dead = true; m.anim = 0; m.pose = "dead"; const p = this.player; p.xp += m.xp; this.xpGained = (this.xpGained || 0) + m.xp; this.drops(m); this.ev("kill", { boss: m.boss, kind: m.kind });
     if (m.kind === "diablo") { this.flags.diablo_dead = true; this.wonAt = this.time; this.say("Vorthak the Undying is undone!", "#F0C060"); for (const m2 of this.monsters) if (!m2.dead) this.kill(m2); }
     else if (m.boss) this.say(`${m.name} is dead!`, "#F0C060");
-    while (p.xp >= p.nextLevelXp()) { p.xp -= p.nextLevelXp(); p.level += 1; p.points += 5; p.recalc(); p.hp = p.maxhp; p.mana = p.maxmana; this.say(`You have reached level ${p.level}! (5 points to spend - press C)`, "#F0C060"); this.fx("level", { x: p.x, y: p.y, ttl: 1.2 }); this.ev("level"); }
+    while (p.xp >= p.nextLevelXp()) { p.xp -= p.nextLevelXp(); p.level += 1; p.points += 5; p.recalc(); p.hp = p.maxhp; p.mana = p.maxmana; if (CM.soloLevelFlourish) CM.soloLevelFlourish(p.name || "You", p.level); this.say(`You have reached level ${p.level}! (5 points to spend - press C)`, "#F0C060"); this.fx("level", { x: p.x, y: p.y, ttl: 1.2 }); this.ev("level"); }
   }
   drops(m) {
     const rnd = this.rnd, ilvl = Math.max(1, m.mlevel), n = m.boss ? 3 : m.champion ? 1 : rnd.random() < 0.16 ? 1 : 0;
