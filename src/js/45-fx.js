@@ -90,7 +90,7 @@ CM.Effects = class {
           put(e, p.x, p.y, p.z, p.size, e.layer, 1 - k * k);
         }
       } else if (e.type === "ring") {
-        out.push({ x: e.at[0] - 0.5, y: e.at[2] - 0.5, flat: true, w: Math.max(0.05, e.to * CM.ease(k)), layer: e.layer, alpha: 1 - k, glow: 1 });
+        out.push({ x: e.at[0] - 0.5, y: e.at[2] - 0.5, flat: true, w: Math.max(0.05, e.to * CM.ease(k)), layer: e.layer, alpha: 1 - k, glow: e.glow });
       } else if (e.type === "flare") {
         put(e, e.at[0], e.at[1] + e.rise * k, e.at[2], e.size * (1 + k * e.grow), e.layer, k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7);
       } else if (e.type === "rain") {

@@ -437,9 +437,12 @@ window.addEventListener("DOMContentLoaded", () => {
       const g = CM.groundAt(fl, x, y), h = CM.hashSeed(`${game.seed}:puddle:${CM.dayOf(game)}:${x}:${y}`);
       if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`] && ["dirt", "cobbles", "flags"].includes(g) && h % 4 === 0) water.push({ x, y, phase: h % 3, w: 0.35 + (h % 7) * 0.04, dx: ((h >> 4) % 40 - 20) / 100, dz: ((h >> 9) % 40 - 20) / 100 });
     }
-    for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3 });
+    for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3, flow: fl.number === -1 ? 1 : 0 });   // (v24.1: the Wood's river runs)
     decor = { key, torches, water };
     return decor;
+  }
+  CM.waterHere = (x, y) => { const fl = game.floor; if (!fl) return false; return decorations(fl).water.some((w) => w.x === x && w.y === y); };   // (v24.1: is the party standing in water)
+  {
   }
 
   // the things that move between two states: when each was seen to change, and which way a door swings (away from
@@ -594,7 +597,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
     const frozen = fl.number === -1 && CM.weather(game) === "snow";      // (the river frozen, as the rules have it: crossed anywhere)
-    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
+    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true, flash: w.flow || 0 });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];

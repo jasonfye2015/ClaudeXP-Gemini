@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v24.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v24.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1482,7 +1482,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "24.0", built: "2026-11-01" };
+const CM = window.CM = { version: "24.1", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9045,8 +9045,13 @@ void main() {
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
-    vec2 p = vWorld.xz; float tm = uTime;
-    vec3 wn = normalize(vec3(0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3), 1.0, 0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9)));
+    vec2 p = vWorld.xz; float tm = uTime, flow = vFx.x;                  // (v24.1: vFx.x on water is its current - the river's; 0 still)
+    if (flow > 0.0) p.y -= tm * 0.6 * flow;                                 // (the ripples carried downstream)
+    float amp = flow > 0.0 ? 1.0 + 0.4 * flow : 0.3 + 0.7 * uWet;           // (still water lies calm and mirrors the sky; rain or a current stirs it)
+    vec3 wn = normalize(vec3(amp * (0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3)), 1.0, amp * (0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9))));
+    if (uWet > 0.0) { vec2 g = vWorld.xz * 2.5, id = floor(g), f = fract(g) - 0.5, c = (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.6, q = f - c;   // (v24.1: the rain's rings, one a cell, each in its own time)
+      float ph = fract(tm * 0.8 + hash(id)), rd = length(q), ring = exp(-pow((rd - ph * 0.45) * 28.0, 2.0)) * (1.0 - ph) * uWet;
+      wn = normalize(wn + vec3(q.x, 0.0, q.y) / max(rd, 0.001) * ring * 0.7); }
     vec3 v = normalize(uEye - vWorld), r = reflect(-v, wn);
     float fr = 0.12 + 0.5 * pow(1.0 - max(dot(v, wn), 0.0), 3.0);
     float r2w = uReach * uReach, lw = uAmbient + uFlicker * r2w / (r2w + 2.2 * d * d + 0.4 * d);
@@ -9677,7 +9682,7 @@ CM.Effects = class {
           put(e, p.x, p.y, p.z, p.size, e.layer, 1 - k * k);
         }
       } else if (e.type === "ring") {
-        out.push({ x: e.at[0] - 0.5, y: e.at[2] - 0.5, flat: true, w: Math.max(0.05, e.to * CM.ease(k)), layer: e.layer, alpha: 1 - k, glow: 1 });
+        out.push({ x: e.at[0] - 0.5, y: e.at[2] - 0.5, flat: true, w: Math.max(0.05, e.to * CM.ease(k)), layer: e.layer, alpha: 1 - k, glow: e.glow });
       } else if (e.type === "flare") {
         put(e, e.at[0], e.at[1] + e.rise * k, e.at[2], e.size * (1 + k * e.grow), e.layer, k < 0.3 ? 1 : 1 - (k - 0.3) / 0.7);
       } else if (e.type === "rain") {
@@ -38265,6 +38270,20 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const ps0 = CM.plotSprites; if (ps0) CM.plotSprites = (game, key, x, y) => ps0(game, key, x, y).map((s) => (/^crop|^crops/.test(s.layer) && !s.flat ? Object.assign(s, { sway: 0.06 * (s.h || 0.6) }) : s));
 }
 
+// ---- 76zzzzd-water.js ----
+"use strict";
+// Living water (v24.1, UPGRADE_PLAN_19.md): rings spread where the party wades - in the river, a flooded vault, the
+// Undercroft, a puddle on the road - and a few drops fly; the shader does the rest (40-render.js): the Wood's river
+// runs, its ripples carried downstream; still water lies calm and mirrors the sky; rain rings every pool and puddle.
+{ const wade = (K, x, y) => {
+    if (CM.reducedMotion || !K || !K.renderer || !K.renderer.ok) return;
+    const f = [Math.sin(K.renderer.yaw), -Math.cos(K.renderer.yaw)], at = [x + 0.5 + f[0] * 0.35, 0, y + 0.5 + f[1] * 0.35];
+    K.fxs.ring({ at, to: 1.1, ms: 900, glow: 0.35 }); setTimeout(() => K.fxs.ring({ at, to: 0.7, ms: 800, glow: 0.3 }), 180);
+    K.fxs.burst({ at: [at[0], 0.05, at[2]], layer: "fx:frost", n: 5, size: 0.04, speed: 0.6, up: 1.2, gravity: 4, ms: 420 });
+  };
+  const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.waterBound && this.game && this.game.on && CM.fxKit) { this.waterBound = true; this.game.on("moved", (x, y) => { if (CM.waterHere && CM.waterHere(x, y)) wade(CM.fxKit, x, y); }); } return rf0.apply(this, a); };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -38785,9 +38804,12 @@ window.addEventListener("DOMContentLoaded", () => {
       const g = CM.groundAt(fl, x, y), h = CM.hashSeed(`${game.seed}:puddle:${CM.dayOf(game)}:${x}:${y}`);
       if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`] && ["dirt", "cobbles", "flags"].includes(g) && h % 4 === 0) water.push({ x, y, phase: h % 3, w: 0.35 + (h % 7) * 0.04, dx: ((h >> 4) % 40 - 20) / 100, dz: ((h >> 9) % 40 - 20) / 100 });
     }
-    for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3 });
+    for (const dc of fl.decor || []) if (dc.kind === "water" && !water.some((w) => w.x === dc.x && w.y === dc.y)) water.push({ x: dc.x, y: dc.y, phase: CM.hashSeed(`${game.seed}:ripple:${dc.x}:${dc.y}`) % 3, flow: fl.number === -1 ? 1 : 0 });   // (v24.1: the Wood's river runs)
     decor = { key, torches, water };
     return decor;
+  }
+  CM.waterHere = (x, y) => { const fl = game.floor; if (!fl) return false; return decorations(fl).water.some((w) => w.x === x && w.y === y); };   // (v24.1: is the party standing in water)
+  {
   }
 
   // the things that move between two states: when each was seen to change, and which way a door swings (away from
@@ -38942,7 +38964,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const d = decorations(fl), tframe = Math.floor(now / 120), wframe = Math.floor(now / 420);
     for (const t of d.torches) if (near(t.x, t.y)) out.push({ x: t.x, y: t.y, face: t.face, layer: `torch${(tframe + t.phase) % 3}`, w: 0.26, h: 0.44, lift: 0.12, glow: 0.85 });
     const frozen = fl.number === -1 && CM.weather(game) === "snow";      // (the river frozen, as the rules have it: crossed anywhere)
-    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true });   // (the water shader: 40-render.js)
+    for (const w of d.water) if (near(w.x, w.y)) out.push(frozen && !w.w ? { x: w.x, y: w.y, flat: true, w: 0.99, layer: "ice" } : { x: w.x, y: w.y, dx: w.dx || 0, dz: w.dz || 0, flat: true, w: w.w || 0.98, layer: `water${(wframe + w.phase) % 3}`, alpha: 0.75, water: true, flash: w.flow || 0 });   // (the water shader: 40-render.js)
     if (game.mode === "combat") {
       const living = game.attackable();
       const fwdv = [Math.sin(renderer.yaw), -Math.cos(renderer.yaw)];
