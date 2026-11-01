@@ -1086,3 +1086,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .hoopla .paytable tr.won td { background: rgba(240,192,64,0.2); color: #FFE070; }
 .hoopla .skballs { display: flex; gap: 6px; margin: 6px 0; } .hoopla .skballs span.ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
 .hoopla .sktotal { font-size: 18px; margin-bottom: 6px; } .hoopla .sktotal b { color: #FFE070; }
+/* ---- v15.9: Gryphon Joust, the Courier's Round, the Undercroft Sprint, the Rune Bastion, the Vault Runes ---- */
+.vault .vrlevels { flex-wrap: wrap; gap: 4px; } .vault .vrlevels button { min-width: 44px; } .vault .vrlevels button.done { border-color: #C89A30; }
+.vault .vrwrap { display: flex; justify-content: center; margin: 6px 0; } .vault .vrcanvas { border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); cursor: pointer; }
+.bastion .arccanvas { cursor: crosshair; }

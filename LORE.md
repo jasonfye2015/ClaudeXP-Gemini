@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Under the floor (v15.9)
+
+Everything the Joker owns goes down further than it should. Below the cellars there is a cavern with a lake of fire
+where gryphon riders joust for the purse, a long undercroft the house pays people to run, a row of dwarf vaults with
+rune-locks nobody has the key to, and - through a painted door - a valley with a little bastion that the goblins come
+for every evening. Up on Market Row, a courier carries the house newsletter.
+
 ## The luck wing and the stalls (v15.8)
 
 The house bought a travelling fair's leftovers for the price of a cart: a row of pin cabinets from somewhere far east,

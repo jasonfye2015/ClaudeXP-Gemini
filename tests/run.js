@@ -5192,6 +5192,34 @@ test("Hoop-la and the Crossbow Range: a ring over a neck scores its bottle and t
   L.got = L.need; L.update(0.01); assert.strictEqual(L.stage, "clear"); const M = new CB.Level(1, 4); M.t = 0.001; M.update(0.01); assert.strictEqual(M.lives, 1);
 });
 
+test("Gryphon Joust, the Courier's Round and the Undercroft Sprint: the higher lance unhorses and leaves an egg, the lower falls; a scroll into a lit box delivers and a dog throws you; a pit or spikes knock the runner, a jump clears spikes, a slide passes a beam; each clears at its end", () => {
+  const CM = load(), GJ = CM.GJ; let L = new GJ.Level(1, 5); L.spawnQ = 0; L.foes = []; const P = L.p; P.guard = 0; P.x = 200; P.y = 100; P.vy = 0;
+  L.foes.push({ x: 200, y: 115, vx: 0, vy: 0, face: 1, ai: 9, dir: 0, kind: "bounder" }); L.update(0.001); assert.strictEqual(L.foes.length, 0); assert.strictEqual(L.score, 500); assert.strictEqual(L.eggs.length, 1);
+  L.eggs[0].t = 5; L.eggs[0].x = P.x; L.eggs[0].y = P.y; L.update(0.001); assert.strictEqual(L.score, 750); assert.strictEqual(L.stage, "clear");
+  L = new GJ.Level(1, 6); L.spawnQ = 0; L.p.guard = 0; L.p.x = 200; L.p.y = 130; L.foes = [{ x: 200, y: 115, vx: 0, vy: 0, face: 1, ai: 9, dir: 0, kind: "hunter" }]; L.update(0.001); assert.strictEqual(L.lives, GJ.lives - 1); assert.ok(L.p.dead > 0);
+  const CO = CM.CO; let C = new CO.Level(1, 7); const h = C.houses.find((q) => q.sub); C.scroll = (CO.H - 80) - (h.y + 50); C.p.guard = 0; C.obsT = 99; C.throwIt(); for (let k = 0; k < 30; k++) { C.scroll -= 70 * (1 + 8 / 70) * 0.01; C.update(0.01); } assert.ok(h.done, "delivered"); assert.strictEqual(C.got, 1); assert.ok(C.score > 100);
+  C = new CO.Level(1, 8); C.p.guard = 0; C.obsT = 99; C.obs = [{ kind: "dog", x: C.p.x, y: (CO.H - 70) - C.scroll, vx: 0 }]; C.update(0.001); assert.strictEqual(C.lives, CO.lives - 1);
+  C = new CO.Level(1, 9); C.obsT = 99; C.got = C.need; C.scroll = C.dist; C.update(0.001); assert.strictEqual(C.stage, "clear");
+  C = new CO.Level(1, 9); C.obsT = 99; C.got = 0; C.scroll = C.dist; C.update(0.001); assert.strictEqual(C.lives, CO.lives - 1, "short of the round");
+  const US = CM.US; let R = new US.Level(1, 3); R.nextAt = 1e9; R.things = [{ kind: "spikes", x: R.x + US.px + 30, w: 26 }]; for (let k = 0; k < 20; k++) R.update(0.01); assert.strictEqual(R.lives, US.lives - 1, "spikes");
+  R = new US.Level(1, 3); R.nextAt = 1e9; R.things = [{ kind: "spikes", x: R.x + US.px + 50, w: 26 }]; R.jump(); for (let k = 0; k < 30; k++) R.update(0.01); assert.strictEqual(R.lives, US.lives, "jumped the spikes");
+  R = new US.Level(1, 3); R.nextAt = 1e9; R.things = [{ kind: "beam", x: R.x + US.px + 20, w: 26 }]; R.slide(); for (let k = 0; k < 20; k++) R.update(0.01); assert.strictEqual(R.lives, US.lives, "slid under the beam");
+  R = new US.Level(1, 3); R.nextAt = 1e9; R.things = [{ kind: "pit", x: R.x + US.px - 10, w: 200 }]; for (let k = 0; k < 60; k++) R.update(0.01); assert.strictEqual(R.lives, US.lives - 1, "down the pit");
+  R = new US.Level(1, 3); R.nextAt = 1e9; R.things = []; R.x = R.len - 1; R.update(0.01); assert.strictEqual(R.stage, "clear");
+});
+
+test("the Rune Bastion: the road is one joined line; runes go only on the grass and cost mana; a fire and a frost rune by the bend hold the first wave, and the runes and mana carry to the next; the Vault Runes: a lock opens, pays gold the first time and a card at the third, tickets each time", () => {
+  const CM = load(), RBT = CM.RBT; for (let i = 1; i < RBT.cells.length; i++) { const [a, b] = RBT.cells[i - 1], [c, d] = RBT.cells[i]; assert.strictEqual(Math.abs(a - c) + Math.abs(b - d), 1); }
+  const g = new CM.Game(); g.newGame("rb-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 500; assert.ok(!g.arcStart("bastion", 10).error); const L = g.arcLevel("bastion");
+  assert.ok(L.build("fire", 5, 5), "not on the road"); assert.strictEqual(L.build("fire", 4, 6), ""); assert.strictEqual(L.build("frost", 6, 4), ""); assert.ok(L.build("arcane", 3, 3), "not enough mana"); assert.strictEqual(L.mana, 25);
+  for (let k = 0; k < 6000 && L.stage === "play"; k++) L.update(0.02); assert.strictEqual(L.stage, "clear"); const m = L.mana; const out = g.arcCheck("bastion"); assert.strictEqual(out.cleared, 1); const L2 = g.arcLevel("bastion"); assert.strictEqual(L2.towers.length, 2); assert.strictEqual(L2.mana, m); assert.strictEqual(L2.n, 2);
+  const VR = CM.VR, h = new CM.Game(); h.newGame("vr-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const solve = (Lk) => { const N = Lk.w * Lk.h; for (let mask = 0; mask < 1 << N; mask++) { const on = Lk.on.map((r) => r.slice()); for (let i = 0; i < N; i++) if (mask >> i & 1) for (const [x, y] of Lk.nb(i % Lk.w, Math.floor(i / Lk.w))) on[y][x] = !on[y][x]; if (on.every((r) => r.every(Boolean))) { const out = []; for (let i = 0; i < N; i++) if (mask >> i & 1) out.push([i % Lk.w, Math.floor(i / Lk.w)]); return out; } } return null; };
+  assert.strictEqual(h.vrNew(5).n, 1, "only the next vault"); const gold0 = h.gold, tk0 = h.tkStore().n; let r; for (const [x, y] of solve(h.vrLive)) r = h.vrTouch(x, y); assert.ok(r.open); assert.strictEqual(r.gold, VR.gold(1)); assert.ok(h.gold - gold0 >= VR.gold(1)); assert.ok(h.tkStore().n - tk0 >= VR.tickets(1));
+  h.vrNew(1); for (const [x, y] of solve(h.vrLive)) r = h.vrTouch(x, y); assert.ok(r.open && !r.gold, "gold only the first time");
+  for (const n of [2, 3]) { h.vrNew(n); for (const [x, y] of solve(h.vrLive)) r = h.vrTouch(x, y); } assert.ok(r.open && r.card, "a card at the third vault"); assert.strictEqual(h.vrNew(9).n, 4);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

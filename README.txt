@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Four cabinets and a vault (the forty-fifth big update - v15.9)
+  Four more arcade cabinets on the common works and a free puzzle (src/js/64zzf-arc2.js; 76zzb-76zzf):
+  - Gryphon Joust: gryphon riders over a lava lake - flap and steer; the higher lance unhorses, the lower falls; catch
+    the egg a fallen rider leaves before it hatches something worse. A wave cleared is a level.
+  - The Courier's Round: ride up Market Row throwing scrolls into the lit houses' letter-boxes, dodging dogs, carts and
+    barrels; deliver to most of the street's subscribers to clear it.
+  - The Undercroft Sprint: an endless run through the tunnels - jump pits and spikes, slide under beams, duck bats,
+    gather coins; each stretch reached clears a level and the pace rises.
+  - The Rune Bastion: tower defence - set fire (bursts), frost (slows) and arcane (long reach) runes by the goblins'
+    road with the mana the fallen drop, strengthen them to three pips; runes and mana carry from wave to wave.
+  - The Vault Runes: a free rune-lock puzzle (lights-out) - touch a rune to turn it and its neighbours, light them all;
+    tickets each vault, gold the first time, a card every third vault; corners join in from vault 8.
+
 The luck and the fair (the forty-fourth big update - v15.8)
   A new Luck shelf and two more fairground stalls (src/js/64zzd-luck.js, 64zze-fair2.js; 76zv-76zza):
   - The Pin Garden: pachinko - balls a gold apiece, shot with a handle through brass pins into start pockets, windmill
