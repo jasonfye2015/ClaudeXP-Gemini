@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Day and night life (v24.3, UPGRADE_PLAN_19.md phase 3)
+  (src/js/76zzzzf-nightlife.js; 26-surface.js, 40-render.js, 80-main.js)
+  - The town keeps hours: its windows light from half past six in the evening, most are lit by eight, and they go dark
+    one by one from ten as the town goes to bed; a few come back before dawn for the early risers.
+  - A lamplighter walks the streets from seven, from the lamp nearest the Square to the next, lighting each with the
+    flame on his pole; by nine they are all lit. At five he goes round again and puts them out. (The clock is the
+    game's - a step a minute - so the lamps come on as the party walks the evening.)
+  - Moths gather about the lit lamps; bats flit over the roofs and the trees at dusk; in the Wood at night an owl
+    calls and passes over. The leaves, the snow and the rest of the air now drift with the day's wind.
+
 Seasons that turn (v24.2, UPGRADE_PLAN_19.md phase 2)
   (src/js/76zzzze-seasons.js; 26-surface.js, 30-art.js, 36-looks.js, 40-render.js, 80-main.js)
   - A run's season comes in over its first days instead of all at once: on the first day only a third of the trees

@@ -244,7 +244,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade);
-        if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 10 < 7) {   // a window lit for the night
+        if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 100 < (opts.night === true ? 0.7 : opts.night) * 100) {   // a window lit for the night (v24.3: opts.night the share lit - fewer as the town goes to bed)
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
             const P = [[ax0 + dx * q, y0, az0 + dy * q], [ax1 + dx * q, y0, az1 + dy * q], [ax1 + dx * q, y1, az1 + dy * q], [ax0 + dx * q, y1, az0 + dy * q]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];

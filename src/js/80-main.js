@@ -391,7 +391,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const towerNear = fl.number === -1 && Math.abs(fl.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(fl.pos[1] - CM.MAGE_TOWER.at[1]) <= 9;
     const kinds = budget ? CM.airKinds({ towerNear, surface, band: CM.themeIndex(fl.number >= 1 ? fl.number : 1), season: CM.season(game), weather, night: CM.isNight(game), hour: CM.hourOf(game), town: fl.number === 0 || (fl.number === -1 && Math.abs(fl.pos[0] - CM.CABIN.centre[0]) + Math.abs(fl.pos[1] - CM.CABIN.centre[1]) <= 12) }) : [];
     const scale = detail === "high" ? 1 : 0.6;
-    air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
+    air.step(Math.min(dt, 0.1), { kinds: kinds.map((k) => ({ id: k.id, rate: k.rate * scale })), eye: renderer.eye, budget, chimneys, wind: renderer.wind ? [renderer.wind.dir[0] * renderer.wind.k * 1.3, renderer.wind.dir[1] * renderer.wind.k * 1.3] : CM.windOf(weather), open: surface ? null : (x, y) => CM.isOpen(fl, x, y) });
   }
 
   // the lights about the party: the wall torches, the lair's embers, crystals and fungus, the props that glow, and the
@@ -407,7 +407,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!CM.themeFor(fl.number).sky || CM.isNight(game)) for (const t of decorations(fl).torches) { if (Math.abs(t.x - px) + Math.abs(t.y - py) > 10) continue; const [dx, dy] = CM.DIRS[t.face]; push("torch", t.x + 0.5 + dx * 0.4, t.y + 0.5 + dy * 0.4); }
     for (const dc of fl.decor || []) if (LIGHT[dc.kind] && Math.abs(dc.x - px) + Math.abs(dc.y - py) <= 10) push(dc.kind, dc.x + 0.5, dc.y + 0.5);
     const night = CM.isNight(game);
-    for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && night)) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
+    for (const p of renderer.standing) { const P = CM.PROPS[p.id] || {}; if (LIGHT[p.id] && (P.glow || (P.night && (CM.lampOn ? CM.lampOn(game, p) : night))) && Math.abs(p.x - px) + Math.abs(p.y - py) <= 10) push(p.id, p.x + 0.5 + p.dx, p.y + 0.5 + p.dz); }
     if (CM.extraLights) CM.extraLights(game, fl, out, renderer);       // (v22.0: the court, the cabinet, the stones, the lit windows, a spell's flare: 76zzzu-light.js)
     return out.sort((a, b) => a.d - b.d).slice(0, 24);
   }
@@ -468,7 +468,7 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
       for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
     }
-    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (lit && CM.PROPS[p.id].night ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
+    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (CM.PROPS[p.id].night && (CM.lampOn ? CM.lampOn(game, p) : lit) ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {
@@ -622,6 +622,7 @@ window.addEventListener("DOMContentLoaded", () => {
           dx: place.dx + fwdv[0] * away, dz: place.dz + fwdv[1] * away, tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(off) }));
       });
     }
+    if (CM.lifeSprites) out.push(...CM.lifeSprites(game, fl, now));      // (v24.3: the lamplighter on his round: 76zzzzf-nightlife.js)
     out.push(...fxs.sprites(now));                                      // what flies and bursts, this frame
     out.push(...air.sprites(now / 1000));                               // what drifts in the air
     return { out, hud };
@@ -1098,8 +1099,8 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky ? (CM.snowDepth ? CM.snowDepth(game) : CM.snowLying(game) ? 1 : 0) : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
-        { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
-          if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
+        { const night = renderer.sky && (game.floor.number === 0 || game.floor.number === -1) ? (CM.litShare ? CM.litShare(game) : renderer.sky.night ? 0.7 : 0) : 0;   // the town's windows lit at dusk, and out as it goes to bed (v24.3: a share): the floor's mesh made again
+          if (night !== (renderer.night || 0)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.wind = CM.windFor && game.floor ? CM.windFor(game, renderer) : null;   // (v24.0: 76zzzzc-wind.js)
         renderer.bloom = game.settings.glow === "off" || detailNow() === 0 ? 0 : game.settings.glow === "strong" ? 1.6 : 1.0;   // (v22.5: the glow, Settings; none at Low detail)
         renderer.grading = CM.gradeFor && game.floor ? CM.gradeFor(game, renderer) : null;   // (v22.4: the band's grade, the hour's colour, frost: 76zzzx-grade.js)
