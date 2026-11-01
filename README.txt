@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The South Fields (the seventy-fifth big update - v19.0, UPGRADE_PLAN_14.md phase 0)
+  (src/js/69j-fields.js, 76zzzj-fields.js, 36c-cropart.js; the crops' pictures in 35b-croppack.js from tools/cropsheet.py)
+  - The open bowl under the town's south wall becomes farmland: a new village building with four levels (24, 48, 72
+    and 100 plots), the later ones wanting island timber and stone. A seed shed at its east end, a trough at its west.
+  - Turn a plot, sow it from a seed in the pack, water it from the can (ten waterings, filled at the trough), pick it
+    when it's ripe. Space on a plot does its next job; the fields' window (the shed, or "The fields" in the menu) is
+    the whole board at once, with "Water what the can will" and "Pick everything ripe".
+  - A crop grows a day for every dawn the party sees after a day it was watered, and rain waters every plot. In winter
+    only kale, leeks and garlic grow. Peas, beans, tomatoes, peppers, corn, berries, grapes and others stand and fruit
+    again after picking. A picked plant sometimes goes to seed and gives one back.
+  - Thirty-nine crops (the Glade farm's six among them, and its seeds are the same seeds), each with its seasons, days,
+    yield and price; the shed sells the season's seeds (half price at the Sowing).
+  - The plants are real pixel art: [LPC] Crops (CC-BY-SA 3.0+ / GPL 3.0+, src/art/CREDITS-crops.txt) and josehzz's
+    Farming Crops (CC0), four growth stages each, two plants a plot in the 3-D view and on the window's board.
+
 The tongue of the last bell (the seventy-fourth big update - v18.8)
   (src/js/69i-thread.js, 76zzzi-thread.js; the canon in LORE.md)
   One story through every part of the world, in a new Journal page, "The last bell". In the Undercroft's bell-yard the

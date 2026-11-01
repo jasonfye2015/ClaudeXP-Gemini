@@ -2531,8 +2531,8 @@ test("the garden, the chronicler and the square: a bed planted grows by one a ru
 
 test("growth: a building is drawn by its level (a foundation, a frame, a roof, a sign, a lit window); nine buildings' renown re-tuned, and three renown for every door opened before a descent; the well's stones carry the hill's chapter in order; what the runs brought back is on the walls", () => {
   const CM = load();
-  assert.strictEqual(Object.keys(CM.VILLAGE).length, 10, Object.keys(CM.VILLAGE).join(","));   // (nine buildings, and the farm)
-  const total = Object.values(CM.VILLAGE).reduce((s, b) => s + b.costs.reduce((a, c) => a + c, 0), 0); assert.ok(total > 2500 && total < 5000, `the town costs ${total} renown in all`);
+  assert.strictEqual(Object.keys(CM.VILLAGE).length, 11, Object.keys(CM.VILLAGE).join(","));   // (nine buildings, the farm and the South Fields)
+  const total = Object.values(CM.VILLAGE).reduce((s, b) => s + b.costs.reduce((a, c) => a + c, 0), 0); assert.ok(total > 2500 && total < 6000, `the town costs ${total} renown in all`);   // (6,000 since the South Fields; every area adds renown since v18.7)
   assert.ok(CM.VILLAGE.home.costs[0] <= CM.VILLAGE.guildhall.costs[0] && CM.VILLAGE.chronicler.costs[0] > CM.VILLAGE.home.costs[1], "the home first, the chronicler's house late");
   for (const B of Object.values(CM.VILLAGE)) { assert.strictEqual(B.costs.length, B.levels.length, B.name); for (let i = 1; i < B.costs.length; i++) assert.ok(B.costs[i] > B.costs[i - 1], `${B.name} climbs`); }
   // the drawn stage, by the level against the most
@@ -5561,6 +5561,31 @@ test("the tongue of the last bell: one story through every place - a making foun
   g.enterFloor(1, "stairs"); g.mode = "explore"; const lich = { name: "The Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true, xp: 1, gold: 1, speed: 10 };
   g.floor.things["2,2"] = { type: "monsters", group: [lich] }; g.startCombat("2,2", g.floor.things["2,2"]); const b = g.foes.find((m) => m.boss); assert.strictEqual(b.hp, 240, "a fifth short");
   assert.ok(g.wmGoals().some((x) => x.area === "The last bell"));
+});
+
+test("the South Fields: the building lays out the plots on the town floor; turn, sow, water and pick; a watered day is a day grown, rain waters all, winter grows only the winter crops; some crops fruit again; the shed and the trough", () => {
+  const CM = load(), FD = CM.SOUTHFIELDS, g = new CM.Game(); g.newGame("fd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "spring";
+  assert.strictEqual(CM.fieldCells(1).length, 24); assert.strictEqual(CM.fieldCells(4).length, 100);
+  for (const L of [1, 2, 3, 4]) for (const [x, y] of CM.fieldCells(L)) assert.ok(CM.isOpen(g.floor, x, y), `plot ${x},${y} is open ground`);
+  assert.ok(/aren't laid out/.test(g.fieldTill("16,33")));
+  g.village.renown = 1000; assert.strictEqual(g.build("fields"), ""); assert.strictEqual(g.fieldsLevel(), 1); assert.strictEqual(g.floor.things["16,33"].type, "plot"); assert.strictEqual(g.floor.things[FD.shed.join(",")].type, "fieldshed");
+  assert.ok(/at the fields/.test(g.fieldTill("16,33")), "the work wants you there"); g.floor.pos = FD.shed.slice(); assert.ok(g.atFields());
+  const k = "16,33"; assert.strictEqual(g.fieldTill(k), ""); assert.strictEqual(CM.groundAt(g.floor, 16, 33), "tilled"); assert.ok(/No radish seed/.test(g.fieldSow(k, "radish")));
+  g.gold = 100; assert.strictEqual(g.fieldBuy("radish", 2), ""); assert.strictEqual(g.gold, 100 - 2 * g.seedPrice("radish")); assert.ok(/sown in/.test(g.fieldBuy("pumpkin", 1)) || /hasn't/.test(g.fieldBuy("pumpkin", 1)), "not in spring");
+  assert.strictEqual(g.fieldSow(k, "radish"), ""); assert.strictEqual(g.plotStage(k), "sown"); assert.ok(/no can/.test(g.fieldWater(k))); assert.strictEqual(g.fieldBuyCan(), ""); assert.strictEqual(g.fields().water, FD.can);
+  assert.strictEqual(g.fieldWater(k), ""); assert.strictEqual(g.fields().water, FD.can - 1); assert.ok(/already/.test(g.fieldWater(k)));
+  const dawn = (n) => { for (let i = 0; i < n; i++) g.fieldsDawn(9000 + i); }; const rainy = CM.weatherOf; CM.weatherOf = () => "clear";
+  dawn(1); assert.strictEqual(g.fields().plots[k].g, 1); dawn(1); assert.strictEqual(g.fields().plots[k].g, 1, "dry: no growth"); assert.strictEqual(g.fields().plots[k].dry, 1);
+  CM.weatherOf = () => "rain"; dawn(2); assert.strictEqual(g.plotStage(k), "ripe", "rain waters it: three days and ripe"); CM.weatherOf = () => "clear";
+  const n0 = g.bag.filter((i) => i.kind === "ingredient" && i.ingredient === "radish").length; assert.strictEqual(g.fieldPick(k), ""); assert.strictEqual(g.bag.filter((i) => i.kind === "ingredient" && i.ingredient === "radish").length - n0, 2);
+  assert.strictEqual(g.plotStage(k), "tilled", "a radish is pulled whole");
+  const k2 = "17,33"; g._fieldTill(k2); g.bag.push(CM.seed("peas")); assert.strictEqual(g.fieldSow(k2, "peas"), ""); CM.weatherOf = () => "rain"; dawn(5); assert.strictEqual(g.plotStage(k2), "ripe"); g.fieldPick(k2);
+  assert.strictEqual(g.plotStage(k2), "after", "peas stand and fruit again"); dawn(2); assert.strictEqual(g.plotStage(k2), "ripe", "in two days");
+  const k3 = "18,33"; g._fieldTill(k3); g.bag.push(CM.seed("radish")); g.fieldSow(k3, "radish"); g.season = "winter"; dawn(3); assert.strictEqual(g.fields().plots[k3].g || 0, 0, "winter: a radish doesn't grow");
+  const k4 = "19,33"; g._fieldTill(k4); g.bag.push(CM.seed("kale")); g.season = "autumn"; g.fieldSow(k4, "kale"); g.season = "winter"; dawn(4); assert.strictEqual(g.plotStage(k4), "ripe", "kale grows through the winter"); CM.weatherOf = rainy;
+  g.season = "spring"; const k5 = "20,33"; g.bag.push(CM.seed("carrot")); g.fields().pick = "carrot"; g.floor.pos = [20, 33]; g.use(); assert.strictEqual(g.plotStage(k5), "tilled", "Space: turned"); g.use(); assert.strictEqual(g.plotStage(k5), "sown", "Space: sown with the chosen seed"); g.use(); assert.ok(g.fields().plots[k5].w, "Space: watered");
+  g.fields().water = 0; g.floor.pos = FD.trough.slice(); g.use(); assert.strictEqual(g.fields().water, FD.can, "the trough fills the can");
+  const v = CM.store.get("village", {}); assert.ok(v.fields && v.fields.plots[k5], "kept with the village");
 });
 
 (async () => {
