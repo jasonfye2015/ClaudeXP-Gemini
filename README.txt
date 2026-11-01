@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Glyph Deep, measured (the eighty-second big update - v20.1, UPGRADE_PLAN_15.md phase 1)
+  (tools/glyphbot.js; the tuning at the top of src/js/64zzzc-glyph.js)
+  - Traps, hidden in the floor until stepped on and shown (^) after: a dart, a pit that holds you a turn or two, a
+    teleport, and a gong that wakes the whole level. One, and one more every four levels.
+  - The deep's own player (tools/glyphbot.js) plays it to measure it: it found levels past 8 far too hard and the
+    Unwritten unbeatable. Now monsters are a little under the level's number and fewer, the last level is the
+    Unwritten's alone (four others, two healing potions in its room), it writes one glyph at a time and only when
+    you're near, and hits a little softer. A hero of the level's own number reaches the stairs about 75 to 100% of
+    the time with a couple of potions; the Unwritten falls to about half the level-20 heroes and nearly all at 23.
+
 The Glyph Deep (the eighty-first big update - v20.0, UPGRADE_PLAN_15.md phase 0)
   (src/js/64zzzc-glyph.js the game, 69o-glyphdeep.js the cabinet's rules, 76zzzp-glyph.js the screen)
   - An arcade cabinet under a lean-to in a clearing north of the Wood's road: Space at it, choose who plays (one of the

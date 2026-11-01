@@ -5709,6 +5709,15 @@ test("the Glyph Deep: a cabinet in the Wood; one hero plays from any level reach
   r.hp = 1; r.pack.push({ name: "Healing Potion", kind: "heal", power: 30, value: 20 }); g.glyphAct("quaff", r.pack.length - 1); assert.ok(r.hp > 1 || r.over);
 });
 
+test("the Glyph Deep, measured: traps hidden till sprung (a dart, a pit that holds, a teleport, a gong that wakes the level); the deep's own player gets a hero of the level's own number down the early levels", () => {
+  const CM = load(), GD = CM.GLYPH; const g = new CM.Game(); g.newGame("gt-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const r = new CM.GlyphRun(g, 0, 8); assert.ok(r.traps.size >= 1); const hp = r.hp;
+  r.traps.set(`${r.x},${r.y}`, { kind: "dart", found: false }); r.spring(r.x, r.y); assert.ok(r.hp < hp && r.traps.get(`${r.x},${r.y}`).found, "a dart, and the trap known");
+  r.traps.set(`${r.x},${r.y}`, { kind: "pit", found: false }); r.spring(r.x, r.y); assert.strictEqual(r.stuck, 2); const at = [r.x, r.y]; r.act("move", [1, 0]); r.act("move", [-1, 0]); assert.ok(r.stuck === 0 || (r.x === at[0] && r.y === at[1]), "held a turn or two");
+  for (const m of r.mons) m.asleep = true; r.traps.set(`${r.x},${r.y}`, { kind: "gong", found: false }); r.spring(r.x, r.y); assert.ok(r.mons.every((m) => !m.asleep), "the gong wakes them");
+  const { play } = require("../tools/glyphbot.js"); let ok = 0; for (let s = 0; s < 4; s++) if (play(CM, 3, 3, s, { potions: 2, weapon: true }).ok) ok++; assert.ok(ok >= 3, `level 3 for a level-3 hero: ${ok} of 4`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
