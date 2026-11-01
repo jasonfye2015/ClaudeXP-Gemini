@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Joker standing (the fifty-fourth big update - v16.8)
+  The party's standing with the Joker (src/js/64zzn-joker.js, 76zzr-joker.js; fights read it in 62-combat.js):
+  - JXP (Joker experience) from play anywhere on the floor: 1 for every 10 gold laid (up to 50 a stake), 1 for every
+    4 tickets won, 3 for each level reached at a cabinet, 10 for a place on a board and 25 more for a record, 40 for a
+    quest, 30 for a tournament night (60 in the top three), 80 for beating a high-roller.
+  - The Joker level, 1 to 50, kept with the floor's books so it carries from expedition to expedition. Each level owes
+    20 gold for each level number, and a card at every fifth (stronger from 15, rare from 25), collected on the Joker
+    standing page with the bonus tickets the level has banked.
+  - What the level gives: 1% more tickets for each level past the first (to 30%, banked); 2% more off the prize
+    counter at every sixth level (to 10%); out in the world, 1% more gold from fights for each level past the fourth
+    (to 20%), 5% more experience from fights at 10 (10% at 20, 15% at 30, 20% at 40), and a Joker's Cordial in the
+    pack at the start of every expedition from level 8 (two from 18, three from 28).
+  - The Joker standing page (the first door on the club strip, or the level on any table's bar): the Joker's card,
+    the bar to the next level, what's waiting, the bonuses now, the perks and where the JXP came from.
+
 The Joker's own air (the fifty-third big update - v16.7)
   Sound and season on the floor (src/js/76zzq-atmos.js):
   - The Joker's music: a lounge tune in the music engine (Mixolydian, 104 to the minute) with a walking bass and swung

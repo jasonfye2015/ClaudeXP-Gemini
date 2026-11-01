@@ -1229,3 +1229,17 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .cgseason span b { color: #FFE070; }
 .casinobox.cgs-spring { box-shadow: 0 0 0 3px #E8A0C0, 0 0 30px rgba(240,160,200,0.25); } .casinobox.cgs-summer { box-shadow: 0 0 0 3px #F0C850, 0 0 30px rgba(255,210,100,0.25); }
 .casinobox.cgs-autumn { box-shadow: 0 0 0 3px #D07028, 0 0 30px rgba(220,120,40,0.25); } .casinobox.cgs-winter { box-shadow: 0 0 0 3px #C8E0FF, 0 0 30px rgba(200,230,255,0.3); }
+/* ---- v16.8: the party's standing with the Joker ---- */
+.cgclub .jkbtn { display: inline-flex; flex-direction: column; align-items: stretch; gap: 3px; background: linear-gradient(#3A1030, #1E0818); border-color: #E0B040; color: #F8E8C8; } .cgclub .jkbtn b { color: #FFE070; }
+.jkmini { display: block; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5); overflow: hidden; } .jkmini i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #FFE070); }
+.cgnav .jkchip { padding: 1px 8px; margin-right: 8px; border-radius: 10px; background: #3A1030; border: 1px solid #E0B040; color: #FFE070; font: bold 12px Georgia, serif; }
+.jktop { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; } .jktop canvas { max-width: 100%; } .jkside { flex: 1; min-width: 280px; }
+.jklevel { display: flex; align-items: baseline; gap: 10px; } .jklevel span { color: #C8B890; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; } .jklevel b { font: bold 54px Georgia, serif; color: #FFE070; text-shadow: 0 0 14px rgba(255,200,60,0.5); }
+.jkbar { position: relative; height: 22px; margin: 6px 0 2px; border-radius: 11px; background: rgba(0,0,0,0.45); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(240,192,64,0.4); }
+.jkbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8A2AB0, #E05090, #FFD060); background-size: 200% 100%; animation: hhflash 3s linear infinite; } .jkbar span { position: absolute; left: 12px; top: 3px; font-size: 12px; color: #FFF; text-shadow: 0 1px 2px #000; }
+.jkwait { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: rgba(240,192,64,0.12); border: 1px dashed rgba(240,192,64,0.5); } .jkwait button { margin-left: 8px; }
+.jknow { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; } .jknow div { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(200,160,64,0.25); }
+.jknow b { color: #FFE8A0; font-family: Georgia, serif; } .jknow span { font-size: 11px; opacity: 0.75; }
+.jkperks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; } .jkperks li { padding: 5px 10px; border-radius: 6px; background: rgba(0,0,0,0.25); opacity: 0.6; } .jkperks li.on { opacity: 1; background: rgba(240,192,64,0.15); }
+.jkperks li b { display: inline-block; min-width: 64px; color: #FFE070; } .jkhow { display: flex; flex-wrap: wrap; gap: 20px; } .jkhow > div { flex: 1; min-width: 260px; } .jkhow ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.jkby { border-collapse: collapse; font-size: 13px; } .jkby td { padding: 2px 10px 2px 0; border-bottom: 1px dotted rgba(255,255,255,0.15); } .jkby td:last-child { text-align: right; color: #FFE8A0; }

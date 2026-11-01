@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v16.7 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.8 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1242,6 +1242,20 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .cgseason span b { color: #FFE070; }
 .casinobox.cgs-spring { box-shadow: 0 0 0 3px #E8A0C0, 0 0 30px rgba(240,160,200,0.25); } .casinobox.cgs-summer { box-shadow: 0 0 0 3px #F0C850, 0 0 30px rgba(255,210,100,0.25); }
 .casinobox.cgs-autumn { box-shadow: 0 0 0 3px #D07028, 0 0 30px rgba(220,120,40,0.25); } .casinobox.cgs-winter { box-shadow: 0 0 0 3px #C8E0FF, 0 0 30px rgba(200,230,255,0.3); }
+/* ---- v16.8: the party's standing with the Joker ---- */
+.cgclub .jkbtn { display: inline-flex; flex-direction: column; align-items: stretch; gap: 3px; background: linear-gradient(#3A1030, #1E0818); border-color: #E0B040; color: #F8E8C8; } .cgclub .jkbtn b { color: #FFE070; }
+.jkmini { display: block; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.5); overflow: hidden; } .jkmini i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #FFE070); }
+.cgnav .jkchip { padding: 1px 8px; margin-right: 8px; border-radius: 10px; background: #3A1030; border: 1px solid #E0B040; color: #FFE070; font: bold 12px Georgia, serif; }
+.jktop { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; } .jktop canvas { max-width: 100%; } .jkside { flex: 1; min-width: 280px; }
+.jklevel { display: flex; align-items: baseline; gap: 10px; } .jklevel span { color: #C8B890; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; } .jklevel b { font: bold 54px Georgia, serif; color: #FFE070; text-shadow: 0 0 14px rgba(255,200,60,0.5); }
+.jkbar { position: relative; height: 22px; margin: 6px 0 2px; border-radius: 11px; background: rgba(0,0,0,0.45); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(240,192,64,0.4); }
+.jkbar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8A2AB0, #E05090, #FFD060); background-size: 200% 100%; animation: hhflash 3s linear infinite; } .jkbar span { position: absolute; left: 12px; top: 3px; font-size: 12px; color: #FFF; text-shadow: 0 1px 2px #000; }
+.jkwait { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: rgba(240,192,64,0.12); border: 1px dashed rgba(240,192,64,0.5); } .jkwait button { margin-left: 8px; }
+.jknow { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; } .jknow div { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(200,160,64,0.25); }
+.jknow b { color: #FFE8A0; font-family: Georgia, serif; } .jknow span { font-size: 11px; opacity: 0.75; }
+.jkperks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; } .jkperks li { padding: 5px 10px; border-radius: 6px; background: rgba(0,0,0,0.25); opacity: 0.6; } .jkperks li.on { opacity: 1; background: rgba(240,192,64,0.15); }
+.jkperks li b { display: inline-block; min-width: 64px; color: #FFE070; } .jkhow { display: flex; flex-wrap: wrap; gap: 20px; } .jkhow > div { flex: 1; min-width: 260px; } .jkhow ul { margin: 0; padding-left: 18px; font-size: 13px; }
+.jkby { border-collapse: collapse; font-size: 13px; } .jkby td { padding: 2px 10px 2px 0; border-bottom: 1px dotted rgba(255,255,255,0.15); } .jkby td:last-child { text-align: right; color: #FFE8A0; }
 </style>
 </head>
 <body>
@@ -1251,7 +1265,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "16.7", built: "2026-11-01" };
+const CM = window.CM = { version: "16.8", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -13885,6 +13899,7 @@ Object.assign(CM.Game.prototype, {
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
+    if (this.jkMul) gold = Math.floor(gold * this.jkMul("gold"));   // (the party's standing with the Joker: 64zzn-joker.js)
     this.gold += gold;
     if (this.gold >= 2000) this.achieve("hoarder");
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
@@ -13939,7 +13954,7 @@ Object.assign(CM.Game.prototype, {
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
-      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus")));   // everyone standing learns from the fight (a scholar's thing, a little more)
+      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
         CM.upgradeHero(hero);
@@ -24219,6 +24234,59 @@ CM.LUCK = {
   });
 }
 
+// ---- 64zzn-joker.js ----
+"use strict";
+// The party's standing with the Joker (v16.8): JXP - Joker experience - earned by play anywhere on the floor (gold
+// laid, tickets won, levels reached at the cabinets, places on the boards and records, quests done, tournament
+// nights settled, high-rollers beaten), and with it the Joker level, from 1 to 50, kept with the floor's books so it
+// carries from expedition to expedition. Each level owes something (gold, and a card every fifth), collected on the
+// standing page with the bonus tickets the level has banked, and
+// the level itself is worth something in and out of the Joker:
+//   on the floor - tickets: 1% more for each level past the first (to 30%), banked as they're won; the prize counter: 2% more off at every sixth level (to 10%)
+//   out in the world - fights pay 1% more gold for each level past the fourth (to 20%); heroes learn 5% more from
+//   fights at level 10, 10% at 20, 15% at 30, 20% at 40; and every expedition starts with a Joker's Cordial in the
+//   pack from level 8 (two from 18, three from 28).
+// The window is 76zzr-joker.js; fights read jkMul in 62-combat.js.
+{ const JK = CM.JK = { cap: 50, stakePer: 10, stakeMax: 50, ticketPer: 4, level: 3, board: 10, record: 25, quest: 40, tour: 30, tourTop: 60, roller: 80 };
+  JK.need = (L) => Math.round(80 * Math.pow(L, 1.45));   // JXP from level L to L + 1
+  JK.at = (jxp) => { let L = 1, left = jxp; while (L < JK.cap && left >= JK.need(L)) { left -= JK.need(L); L += 1; } return { level: L, into: left, need: L < JK.cap ? JK.need(L) : 0 }; };
+  JK.tickets = (L) => Math.min(30, L - 1) / 100;
+  JK.counter = (L) => Math.min(10, Math.floor(L / 6) * 2) / 100;
+  JK.gold = (L) => Math.min(20, Math.max(0, L - 4)) / 100;
+  JK.xp = (L) => Math.min(20, Math.floor(L / 10) * 5) / 100;
+  JK.cordials = (L) => (L >= 28 ? 3 : L >= 18 ? 2 : L >= 8 ? 1 : 0);
+  JK.PERKS = [[2, "Bonus tickets: 1% more for each Joker level past the first, up to 30% (banked; collect them here)"], [5, "Fights pay 1% more gold for each level past the fourth, up to 20%"], [6, "The prize counter: 2% more off (4% at 12, up to 10% at 30)"],
+    [8, "A Joker's Cordial in the pack at the start of every expedition (two at 18, three at 28)"], [10, "Heroes learn 5% more from fights (10% at 20, 15% at 30, 20% at 40)"]];
+  JK.reward = (L) => ({ gold: 20 * L, card: L % 5 === 0 ? (L >= 25 ? "rare" : L >= 15 ? "better" : "common") : null });
+  const cordial = (L) => ({ name: "The Joker's Cordial", kind: "heal", power: 30 + L * 2, value: 30 });
+  const P = CM.Game.prototype, st0 = P.cgStake, tk0 = P.tkAdd, rec0 = P.cgRecord, q0 = P.flQuestCollect, tour0 = P.flTourSettle, hr0 = P.hrSettle, fp0 = P.flPrice, new0 = P.newGame;
+  Object.assign(P, {
+    jkStore() { const F = this.cgStore(); F.jk = F.jk || { jxp: 0, level: 1, bank: 0, owed: [], by: {}, tk: 0 }; return F.jk; },
+    jkLevel() { return this.jkStore().level; },
+    jkInfo() { const J = this.jkStore(); return Object.assign(JK.at(J.jxp), { jxp: J.jxp }); },
+    // JXP earned; each level gained is owed its reward, to collect
+    jkGain(n, why) { n = Math.floor(n); if (n <= 0) return []; const J = this.jkStore(), was = J.level; J.jxp += n; J.by[why || "play"] = (J.by[why || "play"] || 0) + n; const now = JK.at(J.jxp).level, ups = [];
+      for (let L = was + 1; L <= now; L++) { ups.push(L); J.owed.push(L); } J.level = now;
+      if (ups.length) { (this.jkUps = this.jkUps || []).push(...ups); this.cgCelebrate && this.cgCelebrate(ups.some((L) => L % 5 === 0) ? 2 : 1, `Joker level ${now}!`); } return ups; },
+    jkWaiting() { const J = this.jkStore(); return { levels: J.owed.slice(), tickets: Math.floor(J.bank) }; },
+    // the levels' rewards and the banked tickets, collected
+    jkCollect() { const J = this.jkStore(), out = { gold: 0, tickets: Math.floor(J.bank), cards: [], levels: J.owed.slice() };
+      for (const L of J.owed) { const R = JK.reward(L); out.gold += R.gold; if (R.card && this.cgTierCard) { const c = this.cgTierCard(R.card, `Joker level ${L}!`, new CM.Random(CM.hashSeed(`${this.seed}:jk:${L}`))); if (c) out.cards.push(c); } }
+      J.owed = []; this.gold += out.gold; if (out.tickets) { J.bank -= out.tickets; tk0.call(this, out.tickets, "joker"); } this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); return out; },
+    // a multiplier out in the world: "gold" from fights, "xp" from fights
+    jkMul(kind) { const L = this.jkLevel ? this.jkLevel() : 1; return 1 + (kind === "gold" ? JK.gold(L) : kind === "xp" ? JK.xp(L) : 0); },
+    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why) this.jkGain(Math.min(JK.stakeMax, Math.max(1, Math.floor(bet / JK.stakePer))), game); return why; },
+    tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0 && why !== "joker") { const J = this.jkStore(); J.bank += k * JK.tickets(J.level); J.tk += k; const g = Math.floor(J.tk / JK.ticketPer); J.tk -= g * JK.ticketPer; this.jkGain(g, why); } return k; },
+    cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec0.call(this, table, score, level); let n = (level || 0) * JK.level; if (r > 0) n += JK.board; if ((F.records || 0) > before) n += JK.record; this.jkGain(n, table); return r; },
+    flQuestCollect(i) { const out = q0.call(this, i); if (out && !out.error) this.jkGain(JK.quest, "quests"); return out; },
+    flTourSettle() { const N = this.flTour(), done = !!N.settled, out = tour0.call(this); if (!done && out && !out.error) this.jkGain(out.place <= 3 ? JK.tourTop : JK.tour, "tournament"); return out; },
+    hrSettle(win, detail) { const out = hr0.call(this, win, detail); if (out && win) this.jkGain(JK.roller, "highroller"); return out; },
+    flPrice(id, cost) { const c = fp0.call(this, id, cost); return Math.max(1, Math.round(c * (1 - JK.counter(this.jkLevel())))); },
+    // a new expedition: the Joker's cordials in the pack
+    newGame(...a) { const out = new0.apply(this, a); try { const L = this.cgStore && this.jkLevel(), n = L ? JK.cordials(L) : 0; for (let k = 0; k < n; k++) this.bag.push(cordial(L)); } catch (e) { /* no books yet */ } return out; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -33897,7 +33965,7 @@ CM.CG_TABLES.push(["bingo", "The Bell Hall"]);
     cgFireworks(tier, text) {
       tier = Math.max(1, Math.min(3, tier || 1)); const S = SHOW[tier], calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; sounds();
       let host = document.querySelector(".fwlayer"); if (host) host.remove(); host = document.createElement("div"); host.className = `fwlayer fw${tier}`;
-      host.innerHTML = `${calm ? "" : `<canvas></canvas>`}<div class="fwbanner"><b>${S.title}</b>${text ? `<span>${this.esc ? this.esc(text) : text}</span>` : ""}</div>`; document.body.appendChild(host);
+      host.innerHTML = `${calm ? "" : `<canvas></canvas>`}<div class="fwbanner"><b>${tier < 3 && /^Joker level/.test(text || "") ? "LEVEL UP!" : S.title}</b>${text ? `<span>${this.esc ? this.esc(text) : text}</span>` : ""}</div>`; document.body.appendChild(host);
       const life = (calm ? 2.6 : S.over + 2.8) * 1000; setTimeout(() => host.classList.add("out"), life - 600); setTimeout(() => host.remove(), life);
       if (calm) return; const cv = host.querySelector("canvas"), p = cv.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1); let W = 0, H = 0;
       const fit = () => { W = window.innerWidth; H = window.innerHeight; cv.width = W * dpr; cv.height = H * dpr; p.setTransform(dpr, 0, 0, dpr, 0, 0); }; fit();
@@ -34425,6 +34493,62 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
     cgGallery(box) { gal10.call(this, box); const g = this.game, s = seasonOf(g), head = box.querySelector(".cghead"); if (!head) return; const fest = CM.festival ? CM.festival(g) : null, S = SEASON[s];
       const b = document.createElement("div"); b.className = `cgseason cgs-${s}`; b.innerHTML = `<canvas width="900" height="74"></canvas><span><b>${S.name}</b>${fest ? ` · ${CM.FESTIVALS[fest].name} this week` : ""}</span>`; head.after(b);
       const cv = b.querySelector("canvas"), p = cv.getContext("2d"), calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; const frame = (now) => { if (!cv.isConnected) return; banner(p, cv.width, cv.height, s, now); if (!calm) requestAnimationFrame(frame); }; requestAnimationFrame(frame); },
+  });
+}
+
+// ---- 76zzr-joker.js ----
+"use strict";
+// The party's standing with the Joker, the window's side: a door on the club strip with the level and a little bar of
+// JXP (and a mark when there are rewards to collect), the level on every table's bar, and a word when a level is
+// gained. The standing page: the Joker's own card drawn large with the level in its corners, the bar to the next
+// level, what is waiting to be collected (each level's gold and card, the banked bonus tickets), the bonuses the level
+// gives on the floor and in the world now, every perk with the level it opens at, and where the JXP has come from.
+// The rules are 64zzn-joker.js.
+{ const r11 = CM.UI.prototype.renderCasino, gal11 = CM.UI.prototype.cgGallery, nav11 = CM.UI.prototype.cgNav, JK = CM.JK;
+  const money = (n) => Math.floor(n).toLocaleString("en"), pct = (k) => `${Math.round(k * 100)}%`;
+  const nameOf = (id) => ({ quests: "Quests", tournament: "Tournament night", highroller: "High-roller", joker: "the Joker", play: "play" }[id] || ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id);
+  const card = (p, w, h, L, now) => { p.clearRect(0, 0, w, h); const t = now / 1000, r = 14;
+    p.save(); p.translate(w / 2, h / 2); p.rotate(Math.sin(t * 0.7) * 0.03); p.translate(-w / 2, -h / 2);
+    p.fillStyle = "rgba(0,0,0,0.45)"; p.beginPath(); p.roundRect(14, 16, w - 22, h - 22, r); p.fill();
+    const bg = p.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "#FBF6E8"); bg.addColorStop(1, "#EADFC4"); p.fillStyle = bg; p.beginPath(); p.roundRect(8, 8, w - 22, h - 22, r); p.fill(); p.strokeStyle = "#B8902A"; p.lineWidth = 3; p.stroke();
+    p.strokeStyle = "rgba(140,30,40,0.35)"; p.lineWidth = 1; p.beginPath(); p.roundRect(18, 18, w - 42, h - 42, 8); p.stroke();
+    const cx = (w - 14) / 2 + 1, cy = h / 2 - 2;
+    // the Joker: a jester's cap of three points with bells, a grin
+    p.fillStyle = "#F0D0A8"; p.beginPath(); p.arc(cx, cy + 14, 30, 0, Math.PI * 2); p.fill();
+    const capC = ["#B02030", "#2A4AA0", "#C8961A"]; [-1, 0, 1].forEach((k, i) => { p.fillStyle = capC[i]; p.beginPath(); p.moveTo(cx - 30 + i * 20, cy - 4); p.quadraticCurveTo(cx + k * 34, cy - 50 - (k ? 0 : 10), cx + k * 46, cy - 26 - (k ? 0 : 30)); p.lineTo(cx - 10 + i * 20, cy - 4); p.fill();
+      p.fillStyle = "#FFD840"; p.beginPath(); p.arc(cx + k * 46, cy - 26 - (k ? 0 : 30) + Math.sin(t * 4 + i) * 1.5, 5, 0, Math.PI * 2); p.fill(); });
+    p.fillStyle = "#F4ECD8"; p.fillRect(cx - 32, cy - 8, 64, 8); p.fillStyle = "#1A1A1A"; p.beginPath(); p.arc(cx - 10, cy + 10, 3, 0, Math.PI * 2); p.arc(cx + 10, cy + 10, 3, 0, Math.PI * 2); p.fill();
+    p.strokeStyle = "#8A2020"; p.lineWidth = 3; p.beginPath(); p.arc(cx, cy + 18, 14, 0.15, Math.PI - 0.15); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E06070"; p.beginPath(); p.arc(cx - 20, cy + 20, 5, 0, Math.PI * 2); p.arc(cx + 20, cy + 20, 5, 0, Math.PI * 2); p.fill();
+    // the ruff and the level
+    for (let k = 0; k < 9; k++) { p.fillStyle = k % 2 ? "#FFFFFF" : "#E0D8C8"; p.beginPath(); p.arc(cx - 32 + k * 8, cy + 46, 7, 0, Math.PI * 2); p.fill(); }
+    p.fillStyle = "#8A1A28"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.fillText(String(L), 32, 44); p.save(); p.translate(w - 38, h - 36); p.rotate(Math.PI); p.fillText(String(L), 0, 0); p.restore();
+    p.font = "bold 13px Georgia"; p.fillStyle = "#5A3A10"; p.fillText("THE JOKER", cx, h - 44); p.textAlign = "left";
+    const sh = p.createLinearGradient(((t * 0.35) % 2) * w - w * 0.5, 0, ((t * 0.35) % 2) * w, h); sh.addColorStop(0, "rgba(255,255,255,0)"); sh.addColorStop(0.5, "rgba(255,255,255,0.35)"); sh.addColorStop(1, "rgba(255,255,255,0)"); p.fillStyle = sh; p.beginPath(); p.roundRect(8, 8, w - 22, h - 22, r); p.fill();
+    p.restore(); };
+  Object.assign(CM.UI.prototype, {
+    renderCasino() { const g = this.game; if (g.jkUps && g.jkUps.length) { const L = g.jkUps[g.jkUps.length - 1]; g.jkUps = []; this.cgNote = `${this.cgNote ? `${this.cgNote} ` : ""}Joker level ${L}! Collect the reward on the Joker standing page.`; }
+      if (this.cgView === "standing") { this.cgStanding(this.$("#casino-body")); this.cgToasts && this.cgToasts(); this.cgFwFlush && this.cgFwFlush(); return; } return r11.call(this); },
+    cgGallery(box) { gal11.call(this, box); const g = this.game, strip = box.querySelector(".cgclub"); if (!strip || !g.jkInfo) return; const I = g.jkInfo(), W = g.jkWaiting(), b = document.createElement("button"); b.className = "flbtn jkbtn";
+      b.innerHTML = `<span>♠ Joker level <b>${I.level}</b>${W.levels.length || W.tickets ? ` <b class="flready">!</b>` : ""}</span><i class="jkmini"><i style="width:${I.need ? Math.round((100 * I.into) / I.need) : 100}%"></i></i>`; strip.prepend(b);
+      b.addEventListener("click", () => { this.cgView = "standing"; this.caSfx("cardplace", 0.3); this.renderCasino(); }); },
+    cgNav(box) { nav11.call(this, box); const g = this.game, nav = box.querySelector(".cgnav"), gold = nav && nav.querySelector(".cggold"); if (!gold || !g.jkLevel) return; const s = document.createElement("button"); s.className = "jkchip"; s.title = "Your standing with the Joker"; s.textContent = `♠ Lv ${g.jkLevel()}`; gold.before(s);
+      s.addEventListener("click", () => { if (this.cgBusy) return; this.cgView = "standing"; this.caSfx("cardplace", 0.3); this.renderCasino(); }); },
+    cgStanding(box) {
+      const g = this.game, I = g.jkInfo(), L = I.level, W = g.jkWaiting(), J = g.jkStore(), owedGold = W.levels.reduce((a, l) => a + JK.reward(l).gold, 0), owedCards = W.levels.filter((l) => JK.reward(l).card).length;
+      const now = [[`${pct(JK.tickets(L))} more tickets`, "banked as they're won"], [`${pct(JK.counter(L))} off the prize counter`, "on top of its own discount"], [`${pct(JK.gold(L))} more gold from fights`, "out in the world"], [`${pct(JK.xp(L))} more experience from fights`, "out in the world"], [`${JK.cordials(L)} Joker's Cordial${JK.cordials(L) === 1 ? "" : "s"}`, "in the pack at each expedition's start"]];
+      const by = Object.entries(J.by).sort((a, b) => b[1] - a[1]).slice(0, 6);
+      box.innerHTML = `<div class="jkroom"><div class="jktop"><canvas width="210" height="290" data-jkcard></canvas><div class="jkside"><p class="lore">The Joker keeps a book on everyone who plays his floor, and he is generous to the ones he likes. "Play anything," says the cashier, tapping a thick ledger with your name in it. "He notices."</p>
+        <div class="jklevel"><span>Joker level</span><b>${L}</b><span>of ${JK.cap}</span></div><div class="jkbar"><i style="width:${I.need ? Math.round((100 * I.into) / I.need) : 100}%"></i><span>${I.need ? `${money(I.into)} / ${money(I.need)} JXP to level ${L + 1}` : "The top of the book"}</span></div><div class="small">${money(I.jxp)} JXP in all.</div>
+        <div class="jkwait">${W.levels.length || W.tickets ? `<b>Waiting for you:</b> ${[owedGold ? `${money(owedGold)} gold` : "", owedCards ? `${owedCards} card${owedCards > 1 ? "s" : ""}` : "", W.tickets ? `${money(W.tickets)} bonus tickets` : ""].filter(Boolean).join(", ")}${W.levels.length ? ` (from level${W.levels.length > 1 ? "s" : ""} ${W.levels.join(", ")})` : ""} <button class="primary" data-jkget>Collect</button>` : `<span class="small">Nothing waiting just now - the next level pays ${money(JK.reward(Math.min(JK.cap, L + 1)).gold)} gold${JK.reward(L + 1).card ? " and a card" : ""}.</span>`}</div>
+        <div class="cgnote">${this.cgNote || ""}</div>${(this.jkGot || []).map((c) => this.cgCardWon(c)).join("")}</div></div>
+        <h4>What your level gives now</h4><div class="jknow">${now.map(([a, b]) => `<div><b>${a}</b><span>${b}</span></div>`).join("")}</div>
+        <h4>The Joker's perks</h4><ul class="jkperks">${JK.PERKS.map(([at, txt]) => `<li class="${L >= at ? "on" : ""}"><b>${L >= at ? "✓" : `Level ${at}`}</b> ${txt}</li>`).join("")}<li class="${L >= 5 ? "on" : ""}"><b>Every level</b> ${money(20)} gold for each level number, and a card at every fifth (a stronger one from 15, a rare one from 25)</li></ul>
+        <div class="jkhow"><div><h4>How JXP is earned</h4><ul><li>1 for every ${JK.stakePer} gold laid (up to ${JK.stakeMax} a stake)</li><li>1 for every ${JK.ticketPer} tickets won</li><li>${JK.level} for each level reached at a cabinet</li><li>${JK.board} for a place on a board, ${JK.record} more for a record</li><li>${JK.quest} for a quest, ${JK.tour} for a tournament night (${JK.tourTop} in the top three), ${JK.roller} for beating a high-roller</li></ul></div>
+        <div><h4>Where yours came from</h4>${by.length ? `<table class="jkby">${by.map(([k, v]) => `<tr><td>${nameOf(k)}</td><td>${money(v)}</td></tr>`).join("")}</table>` : `<p class="small">Nothing yet - play anything.</p>`}</div></div></div>`;
+      this.cgClubHead(box, "Joker standing"); const q = (s) => box.querySelector(s), cv = q("[data-jkcard]");
+      const draw = (t) => { if (!cv.isConnected) return; card(cv.getContext("2d"), cv.width, cv.height, L, t); requestAnimationFrame(draw); }; requestAnimationFrame(draw);
+      if (q("[data-jkget]")) q("[data-jkget]").addEventListener("click", () => { const o = g.jkCollect(); this.jkGot = o.cards; this.cgNote = `The cashier counts it out: ${[o.gold ? `${money(o.gold)} gold` : "", o.tickets ? `${money(o.tickets)} tickets` : "", o.cards.length ? `${o.cards.length} card${o.cards.length > 1 ? "s" : ""}` : ""].filter(Boolean).join(", ")}.`; this.cgSfx("cardwin", 0.5); if (o.gold) this.cgCoins(this.$("#casino-body"), Math.min(30, 6 + o.gold / 40)); this.renderCasino(); this.jkGot = null; });
+    },
   });
 }
 
