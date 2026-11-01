@@ -16,9 +16,7 @@
     const cx = (w - 14) / 2 + 1, cy = h / 2 - 2;
     // the Joker: a jester's cap of three points with bells, a grin
     p.fillStyle = "#F0D0A8"; p.beginPath(); p.arc(cx, cy + 14, 30, 0, Math.PI * 2); p.fill();
-    const capC = ["#B02030", "#2A4AA0", "#C8961A"]; [-1, 0, 1].forEach((k, i) => { p.fillStyle = capC[i]; p.beginPath(); p.moveTo(cx - 30 + i * 20, cy - 4); p.quadraticCurveTo(cx + k * 34, cy - 50 - (k ? 0 : 10), cx + k * 46, cy - 26 - (k ? 0 : 30)); p.lineTo(cx - 10 + i * 20, cy - 4); p.fill();
-      p.fillStyle = "#FFD840"; p.beginPath(); p.arc(cx + k * 46, cy - 26 - (k ? 0 : 30) + Math.sin(t * 4 + i) * 1.5, 5, 0, Math.PI * 2); p.fill(); });
-    p.fillStyle = "#F4ECD8"; p.fillRect(cx - 32, cy - 8, 64, 8); p.fillStyle = "#1A1A1A"; p.beginPath(); p.arc(cx - 10, cy + 10, 3, 0, Math.PI * 2); p.arc(cx + 10, cy + 10, 3, 0, Math.PI * 2); p.fill();
+    CM.drawJokerHat(p, cx, cy, t, CM.game && CM.game.wdNow ? CM.game.wdNow("hat")[0] : "jester"); p.fillStyle = "#1A1A1A"; p.beginPath(); p.arc(cx - 10, cy + 10, 3, 0, Math.PI * 2); p.arc(cx + 10, cy + 10, 3, 0, Math.PI * 2); p.fill();
     p.strokeStyle = "#8A2020"; p.lineWidth = 3; p.beginPath(); p.arc(cx, cy + 18, 14, 0.15, Math.PI - 0.15); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E06070"; p.beginPath(); p.arc(cx - 20, cy + 20, 5, 0, Math.PI * 2); p.arc(cx + 20, cy + 20, 5, 0, Math.PI * 2); p.fill();
     // the ruff and the level
     for (let k = 0; k < 9; k++) { p.fillStyle = k % 2 ? "#FFFFFF" : "#E0D8C8"; p.beginPath(); p.arc(cx - 32 + k * 8, cy + 46, 7, 0, Math.PI * 2); p.fill(); }

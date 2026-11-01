@@ -5366,6 +5366,17 @@ test("practice and how to play: a table played in practice lays nothing and pays
   ${id}: ["`), `${id} has its How to play`);
 });
 
+test("the wardrobe and the books: looks open by Joker level and can be worn only when open; a book notes each entry once from the tables' own results, and a full page pays tickets, JXP and a card once; nothing is noted in practice", () => {
+  const CM = load(), WD = CM.WARDROBE, BK = CM.BOOKS, g = new CM.Game(); g.newGame("wd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e7; const J = g.jkStore();
+  assert.strictEqual(g.wdNow("felt")[0], "green"); assert.ok(g.wdWear("felt", "crimson").error, "level 7 needed"); J.jxp = 0; for (let L = 1; L < 8; L++) J.jxp += CM.JK.need(L); J.level = 8; assert.ok(!g.wdWear("felt", "crimson").error); assert.strictEqual(g.wdNow("felt")[0], "crimson"); assert.ok(g.wdWear("hat", "nope").error);
+  for (let k = 0; k < 3000 && !g.bkCount("wheel").done; k++) g.bwSpin({ 1: 1, 2: 1, 5: 1, 10: 1, 20: 1, joker: 1, star: 1 });
+  const W = g.bkCount("wheel"); assert.ok(W.done, `the wheel page (${W.have}/${W.of})`); assert.ok(g.bkStore().done.wheel);
+  const t0 = g.tkStore().n; g.bkNote("wheel", "1"); assert.strictEqual(g.tkStore().n, t0, "a page pays once");
+  for (let k = 0; k < 400; k++) g.slotSpin(5); assert.ok(g.bkCount("reels").have >= 2, "the reels' lines noted");
+  const r0 = g.bkCount("roulette").have; g.prStart("roulette"); for (let k = 0; k < 200; k++) g.rouletteSpin([{ type: "straight", n: k % 37, amount: 1 }]); g.prEnd(); assert.strictEqual(g.bkCount("roulette").have, r0, "nothing noted in practice");
+  for (const B of BK) assert.ok(BK.list(B).length > 0, B.id); for (const [kind] of WD.KINDS) assert.strictEqual(WD[kind][0][2], 1, `${kind} has a look open at level 1`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
