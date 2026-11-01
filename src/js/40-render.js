@@ -350,7 +350,8 @@ CM.Renderer = class {
   zoomTo(k, ms = 500) { if (CM.reducedMotion) return; this.zoomAnim = { from: this.zoomNow || 1, to: k, t: 0, ms, back: true }; }
   rollTo(r, ms = 800) { if (CM.reducedMotion) return; this.rollAnim = { from: this.rollNow || 0, to: r, t: 0, ms }; }
   shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
-  punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
+  punch() { if (CM.reducedMotion) return; this.punchT = 1; }
+  nudge(side, k = 1) { if (CM.reducedMotion) return; this.nudgeT = 1; this.nudgeSide = side; this.nudgeK = k; }   // (v23.1) the view leans toward a heavy blow, and back                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }
@@ -511,9 +512,10 @@ CM.Renderer = class {
     this.shakeT = (this.shakeT || 0) * Math.pow(0.0005, dt);              // a shake dies away in about a second
     if (this.shakeT < 0.01) this.shakeT = 0;
     this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
+    this.nudgeT = Math.max(0, (this.nudgeT || 0) - dt / 0.32); const nz = Math.sin((this.nudgeT || 0) * Math.PI) * (this.nudgeK || 0) * 0.07, ns = this.nudgeSide || 0;
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
     const E = this.perch ? [this.perch.x + 0.5, this.perch.h + EYE_HEIGHT, this.perch.y + 0.5] : this.eye;   // (on a gate tower's top: 61c-tower.js)
-    const eye = [E[0] + right[0] * jx + fwd[0] * pk, E[1] + this.bob + jy, E[2] + right[2] * jx + fwd[2] * pk];
+    const eye = [E[0] + right[0] * (jx + nz * ns) + fwd[0] * (pk + nz), E[1] + this.bob + jy - nz * 0.15, E[2] + right[2] * (jx + nz * ns) + fwd[2] * (pk + nz)];
     if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
     if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
     const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];

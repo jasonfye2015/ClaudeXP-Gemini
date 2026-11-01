@@ -17,6 +17,7 @@ CM.MOTION = {
   fallMs: 400, fadeMs: 300, fallTilt: (80 * Math.PI) / 180,
   fleeMs: 650, fleeBack: 1.4,
   riseMs: 1000,
+  windupMs: 110, windupBack: 0.07,                                       // (v23.1) a lunge drawn back before it comes
 };
 CM.motion = function (s) {
   const M = CM.MOTION, now = s.now, out = { forward: 0, back: 0, lift: 0, tilt: 0, scaleY: 1, scale: 1, flash: 0, alpha: 1, skew: 0, done: false };
@@ -49,14 +50,17 @@ CM.motion = function (s) {
     out.scaleY = 1 + Math.sin(now / M.breathMs + phase) * M.breath;     // breathing, each in its own time
     const rose = since(s.roseAt);
     if (rose < M.riseMs) { const k = rose / M.riseMs; out.lift = -(1 - k) * (1 - k) * 1.0; }   // (a guardian rises from the floor into its title)
-    const lunge = since(s.lungeAt), hit = since(s.hitAt);
-    const lunging = lunge < M.lungeIn + M.lungeOut && !(hit < lunge);     // (struck mid-lunge: the lunge is broken off)
-    if (lunging) out.forward = lunge < M.lungeIn ? M.lungeReach * (lunge / M.lungeIn) : M.lungeReach * (1 - (lunge - M.lungeIn) / M.lungeOut);
-    if (hit < M.flinchMs) out.back = M.flinchBack * Math.sin((Math.PI * hit) / M.flinchMs);
+    const wu = s.windup ? M.windupMs : 0, lunge = since(s.lungeAt) - wu, hit = since(s.hitAt), reach = M.lungeReach * (s.reach || 1);
+    if (s.windup && lunge < 0 && lunge >= -wu && !(hit < lunge + wu)) out.back = M.windupBack * (s.reach || 1) * Math.sin((Math.PI / 2) * (lunge + wu) / wu);   // (v23.1: drawn back first)
+    const lunging = lunge >= 0 && lunge < M.lungeIn + M.lungeOut && !(hit < lunge + wu);     // (struck mid-lunge: the lunge is broken off)
+    if (lunging) out.forward = lunge < M.lungeIn ? reach * (lunge / M.lungeIn) : reach * (1 - (lunge - M.lungeIn) / M.lungeOut);
+    const hk = s.hitK || 0, fms = M.flinchMs * (1 + 0.6 * hk);                // (v23.1: a heavy blow knocks it further, longer, and rocks it)
+    if (hit >= 0 && hit < fms) { out.back = M.flinchBack * (1 + 1.6 * hk) * Math.sin((Math.PI * hit) / fms); if (hk > 0.3) out.tilt = 0.2 * hk * Math.sin((2 * Math.PI * hit) / fms) * (s.phase % 2 > 1 ? 1 : -1); }
     if (s.sway) out.skew = Math.sin(now / 900 + phase) * 0.045 + Math.sin(now / 370 + phase * 2) * 0.012;
   }
   const hit = since(s.hitAt);
-  if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;                    // (the flash, even with motion reduced)
+  if (hit < 0) out.flash = 1;                                              // (v23.1: held white through a hit-stop)
+  else if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;               // (the flash, even with motion reduced)
   return out;
 };
 // things that move between two states (phase 2): a door swung open on its hinge, a portcullis lifted, a lever thrown.
