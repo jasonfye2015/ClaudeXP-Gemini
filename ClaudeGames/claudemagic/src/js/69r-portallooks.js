@@ -13,7 +13,7 @@
   PL.status = (g, k) => { const v = g.village || {}; try {
     if (k === "tower") { const n = (g.tower && g.tower.cleared) || 0; return n >= (CM.TOWER_FLOORS || 40) ? "the King is gone; the tower is quiet" : `floor ${n + 1} of ${CM.TOWER_FLOORS || 40} next`; }
     if (k === "cabin") { const K = g.cards(), T = (CM.CARD_TABLES || []).find((t) => !K.beaten[t.id] && (!g.cardTableOpen || g.cardTableOpen(t))); return T ? `next at the table: ${T.name}` : "every game at the table won"; }
-    if (k === "claudeita") { const K = v.cave || {}; return K.runs ? `deepest so far ${K.deepest || 0}, ${K.bosses || 0} of the bosses undone` : "not yet entered"; }
+    if (k === "claudeita") { const K = v.cave || {}; return K.runs ? `deepest reach: ${K.deepest || 0}; ${K.bosses || 0} of the bosses undone` : "not yet entered"; }
     if (k === "fortress") { const n = (g.fort && g.fort.cleared) || 0; return n >= (CM.FORT_FLOORS || 20) ? "the Iron Marshal is gone" : `floor ${n + 1} of ${CM.FORT_FLOORS || 20} next`; }
     if (k === "glyph") { const S = v.glyph || {}; return S.boss ? "the Unwritten is undone" : `${Object.keys(S.paid || {}).length} of 20 levels paid${S.best ? `, deepest ${S.best}` : ""}`; }
     if (k === "ablo") { const A = v.ablo || {}, deep = Math.max(0, ...Object.values(A.heroes || {}).map((p) => p.maxDepth || 0)); return A.visits ? `${A.visits} visit${A.visits === 1 ? "" : "s"}, deepest level ${deep}` : "Haven waits"; }

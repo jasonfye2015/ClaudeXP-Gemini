@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v21.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v21.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1452,6 +1452,9 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 .portalfx::after { content: ""; position: absolute; inset: -20%; background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.35), transparent 30%, rgba(255,255,255,0.25), transparent 60%); animation: portalspin 1.05s linear forwards; mix-blend-mode: screen; }
 @keyframes portalfx { 0% { opacity: 0; transform: scale(0.6); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.4); } } @keyframes portalspin { to { transform: rotate(540deg); } }
 @media (prefers-reduced-motion: reduce) { .portalfx, .portalfx::after { animation: portalfade 0.6s forwards; } @keyframes portalfade { from { opacity: 0.8; } to { opacity: 0; } } }
+/* the court's keepers (v21.3) */
+.ckbox { max-width: 640px; } .ckrows { display: flex; flex-direction: column; gap: 6px; } .ckrow { display: grid; grid-template-columns: 10px 1fr; gap: 10px; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); }
+.ckrow > i { border-radius: 4px; background: var(--c); box-shadow: 0 0 6px var(--c); } .ckgo { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; }
 </style>
 </head>
 <body>
@@ -1461,7 +1464,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "21.2", built: "2026-11-01" };
+const CM = window.CM = { version: "21.3", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -27679,7 +27682,7 @@ Object.assign(CM.Game.prototype, {
   PL.status = (g, k) => { const v = g.village || {}; try {
     if (k === "tower") { const n = (g.tower && g.tower.cleared) || 0; return n >= (CM.TOWER_FLOORS || 40) ? "the King is gone; the tower is quiet" : `floor ${n + 1} of ${CM.TOWER_FLOORS || 40} next`; }
     if (k === "cabin") { const K = g.cards(), T = (CM.CARD_TABLES || []).find((t) => !K.beaten[t.id] && (!g.cardTableOpen || g.cardTableOpen(t))); return T ? `next at the table: ${T.name}` : "every game at the table won"; }
-    if (k === "claudeita") { const K = v.cave || {}; return K.runs ? `deepest so far ${K.deepest || 0}, ${K.bosses || 0} of the bosses undone` : "not yet entered"; }
+    if (k === "claudeita") { const K = v.cave || {}; return K.runs ? `deepest reach: ${K.deepest || 0}; ${K.bosses || 0} of the bosses undone` : "not yet entered"; }
     if (k === "fortress") { const n = (g.fort && g.fort.cleared) || 0; return n >= (CM.FORT_FLOORS || 20) ? "the Iron Marshal is gone" : `floor ${n + 1} of ${CM.FORT_FLOORS || 20} next`; }
     if (k === "glyph") { const S = v.glyph || {}; return S.boss ? "the Unwritten is undone" : `${Object.keys(S.paid || {}).length} of 20 levels paid${S.best ? `, deepest ${S.best}` : ""}`; }
     if (k === "ablo") { const A = v.ablo || {}, deep = Math.max(0, ...Object.values(A.heroes || {}).map((p) => p.maxDepth || 0)); return A.visits ? `${A.visits} visit${A.visits === 1 ? "" : "s"}, deepest level ${deep}` : "Haven waits"; }
@@ -27692,6 +27695,47 @@ Object.assign(CM.Game.prototype, {
     return home ? `The portal home to the Portal Court - ${P[2]}'s twin. Space steps through.` : `${P[2]}: ${PL.status(g, k)}. Who may pass: ${W[1]}. Space steps through.`; };
   // the crossing: every court portal and its twin tells the window which it was
   { const G = CM.Game.prototype, up0 = G.usePortal; G.usePortal = function (t) { const k = t && PC.keyOfTo[t.to]; const out = up0.call(this, t); if (out && k && t.to !== "town") this.emit && this.emit("portalfx", k); return out; }; }
+}
+
+// ---- 69s-courtkeepers.js ----
+"use strict";
+// The court's keepers (v21.3, UPGRADE_PLAN_16.md): the noticeboard in the court's south-east corner (every place
+// beyond the portals, its next step and what's waiting), the Portal-warden by the east wall (who may go where, what each
+// place is, and a word on what to do next), and the shaft's lift (any merchant's camp reached, or the first floor).
+// The windows: 76zzzt-courtkeepers.js.
+{ const PC = CM.PORTALCOURT, PL = CM.PORTALLOOKS, CK = CM.COURTKEEPERS = {};
+  // the board: a row for every place beyond the court, and the shaft
+  CK.board = (g) => { const rows = PC.PORTALS.map(([k, , name, col, kind]) => ({ key: k, name, col, kind, status: PL.status(g, k), who: PL.WHO[k][1] }));
+    const deepest = Math.max(0, ...((g.trail || []).map(([n]) => n || 0))), camps = (g.camps || []).slice().sort((a, b) => a - b);
+    rows.unshift({ key: "shaft", name: "The shaft", col: "#C0A060", kind: "shaft", status: deepest ? `this run's deepest: floor ${deepest}${camps.length ? `; camps below ${camps.join(", ")}` : ""}` : "the first floor waits", who: "the whole party" });
+    const W = g.wsKnown ? g.wsKnown().length : 0; rows.push({ key: "wayfarer", name: "The Wayfarer's Stone", col: "#80C0FF", kind: "stone", status: `${W} of ${CM.WAYSTONE ? CM.WAYSTONE.PLACES.length : 0} places in the Wood known`, who: "the whole party" });
+    return rows; };
+  // the warden's words: who they are, the court, and the next thing worth doing (the goals page's first open row)
+  CK.LINES = [
+    "\"I keep the court. Somebody has to sweep the runes.\"",
+    "\"The portals on the north and south walls go into the Wood - the Tower, Leshy's, the cave, the Fortress, the cabinet by the road. The two on the east wall go somewhere else entirely, and only one of you at a time.\"",
+    "\"The stone in the corner knows every place in the Wood you've walked to. Lay a hand on it.\"",
+    "\"The badge over an arch tells you: one figure, one of you alone; four, all of you.\"",
+    "\"The winch on the shaft will lower you to any camp you've reached. Mind your fingers.\"",
+  ];
+  CK.advice = (g) => { let goals = []; try { goals = g.wmGoals ? g.wmGoals() : []; } catch (e) { goals = []; } const G = goals.find((x) => x.go && !/beaten|undone|won|highest|quiet|rung/i.test(x.text)); return G ? `"If you're asking me - ${G.area}: ${G.text.charAt(0).toLowerCase()}${G.text.slice(1)}"` : "\"You've done more than I'd have thought. Go and sit in the sun.\""; };
+  const G = CM.Game.prototype;
+  Object.assign(G, {
+    talkWarden() { const k = (this.wardenTalks = (this.wardenTalks || 0) + 1); this.emit && this.emit("talk", { title: "The Portal-warden", text: CK.LINES[(k - 1) % CK.LINES.length], lines: [CK.advice(this)] }); return ""; },
+    // the lift: to a camp reached (the merchant's lantern below that floor), or 0 for the first floor by the ladder
+    shaftLiftWhy(n) { const fl = this.floor; if (this.mode !== "explore" || !fl || fl.number !== 0) return "The lift is at the shaft, in town."; const t = fl.things[`${fl.pos[0]},${fl.pos[1]}`]; if (!t || t.type !== "ladder") return "Stand at the shaft.";
+      if (n && !(this.camps || []).includes(n)) return "The lift only goes to camps you've reached."; return ""; },
+    shaftLift(n) { const why = this.shaftLiftWhy(n); if (why) return why; this.logAct && this.logAct("shaftLift", n); this.sound && this.sound("stairs");
+      if (!n) { this.enterFloor(1, "down"); this.say("The winch lowers you hand over hand to the first floor."); return ""; }
+      const below = this.floorAt(n); this.leaveFloor(); this.floor = below; this.stock = null; this.recruits = null; const ladder = this.cellOf(below, "ladder"); if (ladder) below.pos = ladder.slice();
+      this.setMode("camp"); this.emit("floor", below); this.say(`The winch creaks and lowers the whole party past the floors you know, to the merchant's lantern beneath floor ${n}.`); this.saveRun(); this.emit("change"); return ""; },
+  });
+  // the board and the warden in the court
+  { const ly0 = CM.layPortalYard; CM.layPortalYard = function (fl) { const out = ly0.call(this, fl); fl.things[PC.BOARD.join(",")] = { type: "courtboard" }; fl.things[PC.WARDEN.join(",")] = { type: "warden" }; return out; }; }
+  { const use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.number === 0 && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
+      if (t && t.type === "courtboard") { this.logAct && this.logAct("use"); this.say("The court's noticeboard: every place beyond the portals, chalked up and rubbed out and chalked up again."); this.emit("courtboard"); return; }
+      if (t && t.type === "warden") { this.logAct && this.logAct("use"); this.talkWarden(); return; }
+      return use0.apply(this, a); }; }
 }
 
 // ---- 70-ui.js ----
@@ -37692,6 +37736,45 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       const key = near ? `${fl.number}:${fl.pos.join(",")}:${near}` : ""; if (near && key !== lastHum) { try { CM.audio.play("spell", 0.12, 0, (NOTE[near] || 1) * 0.6); } catch (e) { /* quiet */ } } lastHum = key; return out; }; }
 }
 
+// ---- 76zzzt-courtkeepers.js ----
+"use strict";
+// The court's keepers, the window's side (v21.3): the noticeboard drawn (a board of dark planks on two posts, chalked
+// notes pinned to it) and its dialog, a row for every place beyond the court in its own colour; the Portal-warden drawn
+// (a keeper in a long grey-blue coat with a lantern on a staff); and the lift - at the shaft, Space offers the winch's
+// floors (the first, and every camp reached) instead of the old straight drop to the deepest camp. The rules are
+// 69s-courtkeepers.js.
+{ const CK = CM.COURTKEEPERS;
+  CM.art.courtBoard = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64;
+    p.fillStyle = "#3A2A1A"; p.fillRect(12 * u, 34 * u, 3 * u, 30 * u); p.fillRect(49 * u, 34 * u, 3 * u, 30 * u); p.fillStyle = "#5A3E26"; p.fillRect(8 * u, 10 * u, 48 * u, 32 * u);
+    p.strokeStyle = "#3A2814"; p.lineWidth = u; for (let y = 16; y < 42; y += 6) { p.beginPath(); p.moveTo(8 * u, y * u); p.lineTo(56 * u, y * u); p.stroke(); }
+    p.fillStyle = "#4A3420"; p.beginPath(); p.moveTo(5 * u, 11 * u); p.lineTo(32 * u, 3 * u); p.lineTo(59 * u, 11 * u); p.closePath(); p.fill();
+    const notes = [["#F0E8D0", 11, 14], ["#E8E0C0", 24, 13], ["#F4ECD8", 38, 15], ["#E8DCC0", 14, 27], ["#F0E4CC", 30, 26], ["#ECE0C8", 43, 28]];
+    for (const [col, x, y] of notes) { p.fillStyle = col; p.fillRect(x * u, y * u, 10 * u, 11 * u); p.fillStyle = "#8A7A60"; for (let r = 0; r < 3; r++) p.fillRect((x + 1.5) * u, (y + 3 + r * 2.5) * u, 7 * u, 0.7 * u); p.fillStyle = "#C03030"; p.beginPath(); p.arc((x + 5) * u, (y + 1) * u, 0.9 * u, 0, Math.PI * 2); p.fill(); } return c; };
+  CM.art.warden = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64, R = (x, y, w, h, col) => { p.fillStyle = col; p.fillRect(x * u, y * u, w * u, h * u); };
+    R(45, 6, 2, 56, "#5A4A30"); p.fillStyle = "#FFD870"; p.beginPath(); p.arc(46 * u, 8 * u, 3.4 * u, 0, Math.PI * 2); p.fill(); R(43.5, 4, 5, 1.2, "#3A3A40"); R(43.5, 11, 5, 1.2, "#3A3A40");
+    p.fillStyle = "#4A5A70"; p.beginPath(); p.moveTo(22 * u, 62 * u); p.lineTo(25 * u, 28 * u); p.lineTo(39 * u, 28 * u); p.lineTo(42 * u, 62 * u); p.closePath(); p.fill(); R(31, 28, 2, 34, "#3A4858"); R(24, 42, 16, 2.5, "#6A5030");
+    R(20, 30, 5, 14, "#4A5A70"); R(39, 30, 6, 10, "#4A5A70"); R(43, 38, 3, 3, "#D8B098"); R(20, 44, 4, 3, "#D8B098");
+    p.fillStyle = "#D8B098"; p.beginPath(); p.arc(32 * u, 22 * u, 6 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C8C8C8"; p.beginPath(); p.arc(32 * u, 27 * u, 4.5 * u, 0, Math.PI); p.fill();
+    R(29, 20, 1.6, 1.6, "#2A1A10"); R(33.5, 20, 1.6, 1.6, "#2A1A10"); p.fillStyle = "#3A4858"; p.beginPath(); p.moveTo(24 * u, 20 * u); p.quadraticCurveTo(32 * u, 7 * u, 40 * u, 20 * u); p.lineTo(38 * u, 16 * u); p.quadraticCurveTo(32 * u, 12 * u, 26 * u, 16 * u); p.closePath(); p.fill(); return c; };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.courtboard = set.layers.length; set.layers.push(CM.art.courtBoard(set.size)); set.index["npc:warden"] = set.layers.length; set.layers.push(CM.art.warden(set.size)); return set; }; }
+  const dlg = (ui, id, title) => { if (ui.$(`#${id}`)) return ui.$(`#${id}`); const d = document.createElement("div"); d.className = "dialog"; d.id = id; d.innerHTML = `<div class="box ckbox"><h2>${title}</h2><div class="ck-body"></div><div class="note ck-note"></div><div class="row"><button data-ckclose>Close</button></div></div>`;
+    (ui.root || document.body).appendChild(d); d.querySelector("[data-ckclose]").addEventListener("click", () => ui.closeDialogs()); return d; };
+  Object.assign(CM.UI.prototype, {
+    openCourtBoard() { const d = dlg(this, "dlg-courtboard", "The court's noticeboard"), rows = CK.board(this.game);
+      d.querySelector(".ck-body").innerHTML = `<div class="ckrows">${rows.map((r) => `<div class="ckrow" style="--c:${r.col}"><i></i><div><b>${this.esc(r.name)}</b> <span class="small">${{ wood: "the Wood", world: "another world", shaft: "the dungeon", stone: "the Wood, anywhere known" }[r.kind] || ""}</span><div>${this.esc(r.status)}</div><div class="small">${this.esc(r.who)}</div></div></div>`).join("")}</div>`;
+      d.querySelector(".ck-note").textContent = ""; this.openDialog("#dlg-courtboard"); },
+    openShaftLift() { const g = this.game, d = dlg(this, "dlg-shaftlift", "The winch"), camps = (g.camps || []).slice().sort((a, b) => a - b);
+      d.querySelector(".ck-body").innerHTML = `<p class="lore">A winch of old oak over the shaft's mouth, a cage on its rope big enough for four. The keeper's chalk on the post: the camps you've reached.</p>
+        <div class="ckrows"><button class="ckgo" data-lift="0"><b>The first floor</b><span class="small">down the ladder, the long way</span></button>${camps.map((n) => `<button class="ckgo" data-lift="${n}"><b>The camp beneath floor ${n}</b><span class="small">the merchant's lantern</span></button>`).join("")}</div>`;
+      d.querySelectorAll("[data-lift]").forEach((b) => b.addEventListener("click", () => { const why = g.shaftLift(Number(b.dataset.lift)); d.querySelector(".ck-note").textContent = why || ""; if (!why) { this.closeDialogs(); this.refresh && this.refresh(); } }));
+      d.querySelector(".ck-note").textContent = ""; this.openDialog("#dlg-shaftlift"); },
+  });
+  // Space at the shaft, with camps to choose from: the winch asks (the window's choice; the rules' own Space still drops
+  // to the deepest camp, as it always has, for the films and the tests)
+  { const G = CM.Game.prototype, use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.number === 0 && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
+      if (t && t.type === "ladder" && (this.camps || []).length && !this.replaying && CM.ui && CM.ui.game === this) { CM.ui.openShaftLift(); return; } return use0.apply(this, a); }; }
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -37901,6 +37984,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("glyphend", (E) => ui.glyphEnd && ui.glyphEnd(E));
   game.on("wayfarer", () => ui.openWayfarer && ui.openWayfarer());     // (the Wayfarer's Stone: 76zzzr-waystone.js)
   game.on("portalfx", (k) => ui.portalFx && ui.portalFx(k));
+  game.on("courtboard", () => ui.openCourtBoard && ui.openCourtBoard());   // (the court's keepers: 76zzzt-courtkeepers.js)
   game.on("craftgate", () => ui.openCraftGate());
   game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
@@ -38274,6 +38358,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
       else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
       else if (thing.type === "silo") out.push({ x, y, layer: "silo", w: 1.0, h: 1.5 });
+      else if (thing.type === "courtboard") out.push({ x, y, layer: "courtboard", w: 0.95, h: 0.95 });
+      else if (thing.type === "warden") out.push({ x, y, layer: "npc:warden", w: 0.75, h: 0.95, lift: Math.abs(Math.sin(now / 1300)) * 0.01 });
       else if (thing.type === "wayfarer") out.push({ x, y, layer: "wayfarer", w: 0.85, h: 1.3, glow: 0.2 + 0.12 * Math.sin(now / 700) });
       else if (thing.type === "glyphcab") out.push({ x, y, layer: "glyphcab", w: 0.85, h: 1.3, glow: 0.25 + 0.08 * Math.sin(now / 300) });   // (the Glyph Deep's cabinet)
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
