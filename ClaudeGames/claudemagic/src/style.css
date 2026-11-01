@@ -1090,3 +1090,19 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .vault .vrlevels { flex-wrap: wrap; gap: 4px; } .vault .vrlevels button { min-width: 44px; } .vault .vrlevels button.done { border-color: #C89A30; }
 .vault .vrwrap { display: flex; justify-content: center; margin: 6px 0; } .vault .vrcanvas { border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); cursor: pointer; }
 .bastion .arccanvas { cursor: crosshair; }
+/* ---- v16.0: the Residents' Game and the Bell Hall ---- */
+.holdem .hecanvas { display: block; max-width: 100%; border-radius: 14px; box-shadow: 0 8px 22px rgba(0,0,0,0.7); }
+.holdem .hectl .row { min-height: 34px; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 6px; } .holdem .hebuy button, .holdem .heact button { min-width: 110px; }
+.bingo .bgtop { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; } .bingo .bgcage { border-radius: 10px; box-shadow: 0 6px 16px rgba(0,0,0,0.6); }
+.bingo .bgside { flex: 1; min-width: 300px; } .bingo .bgrow { display: flex; gap: 2px; margin-bottom: 2px; }
+.bingo .bgrow b { width: 22px; text-align: center; color: #FFF; border-radius: 3px; font-weight: normal; } .bingo .bgrow span { flex: 1; min-width: 18px; text-align: center; font-size: 10px; font-family: monospace; padding: 2px 0; background: rgba(0,0,0,0.35); color: rgba(240,224,176,0.35); border-radius: 3px; }
+.bingo .bgrow span.on { background: #6A5020; color: #FFF0B0; } .bingo .bgrow span.last { background: #F0C040; color: #2A1A08; animation: crwin 0.5s ease-in-out 3; }
+.bingo .bgpatrow { display: flex; gap: 10px; align-items: center; margin-top: 6px; } .bingo .bgpat { display: grid; grid-template-columns: repeat(5, 9px); gap: 2px; padding: 4px; background: #FBF4E0; border-radius: 4px; }
+.bingo .bgpat i { width: 9px; height: 9px; background: #D8D0B8; border-radius: 2px; } .bingo .bgpat i.on { background: #C02020; }
+.bingo .bgcards { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; } .bingo .bgcard { background: #FBF4E0; border-radius: 8px; padding: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: box-shadow 0.3s; }
+.bingo .bgcard.done { box-shadow: 0 0 0 3px #F0C040, 0 0 18px #F0C040; } .bingo .bgcard.won { box-shadow: 0 0 0 3px #60E060, 0 0 22px #60E060; }
+.bingo .bghead, .bingo .bggrid { display: grid; grid-template-columns: repeat(5, 30px); gap: 2px; } .bingo .bghead b { text-align: center; color: #FFF; border-radius: 3px; font-weight: normal; }
+.bingo .bggrid span { position: relative; height: 26px; line-height: 26px; text-align: center; font: bold 13px Georgia, serif; color: #2A2010; border: 1px solid #D8CCA8; border-radius: 3px; cursor: pointer; user-select: none; }
+.bingo .bggrid span.d::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: rgba(200,30,40,0.38); box-shadow: inset 0 0 0 2px rgba(170,20,30,0.7); } .bingo .bggrid span.free { color: #C08020; } .bingo .bggrid span.stamp::after { animation: bgstamp 0.25s ease-out; }
+@keyframes bgstamp { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.bingo .bgcall.ready { animation: crwin 0.6s ease-in-out infinite; background: #F0C040; color: #2A1A08; }

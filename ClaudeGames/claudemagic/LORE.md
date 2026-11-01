@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The village comes in (v16.0)
+
+For years the village wouldn't set foot on the Joker's floor. Then the Joker bought the old chapel next door, kept the
+bell, and let the priest's sister call the numbers; and he put a round table behind a curtain where the residents can
+play each other - and the party - with nobody from the house taking a cut. Now the smith comes in on Thursdays.
+
 ## Under the floor (v15.9)
 
 Everything the Joker owns goes down further than it should. Below the cellars there is a cavern with a lake of fire
