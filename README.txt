@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Almanac and the visit calendar (the sixty-first big update - v17.5)
+  (src/js/64zzt-almanac.js, 76zzy-almanac.js)
+  - The Joker's Almanac: thirty steps a real month, named for the month's festival, turned by the JXP earned anywhere on
+    the floor (fifty a step; the week's game counts double; nothing in practice). Every step pays - tickets, gold, a
+    potion, a card at every fifth - the tenth, twentieth and thirtieth more, and the thirtieth leaves the month's
+    keepsake in the cabinet. Steps not collected wait a month.
+  - The visit calendar: a card of 28 stamps, one for each real day the party comes in (a missed day costs nothing),
+    stamped at the door on the first visit of the day; each stamp pays, the 7th, 14th, 21st and 28th more.
+
 Your history (the sixtieth big update - v17.4)
   (src/js/64zzs-history.js, 76zzx-history.js)
   Each visit with anything in it is written into the floor's books when the party leaves (the last 200 kept): when,

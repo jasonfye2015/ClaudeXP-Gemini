@@ -5399,6 +5399,16 @@ test("your history: a visit with anything in it is written when the party leaves
   for (let k = 0; k < 230; k++) { g.cgVisitStart(k); g.cgStake("slots", 1); g.cgVisitEnd(k + 5); } assert.strictEqual(g.hsStore().visits.length, CM.HISTORY.keep);
 });
 
+test("the Almanac and the visit calendar: JXP turns the month's steps (not in practice); collecting pays each step reached once, the thirtieth with the month's keepsake; the visit calendar stamps one a day, pays each stamp, and starts a new card when full", () => {
+  const CM = load(), AL = CM.ALMANAC, VC = CM.VISITCAL, g = new CM.Game(); g.newGame("al-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  g.jkGain(AL.per * 3 + 10, "darts"); const I = g.alInfo(); assert.ok(I.reached >= 3); same(I.waiting.slice(0, 3), [1, 2, 3]);
+  const gold0 = g.gold, o = g.alCollect(); assert.strictEqual(o.steps, I.reached); assert.strictEqual(g.gold - gold0, o.gold); assert.strictEqual(g.alCollect().steps, 0, "once");
+  g.prStart("slots"); g.jkGain(5000, "slots"); g.prEnd(); assert.ok(g.alInfo().reached < AL.steps, "nothing in practice");
+  g.alMonth().pts = AL.per * AL.steps + 5; const o2 = g.alCollect(); assert.ok(o2.keepsake); assert.strictEqual(g.alStore().keepsakes.length, 1);
+  const d1 = new Date(2026, 10, 3, 12).getTime(); const s1 = g.vcStamp(d1); assert.strictEqual(s1.n, 1); assert.strictEqual(g.vcStamp(d1 + 3600000), null, "one a day");
+  for (let k = 1; k < VC.stamps; k++) g.vcStamp(d1 + k * 86400000 * 2); assert.strictEqual(g.vcStore().card, 2, "a full card starts a new one"); assert.strictEqual(g.vcStore().n, 0);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
