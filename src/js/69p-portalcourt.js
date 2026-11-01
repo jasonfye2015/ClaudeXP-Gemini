@@ -19,7 +19,7 @@
   for (const [k, at] of PC.PORTALS) CM.PORTAL_YARD[k] = at.slice();
   CM.PORTAL_YARD.plinths = [];
   // the court's other things (the waystone, the noticeboard and the warden come in later updates, but have their places)
-  PC.WAYSTONE = [33, 18]; PC.BOARD = [33, 23]; PC.WARDEN = [37, 20];
+  PC.WAYSTONE = [33, 24]; PC.BOARD = [38, 24]; PC.WARDEN = [39, 20];   // (the corners and the east wall's middle: off every walk)
   // the court laid on the town: the old yard's portals and plinths cleared, every portal in its place
   CM.layPortalYard = function (fl) { const key = (x, y) => `${x},${y}`, [x0, y0, x1, y1] = CM.TOWN_YARD;
     for (const [k, t] of Object.entries(fl.things)) { const [x, y] = k.split(",").map(Number); if (x > x0 && x < x1 && y > y0 && y < y1 && (t.type === "portal" || t.type === "plinth")) delete fl.things[k]; }
