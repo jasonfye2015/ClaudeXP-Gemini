@@ -530,7 +530,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "fieldshed") out.push({ x, y, layer: "house2", w: 0.95, h: 0.95 });
       else if (thing.type === "trough") out.push({ x, y, layer: "well", w: 0.75, h: 0.6 });
       else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
-      else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
+      else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1, sway: 0.05 });
       else if (thing.type === "silo") out.push({ x, y, layer: "silo", w: 1.0, h: 1.5 });
       else if (thing.type === "courtboard") out.push({ x, y, layer: "courtboard", w: 0.95, h: 0.95 });
       else if (thing.type === "warden") out.push({ x, y, layer: "npc:warden", w: 0.75, h: 0.95, lift: Math.abs(Math.sin(now / 1300)) * 0.01 });
@@ -1097,6 +1097,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
+        renderer.wind = CM.windFor && game.floor ? CM.windFor(game, renderer) : null;   // (v24.0: 76zzzzc-wind.js)
         renderer.bloom = game.settings.glow === "off" || detailNow() === 0 ? 0 : game.settings.glow === "strong" ? 1.6 : 1.0;   // (v22.5: the glow, Settings; none at Low detail)
         renderer.grading = CM.gradeFor && game.floor ? CM.gradeFor(game, renderer) : null;   // (v22.4: the band's grade, the hour's colour, frost: 76zzzx-grade.js)
         renderer.air = CM.airFor && game.floor ? CM.airFor(game, renderer) : null;   // (v22.3: the air's body and the sunbeams, 76zzzw-air.js)
