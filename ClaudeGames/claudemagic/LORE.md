@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The Prize Counter (v15.4)
+
+Gold on the tables, tokens in the hand: the house had pink paper tickets printed by the thousand and set a glass
+counter by the cashier's cage to take them. The clerk behind it has never been seen to smile, but she counts very fast,
+and she keeps the good steel at the back, where you have to ask for it.
+
 ## The Daily Challenge (v15.0)
 
 Every morning before the doors open the chalk-boy climbs a stool by the entrance and writes one line on the slate: a

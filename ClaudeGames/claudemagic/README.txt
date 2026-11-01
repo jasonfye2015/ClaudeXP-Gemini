@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Prize Counter (the forty-first big update - v15.4)
+  Every table on the casino floor now hands out prize tokens (src/js/64zq-prizes.js; 76zh-prizes.js): one for each 30
+  gold staked at any table, one for each 50 gold a free table pays (the Mint, the Shelter, the Lexicon Engine, the
+  Conduit), 2 for each blind beaten at Claudeatro (5 for a boss), 3 for a place on a high-score board and 10 for a new
+  record; odd gold carries over. The Prize Counter, reached from the gallery's strip, trades them for pouches of gold,
+  torches, antidotes, healing and mana potions, phoenix feathers, mystery parcels, weapons, armour, shields, helms, an
+  enchanted piece (all made for the deepest floor reached) and common, stronger and rare Claudescryption cards. Gold
+  is the poorest buy on purpose - a token is worth at most an eighth of a gold - so no table can be played at a profit
+  for its tokens. The token count shows in every table's bar, a ticket hopping up as they come.
+
 The polish pass (v15.1 onward)
   Going through the casino's tables one by one for their looks: more polish and more animation, the games as they
   were.

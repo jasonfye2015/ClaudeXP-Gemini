@@ -1025,3 +1025,18 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 #casino-body .lobby .decks .deck:not(.locked):hover { transform: translateY(-3px) rotate(-0.5deg); box-shadow: 0 6px 14px rgba(0,0,0,0.55); }
 #casino-body .lobby .decks .deck.sel { box-shadow: 0 0 0 2px #F0C040, 0 0 16px rgba(240,192,64,0.55); animation: cadecksel 2.4s ease-in-out infinite; }
 @keyframes cadecksel { 50% { box-shadow: 0 0 0 2px #F0C040, 0 0 24px rgba(240,192,64,0.8); } }
+.tkcount { position: relative; display: inline-flex; align-items: center; gap: 4px; font-weight: bold; color: #FFD8F0; }
+.tkcount .tkt { display: inline-block; width: 16px; height: 11px; border-radius: 2px; background: linear-gradient(135deg, #E04080, #A02060); box-shadow: inset 0 0 0 1px #FFC0E0; -webkit-mask: radial-gradient(circle at 0 50%, transparent 2.5px, #000 3px) left / 51% 100% no-repeat, radial-gradient(circle at 100% 50%, transparent 2.5px, #000 3px) right / 51% 100% no-repeat; }
+.cgbar .tkcount { margin-left: auto; margin-right: 12px; } .cgbar .tkcount + .cggold { margin-left: 0; }
+.tkfly { position: absolute; left: 100%; top: -4px; color: #FFB0E0; font-size: 12px; pointer-events: none; animation: tkfly 1.2s ease-out forwards; }
+@keyframes tkfly { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-22px); opacity: 0; } }
+.cgclub .tkbtn { display: inline-flex; align-items: center; gap: 8px; }
+.cgprizes .tkhead { display: flex; align-items: center; gap: 12px; margin: 4px 0 10px; font-size: 16px; } .cgprizes .tkhead .tkcount { font-size: 20px; } .cgprizes .tksub { opacity: 0.6; font-size: 12px; }
+.cgprizes .tkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 12px; border-radius: 10px; background: linear-gradient(rgba(180,220,255,0.08), rgba(0,0,0,0.2)); box-shadow: inset 0 0 0 2px rgba(200,160,64,0.4), inset 0 2px 0 rgba(255,255,255,0.15); }
+.cgprizes .tkprize { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px; border-radius: 8px; background: linear-gradient(#3A1A28, #1E0E16); border: 1px solid rgba(240,160,200,0.35); text-align: center; transition: transform 0.12s, box-shadow 0.12s; }
+.cgprizes .tkprize:not(.dear):hover { transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.5), 0 0 10px rgba(240,120,180,0.3); }
+.cgprizes .tkprize.dear { opacity: 0.55; }
+.cgprizes .tkprize canvas { width: 96px; height: 72px; border-radius: 6px; }
+.cgprizes .tkprize b { color: #F0D070; font-family: Georgia, serif; font-size: 14px; } .cgprizes .tkprize span { font-size: 11px; opacity: 0.8; }
+.cgprizes .tkprize button { margin-top: 3px; }
+.cgprizes .tkout { margin: 10px 0; padding: 8px 12px; border: 1px solid rgba(240,192,64,0.5); border-radius: 8px; background: rgba(0,0,0,0.3); color: #F0E0B0; }
