@@ -1358,3 +1358,5 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .tsnode.has { opacity: 1; border-color: #C89A30; background: linear-gradient(#2E2410, #1A1408); } .tsnode.has b { color: #FFE070; } .tsnode.full { box-shadow: 0 0 0 2px #FFE070; } .tsnode.full i { color: #FFE070; }
 .tsnode.cap { border-width: 2px; } .tsnode.cap b::before { content: "★ "; color: #FFE070; } .tsnode.pop { animation: bgstamp 0.4s ease-out; }
 @media (max-width: 760px) { .tscols { grid-template-columns: 1fr; } .tsline { display: none; } }
+/* ---- v18.3: island tempering at the smith ---- */
+.temperbox { margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(240,192,64,0.4); } .temperbox h4 { margin: 0 0 4px; color: #F0D070; }

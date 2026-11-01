@@ -4037,8 +4037,8 @@ test("the red portal: in the Keep-yard; any one of the party steps through, as t
   const worn = pl.equip.weapon.base; pl.gold = w.goldIn + 420; w.xpGained = 1000; pl.addItem(CM.AB.make("War Hammer", 14, "rare", new CM.AB.Rng(9))); pl.addItem(CM.AB.make("Potion of Healing"));
   const gold0 = g.gold, bag0 = g.bag.length, xp0 = h.xp; w.homeWanted = true; const out = g.leaveClaudeablo();
   assert.strictEqual(g.mode, "explore"); assert.strictEqual(g.gold, gold0 + 420, "the gold carried"); assert.strictEqual(out.xp, Math.round(1000 * CM.ABLO.xpShare)); assert.ok(h.xp > xp0, "the experience");
-  assert.strictEqual(g.bag.length, bag0 + 1, "the pack's gear, as the party's own"); const it = g.bag[g.bag.length - 1]; assert.strictEqual(it.kind, "weapon"); assert.ok(it.props.from === "Claudeablo" && it.name.length > 3);
-  const kept = g.village.ablo.heroes[CM.abloKey(h)]; assert.strictEqual(kept.equip.weapon.base, worn, "what is worn stays there"); assert.strictEqual(kept.gold, w.goldIn, "the purse they came with stays there"); assert.ok(kept.inv.some((x) => x && x.base === "Potion of Healing"), "and the potions");
+  assert.strictEqual(g.bag.filter((x) => !["heal", "mana"].includes(x.kind)).length, g.bag.slice(0, bag0).filter((x) => !["heal", "mana"].includes(x.kind)).length + 1, "the pack's gear, as the party's own (and Haven's potions besides)"); const it = g.bag.filter((x) => x.kind === "weapon").pop(); assert.strictEqual(it.kind, "weapon"); assert.ok(it.props.from === "Claudeablo" && it.name.length > 3);
+  const kept = g.village.ablo.heroes[CM.abloKey(h)]; assert.strictEqual(kept.equip.weapon.base, worn, "what is worn stays there"); assert.strictEqual(kept.gold, w.goldIn, "the purse they came with stays there"); assert.strictEqual(kept.inv.reduce((n, x) => n + (x && CM.AB.kind(x) === "potion" ? x.qty || 1 : 0), 0), w.potsIn, "and the potions they came with (the one found comes home)");
   g.floor.pos = CM.PORTAL_YARD.ablo.slice(); g.mode = "explore"; g.enterClaudeablo(mage); assert.strictEqual(g.abloWorld.player.level, kept.level, "the same character, next time");
 });
 
@@ -5478,6 +5478,17 @@ test("the skill trees: a point a level gained; tiers open by points in the branc
   g.choosePath(h, Object.keys(CM.PATHS[h.cls])[0]); const other = CM.PATHS[h.cls][Object.keys(CM.PATHS[h.cls])[1]].t1.id; assert.ok(!CM.trait(h, other)); assert.strictEqual(g.tsLearn(h, "a5"), ""); assert.ok(CM.trait(h, other), "the other path's trait");
   const hp0 = h.max; for (const k of ["b1", "b1", "b2", "b2", "b3"]) g.tsLearn(h, k); assert.ok(h.max >= hp0 + 6);
   assert.strictEqual(ST.spent(h), 14); g.floor.number = 3; assert.ok(g.tsReset(h), "not in the dungeon"); g.floor.number = 0; assert.strictEqual(g.tsReset(h), ""); assert.strictEqual(ST.spent(h), 0); assert.ok(!CM.trait(h, other));
+});
+
+test("the ways between: Haven's potions come home as the party's; a worn relic is echoed in Haven once; the pipe's coins pay tickets besides gold; island tempering takes a bar, an essence and the fee for +1 on a worn piece, once", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("lk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000; const h = g.party[0];
+  h.weapon = { name: "The Bell's Tongue", kind: "weapon", slot: "weapon", power: 10, value: 1000, props: { relic: true } }; CM.recompute(h);
+  assert.strictEqual(g.enterClaudeablo(0), ""); const pl = g.abloWorld.player; assert.ok(pl.inv.some((it) => it && it.rare_name === "The Bell's Tongue"), "the relic echoed");
+  pl.addItem(CM.AB.make("Potion of Healing")); pl.addItem(CM.AB.make("Potion of Healing")); pl.addItem(CM.AB.make("Potion of Full Mana")); const bag0 = g.bag.length; g.leaveClaudeablo();
+  const got = g.bag.slice(bag0).filter((it) => it.kind === "heal" || it.kind === "mana"); assert.ok(got.length >= 3, `potions home: ${got.length}`);
+  g.enterClaudeablo(0); assert.ok(!g.abloWorld.player.inv.some((it, k) => it && it.rare_name === "The Bell's Tongue" && k > 20), "once"); g.leaveClaudeablo();
+  assert.ok(g.islandTemper(0, "weapon"), "wants a bar and an essence"); g.bag.push(CM.metalBar("iron"), CM.essence()); const p0 = h.weapon.power, gold0 = g.gold; assert.strictEqual(g.islandTemper(0, "weapon"), ""); assert.strictEqual(h.weapon.power, p0 + 1); assert.strictEqual(gold0 - g.gold, CM.LINKS.temper.gold); assert.ok(g.islandTemper(0, "weapon"), "once a piece");
+  const t0 = g.tkStore().n; g.brosRun = { coins: 23, xp: 0, hero: g.party[1], heroIndex: 1, kills: 0 }; try { g.leaveBros("done"); } catch (e) { /* the run's own tidying */ } assert.ok(g.tkStore().n - t0 >= 4, "coins as tickets");
 });
 
 (async () => {
