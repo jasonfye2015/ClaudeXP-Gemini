@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v17.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v17.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1287,6 +1287,17 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .bkbar { display: block; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.15); overflow: hidden; } .bkbar i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #E8B840); }
 .bkents { display: flex; flex-wrap: wrap; gap: 3px; } .bkents span { min-width: 22px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,0.08); color: #A09070; font-size: 11px; text-align: center; } .bkents span.on { background: #3A2A10; color: #FFE8A0; }
 .bkfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px; } .bkfoot .small { color: #6A5030; } .bkpage p.small { color: #5A4A30; }
+/* ---- v17.3: life on the floor, and the Joker's Week ---- */
+.flband { position: relative; margin: 6px 0 4px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(240,192,64,0.35); } .flband canvas { display: block; width: 100%; height: 96px; }
+.fltalk { position: absolute; left: 10px; right: 10px; top: 6px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }
+.fltalk span { max-width: 80%; padding: 2px 10px; border-radius: 10px; background: rgba(251,244,224,0.92); color: #2A2010; font: 12px Georgia, serif; box-shadow: 0 2px 6px rgba(0,0,0,0.5); animation: bgstamp 0.3s ease-out; } .fltalk b { color: #7A2A10; }
+.wkbar { display: block; width: 100%; margin: 0 0 8px; padding: 6px 12px; border-radius: 8px; text-align: left; background: linear-gradient(90deg, #2A1A3A, #3A2410); border: 1px solid #C89A30; color: #F8E8C8; font-size: 13px; } .wkbar b { color: #FFE070; } .wkbar .flready { font-style: normal; }
+.flguest { position: absolute; right: 8px; top: 8px; z-index: 5; display: flex; align-items: center; gap: 6px; max-width: 320px; padding: 4px 10px 4px 4px; border-radius: 24px; background: rgba(10,6,4,0.75); border: 1px solid rgba(240,192,64,0.4); font-size: 12px; color: #E8D8B8; pointer-events: none; }
+.flguest.talk { border-color: #FFE070; color: #FFF; } .cgtable { position: relative; }
+.wktop { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; } .wkinfo { flex: 1; min-width: 260px; } .wkinfo h4 { margin: 0 0 4px; color: #FFE070; } .wkinfo ol { margin: 0 0 6px 18px; padding: 0; }
+.wkwait { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: rgba(240,192,64,0.12); border: 1px dashed rgba(240,192,64,0.5); } .wkwait div { margin: 2px 0; }
+/* (the bar grew: on a narrow window it takes a second line rather than run off the edge) */
+.cgnav.cgbar { flex-wrap: wrap; row-gap: 4px; }
 </style>
 </head>
 <body>
@@ -1296,7 +1307,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "17.2", built: "2026-11-01" };
+const CM = window.CM = { version: "17.3", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24411,6 +24422,50 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzr-week.js ----
+"use strict";
+// The Joker's Week (v17.3): each real week (Monday to Sunday) one game of skill is the week's game - a cabinet (the
+// furthest level counts) or the fairground or the pond (the best score). The residents and the floor's visitors post
+// their bests on the week's board day by day; the party's best that week goes up beside them, and it earns double JXP
+// there all week. When the week is out, the board is settled: first 1,500 gold, 300 tickets and a rare card; second 800,
+// 200 and a stronger card; third 400, 150 and a card; fourth to tenth 60 tickets - collected on the week's page any
+// time in the next four weeks. The window is 76zzw-floorlife.js.
+{ const WK = CM.WEEK = { size: 14, keep: 4, PRIZES: [[1500, 300, "rare"], [800, 200, "better"], [400, 150, "common"]], rest: 60,
+    RANGE: { darts: [350, 950], skee: [250, 720], rings: [12, 60], pond: [800, 9000] } };
+  WK.games = () => ["darts", "skee", "rings", "pond"].concat(Object.keys(CM.ARC ? CM.ARC.reg : {}).sort());
+  // the week of a date: its Monday, as a key
+  WK.key = (now) => { const d = new Date(now || Date.now()); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  WK.day = (now) => (new Date(now || Date.now()).getDay() + 6) % 7;   // (Monday 0 .. Sunday 6)
+  WK.ends = (key) => { const [y, m, d] = key.split("-").map(Number); return new Date(y, m - 1, d + 7, 0, 0, 0).getTime(); };
+  WK.prev = (key, n = 1) => { const [y, m, d] = key.split("-").map(Number); const t = new Date(y, m - 1, d - 7 * n, 12); return WK.key(t.getTime()); };
+  WK.metric = (id) => (CM.ARC && CM.ARC.reg[id] ? "level" : "score");
+  WK.game = (seed, key) => { const L = WK.games(), R = new CM.Random(CM.hashSeed(`${seed}:week:${key}`)); return L[R.int(0, L.length - 1)]; };
+  WK.who = () => { const res = CM.HE ? Object.values(CM.HE.RES).map((r) => r.name) : []; return res.concat(CM.FLOOR ? CM.FLOOR.FOLK.filter((f) => !res.includes(f)) : []); };
+  // the field's bests, each posted on a day of the week
+  WK.field = (seed, key, id) => { const R = new CM.Random(CM.hashSeed(`${seed}:weekfield:${key}`)), who = R.shuffle(WK.who().slice()).slice(0, WK.size), lv = WK.metric(id) === "level", [a, b] = WK.RANGE[id] || [1, 14];
+    return who.map((w) => { const k = Math.pow(R.next(), 1.6); return { who: w, val: lv ? 1 + Math.floor(13 * k) : Math.round(a + (b - a) * k), day: R.int(0, 6), resident: CM.HE ? Object.values(CM.HE.RES).some((r) => r.name === w) : false }; }); };
+  const P = CM.Game.prototype, rec0 = P.cgRecord, jk0 = P.jkGain;
+  Object.assign(P, {
+    wkStore() { const F = this.cgStore(); F.week = F.week || { weeks: {} }; return F.week; },
+    wkInfo(now) { now = now || Date.now(); const key = WK.key(now), id = WK.game(this.seed, key), S = this.wkStore(), W = S.weeks[key] || null; return { key, id, metric: WK.metric(id), mine: W ? W.best : null, day: WK.day(now), ends: WK.ends(key) }; },
+    // the board as it stands: the field's posts so far (all of them once the week is out), and the party's best
+    wkBoard(key, now) { now = now || Date.now(); const id = WK.game(this.seed, key), done = now >= WK.ends(key), day = done ? 6 : WK.day(now), W = this.wkStore().weeks[key];
+      const rows = WK.field(this.seed, key, id).filter((e) => e.day <= day).map((e) => ({ ...e })); if (W && W.best !== null && W.best !== undefined) rows.push({ who: "You", val: W.best, you: true });
+      rows.sort((a, b) => b.val - a.val || (b.you ? 1 : 0) - (a.you ? 1 : 0)); return rows; },
+    wkPlace(key, now) { const i = this.wkBoard(key, now).findIndex((e) => e.you); return i < 0 ? null : i + 1; },
+    cgRecord(table, score, level) { const r = rec0.call(this, table, score, level); if (!this.cgPractice) { const I = this.wkInfo(); if (table === I.id) { const v = I.metric === "level" ? level || 0 : Math.floor(score || 0), S = this.wkStore(), W = S.weeks[I.key] = S.weeks[I.key] || { best: null, game: I.id };
+        if (W.best === null || v > W.best) { const before = this.wkPlace(I.key); W.best = v; const after = this.wkPlace(I.key); this.wkMoved = { before, after, val: v }; this.saveCasino && this.saveCasino(); } } } return r; },
+    jkGain(n, why) { const I = this.wkInfo && this.cgStore ? this.wkInfo() : null; return jk0.call(this, I && why === I.id ? n * 2 : n, why); },
+    // past weeks waiting to be paid
+    wkWaiting(now) { now = now || Date.now(); const S = this.wkStore(), key = WK.key(now), out = []; for (let k = 1; k <= WK.keep; k++) { const p = WK.prev(key, k), W = S.weeks[p]; if (W && W.best !== null && !W.paid) out.push({ key: p, id: W.game, place: this.wkPlace(p, now) }); } return out; },
+    wkClaim(key, now) { now = now || Date.now(); const S = this.wkStore(), W = S.weeks[key]; if (!W || W.best === null) return { error: "You didn't play that week's game." }; if (W.paid) return { error: "Already paid." }; if (now < WK.ends(key)) return { error: "The week isn't out yet." };
+      const place = this.wkPlace(key, now), out = { place, gold: 0, tickets: 0, card: null }; W.paid = true;
+      if (place <= 3) { const [g, t, tier] = WK.PRIZES[place - 1]; out.gold = g; out.tickets = t; this.gold += g; if (this.tkAdd) this.tkAdd(t, "week"); out.card = this.cgTierCard ? this.cgTierCard(tier, `The Joker's Week: ${["first", "second", "third"][place - 1]}!`, new CM.Random(CM.hashSeed(`${this.seed}:weekcard:${key}`))) : null; this.cgCelebrate && this.cgCelebrate(place === 1 ? 3 : 2, `The Joker's Week - ${["first", "second", "third"][place - 1]} place!`); }
+      else if (place <= 10) { out.tickets = WK.rest; if (this.tkAdd) this.tkAdd(WK.rest, "week"); }
+      this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); return out; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -29923,7 +29978,7 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
           const from = -(N + stops[i] - 1) * 64, to = -((2 + i) * N + r.stops[i] - 1) * 64;   // (round two to four times, on to the stop; the strip repeats, so the rest is the same picture)
           el.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], { duration: 1000 + i * 500, easing: "cubic-bezier(.15,.55,.25,1)" }).onfinish = () => {
             el.style.transform = `translateY(${-(N + r.stops[i] - 1) * 64}px)`; el.classList.add("stopped"); this.cgSfx("cardplace", 0.45, 0.8);
-            if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body");
+            if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body"); if (!b2.querySelector(".slotwrap")) return;   // (the party went elsewhere while the reels turned)
               if (r.jackpot) { this.cgSfx("victory", 0.7); this.cgSfx("cardwin", 0.6); b2.querySelector(".slotwrap").classList.add("jackpot"); this.cgCoins(b2, 40); }
               else if (r.won >= (this.cgBet || 5) * 9) { this.cgSfx("victory", 0.45); this.cgCoins(b2, 18); }
               else if (r.won) { this.cgSfx("coin", 0.5); this.cgCoins(b2, 5); }
@@ -34897,6 +34952,64 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
             <div class="bkfoot"><span class="small">${c.done ? "Page full - paid" : `A full page: ${BK.REWARD.tickets} tickets, ${BK.REWARD.jxp} JXP and a ${B.tier === "rare" ? "rare" : "stronger"} card`}</span><button data-bkgo="${B.where}">${nameOf(B.where)}</button></div></div>`; }).join("")}
           ${pond ? `<div class="bkpage"><div class="bkhead"><b>The creel book</b><span>${Object.keys(pond.book).length} / 8</span></div><p class="small">Kept by the old woman at the pond - every fish, with your heaviest.</p><div class="bkfoot"><span></span><button data-bkgo="pond">${nameOf("pond")}</button></div></div>` : ""}</div></div>`;
       this.cgClubHead(box, "Collections"); box.querySelectorAll("[data-bkgo]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.bkgo; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); })); },
+  });
+}
+
+// ---- 76zzw-floorlife.js ----
+"use strict";
+// Life on the floor (v17.3): the residents and the floor's visitors are about. Over the gallery a band of the floor
+// at night - the six residents and a few visitors strolling between the tables, stopping, turning, and now and then
+// saying something: about the floor, about the party's last big win, about the week's board (who's on it, who the
+// party has just gone past). At a table, now and then one of them drops by and watches, and has a word when the
+// party wins big. And the Joker's Week: a banner over the gallery with the week's game and the party's place, and the
+// week's page with the board, the prizes, the time left and last weeks' winnings to collect. The rules are
+// 64zzr-week.js.
+{ const r16 = CM.UI.prototype.renderCasino, gal16 = CM.UI.prototype.cgGallery, fw16 = CM.UI.prototype.cgFwFlush, WK = CM.WEEK, HE = CM.HE;
+  const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id, money = (n) => Math.floor(n).toLocaleString("en"), cap = (s) => s[0].toUpperCase() + s.slice(1);
+  const RES = Object.entries(HE.RES), VIS = [["Sable the cardsharp", "#2A2A3A", "#101010"], ["Old Fenwick", "#6A5A3A", "#D0D0D0"], ["a travelling knight", "#7A7A8A", "#5A3A1A"], ["Grandmother Rook", "#3A2A3A", "#E8E8E8"]];
+  const SAY = { tavern: ["Another round for the lucky ones!", "The wheel's been kind to the farmer's hand all night.", "Mind the reels - they've a mood on."], merchant: ["The middle Drop Board is the honest one, I find.", "Read the house's books - it's all on the wall.", "Never stake what you can't count."],
+    smith: ["Hm.", "Darts. Steady hand. That's all it is.", "The forge is hotter than this place."], library: ["The odds are posted, you know. By the cage.", "Bingo is mostly patience.", "I've read about the golden carp. I don't believe in it."],
+    priest: ["Fortune is a poor god to pray to.", "Moderation, friend. Moderation.", "The bells in the hall are almost holy."], farm: ["I've a good feeling about the wheel tonight!", "Caught an eel off the jetty last night!", "All six numbers, one day. One day."] };
+  const fig = (p, x, y, body, hair, t, face) => { const bob = Math.sin(t * 6 + x) * 1.2; p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(x, y + 26, 10, 3, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = body; p.beginPath(); p.moveTo(x - 10, y + 26); p.quadraticCurveTo(x - 10, y + 4 + bob, x, y + 4 + bob); p.quadraticCurveTo(x + 10, y + 4 + bob, x + 10, y + 26); p.fill();
+    p.fillStyle = "#E8C8A0"; p.beginPath(); p.arc(x, y - 4 + bob, 7, 0, Math.PI * 2); p.fill(); p.fillStyle = hair; p.beginPath(); p.arc(x, y - 7 + bob, 7, Math.PI, Math.PI * 2); p.fill(); p.fillStyle = "#1A1010"; p.fillRect(x + face * 2 - 1, y - 5 + bob, 1.6, 1.6); };
+  Object.assign(CM.UI.prototype, {
+    cgSay(who, text) { (this.flTalk = this.flTalk || []).push({ who, text, at: performance.now() }); if (this.flTalk.length > 3) this.flTalk.shift(); this.flRender && this.flRender(); },
+    cgFwFlush() { const g = this.game, q = g.fwQ && g.fwQ.length && !this.cgBusy ? g.fwQ.slice() : null; fw16.call(this); if (q) { const big = q.reduce((a, e) => (e.tier > a.tier ? e : a), q[0]), [id, R] = RES[Math.floor(Math.random() * RES.length)];
+        setTimeout(() => this.cgSay(cap(R.name), [`Did you see that? ${big.text}`, `Well! ${big.text}`, `The house won't like that - ${big.text}`][Math.floor(Math.random() * 3)]), 1600); if (this.flGuest) this.flGuestSay(big.tier >= 2 ? "Now THAT'S a win!" : "Nicely done."); } },
+    renderCasino() { const out = r16.call(this), g = this.game, v = this.cgView;
+      if (g.wkMoved) { const M = g.wkMoved; g.wkMoved = null; if (M.after && (!M.before || M.after < M.before)) { const B = g.wkBoard(WK.key()), passed = B[M.after] && !B[M.after].you ? B[M.after].who : null; this.cgNote = `${this.cgNote ? `${this.cgNote} ` : ""}The week's board: you're ${M.after}${["st", "nd", "rd"][M.after - 1] || "th"} now.`; if (passed) setTimeout(() => this.cgSay(cap(passed), M.after === 1 ? "You've gone past me on the week's board. Hmph. Enjoy it while it lasts." : "Up the week's board past me? We'll see."), 900); } }
+      if (v === "week") { this.cgWeek(this.$("#casino-body")); this.cgToasts && this.cgToasts(); this.cgFwFlush(); return out; }
+      if (CM.CG_TABLES.some(([k]) => k === v) && this.flGuestFor !== v) { this.flGuestFor = v; this.flGuest = Math.random() < 0.35 ? RES[Math.floor(Math.random() * RES.length)] : null; } if (this.flGuest && CM.CG_TABLES.some(([k]) => k === v)) this.flGuestShow();
+      return out; },
+    flGuestShow() { const host = this.$("#casino-body .cgtable") || this.$("#casino-body"); if (!host || host.querySelector(".flguest")) return; const [id, R] = this.flGuest, el = document.createElement("div"); el.className = "flguest"; el.innerHTML = `<canvas width="40" height="44"></canvas><span>${cap(R.name)} is watching.</span>`; host.appendChild(el);
+      const p = el.querySelector("canvas").getContext("2d"); fig(p, 20, 12, R.col, R.hair, 0, 1); },
+    flGuestSay(text) { const el = this.$("#casino-body .flguest span"); if (el && this.flGuest) { el.textContent = `${cap(this.flGuest[1].name)}: "${text}"`; el.parentElement.classList.add("talk"); } },
+    cgGallery(box) { gal16.call(this, box); const g = this.game, head = box.querySelector(".cgseason") || box.querySelector(".cghead"); if (!head || !g.wkInfo) return; const I = g.wkInfo(), place = g.wkPlace(I.key), wait = g.wkWaiting();
+      const wk = document.createElement("button"); wk.className = "wkbar"; wk.innerHTML = `<b>The Joker's Week:</b> ${nameOf(I.id)} - ${I.metric === "level" ? "the furthest level" : "the best score"} wins. ${I.mine !== null ? `Your best ${money(I.mine)}, ${place}${["st", "nd", "rd"][place - 1] || "th"} on the board.` : "You're not on the board yet."} Double JXP there all week.${wait.length ? ` <i class="flready">!</i> Last week's prize waiting` : ""}`;
+      const band = document.createElement("div"); band.className = "flband"; band.innerHTML = `<canvas width="900" height="96"></canvas><div class="fltalk"></div>`; head.after(band); band.after(wk);
+      wk.addEventListener("click", () => { this.cgView = "week"; this.caSfx("cardplace", 0.3); this.renderCasino(); });
+      const cv = band.querySelector("canvas"), p = cv.getContext("2d"), talk = band.querySelector(".fltalk"), calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const folk = RES.map(([id, R], i) => ({ id, name: R.name, body: R.col, hair: R.hair, x: 80 + i * 130, to: 80 + i * 130, wait: Math.random() * 3 })).concat(VIS.map(([n, b, h], i) => ({ id: null, name: n, body: b, hair: h, x: 140 + i * 190, to: 140 + i * 190, wait: Math.random() * 4 })));
+      this.flRender = () => { if (!talk.isConnected) return; const now = performance.now(), html = (this.flTalk || []).filter((s) => now - s.at < 9000).map((s) => `<span><b>${s.who}:</b> ${s.text}</span>`).join(""); if (html !== talk.dataset.was) { talk.dataset.was = html; talk.innerHTML = html; } };   // (only when it changes: a fresh bubble fades in once)
+      let prev = performance.now(), nextTalk = prev + 2500; const frame = (now) => { if (!cv.isConnected) return; const dt = Math.min(0.05, (now - prev) / 1000), t = now / 1000; prev = now;
+        const sky = p.createLinearGradient(0, 0, 0, 96); sky.addColorStop(0, "#1A1020"); sky.addColorStop(1, "#3A2414"); p.fillStyle = sky; p.fillRect(0, 0, 900, 96);
+        for (let k = 0; k < 6; k++) { const x = 70 + k * 150; p.fillStyle = "#1E5A32"; p.beginPath(); p.ellipse(x, 74, 42, 10, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3A2414"; p.fillRect(x - 3, 74, 6, 18); p.fillStyle = `rgba(255,220,140,${0.25 + 0.1 * Math.sin(t * 2 + k)})`; p.beginPath(); p.arc(x, 14, 22, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFE8A0"; p.beginPath(); p.arc(x, 14, 4, 0, Math.PI * 2); p.fill(); }
+        folk.sort((a, b) => a.x - b.x); for (const f of folk) { if (!calm) { if (f.wait > 0) f.wait -= dt; else { const d = f.to - f.x; if (Math.abs(d) < 1) { f.wait = 1 + Math.random() * 4; f.to = 30 + Math.random() * 840; } else f.x += Math.sign(d) * Math.min(Math.abs(d), 28 * dt); } } fig(p, f.x, 50, f.body, f.hair, f.wait > 0 ? 0 : t, f.to >= f.x ? 1 : -1); }
+        if (now > nextTalk) { nextTalk = now + 6000 + Math.random() * 5000; const f = folk.filter((q) => q.id)[Math.floor(Math.random() * RES.length)], I = g.wkInfo(), B = g.wkBoard(I.key), top = B[0], mineOn = B.find((e) => e.who === f.name);
+          const lines = SAY[f.id].concat(mineOn ? [`I've put ${money(mineOn.val)} on the week's board at ${nameOf(I.id)}. Beat that.`] : [`Have you had a go at ${nameOf(I.id)} this week? It's the week's game.`]).concat(top && !top.you ? [`${cap(top.who)} leads the week's board with ${money(top.val)}.`] : top ? ["You're top of the week's board. Everyone's talking about it."] : []);
+          this.cgSay(cap(f.name), lines[Math.floor(Math.random() * lines.length)]); }
+        this.flRender(); if (!calm || !this.flDrawn) { this.flDrawn = true; requestAnimationFrame(frame); } };
+      requestAnimationFrame(frame); },
+    cgWeek(box) { const g = this.game, I = g.wkInfo(), B = g.wkBoard(I.key), place = g.wkPlace(I.key), left = Math.max(0, I.ends - Date.now()), days = Math.floor(left / 86400000), hrs = Math.floor((left % 86400000) / 3600000), wait = g.wkWaiting(), lv = I.metric === "level";
+      box.innerHTML = `<div class="wkroom"><p class="lore">A chalkboard on an easel by the door, with a jester's head painted at the top: THE JOKER'S WEEK. "One game, all week," says the master of ceremonies. "The village puts its best up as the days go by. Beat them."</p>
+        <div class="wktop"><div class="flframe"><canvas width="176" height="88" data-wkthumb></canvas><b>${nameOf(I.id)}</b><span class="small">${lv ? "furthest level" : "best score"} wins</span></div><div class="wkinfo"><h4>Ends in ${days} day${days === 1 ? "" : "s"} and ${hrs} hour${hrs === 1 ? "" : "s"}</h4>
+          <ol><li>First: ${money(WK.PRIZES[0][0])} gold, ${WK.PRIZES[0][1]} tickets and a rare card</li><li>Second: ${money(WK.PRIZES[1][0])} gold, ${WK.PRIZES[1][1]} tickets and a stronger card</li><li>Third: ${money(WK.PRIZES[2][0])} gold, ${WK.PRIZES[2][1]} tickets and a card</li><li>Fourth to tenth: ${WK.rest} tickets</li></ol>
+          <div class="small">Double JXP at ${nameOf(I.id)} all week. ${place ? `You're ${place}${["st", "nd", "rd"][place - 1] || "th"}.` : "You're not on the board yet - play it."}</div><div class="row"><button class="primary" data-wkgo>Play ${nameOf(I.id)}</button></div></div></div>
+        ${wait.length ? `<div class="wkwait">${wait.map((w) => `<div>The week of ${w.key} (${nameOf(w.id)}): you came <b>${w.place}${["st", "nd", "rd"][w.place - 1] || "th"}</b>. <button class="primary" data-wkclaim="${w.key}">Collect</button></div>`).join("")}</div>` : ""}<div class="cgnote">${this.cgNote || ""}</div>${(this.wkGot || []).map((c) => this.cgCardWon(c)).join("")}
+        <table class="flstand"><tr><th>#</th><th>Who</th><th>${lv ? "Level" : "Score"}</th></tr>${B.map((e, k) => `<tr class="${e.you ? "you" : ""}${k < 3 ? " top" : ""}"><td>${k + 1}</td><td>${e.you ? "You" : cap(e.who)}${e.resident ? " ♠" : ""}</td><td>${money(e.val)}</td></tr>`).join("")}</table><p class="small">♠ marks the village's own residents. New names go up through the week.</p></div>`;
+      this.cgClubHead(box, "The Joker's Week"); const q = (s) => box.querySelector(s), f = CM.CG_THUMB[I.id], c = q("[data-wkthumb]"); if (f && c) f(c.getContext("2d"), c.width, c.height);
+      q("[data-wkgo]").addEventListener("click", () => { this.cgView = I.id; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); });
+      box.querySelectorAll("[data-wkclaim]").forEach((b) => b.addEventListener("click", () => { const r = g.wkClaim(b.dataset.wkclaim); this.wkGot = r.card ? [r.card] : []; this.cgNote = r.error || `Collected: ${[r.gold ? `${money(r.gold)} gold` : "", r.tickets ? `${r.tickets} tickets` : ""].filter(Boolean).join(", ") || "nothing, this time"}.`; this.cgSfx(r.gold ? "victory" : "coin", 0.5); this.renderCasino(); this.wkGot = null; })); },
   });
 }
 

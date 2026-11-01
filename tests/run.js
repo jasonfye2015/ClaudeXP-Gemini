@@ -5377,6 +5377,18 @@ test("the wardrobe and the books: looks open by Joker level and can be worn only
   for (const B of BK) assert.ok(BK.list(B).length > 0, B.id); for (const [kind] of WD.KINDS) assert.strictEqual(WD[kind][0][2], 1, `${kind} has a look open at level 1`);
 });
 
+test("the Joker's Week: a game a week, the same all week; the field posts day by day; the party's best goes up by the week's measure and doubles its JXP there; a week out pays by place once", () => {
+  const CM = load(), WK = CM.WEEK, g = new CM.Game(); g.newGame("wk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6;
+  const mon = new Date(2026, 10, 2, 10).getTime(), sun = new Date(2026, 10, 8, 22).getTime(), next = new Date(2026, 10, 10, 10).getTime();
+  assert.strictEqual(WK.key(mon), "2026-11-02"); assert.strictEqual(WK.key(sun), "2026-11-02"); assert.strictEqual(WK.key(next), "2026-11-09"); assert.strictEqual(WK.prev("2026-11-09"), "2026-11-02"); assert.strictEqual(WK.day(sun), 6);
+  assert.strictEqual(WK.game(g.seed, "2026-11-02"), WK.game(g.seed, "2026-11-02")); const key = WK.key(), I = g.wkInfo(); assert.strictEqual(I.key, key); assert.ok(WK.games().includes(I.id));
+  assert.ok(g.wkBoard("2026-11-02", mon).length <= g.wkBoard("2026-11-02", sun).length, "the field posts through the week"); assert.strictEqual(g.wkBoard("2026-11-02", sun).length, WK.size, "the whole field by Sunday");
+  const lv = I.metric === "level", j0 = g.jkStore().jxp; g.cgRecord(I.id, 99999, 40); const W = g.wkStore().weeks[key]; assert.strictEqual(W.best, lv ? 40 : 99999); assert.strictEqual(g.wkPlace(key), 1, "a record-breaking best tops the board");
+  assert.ok(g.jkStore().jxp - j0 >= 2 * (lv ? 40 * CM.JK.level : 10), "double JXP at the week's game");
+  assert.ok(g.wkClaim(key).error, "not out yet"); const after = WK.ends(key) + 3600000, gold0 = g.gold, r = g.wkClaim(key, after); assert.strictEqual(r.place, 1); assert.strictEqual(g.gold - gold0, WK.PRIZES[0][0]); assert.ok(g.wkClaim(key, after).error, "paid once");
+  g.prStart(I.id === "pond" ? "darts" : I.id); const n0 = Object.keys(g.wkStore().weeks).length; g.prEnd(); assert.strictEqual(Object.keys(g.wkStore().weeks).length, n0);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
