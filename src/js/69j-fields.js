@@ -54,7 +54,7 @@
       for (let i = 0; i < Math.min(n, 60); i++) this.fieldsDawn(day - n + i + 1); this.saveVillage && this.saveVillage(); return n; },
     fieldsDawn(day) { const F = this.fields(), season = CM.season(this), rain = CM.weatherOf(this.seed, day, season) === "rain"; F.days += 1; let ripe = 0;
       for (const P of Object.values(F.plots)) { if (!P.crop) { P.w = false; continue; } const K = CM.CROPS[P.crop]; if (!K) { P.crop = null; continue; }
-        const can = season !== "winter" || K.winter; if ((P.w || rain) && can && !P.ripe) { P.g = (P.g || 0) + 1; P.dry = 0; if (P.g >= (P.need || K.days || 4)) { P.ripe = true; ripe++; } } else if (!P.ripe) P.dry = (P.dry || 0) + 1; P.w = false; }
+        const can = season !== "winter" || K.winter || P.cloche;   /* (a cloche: any season, 69l-fieldhands.js) */ if ((P.w || rain) && can && !P.ripe) { P.g = (P.g || 0) + 1; P.dry = 0; if (P.g >= (P.need || K.days || 4)) { P.ripe = true; ripe++; } } else if (!P.ripe) P.dry = (P.dry || 0) + 1; P.w = false; }
       if (rain) this.fieldsNote = "Rain in the night: the fields are watered."; if (ripe) this.say(`${ripe === 1 ? "A plot" : `${ripe} plots`} in the South Fields ${ripe === 1 ? "is" : "are"} ripe.`); },
     // what stage a plot shows: "bare", "tilled", "sown", 1-3 growing, "ripe", "after" (picked, fruiting again)
     plotStage(key) { const P = this.fields().plots[key]; if (!P || !P.t) return "bare"; if (!P.crop) return "tilled"; if (P.ripe) return "ripe"; const K = CM.CROPS[P.crop], need = P.need || K.days || 4, g = P.g || 0;
