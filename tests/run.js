@@ -5322,6 +5322,14 @@ test("the floor made easier: a table opened is tried and goes to the front of th
   g.cgVisitStart(0); g.cgStake("roulette", 20); g.cgPay("roulette", 40); assert.strictEqual(g.cgVisitEnd(1000).best, "40 gold at roulette", "no celebration: the biggest payout");
 });
 
+test("one way of telling a result: gold paid, tickets won and cards are gathered as they come and taken once; the tickets that come with a stake aren't a win, nor are chips cashed out at the residents' table", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("rs-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 10000;
+  g.cgTakeResult(); g.cgStake("roulette", 300); assert.strictEqual(g.cgTakeResult(), null, "a stake's tickets aren't a win");
+  g.cgPay("roulette", 600); g.tkAdd(7, "roulette"); const c = g.cgTierCard("better", "a test", new CM.Random(3)); const R = g.cgTakeResult(); assert.strictEqual(R.gold, 600); assert.ok(R.tickets >= 7); assert.strictEqual(R.cards.length, c ? 1 : 0); assert.strictEqual(g.cgTakeResult(), null, "taken once");
+  g.cgStake("holdem", 100); g.cgTakeResult(); g.cgPay("holdem", 400); const H = g.cgTakeResult(); assert.ok(!H || !H.gold, "a cash-out isn't a win");
+  const r2 = g.cgCard(true, "a rare", new CM.Random(4)); const R2 = g.cgTakeResult(); assert.strictEqual(R2 ? R2.cards.length : 0, r2 ? 1 : 0, "a card counted once");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
