@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v17.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v17.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1273,6 +1273,20 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* ---- v17.1: fast mode and auto-play ---- */
 .cgspeed { display: inline-flex; gap: 4px; margin-left: 4px; } .cgspeed button { padding: 2px 8px; font-size: 12px; } .cgspeed .cgfast.on { background: #2A4A8A; border-color: #80B0FF; color: #FFF; } .cgspeed .cgautob.on { background: #8A2A2A; border-color: #FF9080; color: #FFF; animation: crwin 1s ease-in-out infinite; }
 .cgautomenu { position: fixed; z-index: 10001; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 10px; background: #1E160E; border: 1px solid #C89A30; box-shadow: 0 10px 24px rgba(0,0,0,0.7); color: #F0E6D0; font-size: 13px; } .cgautomenu b { color: #FFE070; } .cgautomenu .row { gap: 4px; }
+/* ---- v17.2: the wardrobe (worn through the floor) and the collection books ---- */
+#dlg-casino .box.casinobox { background: radial-gradient(ellipse at 50% 35%, var(--felt-a, #1F5A3E) 0%, var(--felt-b, #0F3022) 70%, var(--felt-c, #0A2018) 100%); }
+.chip.c1 { background: var(--chip-1, #8A8A90); } .chip.c5 { background: var(--chip-5, #B02828); } .chip.c25 { background: var(--chip-25, #1E7A3A); } .chip.c100 { background: var(--chip-100, #1A1A1A); } .chip.c500 { background: var(--chip-500, #6A2A9A); } .chip.c1000 { background: var(--chip-1000, #C8A040); }
+.pc.cgback { background: repeating-linear-gradient(45deg, var(--cb-a, #7A1A1A) 0 6px, var(--cb-b, #9A2A2A) 6px 12px); border-color: var(--cb-line, #C8A040); }
+.casinobox.cos-cab .cgtable canvas:not([data-cgthumb]):not([data-wdc]):not([data-lbthumb]) { outline: 3px solid var(--cab); outline-offset: 2px; }
+.cgclub .cosbtn { background: linear-gradient(#3A2A10, #1E1408); border-color: #E0B850; } .cgclub .bkn { color: #FFE070; }
+.wdroom h4 { margin: 12px 0 6px; color: #F0D070; } .wdrow { display: flex; flex-wrap: wrap; gap: 8px; }
+.wdsw { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 122px; padding: 6px; border-radius: 8px; background: linear-gradient(#2A2018, #1A140E); border: 1px solid rgba(200,160,64,0.45); color: inherit; cursor: pointer; }
+.wdsw canvas { width: 104px; height: 58px; border-radius: 5px; } .wdsw b { font-size: 12px; } .wdsw span { font-size: 10px; opacity: 0.75; } .wdsw.on { border: 2px solid #FFE070; box-shadow: 0 0 10px rgba(255,224,112,0.5); } .wdsw.locked { opacity: 0.5; cursor: default; } .wdsw.locked canvas { filter: grayscale(0.8); }
+.bkgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; } .bkpage { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: 6px; background: #FBF4E0; color: #2A2010; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+.bkpage.done { box-shadow: 0 0 0 3px #C8A040, 0 4px 12px rgba(0,0,0,0.5); } .bkhead { display: flex; justify-content: space-between; font-family: Georgia, serif; } .bkhead b { color: #5A2A10; }
+.bkbar { display: block; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.15); overflow: hidden; } .bkbar i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #E8B840); }
+.bkents { display: flex; flex-wrap: wrap; gap: 3px; } .bkents span { min-width: 22px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,0.08); color: #A09070; font-size: 11px; text-align: center; } .bkents span.on { background: #3A2A10; color: #FFE8A0; }
+.bkfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px; } .bkfoot .small { color: #6A5030; } .bkpage p.small { color: #5A4A30; }
 </style>
 </head>
 <body>
@@ -1282,7 +1296,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "17.1", built: "2026-11-01" };
+const CM = window.CM = { version: "17.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24338,6 +24352,65 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzq-wardrobe.js ----
+"use strict";
+// The Joker's wardrobe and the collection books (v17.2).
+// - The wardrobe: looks for the floor, opened by the party's Joker level - the tables' felt, the chips' colours, the
+//   cards' backs, the cabinets' trim, and the Joker's own hat on his card - one of each worn at a time.
+// - The collection books: every line of the reels, every paying hand at video poker, every slot of the Joker's Wheel,
+//   every number won straight up at roulette, every bin of the high Drop Board, every hand won at the residents'
+//   table, every pattern called at the Bell Hall. Each entry is written in when it first comes up for the party; a
+//   whole page pays 100 tickets, 150 JXP and a card (rare for the long pages). The pond's creel book is its own.
+// The window is 76zzv-wardrobe.js.
+{ const WD = CM.WARDROBE = {
+    felt: [["green", "The Joker's green", 1, ["#1F5A3E", "#0F3022", "#0A2018"]], ["blue", "Royal blue", 3, ["#1F3A6A", "#0F1E3A", "#0A1428"]], ["crimson", "Crimson", 7, ["#6A1F2A", "#3A0F16", "#22080C"]],
+      ["violet", "Midnight violet", 12, ["#3A1F5A", "#1E0F30", "#120820"]], ["onyx", "Onyx", 18, ["#2A2A2E", "#141416", "#0A0A0C"]], ["gilt", "Gold leaf", 30, ["#6A5420", "#3A2A0C", "#221806"]]],
+    chips: [["classic", "Classic", 1, ["#8A8A90", "#B02828", "#1E7A3A", "#1A1A1A", "#6A2A9A"]], ["jade", "Jade", 5, ["#A8C8B0", "#2A8A6A", "#1A5A4A", "#0E3A2E", "#C8A040"]], ["obsidian", "Obsidian", 11, ["#4A4A50", "#2A2A30", "#1A1A20", "#0A0A0E", "#8A2A2A"]],
+      ["pearl", "Pearl", 16, ["#E8E4DC", "#D8C8D8", "#C8D8E8", "#B8B0A8", "#E8D8B0"]], ["gilded", "Gilded", 25, ["#C8A040", "#E0B850", "#A88030", "#806020", "#F0D070"]]],
+    backs: [["ruby", "Ruby", 1, ["#7A1A1A", "#9A2A2A", "#C8A040"]], ["sapphire", "Sapphire", 4, ["#1A2A6A", "#2A3A8A", "#C8D0E8"]], ["forest", "Forest", 9, ["#1A4A2A", "#2A5A3A", "#D0C080"]],
+      ["joker", "The Joker's own", 14, ["#4A1A4A", "#C8A040", "#F0E0C0"]], ["stars", "Starfield", 22, ["#0A0A2A", "#1A1A4A", "#F0E8A0"]], ["gold", "Gilded", 35, ["#8A6A20", "#C8A040", "#FFF0B0"]]],
+    cabinet: [["oak", "Oak", 1, null], ["brass", "Brass", 6, "#C8A040"], ["silver", "Silver", 13, "#C8D0D8"], ["neon", "Neon", 20, "#40E0F0"], ["gold", "Gold", 28, "#FFD840"]],
+    hat: [["jester", "The jester's cap", 1], ["crown", "A crown", 10], ["wizard", "A wizard's hat", 17], ["tophat", "A top hat", 24], ["laurel", "A laurel", 40], ["goldcrown", "The golden crown", 50]],
+    KINDS: [["felt", "Table felt"], ["chips", "Chips"], ["backs", "Card backs"], ["cabinet", "Cabinet trim"], ["hat", "The Joker's hat"]] };
+  WD.item = (kind, id) => WD[kind].find((x) => x[0] === id) || WD[kind][0];
+  const BK = CM.BOOKS = [
+    { id: "reels", name: "The Reels' lines", where: "slots", tier: "better", entries: [["joker", "Three Jokers"], ["seven", "Three sevens"], ["bar", "Three bars"], ["cherry", "Three cherries"], ["bell", "Three bells"], ["lemon", "Three lemons"], ["mix", "Bars, bells and sevens"], ["twoCherry", "Two cherries"], ["oneCherry", "A cherry first"]] },
+    { id: "poker", name: "Jacks or Better", where: "poker", tier: "rare", entries: () => CM.CG.VP_PAY.map(([n]) => [n, n]) },
+    { id: "wheel", name: "The Joker's Wheel", where: "bigwheel", tier: "better", entries: [["1", "One"], ["2", "Two"], ["5", "Five"], ["10", "Ten"], ["20", "Twenty"], ["joker", "The Joker"], ["star", "The Star"]] },
+    { id: "roulette", name: "Every number, straight up", where: "roulette", tier: "rare", entries: () => Array.from({ length: 37 }, (_, n) => [String(n), String(n)]) },
+    { id: "drop", name: "The high Drop Board", where: "plinko", tier: "rare", entries: () => Array.from({ length: 13 }, (_, b) => [String(b), `${CM.PK.RISK.high[b]}x`]) },
+    { id: "holdem", name: "Hands won at the residents' table", where: "holdem", tier: "rare", entries: () => CM.HE.CATS.map((c, i) => [String(i), c]) },
+    { id: "bingo", name: "The Bell Hall's patterns", where: "bingo", tier: "better", entries: () => CM.BGO.PATTERNS.map((p) => [p.id, p.name]) },
+  ];
+  BK.REWARD = { tickets: 100, jxp: 150 };
+  BK.list = (B) => (typeof B.entries === "function" ? B.entries() : B.entries);
+  const P = CM.Game.prototype, slot0 = P.slotSpin, vp0 = P.vpDraw, bw0 = P.bwSpin, ro0 = P.rouletteSpin, pk0 = P.pkDrop, he0 = P.heEvents, bgEnd0 = P.bgEnd;
+  Object.assign(P, {
+    // ---- the wardrobe ----
+    wdStore() { const F = this.cgStore(); F.wd = F.wd || { felt: "green", chips: "classic", backs: "ruby", cabinet: "oak", hat: "jester" }; return F.wd; },
+    wdOpen(kind, id) { const it = WD[kind] && WD[kind].find((x) => x[0] === id); return !!it && (this.jkLevel ? this.jkLevel() : 1) >= it[2]; },
+    wdWear(kind, id) { if (!WD[kind]) return { error: "No such thing." }; const it = WD[kind].find((x) => x[0] === id); if (!it) return { error: "No such thing." }; if (!this.wdOpen(kind, id)) return { error: `That opens at Joker level ${it[2]}.` };
+      this.wdStore()[kind] = id; this.saveCasino && this.saveCasino(); return { ok: true }; },
+    wdNow(kind) { return WD.item(kind, this.wdStore()[kind]); },
+    // ---- the books ----
+    bkStore() { const F = this.cgStore(); F.books = F.books || { got: {}, done: {} }; return F.books; },
+    bkNote(book, key) { if (this.cgPractice) return null; const S = this.bkStore(), B = BK.find((b) => b.id === book); if (!B) return null; const G = S.got[book] = S.got[book] || {}; key = String(key); if (G[key] || !BK.list(B).some(([k]) => k === key)) return null;
+      G[key] = Date.now(); const out = { book, key, name: (BK.list(B).find(([k]) => k === key) || [])[1] };
+      if (!S.done[book] && BK.list(B).every(([k]) => G[k])) { S.done[book] = Date.now(); out.done = true; if (this.tkAdd) this.tkAdd(BK.REWARD.tickets, "books"); if (this.jkGain) this.jkGain(BK.REWARD.jxp, "books");
+        out.card = this.cgTierCard ? this.cgTierCard(B.tier, `A page of the collection books: ${B.name}!`, new CM.Random(CM.hashSeed(`${this.seed}:book:${book}`))) : null; this.cgCelebrate && this.cgCelebrate(2, `${B.name} - the page is full!`); }
+      (this.bkNew = this.bkNew || []).push(out); this.saveCasino && this.saveCasino(); return out; },
+    bkCount(book) { const B = BK.find((b) => b.id === book), G = this.bkStore().got[book] || {}; return { have: BK.list(B).filter(([k]) => G[k]).length, of: BK.list(B).length, done: !!this.bkStore().done[book] }; },
+    // ---- the tables, read for the books ----
+    slotSpin(bet) { const r = slot0.call(this, bet); if (r && !r.error && r.won > 0) { const [a, b, c] = r.symbols, key = a === b && b === c ? a : /^Any three/.test(r.what) ? "mix" : /^Two cherries/.test(r.what) ? "twoCherry" : "oneCherry"; this.bkNote("reels", key); } return r; },
+    vpDraw() { const r = vp0.call(this), V = this.vpState(); if (V && V.stage === "done" && V.rank >= 0) this.bkNote("poker", CM.CG.VP_PAY[V.rank][0]); return r; },
+    bwSpin(bets) { const r = bw0.call(this, bets); if (r && !r.error && r.back > 0) this.bkNote("wheel", r.hit); return r; },
+    rouletteSpin(bets) { const r = ro0.call(this, bets); if (r && !r.error) for (const b of r.winners || []) if (b.type === "straight") this.bkNote("roulette", b.n); return r; },
+    pkDrop(bet, risk) { const r = pk0.call(this, bet, risk); if (r && !r.error && risk === "high") this.bkNote("drop", r.bin); return r; },
+    heEvents() { const out = he0.call(this); for (const e of out) if (e.kind === "win" && e.seat === 0 && e.cat >= 0) this.bkNote("holdem", e.cat); return out; },
+    bgEnd(G, ball, hallWho) { const r = bgEnd0.call(this, G, ball, hallWho); if (r && r.won > 0) this.bkNote("bingo", G.pat); return r; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -33066,7 +33139,7 @@ CM.CG_TABLES.push(["patience", "The Patience Table"]);
     ptCardDraw(p, c, x, y, lit, lifted) {
       const rr = (r) => { p.beginPath(); p.roundRect ? p.roundRect(x, y, CW, CH, r) : p.rect(x, y, CW, CH); };
       p.fillStyle = `rgba(0,0,0,${lifted ? 0.4 : 0.25})`; p.beginPath(); p.roundRect ? p.roundRect(x + (lifted ? 6 : 2), y + (lifted ? 8 : 3), CW, CH, 7) : p.rect(x + 2, y + 3, CW, CH); p.fill();
-      if (!c.up) { const bg = p.createLinearGradient(x, y, x + CW, y + CH); bg.addColorStop(0, "#7A1A2A"); bg.addColorStop(1, "#4A0A18"); p.fillStyle = bg; rr(7); p.fill(); p.strokeStyle = "#E0B860"; p.lineWidth = 1.5; p.beginPath(); p.roundRect ? p.roundRect(x + 5, y + 5, CW - 10, CH - 10, 4) : p.rect(x + 5, y + 5, CW - 10, CH - 10); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E0B860"; p.beginPath(); p.moveTo(x + CW / 2, y + CH / 2 - 14); p.lineTo(x + CW / 2 + 10, y + CH / 2); p.lineTo(x + CW / 2, y + CH / 2 + 14); p.lineTo(x + CW / 2 - 10, y + CH / 2); p.fill(); return; }
+      if (!c.up) { const bg = p.createLinearGradient(x, y, x + CW, y + CH); const cb = CM.cosBack ? CM.cosBack() : ["#7A1A2A", "#4A0A18"]; bg.addColorStop(0, cb[0]); bg.addColorStop(1, cb[1]); p.fillStyle = bg; rr(7); p.fill(); p.strokeStyle = "#E0B860"; p.lineWidth = 1.5; p.beginPath(); p.roundRect ? p.roundRect(x + 5, y + 5, CW - 10, CH - 10, 4) : p.rect(x + 5, y + 5, CW - 10, CH - 10); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E0B860"; p.beginPath(); p.moveTo(x + CW / 2, y + CH / 2 - 14); p.lineTo(x + CW / 2 + 10, y + CH / 2); p.lineTo(x + CW / 2, y + CH / 2 + 14); p.lineTo(x + CW / 2 - 10, y + CH / 2); p.fill(); return; }
       p.fillStyle = "#FBF6E8"; rr(7); p.fill(); p.strokeStyle = lit ? "#F0B020" : "rgba(60,40,20,0.4)"; p.lineWidth = lit ? 3 : 1; rr(7); p.stroke(); p.lineWidth = 1;
       const col = c.s === 1 || c.s === 2 ? "#C02030" : "#1A1A22", sy = SUIT[c.s], rk = RANK[c.r]; p.fillStyle = col; p.font = "bold 15px Georgia"; p.fillText(rk, x + 5, y + 17); p.font = "13px Georgia"; p.fillText(sy, x + 5, y + 31);
       p.save(); p.translate(x + CW - 5, y + CH - 5); p.rotate(Math.PI); p.font = "bold 15px Georgia"; p.fillText(rk, 0, 12); p.restore();
@@ -33737,7 +33810,7 @@ CM.CG_TABLES.push(["holdem", "The Residents' Game"]);
   const card = (p, x, y, c, up, s = 1) => { const w = 34 * s, h = 48 * s; p.save(); p.translate(x, y); p.fillStyle = "rgba(0,0,0,0.35)"; p.fillRect(-w / 2 + 2, -h / 2 + 3, w, h);
     const r = 4 * s; p.beginPath(); p.moveTo(-w / 2 + r, -h / 2); p.arcTo(w / 2, -h / 2, w / 2, h / 2, r); p.arcTo(w / 2, h / 2, -w / 2, h / 2, r); p.arcTo(-w / 2, h / 2, -w / 2, -h / 2, r); p.arcTo(-w / 2, -h / 2, w / 2, -h / 2, r); p.closePath();
     if (up && c) { p.fillStyle = "#FBF8F0"; p.fill(); p.strokeStyle = "#B8B0A0"; p.stroke(); const red = c.s === 1 || c.s === 2; p.fillStyle = red ? "#C02028" : "#1A1A22"; p.font = `bold ${Math.round(15 * s)}px Georgia`; p.textAlign = "center"; p.fillText(HE.RANKS[c.r] === "T" ? "10" : HE.RANKS[c.r], 0, -3 * s); p.font = `${Math.round(17 * s)}px serif`; p.fillText(HE.SUITS[c.s], 0, 16 * s); p.textAlign = "left"; }
-    else { p.fillStyle = "#7A1A24"; p.fill(); p.strokeStyle = "#E0B860"; p.lineWidth = 1.5; p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(224,184,96,0.5)"; p.strokeRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w - 8 * s, h - 8 * s); p.beginPath(); p.arc(0, 0, 7 * s, 0, Math.PI * 2); p.stroke(); }
+    else { const cb = CM.cosBack ? CM.cosBack() : ["#7A1A24", "#7A1A24", "#E0B860"]; p.fillStyle = cb[0]; p.fill(); p.strokeStyle = cb[2]; p.lineWidth = 1.5; p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(224,184,96,0.5)"; p.strokeRect(-w / 2 + 4 * s, -h / 2 + 4 * s, w - 8 * s, h - 8 * s); p.beginPath(); p.arc(0, 0, 7 * s, 0, Math.PI * 2); p.stroke(); }
     p.restore(); };
   const chips = (p, x, y, n) => { const k = Math.min(8, Math.ceil(Math.log2(n + 1))); for (let i = 0; i < k; i++) { p.fillStyle = ["#C03030", "#3060C0", "#30A050", "#E0B040", "#202020"][i % 5]; p.beginPath(); p.ellipse(x, y - i * 3, 9, 4, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(255,255,255,0.6)"; p.setLineDash([2, 3]); p.stroke(); p.setLineDash([]); } };
   const face = (p, x, y, id, now, dim) => { const P = id === "you" ? { col: "#2A5A8A", hair: "#5A3A20" } : HE.RES[id]; p.save(); p.globalAlpha = dim ? 0.35 : 1;
@@ -34566,9 +34639,7 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
     const cx = (w - 14) / 2 + 1, cy = h / 2 - 2;
     // the Joker: a jester's cap of three points with bells, a grin
     p.fillStyle = "#F0D0A8"; p.beginPath(); p.arc(cx, cy + 14, 30, 0, Math.PI * 2); p.fill();
-    const capC = ["#B02030", "#2A4AA0", "#C8961A"]; [-1, 0, 1].forEach((k, i) => { p.fillStyle = capC[i]; p.beginPath(); p.moveTo(cx - 30 + i * 20, cy - 4); p.quadraticCurveTo(cx + k * 34, cy - 50 - (k ? 0 : 10), cx + k * 46, cy - 26 - (k ? 0 : 30)); p.lineTo(cx - 10 + i * 20, cy - 4); p.fill();
-      p.fillStyle = "#FFD840"; p.beginPath(); p.arc(cx + k * 46, cy - 26 - (k ? 0 : 30) + Math.sin(t * 4 + i) * 1.5, 5, 0, Math.PI * 2); p.fill(); });
-    p.fillStyle = "#F4ECD8"; p.fillRect(cx - 32, cy - 8, 64, 8); p.fillStyle = "#1A1A1A"; p.beginPath(); p.arc(cx - 10, cy + 10, 3, 0, Math.PI * 2); p.arc(cx + 10, cy + 10, 3, 0, Math.PI * 2); p.fill();
+    CM.drawJokerHat(p, cx, cy, t, CM.game && CM.game.wdNow ? CM.game.wdNow("hat")[0] : "jester"); p.fillStyle = "#1A1A1A"; p.beginPath(); p.arc(cx - 10, cy + 10, 3, 0, Math.PI * 2); p.arc(cx + 10, cy + 10, 3, 0, Math.PI * 2); p.fill();
     p.strokeStyle = "#8A2020"; p.lineWidth = 3; p.beginPath(); p.arc(cx, cy + 18, 14, 0.15, Math.PI - 0.15); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E06070"; p.beginPath(); p.arc(cx - 20, cy + 20, 5, 0, Math.PI * 2); p.arc(cx + 20, cy + 20, 5, 0, Math.PI * 2); p.fill();
     // the ruff and the level
     for (let k = 0; k < 9; k++) { p.fillStyle = k % 2 ? "#FFFFFF" : "#E0D8C8"; p.beginPath(); p.arc(cx - 32 + k * 8, cy + 46, 7, 0, Math.PI * 2); p.fill(); }
@@ -34777,6 +34848,56 @@ CM.HOWTO = {
     cgAutoBar() { const A = this.cgAuto, b = this.$("#casino-body [data-auto]"); if (A && b) { b.textContent = `Stop auto (${A.done}/${A.n})`; b.classList.add("on"); } },
   });
   const g0 = (n) => `${n >= 0 ? "+" : "-"}${Math.abs(Math.round(n)).toLocaleString("en")}`;
+}
+
+// ---- 76zzv-wardrobe.js ----
+"use strict";
+// The wardrobe and the collection books, the window's side: what the party wears is put on the whole floor - the felt
+// under every table, the chips in the bet rows, the backs of the cards (dealt at blackjack, hold'em and patience), a
+// trim round the cabinets' screens, and the Joker's hat on his card. The Wardrobe door shows each kind as swatches,
+// the locked ones with the level they open at; the Collections door shows every book's page, the entries found lit
+// and the rest as question marks, with its reward. A new entry is told on the table's note. The rules are
+// 64zzq-wardrobe.js.
+CM.cosBack = () => { const g = CM.game; try { return g && g.wdNow ? g.wdNow("backs")[3] : CM.WARDROBE.backs[0][3]; } catch (e) { return CM.WARDROBE.backs[0][3]; } };
+CM.drawJokerHat = (p, cx, cy, t, hat) => {
+  const bell = (x, y, i) => { p.fillStyle = "#FFD840"; p.beginPath(); p.arc(x, y + Math.sin(t * 4 + i) * 1.5, 5, 0, Math.PI * 2); p.fill(); };
+  if (hat === "crown" || hat === "goldcrown") { p.fillStyle = hat === "goldcrown" ? "#FFD840" : "#C8A040"; p.beginPath(); p.moveTo(cx - 30, cy - 4); p.lineTo(cx - 30, cy - 34); p.lineTo(cx - 15, cy - 18); p.lineTo(cx, cy - 42); p.lineTo(cx + 15, cy - 18); p.lineTo(cx + 30, cy - 34); p.lineTo(cx + 30, cy - 4); p.fill();
+    for (const [x, c] of [[-15, "#C02030"], [0, "#2A6AD0"], [15, "#30A050"]]) { p.fillStyle = c; p.beginPath(); p.arc(cx + x, cy - 12, 4, 0, Math.PI * 2); p.fill(); } if (hat === "goldcrown") { p.fillStyle = `rgba(255,255,255,${0.4 + 0.3 * Math.sin(t * 3)})`; p.fillRect(cx - 24, cy - 26, 4, 10); } }
+  else if (hat === "wizard") { p.fillStyle = "#2A2A8A"; p.beginPath(); p.moveTo(cx - 34, cy - 2); p.quadraticCurveTo(cx + 4, cy - 30, cx + 18, cy - 70); p.quadraticCurveTo(cx + 14, cy - 30, cx + 34, cy - 2); p.fill(); p.fillStyle = "#FFE070"; for (const [x, y] of [[-8, -20], [6, -38], [-2, -8]]) { p.beginPath(); p.arc(cx + x, cy + y, 2.5, 0, Math.PI * 2); p.fill(); } }
+  else if (hat === "tophat") { p.fillStyle = "#1A1A1A"; p.fillRect(cx - 36, cy - 8, 72, 6); p.fillRect(cx - 22, cy - 50, 44, 44); p.fillStyle = "#8A1A28"; p.fillRect(cx - 22, cy - 16, 44, 6); }
+  else if (hat === "laurel") { p.strokeStyle = "#5A8A30"; p.lineWidth = 3; p.beginPath(); p.arc(cx, cy + 6, 32, Math.PI * 1.1, Math.PI * 1.9); p.stroke(); p.lineWidth = 1; for (let k = 0; k < 9; k++) { const a = Math.PI * (1.1 + k * 0.1); p.fillStyle = "#6AAA40"; p.beginPath(); p.ellipse(cx + Math.cos(a) * 32, cy + 6 + Math.sin(a) * 32, 6, 3, a + 1.2, 0, Math.PI * 2); p.fill(); } }
+  else { const capC = ["#B02030", "#2A4AA0", "#C8961A"]; [-1, 0, 1].forEach((k, i) => { p.fillStyle = capC[i]; p.beginPath(); p.moveTo(cx - 30 + i * 20, cy - 4); p.quadraticCurveTo(cx + k * 34, cy - 50 - (k ? 0 : 10), cx + k * 46, cy - 26 - (k ? 0 : 30)); p.lineTo(cx - 10 + i * 20, cy - 4); p.fill(); bell(cx + k * 46, cy - 26 - (k ? 0 : 30), i); }); }
+  if (hat !== "laurel") { p.fillStyle = "#F4ECD8"; p.fillRect(cx - 32, cy - 8, 64, 8); } };
+{ const r15 = CM.UI.prototype.renderCasino, open15 = CM.UI.prototype.openCasino, gal15 = CM.UI.prototype.cgGallery, WD = CM.WARDROBE, BK = CM.BOOKS;
+  const nameOf = (id) => ((CM.CG_TABLES.find(([k]) => k === id) || [])[1]) || id;
+  const wear = (ui) => { const g = ui.game, box = ui.$("#dlg-casino .casinobox"); if (!box || !g.wdNow) return; const F = g.wdNow("felt")[3], C = g.wdNow("chips")[3], B = g.wdNow("backs")[3], T = g.wdNow("cabinet")[3], s = box.style;
+    s.setProperty("--felt-a", F[0]); s.setProperty("--felt-b", F[1]); s.setProperty("--felt-c", F[2]); [1, 5, 25, 100, 500].forEach((v, i) => s.setProperty(`--chip-${v}`, C[i])); if (CM.CG.chips.includes(1000)) s.setProperty("--chip-1000", C[4]);
+    s.setProperty("--cb-a", B[0]); s.setProperty("--cb-b", B[1]); s.setProperty("--cb-line", B[2]); s.setProperty("--cab", T || "transparent"); box.classList.toggle("cos-cab", !!T); };
+  const swatch = (p, kind, it, w, h) => { const v = it[3]; p.clearRect(0, 0, w, h);
+    if (kind === "felt") { const g = p.createRadialGradient(w / 2, h * 0.4, 4, w / 2, h / 2, w * 0.7); g.addColorStop(0, v[0]); g.addColorStop(0.7, v[1]); g.addColorStop(1, v[2]); p.fillStyle = g; p.fillRect(0, 0, w, h); }
+    else if (kind === "chips") { p.fillStyle = "#1A140E"; p.fillRect(0, 0, w, h); v.forEach((c, i) => { const x = 14 + i * ((w - 28) / 4), y = h / 2 + (i % 2 ? 4 : -4); p.fillStyle = c; p.beginPath(); p.arc(x, y, 11, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(255,255,255,0.7)"; p.setLineDash([3, 3]); p.lineWidth = 2; p.stroke(); p.setLineDash([]); p.lineWidth = 1; }); }
+    else if (kind === "backs") { p.fillStyle = "#1A140E"; p.fillRect(0, 0, w, h); for (const [x, r] of [[w / 2 - 12, -0.15], [w / 2 + 12, 0.15]]) { p.save(); p.translate(x, h / 2); p.rotate(r); p.fillStyle = v[0]; p.fillRect(-14, -20, 28, 40); p.strokeStyle = v[1]; p.lineWidth = 2; for (let k = -40; k < 40; k += 7) { p.beginPath(); p.moveTo(-14, k); p.lineTo(14, k + 28); p.stroke(); } p.strokeStyle = v[2]; p.strokeRect(-12, -18, 24, 36); p.restore(); } }
+    else if (kind === "cabinet") { p.fillStyle = "#1A140E"; p.fillRect(0, 0, w, h); p.fillStyle = "#0A1020"; p.fillRect(18, 10, w - 36, h - 20); if (v) { p.strokeStyle = v; p.lineWidth = 4; p.strokeRect(14, 6, w - 28, h - 12); if (it[0] === "neon") { p.shadowColor = v; p.shadowBlur = 10; p.strokeRect(14, 6, w - 28, h - 12); p.shadowBlur = 0; } p.lineWidth = 1; } else { p.strokeStyle = "#6A4A28"; p.lineWidth = 4; p.strokeRect(14, 6, w - 28, h - 12); p.lineWidth = 1; } }
+    else if (kind === "hat") { p.fillStyle = "#2A1A10"; p.fillRect(0, 0, w, h); p.save(); p.translate(w / 2, h * 0.62); p.scale(0.5, 0.5); p.fillStyle = "#F0D0A8"; p.beginPath(); p.arc(0, 18, 28, 0, Math.PI * 2); p.fill(); CM.drawJokerHat(p, 0, 0, performance.now() / 1000, it[0]); p.restore(); } };
+  Object.assign(CM.UI.prototype, {
+    openCasino() { const out = open15.call(this); wear(this); return out; },
+    renderCasino() { const g = this.game; if (g.bkNew && g.bkNew.length) { const n = g.bkNew.splice(0), last = n[n.length - 1], B = BK.find((b) => b.id === last.book), c = g.bkCount(last.book); this.cgNote = `${this.cgNote ? `${this.cgNote} ` : ""}New in the books: ${last.name} (${B.name}, ${c.have} of ${c.of}).`; }
+      const v = this.cgView; if (v === "wardrobe" || v === "books") { if (v === "wardrobe") this.cgWardrobe(this.$("#casino-body")); else this.cgBooks(this.$("#casino-body")); this.cgToasts && this.cgToasts(); this.cgFwFlush && this.cgFwFlush(); wear(this); return; }
+      const out = r15.call(this); wear(this); return out; },
+    cgGallery(box) { gal15.call(this, box); const g = this.game, strip = box.querySelector(".cgclub"); if (!strip || !g.bkStore) return; const done = BK.filter((b) => g.bkCount(b.id).done).length;
+      for (const [view, html] of [["wardrobe", "Wardrobe"], ["books", `Collections <b class="bkn">${done}/${BK.length}</b>`]]) { const b = document.createElement("button"); b.className = "flbtn cosbtn"; b.innerHTML = html; strip.appendChild(b); b.addEventListener("click", () => { this.cgView = view; this.caSfx("cardplace", 0.3); this.renderCasino(); }); } },
+    cgWardrobe(box) { const g = this.game, L = g.jkLevel ? g.jkLevel() : 1;
+      box.innerHTML = `<div class="wdroom"><p class="lore">Behind the cashier's cage, a tall cupboard of the house's finery - bolts of felt, trays of chips, decks still in their bands, brass and silver fittings, and a hat stand with the Joker's hats. "Your standing opens the cupboard," says the cashier. "The higher you stand, the finer it gets." You stand at Joker level <b>${L}</b>.</p>
+        ${WD.KINDS.map(([kind, label]) => `<h4>${label}</h4><div class="wdrow">${WD[kind].map((it) => { const open = L >= it[2], on = g.wdStore()[kind] === it[0]; return `<button class="wdsw${on ? " on" : ""}${open ? "" : " locked"}" data-wd="${kind}:${it[0]}" ${open ? "" : "disabled"}><canvas width="104" height="58" data-wdc="${kind}:${it[0]}"></canvas><b>${it[1]}</b><span>${on ? "Worn" : open ? "Wear it" : `🔒 Joker level ${it[2]}`}</span></button>`; }).join("")}</div>`).join("")}<div class="cgnote">${this.cgNote || ""}</div></div>`;
+      this.cgClubHead(box, "Wardrobe"); box.querySelectorAll("[data-wdc]").forEach((c) => { const [kind, id] = c.dataset.wdc.split(":"); swatch(c.getContext("2d"), kind, WD.item(kind, id), c.width, c.height); });
+      box.querySelectorAll("[data-wd]").forEach((b) => b.addEventListener("click", () => { const [kind, id] = b.dataset.wd.split(":"), r = g.wdWear(kind, id); this.cgNote = r.error || `${WD.item(kind, id)[1]} - worn.`; this.cgSfx(r.error ? "miss" : "cardplace", 0.4); this.renderCasino(); })); },
+    cgBooks(box) { const g = this.game, S = g.bkStore(), pond = g.pdStore ? g.pdStore() : null;
+      box.innerHTML = `<div class="bkroom"><p class="lore">On a lectern by the door, the house's collection books: a page for each table, a line for each thing it can do. "Fill a page," says the cashier, "and the Joker pays for the ink."</p><div class="bkgrid">${BK.map((B) => { const c = g.bkCount(B.id), G = S.got[B.id] || {};
+          return `<div class="bkpage${c.done ? " done" : ""}"><div class="bkhead"><b>${B.name}</b><span>${c.have} / ${c.of}</span></div><i class="bkbar"><i style="width:${Math.round((100 * c.have) / c.of)}%"></i></i><div class="bkents">${BK.list(B).map(([k, n]) => `<span class="${G[k] ? "on" : ""}" title="${G[k] ? n : "not yet"}">${G[k] ? n : "?"}</span>`).join("")}</div>
+            <div class="bkfoot"><span class="small">${c.done ? "Page full - paid" : `A full page: ${BK.REWARD.tickets} tickets, ${BK.REWARD.jxp} JXP and a ${B.tier === "rare" ? "rare" : "stronger"} card`}</span><button data-bkgo="${B.where}">${nameOf(B.where)}</button></div></div>`; }).join("")}
+          ${pond ? `<div class="bkpage"><div class="bkhead"><b>The creel book</b><span>${Object.keys(pond.book).length} / 8</span></div><p class="small">Kept by the old woman at the pond - every fish, with your heaviest.</p><div class="bkfoot"><span></span><button data-bkgo="pond">${nameOf("pond")}</button></div></div>` : ""}</div></div>`;
+      this.cgClubHead(box, "Collections"); box.querySelectorAll("[data-bkgo]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.bkgo; this.cgNote = ""; this.caSfx("cardplace", 0.3); this.renderCasino(); })); },
+  });
 }
 
 // ---- 77-splash.js ----

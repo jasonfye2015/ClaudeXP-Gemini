@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The wardrobe and the books (the fifty-eighth big update - v17.2)
+  (src/js/64zzq-wardrobe.js, 76zzv-wardrobe.js)
+  - The Wardrobe (a door on the club strip): looks opened by the Joker level - six table felts (green, royal blue at 3,
+    crimson 7, midnight violet 12, onyx 18, gold leaf 30), five chip sets (classic, jade 5, obsidian 11, pearl 16,
+    gilded 25), six card backs (ruby, sapphire 4, forest 9, the Joker's own 14, starfield 22, gilded 35), five cabinet
+    trims (oak, brass 6, silver 13, neon 20, gold 28) and six hats for the Joker's card (the jester's cap, a crown at
+    10, a wizard's hat 17, a top hat 24, a laurel 40, the golden crown 50). What's worn is worn across the floor: the
+    felt behind every table, the chips in the bet rows, the card backs at blackjack, hold'em and patience, a trim round
+    the screens.
+  - The Collections (a door on the club strip): seven books filled from play - the reels' nine lines, video poker's
+    paying hands, the Joker's Wheel's seven slots, every number won straight up at roulette, the high Drop Board's
+    thirteen bins, the hands won at the residents' table, the Bell Hall's patterns - with the pond's creel book beside
+    them. Each new entry is told on the table's note; a full page pays 100 tickets, 150 JXP and a card (rare for the
+    long pages). Nothing is noted in practice.
+
 Fast and auto (the fifty-seventh big update - v17.1)
   (src/js/76zzu-speed.js)
   - Fast: at the tables where the waiting is only watching (the reels, roulette, blackjack, video poker, the dice, the
