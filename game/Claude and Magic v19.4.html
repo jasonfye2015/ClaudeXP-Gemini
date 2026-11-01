@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v19.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v19.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1436,6 +1436,9 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* the charmed crops (v19.3) */
 .fdplot.charmed img { filter: drop-shadow(0 0 3px var(--glow, #F0C040)) drop-shadow(0 0 6px var(--glow, #F0C040)); animation: fdcharm 2.2s ease-in-out infinite; } @keyframes fdcharm { 50% { filter: drop-shadow(0 0 1px var(--glow, #F0C040)); } }
 @media (prefers-reduced-motion: reduce) { .fdplot.charmed img { animation: none; } }
+/* what the fields are for (v19.4) */
+.fduse { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: rgba(140,110,40,0.14); font-size: 13px; } @media (max-width: 760px) { .fduse { grid-template-columns: 1fr; } }
+.fduse p { margin: 6px 0; } .fduse button { margin: 0 4px 4px 0; }
 </style>
 </head>
 <body>
@@ -1445,7 +1448,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "19.3", built: "2026-11-01" };
+const CM = window.CM = { version: "19.4", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -25122,7 +25125,7 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
       if (this.gold < LK.temper.gold) return `The smith's fee is ${LK.temper.gold} gold.`; return ""; },
     islandTemper(hero, slot) { const hi = typeof hero === "number" ? hero : this.party.indexOf(hero), h = this.party[hi], why = this.islandTemperWhy(h, slot); if (why) return why; this.logAct && this.logAct("islandTemper", hi, slot);
       this.bag.splice(this.bag.findIndex((x) => x.kind === "bar"), 1); this.bag.splice(this.bag.findIndex((x) => x.kind === "essence"), 1); this.gold -= LK.temper.gold;
-      const it = h[slot]; it.props = Object.assign({}, it.props, { tempered: true }); it.power = (it.power || 0) + LK.temper.power; it.value = Math.round((it.value || 0) * 1.15); CM.recompute(h); this.sound && this.sound("anvil"); this.emit && this.emit("change"); return ""; },
+      const it = h[slot]; it.props = Object.assign({}, it.props, { tempered: true }); it.power = (it.power || 0) + LK.temper.power; it.value = Math.round((it.value || 0) * 1.15); CM.recompute(h); this.sound && this.sound("slam"); this.emit && this.emit("change"); return ""; },
   });
 }
 
@@ -26627,7 +26630,7 @@ Object.assign(CM.Game.prototype, {
     // ---- the request board ----
     rqStore() { this.village = this.village || {}; const S = this.village.requests = this.village.requests || { day: "", list: [], done: 0 }; return S; },
     rqList(now) { const S = this.rqStore(), day = RQ.day(now); if (S.day !== day) { const keep = S.list.filter((q) => !q.done && !q.carried).map((q) => Object.assign(q, { carried: true })).slice(0, 1), R = new CM.Random(CM.hashSeed(`${this.seed}:requests:${day}`)), places = new Set(keep.map((q) => RQ.byId[q.kind].place)), list = keep.slice();
-        for (const K of R.shuffle(RQ.KINDS.slice())) { if (list.length >= RQ.per) break; if (places.has(K.place)) continue; places.add(K.place); const goal = K.goal ? K.goal(this) : K.n;
+        for (const K of R.shuffle(RQ.KINDS.slice())) { if (list.length >= RQ.per) break; if (places.has(K.place) || (K.open && !K.open(this))) continue;   /* (a kind may wait for its place: 69n-fielduse.js) */ places.add(K.place); const goal = K.goal ? K.goal(this) : K.n;
           list.push({ kind: K.id, n: goal, base: K.deed && !K.goal ? K.count(this) : 0, giver: R.pick(RQ.GIVERS), renown: 10 + R.int(0, 3) * 5, gold: 40 + R.int(0, 6) * 20, done: false }); }
         S.day = day; S.list = list; this.saveVillage && this.saveVillage(); } return S.list; },
     rqProgress(q) { const K = RQ.byId[q.kind]; if (!K) return 0; if (!K.deed) return Math.min(q.n, K.have(this)); if (K.goal) return K.count(this) >= q.n ? q.n : K.count(this); const c = K.count(this); if (c < q.base) q.base = 0; return Math.min(q.n, c - q.base); },
@@ -26862,7 +26865,7 @@ Object.assign(CM.Game.prototype, {
     thForgeWhy() { const I = this.thInfo(); if (I.forged) return "The tongue is cast."; if (I.have < I.all) return `The makings aren't all found: ${I.have} of ${I.all}.`; if (!this.floor || this.floor.number !== 0) return "The casting wants the smith's fire, in town.";
       if (!this.bag.some((x) => x.kind === "bar")) return "It wants a metal bar to hold it all together (from the island, or the smelter)."; if (this.gold < TH.forgeGold) return `The smith asks ${TH.forgeGold} gold for the fire and the night.`; return ""; },
     thForge() { const why = this.thForgeWhy(); if (why) return why; this.logAct && this.logAct("thForge"); this.bag.splice(this.bag.findIndex((x) => x.kind === "bar"), 1); this.gold -= TH.forgeGold; const T = this.thStore(); T.forged = true;
-      this.sound && this.sound("anvil"); this.say("The smith works all night and won't let anyone watch. In the morning there is a bell's tongue on the anvil, the size of a fist, and when the smith lifts it, it hums."); CM.store.set("village", this.village); this.emit && this.emit("change"); return ""; },
+      this.sound && this.sound("slam"); this.say("The smith works all night and won't let anyone watch. In the morning there is a bell's tongue on the anvil, the size of a fist, and when the smith lifts it, it hums."); CM.store.set("village", this.village); this.emit && this.emit("change"); return ""; },
     thRingWhy() { const I = this.thInfo(); if (I.rung) return "It has rung."; if (!I.forged) return "There's no tongue to give him yet."; if (!this.floor || this.floor.number !== TH.yard) return "The Boy is in the bell-yard, the Undercroft's deepest street."; return ""; },
     thRing() { const why = this.thRingWhy(); if (why) return why; this.logAct && this.logAct("thRing"); const T = this.thStore(); T.rung = CM.today ? CM.today() : 1;
       this.village.renown = (this.village.renown || 0) + TH.renown; this.achieve && this.achieve("lastbell"); this.sound && this.sound("victory");
@@ -26947,7 +26950,7 @@ Object.assign(CM.Game.prototype, {
       if (P.picks && g === 0) return "after"; if (g === 0) return "sown"; return Math.min(3, 1 + Math.floor((g / need) * 3)); },
     fieldWhy(key) { if (this.fieldsLevel() < 1) return "The South Fields aren't laid out yet (the village's window)."; if (!this.floor || this.floor.number !== 0) return "The fields are in town."; if (!this.isPlot(key)) return "That isn't one of the plots."; if (!this.atFields()) return "You need to be at the fields."; return ""; },
     fieldTill(key) { const why = this.fieldWhy(key); if (why) return why; const F = this.fields(), P = F.plots[key] = F.plots[key] || {}; if (P.t) return "Already turned."; this.logAct && this.logAct("fieldTill", key); return this._fieldTill(key); },
-    _fieldTill(key) { const F = this.fields(), P = F.plots[key] = F.plots[key] || {}; P.t = 1; this.clock = (this.clock || 0) + FD.hoeMinutes; const [x, y] = key.split(",").map(Number); if (this.floor && CM.setGround) CM.setGround(this.floor, x, y, "tilled"); this.sound && this.sound("dig"); this.emit && this.emit("floor", this.floor); return ""; },
+    _fieldTill(key) { const F = this.fields(), P = F.plots[key] = F.plots[key] || {}; P.t = 1; this.clock = (this.clock || 0) + FD.hoeMinutes; const [x, y] = key.split(",").map(Number); if (this.floor && CM.setGround) CM.setGround(this.floor, x, y, "tilled"); this.sound && this.sound("grind"); this.emit && this.emit("floor", this.floor); return ""; },
     fieldSow(key, crop) { const why = this.fieldWhy(key); if (why) return why; const P = this.fields().plots[key]; if (!P || !P.t) return "Turn the earth first."; if (P.crop) return "Something's growing there.";
       const K = CM.CROPS[crop]; if (!K) return "No such seed."; const i = this.bag.findIndex((it) => it.kind === "seed" && it.crop === crop); if (i < 0) return `No ${K.name.toLowerCase()} seed in the pack (the shed sells them).`;
       if (!K.sow.includes(CM.season(this))) return `${K.name} is sown in ${K.sow.join(" or ")}.`; this.logAct && this.logAct("fieldSow", key, crop); return this._fieldSow(key, crop, i); },
@@ -27217,6 +27220,64 @@ Object.assign(CM.Game.prototype, {
       if (FS.on && !out && crop && q >= 3 && !giant && FS.roll(this, `cut:${key}`) < FS.cutting) { const s = CM.seed(crop); s.q = q; s.name = `${CM.CROPS[crop].name} cutting ${CM.stars ? CM.stars(q) : q}`; s.value = 20 + q * 8; this.gain([s], "fields"); } return out; };
     G._fieldSow = function (key, crop, i) { const it = this.bag[i], base = it && it.q ? it.q : 0; const out = sow0.call(this, key, crop, i); const P = this.fields().plots[key]; if (P) P.base = base; return out; };
     const q0 = FC.quality; FC.quality = (g, key) => { const P = g.fields().plots[key]; return Math.max(q0(g, key), P && P.crop && P.base ? Math.min(5, P.base) : 0); }; }
+}
+
+// ---- 69n-fielduse.js ----
+"use strict";
+// The South Fields, what they're for (v19.4, UPGRADE_PLAN_14.md phase 4).
+// - The market stall in the Square: the fields' produce sold at its full worth (stars and all), and three crops a day
+//   in demand at half as much again; from the pack or straight out of the silo, anywhere in town.
+// - The Harvest Fair's contest (the fair's week in September, or the season pinned): one entry a fair, the party's best
+//   crop against three of the village's, judged on its stars and its kind; first, second and third pay renown and
+//   gold, and first a blue ribbon.
+// - The still in the shed: mana-blossom to a mana potion, two frost-berries to a healing potion, a moon-melon to a
+//   bottle of moon-melon wine, coin-bean pods cracked for their copper (gold), the Joker's roses sold to the Joker for
+//   tickets.
+// - The request board asks for the fields too (a crop of three stars, a charmed crop), once they're laid out.
+// - The fields count toward the renown level: a picking of ten, a giant, a fair won, the market's takings.
+// The window's side: 76zzzn-fielduse.js.
+{ const FU = CM.FIELDUSE = { demand: 3, demandMult: 1.5, places: [[60, 300, 1], [30, 120, 2], [15, 50, 3]] };
+  const G = CM.Game.prototype, FS = CM.FIELDSEEDS;
+  const produce = (it) => it && it.kind === "ingredient" && CM.CROPS[it.ingredient] && CM.CROPS[it.ingredient].price;
+  FU.day = () => (CM.TOWNREQ ? CM.TOWNREQ.day() : Math.floor(Date.now() / 86400000));
+  FU.demandFor = (g, day) => { const all = Object.keys(CM.CROPS).filter((c) => CM.CROPS[c].price), R = new CM.Random(CM.hashSeed(`${g.seed}:market:${day === undefined ? FU.day() : day}`)), out = []; while (out.length < FU.demand && out.length < all.length) { const c = R.pick(all); if (!out.includes(c)) out.push(c); } return out; };
+  FU.price = (g, it) => Math.round((it.value || CM.CROPS[it.ingredient].price) * (FU.demandFor(g).includes(it.ingredient) ? FU.demandMult : 1));
+  // the contest: the party's entry, scored; the village's three, by the year
+  FU.score = (it) => (it.q || 1) * 20 + Math.min(60, Math.round(CM.CROPS[it.ingredient].price / 2)) + (CM.CROPS[it.ingredient].charmed ? 15 : 0);
+  FU.rivals = (g, year) => { const R = new CM.Random(CM.hashSeed(`${g.seed}:fair:${year}`)); return [["the farmer's hand", R.int(70, 120)], ["the tavern-keeper", R.int(55, 105)], ["the priest", R.int(40, 95)]]; };
+  FU.year = () => new Date().getFullYear();
+  Object.assign(G, {
+    marketSell(from = "pack") { if (!this.floor || this.floor.number !== 0) return { error: "The market stall is in the Square, in town." }; const F = this.fields(), src = from === "silo" ? (F.silo || []) : this.bag;
+      const sold = src.filter(produce); if (!sold.length) return { error: from === "silo" ? "Nothing of the fields' in the silo." : "Nothing of the fields' in the pack." }; this.logAct && this.logAct("marketSell", from);
+      let gold = 0; for (const it of sold) gold += FU.price(this, it); for (const it of sold) src.splice(src.indexOf(it), 1);
+      this.gold += gold; F.marketGold = (F.marketGold || 0) + gold; this.sound && this.sound("coin"); this.say(`The market stall sells ${CM.plural(sold.length, "thing")} from the fields for ${gold} gold.`); this.saveVillage && this.saveVillage(); this.emit && this.emit("change"); return { n: sold.length, gold }; },
+    fairOpen() { return Boolean(CM.festivalIs && CM.festivalIs(this, "harvest")); },
+    fairEnter(i) { if (!this.fairOpen()) return { error: "The contest is at the Harvest Fair (September's fair week)." }; if (!this.floor || this.floor.number !== 0) return { error: "The contest is judged in town." };
+      const F = this.fields(), year = FU.year(); if (F.fairYear === year) return { error: "One entry a fair: yours is in." }; const it = this.bag[i]; if (!produce(it)) return { error: "Enter something grown in the fields." };
+      this.logAct && this.logAct("fairEnter", i); this.bag.splice(i, 1); F.fairYear = year; const mine = FU.score(it), table = FU.rivals(this, year).concat([["your party", mine]]).sort((a, b) => b[1] - a[1]), place = table.findIndex(([w]) => w === "your party") + 1;
+      const P = FU.places[place - 1]; if (P) { this.village.renown = (this.village.renown || 0) + P[0]; this.gold += P[1]; } if (place === 1) { F.fairWins = (F.fairWins || 0) + 1; this.achieve && this.achieve("blueribbon"); }
+      this.say(`The judges walk the tables, poke everything, and confer. ${["First", "Second", "Third", "Fourth"][place - 1]} prize for your ${it.name.toLowerCase()}${P ? ` (+${P[0]} renown, ${P[1]} gold)` : " - the village is very good at this"}.`);
+      this.saveVillage && this.saveVillage(); this.emit && this.emit("change"); return { place, table, score: mine }; },
+    stillWhy(crop) { if (!this.atFields()) return "The still is in the shed."; const need = { manablossom: 1, frostberry: 2, moonmelon: 1, coinbean: 1, jokerrose: 1 }[crop]; if (!need) return "The still has nothing to make of that.";
+      return this.bag.filter((it) => it.kind === "ingredient" && it.ingredient === crop).length >= need ? "" : `It wants ${need} ${CM.CROPS[crop].name.toLowerCase()}.`; },
+    still(crop) { const why = this.stillWhy(crop); if (why) return why; this.logAct && this.logAct("still", crop); const need = crop === "frostberry" ? 2 : 1;
+      for (let k = 0; k < need; k++) this.bag.splice(this.bag.findIndex((it) => it.kind === "ingredient" && it.ingredient === crop), 1);
+      if (crop === "manablossom") this.gain([{ name: "Mana Potion", kind: "mana", power: 30, value: 40 }], "fields");
+      else if (crop === "frostberry") this.gain([{ name: "Healing Potion", kind: "heal", power: 45, value: 35 }], "fields");
+      else if (crop === "moonmelon") this.gain([{ name: "Moon-melon wine", kind: "heal", power: 90, value: 120 }], "fields");
+      else if (crop === "coinbean") { this.gold += 15; this.say("The pod cracks: fifteen copper-bright coins."); }
+      else if (crop === "jokerrose") { if (this.tkAdd) this.tkAdd(30, "fields"); this.say("A boy from the Joker takes the rose and leaves thirty tickets."); }
+      this.sound && this.sound("heal"); this.saveVillage && this.saveVillage(); this.emit && this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.blueribbon = { name: "Blue Ribbon", what: "Take first prize at the Harvest Fair's contest with something from the South Fields", title: "of the Blue Ribbon" };
+  // the request board asks for the fields too
+  if (CM.TOWNREQ && CM.TOWNREQ.KINDS) { const RQ = CM.TOWNREQ, open = (g) => g.fieldsLevel && g.fieldsLevel() >= 1, take = (g, test, n) => { for (let i = g.bag.length - 1; i >= 0 && n > 0; i--) if (test(g.bag[i])) { g.bag.splice(i, 1); n--; } };
+    const starred = (it) => produce(it) && (it.q || 0) >= 3, charmed = (it) => produce(it) && CM.CROPS[it.ingredient].charmed;
+    RQ.KINDS.push({ id: "starred", place: "the South Fields", n: 1, open, what: () => "a crop of three stars or more from the South Fields", have: (g) => g.bag.filter(starred).length, take: (g, n) => take(g, starred, n) },
+      { id: "charmed", place: "the South Fields", n: 1, open, what: () => "a charmed crop (mana-blossom, frost-berries, ember pepper, moon-melon, coin-bean or the Joker's rose)", have: (g) => g.bag.filter(charmed).length, take: (g, n) => take(g, charmed, n) });
+    RQ.byId.starred = RQ.KINDS[RQ.KINDS.length - 2]; RQ.byId.charmed = RQ.KINDS[RQ.KINDS.length - 1]; }
+  // toward the renown level
+  if (CM.RENOWNLV) CM.RENOWNLV.AREAS.push(["fields", "The South Fields", "1 a ten picked, 15 a giant, 20 a fair won, 1 a 200 gold sold", (g) => { const F = (g.village || {}).fields || {}; return Math.floor((F.picked || 0) / 10) + 15 * (F.giants || 0) + 20 * (F.fairWins || 0) + Math.floor((F.marketGold || 0) / 200); }]);
 }
 
 // ---- 70-ui.js ----
@@ -36925,6 +36986,29 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const rf0 = CM.UI.prototype.renderFields;
   CM.UI.prototype.renderFields = function () { rf0.call(this); const g = this.game, box = this.$("#fd-body"); if (!box || g.fieldsLevel() < 1) return; const F = g.fields();
     box.querySelectorAll("[data-fd]").forEach((b) => { const P = F.plots[b.dataset.fd], C = P && P.crop && FS.CHARMED[P.crop]; if (C) { b.classList.add("charmed"); b.style.setProperty("--glow", C.glow); } }); };
+}
+
+// ---- 76zzzn-fielduse.js ----
+"use strict";
+// The South Fields, what they're for - the window's side (v19.4): under the board, the market stall (today's demand,
+// what the pack and the silo would fetch, Sell), the Harvest Fair's contest when the fair is on (enter a crop, the
+// judges' table), and the shed's still. The rules are 69n-fielduse.js.
+{ const FU = CM.FIELDUSE, rf0 = CM.UI.prototype.renderFields;
+  CM.UI.prototype.renderFields = function () { rf0.call(this); const g = this.game, box = this.$("#fd-body"); if (!box || g.fieldsLevel() < 1) return; const F = g.fields(), town = g.floor && g.floor.number === 0, here = g.atFields();
+    const isProd = (it) => it && it.kind === "ingredient" && CM.CROPS[it.ingredient] && CM.CROPS[it.ingredient].price, worth = (list) => list.filter(isProd).reduce((n, it) => n + FU.price(g, it), 0);
+    const demand = FU.demandFor(g), packN = g.bag.filter(isProd).length, siloN = (F.silo || []).filter(isProd).length;
+    const fair = g.fairOpen(), entered = F.fairYear === FU.year(), entries = g.bag.map((it, i) => [it, i]).filter(([it]) => isProd(it)).sort((a, b) => FU.score(b[0]) - FU.score(a[0])).slice(0, 6);
+    const stills = ["manablossom", "frostberry", "moonmelon", "coinbean", "jokerrose"].filter((c) => g.bag.some((it) => it.kind === "ingredient" && it.ingredient === c));
+    const el = document.createElement("div"); el.className = "fduse";
+    el.innerHTML = `<div><div class="list-title">The market stall (the Square)</div><p class="small">In demand today, at half as much again: <b>${demand.map((c) => this.esc(CM.CROPS[c].name)).join(", ")}</b>.</p>
+        <p><button data-fdsell="pack" ${town && packN ? "" : "disabled"}>Sell the pack's ${packN} (${worth(g.bag)}g)</button> <button data-fdsell="silo" ${town && siloN ? "" : "disabled"}>Sell the silo's ${siloN} (${worth(F.silo || [])}g)</button></p>${F.marketGold ? `<p class="small">Sold at the stall so far: ${F.marketGold} gold.</p>` : ""}</div>
+      <div><div class="list-title">The Harvest Fair's contest</div>${fair ? (entered ? `<p class="small">Your entry is in for this fair.</p>` : entries.length ? `<p class="small">One entry a fair, judged on its stars and its kind:</p>${entries.map(([it, i]) => `<button data-fdfair="${i}">${this.esc(it.name)} <small>(${FU.score(it)})</small></button>`).join(" ")}` : `<p class="small">Bring something from the fields to enter.</p>`) : `<p class="small">At the Harvest Fair, in September's fair week.${F.fairWins ? ` Blue ribbons: ${F.fairWins}.` : ""}</p>`}</div>
+      <div><div class="list-title">The still</div>${stills.length ? stills.map((c) => `<button data-fdstill="${c}" ${here && !g.stillWhy(c) ? "" : "disabled"} title="${this.esc(g.stillWhy(c) || "")}">${this.esc({ manablossom: "Mana-blossom to a mana potion", frostberry: "Two frost-berries to a healing potion", moonmelon: "Moon-melon to wine", coinbean: "Crack a coin-bean pod", jokerrose: "A rose for the Joker (30 tickets)" }[c])}</button>`).join(" ") : `<p class="small">The charmed crops go in the still: mana-blossom, frost-berries, moon-melon, coin-beans, the Joker's roses.</p>`}</div>`;
+    const at = box.querySelector(".fdhands") || box.querySelector(".fdcare") || box.querySelector(".fdgrid"); if (at) at.after(el);
+    const done = (r) => { this.fdNote = r || ""; this.renderFields(); this.refresh && this.refresh(); };
+    el.querySelectorAll("[data-fdsell]").forEach((b) => b.addEventListener("click", () => { const r = g.marketSell(b.dataset.fdsell); done(r.error || `Sold for ${r.gold} gold.`); }));
+    el.querySelectorAll("[data-fdfair]").forEach((b) => b.addEventListener("click", () => { const r = g.fairEnter(Number(b.dataset.fdfair)); done(r.error || `Placed ${r.place}: ${r.table.map(([w, s]) => `${w} ${s}`).join(", ")}.`); }));
+    el.querySelectorAll("[data-fdstill]").forEach((b) => b.addEventListener("click", () => done(g.still(b.dataset.fdstill)))); };
 }
 
 // ---- 77-splash.js ----

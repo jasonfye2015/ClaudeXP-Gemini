@@ -53,7 +53,7 @@
     // ---- the request board ----
     rqStore() { this.village = this.village || {}; const S = this.village.requests = this.village.requests || { day: "", list: [], done: 0 }; return S; },
     rqList(now) { const S = this.rqStore(), day = RQ.day(now); if (S.day !== day) { const keep = S.list.filter((q) => !q.done && !q.carried).map((q) => Object.assign(q, { carried: true })).slice(0, 1), R = new CM.Random(CM.hashSeed(`${this.seed}:requests:${day}`)), places = new Set(keep.map((q) => RQ.byId[q.kind].place)), list = keep.slice();
-        for (const K of R.shuffle(RQ.KINDS.slice())) { if (list.length >= RQ.per) break; if (places.has(K.place)) continue; places.add(K.place); const goal = K.goal ? K.goal(this) : K.n;
+        for (const K of R.shuffle(RQ.KINDS.slice())) { if (list.length >= RQ.per) break; if (places.has(K.place) || (K.open && !K.open(this))) continue;   /* (a kind may wait for its place: 69n-fielduse.js) */ places.add(K.place); const goal = K.goal ? K.goal(this) : K.n;
           list.push({ kind: K.id, n: goal, base: K.deed && !K.goal ? K.count(this) : 0, giver: R.pick(RQ.GIVERS), renown: 10 + R.int(0, 3) * 5, gold: 40 + R.int(0, 6) * 20, done: false }); }
         S.day = day; S.list = list; this.saveVillage && this.saveVillage(); } return S.list; },
     rqProgress(q) { const K = RQ.byId[q.kind]; if (!K) return 0; if (!K.deed) return Math.min(q.n, K.have(this)); if (K.goal) return K.count(this) >= q.n ? q.n : K.count(this); const c = K.count(this); if (c < q.base) q.base = 0; return Math.min(q.n, c - q.base); },
