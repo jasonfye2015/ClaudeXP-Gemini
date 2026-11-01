@@ -58,6 +58,9 @@ CM.CG_INFO = {
   vault: { cat: "puzzles", line: "Light every rune to open the vault. Free." },
   holdem: { cat: "tables", line: "Limit hold'em against the village's residents." },
   bingo: { cat: "luck", line: "Eyes down in the old chapel; every finished card shares." },
+  lottery: { cat: "luck", line: "Six numbers from thirty; the draw is at eight each evening." },
+  plinko: { cat: "luck", line: "Plinko: one big chip down twelve rows of pegs." },
+  pond: { cat: "fair", line: "Cast, strike and play the fish in; some bite only at night." },
 };
 CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["luck", "Luck"], ["fair", "Fairground"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
@@ -117,6 +120,18 @@ CM.CG_THUMB = (() => {
     vault: (p, w, h) => { bg(p, w, h, "#3A3430", "#141010"); circ(p, w / 2, h / 2, 34, "#3A3840"); p.strokeStyle = "#7A7680"; p.lineWidth = 3; p.beginPath(); p.arc(w / 2, h / 2, 34, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { p.fillStyle = (x + y) % 2 ? "#2E2C34" : "#C89A30"; p.fillRect(w / 2 - 22 + x * 15, h / 2 - 22 + y * 15, 13, 13); } },
     holdem: (p, w, h) => { bg(p, w, h, "#3A2214", "#160E0A"); p.fillStyle = "#1E6A36"; p.beginPath(); p.ellipse(w / 2, h / 2 + 6, w / 2 - 12, h / 2 - 12, 0, 0, Math.PI * 2); p.fill(); for (let k = 0; k < 5; k++) { p.fillStyle = k < 3 ? "#FBF8F0" : "#7A1A24"; p.fillRect(w / 2 - 44 + k * 18, h / 2 - 4, 14, 20); } p.fillStyle = "#C02028"; p.font = "bold 10px Georgia"; p.fillText("A♥", w / 2 - 43, h / 2 + 10); p.fillStyle = "#1A1A22"; p.fillText("K♠", w / 2 - 25, h / 2 + 10); circ(p, 22, 20, 8, "#E8C8A0"); circ(p, w - 22, 20, 8, "#E8C8A0"); circ(p, w / 2, h / 2 + 26, 4, "#E0B040"); },
     bingo: (p, w, h) => { bg(p, w, h, "#3A2A40", "#1A1218"); const c = ["#C03838", "#E0A030", "#3A9A50", "#3070C0", "#8A50C0"]; for (let x = 0; x < 5; x++) { p.fillStyle = c[x]; p.fillRect(w / 2 - 6 + x * 12, 8, 11, 8); for (let y = 0; y < 4; y++) { p.fillStyle = (x * 3 + y) % 4 === 0 ? "#C02020" : "#FBF4E0"; p.fillRect(w / 2 - 6 + x * 12, 18 + y * 11, 11, 10); } } p.strokeStyle = "#E0B860"; p.beginPath(); p.arc(34, h / 2 + 4, 22, 0, Math.PI * 2); p.stroke(); for (let k = 0; k < 6; k++) circ(p, 26 + (k % 3) * 8, h / 2 + (k > 2 ? 10 : 0), 4, c[k % 5]); },
+    lottery: (p, w, h) => { const g = p.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#2A3A6A"); g.addColorStop(1, "#141A34"); p.fillStyle = g; p.fillRect(0, 0, w, h);
+    p.strokeStyle = "rgba(220,240,255,0.7)"; p.lineWidth = 2; p.beginPath(); p.arc(52, h / 2 + 4, 30, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; const C = ["#F0C840", "#4A90E0", "#E05090"];
+    for (let k = 0; k < 9; k++) { p.fillStyle = C[k % 3]; p.beginPath(); p.arc(36 + (k % 3) * 14 + (k > 5 ? 6 : 0), h / 2 - 8 + Math.floor(k / 3) * 12, 5.5, 0, Math.PI * 2); p.fill(); }
+    for (let k = 0; k < 4; k++) { p.fillStyle = C[k % 3]; p.beginPath(); p.arc(104 + k * 18, h - 18, 7, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFF"; p.beginPath(); p.arc(104 + k * 18, h - 18, 4, 0, Math.PI * 2); p.fill(); }
+    p.fillStyle = "#FFE070"; p.font = "bold 13px Georgia"; p.fillText("5,000", 100, 26); },
+    plinko: (p, w, h) => { const g = p.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#14204A"); g.addColorStop(1, "#0A1028"); p.fillStyle = g; p.fillRect(0, 0, w, h);
+    for (let r = 0; r < 5; r++) for (let k = 0; k <= r + 2; k++) { p.fillStyle = "#F0D070"; p.beginPath(); p.arc(w / 2 + (k - (r + 2) / 2) * 16, 12 + r * 11, 2, 0, Math.PI * 2); p.fill(); }
+    const C = ["#E03030", "#F08030", "#F0C040", "#60B0F0", "#F0C040", "#F08030", "#E03030"]; C.forEach((c, k) => { p.fillStyle = c; p.fillRect(w / 2 - 63 + k * 18, h - 16, 16, 12); });
+    p.fillStyle = "#F0C040"; p.beginPath(); p.arc(w / 2 + 8, 40, 7, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A5A10"; p.font = "bold 9px Georgia"; p.textAlign = "center"; p.fillText("J", w / 2 + 8, 43); p.textAlign = "left"; },
+    pond: (p, w, h) => { const g = p.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#80B8E0"); g.addColorStop(0.4, "#3A7A9A"); g.addColorStop(1, "#1A4A5A"); p.fillStyle = g; p.fillRect(0, 0, w, h); p.fillStyle = "#2A5A2A"; p.fillRect(0, 22, w, 8);
+    p.strokeStyle = "rgba(255,255,255,0.4)"; for (let k = 0; k < 3; k++) { p.beginPath(); p.ellipse(110, 46, 6 + k * 7, 2 + k * 2.5, 0, 0, Math.PI * 2); p.stroke(); } p.fillStyle = "#E03030"; p.fillRect(108, 40, 4, 6); p.fillStyle = "#FFF"; p.fillRect(108, 37, 4, 3);
+    p.strokeStyle = "#5A3A1A"; p.lineWidth = 2; p.beginPath(); p.moveTo(10, h); p.quadraticCurveTo(50, 20, 90, 18); p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(255,255,255,0.6)"; p.beginPath(); p.moveTo(90, 18); p.lineTo(110, 40); p.stroke(); CM.FISH_ART(p, "trout", 50, h - 18, 50, -0.2); },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();

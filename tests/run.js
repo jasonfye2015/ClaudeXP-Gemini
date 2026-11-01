@@ -5260,6 +5260,31 @@ test("the floor's evenings: the counter grows with tickets spent and takes its d
   assert.ok(!g.heSit(2500).error, "a VIP buy-in"); g.heStore().live.stage = "between"; g.heLeave(); assert.ok(!g.vipDaily().error); assert.ok(g.vipDaily().error, "once a day"); g.vipSet(false); assert.strictEqual(CM.CG.max, FL.base.max);
 });
 
+test("the town's draws: the lottery sells slips for tonight's draw (tomorrow's after eight), draws the save's own balls, pays by numbers matched and the jackpot for all six; the drop board pays its multiples and returns about 96%; the pond sells bait, picks a fish for the cast and the hour, pays by weight and fills the creel book; big wins are noticed for the fireworks, cash-outs are not", () => {
+  const CM = load(), LOT = CM.LOT, PK = CM.PK, POND = CM.POND, g = new CM.Game(); g.newGame("dr-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000;
+  const am = new Date(2026, 10, 1, 10, 0).getTime(), pm = new Date(2026, 10, 1, 21, 0).getTime(); assert.strictEqual(LOT.drawKey(am), "2026-11-01"); assert.strictEqual(LOT.drawKey(pm), "2026-11-02"); assert.strictEqual(LOT.nextKey("2026-11-30"), "2026-12-01");
+  assert.ok(g.lotBuy([1, 2, 3], am).error); assert.ok(g.lotBuy([1, 2, 3, 4, 5, 31], am).error); const balls = g.lotBalls("2026-11-01"); assert.strictEqual(new Set(balls).size, 6); same(balls, g.lotBalls("2026-11-01"), "the same balls every time");
+  const g0 = g.gold, s1 = g.lotBuy(balls, am); assert.ok(!s1.error); assert.strictEqual(g0 - g.gold, LOT.price); const s2 = g.lotBuy(null, am); assert.strictEqual(s2.nums.length, 6);
+  const three = balls.slice(0, 3).concat(Array.from({ length: 30 }, (_, i) => i + 1).filter((n) => !balls.includes(n)).slice(0, 3)); g.lotBuy(three, am);
+  assert.ok(g.lotSettle("2026-11-01", am).error, "not drawn yet"); same(g.lotDue(am), []); same(g.lotDue(pm), ["2026-11-01"]);
+  const potBefore = g.lotStore().pot; g.fwQ = []; const g1 = g.gold, r = g.lotSettle("2026-11-01", pm); assert.ok(!r.error); assert.strictEqual(r.jackpot, potBefore); assert.ok(r.slips.some((x) => x.m === 3 && x.gold === LOT.PAYS[3][0]));
+  assert.strictEqual(g.gold - g1, r.gold); assert.ok(r.cards.length >= 1); assert.strictEqual(g.lotStore().pot, LOT.pot0); assert.ok(g.fwQ.some((e) => e.tier === 3), "the jackpot's fireworks"); assert.strictEqual(g.lotStore().slips.length, 0);
+  for (let k = 0; k < LOT.max; k++) assert.ok(!g.lotBuy(null, pm).error); assert.ok(g.lotBuy(null, pm).error, "the limit"); const p0 = g.lotStore().pot; g.lotPotTo("2026-11-05"); assert.ok(g.lotStore().pot > p0 || g.lotStore().news.length, "the pot grows (or the village won it)");
+  // the drop board
+  const C = (n, k) => { let c = 1; for (let i = 0; i < k; i++) c = (c * (n - i)) / (i + 1); return c; };
+  for (const [k, T] of Object.entries(PK.RISK)) { assert.strictEqual(T.length, PK.rows + 1); same(T, T.slice().reverse()); const ev = T.reduce((a, m, b) => a + (m * C(PK.rows, b)) / 4096, 0); assert.ok(ev > 0.95 && ev < 0.97, `${k} returns ${ev}`); }
+  for (let k = 0; k < 40; k++) { const b = g.gold, d = g.pkDrop(10, "high"); assert.strictEqual(d.bin, d.path.reduce((a, x) => a + x, 0)); assert.strictEqual(d.mult, PK.RISK.high[d.bin]); assert.strictEqual(g.gold - b, d.gold - 10); assert.strictEqual(d.gold, Math.floor(10 * d.mult)); }
+  assert.ok(g.pkDrop(10, "wild").error);
+  // the pond
+  assert.ok(g.pdCast(0.5).error, "no bait"); const gb = g.gold; assert.ok(!g.pdBuy("worms").error); assert.strictEqual(gb - g.gold, POND.BAIT.worms.price); assert.strictEqual(g.pdStore().left, 5); assert.ok(g.pdBuy("spinners").error, "use up the worms first");
+  const c = g.pdCast(0.6, 13); assert.ok(POND.byId[c.id]); assert.ok(g.pdCast(0.6, 13).error, "the line's out"); assert.ok(!POND.byId[c.id][8], "no night fish by day");
+  g.pdStore().cur = { id: "pike", name: "Pike", tier: 3, kg: 5.5, fight: 0.8 }; const g2 = g.gold, L = g.pdLand(true); assert.strictEqual(L.gold, Math.floor(5.5 * POND.byId.pike[5])); assert.strictEqual(g.gold - g2, L.gold); assert.ok(L.first); assert.strictEqual(g.pdStore().best.pike, 5.5);
+  g.pdCast(0.3, 13); assert.ok(g.pdLand(false).lost); assert.strictEqual(g.pdStore().lost, 1); g.pdCast(0.3, 13); g.pdStore().cur = { id: "golden", name: "The golden carp", tier: 5, kg: 3, fight: 0.7 }; g.fwQ = []; const G = g.pdLand(true); assert.ok(G.cards.length); assert.ok(g.fwQ.some((e) => e.tier >= 2));
+  let night = 0; for (let k = 0; k < 2000; k++) { const f = POND.pick(0.7, "spinners", 12, new CM.Random(k)); if (POND.byId[f.id][8]) night++; } assert.strictEqual(night, 0); for (let k = 0; k < 400; k++) if (POND.byId[POND.pick(0.7, "spinners", 23, new CM.Random(k)).id][8]) night++; assert.ok(night > 0, "eels and catfish after dark");
+  // big wins, noticed
+  g.fwQ = []; g.cgStake("slots", 10); g.cgPay("slots", 300); assert.strictEqual(g.fwQ.length, 1); assert.strictEqual(g.fwQ[0].tier, 2); g.cgPay("slots", 20); assert.strictEqual(g.fwQ.length, 1, "a small win isn't"); g.cgStake("holdem", 100); g.cgPay("holdem", 5000); assert.strictEqual(g.fwQ.length, 1, "a cash-out isn't");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

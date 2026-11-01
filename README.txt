@@ -1392,6 +1392,22 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The town's draws (the forty-eighth big update - v16.2)
+  Three new games and a celebration (src/js/64zzj-draws.js; 76zzj-fireworks.js, 76zzk-lottery.js, 76zzl-plinko.js, 76zzm-pond.js):
+  - Fireworks: a big win - ten or twenty-five times the stake, a great deal of gold at once, a rare card, a hundred
+    tickets or more - sends rockets up over the window when the table shows its result: peonies, rings, gold willows,
+    palms, crossettes and hearts, with a whistle, a boom and a crackle, and a banner (BIG WIN, HUGE WIN, JACKPOT - a
+    finale with a rain of gold). Cash-outs are not wins. With reduced motion asked for, only the banner.
+  - The Town Lottery: slips at 2 gold, six numbers from thirty (or quick picks), up to 25 a draw; the draw is at eight
+    each evening, real time. Watch it: the drum turns and six balls ride the chute, lighting your numbers. Three matched
+    pay 8 gold, four 60, five 1,200 and a rare card, six the town jackpot (from 5,000, growing every night, now and
+    then won by someone in the village).
+  - The Drop Board: plinko - a big chip down twelve rows of pegs into thirteen bins; low, middle and high risk boards
+    (0.2 to 120 times the stake), each about 96% back; ten times or better pays tickets, the high corner a card once.
+  - The Fishing Pond: bait at the shed, then cast (hold and let go), strike when the float goes under, and play the fish
+    in against the line's tension. Ten kinds (eels and catfish only after dark, real time; the golden carp rare); the
+    fishmonger pays by weight, every fish pays tickets, and the creel book keeps the best of each (a card when full).
+
 The floor's evenings (the forty-seventh big update - v16.1)
   Four things across the whole Gilded Joker floor (src/js/64zzi-floor.js, 76zzi-floor.js), on the gallery's club strip:
   - The prize counter grows with the tickets spent - glass cases, the velvet shelf, the Gilded Vault - each step 5%

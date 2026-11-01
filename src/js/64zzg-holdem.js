@@ -128,7 +128,7 @@
         if (e.kind === "deal") H.hands += 1;
         if (e.kind === "win" && e.seat === 0) { H.pots += 1; H.best = Math.max(H.best, e.amount); const tk = e.cat >= 4 ? [0, 0, 0, 0, 1, 2, 3, 5, 10][e.cat] : 0; if (tk && this.tkAdd) { this.tkAdd(tk, "holdem"); e.tickets = tk; } if (e.royal) e.card = this.cgCard(true, ROYAL_WHY, this.cgRnd("herc")); }
         if (e.kind === "bust") { H.sent += 1; if (this.tkAdd) { this.tkAdd(2, "holdem"); e.tickets = 2; } }
-        if (e.kind === "cleared") { const k = T.buyin; if (!H.cleared[k]) { H.cleared[k] = true; e.card = this.cgTierCard(T.buyin >= 250 ? "rare" : T.buyin >= 100 ? "better" : "common", `The Residents' Game: the whole table sent home at ${k} gold!`, new CM.Random(CM.hashSeed(`${this.seed}:he:card:${k}`))); } else if (this.tkAdd) { this.tkAdd(10, "holdem"); e.tickets = 10; } }
+        if (e.kind === "cleared" && !T.duel) { const k = T.buyin; if (!H.cleared[k]) { H.cleared[k] = true; e.card = this.cgTierCard(T.buyin >= 250 ? "rare" : T.buyin >= 100 ? "better" : "common", `The Residents' Game: the whole table sent home at ${k} gold!`, new CM.Random(CM.hashSeed(`${this.seed}:he:card:${k}`))); } else if (this.tkAdd) { this.tkAdd(10, "holdem"); e.tickets = 10; } }
       }
       this.saveCasino && this.saveCasino(); return out; },
     heAct(a) { const T = this.heTable(); if (!T) return "Not at the table."; const why = HE.act(T, 0, a); this.saveCasino && this.saveCasino(); return why; },
