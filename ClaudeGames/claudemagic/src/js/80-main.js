@@ -288,7 +288,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
-      case "intro": if (fx.foe) rising.set(fx.foe, now); break;
+      case "intro": {                                                    // (v23.2: one case - a second one below it never ran, so the title card had stopped showing)
+        if (fx.foe) rising.set(fx.foe, now);
+        if (CM.bossStage && CM.bossStage(fxKit, fx)) break;             // (staged: bars, the camera, a banner, a sting - 76zzzza-stage.js)
+        const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break;
+      }
       case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, fx.crit ? fx.amount + "!" : String(fx.amount), fx.crit ? "crit" : fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
@@ -335,7 +339,6 @@ window.addEventListener("DOMContentLoaded", () => {
       case "mend": { const at = atFoe(fx.foe, 0.3); if (at) fxs.drift({ at, layer: "fx:leaf", n: 8, size: 0.06, rise: 0.5, ms: 900 }); break; }
       case "ward": { const at = atFoe(fx.foe, 0.5); if (at) fxs.flare({ at, layer: "fx:frost", size: 0.9, ms: 500, grow: 0.3 }); break; }
       case "combo": ui.tint("rgba(255,230,150,0.35)", 500); break;
-      case "intro": { const G = fx.foe.guardian ? CM.GUARDIANS[fx.foe.guardian] : null; ui.titleCard(fx.foe.name, G ? (fx.foe.echo ? "an echo, in " : "in ") + G.lair.name : "in his palace"); renderer.shake(0.35); renderer.punch(); break; }
       default: break;
     }
   }

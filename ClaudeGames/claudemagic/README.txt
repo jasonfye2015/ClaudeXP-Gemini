@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Entrances (v23.2, UPGRADE_PLAN_18.md phase 2)
+  (src/js/76zzzza-stage.js; 80-main.js, style.css)
+  - A guardian or the Lich King enters on a stage: black bars close in from above and below, the clock and the name
+    tags step aside, the camera leans in while it rises from the floor, its name comes up in a large banner with where
+    it rules, and a sting of music sounds - a low drum and a rising minor chord.
+  - Any key or a click skips it; the fight (and the automatic hand) waits until it is done.
+  - The title card had stopped showing at all: the recipe had two cases for the entrance and only the first ever ran.
+  - Reduced motion or As good as instant: the banner and the sting only.
+
 Blows that land (v23.1, UPGRADE_PLAN_18.md phase 1)
   (src/js/76zzzz-blows.js; 62-combat.js, 28-motion.js, 45-fx.js, 40-render.js, 80-main.js, style.css)
   - A critical hit (a weak spot found, a knife from behind) is shown as one: the foe flashes white and everything in
