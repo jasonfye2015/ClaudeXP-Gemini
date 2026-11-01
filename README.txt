@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Finding your way round (the fifty-first big update - v16.5)
+  The gallery and the door (src/js/64zzl-lobby.js, 76zzo-lobby.js; the gallery's own changes in 76ze-gallery.js):
+  - A search box (names and descriptions), a sort (as on the floor, most played, most tickets won, A to Z), a
+    Favourites tab with a star on every card and on every table's bar, a "Recently played" row of the last eight
+    tables opened, and a green "New" ribbon on every table the party has never tried.
+  - Figures for every table (the "i" on its card, or Figures on its bar): times played, gold laid and paid back, the
+    return so far with a break-even bar, up or down, tickets won there, the best score, first and last played.
+  - The reckoning at the door: leaving after a visit with anything in it shows the evening's bill - time on the floor,
+    the tables played, gold laid and paid back, the purse before and after, tickets, the best moment and the cards -
+    with Leave the Joker or Back to the floor.
+
 The sweep (the fiftieth big update - v16.4)
   tools/sweep.py opens all 55 tables in a real browser engine at a normal and a narrow window, plays a few rounds with
   clicks and keys, and reports script errors, loops or timers left running after leaving, and anything that runs off
