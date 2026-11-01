@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The ways between (the sixty-ninth big update - v18.3)
+  (src/js/64zzza-links.js, 76zzze-links.js)
+  - Haven's potions come home: potions a hero found in Claudeablo (beyond those they went in with, which stay there as
+    the gold does) become the party's own - healing, mana, and the full ones as strong healing.
+  - The party's relics go in: a relic, unique or heirloom a hero wears through the red portal is echoed in Haven - a
+    rare piece of the same kind, made for their level, bearing the relic's name - once for each relic.
+  - The pipe's coins pay tickets at the Joker too: one for every five coins carried out (the gold as before).
+  - Island tempering at the smith: a metal bar (the island's, or the smelter's) and an essence (the dungeon's) put +1
+    on a worn weapon or armour, once a piece, for 40 gold.
+
 Skill trees (the sixty-eighth big update - v18.2)
   (src/js/64zzz-skilltree.js, 76zzzd-skilltree.js)
   Every calling has a tree of three branches, each its own names (the Knight's Blade, Shield and Banner; the Mage's
