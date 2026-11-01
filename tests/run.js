@@ -5331,7 +5331,7 @@ test("one way of telling a result: gold paid, tickets won and cards are gathered
 });
 
 test("the Joker's standing: JXP from stakes, tickets, levels, boards and quests; the level from the JXP; each level owed its reward and collected with the banked bonus tickets; the level's bonuses at the counter, in fights and at an expedition's start", () => {
-  const CM = load(), JK = CM.JK, g = new CM.Game(); g.newGame("jk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore();
+  const CM = load(), JK = CM.JK, g = new CM.Game(); g.newGame("jk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore(); g.hhOn = () => null;   // (no happy hour: its game changes with the real hour)
   assert.strictEqual(JK.at(0).level, 1); assert.strictEqual(JK.at(JK.need(1)).level, 2); assert.strictEqual(JK.at(JK.need(1) - 1).level, 1); assert.strictEqual(JK.at(1e12).level, JK.cap);
   assert.strictEqual(g.jkLevel(), 1); assert.strictEqual(g.jkMul("gold"), 1); const J = g.jkStore(), j0 = J.jxp; g.cgStake("craps", 100); assert.strictEqual(J.jxp - j0, 10); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 10, "half a JXP carries"); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 11, "and adds up");
   const j1 = J.jxp; g.cgRecord("swarm", 5000, 6); assert.ok(J.jxp - j1 >= 6 * JK.level + JK.board);
