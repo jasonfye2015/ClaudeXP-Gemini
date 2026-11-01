@@ -5657,6 +5657,27 @@ test("seeds from everywhere: rare and charmed crops, not on the shed's shelf or 
   const v = g.village; v.levels.farm = 1; g.stock = []; g.season = "summer"; if (g.restock) g.restock(); assert.ok(!(g.stock || []).some((it) => it.kind === "seed" && FS.ALL.includes(it.crop)), "nor at the merchant's");
 });
 
+test("what the fields are for: the market stall sells the fields' things at their worth and the day's demand higher; the Harvest Fair's contest once a fair; the still; the board asks for the fields once they're laid out; the fields count toward the renown level", () => {
+  const CM = load(), FU = CM.FIELDUSE, FD = CM.SOUTHFIELDS, RQ = CM.TOWNREQ; const g = new CM.Game(); g.newGame("fu-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.ok(!RQ.byId.starred.open(g), "the board waits for the fields"); g.village.renown = 2000; g.build("fields"); assert.ok(RQ.byId.starred.open(g));
+  const dem = FU.demandFor(g); assert.strictEqual(dem.length, 3); assert.deepStrictEqual([...FU.demandFor(g)], [...dem], "the same all day");
+  const a = CM.SOUTHFIELDS.produce(dem[0]), plain = Object.keys(CM.CROPS).find((c) => CM.CROPS[c].price && !dem.includes(c)), b = CM.SOUTHFIELDS.produce(plain);
+  assert.strictEqual(FU.price(g, a), Math.round(a.value * 1.5)); assert.strictEqual(FU.price(g, b), b.value);
+  g.bag.push(a, b); const g0 = g.gold, r = g.marketSell("pack"); assert.strictEqual(r.n, 2); assert.strictEqual(g.gold - g0, FU.price(g, a) + FU.price(g, b)); assert.ok(!g.bag.includes(a));
+  assert.ok(g.marketSell("pack").error, "nothing left"); g.fields().silo = [CM.SOUTHFIELDS.produce("carrot")]; assert.strictEqual(g.marketSell("silo").n, 1); assert.strictEqual(g.fields().silo.length, 0);
+  // the fair
+  g.fairOpen = () => false; g.bag.push(CM.SOUTHFIELDS.produce("pumpkin")); assert.ok(g.fairEnter(g.bag.length - 1).error); g.fairOpen = () => true;
+  const best = CM.SOUTHFIELDS.produce("moonmelon"); best.q = 5; g.bag.push(best); const r0 = g.village.renown, e = g.fairEnter(g.bag.length - 1); assert.ok(!e.error, e.error);
+  assert.strictEqual(e.score, 5 * 20 + 60 + 15); assert.strictEqual(e.place, 1, "five stars of moon-melon takes it"); assert.strictEqual(g.village.renown - r0, 60 + 20, "the prize, and the fair won counted toward the renown level"); assert.ok(g.achievements.blueribbon);
+  assert.ok(/One entry/.test(g.fairEnter(0).error)); assert.strictEqual(g.fields().fairWins, 1);
+  // the still
+  g.floor.pos = FD.shed.slice(); assert.ok(/wants 2/.test(g.stillWhy("frostberry"))); g.bag.push(CM.food("frostberry"), CM.food("frostberry"), CM.food("manablossom"), CM.food("coinbean"));
+  assert.strictEqual(g.still("frostberry"), ""); assert.ok(g.bag.some((i) => i.kind === "heal" && i.name === "Healing Potion")); assert.strictEqual(g.still("manablossom"), ""); assert.ok(g.bag.some((i) => i.kind === "mana"));
+  const gc = g.gold; assert.strictEqual(g.still("coinbean"), ""); assert.strictEqual(g.gold - gc, 15);
+  // the renown level counts the fields
+  const area = CM.RENOWNLV.AREAS.find((x) => x[0] === "fields"); g.fields().picked = 40; g.fields().giants = 1; assert.strictEqual(area[3](g), 4 + 15 + 20 + Math.floor(g.fields().marketGold / 200));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

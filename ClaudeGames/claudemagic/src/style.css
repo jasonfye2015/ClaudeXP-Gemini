@@ -1423,3 +1423,6 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* the charmed crops (v19.3) */
 .fdplot.charmed img { filter: drop-shadow(0 0 3px var(--glow, #F0C040)) drop-shadow(0 0 6px var(--glow, #F0C040)); animation: fdcharm 2.2s ease-in-out infinite; } @keyframes fdcharm { 50% { filter: drop-shadow(0 0 1px var(--glow, #F0C040)); } }
 @media (prefers-reduced-motion: reduce) { .fdplot.charmed img { animation: none; } }
+/* what the fields are for (v19.4) */
+.fduse { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: rgba(140,110,40,0.14); font-size: 13px; } @media (max-width: 760px) { .fduse { grid-template-columns: 1fr; } }
+.fduse p { margin: 6px 0; } .fduse button { margin: 0 4px 4px 0; }

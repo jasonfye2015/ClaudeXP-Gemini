@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+What the fields are for (the seventy-ninth big update - v19.4, UPGRADE_PLAN_14.md phase 4)
+  (src/js/69n-fielduse.js, 76zzzn-fielduse.js)
+  - The market stall in the Square: the fields' produce sells at its full worth, stars and all, and three crops a day
+    are in demand at half as much again - from the pack or straight out of the silo, anywhere in town.
+  - The Harvest Fair's contest (September's fair week): one entry a fair, scored on its stars and its kind against
+    three of the village's; first, second and third pay renown and gold, and first a blue ribbon (an achievement).
+  - The still in the shed: mana-blossom to a mana potion, two frost-berries to a healing potion, moon-melon to wine,
+    coin-bean pods cracked for gold, and the Joker's roses traded to the Joker for tickets.
+  - The request board asks for the fields too (a crop of three stars or more, a charmed crop), once they're laid out.
+  - The fields count toward the renown level: a picking of ten, a giant, a fair won, every 200 gold sold.
+  - (Three sounds named in earlier updates that the game didn't have - the anvil, turning earth - now use real ones.)
+
 Seeds from everywhere (the seventy-eighth big update - v19.3, UPGRADE_PLAN_14.md phase 3)
   (src/js/69m-fieldseeds.js, 76zzzm-fieldseeds.js)
   - Eight rare crops (rhubarb, asparagus, artichoke, blackberries, raspberries, coffee, pineapple, kiwi) and six

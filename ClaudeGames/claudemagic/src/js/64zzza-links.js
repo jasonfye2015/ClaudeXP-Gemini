@@ -34,6 +34,6 @@
       if (this.gold < LK.temper.gold) return `The smith's fee is ${LK.temper.gold} gold.`; return ""; },
     islandTemper(hero, slot) { const hi = typeof hero === "number" ? hero : this.party.indexOf(hero), h = this.party[hi], why = this.islandTemperWhy(h, slot); if (why) return why; this.logAct && this.logAct("islandTemper", hi, slot);
       this.bag.splice(this.bag.findIndex((x) => x.kind === "bar"), 1); this.bag.splice(this.bag.findIndex((x) => x.kind === "essence"), 1); this.gold -= LK.temper.gold;
-      const it = h[slot]; it.props = Object.assign({}, it.props, { tempered: true }); it.power = (it.power || 0) + LK.temper.power; it.value = Math.round((it.value || 0) * 1.15); CM.recompute(h); this.sound && this.sound("anvil"); this.emit && this.emit("change"); return ""; },
+      const it = h[slot]; it.props = Object.assign({}, it.props, { tempered: true }); it.power = (it.power || 0) + LK.temper.power; it.value = Math.round((it.value || 0) * 1.15); CM.recompute(h); this.sound && this.sound("slam"); this.emit && this.emit("change"); return ""; },
   });
 }
