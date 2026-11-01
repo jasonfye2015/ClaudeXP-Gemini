@@ -21,13 +21,23 @@ uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
 uniform vec3 uTorchPos; uniform float uBump;   // (v22.0) where the party's torch is held, a little to the side and up; (v22.1) the relief's strength - 0 for all but walls, floors and the ground
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
-uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft;   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+vec3 shafts(vec3 vdir, float d) {                                          // (v22.3) looking toward the sun: bars of light standing in the air, the dust drifting in them
+  if (uShaft <= 0.0 || uSunK <= 0.0) return vec3(0.0);
+  vec3 sa = normalize(cross(uSun, vec3(0.0, 1.0, 0.001))), sb = cross(uSun, sa), q = uEye + vdir * min(d, 14.0) * 0.6;   // (the air part way along the look, not the surface)
+  float bars = smoothstep(0.4, 0.8, vnoise(vec2(dot(q, sa) * 1.1, dot(q, sb) * 0.18 + uTime * 0.015))), toward = pow(max(dot(vdir, uSun), 0.0), 2.0);
+  float dust = step(0.993, hash(floor(gl_FragCoord.xy * 0.5) + floor(uTime * 3.0))) * 0.5;
+  return mix(uHorizon, vec3(1.0, 0.92, 0.72), 0.7) * uShaft * toward * bars * (0.55 + dust) * smoothstep(1.0, 7.0, d);
+}
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
   vec4 t = shared ? ts : tt;
-  if (vFx.z > 2.5 && vFx.z < 3.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r), 1.0); return; }
+  if (vFx.z > 2.5 && vFx.z < 3.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r) + shafts(normalize(vWorld - uEye), 40.0) * 0.45, 1.0); return; }
   if (t.a < 0.5) discard;
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
@@ -65,13 +75,14 @@ void main() {
   tface *= mix(1.0, relief, min(1.0, uBump));   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n0.y), 0.7));   // walls facing the sun lit, the others in shade
-  vec3 extra = vec3(0.0);
+  vec3 extra = vec3(0.0), vdir = (vWorld - uEye) / max(d, 0.001), airGlow = vec3(0.0);
   for (int i = 0; i < 24; i++) {
     if (i >= uLights) break;
     vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
     float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
     vec3 Ld = L / max(ld, 0.001); float face = (0.35 + 0.65 * max(dot(n0, Ld), 0.0)) * mix(1.0, clamp(max(dot(n, Ld), 0.0) / max(dot(n0, Ld), 0.25), 0.35, 1.6), min(1.0, uBump));
     extra += uLightCol[i] * fall * face;
+    if (uHaze > 0.0) { vec3 EL = uLightPos[i].xyz - uEye; float tt = clamp(dot(EL, vdir), 0.0, d), md = length(EL - vdir * tt); airGlow += uLightCol[i] * exp(-md * md * 3.0) * smoothstep(0.0, 1.0, tt); }   // (v22.3: the lamp's glow in the air between)
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   col += spec * uTorch * min(light, 1.2) * uGrade;
@@ -83,7 +94,14 @@ void main() {
   }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   fog = max(fog, uMist * (1.0 - smoothstep(0.0, 1.4, vWorld.y)) * smoothstep(0.8, 7.0, d) * 0.85);   // (mist: lying low on the land)
+  if (uHaze > 0.0) {                                                        // (v22.3) the air has a body: it drifts, lies thicker low, and the lights glow in it
+    float drift = 0.6 * vnoise(vWorld.xz * 0.35 + vec2(uTime * 0.06, uTime * 0.025)) + 0.4 * vnoise(vWorld.xz * 0.9 - vec2(uTime * 0.04, -uTime * 0.03));
+    float body = uHaze * smoothstep(0.4, 5.0, d) * (1.0 - 0.6 * smoothstep(0.0, 1.2, vWorld.y)) * (0.5 + 0.9 * drift);
+    fog = max(fog, min(0.8, body * 0.6));
+    col += airGlow * uHaze * 0.22 * (1.0 - fog * 0.5) + uTorch * uFlicker * uHaze * 0.05 * (1.0 - exp(-d * 0.35)) * (1.0 - fog);
+  }
   col = mix(col, uFog, fog);
+  col += shafts(vdir, d);
   col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
   fragColor = vec4(col, t.a * vFx.y);
@@ -128,7 +146,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -457,6 +475,7 @@ CM.Renderer = class {
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     gl.uniform3fv(this.loc.uGrade, t.grade || [1, 1, 1]);
     gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
+    gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
