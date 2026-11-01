@@ -5389,6 +5389,16 @@ test("the Joker's Week: a game a week, the same all week; the field posts day by
   g.prStart(I.id === "pond" ? "darts" : I.id); const n0 = Object.keys(g.wkStore().weeks).length; g.prEnd(); assert.strictEqual(Object.keys(g.wkStore().weeks).length, n0);
 });
 
+test("your history: a visit with anything in it is written when the party leaves (not on a peek, not a quiet one), the last two hundred kept; the record adds them up - the running total, the best and worst, tickets by month, the most played", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("hs-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 10000;
+  g.cgVisitStart(0); g.cgVisitEnd(1000); assert.strictEqual(g.hsStore().visits.length, 0, "a quiet visit isn't written");
+  g.cgVisitStart(Date.UTC(2026, 9, 15, 12)); g.cgStake("craps", 100); g.cgPay("craps", 250); g.tkAdd(12, "craps"); g.cgVisitEnd(Date.UTC(2026, 9, 15, 12) + 60000, true); assert.strictEqual(g.hsStore().visits.length, 0, "a peek isn't");
+  g.cgVisitEnd(Date.UTC(2026, 9, 15, 12) + 600000); const v = g.hsStore().visits[0]; assert.strictEqual(v.net, 150); assert.strictEqual(v.secs, 600); assert.ok(v.tickets >= 12); assert.ok(v.tables.includes("craps"));
+  g.cgVisitStart(Date.UTC(2026, 10, 15, 12)); g.cgStake("slots", 200); g.cgVisitEnd(Date.UTC(2026, 10, 15, 12) + 1000); const S = g.hsSummary();
+  assert.strictEqual(S.visits, 2); same(S.running, [150, 150 + g.hsStore().visits[1].net]); assert.strictEqual(S.best.net, 150); assert.ok(S.worst.net <= 0); assert.strictEqual(S.months.length, 2); assert.strictEqual(S.played[0][0] === "craps" || S.played[0][0] === "slots", true);
+  for (let k = 0; k < 230; k++) { g.cgVisitStart(k); g.cgStake("slots", 1); g.cgVisitEnd(k + 5); } assert.strictEqual(g.hsStore().visits.length, CM.HISTORY.keep);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
