@@ -5081,6 +5081,20 @@ test("the Daily Challenge: the same table and marks for everyone on a day; a gam
   assert.ok(g.dlState().history.length <= DAILY.keep);
 });
 
+test("the Prize Counter: tokens for stakes, payouts (the free tables too), boards and Claudeatro's blinds, odd gold carried over; every prize can be bought, takes its tokens and gives gold, an item or a card; gold is a poor buy, so playing for tokens loses gold", () => {
+  const CM = load(), PRIZE = CM.PRIZE, g = new CM.Game(); g.newGame("tk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; g.trail = [[6, 0]]; const T = () => g.tkStore();
+  g.cgStake("slots", 20); assert.strictEqual(T().n, 0, "twenty gold is not yet a token"); g.cgStake("slots", 10); assert.strictEqual(T().n, 1, "carried over"); const s0 = T().n; g.cgPay("slots", 500); assert.strictEqual(T().n, s0, "a staked table gives tokens for the stake, not the win");
+  const n0 = T().n; g.cgPay("mint", 120); assert.strictEqual(T().n - n0, 2); const n1 = T().n; g.cgRecord("swarm", 500, 2); assert.strictEqual(T().n - n1, PRIZE.board); const n2 = T().n; g.cgRecord("swarm", 900, 3); assert.strictEqual(T().n - n2, PRIZE.record);
+  // buying: too dear, then each prize
+  T().n = 10; assert.ok(g.tkBuy("chest").error); assert.strictEqual(T().n, 10);
+  T().n = 100000; const bag0 = g.bag.length, cards0 = g.cgStore().cards.length;
+  for (const [id, shelf, , cost] of PRIZE.LIST) { const t0 = T().n, gold0 = g.gold, o = g.tkBuy(id); assert.ok(!o.error, id); assert.strictEqual(t0 - T().n, cost, id);
+    if (shelf === "gold") assert.ok(g.gold - gold0 > 0 && g.gold - gold0 < cost, id); else if (shelf === "cards") assert.ok(o.card, id); else assert.ok(o.item && o.item.name, id); }
+  assert.strictEqual(g.bag.length - bag0, PRIZE.LIST.filter((r) => r[1] === "potions" || r[1] === "gear").length); assert.strictEqual(g.cgStore().cards.length - cards0, 3);
+  // no loop: the gold a staked gold coin earns back as tokens is less than the edge of the fairest table
+  const best = Math.max(...PRIZE.LIST.filter((r) => r[1] === "gold").map((r) => Number(r[4].split(" ")[0]) / r[3])); assert.ok(best / PRIZE.perStake < 1 - PRIZE.bestReturn, "tokens cannot turn the tables' odds");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
