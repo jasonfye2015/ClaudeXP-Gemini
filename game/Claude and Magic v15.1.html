@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -954,6 +954,64 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .dlpast th, .dlpast td { padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
 .dlpast th { color: #F0D070; font-family: Georgia, serif; }
 .dlpast tr.today td { background: rgba(240,192,64,0.08); font-weight: bold; }
+/* ---- v15.1 polish: the Gilded Reels, Roulette, Blackjack, Jacks or Better ---- */
+.cgtoasts { top: auto; bottom: 120px; }
+.slots .slotcab { position: relative; padding: 46px 18px 18px; border-radius: 22px 22px 14px 14px; background: linear-gradient(160deg, #7A1A1A, #3A0808 60%, #200404); box-shadow: inset 0 0 0 3px #C8A040, inset 0 0 18px rgba(0,0,0,0.7), 0 8px 18px rgba(0,0,0,0.6); margin-right: 30px; }
+.slots .slotcab .marquee { position: absolute; left: 14px; right: 14px; top: 8px; height: 28px; border-radius: 14px 14px 4px 4px; background: linear-gradient(#2A1408, #120804); box-shadow: inset 0 0 0 2px #C8A040; display: flex; align-items: center; justify-content: center; }
+.slots .slotcab .marquee span { font-family: Georgia, serif; font-weight: bold; letter-spacing: 3px; font-size: 13px; color: #FFE070; text-shadow: 0 0 6px #F0A020, 0 0 12px #F07020; animation: cgneon 2.4s ease-in-out infinite; }
+@keyframes cgneon { 0%, 100% { opacity: 1; } 48% { opacity: 1; } 50% { opacity: 0.55; } 52% { opacity: 1; } }
+.slots .slotcab .bulbs { position: absolute; inset: 4px; pointer-events: none; }
+.slots .slotcab .bulbs i { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #FFE8A0; box-shadow: 0 0 6px #FFC040; animation: cgbulb 1.2s linear infinite; animation-delay: calc(var(--k) * -0.0667s); }
+.slots .slotcab .bulbs i:nth-child(-n+9) { top: calc(40px + var(--k) * 22px); left: 2px; }
+.slots .slotcab .bulbs i:nth-child(n+10) { top: calc(40px + (var(--k) - 9) * 22px); right: 2px; }
+.slots .slotcab.busy .bulbs i { animation-duration: 0.4s; }
+@keyframes cgbulb { 0%, 60% { opacity: 1; } 70%, 100% { opacity: 0.25; box-shadow: none; } }
+.slots .reels.spinning .strip:not(.stopped) { filter: blur(1.6px) brightness(0.95); }
+.slots .sym .jokr { display: inline-flex; align-items: center; justify-content: center; width: 46px; height: 52px; border-radius: 8px; background: linear-gradient(135deg, #7030A0, #3A1060); color: #FFE070; font-family: Georgia, serif; font-size: 30px; box-shadow: inset 0 0 0 2px #F0C040; position: relative; }
+.slots .sym .jokr i { position: absolute; right: 3px; top: 1px; font-size: 13px; font-style: normal; }
+.slots .paytable .jokr { display: inline-flex; width: 16px; height: 18px; font-size: 11px; border-radius: 3px; background: #5A2080; color: #FFE070; align-items: center; justify-content: center; margin-right: 2px; box-shadow: inset 0 0 0 1px #F0C040; }
+.slots .paytable .jokr i { display: none; }
+.slots .sym.hit { animation: cgsymhit 0.55s ease-in-out 5; position: relative; z-index: 1; }
+@keyframes cgsymhit { 0%, 100% { transform: scale(1); filter: none; } 50% { transform: scale(1.18); filter: drop-shadow(0 0 8px #FFE070) brightness(1.15); } }
+.slots .slotwrap.win .payline { background: #FFE070; box-shadow: 0 0 10px #FFE070, 0 0 20px #F0A020; }
+.slots .lever { position: absolute; right: -26px; top: 70px; width: 22px; height: 120px; }
+.slots .lever::before { content: ""; position: absolute; left: 0; top: 52px; width: 14px; height: 30px; border-radius: 4px; background: linear-gradient(90deg, #8A6A20, #F0C040, #8A6A20); }
+.slots .lever .arm { position: absolute; left: 5px; bottom: 50px; width: 5px; height: 70px; background: linear-gradient(90deg, #888, #EEE, #888); transform-origin: 50% 100%; transform: rotate(8deg); }
+.slots .lever .arm i { position: absolute; left: -7px; top: -14px; width: 19px; height: 19px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FF8080, #B01010 60%, #600000); box-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+.slots .lever.pull .arm { animation: cglever 0.6s ease-in-out; }
+@keyframes cglever { 0% { transform: rotate(8deg); } 35% { transform: rotate(170deg) scaleY(0.9); } 100% { transform: rotate(8deg); } }
+.roulette .rc.hit::after { content: ""; position: absolute; left: 50%; top: -12px; width: 14px; height: 18px; margin-left: -7px; border-radius: 7px 7px 3px 3px; background: radial-gradient(circle at 40% 30%, #FFFFFF, #C8D8E8 60%, #8090A0); box-shadow: 0 3px 5px rgba(0,0,0,0.6); animation: cgdolly 0.5s ease-out; z-index: 3; }
+@keyframes cgdolly { from { transform: translateY(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.roulette .bchip { background: radial-gradient(circle, #F0D070 55%, #B08A30 56%, #F0D070 70%); border: 1px dashed rgba(60,40,10,0.5); }
+.blackjack .bjtable { min-height: 330px; overflow: hidden; } .blackjack .bjdealer { margin-bottom: 70px; position: relative; z-index: 1; } .blackjack .bjplayer { position: relative; z-index: 1; }
+.blackjack .bjprint { position: absolute; left: 12%; top: 31%; width: 76%; height: 24%; pointer-events: none; }
+.blackjack .bjprint text { font-family: Georgia, serif; font-size: 22px; letter-spacing: 6px; fill: rgba(240,220,150,0.28); font-weight: bold; }
+.blackjack .bjrule { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-size: 11px; letter-spacing: 2px; color: rgba(240,220,150,0.3); text-transform: uppercase; pointer-events: none; }
+.blackjack .shoe i { position: absolute; left: 8px; right: 8px; top: 8px; height: 30px; border-radius: 3px; background: repeating-linear-gradient(90deg, #F8F0E0 0 2px, #D8C8A8 2px 3px); box-shadow: inset 0 0 4px rgba(0,0,0,0.5); }
+.blackjack .bjbet { position: absolute; left: 26px; bottom: 22px; width: 64px; height: 64px; border-radius: 50%; border: 2px solid rgba(240,220,150,0.45); display: flex; align-items: center; justify-content: center; }
+.blackjack .bjbet.empty span { color: rgba(240,220,150,0.4); font-size: 11px; letter-spacing: 2px; }
+.blackjack .bjbet .stack { position: absolute; left: 50%; bottom: 18px; width: 0; }
+.blackjack .bjbet .stack i { position: absolute; left: -17px; bottom: calc(var(--k) * 4px); width: 34px; height: 9px; border-radius: 50%; background: repeating-linear-gradient(90deg, #C02020 0 6px, #F8F0E0 6px 9px); box-shadow: 0 1px 0 #600, 0 2px 3px rgba(0,0,0,0.5); }
+.blackjack .bjbet span { position: absolute; bottom: -18px; font-size: 12px; font-weight: bold; color: #FFE070; }
+.blackjack .bjbanner { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); padding: 8px 26px; border-radius: 10px; font-family: Georgia, serif; font-weight: bold; font-size: 28px; letter-spacing: 3px; pointer-events: none; animation: cgbanner 2.6s ease-out forwards; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+.blackjack .bjbanner.win { background: rgba(20,80,30,0.9); color: #C0FFC0; border: 2px solid #80F080; }
+.blackjack .bjbanner.bj { background: linear-gradient(#5A2080, #2A0840); color: #FFE070; border: 2px solid #F0C040; text-shadow: 0 0 10px #F0A020; }
+.blackjack .bjbanner.push { background: rgba(40,40,60,0.9); color: #E0E0F0; border: 2px solid #A0A0C0; }
+.blackjack .bjbanner.lose { background: rgba(80,10,10,0.9); color: #FFC0C0; border: 2px solid #F06060; }
+@keyframes cgbanner { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } 12% { transform: translate(-50%, -50%) scale(1.12); opacity: 1; } 20% { transform: translate(-50%, -50%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+.blackjack .res.blackjack { color: #FFE070; text-shadow: 0 0 6px #F0A020; } .blackjack .res.win { color: #90F090; } .blackjack .res.push { color: #C0C0E0; }
+.poker .vpcab { display: inline-block; padding: 14px 16px 10px; margin: 8px 0; border-radius: 12px; background: linear-gradient(#0E2A1E, #061810); box-shadow: inset 0 0 0 3px #C8A040, inset 0 0 26px rgba(80,255,160,0.12), 0 6px 14px rgba(0,0,0,0.6); }
+.poker .vpcab .vphand { margin: 0 0 6px; }
+.poker .vpled { display: flex; justify-content: space-between; gap: 18px; padding: 4px 10px; border-radius: 4px; background: #020804; font-family: monospace; font-size: 13px; letter-spacing: 1px; color: #50F090; text-shadow: 0 0 6px #20C060; }
+.poker .vpled b { color: #FFE070; text-shadow: 0 0 6px #F0A020; }
+.poker .paytable.vp tr.now td { background: rgba(80,240,140,0.18); color: #C0FFD8; }
+.poker .paytable.vp tr.won td { animation: cgrowwin 0.5s ease-in-out 6; }
+@keyframes cgrowwin { 50% { background: #F0C040; color: #201400; } }
+.vpslot.held .pc { box-shadow: 0 0 14px 3px rgba(240,208,112,0.75); }
+.vpslot .pc { transition: transform 0.15s, box-shadow 0.15s; }
+.vpslot:hover .pc { transform: translateY(-3px); }
+.vpslot.held .tag { color: #201400; background: #F0C040; border-radius: 4px; padding: 0 6px; animation: cgheld 0.25s ease-out; }
+@keyframes cgheld { from { transform: scale(1.6); } to { transform: none; } }
 </style>
 </head>
 <body>
@@ -963,7 +1021,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.0", built: "2026-10-31" };
+const CM = window.CM = { version: "15.1", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -27939,27 +27997,27 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
     // ---- the Gilded Reels ----
     cgSlots(box) {
       const CG = CM.CG, P = CG.SLOT_PAY, A = CG.SLOT_ART, last = this.cgSlotLast, stops = last ? last.stops : [0, 9, 17], N = CG.REEL.length;
-      const strip = [].concat(...Array(6).fill(CG.REEL)).map((s) => `<div class="sym s-${s}">${A[s]}</div>`).join("");
+      const art = (s) => (s === "joker" ? `<span class="jokr">J<i>★</i></span>` : A[s]), strip = [].concat(...Array(6).fill(CG.REEL)).map((s) => `<div class="sym s-${s}">${art(s)}</div>`).join("");
       const row = (k, txt) => `<tr><td>${txt}</td><td>${P[k]} x</td></tr>`;
       box.innerHTML = `<div class="cgtable slots"><h3>The Gilded Reels</h3><p class="lore">A tall brass machine with a gilded Joker on its crown, humming faintly. "One line, three reels," says the attendant. "Fair as a coin."</p>
-        <div class="slotwrap"><div class="reels">${[0, 1, 2].map((i) => `<div class="reel"><div class="strip" data-reel="${i}" style="transform: translateY(${-(N + stops[i] - 1) * 64}px)">${strip}</div></div>`).join("")}<div class="payline"></div></div>
-        <table class="paytable">${row("joker", "🃏🃏🃏 + a rare card")}${row("seven", "7 7 7")}${row("bar", "▬ ▬ ▬")}${row("cherry", "🍒🍒🍒")}${row("bell", "🔔🔔🔔")}${row("lemon", "🍋🍋🍋")}${row("mix", "any three of ▬ 🔔 7")}${row("twoCherry", "any two 🍒")}${row("oneCherry", "🍒 on the first reel")}<tr><td colspan="2" class="small">The machine returns 97.1% of what is put in it.</td></tr></table></div>
+        <div class="slotwrap"><div class="slotcab"><div class="marquee"><span>THE GILDED REELS</span></div><div class="bulbs">${Array.from({ length: 18 }, (_, k) => `<i style="--k:${k}"></i>`).join("")}</div><div class="reels">${[0, 1, 2].map((i) => `<div class="reel"><div class="strip" data-reel="${i}" style="transform: translateY(${-(N + stops[i] - 1) * 64}px)">${strip}</div></div>`).join("")}<div class="payline"></div></div><div class="lever"><div class="arm"><i></i></div></div></div>
+        <table class="paytable">${row("joker", `${art("joker")}${art("joker")}${art("joker")} + a rare card`)}${row("seven", "7 7 7")}${row("bar", "▬ ▬ ▬")}${row("cherry", "🍒🍒🍒")}${row("bell", "🔔🔔🔔")}${row("lemon", "🍋🍋🍋")}${row("mix", "any three of ▬ 🔔 7")}${row("twoCherry", "any two 🍒")}${row("oneCherry", "🍒 on the first reel")}<tr><td colspan="2" class="small">The machine returns 97.1% of what is put in it.</td></tr></table></div>
         ${this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${last && last.card ? this.cgCardWon(last.card) : ""}
         <div class="row"><button class="primary" data-spin>Pull the lever</button><button data-leave>Leave</button></div>${this.cgStats("slots")}</div>`;
       this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
       box.querySelector("[data-spin]").addEventListener("click", () => {
         if (this.cgBusy) return; const r = this.game.slotSpin(this.cgBet === undefined ? 5 : this.cgBet); if (r.error) { this.cgNote = r.error; this.cgSfx("miss", 0.3); this.renderCasino(); return; }
-        this.cgBusy = true; this.cgSfx("hinge", 0.5); const strips = [...box.querySelectorAll("[data-reel]")]; let ticks = 0;
+        this.cgBusy = true; this.cgSfx("hinge", 0.5); const strips = [...box.querySelectorAll("[data-reel]")]; let ticks = 0; box.querySelector(".lever").classList.add("pull"); box.querySelector(".reels").classList.add("spinning"); box.querySelector(".slotcab").classList.add("busy");
         const tick = setInterval(() => { this.cgSfx("card", 0.1, 1.6 + Math.random() * 0.4); if (++ticks > 40) clearInterval(tick); }, 60);
         strips.forEach((el, i) => {
           const from = -(N + stops[i] - 1) * 64, to = -((2 + i) * N + r.stops[i] - 1) * 64;   // (round two to four times, on to the stop; the strip repeats, so the rest is the same picture)
           el.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], { duration: 1000 + i * 500, easing: "cubic-bezier(.15,.55,.25,1)" }).onfinish = () => {
-            el.style.transform = `translateY(${-(N + r.stops[i] - 1) * 64}px)`; this.cgSfx("cardplace", 0.45, 0.8);
+            el.style.transform = `translateY(${-(N + r.stops[i] - 1) * 64}px)`; el.classList.add("stopped"); this.cgSfx("cardplace", 0.45, 0.8);
             if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body");
               if (r.jackpot) { this.cgSfx("victory", 0.7); this.cgSfx("cardwin", 0.6); b2.querySelector(".slotwrap").classList.add("jackpot"); this.cgCoins(b2, 40); }
               else if (r.won >= (this.cgBet || 5) * 9) { this.cgSfx("victory", 0.45); this.cgCoins(b2, 18); }
               else if (r.won) { this.cgSfx("coin", 0.5); this.cgCoins(b2, 5); }
-              if (r.won) b2.querySelector(".slotwrap").classList.add("win"); }
+              if (r.won) { b2.querySelector(".slotwrap").classList.add("win"); b2.querySelectorAll("[data-reel]").forEach((el2, j) => { const sym = el2.children[N + r.stops[j]]; if (sym && (!/cherr/i.test(r.what) || CG.REEL[r.stops[j]] === "cherry")) sym.classList.add("hit"); }); } }
           };
         });
       });
@@ -27994,7 +28052,7 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
           const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3), wa = a0 + (wheelEnd - a0) * e, ba = ball0 + (ballEnd - ball0) * e;
           const rad = 118 - Math.min(1, Math.max(0, (k - 0.55) / 0.4)) * 16;   
           this.cgDrawWheel(cv, wa, ba, rad); const pocket = Math.floor((((ba - wa) % (Math.PI * 2)) + Math.PI * 4) % (Math.PI * 2) / slot); if (pocket !== lastPocket && k > 0.15) { lastPocket = pocket; this.cgSfx("card", 0.06 + 0.1 * k, 2.2 - k); }
-          if (k < 1) { requestAnimationFrame(step); return; }
+          this.cgBallTrail = (this.cgBallTrail || []).concat([[ba, rad]]).slice(-7); if (k < 1) { requestAnimationFrame(step); return; } this.cgBallTrail = [];
           this.cgWheelA = wa % (Math.PI * 2); this.cgBallA = this.cgWheelA + idx * slot + slot / 2; this.cgBallR = rad; this.cgBusy = false; this.cgRLast = r; this.cgSfx("cardplace", 0.6, 0.7);
           this.cgNote = `${r.n} ${r.colour}. ${r.back ? `The board pays ${r.back} gold.` : "The house takes the board."}`; if (!r.back) this.cgRBets = {};
           this.renderCasino(); const b2 = this.$("#casino-body"); if (r.back) { this.cgSfx(r.back >= r.staked * 5 ? "victory" : "coin", 0.55); this.cgCoins(b2, Math.min(30, 4 + Math.round(r.back / Math.max(1, r.staked)) * 2)); } if (r.card) this.cgSfx("cardwin", 0.6);
@@ -28007,9 +28065,14 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
       p.fillStyle = "#4A2A14"; p.beginPath(); p.arc(c, c, 146, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C8A040"; p.beginPath(); p.arc(c, c, 138, 0, Math.PI * 2); p.fill();
       CG.WHEEL.forEach((n, i) => { const a = wa + i * slot; p.fillStyle = n === 0 ? "#1E8A3A" : CG.RED.has(n) ? "#B02020" : "#1A1A1A"; p.beginPath(); p.moveTo(c, c); p.arc(c, c, 132, a, a + slot); p.closePath(); p.fill();
         p.save(); p.translate(c, c); p.rotate(a + slot / 2 + Math.PI / 2); p.fillStyle = "#F0E8D0"; p.font = "bold 10px Georgia, serif"; p.textAlign = "center"; p.fillText(String(n), 0, -118); p.restore(); });
+      p.strokeStyle = "rgba(240,220,160,0.55)"; p.lineWidth = 1; CG.WHEEL.forEach((n, i) => { const a = wa + i * slot; p.beginPath(); p.moveTo(c + Math.cos(a) * 94, c + Math.sin(a) * 94); p.lineTo(c + Math.cos(a) * 132, c + Math.sin(a) * 132); p.stroke(); });
+      const sh = p.createRadialGradient(c - 30, c - 40, 20, c, c, 146); sh.addColorStop(0, "rgba(255,255,255,0.12)"); sh.addColorStop(0.7, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,0,0.35)"); p.fillStyle = sh; p.beginPath(); p.arc(c, c, 146, 0, Math.PI * 2); p.fill();
       p.fillStyle = "#3A2210"; p.beginPath(); p.arc(c, c, 92, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#C8A040"; p.lineWidth = 3; p.beginPath(); p.arc(c, c, 92, 0, Math.PI * 2); p.stroke();
+      const cone = p.createRadialGradient(c - 10, c - 14, 4, c, c, 92); cone.addColorStop(0, "#7A5028"); cone.addColorStop(1, "#2A1808"); p.fillStyle = cone; p.beginPath(); p.arc(c, c, 89, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#F0D070"; for (let k = 0; k < 8; k++) { const a = (k * Math.PI) / 4 + Math.PI / 8; p.save(); p.translate(c + Math.cos(a) * 141, c + Math.sin(a) * 141); p.rotate(a); p.beginPath(); p.moveTo(-5, 0); p.lineTo(0, -2.5); p.lineTo(5, 0); p.lineTo(0, 2.5); p.closePath(); p.fill(); p.restore(); }
       p.save(); p.translate(c, c); p.rotate(wa); p.fillStyle = "#E0C060"; for (let k = 0; k < 4; k++) { p.rotate(Math.PI / 2); p.fillRect(-4, -60, 8, 56); } p.beginPath(); p.arc(0, 0, 14, 0, Math.PI * 2); p.fill(); p.restore();
-      if (ba !== null && ba !== undefined) { const r = rad || this.cgBallR || 106; p.fillStyle = "#FFFFFF"; p.beginPath(); p.arc(c + Math.cos(ba) * r, c + Math.sin(ba) * r, 6, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(0,0,0,0.35)"; p.lineWidth = 1; p.stroke(); }
+      (this.cgBallTrail || []).forEach(([ta, tr], k, arr) => { p.fillStyle = `rgba(255,255,255,${(0.25 * (k + 1)) / arr.length})`; p.beginPath(); p.arc(c + Math.cos(ta) * tr, c + Math.sin(ta) * tr, 5, 0, Math.PI * 2); p.fill(); });
+      if (ba !== null && ba !== undefined) { const r = rad || this.cgBallR || 106; p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.arc(c + Math.cos(ba) * r + 2, c + Math.sin(ba) * r + 3, 6, 0, Math.PI * 2); p.fill(); const bgr = p.createRadialGradient(c + Math.cos(ba) * r - 2, c + Math.sin(ba) * r - 2, 1, c + Math.cos(ba) * r, c + Math.sin(ba) * r, 6); bgr.addColorStop(0, "#FFFFFF"); bgr.addColorStop(1, "#B8B8C0"); p.fillStyle = bgr; p.beginPath(); p.arc(c + Math.cos(ba) * r, c + Math.sin(ba) * r, 6, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(0,0,0,0.35)"; p.lineWidth = 1; p.stroke(); }
     },
     // ---- Blackjack ----
     cgBlackjack(box) {
@@ -28018,7 +28081,7 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
       const dv = B ? CG.bjValue(B.dealer).total : 0;
       const hands = B ? B.hands.map((H, i) => { const v = CG.bjValue(H.cards), res = B.results ? B.results[i] : null; return `<div class="bjhand${play && B.active === i ? " now" : ""}"><div class="cards">${H.cards.map(card).join("")}</div><div class="bjv">${v.total}${v.soft && v.total < 21 ? " (soft)" : ""} - ${H.bet} gold${H.doubled ? " (doubled)" : ""}${res ? ` <b class="res ${res.r}">${{ blackjack: "Blackjack!", win: "Win", push: "Push", lose: "Lose", bust: "Bust" }[res.r]}${res.pay ? ` +${res.pay}` : ""}</b>` : ""}</div></div>`; }).join("") : "";
       box.innerHTML = `<div class="cgtable blackjack"><h3>Blackjack</h3><p class="lore">Six decks in a brass shoe. The dealer smiles without showing her teeth. "Blackjack pays three to two. I stand on all seventeens."</p>
-        <div class="bjtable"><div class="shoe" title="The shoe"></div><div class="bjdealer"><div class="lbl">The dealer${B ? ` - ${B.stage === "done" ? dv : CG.bjValue([B.dealer[0]]).total}` : ""}</div><div class="cards">${B ? B.dealer.map(card).join("") : ""}</div></div><div class="bjplayer">${hands || `<div class="small">Place a bet and deal.</div>`}</div></div>
+        <div class="bjtable"><svg class="bjprint" viewBox="0 0 600 200" preserveAspectRatio="none"><path id="bjarc" d="M 90 150 Q 300 60 510 150" fill="none"/><text><textPath href="#bjarc" startOffset="50%" text-anchor="middle">BLACKJACK PAYS 3 TO 2</textPath></text></svg><div class="bjrule">Dealer must stand on all 17s</div><div class="shoe" title="The shoe"><i></i></div>${B ? `<div class="bjbet"><div class="stack">${Array.from({ length: Math.min(8, 1 + Math.floor(Math.log2(Math.max(1, B.hands.reduce((t, H) => t + H.bet, 0))))) }, (_, k) => `<i style="--k:${k}"></i>`).join("")}</div><span>${B.hands.reduce((t, H) => t + H.bet, 0)}</span></div>` : `<div class="bjbet empty"><span>BET</span></div>`}<div class="bjdealer"><div class="lbl">The dealer${B ? ` - ${B.stage === "done" ? dv : CG.bjValue([B.dealer[0]]).total}` : ""}</div><div class="cards">${B ? B.dealer.map(card).join("") : ""}</div></div><div class="bjplayer">${hands || `<div class="small">Place a bet and deal.</div>`}</div>${B && B.stage === "done" && B.results ? (() => { const rs = B.results.map((x) => x.r), t = rs.includes("blackjack") ? ["BLACKJACK!", "bj"] : rs.some((x) => x === "win") ? ["YOU WIN", "win"] : rs.every((x) => x === "push") ? ["PUSH", "push"] : rs.every((x) => x === "lose" || x === "bust") ? [rs.includes("bust") ? "BUST" : "DEALER WINS", "lose"] : ["SETTLED", "push"]; return `<div class="bjbanner ${t[1]}">${t[0]}</div>`; })() : ""}</div>
         ${play ? "" : this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${B && B.card ? this.cgCardWon(B.card) : ""}
         <div class="row">${play ? `<button class="primary" data-bj="hit">Hit</button><button data-bj="stand">Stand</button><button data-bj="double" ${g.bjCanDouble() ? "" : "disabled"}>Double</button><button data-bj="split" ${g.bjCanSplit() ? "" : "disabled"}>Split</button>` : `<button class="primary" data-bjdeal>Deal</button>`}<button data-leave>Leave</button></div>
         <div class="small">Six decks, shuffled when a quarter is left; the dealer peeks for blackjack and stands on soft 17; double on any two cards, split a pair once (split aces take one card each). About 99.5% back with good play. A blackjack of the Ace and Jack of Spades brings a Claudescryption card besides.</div>${this.cgStats("blackjack")}</div>`;
@@ -28035,8 +28098,8 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
       const g = this.game, V = g.vpState(), CG = CM.CG, hold = V && V.stage === "hold", bet = V ? V.bet : (this.cgBet === undefined ? 5 : this.cgBet), seen = this.cgSeen = this.cgSeen || new Set();
       const cards = V ? V.cards.map((c, i) => { const fresh = !seen.has(`vp${c.id}:${V.stage}`) && (V.stage === "hold" || (V.drawn || []).includes(i)); seen.add(`vp${c.id}:${V.stage}`); return `<div class="vpslot${V.held[i] ? " held" : ""}" data-vh="${i}">${this.caCard(c, { cls: fresh ? (V.stage === "hold" ? "deal" : "flip") : "" })}<span class="tag">${V.held[i] ? "HELD" : hold ? "hold?" : ""}</span></div>`; }).join("") : [0, 1, 2, 3, 4].map(() => `<div class="vpslot"><div class="pc cgback"></div></div>`).join("");
       box.innerHTML = `<div class="cgtable poker"><h3>Jacks or Better</h3><p class="lore">A cabinet of brass and green glass that deals itself. Five cards; keep what you like; draw once.</p>
-        <table class="paytable vp">${CG.VP_PAY.map(([n, m], i) => `<tr class="${V && V.stage === "done" && V.rank === i ? "won" : ""}"><td>${n}${i === 0 ? " <small>+ a rare card</small>" : ""}</td><td>${m * bet}</td></tr>`).join("")}<tr><td colspan="2" class="small">The full 9/6 table: 99.5% back with good play.</td></tr></table>
-        <div class="vphand">${cards}</div>${hold ? "" : this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${V && V.card ? this.cgCardWon(V.card) : ""}
+        <table class="paytable vp">${CG.VP_PAY.map(([n, m], i) => `<tr class="${V && V.stage === "done" && V.rank === i ? "won" : hold && CG.vpRank(V.cards) === i ? "now" : ""}"><td>${n}${i === 0 ? " <small>+ a rare card</small>" : ""}</td><td>${m * bet}</td></tr>`).join("")}<tr><td colspan="2" class="small">The full 9/6 table: 99.5% back with good play.</td></tr></table>
+        <div class="vpcab"><div class="vphand">${cards}</div><div class="vpled"><span>BET <b>${bet}</b></span><span>${hold ? (CG.vpRank(V.cards) >= 0 ? `DEALT: <b>${CG.VP_PAY[CG.vpRank(V.cards)][0].toUpperCase()}</b>` : "HOLD AND DRAW") : V && V.stage === "done" ? (V.back ? `WIN <b>${V.back}</b>` : "GAME OVER") : "PRESS DEAL"}</span></div></div>${hold ? "" : this.cgBetRow()}<div class="cgnote">${this.cgNote || ""}</div>${V && V.card ? this.cgCardWon(V.card) : ""}
         <div class="row">${hold ? `<button class="primary" data-vpdraw>Draw</button>` : `<button class="primary" data-vpdeal>Deal</button>`}<button data-leave>Leave</button></div>${this.cgStats("poker")}</div>`;
       this.cgWireBet(box); box.querySelector("[data-leave]").addEventListener("click", () => this.closeDialogs());
       box.querySelectorAll(".pc.deal, .pc.flip").forEach((el, i) => { el.style.animationDelay = `${i * 0.12}s`; setTimeout(() => this.cgSfx("card", 0.35, 1 + Math.random() * 0.3), i * 120); });
