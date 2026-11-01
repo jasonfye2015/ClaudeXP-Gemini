@@ -36,8 +36,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- textures by depth and by theme, the floor's mesh, the camera ----
   let artCache = {}, cacheOrder = [];
+  let scaleGrace = 0;                                                   // (v21.4: the Detail isn't judged for three seconds after a new floor or mode, while its pictures and mesh settle)
   let themeOn = -1, lookOn = null, dreamOn = false, seasonOn = null;
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
+  // a set, built once and kept (half a dozen at a time)
+  function setFor(key, special, i, look) {
+    if (!artCache[key]) {
+      artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
+      cacheOrder.push(key);
+      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
+    }
+    return artCache[key];
+  }
+  // (v21.4) while the title is up: the town's set built and sent to the graphics card a slice a frame, so a new
+  // expedition (which starts in town) doesn't stop to do it
+  let townReady = null;
+  function prepareTown() {
+    if (game.mode !== "title" || !renderer.ok || !renderer.prepare || !CM.art.hasLook(game.settings.look) && game.settings.look !== "drawn") return;
+    const look = lookNow(), season = CM.season ? CM.season(game) : "summer", key = `${look}:${CM.TOWN_THEME.name}:${season}`; if (townReady === key) return;
+    const was = CM.art.season; CM.art.season = season; try { renderer.prepare(setFor(key, CM.TOWN_THEME, 0, look)); townReady = key; } finally { CM.art.season = was; }
+  }
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
@@ -45,12 +63,8 @@ window.addEventListener("DOMContentLoaded", () => {
     if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
     const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
-    if (!artCache[key]) {
-      artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
-      cacheOrder.push(key);
-      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
-    }
-    renderer.setTextures(artCache[key]);
+    const art = setFor(key, special, i, look);
+    renderer.setTextures(art, game.mode === "title");                  // (behind the title card: a slice a frame, 40-render.js)
     themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
@@ -68,6 +82,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function showDemo() {
     renderer.seed = "title";
     useTheme(1);
+    prepareTown();                                                     // (v21.4: the town's set, built with the title's in the one moment of loading, and sent up a slice a frame behind it)
     renderer.setFloor(demo, CM.THEMES[0]);
     if (!demoCell) {                                                     // a square with a long view down a corridor
       const dist = CM.distances(demo.grid, [1, 1]);
@@ -86,6 +101,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setSprites([]);
   }
   game.on("floor", (floor) => {
+    scaleGrace = performance.now() + 3000;
     if (!renderer.ok) return;
     renderer.seed = game.seed; renderer.season = CM.season ? CM.season(game) : "summer";
     useTheme(floor.number);
@@ -95,7 +111,10 @@ window.addEventListener("DOMContentLoaded", () => {
   let walkReady = 0;                                                    // (a heavy pack: the next step waits)
   game.on("moved", (x, y) => { const pace = game.walkPace ? game.walkPace() : 1; renderer.moveTo(x, y, game.settings.smooth ? 180 * pace : 0); walkReady = performance.now() + (pace - 1) * 220; });
   game.on("turned", (facing) => renderer.turnTo(facing, game.settings.smooth ? 160 : 0));
-  game.on("mesh", () => { if (renderer.ok && game.floor) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); });
+  // a trace or a change on the floor: its mesh made again - once, on the next frame, however many came together (a fight
+  // won leaves remains, a scorch and arrows), and not at all if the floor was made again meanwhile (v21.4)
+  let meshAsk = 0;
+  game.on("mesh", () => { if (!renderer.ok || !game.floor || meshAsk) return; const at = renderer.meshes || 0; meshAsk = requestAnimationFrame(() => { meshAsk = 0; if (game.floor && (renderer.meshes || 0) === at) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); }); });
   game.on("teleported", (x, y) => renderer.setCamera(x, y, game.floor.facing));
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
@@ -151,11 +170,14 @@ window.addEventListener("DOMContentLoaded", () => {
     else if (fl.number % 5 === 0 && Object.values(CM.LORE_TEXT).some((l) => l.contradicts && CM.LORE_TEXT[l.contradicts].chapter === Object.keys(CM.CHAPTERS).find((k) => CM.CHAPTERS[k] === ch))) ui.titleCard(ch.name, "Below, the walls will say otherwise.");
   });
   game.on("mode", (mode) => {
+    scaleGrace = performance.now() + 3000;
     if (mode === "title") showDemo();
     else if (game.floor && renderer.ok) {
       useTheme(game.floor.number);
-      renderer.setFloor(game.floor, CM.themeFor(game.floor.number));
-      renderer.setCamera(game.floor.pos[0], game.floor.pos[1], game.floor.facing);
+      // (v21.4) a mode changing inside a floor's coming (enterFloor sets the mode, then sends the floor): the mesh made
+      // on the next frame, and only if the floor event hasn't made it meanwhile - once, not twice
+      const at = renderer.meshes || 0, fl = game.floor;
+      requestAnimationFrame(() => { if (game.floor === fl && (renderer.meshes || 0) === at && game.mode !== "title") { renderer.setFloor(fl, CM.themeFor(fl.number)); renderer.setCamera(fl.pos[0], fl.pos[1], fl.facing); } });
     }
   });
   const applySettings = (s) => {
@@ -183,14 +205,16 @@ window.addEventListener("DOMContentLoaded", () => {
   let detailCap = 2;
   const detailNow = () => Math.min(CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium") < 0 ? 1 : CM.DETAIL_ORDER.indexOf(game.settings.detail || "medium"), detailCap);
   const applyDetail = () => { const d = CM.DETAIL[CM.DETAIL_ORDER[detailNow()]]; if (d !== renderer.density) { renderer.density = d; if (game.floor && renderer.ok && game.mode !== "title") renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } };
-  function autoScale(dt) {                                               // frames coming late for two seconds: a step down (the Detail first, then the render scale); quick for ten: a step back up
+  function autoScale(dt) {                                               // frames coming late for two seconds: a step down (the Detail first, then the render scale); quick for thirty: a step back up
+    if (dt > 0.25) return;                                               // (a stall - a set uploading, a floor made - is not the machine being slow: it doesn't count)
+    if (performance.now() < scaleGrace) { slowFor = 0; quickFor = 0; return; }
     if (dt > 0.022) { slowFor += dt; quickFor = 0; } else if (dt < 0.013) { quickFor += dt; slowFor = 0; } else { slowFor = 0; quickFor = 0; }
     if (slowFor > 2 && detailNow() > 0) { detailCap = detailNow() - 1; slowFor = 0; applyDetail(); return; }
-    if (!renderAuto) { if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); } return; }
+    if (!renderAuto) { if (quickFor > 30 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); } return; }
     const i = RENDER_STEPS.indexOf(renderer.scale || 1);
     if (slowFor > 2 && i < RENDER_STEPS.length - 1) { renderer.scale = RENDER_STEPS[i + 1]; slowFor = 0; }
-    else if (quickFor > 10 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
-    else if (quickFor > 10 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); }
+    else if (quickFor > 30 && i > 0) { renderer.scale = RENDER_STEPS[i - 1]; quickFor = 0; }
+    else if (quickFor > 30 && detailCap < 2) { detailCap += 1; quickFor = 0; applyDetail(); }
   }
   game.on("settings", applySettings);
   applySettings(game.settings);
@@ -1079,6 +1103,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (fpsTime >= 0.5) { fps = Math.round(frames / fpsTime); frames = 0; fpsTime = 0; ui.$("#view .fps").textContent = `${fps} fps - v${CM.version} ${CM.built}`; }
     requestAnimationFrame(frame);
   }
-  showDemo();
+  if (CM.art.hasLook(game.settings.look) || game.settings.look === "drawn" || !CM.packs) showDemo();   // (v21.4: a look still decoding waits for its pack - one set built and uploaded, not two; the title card is up meanwhile)
   requestAnimationFrame(frame);
 });

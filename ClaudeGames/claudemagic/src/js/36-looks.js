@@ -184,7 +184,7 @@ CM.art.build = function (theme, look = "drawn") {
 // which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
 CM.SHARED_SIZE = 256;
 CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
-CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:|window:|ice$)/.test(name);   // (the outdoors: only the town and the land use these)
+CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:|window:|ice$|crops:|court:|portal:|sprinkler:|npc:fieldhand|npc:warden$|glyphcab$|wayfarer$|scarecrow$|cloche$|silo$|courtboard$)/.test(name);   // (v21.4: the fields', the court's and the cabinet's pictures are the surface's too: never uploaded below ground)   // (the outdoors: only the town and the land use these)
 CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));
 // the painters that take no theme draw the same thing every time: keep what they drew, so a band's set is quick to
 // make again (the canvases are only read: by the uploads, and by the looks that copy or pixelate them)

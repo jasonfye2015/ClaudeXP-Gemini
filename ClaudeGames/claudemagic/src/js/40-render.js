@@ -168,16 +168,31 @@ CM.Renderer = class {
   // a set's pictures go two ways: the band's own (CM.art.isThemeLayer) into the band's texture at the set's size, and
   // the rest into the shared texture at CM.SHARED_SIZE - uploaded only when the shared ones are not already there
   // (art.sharedKey: the look). A layer of another size is scaled as it goes up.
-  _upload(tex, layers, size, crisp) {
+  // (v21.4) gentle: behind the title card, the layers go up a slice a frame (the first read of a freshly painted canvas
+  // is where the browser really paints it, a few milliseconds each), so the card stays smooth; the mipmaps when done
+  _upload(tex, layers, size, crisp, gentle) {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
     gl.texImage3D(gl.TEXTURE_2D_ARRAY, 0, gl.RGBA8, size, size, Math.max(1, layers.length), 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    let scratch = null;
-    layers.forEach((layer, i) => {
-      let src = layer;
-      if (layer.width !== size) { scratch = scratch || Object.assign(document.createElement("canvas"), { width: size, height: size }); const p = scratch.getContext("2d"); p.clearRect(0, 0, size, size); p.imageSmoothingEnabled = !crisp; p.drawImage(layer, 0, 0, size, size); src = scratch; }
-      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, gl.RGBA, gl.UNSIGNED_BYTE, src);
-    });
+    if (gentle && typeof requestAnimationFrame !== "undefined") { let i = 0; const step = () => { if (!gl.isTexture(tex)) return; const until = performance.now() + 6; gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
+        while (i < layers.length && performance.now() < until) { this._layer(tex, layers[i], i, size, crisp); i++; }
+        if (i < layers.length) requestAnimationFrame(step); else this._finish(tex, crisp); };
+      gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, crisp ? gl.NEAREST : gl.LINEAR); step(); return; }
+    layers.forEach((layer, i) => this._layer(tex, layer, i, size, crisp));
+    this._finish(tex, crisp);
+  }
+  _layer(tex, layer, i, size, crisp) {
+    const gl = this.gl;
+    let src = layer;
+    if (layer.width !== size) {                                          // (a picture of another size: drawn to the set's size first)
+      if (!this._scratch || this._scratch.width !== size) this._scratch = Object.assign(document.createElement("canvas"), { width: size, height: size });
+      const p = this._scratch.getContext("2d"); p.clearRect(0, 0, size, size); p.imageSmoothingEnabled = !crisp; p.drawImage(layer, 0, 0, size, size); src = this._scratch;
+    }
+    if (src && src.getContext && src.width === size && src.height === size) { try { const p = src.getContext("2d"); if (p) src = p.getImageData(0, 0, size, size); } catch (e) { /* the canvas as it is */ } }   // (v21.4: a canvas's pixels read off it and handed over as pixels - several times quicker here than handing over the canvas)
+    gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, i, size, size, 1, gl.RGBA, gl.UNSIGNED_BYTE, src);
+  }
+  _finish(tex, crisp) {
+    const gl = this.gl; gl.bindTexture(gl.TEXTURE_2D_ARRAY, tex);
     gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, crisp ? gl.NEAREST : gl.LINEAR);
@@ -187,7 +202,25 @@ CM.Renderer = class {
     if (aniso) gl.texParameterf(gl.TEXTURE_2D_ARRAY, aniso.TEXTURE_MAX_ANISOTROPY_EXT, Math.min(8, gl.getParameter(aniso.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
   }
 
-  setTextures(art) {
+  // (v21.4) a set made ready ahead of time: its pictures sent up a slice a frame into textures of its own, swapped in
+  // at once when the set is asked for (the town's, while the title is up)
+  prepare(art) {
+    const gl = this.gl; if (!gl) return; if (this.prepared) { if (this.prepared.art === art) return; this._dropPrepared(); }
+    const { own, rest, sharedKey } = this._split(art), P = { art, own, rest, sharedKey, texture: gl.createTexture(), shared: null };
+    this._upload(P.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp), true);
+    if (this.sharedKey !== sharedKey) { P.shared = gl.createTexture(); this._upload(P.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp), true); }
+    this.prepared = P;
+  }
+  _dropPrepared() { const P = this.prepared, gl = this.gl; if (!P) return; if (P.texture) gl.deleteTexture(P.texture); if (P.shared) gl.deleteTexture(P.shared); this.prepared = null; }
+  _split(art) { const own = [], rest = []; for (const name of Object.keys(art.index)) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }
+    return { own, rest, sharedKey: `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}` }; }
+  setTextures(art, gentle) {
+    if (this.prepared && this.prepared.art === art) { const P = this.prepared, gl = this.gl; this.prepared = null;   // (ready ahead: swapped in)
+      if (P.shared) { if (this.shared) gl.deleteTexture(this.shared); this.shared = P.shared; this.sharedKey = P.sharedKey; }
+      if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; const index = {}; P.own.forEach((n, i) => { index[n] = i; }); P.rest.forEach((n, i) => { index[n] = 1000 + i; });
+        this.index = index; this.sub = art.sub || {}; this.crisp = Boolean(art.crisp); return; }
+      gl.deleteTexture(P.texture); }                                     // (the shared set moved on meanwhile: made the ordinary way)
+    else if (this.prepared) this._dropPrepared();
     const gl = this.gl, names = Object.keys(art.index), own = [], rest = [];
     for (const name of names) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }   // (the outdoors below ground: not needed, not uploaded - so the shared set is the same for every band)
     const index = {};
@@ -197,12 +230,12 @@ CM.Renderer = class {
     if (!this.shared || this.sharedKey !== sharedKey) {
       if (this.shared) gl.deleteTexture(this.shared);
       this.shared = gl.createTexture(); this.sharedKey = sharedKey;
-      this._upload(this.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp));
+      this._upload(this.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp), gentle);
       this.uploads = (this.uploads || 0) + rest.length;
     }
     if (this.texture) gl.deleteTexture(this.texture);
     this.texture = gl.createTexture();
-    this._upload(this.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp));
+    this._upload(this.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp), gentle);
     this.uploads = (this.uploads || 0) + own.length;
     this.index = index;
     this.sub = art.sub || {};
@@ -211,7 +244,7 @@ CM.Renderer = class {
 
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
-    this.theme = theme;
+    this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
     const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
     const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)

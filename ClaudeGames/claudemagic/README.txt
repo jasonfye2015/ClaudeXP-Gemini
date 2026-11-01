@@ -1392,6 +1392,22 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A smoother start (v21.4)
+  (src/js/40-render.js, 80-main.js, 36-looks.js)
+  Measured in the browser the Timeline uses (QtWebEngine, Chromium 140) on the same machine, before and after:
+  the page ready in 3.5 s (it was 6.7), a new game started in 0.4 s (it was a 1.4 s freeze), and the town's first
+  seconds with one long frame (there were seven, up to 130 ms).
+  - The textures go to the graphics card as their pixels, read off each picture, not as the picture itself - in this
+    browser several times quicker (the town's set: 0.6 s, from 2 s at worst).
+  - At the start one set is built and sent, not two: a look still decoding is waited for behind the title card.
+  - Behind the title the sets go up a slice a frame, and the town's set (a new expedition's first) is made ready there,
+    so starting a game swaps it in at once.
+  - The fields', the court's and the cabinet's pictures count as the surface's, so they are never sent below ground.
+  - A floor's mesh is made once on arriving (the mode changing inside the arrival made it twice), and the traces a fight
+    leaves (remains, scorch, arrows) make it again once, on the next frame - not once each, there and then.
+  - The automatic Detail no longer counts a loading pause as the machine being slow, waits three seconds on a new floor
+    before judging, and needs thirty quick seconds, not ten, to step back up - no more stepping down and up at the start.
+
 The court's keepers (the eighty-seventh big update - v21.3, UPGRADE_PLAN_16.md phase 3 - the plan complete)
   (src/js/69s-courtkeepers.js, 76zzzt-courtkeepers.js)
   - The noticeboard in the court's south-east corner: every place beyond the court in its own colour - the shaft, the
