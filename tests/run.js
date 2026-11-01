@@ -5285,6 +5285,28 @@ test("the town's draws: the lottery sells slips for tonight's draw (tomorrow's a
   g.fwQ = []; g.cgStake("slots", 10); g.cgPay("slots", 300); assert.strictEqual(g.fwQ.length, 1); assert.strictEqual(g.fwQ[0].tier, 2); g.cgPay("slots", 20); assert.strictEqual(g.fwQ.length, 1, "a small win isn't"); g.cgStake("holdem", 100); g.cgPay("holdem", 5000); assert.strictEqual(g.fwQ.length, 1, "a cash-out isn't");
 });
 
+test("the floor's big nights: the progressive jackpot grows with every stake and by the hour, never past its limit, and bursts at its secret point on the next stake at a jackpot table; happy hour doubles one game's tickets; a high-roller's wager is staked, played (a score to beat, or heads-up hold'em) and paid double; the exchange buys and sells tickets at the day's rates and can't be turned round for profit", () => {
+  const CM = load(), JP = CM.JP, TX = CM.TX, g = new CM.Game(); g.newGame("bn-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore();
+  const J = g.jpStore(); assert.strictEqual(Math.floor(J.pot), JP.pot0); assert.ok(J.trig > JP.pot0 && J.trig <= JP.must); const at = J.at; g.jpPot(at + 5 * 3600000 + 10); assert.strictEqual(Math.floor(J.pot), JP.pot0 + 5 * JP.hourly);
+  const p0 = J.pot; g.cgStake("craps", 500); assert.ok(Math.abs(J.pot - (p0 + 500 * JP.feed)) < 1e-6);
+  J.pot = J.trig - 1; g.cgStake("craps", 100); assert.ok(J.pot >= J.trig); assert.strictEqual(J.wins.length, 0, "craps isn't a jackpot table");
+  const won = Math.floor(J.pot), gold0 = g.gold; g.fwQ = []; assert.strictEqual(g.cgStake("slots", 5), ""); assert.strictEqual(J.wins.length, 1); assert.strictEqual(g.gold - gold0, won - 5); assert.strictEqual(Math.floor(J.pot), JP.pot0); assert.ok(g.fwQ.some((e) => e.tier === 3)); assert.ok(J.trig > JP.pot0 && J.trig <= JP.must);
+  J.pot = JP.must - 1; J.trig = JP.must + 99; g.cgStake("craps", 500); assert.ok(J.pot <= JP.must, "never past the limit");
+  // happy hour
+  const H = g.hhToday(); assert.ok(CM.HH.GAMES.includes(H.table)); assert.ok(H.hour >= CM.HH.from && H.hour <= CM.HH.to); assert.strictEqual(g.hhOn(new Date(2026, 10, 1, H.hour, 30).getTime()), H.table); assert.strictEqual(g.hhOn(new Date(2026, 10, 1, (H.hour + 2) % 24, 30).getTime()), null);
+  g.hhOn = () => H.table; let n0 = T.n; g.tkAdd(10, H.table); assert.strictEqual(T.n - n0, 20, "doubled"); n0 = T.n; g.tkAdd(10, H.table === "darts" ? "skee" : "darts"); assert.strictEqual(T.n - n0, 10); delete g.hhOn;
+  // a high-roller at the Tavern Board
+  const key = CM.FLOOR.day(), S = g.hrStore(); g.hrToday(); S.days[key] = { who: "smith", kind: "darts", wager: 1000, target: 100, state: "offered" }; const gw = g.gold; assert.ok(!g.hrAccept().error); assert.strictEqual(gw - g.gold, 1000, "over the house limit, a wager"); assert.ok(g.hrAccept().error);
+  assert.ok(!g.faStart("darts", 5).error); let out; for (let k = 0; k < 24; k++) out = g.faThrow("darts", 0, 0); assert.ok(out.over); assert.ok(out.challenge && out.challenge.win, `scored ${g.faState("darts").score}`); assert.strictEqual(out.challenge.gold, 2000); assert.ok(out.challenge.card); assert.strictEqual(S.days[key].state, "won"); assert.strictEqual(S.won, 1);
+  // and heads-up hold'em
+  S.days[key] = { who: "tavern", kind: "holdem", wager: 750, target: 0, state: "offered" }; assert.ok(!g.hrAccept().error); const Tb = g.heTable(); assert.strictEqual(Tb.seats.length, 2); assert.ok(Tb.duel); assert.strictEqual(Tb.buyin, 750);
+  Tb.seats[0].stack = 1500; Tb.seats[1].stack = 0; Tb.stage = "over"; const lv = g.heLeave(); assert.strictEqual(lv.chips, 1500); assert.ok(lv.challenge.win); assert.strictEqual(S.days[key].state, "won");
+  S.days[key] = { who: "merchant", kind: "rings", wager: 200, target: 99, state: "offered" }; assert.ok(!g.hrDecline().error); assert.strictEqual(S.days[key].state, "declined"); assert.ok(g.hrAccept().error);
+  // the exchange
+  const r = g.txRates(); assert.ok(r.buy >= r.sell * 2.5, "buying costs well over selling"); assert.strictEqual(TX.history(g.seed, key).length, 14); T.n = 1000; const ga = g.gold, s1 = g.txSell(100); assert.strictEqual(s1.gold, Math.floor(100 * r.sell)); assert.strictEqual(g.gold - ga, s1.gold); assert.strictEqual(T.n, 900);
+  const gb = g.gold, b1 = g.txBuy(100); assert.strictEqual(gb - g.gold, Math.ceil(100 * r.buy)); assert.strictEqual(T.n, 1000); assert.ok(b1.gold > s1.gold, "round the loop loses"); assert.ok(g.txBuy(TX.buyMax).error, "the day's limit"); assert.ok(g.txSell(5000).error, "more than you hold");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
