@@ -5545,6 +5545,24 @@ test("one name across the world: every part of the world adds renown once from i
   assert.ok(g.wmGoals()[0].area === "Renown");
 });
 
+test("the tongue of the last bell: one story through every place - a making found in each by a deed there, kept with the village; cast at the smith; given to the Boy in the bell-yard; then the Lich King rises a fifth short", () => {
+  const CM = load(), TH = CM.THREAD, g = new CM.Game(); g.newGame("th-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  let I = g.thInfo(); assert.strictEqual(I.chapter, 0); assert.strictEqual(I.all, 10); assert.strictEqual(g.thSync().length, 0, "nothing yet");
+  g.trail = (g.trail || []).concat([[TH.yard, 0], [15, 0]]); assert.deepStrictEqual([...g.thSync()].sort(), ["ropes", "yard"]); assert.strictEqual(g.thInfo().chapter, 1); assert.strictEqual(g.thSync().length, 0, "once");
+  g.tower = { cleared: 10, best: 10 }; g.fort = { cleared: 5, best: 5 }; g.abloStore().heroes.x = { maxDepth: 8 }; g.achievements.homestead = { date: 1 }; g.caveStore().bosses = 1; g.tally.brosBest = 4; g.cards().beaten = { a: 1, b: 1, c: 1 };
+  assert.ok(/found: 9 of 10|9 of 10/.test(g.thForgeWhy()) || g.thSync().length === 7);
+  const JK = CM.JOKER || CM.JK, J = g.jkStore(); if (JK && JK.need) { J.jxp = 0; for (let L = 1; L < 10; L++) J.jxp += JK.need(L); }
+  g.thSync(); I = g.thInfo(); assert.strictEqual(I.have, 10, I.notes.filter((x) => !x.got).map((x) => x.id).join()); assert.strictEqual(I.chapter, 2);
+  const v2 = CM.store.get("village", {}); assert.strictEqual(Object.keys(v2.thread.notes).length, 10, "kept with the village");
+  g.enterFloor(0, "rope", CM.TOWN_AT.smith.slice()); g.mode = "explore"; assert.ok(/metal bar/.test(g.thForgeWhy())); g.bag.push(CM.metalBar("iron")); g.gold = 50; assert.ok(/200 gold/.test(g.thForgeWhy())); g.gold = 250;
+  assert.strictEqual(g.thForge(), ""); assert.strictEqual(g.gold, 50); assert.ok(!g.bag.some((x) => x.kind === "bar")); assert.strictEqual(g.thInfo().chapter, 3);
+  assert.ok(/bell-yard/.test(g.thRingWhy()), "only in the bell-yard"); g.enterFloor(TH.yard, "down"); g.mode = "explore"; const r0 = g.village.renown || 0;
+  assert.strictEqual(g.thRing(), ""); assert.strictEqual(g.village.renown - r0, TH.renown); assert.ok(g.achievements.lastbell); assert.strictEqual(g.thInfo().chapter, 4);
+  g.enterFloor(1, "stairs"); g.mode = "explore"; const lich = { name: "The Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true, xp: 1, gold: 1, speed: 10 };
+  g.floor.things["2,2"] = { type: "monsters", group: [lich] }; g.startCombat("2,2", g.floor.things["2,2"]); const b = g.foes.find((m) => m.boss); assert.strictEqual(b.hp, 240, "a fifth short");
+  assert.ok(g.wmGoals().some((x) => x.area === "The last bell"));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

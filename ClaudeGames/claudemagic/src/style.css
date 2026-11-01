@@ -1386,3 +1386,12 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .rlrow { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dotted rgba(240,192,64,0.15); font-size: 13px; } .rlrow i { opacity: 0.6; font-style: normal; }
 .rlrow span:first-child { min-width: 42px; } .rlrow:not(.have) { opacity: 0.6; } .rlcols > div:first-child .rlrow { opacity: 1; } .rlrow.have span:first-child { color: #F0C040; }
 .rlcols > div:last-child .rlrow { justify-content: flex-start; }
+/* the last bell (v18.8) */
+.thtop { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: start; margin-bottom: 8px; } @media (max-width: 640px) { .thtop { grid-template-columns: 1fr; } }
+.thbell { width: 170px; } .thbell .body { fill: #6A5A40; stroke: #2A2014; stroke-width: 2; } .thbell.rung .body { fill: #B89040; }
+.thbell .socket { fill: none; stroke: #8A7A60; stroke-dasharray: 3 3; stroke-width: 2; } .thbell .tongue { fill: #E8C060; stroke: #5A4010; stroke-width: 2; }
+.thbell circle:not(.socket):not(.tongue) { fill: #2A2218; stroke: #6A5A40; stroke-width: 2; } .thbell circle.got { fill: #F0C040; stroke: #FFF0B0; filter: drop-shadow(0 0 4px rgba(240,192,64,0.8)); }
+.thbell.rung { animation: thswing 2.4s ease-in-out infinite; transform-origin: 50% 8%; } @keyframes thswing { 25% { transform: rotate(4deg); } 75% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .thbell.rung { animation: none; } }
+.entry.thnote { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; } .entry.thnote:not(.got) { opacity: 0.75; }
+.thplace { min-width: 180px; display: flex; flex-direction: column; gap: 2px; } .thplace span { font-size: 13px; opacity: 0.85; } .entry.thnote.got .thplace b { color: #F0C040; } .entry.thnote p { margin: 0; flex: 1; }
