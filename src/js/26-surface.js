@@ -222,7 +222,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
-  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0;
+  let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky) {                                                                             // the buildings: walled all round, and roofed
     const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
@@ -246,7 +246,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
             const P = [[ax0 + dx * q, y0, az0 + dy * q], [ax1 + dx * q, y0, az1 + dy * q], [ax1 + dx * q, y1, az1 + dy * q], [ax0 + dx * q, y1, az0 + dy * q]], uv = [[0, 1], [1, 1], [1, 0], [0, 0]];
             for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], index["window:lit"], 1, 0, 1, 1);
-            litWindows++; }
+            litWindows++; windows.push([(ax0 + ax1) / 2 + dx * 0.35, (y0 + y1) / 2, (az0 + az1) / 2 + dy * 0.35]); }
         }
         const o = 0.035, ox = dx * o, oz = dy * o, ft = 0.16;                        // the footing: a course of stone, standing a little proud
         poly([[a[0] + ox, 0, a[1] + oz], [b[0] + ox, 0, b[1] + oz], [b[0] + ox, ft, b[1] + oz], [a[0] + ox, ft, a[1] + oz]], [[0, 1], [1, 1], [1, 1 - ft], [0, 1 - ft]], stone, shade * 0.8);
@@ -415,5 +415,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, covered: covered.size, skirt, ring, props, decals, overhead };
 };

@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Light (the eighty-eighth big update - v22.0, UPGRADE_PLAN_17.md phase 0)
+  (src/js/76zzzu-light.js; 40-render.js, 26-surface.js, 80-main.js)
+  - Up to twenty-four lights a frame (from twelve), in the town, the Wood and every floor below.
+  - More things give light: the Portal Court's portals and braziers in their own colours, the Wayfarer's Stones, the
+    Glyph Deep's cabinet; after dark, the town's lit windows spill warm light onto the street.
+  - Spells and blasts flare where they land and die away: fire orange, frost blue, lightning white, holy light gold,
+    a blink violet, a summoning purple.
+  - The party's torch is held in the right hand, a little up, not worn at the eye: what faces it is lit more, so
+    corners and wall faces read in the torchlight.
+
 A smoother start (v21.4)
   (src/js/40-render.js, 80-main.js, 36-looks.js)
   Measured in the browser the Timeline uses (QtWebEngine, Chromium 140) on the same machine, before and after:
