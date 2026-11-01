@@ -442,6 +442,7 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const [key, thing] of Object.entries(fl.things)) {
       let [x, y] = key.split(",").map(Number);
       if (!near(x, y)) continue;
+      if (CM.courtExtras && fl.number === 0) for (const sp of CM.courtExtras(game, key, x, y, thing, now)) out.push(sp);   // (the Portal Court's stones, braziers and runes: 76zzzq-portalcourt.js)
       if (thing.type === "chest") out.push({ x, y, layer: "chest", w: 0.75, h: 0.75 });
       else if (thing.type === "ladder") out.push({ x, y, layer: "hatch", w: 0.92, flat: true });
       else if (thing.type === "stairs_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
