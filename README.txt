@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Air (v22.3, UPGRADE_PLAN_17.md phase 3)
+  (src/js/76zzzw-air.js; 40-render.js, 80-main.js)
+  - The air below has a body, each band its own: the Drowned Town and the Undercroft thick and drifting, the Foundry
+    smoky, the Fungal Deep full of spores, the Flooded Vaults damp, the Catacombs only a little. It lies thicker low
+    and drifts slowly; the party's torch and every lamp and brazier glow in it.
+  - Above, the Wood's hollows and the town's lanes lie misty at dawn and a little hazy at night.
+  - By day, looking toward the sun, bars of light stand in the air with dust drifting in them - strongest in the Wood,
+    fainter in the town's lanes; none in the rain. Nothing moves with Reduced motion on.
+
 Shadows (v22.2, UPGRADE_PLAN_17.md phase 2)
   (src/js/76zzzv-shadows.js; 40-render.js, 80-main.js)
   - Whatever stands on the ground - people, monsters, chests, props, trees - casts a shadow away from the light that
