@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Spells that travel (the eighty-ninth big update - v23.0, UPGRADE_PLAN_18.md phase 0)
+  (src/js/76zzzy-spells.js; 45-fx.js, 80-main.js)
+  - Every spell aimed at foes leaves its caster's hand - the hero's own side of the view - and travels: Magic Missile
+    three darts, Frost a shard to each foe, Lightning a crack from the hand, Call Lightning and Smite from above, Sleep
+    and Lullaby a drift of motes, Turn Undead a wave of light rolling out, Drain a red stream coming back to the caster,
+    a Firework's sparks arcing over.
+  - Each lands with an impact: a ring on the floor, a burst, a flare of its light on the walls.
+  - Some leave something on the ground a while: a fireball's fire burning under each foe, frost glittering, holy light,
+    thorns and roots, a sanctuary's ring. (Not with Reduced motion.)
+  - Spells on the party - healing, blessing, protection - rise about the caster's side of the view.
+
 Glow (v22.5, UPGRADE_PLAN_17.md phase 5 - the light and air plan done)
   (src/js/40-render.js, 70-ui.js, 80-main.js)
   - What is bright is softly haloed: torch flames, lamps and braziers, the portals and their runes, spells, gold, the

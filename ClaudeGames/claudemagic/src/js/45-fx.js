@@ -56,6 +56,10 @@ CM.Effects = class {
     this.list.push(e);
   }
 
+  // (v23.0) something left on the ground for a while - fire burning, frost glittering, holy light, roots: a flat picture
+  // that swells in, breathes and fades; with `motes`, sparks rise off it now and then
+  ground(o) { const e = Object.assign({ type: "ground", t0: this.now(), ms: 2600, at: [0, 0, 0], size: 0.7, layer: "fx:fire", glow: 1, alpha: 0.8, motes: null, seed: 4 }, o); e.ms /= CM.fxSpeed || 1; e.rnd = new CM.Random(e.seed + Math.floor(e.t0 % 1000)); this.list.push(e); }
+
   // the sprites of everything in flight right now; the expired fall off the list (a landing projectile runs its then)
   sprites(now = this.now()) {
     const out = [], keep = [], spawn = [];
@@ -69,7 +73,12 @@ CM.Effects = class {
         put(e, x, y, z, e.size, e.layer);
         if (e.trail && now - (e.lastTrail || 0) > 28) { e.lastTrail = now; spawn.push({ type: "mote", t0: now, ms: 220, at: [x, y, z], size: e.size * 0.3, layer: e.trail, glow: 1 }); }
       } else if (e.type === "mote") {
-        put(e, e.at[0], e.at[1], e.at[2], e.size * (1 - k * 0.5), e.layer, 1 - k);
+        put(e, e.at[0], e.at[1] + (e.rise || 0) * k, e.at[2], e.size * (1 - k * 0.5), e.layer, 1 - k);
+      } else if (e.type === "ground") {
+        const a = e.alpha * Math.min(1, k * 8) * (k > 0.7 ? (1 - k) / 0.3 : 1) * (0.85 + 0.15 * Math.sin(now / 160 + e.seed));
+        out.push({ x: e.at[0] - 0.5, y: e.at[2] - 0.5, flat: true, w: e.size * (0.6 + 0.4 * Math.min(1, k * 5)), layer: e.layer, alpha: a, glow: e.glow });
+        if (e.motes && k < 0.8 && now - (e.lastMote || 0) > 110) { e.lastMote = now; const r = e.rnd.next() * e.size * 0.4, an = e.rnd.next() * Math.PI * 2;
+          spawn.push({ type: "mote", t0: now, ms: 520, at: [e.at[0] + Math.cos(an) * r, 0.05, e.at[2] + Math.sin(an) * r], rise: 0.35, size: 0.06, layer: e.motes, glow: 1 }); }
       } else if (e.type === "burst") {
         const dt = Math.min(0.05, (now - e.last) / 1000);
         e.last = now;
