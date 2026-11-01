@@ -148,10 +148,12 @@ CM.sky = function (game) {
 // count} and what was built, for the tests: ceilings, walls, roofs, trees, and on the surface the squares covered (ground,
 // a top or a roof over every one), the skirt's quads past the edge and the far ring's.
 CM.MESH_STRIDE = 10;
+// (v24.0) how far each growing thing's top gives to a full wind, in squares: read by the vertex shader (40-render.js)
+CM.SWAY = { tree: 0.07, plant: 0.06, tallgrass: 0.11, reeds: 0.12, tuft: 0.06, tuft_dry: 0.07, flowers: 0.05, shrub: 0.04, fern: 0.05 };
 CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts: { props (CM.scatter's), sub (where each prop sits in its layer) }
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
-  const quad = (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  const quad = (a, b, c, d, layer, shade, sway = 0) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };   // (sway, v24.0: how far its top gives to the wind)
   // a floor or ceiling square, turned a quarter-turn and mirrored by hash (no two neighbours alike), with a shade at
   // each corner: darker where the corner meets walls (ambient occlusion, baked)
   const UVS = [[[0, 1], [1, 1], [1, 0], [0, 0]], [[1, 1], [1, 0], [0, 0], [0, 1]], [[1, 0], [0, 0], [0, 1], [1, 1]], [[0, 0], [0, 1], [1, 1], [1, 0]]];
@@ -353,8 +355,8 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   }
   for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, layer = L(`tree:${v}`), h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
-    quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0);
-    quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0);
+    quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
+    quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }
   let decals = 0, overhead = 0;
   if (!sky && opts.decals !== false) {                                                   // below: what is on the walls, and what hangs overhead, by band
@@ -394,7 +396,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   }
   let props = 0;                                                                        // the props that lie or grow: flat, and crossed pairs
   const sub = opts.sub || {};
-  const quadUV = (a, b, c, d, layer, shade, r) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  const quadUV = (a, b, c, d, layer, shade, r, sway = 0) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };
   for (const p of opts.props || []) {
     if (p.how === "stand") continue;
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
@@ -411,7 +413,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);
     } else for (const t of [p.turn, p.turn + Math.PI / 2]) {
       const ux = Math.cos(t) * hw, uz = Math.sin(t) * hw;
-      quadUV([cx - ux, 0, cz - uz], [cx + ux, 0, cz + uz], [cx + ux, p.h, cz + uz], [cx - ux, p.h, cz - uz], layer, shade, r);
+      quadUV([cx - ux, 0, cz - uz], [cx + ux, 0, cz + uz], [cx + ux, p.h, cz + uz], [cx - ux, p.h, cz - uz], layer, shade, r, sky ? CM.SWAY[p.id] || CM.SWAY.plant : 0);
     }
     props++;
   }
