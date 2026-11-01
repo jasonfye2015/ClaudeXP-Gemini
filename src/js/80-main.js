@@ -257,6 +257,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   function castFx(fx) {                                                 // a spell, a skill, a scroll or a wand: its light
     const id = fx.id, foes = fx.foes && fx.foes.length ? fx.foes : game.living();
+    if (CM.castFx2 && CM.castFx2(fx, foes, fxKit)) return;              // (v23.0: spells that travel from the caster's hand - 76zzzy-spells.js)
     switch (id) {
       case "missile": shoot(fx.foe, "force"); break;
       case "firebolt": shoot(fx.foe, "fire"); break;
@@ -281,6 +282,8 @@ window.addEventListener("DOMContentLoaded", () => {
       default: break;
     }
   }
+  const fxKit = { fxs, renderer, ui, game, atFoe, fromParty, beforeParty, floatAt, later, foePlace, hits, lunges, flashes, rising, dying };   // (the recipes' tools, for the later files)
+  CM.fxKit = fxKit;
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
