@@ -352,7 +352,11 @@ CM.Renderer = class {
       const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const lift = s.lift || 0;
-      if (s.flat) {
+      if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
+        const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = (w * (s.len || 1)) / 2, hw = w / 2, ox = c * hl * 0.85, oz = sn * hl * 0.85, y0 = 0.0035;
+        const P = (a2, b2) => [cx + ox + c * a2 - sn * b2, y0, cz + oz + sn * a2 + c * b2];
+        corners = [P(-hl, hw), P(hl, hw), P(hl, -hw), P(-hl, -hw)];
+      } else if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
       } else if (s.axis && s.swing) {                                    // a door swung on its hinge (28-motion.js): toward the side away from the party
         const L = 0.94, sd = s.swingSide || 1, sw = s.swing, top = 0.97;
