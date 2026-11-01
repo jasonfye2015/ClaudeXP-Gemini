@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The village's hands (the seventy-seventh big update - v19.2, UPGRADE_PLAN_14.md phase 2)
+  (src/js/69l-fieldhands.js, 76zzzl-fieldhands.js; the kit painted in 36c-cropart.js)
+  - Sprinklers, made at the shed's workbench from a bar and gold and set on a plot: copper waters the four plots
+    beside it (a copper, tin or bronze bar, 30 gold), iron the eight round it (iron or steel, 60), star-iron a 5x5
+    (150). They water at every dawn; lifted, they go back on the shelf.
+  - Cloches: a glass bell over one plot (30 gold and two island stones) - it can be sown with any crop in any season
+    and grows through the winter.
+  - The plan: mark the crop a plot should keep (the board's Plan mode); "Tend everything" sows the plan from the
+    pack, pulls the weeds, picks what's ripe and waters as far as the can goes, in one go.
+  - The field crew: hire one to three hands (6 gold a dawn each, from a purse the party fills). Every dawn each does
+    fourteen jobs: weeds, picking into the silo (up to 600 things, with a seed box for the seeds that come back),
+    turning and sowing the plan (buying seed out of the purse when the box is out), and watering. Unpaid, they stand idle.
+  - The seed-maker: one of a crop, picked, makes two of its seeds.
+
 Water and quality (the seventy-sixth big update - v19.1, UPGRADE_PLAN_14.md phase 1)
   (src/js/69k-fieldcare.js, 76zzzk-fieldcare.js)
   - Thirst: an unwatered crop stalls, and four dry dawns in a row wither it.

@@ -26,7 +26,7 @@
         <label><input type="checkbox" data-fdauto ${F.autoCompost ? "checked" : ""}> compost when sowing</label>
         <button data-fdmode class="${this.fdMode === "compost" ? "on" : ""}" ${here && F.compost > 0 ? "" : "disabled"}>${this.fdMode === "compost" ? "Compost mode: click a crop (done)" : "Compost a crop..."}</button>
         ${F.scarecrow ? "<span>A scarecrow keeps the crows off.</span>" : `<button data-fdcrow ${here ? "" : "disabled"}>Buy a scarecrow (${FC.scarecrowGold}g)</button>`}${F.best ? `<span>Best yet: ${CM.stars ? CM.stars(F.best) : F.best}${F.giants ? `, ${F.giants} giant${F.giants > 1 ? "s" : ""}` : ""}</span>` : ""}`;
-      const head = box.querySelector(".fdhead"); if (head) head.after(care);
+      const at = box.querySelector(".fdgrid") || box.querySelector(".fdhead"); if (at) at.after(care);
       care.querySelector("[data-fdauto]").addEventListener("change", (e) => { g.fieldAutoCompost(e.target.checked); this.renderFields(); });
       care.querySelector("[data-fdmode]").addEventListener("click", () => { this.fdMode = this.fdMode === "compost" ? null : "compost"; this.renderFields(); });
       const cb = care.querySelector("[data-fdcrow]"); if (cb) cb.addEventListener("click", () => { this.fdNote = g.fieldBuyScarecrow() || "The scarecrow goes up by the shed."; this.renderFields(); this.refresh && this.refresh(); }); },

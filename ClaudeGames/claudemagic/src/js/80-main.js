@@ -491,6 +491,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "trough") out.push({ x, y, layer: "well", w: 0.75, h: 0.6 });
       else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
       else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
+      else if (thing.type === "silo") out.push({ x, y, layer: "silo", w: 1.0, h: 1.5 });
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

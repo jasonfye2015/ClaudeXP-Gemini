@@ -5612,6 +5612,31 @@ test("the South Fields' care: four dry dawns wither a crop; bare earth grows wee
   assert.ok(!F.plots["22,35"].crop, "all nine cleared"); CM.weatherOf = wx;
 });
 
+test("the South Fields' hands: sprinklers from bars water their reach at dawn; a cloche grows a crop out of season and through winter; the crew, paid from their purse, weed, pick into the silo, sow the plan and water; idle unpaid; the seed-maker; tend everything", () => {
+  const CM = load(), FD = CM.SOUTHFIELDS, FH = CM.FIELDHANDS; CM.FIELDCARE.weedChance = 0; CM.FIELDCARE.crowChance = 0; const g = new CM.Game(); g.newGame("fh-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "spring";
+  g.village.renown = 2000; g.build("fields"); g.village.levels.fields = 4; g.fieldsApply(); g.floor.pos = FD.shed.slice(); const F = g.fields(); F.can = true; F.water = 99; g.gold = 5000;
+  const wx = CM.weatherOf; CM.weatherOf = () => "clear"; let d = 300; const dawn = (n) => { for (let i = 0; i < n; i++) g.fieldsDawn(d++); };
+  assert.ok(/iron bar/.test(g.fieldMakeSprinkler("iron"))); g.bag.push(CM.metalBar("iron")); assert.strictEqual(g.fieldMakeSprinkler("iron"), ""); assert.strictEqual(F.sprinklers.iron, 1);
+  assert.strictEqual(g.fieldSetSprinkler("20,34", "iron"), ""); assert.strictEqual(g.plotStage("20,34"), "sprinkler"); assert.ok(/sprinkler/i.test(g.fieldSow("20,34", "radish")));
+  for (const k of ["19,33", "21,35", "22,34"]) { g._fieldTill(k); g.bag.push(CM.seed("radish")); assert.strictEqual(g.fieldSow(k, "radish"), ""); }
+  dawn(1); assert.strictEqual(F.plots["19,33"].g, 1, "in reach: watered"); assert.strictEqual(F.plots["21,35"].g, 1); assert.strictEqual(F.plots["22,34"].g || 0, 0, "two away: not");
+  // a cloche
+  const S = CM.TOWNREQ.byId.stone; assert.ok(/stone/.test(g.fieldCloche("12,32"))); g.craftStore().satchels = { x: [{ b: CM.CC.B.STONE, n: 3 }] }; assert.strictEqual(S.have(g), 3);
+  { assert.strictEqual(g.fieldCloche("12,32"), ""); assert.strictEqual(S.have(g), 1, "two stones for its rim"); g._fieldTill("12,32"); g.bag.push(CM.seed("pumpkin")); assert.strictEqual(g.fieldSow("12,32", "pumpkin"), "", "a pumpkin under glass in spring");
+    g.season = "winter"; for (let i = 0; i < 8; i++) { F.plots["12,32"].w = true; dawn(1); } assert.strictEqual(g.plotStage("12,32"), "ripe", "through the winter"); g.season = "spring"; }
+  // the crew
+  F.plots["30,36"] = { t: 1, plan: "radish" }; F.plots["31,36"] = { plan: "radish" }; F.plots["29,36"] = { t: 1, weed: true }; F.plots["28,36"] = { t: 1, crop: "carrot", ripe: true, g: 4, need: 4 };
+  assert.strictEqual(g.fieldHire(2), ""); dawn(1); assert.ok(F.unpaid, "no purse: idle"); assert.ok(F.plots["29,36"].weed);
+  assert.strictEqual(g.fieldPurse(100), ""); assert.strictEqual(F.purse, 100); dawn(1); assert.ok(!F.unpaid);
+  assert.ok(!F.plots["29,36"].weed, "weeded"); assert.ok(F.silo.some((i) => i.ingredient === "carrot"), "picked into the silo"); assert.strictEqual(F.plots["30,36"].crop, "radish", "the plan sown"); assert.strictEqual(F.plots["31,36"].crop, "radish", "turned and sown");
+  assert.ok(F.plots["30,36"].w, "and watered"); assert.ok(F.purse < 100 - 2 * FH.wage + 1, "wages and seed paid from the purse");
+  const b0 = g.bag.length; assert.strictEqual(g.fieldTakeSilo(), ""); assert.ok(g.bag.length > b0 && F.silo.length === 0);
+  // the seed-maker, and tend everything
+  g.bag.push(CM.food("carrot")); const s0 = g.bag.filter((i) => i.kind === "seed" && i.crop === "carrot").length; assert.strictEqual(g.fieldSeedMaker("carrot"), ""); assert.strictEqual(g.bag.filter((i) => i.kind === "seed" && i.crop === "carrot").length - s0, 2);
+  g.fieldHire(0); F.plots["27,36"] = { t: 1, plan: "carrot" }; F.plots["26,36"] = { t: 1, crop: "beet", ripe: true, g: 4, need: 4 }; F.plots["25,36"] = { t: 1, weed: true };
+  assert.strictEqual(g.fieldTendAll(), ""); assert.strictEqual(F.plots["27,36"].crop, "carrot"); assert.ok(F.plots["27,36"].w); assert.ok(!F.plots["26,36"].ripe); assert.ok(!F.plots["25,36"].weed); CM.weatherOf = wx;
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
