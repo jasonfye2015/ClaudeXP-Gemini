@@ -1329,3 +1329,11 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .stend p { font: italic 15px/1.6 Georgia, serif; } .stend p.small { font: 13px Georgia, serif; }
 /* ---- v17.9: the floor's spoils on the result card ---- */
 .cgresult .cgrxp { color: #C8E8FF; } .cgresult .cgrxp b { font-size: 18px; color: #E0F4FF; } .cgresult .cgritems { flex-basis: 100%; justify-content: center; font-size: 13px; color: #F0E6D0; }
+/* ---- v18.0: a level gained - the card's border runs with light ---- */
+.lvburst { position: fixed; z-index: 9000; pointer-events: none; }
+.member.lvup { position: relative; animation: lvpulse 0.6s ease-in-out 4; border-color: #FFE070 !important; }
+.member.lvup::after { content: ""; position: absolute; inset: -4px; border-radius: 5px; padding: 3px; pointer-events: none; background: conic-gradient(from var(--lva, 0deg), #FFE070, #FF9030, transparent 30%, transparent 50%, #FFE070, #FFF6C0, transparent 80%, #FFE070);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); animation: lvrun 0.9s linear infinite; }
+@property --lva { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+@keyframes lvrun { to { --lva: 360deg; } } @keyframes lvpulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,224,112,0); } 50% { box-shadow: 0 0 22px 6px rgba(255,224,112,0.75); } }
+@media (prefers-reduced-motion: reduce) { .member.lvup, .member.lvup::after { animation: none; box-shadow: 0 0 14px 4px rgba(255,224,112,0.7); } }

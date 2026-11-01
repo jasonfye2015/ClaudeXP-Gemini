@@ -348,6 +348,7 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, hold = CM.fx ? Math.max(0, CM.fx.holdUntil - performance.now()) : 0;
     const later = (fn) => (hold > 0 ? setTimeout(fn, hold) : fn());                   // (while a bolt is in flight, the blow waits for it)
     if (fx.kind === "hurt") later(() => { this.flash(".hurt", 60); this.cardFx(g.party.indexOf(fx.hero), "jolt", 500); });
+    else if (fx.kind === "levelup" && fx.real && this.levelFlourish) this.levelFlourish(fx.hero, fx.level);
     else if (fx.kind === "levelup") this.cardFx(g.party.indexOf(fx.hero), "glow-gold", 1200);
     else if (fx.kind === "sear") this.cardFx(g.party.indexOf(fx.hero), "jolt", 400);
     else if (fx.kind === "relic") g.party.forEach((h, i) => { if (h.hp > 0) this.cardFx(i, "glow-gold", 1400); });
