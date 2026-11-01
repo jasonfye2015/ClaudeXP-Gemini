@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v23.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v23.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1482,7 +1482,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "23.3", built: "2026-11-01" };
+const CM = window.CM = { version: "23.4", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9584,7 +9584,7 @@ CM.Renderer = class {
 // expired fall off. A projectile can carry a `then` - its burst, its flash - for the moment it lands, and while one is
 // in flight the window holds the damage it will do until it gets there (holdUntil). The recipes - which effect each
 // event of the game gets - are in 80-main.js, where the camera and the foes' places are known.
-CM.fxSpeed = 1;                                   // Settings > Combat speed: 1, 2 (fast) or 6 (as good as instant) - every effect's ms is divided by it
+CM.fxSpeed = 1;                                   // Settings > Combat speed: 0.8 (cinematic), 1, 2 (quick) or 6 (as good as instant) - every effect's ms is divided by it
 CM.reducedMotion = false;                         // Settings > Reduce motion: no shaking, no flashes, no washes of colour
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }
@@ -28015,7 +28015,7 @@ CM.UI = class {
   <div class="row"><label for="set-season">The season: the real date's, or one pinned for every new run</label><select id="set-season"><option value="">By the date</option><option value="spring">Spring</option><option value="summer">Summer</option><option value="autumn">Autumn</option><option value="winter">Winter</option></select></div>
   <div class="row"><label for="set-autoland">Automatic takes a day in the land before the shaft: the Wood's nodes, the open cave with a pick, the farm</label><input type="checkbox" id="set-autoland"></div>
   <div class="row"><label for="set-render">Render scale - fewer pixels on a slow machine (Auto steps down when frames come late)</label><select id="set-render"><option value="auto">Auto</option><option value="full">Full</option><option value="three">Three quarters</option><option value="half">Half</option></select></div>
-  <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang</label><select id="set-speed"><option value="normal">Normal</option><option value="fast">Fast</option><option value="instant">As good as instant</option></select></div>
+  <div class="row"><label for="set-speed">Combat speed - how long bolts fly and sparks hang, and how long a crit or an entrance holds</label><select id="set-speed"><option value="cinematic">Cinematic</option><option value="normal">Normal</option><option value="fast">Quick</option><option value="instant">As good as instant</option></select></div>
   <div class="row"><label for="set-text">Text size</label><select id="set-text"><option value="normal">Normal</option><option value="large">Large</option><option value="larger">Larger</option></select></div>
   <div class="row"><label for="set-motion">Reduce motion - no shaking, no flashes, no washes of colour over the view</label><input type="checkbox" id="set-motion"></div>
   <div class="row"><label for="set-contrast">High contrast - brighter text and sharper edges</label><input type="checkbox" id="set-contrast"></div>
@@ -38152,8 +38152,11 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
         const stop = (fx.crit ? 95 : 55) * cine / quick, p = K.foePlace(fx.foe), side = p ? Math.sign(p.dx * Math.cos(K.renderer.yaw) + p.dz * Math.sin(K.renderer.yaw)) : 0;
         K.fxs.hitStop(stop); K.hits.set(fx.foe, now + stop); K.flashes.set(fx.foe, 1);
         K.renderer.nudge(side * 0.6, (fx.crit ? 1 : 0.6) * cine);
+        if (fx.crit && CM.cinematic) K.renderer.zoomTo(0.9, 420);         // (v23.4: Cinematic pushes in on a crit)
         if (fx.crit) { const at = K.atFoe(fx.foe, 0.55); if (at) K.fxs.burst({ at, layer: "fx:spark", n: 18, size: 0.07, speed: 2.0, up: 1.8, ms: 600 }); K.ui.tint("rgba(255,255,255,0.35)", 120); K.renderer.shake(0.25 * cine); }
       }
+    } else if (fx.kind === "die" && fx.foe && CM.cinematic && !CM.reducedMotion && !fx.foe.fled) {   // (v23.4: Cinematic - a kill holds a beat, the camera leans in)
+      K.fxs.hitStop(120); K.renderer.zoomTo(CM.unmoved(fx.foe) ? 0.82 : 0.9, CM.unmoved(fx.foe) ? 900 : 520);
     } else if (fx.kind === "hurt" && fx.hero && fx.hero.max && !CM.reducedMotion) {
       const frac = fx.amount / fx.hero.max; if (frac > 0.08) K.later(() => K.renderer.nudge(0, -Math.min(1, frac * 3) * 0.8));
     }
@@ -38507,7 +38510,7 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.music.setEnabled(s.music !== false);
     CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
-    CM.fxSpeed = { normal: 1, fast: 2, instant: 6 }[s.speed] || 1;
+    CM.fxSpeed = { cinematic: 0.8, normal: 1, fast: 2, instant: 6 }[s.speed] || 1; CM.cinematic = s.speed === "cinematic";   // (v23.4: Cinematic slows a little and holds longer - 76zzzz-blows.js, 76zzzza-stage.js)
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));

@@ -4,7 +4,7 @@
 // expired fall off. A projectile can carry a `then` - its burst, its flash - for the moment it lands, and while one is
 // in flight the window holds the damage it will do until it gets there (holdUntil). The recipes - which effect each
 // event of the game gets - are in 80-main.js, where the camera and the foes' places are known.
-CM.fxSpeed = 1;                                   // Settings > Combat speed: 1, 2 (fast) or 6 (as good as instant) - every effect's ms is divided by it
+CM.fxSpeed = 1;                                   // Settings > Combat speed: 0.8 (cinematic), 1, 2 (quick) or 6 (as good as instant) - every effect's ms is divided by it
 CM.reducedMotion = false;                         // Settings > Reduce motion: no shaking, no flashes, no washes of colour
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }

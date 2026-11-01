@@ -14,8 +14,11 @@
         const stop = (fx.crit ? 95 : 55) * cine / quick, p = K.foePlace(fx.foe), side = p ? Math.sign(p.dx * Math.cos(K.renderer.yaw) + p.dz * Math.sin(K.renderer.yaw)) : 0;
         K.fxs.hitStop(stop); K.hits.set(fx.foe, now + stop); K.flashes.set(fx.foe, 1);
         K.renderer.nudge(side * 0.6, (fx.crit ? 1 : 0.6) * cine);
+        if (fx.crit && CM.cinematic) K.renderer.zoomTo(0.9, 420);         // (v23.4: Cinematic pushes in on a crit)
         if (fx.crit) { const at = K.atFoe(fx.foe, 0.55); if (at) K.fxs.burst({ at, layer: "fx:spark", n: 18, size: 0.07, speed: 2.0, up: 1.8, ms: 600 }); K.ui.tint("rgba(255,255,255,0.35)", 120); K.renderer.shake(0.25 * cine); }
       }
+    } else if (fx.kind === "die" && fx.foe && CM.cinematic && !CM.reducedMotion && !fx.foe.fled) {   // (v23.4: Cinematic - a kill holds a beat, the camera leans in)
+      K.fxs.hitStop(120); K.renderer.zoomTo(CM.unmoved(fx.foe) ? 0.82 : 0.9, CM.unmoved(fx.foe) ? 900 : 520);
     } else if (fx.kind === "hurt" && fx.hero && fx.hero.max && !CM.reducedMotion) {
       const frac = fx.amount / fx.hero.max; if (frac > 0.08) K.later(() => K.renderer.nudge(0, -Math.min(1, frac * 3) * 0.8));
     }
