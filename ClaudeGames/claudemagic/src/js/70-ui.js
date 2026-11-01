@@ -502,7 +502,7 @@ CM.UI = class {
     const V = CM.VILLAGE[villageId]; if (!V) return;
     const lvl = g.villageLevel(villageId), d = document.createElement("div"); d.className = "raise small";
     if (lvl >= V.costs.length) d.textContent = `${V.name} is as grand as it can be.`;
-    else { d.textContent = `Raise ${V.name} (level ${lvl} of ${V.costs.length}): ${V.levels[lvl]} - `; const b = document.createElement("button"); b.textContent = `${V.costs[lvl]} renown (you have ${g.renown()})`; b.disabled = g.renown() < V.costs[lvl]; b.addEventListener("click", () => { const n = g.build(villageId); if (n) g.say(n); if (after) after(); this.refresh(); }); d.appendChild(b); }
+    else { d.textContent = `Raise ${V.name} (level ${lvl} of ${V.costs.length}): ${V.levels[lvl]} - `; const b = document.createElement("button"); b.textContent = `${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""} (you have ${g.renown()})`; b.disabled = g.renown() < V.costs[lvl]; b.addEventListener("click", () => { const n = g.build(villageId); if (n) g.say(n); if (after) after(); this.refresh(); }); d.appendChild(b); }
     root.insertBefore(d, root.querySelector(".end"));
   }
   // the garden: the beds above the alchemist's bench
@@ -577,8 +577,8 @@ CM.UI = class {
   openLibrary(keepNote) {
     const g = this.game, V = CM.VILLAGE.library, lvl = g.villageLevel("library"), L = g.libraryState(), box = this.$("#library-rooms"), note = this.$("#library-note");
     const say = (t) => { note.textContent = t || "Done."; this.openLibrary(true); this.refresh(); };
-    this.$("#library-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
-    const bb = this.$("#btn-library-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    this.$("#library-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""} (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-library-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""}`; bb.disabled = g.renown() < V.costs[lvl]; }
     if (!keepNote) note.textContent = "";
     box.innerHTML = "";
     const room = (title) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
@@ -605,7 +605,7 @@ CM.UI = class {
   // the guildhall: the trainers, the second calling, the contracts, the roster and the muster
   openGuild(keepNote) {
     const g = this.game, V = CM.VILLAGE.guildhall, lvl = g.villageLevel("guildhall"), box = this.$("#guild-rooms"), note = this.$("#guild-note");
-    this.$("#guild-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    this.$("#guild-what").textContent = `Level ${lvl} of ${V.costs.length}. ${lvl ? V.levels.slice(0, lvl).join("; ") + "." : ""}` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""} (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
     const bb = this.$("#btn-guild-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { const cr0 = Math.min(g.builderCredit ? g.builderCredit() : 0, V.costs[lvl]); bb.textContent = `Build, ${V.costs[lvl] - cr0} renown${cr0 ? ` (and ${cr0} of the builders' credit)` : ""}`; bb.disabled = g.renown() < V.costs[lvl] - cr0; }
     if (!keepNote) note.textContent = "";
     box.innerHTML = "";
@@ -621,8 +621,8 @@ CM.UI = class {
   openHome(keepNote) {
     const g = this.game, lvl = g.homeLevel(), H = g.home(), V = CM.VILLAGE.home, box = this.$("#home-rooms"), note = this.$("#home-note");
     const say = (t) => { note.textContent = t || "Done."; this.openHome(true); this.refresh(); };
-    this.$("#home-what").textContent = `Level ${lvl} of ${V.costs.length}.` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
-    const bb = this.$("#btn-home-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown`; bb.disabled = g.renown() < V.costs[lvl]; }
+    this.$("#home-what").textContent = `Level ${lvl} of ${V.costs.length}.` + (lvl < V.costs.length ? ` Next, for ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""} (you have ${g.renown()}): ${V.levels[lvl]}.` : "");
+    const bb = this.$("#btn-home-build"); bb.style.display = lvl < V.costs.length ? "" : "none"; if (lvl < V.costs.length) { bb.textContent = `Build, ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""}`; bb.disabled = g.renown() < V.costs[lvl]; }
     if (!keepNote) note.textContent = "";
     box.innerHTML = "";
     const room = (title, body) => { const d = document.createElement("div"); d.innerHTML = `<div class="list-title">${title}</div>`; const inner = document.createElement("div"); d.appendChild(inner); box.appendChild(d); return inner; };
@@ -644,8 +644,8 @@ CM.UI = class {
     const lvl = CM.plotLevel(g, id), V = P.village ? CM.VILLAGE[P.village] : null;
     this.$("#building-title").textContent = P.name;
     this.$("#building-what").textContent = P.what + (lvl ? "" : V ? " Nothing stands here yet but the foundation." : " A foundation only: the town raises it in the updates to come.");
-    this.$("#building-levels").innerHTML = V ? (lvl ? V.levels.slice(0, lvl).map((w, i) => `<div>Level ${i + 1}: ${this.esc(w)}</div>`).join("") : "") + (lvl < V.costs.length ? `<div><i>Next, for ${V.costs[lvl]} renown: ${this.esc(V.levels[lvl])}</i> (you have ${g.renown()})</div>` : "<div><i>Complete.</i></div>") : "";
-    const b = this.$("#btn-building-build"); b.style.display = V && lvl < V.costs.length ? "" : "none"; if (V && lvl < V.costs.length) { b.textContent = `Build, ${V.costs[lvl]} renown`; b.disabled = g.renown() < V.costs[lvl]; }
+    this.$("#building-levels").innerHTML = V ? (lvl ? V.levels.slice(0, lvl).map((w, i) => `<div>Level ${i + 1}: ${this.esc(w)}</div>`).join("") : "") + (lvl < V.costs.length ? `<div><i>Next, for ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""}: ${this.esc(V.levels[lvl])}</i> (you have ${g.renown()})</div>` : "<div><i>Complete.</i></div>") : "";
+    const b = this.$("#btn-building-build"); b.style.display = V && lvl < V.costs.length ? "" : "none"; if (V && lvl < V.costs.length) { b.textContent = `Build, ${V.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, V, lvl) : ""}`; b.disabled = g.renown() < V.costs[lvl]; }
     if (!keepNote) this.$("#building-note").textContent = "";
     this.openDialog("#dlg-building");
   }
@@ -657,9 +657,9 @@ CM.UI = class {
     for (const [id, B] of Object.entries(CM.VILLAGE)) {
       const lvl = g.villageLevel(id), row = document.createElement("div");
       row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto";
-      row.innerHTML = `<div><b>${B.name}</b> <small>level ${lvl} of ${B.costs.length}</small><small>${lvl ? B.levels.slice(0, lvl).map((w) => this.esc(w)).join("; ") : "Not built."}</small>${lvl < B.costs.length ? `<small><i>Next (${B.costs[lvl]} renown): ${this.esc(B.levels[lvl])}</i></small>` : ""}</div>`;
+      row.innerHTML = `<div><b>${B.name}</b> <small>level ${lvl} of ${B.costs.length}</small><small>${lvl ? B.levels.slice(0, lvl).map((w) => this.esc(w)).join("; ") : "Not built."}</small>${lvl < B.costs.length ? `<small><i>Next (${B.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, B, lvl) : ""}): ${this.esc(B.levels[lvl])}</i></small>` : ""}</div>`;
       const b = document.createElement("button");
-      b.textContent = lvl < B.costs.length ? `Build, ${B.costs[lvl]} renown` : "Complete";
+      b.textContent = lvl < B.costs.length ? `Build, ${B.costs[lvl]} renown${CM.matsNote ? CM.matsNote(g, B, lvl) : ""}` : "Complete";
       b.disabled = lvl >= B.costs.length || g.renown() < B.costs[lvl];
       b.addEventListener("click", () => { note.textContent = g.build(id) || `${B.name} rises a level.`; this.renderVillage(); });
       row.appendChild(b); bb.appendChild(row);
