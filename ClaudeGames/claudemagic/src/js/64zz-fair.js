@@ -10,7 +10,8 @@
 //   how long it is held.
 // The windows are 76zq-darts.js and 76zr-runeroll.js.
 CM.FAIR = {
-  darts: { name: "The Tavern Board", rounds: 8, per: 3, scatter: 0.075, ticketPer: 20, MARKS: [500, 700, 900], PAY: [[400, 0.2], [500, 0.35], [600, 0.55], [700, 0.75], [800, 0.95], [900, 1.1]], waver: 0.16 },
+  fullTickets: 5,
+  darts: { name: "The Tavern Board", rounds: 8, per: 3, scatter: 0.075, ticketPer: 20, MARKS: [500, 700, 900], PAY: [[400, 0.2], [500, 0.35], [600, 0.5], [700, 0.68], [800, 0.85], [900, 0.98]], waver: 0.16 },   // (the top trimmed: a perfect hand made 108%; the books, v16.9)
   skee: { name: "Rune-Roll", balls: 9, ticketPer: 10, MARKS: [380, 500, 640], PAY: [[300, 0.25], [380, 0.45], [440, 0.7], [500, 0.95], [560, 1.25], [640, 1.6], [720, 2.2]] },
   ORDER: [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5],
   // board radii as a share of the doubles' outer edge
@@ -38,7 +39,7 @@ CM.FAIR = {
       if (S.throws.length >= total) Object.assign(out, this.faEnd(kind)); this.saveCasino && this.saveCasino(); return out;
     },
     faEnd(kind) {
-      const S = this.faState(kind), K = FA[kind], F = this.cgStore(), gold = Math.round(S.bet * FA.pay(kind, S.score)), tickets = Math.floor(S.score / K.ticketPer); S.stage = "done";
+      const S = this.faState(kind), K = FA[kind], F = this.cgStore(), gold = Math.floor(S.bet * FA.pay(kind, S.score)), tickets = Math.floor((S.score / K.ticketPer) * Math.min(1, S.bet / FA.fullTickets)); /* full tickets from a 5-gold stake: the books, v16.9 */ S.stage = "done";
       if (gold) this.cgPay(kind, gold); if (this.tkAdd) this.tkAdd(tickets, kind); const C = F[`fa_${kind}_cards`] = F[`fa_${kind}_cards`] || {}, cards = [];
       K.MARKS.forEach((m, i) => { if (S.score >= m && !C[m]) { const c = this.cgTierCard(["common", "better", "rare"][i], `${K.name}: ${m} points!`, new CM.Random(CM.hashSeed(`${this.seed}:${kind}:card:${m}`))); C[m] = c || true; if (c) cards.push(c); } });
       F[`fa_${kind}_best`] = Math.max(F[`fa_${kind}_best`] || 0, S.score); this.cgRecord && this.cgRecord(kind, S.score, Math.floor(S.score / 100)); S.last = { score: S.score, gold, tickets, cards }; this.emit("change");

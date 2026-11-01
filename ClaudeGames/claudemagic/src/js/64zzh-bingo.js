@@ -45,7 +45,7 @@
     // someone called: every card that's done shares the pot
     bgEnd(G, ball, hallWho) { const B = this.bgStore(), mine = this.bgDone(G, ball), myN = mine.filter(Boolean).length, n = myN + hallWho.length, pool = Math.floor((G.cards.length + G.hall.length) * G.price * BGO.share);
       const won = n ? Math.floor((pool * myN) / n) : 0; G.stage = "done"; const res = G.result = { won, mine, hallWho, pool, balls: G.drawn, pattern: G.pat };
-      if (won > 0) { this.cgPay("bingo", won); B.wins += 1; B.best = Math.max(B.best, won); const tk = 3 + Math.floor(won / 10); if (this.tkAdd) this.tkAdd(tk, "bingo"); res.tickets = tk;
+      if (won > 0) { this.cgPay("bingo", won); B.wins += 1; B.best = Math.max(B.best, won); const tk = Math.floor(won / 25); /* tickets by the win: the books, v16.9 */ if (this.tkAdd) this.tkAdd(tk, "bingo"); res.tickets = tk;
         if (G.pat === "full") { if (!B.full) { B.full = true; res.card = this.cgTierCard("better", "The Bell Hall: a coverall!", new CM.Random(CM.hashSeed(`${this.seed}:bingo:card`))); } else if (this.tkAdd) { this.tkAdd(10, "bingo"); res.tickets += 10; } }
         if (this.cgRecord) this.cgRecord("bingo", won, G.drawn); }
       this.emit("change"); return res; },

@@ -35,7 +35,7 @@ Object.assign(CM.Game.prototype, {
     if (L.stage === "clear") {
       const n = S.n, pay = Math.round(S.bet * def.pay(n)), C = this.arcClaimed(id); let card = null;
       if (n % def.cardEvery === 0 && !C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `${def.name}, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:${id}:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
-      this.cgPay(id, pay); const tk = this.tkAdd ? this.tkAdd(n, id) : 0; S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.cgPay(id, pay); const tk = this.tkAdd ? this.tkAdd(Math.floor(n * Math.min(1, S.bet / 5)), id) : 0; /* full tickets from a 5-gold stake: the books, v16.9 */ S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
       this.arcLevel(id); return { cleared: n, pay, card, tickets: tk };
     }
     if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F[`ar_${id}_best`] = Math.max(F[`ar_${id}_best`] || 0, L.score); this.cgRecord && this.cgRecord(id, L.score, S.n); this.arcLive[id] = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }

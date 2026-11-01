@@ -38,9 +38,10 @@
       J.owed = []; this.gold += out.gold; if (out.tickets) { J.bank -= out.tickets; tk0.call(this, out.tickets, "joker"); } this.saveCasino && this.saveCasino(); this.emit && this.emit("change"); return out; },
     // a multiplier out in the world: "gold" from fights, "xp" from fights
     jkMul(kind) { const L = this.jkLevel ? this.jkLevel() : 1; return 1 + (kind === "gold" ? JK.gold(L) : kind === "xp" ? JK.xp(L) : 0); },
-    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why) this.jkGain(Math.min(JK.stakeMax, Math.max(1, Math.floor(bet / JK.stakePer))), game); return why; },
+    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why) { const J = this.jkStore(); J.sf = (J.sf || 0) + Math.min(JK.stakeMax, Math.floor(bet) / JK.stakePer); const n = Math.floor(J.sf + 1e-9); J.sf -= n; this.jkGain(n, game); } return why; },   // (a part of a JXP carries: small stakes add up, and don't count for more)
     tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0 && why !== "joker") { const J = this.jkStore(); J.bank += k * JK.tickets(J.level); J.tk += k; const g = Math.floor(J.tk / JK.ticketPer); J.tk -= g * JK.ticketPer; this.jkGain(g, why); } return k; },
-    cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec0.call(this, table, score, level); let n = (level || 0) * JK.level; if (r > 0) n += JK.board; if ((F.records || 0) > before) n += JK.record; this.jkGain(n, table); return r; },
+    cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec0.call(this, table, score, level); let n = (CM.FAIR && CM.FAIR[table]) || table === "bingo" ? 0 : (level || 0) * JK.level;   // (only a cabinet's levels are levels: bingo sends its balls, the fairground its hundreds)
+      if (r > 0) n += JK.board; if ((F.records || 0) > before) n += JK.record; this.jkGain(n, table); return r; },
     flQuestCollect(i) { const out = q0.call(this, i); if (out && !out.error) this.jkGain(JK.quest, "quests"); return out; },
     flTourSettle() { const N = this.flTour(), done = !!N.settled, out = tour0.call(this); if (!done && out && !out.error) this.jkGain(out.place <= 3 ? JK.tourTop : JK.tour, "tournament"); return out; },
     hrSettle(win, detail) { const out = hr0.call(this, win, detail); if (out && win) this.jkGain(JK.roller, "highroller"); return out; },
