@@ -1392,6 +1392,22 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Six new arcade cabinets (the forty-second big update - v15.6)
+  A common works for level-by-level cabinets (src/js/64zr-arcfw.js; 76zi-arcfw.js) - one stake a game, gold for every
+  level cleared every game, prize tickets by the level's number, a card every third level the first time, a high-score
+  board and a daily-challenge place for each - and six cabinets built on it:
+  - The Wyrm's Feast (64zs/76zj): a snake game - a wyrm eating glimmer berries in a walled garden bed, stones from level 3.
+  - The Barrow Crawler (64zt/76zk): a centipede game - a gnome against a long crawler winding down through toadstools,
+    and a spider from level 2.
+  - The Belfry Climb (64zu/76zl): a climbing game - up the bell tower's sloping beams and ladders while a troll rolls
+    kegs (jump them for 100), wisps from level 3; ring the bell.
+  - The Skyreach Landing (64zv/76zm): a landing game - set a sky-skiff down softly and upright on ×2, ×3 or ×5 pads among
+    floating isles; stronger pull and less fuel each level, wind from level 4.
+  - The Rampart Battery (64zw/76zn): a defence game - burst falling embers with bolts from three mana wells before they
+    reach six cottages; splitting embers from wave 3, a fire-drake from wave 5.
+  - Glimmerpop (64zx/76zo): a bubble shooter - pop three of a colour in an alchemist's still, drop what hangs; the
+    ceiling comes down every few shots.
+
 The Prize Counter (the forty-first big update - v15.4)
   Every table on the casino floor now hands out prize tickets (src/js/64zq-prizes.js; 76zh-prizes.js): one for each 30
   gold staked at any table, one for each 50 gold a free table pays (the Mint, the Shelter, the Lexicon Engine, the

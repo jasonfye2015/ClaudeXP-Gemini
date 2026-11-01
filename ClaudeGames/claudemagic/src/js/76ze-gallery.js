@@ -33,6 +33,12 @@ CM.CG_INFO = {
   shelter: { cat: "idle", line: "Dig a warren and keep its residents fed." },
   cascade: { cat: "prizes", line: "Drop coins on the pusher; prizes over the edge." },
   claw: { cat: "prizes", line: "Copper, silver and gold claws full of real prizes." },
+  wyrm: { cat: "arcade", line: "Feed the wyrm berries; mind its tail." },
+  crawler: { cat: "arcade", line: "Shoot the long crawler down through the toadstools." },
+  belfry: { cat: "arcade", line: "Climb the bell tower past the troll's kegs." },
+  lander: { cat: "arcade", line: "Set the sky-skiff down gently on a lit pad." },
+  rampart: { cat: "arcade", line: "Burst the falling embers before they reach the town." },
+  glimmerpop: { cat: "arcade", line: "Shoot coloured bubbles; three of a kind pop." },
 };
 CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
@@ -67,6 +73,12 @@ CM.CG_THUMB = (() => {
     mint: (p, w, h) => { bg(p, w, h, "#3A2A10", "#1A1008"); circ(p, w / 2, h / 2, 26, "#F0C040"); circ(p, w / 2, h / 2, 20, "#D0A020"); p.fillStyle = "#6A4A10"; p.font = "bold 20px Georgia"; p.textAlign = "center"; p.fillText("G", w / 2, h / 2 + 7); for (let k = 0; k < 5; k++) circ(p, 20 + k * 30, h - 10, 5, "#F0C040"); },
     shelter: (p, w, h) => { bg(p, w, h, "#4A3A2A", "#2A1E14"); for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { p.fillStyle = ["#3A5A8A", "#8A5A3A", "#5A8A3A"][(x + y) % 3]; p.fillRect(30 + x * 40, 12 + y * 26, 36, 22); circ(p, 40 + x * 40, 28 + y * 26, 3, "#F0C8A0"); } p.fillStyle = "#6A5A4A"; p.fillRect(10, 12, 14, 74); },
     cascade: (p, w, h) => { bg(p, w, h, "#3A1A40", "#1A0A20"); p.fillStyle = "#8A8A9A"; p.fillRect(20, 20, w - 40, 14); for (let k = 0; k < 18; k++) circ(p, 26 + (k * 37) % (w - 50), 46 + ((k * 13) % 30), 6, "#F0C040"); },
+    wyrm: (p, w, h) => { bg(p, w, h, "#3A7A2E", "#2A5A20"); const pts = [[20, 60], [40, 60], [60, 50], [80, 40], [100, 40], [120, 50]]; pts.forEach(([x, y], i) => circ(p, x, y, 9 - i * 0.6, i === pts.length - 1 ? "#6AD070" : "#4AA050")); circ(p, 150, 30, 6, "#D02848"); },
+    crawler: (p, w, h) => { bg(p, w, h, "#140C08", "#2A1C12"); for (let k = 0; k < 7; k++) circ(p, 30 + k * 14, 40, 7, k ? "#80B040" : "#E0B030"); for (const [x, y] of [[20, 20], [60, 18], [120, 26], [140, 60], [90, 62]]) { p.fillStyle = "#C83828"; p.beginPath(); p.arc(x, y, 6, Math.PI, 0); p.fill(); } p.fillStyle = "#3060C0"; p.beginPath(); p.moveTo(w / 2 - 5, h - 4); p.lineTo(w / 2, h - 16); p.lineTo(w / 2 + 5, h - 4); p.fill(); },
+    belfry: (p, w, h) => { bg(p, w, h, "#2A2030", "#140E14"); p.fillStyle = "#7A4A22"; for (let k = 0; k < 4; k++) p.fillRect(k % 2 ? 10 : 30, 18 + k * 18, w - 40, 4); p.strokeStyle = "#8A6A3A"; p.strokeRect(w - 50, 22, 8, 14); circ(p, 60, 30 + 18, 5, "#8A5A28"); circ(p, 30, 12, 7, "#4A6A3A"); p.fillStyle = "#C8962A"; p.beginPath(); p.arc(w / 2, 14, 7, Math.PI, 0); p.fill(); },
+    lander: (p, w, h) => { bg(p, w, h, "#2A1A4A", "#F0A050"); p.fillStyle = "#3A2E3A"; p.beginPath(); p.moveTo(0, h); p.lineTo(0, 60); p.lineTo(30, 50); p.lineTo(60, 64); p.lineTo(90, 64); p.lineTo(120, 44); p.lineTo(w, 58); p.lineTo(w, h); p.fill(); p.fillStyle = "#C8A060"; p.fillRect(60, 62, 30, 3); circ(p, 76, 24, 7, "#E0C080"); p.fillStyle = "#FFB040"; p.beginPath(); p.moveTo(73, 34); p.lineTo(76, 44); p.lineTo(79, 34); p.fill(); },
+    rampart: (p, w, h) => { bg(p, w, h, "#060818", "#1A1A3A"); p.strokeStyle = "rgba(255,140,60,0.7)"; for (const [x0, x1] of [[20, 50], [90, 70], [150, 120]]) { p.beginPath(); p.moveTo(x0, 0); p.lineTo(x1, 50); p.stroke(); } const g = p.createRadialGradient(100, 40, 0, 100, 40, 16); g.addColorStop(0, "#FFF"); g.addColorStop(1, "rgba(120,180,255,0)"); p.fillStyle = g; p.fillRect(80, 20, 40, 40); p.fillStyle = "#3A3440"; p.fillRect(0, h - 12, w, 12); for (let k = 0; k < 6; k++) { p.fillStyle = "#8A3A2A"; p.fillRect(14 + k * 26, h - 20, 12, 8); } },
+    glimmerpop: (p, w, h) => { bg(p, w, h, "#1A2830", "#0A1014"); const c = ["#E04050", "#40A0F0", "#50C060", "#F0C030", "#B060E0"]; for (let r = 0; r < 3; r++) for (let k = 0; k < 9; k++) circ(p, 14 + k * 18 + (r % 2) * 9, 12 + r * 15, 8, c[(k + r * 2) % 5]); circ(p, w / 2, h - 12, 8, "#40A0F0"); },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();

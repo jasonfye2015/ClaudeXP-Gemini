@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1062,7 +1062,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.5", built: "2026-10-31" };
+const CM = window.CM = { version: "15.6", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22595,6 +22595,365 @@ const PRIZE = CM.PRIZE;
   });
 }
 
+// ---- 64zr-arcfw.js ----
+"use strict";
+// The arcade cabinets' common works (the forty-second big update - v15.6). Each level-by-level cabinet on the Gilded
+// Joker's floor registers its rules here - a Level class (constructor(n, seed, keep), update(dt), events, stage of
+// "play", "clear" or "over", score, lives) - and gets the same house terms as the rest of the arcade: one stake a game;
+// each level cleared pays gold (more for each level, every game) and prize tickets (as many as the level's number);
+// every third level a Claudescryption card, the first time ever (common to the fourth, a stronger common to the ninth,
+// rare from the tenth); the game's end puts its score on the cabinet's high-score board. The window's side is
+// 76zi-arcfw.js.
+CM.ARC = { reg: {} };
+CM.ARC.add = (id, def) => { def.id = id; def.pay = def.pay || ((n) => 0.05 + 0.03 * n); def.cardEvery = def.cardEvery || 3; def.keep = def.keep || ((L) => ({ score: L.score, lives: L.lives, extraGiven: L.extraGiven })); CM.ARC.reg[id] = def; if (CM.CLUB && !CM.CLUB.BOARDS.includes(id)) CM.CLUB.BOARDS.push(id); if (CM.DAILY && def.marks) CM.DAILY.MARKS[id] = def.marks; };
+// a few things most cabinets want
+CM.ARC.clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+CM.ARC.near = (a, b, r) => Math.hypot(a.x - b.x, a.y - b.y) < r;
+Object.assign(CM.Game.prototype, {
+  arcState(id) { return this.cgStore()[`ar_${id}`] || null; },
+  arcClaimed(id) { const F = this.cgStore(), k = `ar_${id}_cards`; F[k] = F[k] || {}; return F[k]; },
+  arcLevel(id) {
+    const S = this.arcState(id), def = CM.ARC.reg[id]; if (!S || S.stage !== "play") return null; const live = this.arcLive = this.arcLive || {}; let L = live[id];
+    if (!L || L.key !== `${S.seed}:${S.n}`) {
+      if (L && L.key && L.key.startsWith(`${S.seed}:`)) { L = live[id] = new def.Level(S.n, CM.hashSeed(`${S.seed}:${S.n}`), def.keep(L)); L.key = `${S.seed}:${S.n}`; }
+      else { S.stage = "done"; S.last = S.last || { level: S.n, won: S.won, cards: [], lost: true }; this.saveCasino && this.saveCasino(); return null; }
+    }
+    return L;
+  },
+  arcStart(id, bet) {
+    const S0 = this.arcState(id), def = CM.ARC.reg[id], live = this.arcLive = this.arcLive || {};
+    if (S0 && S0.stage === "play" && live[id] && live[id].key && live[id].key.startsWith(`${S0.seed}:`)) return { error: "A game is on." };
+    const why = this.cgStake(id, bet); if (why) return { error: why };
+    const F = this.cgStore(); F.n += 1; const S = F[`ar_${id}`] = { stage: "play", n: 1, bet: Math.floor(bet), seed: `${this.seed}:${id}:${F.n}`, won: 0, cards: [] };
+    live[id] = new def.Level(1, CM.hashSeed(`${S.seed}:1`)); live[id].key = `${S.seed}:1`; this.saveCasino && this.saveCasino(); return S;
+  },
+  // a level cleared: gold every game, tickets, a card each third level the first time; the end: the board
+  arcCheck(id) {
+    const S = this.arcState(id), L = (this.arcLive || {})[id], def = CM.ARC.reg[id]; if (!S || !L || S.stage !== "play") return null;
+    if (L.stage === "clear") {
+      const n = S.n, pay = Math.round(S.bet * def.pay(n)), C = this.arcClaimed(id); let card = null;
+      if (n % def.cardEvery === 0 && !C[n]) { card = this.cgTierCard(CM.cardTierFor(n), `${def.name}, level ${n} cleared!`, new CM.Random(CM.hashSeed(`${this.seed}:${id}:card:${n}`))); C[n] = card || true; if (card) S.cards.push(card); }
+      this.cgPay(id, pay); const tk = this.tkAdd ? this.tkAdd(n, id) : 0; S.won += pay; S.n += 1; this.saveCasino && this.saveCasino(); this.emit("change");
+      this.arcLevel(id); return { cleared: n, pay, card, tickets: tk };
+    }
+    if (L.stage === "over") { S.stage = "done"; S.last = { level: S.n, score: L.score, won: S.won, cards: S.cards.slice() }; const F = this.cgStore(); F[`ar_${id}_best`] = Math.max(F[`ar_${id}_best`] || 0, L.score); this.cgRecord && this.cgRecord(id, L.score, S.n); this.arcLive[id] = null; this.saveCasino && this.saveCasino(); this.emit("change"); return { over: true }; }
+    return null;
+  },
+});
+
+// ---- 64zs-wyrm.js ----
+"use strict";
+// The Wyrm's Feast (v15.6): a snake game in the Joker's garden. A young wyrm slides square by square round a walled bed,
+// turning as it is told (never straight back on itself), eating glimmer berries - each makes it a segment longer. Eat
+// the level's share and the level is cleared; each level the wyrm is quicker and asks more, and from the third, old
+// standing stones dot the bed. A golden berry shows now and then for a while. Running into a wall, a stone or itself
+// costs a life, and the level starts over with what was eaten kept. Three lives. Window: 76zj-wyrm.js.
+CM.WY = { W: 24, H: 20, lives: 3 };
+{ const WY = CM.WY;
+  WY.Level = class {
+    constructor(n, seed, keep) {
+      this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: WY.lives });
+      this.need = 8 + 3 * n; this.eaten = 0; this.tick = Math.max(0.05, 0.15 - 0.012 * n); this.stones = new Set();
+      if (n >= 3) for (let k = 0; k < Math.min(22, 4 + 2 * n); k++) { const x = this.rnd.int(2, WY.W - 3), y = this.rnd.int(2, WY.H - 3); if (Math.abs(y - WY.H / 2) > 1 || x > 8) this.stones.add(`${x},${y}`); }
+      this.spawn();
+    }
+    spawn() { const y = Math.floor(WY.H / 2); this.body = [[6, y], [5, y], [4, y], [3, y]]; this.dir = [1, 0]; this.queue = []; this.acc = 0; this.dead = 0; this.berry = this.place(); this.gold = null; this.goldT = 6 + this.rnd.next() * 6; }
+    free(x, y) { return x >= 0 && y >= 0 && x < WY.W && y < WY.H && !this.stones.has(`${x},${y}`) && !this.body.some(([a, b]) => a === x && b === y); }
+    place() { for (let k = 0; k < 400; k++) { const x = this.rnd.int(1, WY.W - 2), y = this.rnd.int(1, WY.H - 2); if (this.free(x, y) && !(this.berry && this.berry[0] === x && this.berry[1] === y)) return [x, y]; } return [1, 1]; }
+    turn(dx, dy) { const last = this.queue.length ? this.queue[this.queue.length - 1] : this.dir; if ((dx === -last[0] && dy === -last[1]) || (dx === last[0] && dy === last[1])) return; if (this.queue.length < 3) this.queue.push([dx, dy]); }
+    step() {
+      if (this.queue.length) this.dir = this.queue.shift(); const [hx, hy] = this.body[0], nx = hx + this.dir[0], ny = hy + this.dir[1];
+      const tail = this.body[this.body.length - 1], eats = this.berry[0] === nx && this.berry[1] === ny, eatsG = this.gold && this.gold.x === nx && this.gold.y === ny;
+      const hitSelf = this.body.some(([a, b], i) => a === nx && b === ny && !(i === this.body.length - 1 && !eats && !eatsG));
+      if (nx < 0 || ny < 0 || nx >= WY.W || ny >= WY.H || this.stones.has(`${nx},${ny}`) || hitSelf) { this.lives -= 1; this.dead = 1.2; this.events.push({ kind: "die", x: hx, y: hy }); return; }
+      this.body.unshift([nx, ny]); if (!eats && !eatsG) this.body.pop(); void tail;
+      if (eats) { this.eaten += 1; const pts = 10 * this.n; this.score += pts; this.events.push({ kind: "eat", x: nx, y: ny, pts }); if (this.eaten >= this.need) { this.stage = "clear"; this.events.push({ kind: "clear" }); return; } this.berry = this.place(); }
+      if (eatsG) { const pts = 50 * this.n; this.score += pts; this.events.push({ kind: "gold", x: nx, y: ny, pts }); this.gold = null; }
+    }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt;
+      if (this.dead) { this.dead -= dt; if (this.dead <= 0) { this.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else this.spawn(); } return; }
+      if (this.gold) { this.gold.t -= dt; if (this.gold.t <= 0) this.gold = null; } else if ((this.goldT -= dt) <= 0) { const [x, y] = this.place(); this.gold = { x, y, t: 6 }; this.goldT = 10 + this.rnd.next() * 8; this.events.push({ kind: "goldshow" }); }
+      this.acc += dt; while (this.acc >= this.tick && this.stage === "play" && !this.dead) { this.acc -= this.tick; this.step(); }
+    }
+  };
+  CM.ARC.add("wyrm", { name: "The Wyrm's Feast", Level: WY.Level, marks: [3, 5, 7] });
+}
+
+// ---- 64zt-crawler.js ----
+"use strict";
+// The Barrow Crawler (v15.6): a centipede game in an old barrow. A long crawler of segments winds down through a field of
+// toadstools, turning down a row and back each time it meets one or the wall; at the bottom it climbs and falls inside
+// the gnome's patch. The gnome slides about that patch and fires one wand-spark at a time: a segment hit becomes a
+// toadstool and the crawler splits in two, the one behind it gaining a head. Toadstools take three sparks. From the
+// second level a spider bounds about the gnome's patch. Clear every segment to clear the level; each level a longer,
+// quicker crawler and more toadstools. Three lives. Window: 76zk-crawler.js.
+CM.BC = { W: 25, H: 30, zone: 24, lives: 3 };
+{ const BC = CM.BC;
+  BC.Level = class {
+    constructor(n, seed, keep) {
+      this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: BC.lives, extraGiven: false });
+      this.mush = new Map(); const R = this.rnd; for (let k = 0; k < 34 + 3 * n; k++) { const x = R.int(0, BC.W - 1), y = R.int(1, BC.H - 4); this.mush.set(`${x},${y}`, 3); }
+      this.period = Math.max(0.035, 0.09 - 0.005 * n); this.segs = []; const len = Math.min(16, 9 + n);
+      for (let i = 0; i < len; i++) this.segs.push({ x: 12 - i < 0 ? 0 : 12 - i, y: 0, dir: 1, vdir: 1, head: i === 0, fx: 12 - i, fy: 0, id: i });
+      this.segs.forEach((s, i) => { s.x = 12 + i; s.fx = s.x; s.dir = -1; }); this.acc = 0; this.ids = len; this.spawn();
+    }
+    spawn() { this.p = { x: BC.W / 2, y: BC.H - 1.5, dead: 0 }; this.bolt = null; this.spider = null; this.spiderT = 4 + this.rnd.next() * 4; this.move = [0, 0]; }
+    input(mx, my) { this.move = [mx, my]; }
+    fire() { if (!this.bolt && !this.p.dead) { this.bolt = { x: this.p.x, y: this.p.y - 0.6 }; this.events.push({ kind: "fire" }); } }
+    stepSegs() {
+      for (const s of this.segs) {
+        const nx = s.x + s.dir, blocked = nx < 0 || nx >= BC.W || this.mush.has(`${nx},${s.y}`);
+        if (!blocked) { s.x = nx; continue; }
+        let ny = s.y + s.vdir; if (ny >= BC.H) { s.vdir = -1; ny = s.y - 1; } else if (s.vdir < 0 && ny < BC.zone) { s.vdir = 1; ny = s.y + 1; }
+        s.y = ny; s.dir = -s.dir;
+      }
+    }
+    lose() { if (this.p.dead) return; this.lives -= 1; this.p.dead = 1.6; this.events.push({ kind: "die", x: this.p.x, y: this.p.y }); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const P = this.p;
+      if (P.dead) { P.dead -= dt; if (P.dead <= 0) { P.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } this.spawn(); for (const s of this.segs) if (s.y >= BC.zone - 2) { s.y = 0; s.vdir = 1; } } return; }
+      // the gnome
+      P.x = CM.ARC.clamp(P.x + this.move[0] * 14 * dt, 0.5, BC.W - 0.5); P.y = CM.ARC.clamp(P.y + this.move[1] * 12 * dt, BC.zone, BC.H - 0.5);
+      // the spark
+      if (this.bolt) { const B = this.bolt; B.y -= 42 * dt; const cx = Math.floor(B.x), cy = Math.floor(B.y);
+        if (B.y < 0) this.bolt = null;
+        else if (this.mush.has(`${cx},${cy}`)) { const h = this.mush.get(`${cx},${cy}`) - 1; if (h <= 0) { this.mush.delete(`${cx},${cy}`); this.score += 1; this.events.push({ kind: "pop", x: cx, y: cy }); } else this.mush.set(`${cx},${cy}`, h); this.events.push({ kind: "chip" }); this.bolt = null; }
+        else { const i = this.segs.findIndex((s) => Math.abs(s.fx + 0.5 - B.x) < 0.7 && Math.abs(s.fy + 0.5 - B.y) < 0.7);
+          if (i >= 0) { const s = this.segs[i], pts = s.head ? 100 : 10; this.score += pts; this.events.push({ kind: "hit", x: s.fx, y: s.fy, pts, head: s.head }); this.mush.set(`${s.x},${s.y}`, 3); const after = this.segs[i + 1]; if (after && !after.head) after.head = true; this.segs.splice(i, 1); this.bolt = null; if (!this.segs.length) { this.stage = "clear"; this.events.push({ kind: "clear" }); return; } }
+          else if (this.spider && Math.abs(this.spider.x - B.x) < 0.9 && Math.abs(this.spider.y - B.y) < 0.8) { const d = Math.abs(this.spider.y - P.y), pts = d < 2 ? 900 : d < 4 ? 600 : 300; this.score += pts; this.events.push({ kind: "spider", x: this.spider.x, y: this.spider.y, pts }); this.spider = null; this.bolt = null; } } }
+      // the crawler, a cell at a time, slid between
+      this.acc += dt; while (this.acc >= this.period) { this.acc -= this.period; this.stepSegs(); }
+      for (const s of this.segs) { const k = Math.min(1, dt / this.period * 1.2); s.fx += (s.x - s.fx) * Math.min(1, k * 2.2); s.fy += (s.y - s.fy) * Math.min(1, k * 2.2); if (Math.abs(s.x - s.fx) > 2) s.fx = s.x; }
+      // the spider
+      if (this.n >= 2) { if (!this.spider && (this.spiderT -= dt) <= 0) { const L = this.rnd.chance(0.5); this.spider = { x: L ? -1 : BC.W + 1, y: BC.zone + 1, vx: (L ? 1 : -1) * (5 + this.n * 0.3), vy: 6, t: 0 }; this.events.push({ kind: "spidercome" }); }
+        if (this.spider) { const S = this.spider; S.x += S.vx * dt; S.y += S.vy * dt; S.t += dt; if (S.y > BC.H - 0.5 || S.y < BC.zone - 2) S.vy = -S.vy; if (this.rnd.chance(dt * 1.5)) S.vy = (this.rnd.chance(0.5) ? 1 : -1) * (4 + this.rnd.next() * 5);
+          const k = `${Math.floor(S.x)},${Math.floor(S.y)}`; if (this.mush.has(k) && this.rnd.chance(dt * 3)) this.mush.delete(k);
+          if (S.x < -2 || S.x > BC.W + 2) { this.spider = null; this.spiderT = 5 + this.rnd.next() * 5; } else if (Math.abs(S.x - P.x) < 0.9 && Math.abs(S.y - P.y) < 0.9) this.lose(); } }
+      for (const s of this.segs) if (Math.abs(s.fx + 0.5 - P.x) < 0.9 && Math.abs(s.fy + 0.5 - P.y) < 0.9) { this.lose(); break; }
+      if (!this.extraGiven && this.score >= 12000) { this.extraGiven = true; this.lives += 1; this.events.push({ kind: "extra" }); }
+    }
+  };
+  CM.ARC.add("crawler", { name: "The Barrow Crawler", Level: BC.Level, marks: [2, 4, 6] });
+}
+
+// ---- 64zu-belfry.js ----
+"use strict";
+// The Belfry Climb (v15.6): a climbing game up the Joker's bell tower. A troll squats at the top and sends kegs rolling
+// down six sloping beams, each falling from the open end to the beam below, now and then dropping down a ladder; at the
+// bottom they roll into the brazier. The climber walks, climbs the ladders and jumps (Space) - a keg jumped is 100 -
+// and rings the bell at the top to clear the level, with what is left of the bonus. Each level the kegs come quicker
+// and faster, and from the third level a will-o'-wisp drifts out of the brazier now and then and wanders the beams. A
+// keg or a wisp costs a life. Three lives. Window: 76zl-belfry.js.
+CM.BF = { W: 28, H: 32, lives: 3, jump: 0.55, jumpH: 1.7 };
+{ const BF = CM.BF;
+  // the beams, top to bottom: y at the left end, slope, the range walkable, which way kegs roll
+  BF.BEAMS = [{ y0: 6, s: 0, x0: 2, x1: 15, dir: 1 }, { y0: 10, s: 0.06, x0: 1, x1: 25, dir: 1 }, { y0: 16.6, s: -0.06, x0: 3, x1: 27, dir: -1 }, { y0: 20, s: 0.06, x0: 1, x1: 25, dir: 1 }, { y0: 26.6, s: -0.06, x0: 3, x1: 27, dir: -1 }, { y0: 30, s: 0, x0: 0, x1: 28, dir: -1 }];
+  BF.yAt = (i, x) => BF.BEAMS[i].y0 + BF.BEAMS[i].s * x;
+  // ladders: [x, upper beam, lower beam]
+  BF.LADDERS = [[10, 0, 1], [4, 1, 2], [15, 1, 2], [12, 2, 3], [21, 2, 3], [6, 3, 4], [17, 3, 4], [23, 4, 5], [11, 4, 5]];
+  BF.Level = class {
+    constructor(n, seed, keep) {
+      this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: BF.lives, extraGiven: false });
+      this.mul = 1 + Math.min(0.7, (n - 1) * 0.08); this.spawn();
+    }
+    spawn() { this.p = { x: 5, beam: 5, y: BF.yAt(5, 5), lad: null, jumpT: 0, h: 0, face: 1, dead: 0, walk: 0 }; this.kegs = []; this.wisps = []; this.kegT = 1; this.bonus = 5000; this.ctl = { x: 0, y: 0 }; }
+    input(x, y) { this.ctl.x = x; this.ctl.y = y; }
+    jump() { const P = this.p; if (!P.lad && !P.jumpT && !P.dead) { P.jumpT = BF.jump; P.jumped = new Set(); this.events.push({ kind: "jump" }); } }
+    ladderAt(x, beam, up) { return BF.LADDERS.find(([lx, a, b]) => Math.abs(lx - x) < 0.45 && (up ? b === beam : a === beam)); }
+    lose(why) { const P = this.p; if (P.dead) return; this.lives -= 1; P.dead = 1.8; this.events.push({ kind: "die", why, x: P.x, y: P.y }); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const P = this.p;
+      if (P.dead) { P.dead -= dt; if (P.dead <= 0) { P.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } this.spawn(); } return; }
+      this.bonus = Math.max(0, this.bonus - dt * 50);
+      // the climber
+      if (P.lad) { const [lx, a, b] = P.lad, top = BF.yAt(a, lx), bot = BF.yAt(b, lx); P.y += this.ctl.y * 4.5 * dt; P.walk += Math.abs(this.ctl.y) * dt;
+        if (P.y <= top) { P.y = top; P.beam = a; P.lad = null; if (a === 0) { this.stage = "clear"; const b2 = Math.round(this.bonus / 100) * 100; this.score += b2; this.events.push({ kind: "bell", bonus: b2 }); return; } } else if (P.y >= bot) { P.y = bot; P.beam = b; P.lad = null; } }
+      else {
+        if (!P.jumpT && this.ctl.y) { const L2 = this.ladderAt(P.x, P.beam, this.ctl.y < 0); if (L2) { P.lad = L2; P.x = L2[0]; } }
+        if (!P.lad) { const Bm = BF.BEAMS[P.beam]; if (this.ctl.x) P.face = this.ctl.x; P.x = CM.ARC.clamp(P.x + this.ctl.x * 5.5 * dt, Bm.x0 + 0.4, Bm.x1 - 0.4); P.walk += Math.abs(this.ctl.x) * dt; P.y = BF.yAt(P.beam, P.x);
+          if (P.jumpT) { P.jumpT = Math.max(0, P.jumpT - dt); P.h = Math.sin((1 - P.jumpT / BF.jump) * Math.PI) * BF.jumpH; } else P.h = 0; }
+      }
+      // kegs: thrown, rolled, dropped, sometimes down a ladder
+      if ((this.kegT -= dt) <= 0) { this.kegT = Math.max(1.1, 3 - 0.18 * this.n) * (0.7 + this.rnd.next() * 0.6); this.kegs.push({ x: 4, beam: 1, y: BF.yAt(1, 4), fall: 0, lad: null, rot: 0, id: this.t }); this.events.push({ kind: "throw" }); }
+      const sp = 5.5 * this.mul;
+      for (const k of this.kegs) {
+        if (k.fall) { k.y += 14 * dt; const Bt = BF.yAt(k.fall, k.x); if (k.y >= Bt) { k.y = Bt; k.beam = k.fall; k.fall = 0; this.events.push({ kind: "thud" }); } continue; }
+        if (k.lad) { k.y += sp * 0.8 * dt; const bot = BF.yAt(k.lad[2], k.lad[0]); if (k.y >= bot) { k.y = bot; k.beam = k.lad[2]; k.lad = null; } continue; }
+        const Bm = BF.BEAMS[k.beam]; k.x += Bm.dir * sp * dt; k.rot += Bm.dir * sp * dt * 2; k.y = BF.yAt(k.beam, k.x);
+        const L2 = this.ladderAt(k.x, k.beam, false); if (L2 && k.lastLad !== L2 && k.beam < 5) { k.lastLad = L2; if (this.rnd.chance(0.25 + 0.02 * this.n)) { k.lad = L2; k.x = L2[0]; continue; } }
+        if (k.beam === 5 && k.x < 1.2) { k.gone = true; if (this.n >= 3 && this.wisps.length < Math.min(3, this.n - 2) && this.rnd.chance(0.35)) { this.wisps.push({ x: 1.5, beam: 5, y: BF.yAt(5, 1.5), dir: 1, t: 0 }); this.events.push({ kind: "wisp" }); } continue; }
+        if (k.x > Bm.x1 || k.x < Bm.x0) { k.fall = k.beam + 1; }
+      }
+      this.kegs = this.kegs.filter((k) => !k.gone);
+      // the wisps: wander along their beam, and up or down ladders now and then
+      for (const w of this.wisps) { w.t += dt; if (w.lad) { w.y += w.vy * 2.5 * dt; const [lx, a, b] = w.lad, top = BF.yAt(a, lx), bot = BF.yAt(b, lx); if (w.y <= top) { w.y = top; w.beam = a; w.lad = null; } else if (w.y >= bot) { w.y = bot; w.beam = b; w.lad = null; } continue; }
+        const Bm = BF.BEAMS[w.beam]; w.x += w.dir * 2.4 * this.mul * dt; if (w.x > Bm.x1 - 0.5 || w.x < Bm.x0 + 0.5) w.dir = -w.dir; w.y = BF.yAt(w.beam, w.x);
+        const up = this.ladderAt(w.x, w.beam, true); if (up && w.beam > 1 && this.rnd.chance(dt * 1.2)) { w.lad = up; w.x = up[0]; w.vy = -1; } }
+      // touching
+      if (!P.dead) {
+        for (const k of this.kegs) { if (k.fall) continue; const dx = Math.abs(k.x - P.x), dy = Math.abs(k.y - (P.y - P.h)); if (dx < 0.8 && dy < 0.9) { this.lose("keg"); break; }
+          if (P.jumpT && P.jumped && !P.jumped.has(k.id) && dx < 0.8 && Math.abs(k.y - P.y) < 0.6 && P.h >= 0.9) { P.jumped.add(k.id); this.score += 100; this.events.push({ kind: "leap", x: P.x, y: P.y, pts: 100 }); } }
+        for (const w of this.wisps) if (Math.abs(w.x - P.x) < 0.8 && Math.abs(w.y - (P.y - P.h)) < 0.9) { this.lose("wisp"); break; }
+      }
+      if (!this.extraGiven && this.score >= 10000) { this.extraGiven = true; this.lives += 1; this.events.push({ kind: "extra" }); }
+    }
+  };
+  CM.ARC.add("belfry", { name: "The Belfry Climb", Level: BF.Level, marks: [2, 3, 5] });
+}
+
+// ---- 64zv-lander.js ----
+"use strict";
+// The Skyreach Landing (v15.6): a landing game over the floating isles. A sky-skiff falls in from the top, pulled down,
+// with a little fuel to spend: Up fires its burner, Left and Right turn it. Land it on one of the lit pads - gently
+// (slow down and across) and upright - to clear the level; the narrower pads score more. Touching the rocks, or a pad too
+// hard or askew, wrecks it - a life gone, the level tried again. Each level the pull is stronger, the fuel less and a
+// wind blows harder from the fourth on. Three lives. Window: 76zm-lander.js.
+CM.LD = { W: 60, H: 40, lives: 3, safeV: 2.4, safeH: 1.6, safeA: 0.28 };
+{ const LD = CM.LD;
+  LD.Level = class {
+    constructor(n, seed, keep) {
+      const R = this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: LD.lives });
+      this.g = 1.6 + 0.12 * n; this.fuel0 = Math.max(45, 100 - 5 * n); this.wind = n >= 4 ? (R.chance(0.5) ? 1 : -1) * Math.min(1.2, 0.25 * (n - 3)) : 0;
+      // the ground: a jagged line with flat pads cut in
+      const pts = []; let y = 30; for (let x = 0; x <= LD.W; x += 2) { y = CM.ARC.clamp(y + (R.next() - 0.5) * 6, 20, 37); pts.push([x, y]); }
+      this.pads = []; const widths = [[3, 2], [2, 3], [1, 5]]; const used = [];
+      for (const [w, m] of widths) { for (let k = 0; k < 50; k++) { const i = R.int(2, pts.length - 2 - w); const x0 = pts[i][0]; if (used.some((u) => Math.abs(u - x0) < 10)) continue; used.push(x0); const py = pts[i][1]; for (let j = i; j <= i + w; j++) pts[j][1] = py; this.pads.push({ x0, x1: x0 + w * 2, y: py, m }); break; } }
+      this.ground = pts; this.stars = Array.from({ length: 50 }, () => [R.next() * LD.W, R.next() * 20, R.next()]); this.spawn();
+    }
+    spawn() { this.s = { x: 8 + this.rnd.next() * 10, y: 3, vx: 3 + this.rnd.next() * 2, vy: 0, a: 0, fuel: this.fuel0, burn: false, dead: 0, landed: 0 }; this.ctl = { turn: 0, burn: false }; }
+    input(turn, burn) { this.ctl.turn = turn; this.ctl.burn = !!burn; }
+    groundAt(x) { const G = this.ground; const i = CM.ARC.clamp(Math.floor(x / 2), 0, G.length - 2), [x0, y0] = G[i], [x1, y1] = G[i + 1]; return y0 + (y1 - y0) * ((x - x0) / (x1 - x0)); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const S = this.s;
+      if (S.dead) { S.dead -= dt; if (S.dead <= 0) { if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } this.spawn(); } return; }
+      if (S.landed) { S.landed -= dt; if (S.landed <= 0) { this.stage = "clear"; this.events.push({ kind: "clear" }); } return; }
+      S.a += this.ctl.turn * 2.4 * dt; S.a = CM.ARC.clamp(S.a, -1.6, 1.6); S.burn = this.ctl.burn && S.fuel > 0;
+      if (S.burn) { S.fuel = Math.max(0, S.fuel - 10 * dt); S.vx += Math.sin(S.a) * 5.2 * dt; S.vy -= Math.cos(S.a) * 5.2 * dt; }
+      S.vy += this.g * dt; S.vx += this.wind * dt * 0.6; S.x += S.vx * dt; S.y += S.vy * dt;
+      if (S.x < 0) { S.x = 0; S.vx = Math.abs(S.vx) * 0.3; } if (S.x > LD.W) { S.x = LD.W; S.vx = -Math.abs(S.vx) * 0.3; }
+      if (S.y < 0) { S.y = 0; S.vy = Math.max(0, S.vy); }
+      // the feet touch
+      const gy = this.groundAt(S.x); if (S.y + 0.9 >= gy) {
+        const pad = this.pads.find((P) => S.x - 0.6 >= P.x0 && S.x + 0.6 <= P.x1), soft = S.vy <= LD.safeV && Math.abs(S.vx) <= LD.safeH && Math.abs(S.a) <= LD.safeA;
+        if (pad && soft) { S.y = gy - 0.9; S.landed = 1.4; const pts = Math.round((50 + S.fuel * 2) * pad.m * (1 + (LD.safeV - S.vy) / LD.safeV)); this.score += pts; this.events.push({ kind: "land", x: S.x, y: S.y, pts, m: pad.m }); }
+        else { this.lives -= 1; S.dead = 1.8; S.y = gy - 0.9; this.events.push({ kind: "crash", x: S.x, y: S.y, why: pad ? (S.vy > LD.safeV ? "too fast" : Math.abs(S.a) > LD.safeA ? "askew" : "sliding") : "rocks" }); }
+      }
+    }
+  };
+  CM.ARC.add("lander", { name: "The Skyreach Landing", Level: LD.Level, marks: [2, 4, 6] });
+}
+
+// ---- 64zw-rampart.js ----
+"use strict";
+// The Rampart Battery (v15.6): a defence game on the town wall. Embers fall out of the night sky toward six cottages and
+// the three mana wells on the rampart. Aim and loose a bolt (the nearest well with charges left fires it): where it
+// reaches it bursts into a ring of light that swells and fades, and any ember inside is put out. Each well holds ten
+// charges a wave. From the third wave some embers split as they fall; from the fifth a fire-drake crosses, dropping
+// its own. A wave is held when every ember is out: each charge left and each cottage standing pays. A well hit is dark
+// for the rest of the wave; a cottage hit is gone. When the last cottage burns, the game is over (a cottage comes back
+// every 10,000). Window: 76zn-rampart.js.
+CM.RB = { W: 480, H: 400, ground: 368, charges: 10 };
+{ const RB = CM.RB;
+  RB.Level = class {
+    constructor(n, seed, keep) {
+      this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play";
+      Object.assign(this, keep || { score: 0, cottages: [true, true, true, true, true, true], bank: 0, nextBonus: 10000 }); this.cottages = this.cottages.slice();
+      this.lives = this.cottages.filter(Boolean).length; this.wells = [40, 240, 440].map((x) => ({ x, y: RB.ground - 6, n: RB.charges, dark: false }));
+      this.homes = [90, 135, 180, 300, 345, 390]; this.embers = []; this.bolts = []; this.bursts = []; this.toSend = 10 + 3 * n; this.sendT = 0.6; this.speed = 24 + 4 * n; this.drake = null; this.drakeT = 8; this.endT = 0;
+    }
+    targets() { const t = []; this.homes.forEach((x, i) => { if (this.cottages[i]) t.push({ x, y: RB.ground, home: i }); }); this.wells.forEach((w, i) => { if (!w.dark) t.push({ x: w.x, y: RB.ground, well: i }); }); return t; }
+    ember(x, y) { const T = this.targets(); if (!T.length) return; const tg = this.rnd.pick(T), d = Math.hypot(tg.x - x, tg.y - y); this.embers.push({ x0: x, y0: y, x, y, tx: tg.x, ty: tg.y, vx: (tg.x - x) / d * this.speed, vy: (tg.y - y) / d * this.speed, split: this.n >= 3 && this.rnd.chance(0.25) ? 120 + this.rnd.next() * 100 : 0 }); }
+    fire(x, y) {
+      if (y > RB.ground - 30) y = RB.ground - 30; let best = null, bd = 1e9; for (const w of this.wells) if (!w.dark && w.n > 0) { const d = Math.abs(w.x - x); if (d < bd) { bd = d; best = w; } }
+      if (!best || this.stage !== "play") { this.events.push({ kind: "empty" }); return; } best.n -= 1; const d = Math.hypot(x - best.x, y - best.y), sp = best === this.wells[1] ? 520 : 380;
+      this.bolts.push({ x0: best.x, y0: best.y, x: best.x, y: best.y, tx: x, ty: y, vx: (x - best.x) / d * sp, vy: (y - best.y) / d * sp, left: d / sp }); this.events.push({ kind: "fire" });
+    }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt;
+      if (this.toSend > 0 && (this.sendT -= dt) <= 0) { this.sendT = Math.max(0.25, 1.4 - 0.08 * this.n) * (0.5 + this.rnd.next()); const k = Math.min(this.toSend, this.rnd.int(1, 2 + Math.floor(this.n / 3))); for (let i = 0; i < k; i++) { this.ember(this.rnd.next() * RB.W, 0); this.toSend -= 1; } }
+      if (this.n >= 5 && !this.drake && (this.drakeT -= dt) <= 0) { const L = this.rnd.chance(0.5); this.drake = { x: L ? -20 : RB.W + 20, y: 70 + this.rnd.next() * 80, vx: L ? 60 : -60, drop: 1 }; this.drakeT = 12; this.events.push({ kind: "drake" }); }
+      if (this.drake) { const D = this.drake; D.x += D.vx * dt; D.drop -= dt; if (D.drop <= 0) { D.drop = 1.4; this.ember(D.x, D.y); } if (D.x < -40 || D.x > RB.W + 40) this.drake = null; }
+      for (const b of this.bolts) { b.x += b.vx * dt; b.y += b.vy * dt; b.left -= dt; if (b.left <= 0) { b.gone = true; this.bursts.push({ x: b.tx, y: b.ty, t: 0 }); this.events.push({ kind: "burst", x: b.tx, y: b.ty }); } }
+      this.bolts = this.bolts.filter((b) => !b.gone);
+      for (const B of this.bursts) { B.t += dt; B.r = B.t < 0.5 ? (B.t / 0.5) * 34 : Math.max(0, 34 * (1 - (B.t - 0.5) / 0.6)); }
+      this.bursts = this.bursts.filter((B) => B.t < 1.1);
+      for (const e of this.embers) {
+        e.x += e.vx * dt; e.y += e.vy * dt;
+        if (e.split && e.y > e.split) { e.split = 0; for (let k = 0; k < 2; k++) this.ember(e.x, e.y); }
+        for (const B of this.bursts) if (Math.hypot(e.x - B.x, e.y - B.y) < B.r) { e.gone = true; this.score += 25; this.events.push({ kind: "out", x: e.x, y: e.y, pts: 25 }); break; }
+        if (!e.gone && e.y >= RB.ground) { e.gone = true; const hi = this.homes.findIndex((x, i) => this.cottages[i] && Math.abs(x - e.x) < 16), wi = this.wells.findIndex((w) => !w.dark && Math.abs(w.x - e.x) < 16);
+          if (hi >= 0) { this.cottages[hi] = false; this.events.push({ kind: "burn", x: e.x, home: true }); } else if (wi >= 0) { this.wells[wi].dark = true; this.wells[wi].n = 0; this.events.push({ kind: "burn", x: e.x, well: true }); } else this.events.push({ kind: "thud", x: e.x }); }
+      }
+      if (this.drake) for (const B of this.bursts) if (Math.hypot(this.drake.x - B.x, this.drake.y - B.y) < B.r + 8) { this.score += 300; this.events.push({ kind: "drakedown", x: this.drake.x, y: this.drake.y, pts: 300 }); this.drake = null; break; }
+      this.embers = this.embers.filter((e) => !e.gone); this.lives = this.cottages.filter(Boolean).length;
+      if (!this.lives) { this.stage = "over"; this.events.push({ kind: "over" }); return; }
+      if (this.toSend <= 0 && !this.embers.length && !this.drake && !this.bolts.length && !this.bursts.length) {
+        const charges = this.wells.reduce((t, w) => t + w.n, 0), homes = this.cottages.filter(Boolean).length, mul = Math.min(6, 1 + Math.floor((this.n - 1) / 2)), pts = (charges * 5 + homes * 100) * mul; this.score += pts;
+        while (this.score >= this.nextBonus) { this.nextBonus += 10000; const i = this.cottages.indexOf(false); if (i >= 0) { this.cottages[i] = true; this.events.push({ kind: "rebuild" }); } }
+        this.stage = "clear"; this.events.push({ kind: "held", charges, homes, pts });
+      }
+    }
+  };
+  CM.ARC.add("rampart", { name: "The Rampart Battery", Level: RB.Level, keep: (L) => ({ score: L.score, cottages: L.cottages, nextBonus: L.nextBonus }), marks: [3, 5, 8] });
+}
+
+// ---- 64zx-glimmerpop.js ----
+"use strict";
+// Glimmerpop (v15.6): a bubble shooter in an alchemist's still. Coloured glimmer-bubbles hang from the ceiling in offset
+// rows; a little launcher at the bottom shoots one at a time (the next one waits beside it), bouncing off the walls; it
+// sticks where it touches, and three or more of one colour joined together pop - and anything left hanging by them falls
+// for a bonus. Every few shots the ceiling comes down a row. Clear every bubble to clear the level; if they reach the
+// line by the launcher, a life is lost and the level starts again. Each level more rows and, from the fourth and the
+// seventh, another colour. Three lives. Window: 76zo-glimmerpop.js.
+CM.GP = { COLS: 9, ROWS: 14, R: 16, lives: 3, speed: 620 };
+{ const GP = CM.GP, W = GP.COLS * GP.R * 2 + GP.R;
+  GP.W = W; GP.H = (GP.ROWS + 2) * GP.R * 1.74 + 40; GP.line = GP.ROWS * GP.R * 1.74 + GP.R;
+  GP.pos = (r, c, top) => [GP.R + c * GP.R * 2 + (r % 2 ? GP.R : 0), top + GP.R + r * GP.R * 1.74];
+  GP.Level = class {
+    constructor(n, seed, keep) {
+      const R = this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: GP.lives });
+      this.colours = Math.min(7, 4 + (n >= 4 ? 1 : 0) + (n >= 7 ? 1 : 0) + (n >= 10 ? 1 : 0)); this.start = Math.min(9, 4 + Math.floor(n / 2)); this.every = Math.max(4, 9 - Math.floor(n / 2)); this.reset();
+    }
+    reset() { const R = this.rnd; this.top = 0; this.grid = Array.from({ length: GP.ROWS }, () => Array(GP.COLS).fill(-1)); for (let r = 0; r < this.start; r++) for (let c = 0; c < this.cols(r); c++) this.grid[r][c] = R.int(0, this.colours - 1);
+      this.shots = 0; this.ball = null; this.cur = this.pick(); this.next = this.pick(); this.aim = -Math.PI / 2; this.falling = []; this.dead = 0; }
+    cols(r) { return r % 2 ? GP.COLS - 1 : GP.COLS; }
+    present() { const s = new Set(); for (const row of this.grid) for (const v of row) if (v >= 0) s.add(v); return [...s]; }
+    pick() { const pr = this.present(); return pr.length ? this.rnd.pick(pr) : this.rnd.int(0, this.colours - 1); }
+    setAim(a) { this.aim = CM.ARC.clamp(a, -Math.PI + 0.12, -0.12); }
+    shoot() { if (this.ball || this.dead || this.stage !== "play") return; this.ball = { x: GP.W / 2, y: GP.H - 30, vx: Math.cos(this.aim) * GP.speed, vy: Math.sin(this.aim) * GP.speed, k: this.cur }; this.cur = this.next; this.next = this.pick(); this.events.push({ kind: "shoot" }); }
+    nbrs(r, c) { const o = r % 2 ? [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]] : [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]]; return o.map(([dr, dc]) => [r + dr, c + dc]).filter(([a, b]) => a >= 0 && a < GP.ROWS && b >= 0 && b < this.cols(a)); }
+    snap(x, y) { let best = null, bd = 1e9; for (let r = 0; r < GP.ROWS; r++) for (let c = 0; c < this.cols(r); c++) { if (this.grid[r][c] >= 0) continue; const [px, py] = GP.pos(r, c, this.top), d = Math.hypot(px - x, py - y); if (d < bd) { bd = d; best = [r, c]; } } return best; }
+    land(b) {
+      const at = this.snap(b.x, b.y); if (!at) return; const [r, c] = at; this.grid[r][c] = b.k; this.shots += 1;
+      // the same colour joined
+      const seen = new Set([`${r},${c}`]), q = [[r, c]]; while (q.length) { const [a, d] = q.shift(); for (const [e, f] of this.nbrs(a, d)) if (!seen.has(`${e},${f}`) && this.grid[e][f] === b.k) { seen.add(`${e},${f}`); q.push([e, f]); } }
+      let popped = 0, dropped = 0;
+      if (seen.size >= 3) { for (const k of seen) { const [a, d] = k.split(",").map(Number), [x, y] = GP.pos(a, d, this.top); this.events.push({ kind: "pop", x, y, k: b.k }); this.grid[a][d] = -1; popped++; }
+        // what hangs from nothing falls
+        const held = new Set(), q2 = []; for (let cc = 0; cc < this.cols(0); cc++) if (this.grid[0][cc] >= 0) { held.add(`0,${cc}`); q2.push([0, cc]); }
+        while (q2.length) { const [a, d] = q2.shift(); for (const [e, f] of this.nbrs(a, d)) if (!held.has(`${e},${f}`) && this.grid[e][f] >= 0) { held.add(`${e},${f}`); q2.push([e, f]); } }
+        for (let a = 0; a < GP.ROWS; a++) for (let d = 0; d < this.cols(a); d++) if (this.grid[a][d] >= 0 && !held.has(`${a},${d}`)) { const [x, y] = GP.pos(a, d, this.top); this.falling.push({ x, y, vy: 0, k: this.grid[a][d] }); this.grid[a][d] = -1; dropped++; } }
+      if (popped) { const pts = popped * 10 * this.n + (dropped ? 20 * Math.pow(2, Math.min(dropped, 10)) : 0); this.score += pts; this.events.push({ kind: "score", x: b.x, y: b.y, pts, dropped }); } else this.events.push({ kind: "stick" });
+      if (!this.present().length) { this.stage = "clear"; this.events.push({ kind: "clear" }); return; }
+      if (this.shots % this.every === 0) { this.top += GP.R * 1.74; this.events.push({ kind: "lower" }); }
+      if (!this.present().includes(this.cur)) this.cur = this.pick(); if (!this.present().includes(this.next)) this.next = this.pick();
+      for (let a = 0; a < GP.ROWS; a++) for (let d = 0; d < this.cols(a); d++) if (this.grid[a][d] >= 0 && GP.pos(a, d, this.top)[1] + GP.R > GP.line) { this.lives -= 1; this.dead = 1.6; this.events.push({ kind: "die" }); return; }
+    }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt;
+      for (const f of this.falling) { f.vy += 900 * dt; f.y += f.vy * dt; } this.falling = this.falling.filter((f) => f.y < GP.H + 40);
+      if (this.dead) { this.dead -= dt; if (this.dead <= 0) { this.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else this.reset(); } return; }
+      const b = this.ball; if (!b) return; const steps = Math.ceil(GP.speed * dt / 6);
+      for (let s = 0; s < steps && this.ball; s++) { b.x += b.vx * dt / steps; b.y += b.vy * dt / steps;
+        if (b.x < GP.R) { b.x = GP.R; b.vx = Math.abs(b.vx); this.events.push({ kind: "wall" }); } if (b.x > GP.W - GP.R) { b.x = GP.W - GP.R; b.vx = -Math.abs(b.vx); this.events.push({ kind: "wall" }); }
+        let hit = b.y - GP.R <= this.top; if (!hit) for (let r = 0; r < GP.ROWS && !hit; r++) for (let c = 0; c < this.cols(r); c++) { if (this.grid[r][c] < 0) continue; const [px, py] = GP.pos(r, c, this.top); if (Math.hypot(px - b.x, py - b.y) < GP.R * 1.8) { hit = true; break; } }
+        if (hit) { this.ball = null; this.land(b); } }
+    }
+  };
+  CM.ARC.add("glimmerpop", { name: "Glimmerpop", Level: GP.Level, marks: [3, 5, 7] });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -30349,6 +30708,12 @@ CM.CG_INFO = {
   shelter: { cat: "idle", line: "Dig a warren and keep its residents fed." },
   cascade: { cat: "prizes", line: "Drop coins on the pusher; prizes over the edge." },
   claw: { cat: "prizes", line: "Copper, silver and gold claws full of real prizes." },
+  wyrm: { cat: "arcade", line: "Feed the wyrm berries; mind its tail." },
+  crawler: { cat: "arcade", line: "Shoot the long crawler down through the toadstools." },
+  belfry: { cat: "arcade", line: "Climb the bell tower past the troll's kegs." },
+  lander: { cat: "arcade", line: "Set the sky-skiff down gently on a lit pad." },
+  rampart: { cat: "arcade", line: "Burst the falling embers before they reach the town." },
+  glimmerpop: { cat: "arcade", line: "Shoot coloured bubbles; three of a kind pop." },
 };
 CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
@@ -30383,6 +30748,12 @@ CM.CG_THUMB = (() => {
     mint: (p, w, h) => { bg(p, w, h, "#3A2A10", "#1A1008"); circ(p, w / 2, h / 2, 26, "#F0C040"); circ(p, w / 2, h / 2, 20, "#D0A020"); p.fillStyle = "#6A4A10"; p.font = "bold 20px Georgia"; p.textAlign = "center"; p.fillText("G", w / 2, h / 2 + 7); for (let k = 0; k < 5; k++) circ(p, 20 + k * 30, h - 10, 5, "#F0C040"); },
     shelter: (p, w, h) => { bg(p, w, h, "#4A3A2A", "#2A1E14"); for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { p.fillStyle = ["#3A5A8A", "#8A5A3A", "#5A8A3A"][(x + y) % 3]; p.fillRect(30 + x * 40, 12 + y * 26, 36, 22); circ(p, 40 + x * 40, 28 + y * 26, 3, "#F0C8A0"); } p.fillStyle = "#6A5A4A"; p.fillRect(10, 12, 14, 74); },
     cascade: (p, w, h) => { bg(p, w, h, "#3A1A40", "#1A0A20"); p.fillStyle = "#8A8A9A"; p.fillRect(20, 20, w - 40, 14); for (let k = 0; k < 18; k++) circ(p, 26 + (k * 37) % (w - 50), 46 + ((k * 13) % 30), 6, "#F0C040"); },
+    wyrm: (p, w, h) => { bg(p, w, h, "#3A7A2E", "#2A5A20"); const pts = [[20, 60], [40, 60], [60, 50], [80, 40], [100, 40], [120, 50]]; pts.forEach(([x, y], i) => circ(p, x, y, 9 - i * 0.6, i === pts.length - 1 ? "#6AD070" : "#4AA050")); circ(p, 150, 30, 6, "#D02848"); },
+    crawler: (p, w, h) => { bg(p, w, h, "#140C08", "#2A1C12"); for (let k = 0; k < 7; k++) circ(p, 30 + k * 14, 40, 7, k ? "#80B040" : "#E0B030"); for (const [x, y] of [[20, 20], [60, 18], [120, 26], [140, 60], [90, 62]]) { p.fillStyle = "#C83828"; p.beginPath(); p.arc(x, y, 6, Math.PI, 0); p.fill(); } p.fillStyle = "#3060C0"; p.beginPath(); p.moveTo(w / 2 - 5, h - 4); p.lineTo(w / 2, h - 16); p.lineTo(w / 2 + 5, h - 4); p.fill(); },
+    belfry: (p, w, h) => { bg(p, w, h, "#2A2030", "#140E14"); p.fillStyle = "#7A4A22"; for (let k = 0; k < 4; k++) p.fillRect(k % 2 ? 10 : 30, 18 + k * 18, w - 40, 4); p.strokeStyle = "#8A6A3A"; p.strokeRect(w - 50, 22, 8, 14); circ(p, 60, 30 + 18, 5, "#8A5A28"); circ(p, 30, 12, 7, "#4A6A3A"); p.fillStyle = "#C8962A"; p.beginPath(); p.arc(w / 2, 14, 7, Math.PI, 0); p.fill(); },
+    lander: (p, w, h) => { bg(p, w, h, "#2A1A4A", "#F0A050"); p.fillStyle = "#3A2E3A"; p.beginPath(); p.moveTo(0, h); p.lineTo(0, 60); p.lineTo(30, 50); p.lineTo(60, 64); p.lineTo(90, 64); p.lineTo(120, 44); p.lineTo(w, 58); p.lineTo(w, h); p.fill(); p.fillStyle = "#C8A060"; p.fillRect(60, 62, 30, 3); circ(p, 76, 24, 7, "#E0C080"); p.fillStyle = "#FFB040"; p.beginPath(); p.moveTo(73, 34); p.lineTo(76, 44); p.lineTo(79, 34); p.fill(); },
+    rampart: (p, w, h) => { bg(p, w, h, "#060818", "#1A1A3A"); p.strokeStyle = "rgba(255,140,60,0.7)"; for (const [x0, x1] of [[20, 50], [90, 70], [150, 120]]) { p.beginPath(); p.moveTo(x0, 0); p.lineTo(x1, 50); p.stroke(); } const g = p.createRadialGradient(100, 40, 0, 100, 40, 16); g.addColorStop(0, "#FFF"); g.addColorStop(1, "rgba(120,180,255,0)"); p.fillStyle = g; p.fillRect(80, 20, 40, 40); p.fillStyle = "#3A3440"; p.fillRect(0, h - 12, w, 12); for (let k = 0; k < 6; k++) { p.fillStyle = "#8A3A2A"; p.fillRect(14 + k * 26, h - 20, 12, 8); } },
+    glimmerpop: (p, w, h) => { bg(p, w, h, "#1A2830", "#0A1014"); const c = ["#E04050", "#40A0F0", "#50C060", "#F0C030", "#B060E0"]; for (let r = 0; r < 3; r++) for (let k = 0; k < 9; k++) circ(p, 14 + k * 18 + (r % 2) * 9, 12 + r * 15, 8, c[(k + r * 2) % 5]); circ(p, w / 2, h - 12, 8, "#40A0F0"); },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();
@@ -30582,6 +30953,346 @@ CM.CG_THUMB = (() => {
       box.querySelectorAll("[data-tkshelf]").forEach((b) => b.addEventListener("click", () => { this.tkShelf = b.dataset.tkshelf; this.caSfx("card", 0.25); this.renderCasino(); }));
       box.querySelectorAll("[data-tkbuy]").forEach((b) => b.addEventListener("click", () => { const o = g.tkBuy(b.dataset.tkbuy); if (o.error) { this.cgSfx("miss", 0.3); return; } this.cgSfx("cardwin", 0.5); if (o.gold) this.cgCoins(this.$("#casino-body"), 10);
         this.tkOut = `<div class="tkout">${o.gold ? `${o.name}: <b>${o.gold} gold</b>.` : o.card ? this.cgCardWon(o.card) : o.item ? `${o.name}: <b class="rarity-${CM.rarityOf(o.item)}">${o.item.name}</b>${o.item.unknown ? " (not yet known)" : ""} - in the party's pack.` : ""}</div>`; this.renderCasino(); this.tkOut = ""; }));
+    },
+  });
+}
+
+// ---- 76zi-arcfw.js ----
+"use strict";
+// The arcade cabinets' common window (the forty-second big update): each registered cabinet's table is laid out the
+// same way - its canvas in a cabinet frame on the left, the ladder of levels (gold, and the card levels marked), the lore,
+// the stake, the buttons and the help on the right - and run by the same loop: the keys held and pressed and the mouse
+// passed to the rules, the rules stepped, their events turned into sound and sparks by the cabinet, the house's terms
+// checked, a banner for each level cleared and a note at the end. The cabinet draws only its own play: the bar of
+// score, level and lives across the top, the banner, the pause and the sparks and floating points are drawn here.
+{ const floor0 = CM.UI.prototype.renderFloor, TOP = 28;
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (CM.ARC.reg[this.cgView]) return this.arcTable(box, this.cgView); return floor0.call(this, box); },
+    arcTable(box, id) {
+      const g = this.game, def = CM.ARC.reg[id], U = def.ui, S = g.arcState(id), L = g.arcLevel(id), live = !!L, bet = live ? S.bet : (this.cgBet === undefined ? 5 : this.cgBet), Cl = g.arcClaimed(id), last = S && S.stage === "done" ? S.last : null;
+      const top = Math.max(15, (S && live ? S.n : 1) + 4), rows = []; for (let n = 1; n <= top; n++) { const card = n % def.cardEvery === 0, tier = CM.cardTierFor(n); rows.push(`<div class="rung${live && S.n === n ? " now" : ""}${live && S.n > n ? " done" : ""}"><span>${U.levelWord || "Level"} ${n}</span><b>${Math.round(bet * def.pay(n))}</b><i class="${!card ? "" : Cl[n] ? "got" : tier}" title="${!card ? "" : Cl[n] ? "card already won" : `a ${tier === "better" ? "stronger common" : tier} card, the first time`}">${!card ? "" : Cl[n] ? "✓" : tier === "rare" ? "★" : tier === "better" ? "◆" : "♦"}</i></div>`); }
+      box.innerHTML = `<div class="cgtable arcfw ${id} runestack dash"><h3>${def.name}</h3><div class="rswrap"><div class="arccab" style="--c1:${U.frame || "#3A2A18"}"><canvas class="arccanvas" width="${U.W}" height="${U.H + TOP}" tabindex="0" style="width:${U.W * (U.scale || 1)}px;height:${(U.H + TOP) * (U.scale || 1)}px"></canvas></div>
+        <div class="dashside"><p class="lore">${U.lore}</p>
+        <div class="ladder rsladder">${rows.reverse().join("")}</div>
+        ${live ? "" : this.cgBetRow("The stake")}<div class="cgnote">${this.cgNote || ""}</div>${last && last.cards && last.cards.length ? last.cards.map((c) => this.cgCardWon(c)).join("") : ""}
+        <div class="row">${live ? `<button data-arcpause>${this.arcPaused ? "Go on" : "Pause"}</button>` : `<button class="primary" data-arcstart>${U.start || "Insert"} (${bet} gold)</button>`}<button data-leave>Leave</button></div>
+        <div class="small">${U.help} P to pause. Each ${(U.levelWord || "level").toLowerCase()} cleared pays gold, more each, every game, and as many prize tickets as its number; every third gives a card the first time ever (♦ to the 4th, ◆ to the 9th, ★ from the 10th). Best score ${(g.cgStore()[`ar_${id}_best`] || 0).toLocaleString("en")}.</div>${this.cgStats(id)}</div></div></div>`;
+      this.cgWireBet(box); const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      if (q("[data-arcstart]")) q("[data-arcstart]").addEventListener("click", () => { const r = g.arcStart(id, bet); this.cgNote = r.error || U.go || "Level 1!"; this.arcFx = { parts: [], pts: [], banner: r.error ? null : { at: performance.now(), text: `${(U.levelWord || "Level").toUpperCase()} 1` }, shake: 0 }; this.arcPaused = false; this.cgSfx(r.error ? "miss" : "door", 0.45); this.renderCasino(); const cv = this.$("#casino-body .arccanvas"); if (cv) cv.focus(); });
+      if (q("[data-arcpause]")) q("[data-arcpause]").addEventListener("click", () => { this.arcPaused = !this.arcPaused; this.renderCasino(); });
+      const cv = this.arcCanvas = q(".arccanvas"); this.arcId = id;
+      const pos = (e) => { const r = cv.getBoundingClientRect(); return [((e.clientX - r.left) / r.width) * U.W, ((e.clientY - r.top) / r.height) * (U.H + TOP) - TOP]; };
+      cv.addEventListener("mousemove", (e) => { this.arcMouse = pos(e); });
+      cv.addEventListener("mousedown", (e) => { const Lm = g.arcLevel(id); this.arcMouseDown = true; if (Lm && !this.arcPaused && def.click) def.click(Lm, ...pos(e), this); cv.focus(); });
+      cv.addEventListener("mouseup", (e) => { const Lm = g.arcLevel(id); this.arcMouseDown = false; if (Lm && !this.arcPaused && def.release) def.release(Lm, ...pos(e), this); });
+      cv.addEventListener("contextmenu", (e) => e.preventDefault());
+      if (!this.arcKeys) { this.arcHeld = new Set();
+        this.arcKeys = (e) => { const id2 = this.arcId, d2 = CM.ARC.reg[id2]; if (!d2 || this.cgView !== id2 || !this.dialogOpen() || !this.game.arcLevel(id2)) return; if (e.type === "keydown" && e.code === "KeyP") { e.preventDefault(); this.arcPaused = !this.arcPaused; this.renderCasino(); return; }
+          if (!(d2.ui.keys || []).includes(e.code)) return; e.preventDefault(); e.stopPropagation();
+          if (e.type === "keydown") { if (!e.repeat && d2.press && !this.arcPaused) d2.press(this.game.arcLevel(id2), e.code, this); this.arcHeld.add(e.code); } else this.arcHeld.delete(e.code); };
+        window.addEventListener("keydown", this.arcKeys, true); window.addEventListener("keyup", this.arcKeys, true); }
+      if (!this.arcLoop) { let prev = performance.now(); const loop = (now) => { if (!this.arcCanvas || !this.arcCanvas.isConnected || !CM.ARC.reg[this.cgView]) { this.arcLoop = null; return; } const dt = Math.min(0.05, (now - prev) / 1000); prev = now; this.arcFrame(dt, now); this.arcLoop = requestAnimationFrame(loop); }; this.arcLoop = requestAnimationFrame(loop); }
+    },
+    arcFrame(dt, now) {
+      const g = this.game, id = this.arcId, def = CM.ARC.reg[id], U = def.ui, L = g.arcLevel(id), cv = this.arcCanvas, p = cv.getContext("2d"), fx = this.arcFx = this.arcFx || { parts: [], pts: [], shake: 0 };
+      if (L && !this.arcPaused) { if (def.input) def.input(L, this.arcHeld || new Set(), this); L.update(dt); for (const e of L.events.splice(0)) def.event && def.event(this, e, now, L, fx);
+        const out = g.arcCheck(id);
+        if (out && out.cleared) { fx.banner = { at: now, text: `${(U.levelWord || "Level").toUpperCase()} ${out.cleared + 1}`, sub: `${U.levelWord || "Level"} ${out.cleared} cleared: +${out.pay} gold, +${out.tickets} tickets${out.card ? ` - ${out.card}` : ""}` }; this.cgSfx("victory", 0.5); if (out.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 300); this.cgNote = `${U.levelWord || "Level"} ${out.cleared} cleared: ${out.pay} gold and ${out.tickets} tickets${out.card ? `, and a card - ${out.card}` : ""}.`; this.renderCasino(); return; }
+        if (out && out.over) { const S = g.arcState(id); this.cgNote = `${U.over || "Game over"} on ${(U.levelWord || "level").toLowerCase()} ${S.last.level}: ${S.last.score.toLocaleString("en")} points, ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
+      const Lv = L || (this.arcLastDrawn && this.arcLastDrawn.__id === id ? this.arcLastDrawn : null); if (L) { this.arcLastDrawn = L; L.__id = id; }
+      p.save(); if (fx.shake > 0) { fx.shake -= dt; p.translate((Math.random() - 0.5) * fx.shake * 24, (Math.random() - 0.5) * fx.shake * 24); }
+      p.save(); p.translate(0, TOP); def.draw(p, Lv, now, dt, this, fx); p.restore();
+      p.save(); p.translate(0, TOP);
+      fx.parts = fx.parts.filter((q) => (q.life -= dt) > 0); for (const q of fx.parts) { q.x += q.vx * dt; q.y += q.vy * dt; q.vy += (q.g === undefined ? 300 : q.g) * dt; p.globalAlpha = Math.min(1, q.life * 2.5); p.fillStyle = q.c; p.fillRect(q.x - (q.s || 3) / 2, q.y - (q.s || 3) / 2, q.s || 3, q.s || 3); } p.globalAlpha = 1;
+      fx.pts = fx.pts.filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = q.c || "#FFF0B0"; p.font = "bold 12px monospace"; p.textAlign = "center"; p.fillText(String(q.n), q.x, q.y - (now - q.at) / 35); p.textAlign = "left"; } p.globalAlpha = 1;
+      p.restore(); p.restore();
+      // the bar
+      p.fillStyle = "#0E0A14"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score.toLocaleString("en")}` : def.name.toUpperCase(), 8, 19);
+      if (Lv) { p.textAlign = "center"; p.fillText(`${(U.levelWord || "Level").toUpperCase()} ${Lv.n}`, cv.width / 2, 19); p.textAlign = "left"; if (U.extraHud) U.extraHud(p, Lv, cv.width, now); else for (let k = 0; k < Math.min(6, Lv.lives || 0); k++) { const x = cv.width - 14 - k * 18; if (def.lifeIcon) def.lifeIcon(p, x, 14, now); else { p.fillStyle = "#80E0FF"; p.beginPath(); p.arc(x, 14, 5, 0, Math.PI * 2); p.fill(); } } }
+      if (!Lv) { p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(0, TOP, cv.width, cv.height - TOP); p.fillStyle = "rgba(255,240,200,0.92)"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText(def.name, cv.width / 2, cv.height / 2); if (Math.floor(now / 600) % 2) { p.font = "13px Georgia, serif"; p.fillText("Set a stake and begin", cv.width / 2, cv.height / 2 + 26); } p.textAlign = "left"; }
+      if (fx.banner && now - fx.banner.at < 2600) { const B = fx.banner, t = (now - B.at) / 2600; p.globalAlpha = t > 0.8 ? (1 - t) / 0.2 : Math.min(1, t * 8); p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, cv.height / 2 - 46, cv.width, 92); p.fillStyle = "#FFE070"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText(B.text, cv.width / 2, cv.height / 2 + 12 + (B.sub ? 14 : 0)); if (B.sub) { p.font = "13px Georgia, serif"; p.fillStyle = "#F0E0B0"; p.fillText(B.sub, cv.width / 2, cv.height / 2 - 14); } p.textAlign = "left"; p.globalAlpha = 1; }
+      if (this.arcPaused) { p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#FFF"; p.font = "bold 26px Georgia, serif"; p.textAlign = "center"; p.fillText("Paused", cv.width / 2, cv.height / 2); p.textAlign = "left"; }
+    },
+    // sparks and points, for the cabinets
+    arcBurst(fx, x, y, cols, n = 14, sp = 140, g = 300) { for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, v = sp * (0.3 + Math.random() * 0.7); fx.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - sp * 0.3, life: 0.4 + Math.random() * 0.4, c: cols[k % cols.length], g }); } },
+    arcPts(fx, x, y, n, c) { fx.pts.push({ x, y, n, at: performance.now(), c }); },
+  });
+}
+
+// ---- 76zj-wyrm.js ----
+"use strict";
+// The Wyrm's Feast, the window's side: a walled garden bed of checkered grass with the moss on its stone wall, standing
+// stones with lichen, berries that pulse with a glow, the golden one ringed and blinking as it fades; the wyrm in green
+// scales darkening to the tail, its head with eyes and a flicking tongue, sliding smoothly between squares; a burst of
+// juice for each berry. Arrows or W A S D to turn. The rules are 64zs-wyrm.js.
+CM.CG_TABLES.push(["wyrm", "The Wyrm's Feast"]);
+{ const C = 20, WY = CM.WY;
+  Object.assign(CM.ARC.reg.wyrm, {
+    ui: { W: WY.W * C, H: WY.H * C, scale: 1.1, frame: "#2A4A20", start: "Into the garden", go: "Level 1. Feast!", over: "The wyrm curls up to sleep",
+      lore: "A walled bed in the Joker's kitchen garden, and in it a young wyrm with an appetite. \"Feed it glimmer berries,\" says the gardener. \"It grows. It gets quick. It does not like walls.\"",
+      help: "Arrows or W A S D to turn (it will not turn straight back on itself). Eat the level's berries to clear it; a golden berry is worth five; walls, stones and the wyrm itself cost a life.",
+      keys: ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD"] },
+    press(L, code) { const d = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] }[code]; if (d) L.turn(...d); },
+    lifeIcon(p, x, y) { p.fillStyle = "#5AC060"; p.beginPath(); p.arc(x, y, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = "#101010"; p.fillRect(x + 1, y - 2, 2, 2); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "eat") { ui.cgSfx("coin", 0.3, 1.2 + Math.min(1, L.eaten / L.need)); ui.arcBurst(fx, e.x * C + C / 2, e.y * C + C / 2, ["#E04060", "#FF90A0", "#FFFFFF"], 12, 110); ui.arcPts(fx, e.x * C + C / 2, e.y * C, e.pts); }
+      else if (e.kind === "gold") { ui.cgSfx("cardwin", 0.4); ui.arcBurst(fx, e.x * C + C / 2, e.y * C + C / 2, ["#FFE070", "#FFF8C0"], 20, 150); ui.arcPts(fx, e.x * C + C / 2, e.y * C, e.pts, "#FFE070"); }
+      else if (e.kind === "goldshow") ui.cgSfx("spell", 0.25, 1.6); else if (e.kind === "die") { ui.cgSfx("hurt", 0.55); fx.shake = 0.25; ui.arcBurst(fx, e.x * C + C / 2, e.y * C + C / 2, ["#5AC060", "#2A7A30", "#FFFFFF"], 22, 160); }
+    },
+    draw(p, L, now) {
+      const W = WY.W * C, H = WY.H * C; for (let y = 0; y < WY.H; y++) for (let x = 0; x < WY.W; x++) { p.fillStyle = (x + y) % 2 ? "#3A7A2E" : "#438834"; p.fillRect(x * C, y * C, C, C); if ((x * 7 + y * 13) % 9 === 0) { p.fillStyle = "#56A040"; p.fillRect(x * C + 6, y * C + 10, 2, 5); p.fillRect(x * C + 10, y * C + 8, 2, 6); } }
+      p.strokeStyle = "#7A7068"; p.lineWidth = 6; p.strokeRect(3, 3, W - 6, H - 6); p.strokeStyle = "#5A8A40"; p.lineWidth = 2; p.setLineDash([6, 10]); p.strokeRect(3, 3, W - 6, H - 6); p.setLineDash([]); p.lineWidth = 1;
+      if (!L) return;
+      for (const k of L.stones) { const [x, y] = k.split(",").map(Number), X = x * C, Y = y * C; p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(X + 11, Y + 17, 9, 3, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A847C"; p.beginPath(); p.moveTo(X + 3, Y + 17); p.lineTo(X + 5, Y + 3); p.lineTo(X + 15, Y + 2); p.lineTo(X + 17, Y + 17); p.fill(); p.fillStyle = "#9AB060"; p.fillRect(X + 6, Y + 5, 4, 3); p.fillStyle = "#A8A29A"; p.fillRect(X + 7, Y + 8, 2, 7); }
+      const pulse = 1 + 0.12 * Math.sin(now / 160), [bx, by] = L.berry; p.save(); p.shadowColor = "#FF5070"; p.shadowBlur = 10; p.fillStyle = "#D02848"; p.beginPath(); p.arc(bx * C + C / 2, by * C + C / 2 + 1, 6 * pulse, 0, Math.PI * 2); p.fill(); p.restore(); p.fillStyle = "#FFB0C0"; p.fillRect(bx * C + 7, by * C + 7, 3, 3); p.fillStyle = "#3A8A30"; p.fillRect(bx * C + 10, by * C + 2, 2, 4);
+      if (L.gold) { const G = L.gold, blink = G.t < 2 && Math.floor(now / 120) % 2; if (!blink) { p.save(); p.shadowColor = "#FFE070"; p.shadowBlur = 14; p.fillStyle = "#F0C030"; p.beginPath(); p.arc(G.x * C + C / 2, G.y * C + C / 2, 7, 0, Math.PI * 2); p.fill(); p.restore(); p.strokeStyle = "#FFF4B0"; p.beginPath(); p.arc(G.x * C + C / 2, G.y * C + C / 2, 9 + 2 * Math.sin(now / 100), 0, Math.PI * 2); p.stroke(); } }
+      // the wyrm, slid between squares by how far the step has gone
+      const k = L.dead ? 1 : Math.min(1, L.acc / L.tick), n = L.body.length, flick = L.dead && Math.floor(now / 100) % 2;
+      for (let i = n - 1; i >= 0; i--) { const [x, y] = L.body[i], prev = L.body[i + 1] || L.body[i], X = (prev[0] + (x - prev[0]) * k) * C + C / 2, Y = (prev[1] + (y - prev[1]) * k) * C + C / 2, f = i / Math.max(1, n - 1), r = C * (0.48 - f * 0.18);
+        if (flick) continue; const gr = p.createRadialGradient(X - 3, Y - 3, 1, X, Y, r); gr.addColorStop(0, `hsl(${110 - f * 30},60%,${58 - f * 18}%)`); gr.addColorStop(1, `hsl(${110 - f * 30},55%,${32 - f * 12}%)`); p.fillStyle = gr; p.beginPath(); p.arc(X, Y, r, 0, Math.PI * 2); p.fill();
+        if (i % 2 === 0 && i) { p.fillStyle = "rgba(255,240,150,0.35)"; p.beginPath(); p.arc(X, Y, r * 0.35, 0, Math.PI * 2); p.fill(); }
+        if (i === 0) { const [ex, ey] = L.dir, sx = -ey, sy = ex; p.fillStyle = "#FFF"; for (const s of [-1, 1]) { p.beginPath(); p.arc(X + ex * 3 + sx * 4 * s, Y + ey * 3 + sy * 4 * s, 2.6, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#101010"; for (const s of [-1, 1]) p.fillRect(X + ex * 4 + sx * 4 * s - 1, Y + ey * 4 + sy * 4 * s - 1, 2, 2);
+          if (Math.floor(now / 300) % 3 === 0) { p.strokeStyle = "#E03040"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(X + ex * 9, Y + ey * 9); p.lineTo(X + ex * 14, Y + ey * 14); p.lineTo(X + ex * 16 + sx * 2, Y + ey * 16 + sy * 2); p.moveTo(X + ex * 14, Y + ey * 14); p.lineTo(X + ex * 16 - sx * 2, Y + ey * 16 - sy * 2); p.stroke(); p.lineWidth = 1; } } }
+      // berries left
+      p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(W - 92, H - 22, 86, 16); p.fillStyle = "#FFD0D8"; p.font = "bold 11px monospace"; p.fillText(`BERRIES ${L.eaten}/${L.need}`, W - 86, H - 10);
+    },
+  });
+}
+
+// ---- 76zk-crawler.js ----
+"use strict";
+// The Barrow Crawler, the window's side: the barrow's earthen floor in shadow, roots hanging from above, toadstools with
+// spotted caps (shrinking as they are chipped, glowing faintly), the crawler's segments in banded carapace with legs
+// that ripple, the head with mandibles and eyes; the gnome with a pointed hat and a wand, sparks from it; the spider all
+// legs; bursts of green when a segment pops. Arrows or W A S D (or the mouse) to move, Space (or a click) to fire.
+// The rules are 64zt-crawler.js.
+CM.CG_TABLES.push(["crawler", "The Barrow Crawler"]);
+{ const C = 16, BC = CM.BC;
+  Object.assign(CM.ARC.reg.crawler, {
+    ui: { W: BC.W * C, H: BC.H * C, scale: 1.1, frame: "#3A2A1A", start: "Into the barrow", go: "Level 1. Here it comes!", over: "The barrow goes quiet",
+      lore: "Under the Joker's cellars the house broke into an old barrow, and something long lives in it. \"Keep it off the gnome,\" says the attendant, handing over a wand. \"It turns at every toadstool. It gets quicker.\"",
+      help: "Arrows or W A S D (or the mouse over the barrow) to move about the bottom; Space or a click to fire one spark at a time. A head is 100, a segment 10, the spider up to 900 the closer it is. Hit segments become toadstools and split the crawler. One more life at 12,000.",
+      keys: ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD", "Space"] },
+    input(L, H, ui) { const mx = (H.has("ArrowRight") || H.has("KeyD") ? 1 : 0) - (H.has("ArrowLeft") || H.has("KeyA") ? 1 : 0), my = (H.has("ArrowDown") || H.has("KeyS") ? 1 : 0) - (H.has("ArrowUp") || H.has("KeyW") ? 1 : 0);
+      if (!mx && !my && ui.arcMouse && ui.arcMouseOn) { const tx = ui.arcMouse[0] / C, ty = ui.arcMouse[1] / C, dx = tx - L.p.x, dy = ty - L.p.y; L.input(Math.abs(dx) > 0.2 ? Math.sign(dx) * Math.min(1, Math.abs(dx)) : 0, Math.abs(dy) > 0.2 ? Math.sign(dy) * Math.min(1, Math.abs(dy)) : 0); } else L.input(mx, my);
+      if (H.has("Space") || ui.arcMouseDown) L.fire(); if (mx || my) ui.arcMouseOn = false; },
+    click(L, x, y, ui) { ui.arcMouseOn = true; L.fire(); },
+    lifeIcon(p, x, y) { p.fillStyle = "#3060C0"; p.beginPath(); p.moveTo(x - 5, y + 5); p.lineTo(x, y - 6); p.lineTo(x + 5, y + 5); p.fill(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "fire") ui.cgSfx("zap", 0.12, 2); else if (e.kind === "chip") ui.cgSfx("step", 0.12, 1.6); else if (e.kind === "pop") ui.arcBurst(fx, e.x * C + 8, e.y * C + 8, ["#E04030", "#F0E0D0"], 8, 80);
+      else if (e.kind === "hit") { ui.cgSfx(e.head ? "shatter" : "card", 0.35, e.head ? 1.3 : 1.7); ui.arcBurst(fx, e.x * C + 8, e.y * C + 8, ["#80E060", "#40A030", "#FFFFFF"], e.head ? 16 : 9, 120); if (e.head) ui.arcPts(fx, e.x * C + 8, e.y * C, e.pts); }
+      else if (e.kind === "spider") { ui.cgSfx("cardwin", 0.4); ui.arcBurst(fx, e.x * C, e.y * C, ["#A060E0", "#FFFFFF"], 18, 150); ui.arcPts(fx, e.x * C, e.y * C - 8, e.pts, "#E0B0FF"); }
+      else if (e.kind === "spidercome") ui.cgSfx("monster", 0.2, 1.8); else if (e.kind === "die") { ui.cgSfx("hurt", 0.6); fx.shake = 0.3; ui.arcBurst(fx, e.x * C, e.y * C, ["#3060C0", "#F0C8A0", "#FFE070"], 24, 170); } else if (e.kind === "extra") ui.cgSfx("cardwin", 0.4);
+    },
+    draw(p, L, now) {
+      const W = BC.W * C, H = BC.H * C, bg = p.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#140C08"); bg.addColorStop(1, "#2A1C12"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      for (let k = 0; k < 60; k++) { p.fillStyle = k % 3 ? "rgba(0,0,0,0.25)" : "rgba(200,160,100,0.06)"; p.fillRect((k * 97) % W, (k * 53) % H, 3 + (k % 4), 2); }
+      p.strokeStyle = "rgba(120,90,50,0.5)"; p.lineWidth = 1.5; for (let k = 0; k < 9; k++) { const x0 = (k * 61 + 20) % W; p.beginPath(); p.moveTo(x0, 0); let x = x0; for (let y = 0; y < 20 + (k % 3) * 12; y += 4) { x += Math.sin(y / 4 + k + now / 1500) * 1.5; p.lineTo(x, y); } p.stroke(); } p.lineWidth = 1;
+      p.fillStyle = "rgba(90,120,200,0.06)"; p.fillRect(0, BC.zone * C, W, H - BC.zone * C); p.strokeStyle = "rgba(140,170,255,0.15)"; p.setLineDash([4, 6]); p.beginPath(); p.moveTo(0, BC.zone * C); p.lineTo(W, BC.zone * C); p.stroke(); p.setLineDash([]);
+      if (!L) return;
+      for (const [k, h] of L.mush) { const [x, y] = k.split(",").map(Number), X = x * C + 8, Y = y * C + 9, s = 0.55 + h * 0.15; p.fillStyle = "#E8D8C0"; p.fillRect(X - 2 * s, Y, 4 * s, 6 * s); p.save(); p.shadowColor = "rgba(255,90,60,0.6)"; p.shadowBlur = 4; p.fillStyle = "#C83828"; p.beginPath(); p.arc(X, Y, 7 * s, Math.PI, 0); p.fill(); p.restore(); p.fillStyle = "#F8E8D8"; p.fillRect(X - 4 * s, Y - 4 * s, 2, 2); p.fillRect(X + 2 * s, Y - 5 * s, 2, 2); }
+      for (const s of L.segs) { const X = s.fx * C + 8, Y = s.fy * C + 8, leg = Math.sin(now / 60 + s.id) * 2; p.strokeStyle = "#5A3A10"; p.lineWidth = 1.5; for (const o of [-4, 0, 4]) { p.beginPath(); p.moveTo(X + o, Y); p.lineTo(X + o + leg, Y + 8); p.moveTo(X + o, Y); p.lineTo(X + o - leg, Y - 8); p.stroke(); } p.lineWidth = 1;
+        const gr = p.createRadialGradient(X - 2, Y - 2, 1, X, Y, 8); gr.addColorStop(0, s.head ? "#F0D060" : "#B0E070"); gr.addColorStop(1, s.head ? "#A06010" : "#4A8020"); p.fillStyle = gr; p.beginPath(); p.arc(X, Y, 7.5, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.arc(X, Y, 4.5, 0, Math.PI * 2); p.stroke();
+        if (s.head) { p.fillStyle = "#FFF"; p.fillRect(X + s.dir * 2 - 1, Y - 4, 3, 3); p.fillRect(X + s.dir * 2 - 1, Y + 1, 3, 3); p.strokeStyle = "#3A2008"; p.beginPath(); p.moveTo(X + s.dir * 6, Y - 3); p.lineTo(X + s.dir * 10, Y - 1); p.moveTo(X + s.dir * 6, Y + 3); p.lineTo(X + s.dir * 10, Y + 1); p.stroke(); } }
+      if (L.spider) { const S = L.spider, X = S.x * C, Y = S.y * C; p.strokeStyle = "#3A2050"; p.lineWidth = 2; for (let k = 0; k < 4; k++) { const a = Math.sin(now / 50 + k) * 0.4; for (const sd of [-1, 1]) { p.beginPath(); p.moveTo(X, Y); p.lineTo(X + sd * (8 + k * 2), Y - 6 + k * 4 + a * 4); p.lineTo(X + sd * (12 + k * 2), Y + 2 + k * 4); p.stroke(); } } p.lineWidth = 1; p.fillStyle = "#7040A0"; p.beginPath(); p.ellipse(X, Y, 8, 6, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FF4040"; p.fillRect(X - 3, Y - 2, 2, 2); p.fillRect(X + 1, Y - 2, 2, 2); }
+      if (L.bolt) { p.save(); p.shadowColor = "#80F0FF"; p.shadowBlur = 8; p.fillStyle = "#C0F8FF"; p.fillRect(L.bolt.x * C - 1.5, L.bolt.y * C - 6, 3, 10); p.restore(); }
+      const P = L.p; if (!P.dead || Math.floor(now / 100) % 2) { const X = P.x * C, Y = P.y * C; p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(X, Y + 8, 7, 2, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A4A2A"; p.fillRect(X - 5, Y + 1, 10, 7); p.fillStyle = "#F0C8A0"; p.beginPath(); p.arc(X, Y - 1, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3060C0"; p.beginPath(); p.moveTo(X - 6, Y - 2); p.lineTo(X, Y - 14); p.lineTo(X + 6, Y - 2); p.fill(); p.fillStyle = "#F0F0F0"; p.fillRect(X - 3, Y + 1, 6, 3); p.strokeStyle = "#8A5A20"; p.lineWidth = 2; p.beginPath(); p.moveTo(X + 6, Y + 4); p.lineTo(X + 6, Y - 6); p.stroke(); p.lineWidth = 1; p.fillStyle = "#A0F0FF"; p.fillRect(X + 5, Y - 9, 3, 3); }
+    },
+  });
+}
+
+// ---- 76zl-belfry.js ----
+"use strict";
+// The Belfry Climb, the window's side: the inside of the bell tower at dusk - a high window with the sky, stone walls,
+// the sloping oak beams with iron bolts, rope-bound ladders; the troll at the top beside the bell (swinging, glinting),
+// heaving kegs; kegs rolling with their hoops turning; the brazier at the bottom with its fire; the climber in a red
+// hood, legs moving as she walks and climbs; the wisps as pale flames. Arrows or W A S D to walk and climb, Space to
+// jump. The rules are 64zu-belfry.js.
+CM.CG_TABLES.push(["belfry", "The Belfry Climb"]);
+{ const C = 16, BF = CM.BF;
+  Object.assign(CM.ARC.reg.belfry, {
+    ui: { W: BF.W * C, H: BF.H * C, scale: 1.05, frame: "#4A3018", start: "Up the tower", go: "Level 1. Ring the bell!", over: "The climber limps home",
+      lore: "The Joker's bell tower has a troll in it - nobody remembers who let him in - and he does not want the bell rung. He rolls kegs at anyone who tries. \"Ring it anyway,\" says the attendant. \"The house pays by the ring.\"",
+      help: "Arrows or W A S D to walk and climb the ladders; Space to jump - 100 for every keg jumped. Reach the bell at the top for the level and what is left of the bonus. Kegs sometimes come down the ladders; from level 3 wisps drift out of the brazier. One more life at 10,000.",
+      keys: ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyS", "KeyD", "Space"],
+      extraHud(p, L, W) { p.fillStyle = "#C0F0FF"; p.font = "11px monospace"; p.fillText(`BONUS ${Math.round(L.bonus / 100) * 100}`, W - 190, 19); for (let k = 0; k < Math.min(5, L.lives); k++) { p.fillStyle = "#C03030"; p.beginPath(); p.arc(W - 14 - k * 16, 14, 5, Math.PI, 0); p.fill(); p.fillStyle = "#F0C8A0"; p.fillRect(W - 17 - k * 16, 14, 6, 4); } } },
+    input(L, H) { L.input((H.has("ArrowRight") || H.has("KeyD") ? 1 : 0) - (H.has("ArrowLeft") || H.has("KeyA") ? 1 : 0), (H.has("ArrowDown") || H.has("KeyS") ? 1 : 0) - (H.has("ArrowUp") || H.has("KeyW") ? 1 : 0)); },
+    press(L, code) { if (code === "Space") L.jump(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "jump") ui.cgSfx("step", 0.25, 1.8); else if (e.kind === "throw") ui.cgSfx("grind", 0.25, 0.8); else if (e.kind === "thud") ui.cgSfx("bump", 0.2, 0.7);
+      else if (e.kind === "leap") { ui.cgSfx("coin", 0.4, 1.4); ui.arcPts(fx, e.x * C, e.y * C - 30, e.pts); } else if (e.kind === "wisp") ui.cgSfx("spell", 0.25, 0.7);
+      else if (e.kind === "bell") { ui.cgSfx("tablebell", 0.7, 0.7); setTimeout(() => ui.cgSfx("tablebell", 0.6, 0.7), 350); ui.arcBurst(fx, 12 * C, 4 * C, ["#FFE070", "#FFFFFF"], 30, 180); ui.arcPts(fx, 12 * C, 3 * C, e.bonus, "#FFE070"); }
+      else if (e.kind === "die") { ui.cgSfx("hurt", 0.6); fx.shake = 0.35; ui.arcBurst(fx, e.x * C, e.y * C - 8, ["#C03030", "#FFE070", "#FFFFFF"], 22, 160); } else if (e.kind === "extra") ui.cgSfx("cardwin", 0.4);
+    },
+    draw(p, L, now) {
+      const W = BF.W * C, H = BF.H * C, bg = p.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#2A2030"); bg.addColorStop(1, "#140E14"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 18) for (let x = ((y / 18) % 2) * 20 - 20; x < W; x += 40) { p.fillStyle = "rgba(255,255,255,0.025)"; p.fillRect(x + 1, y + 1, 38, 16); }
+      // the window
+      const wx = W - 110, wy = 20, sky = p.createLinearGradient(0, wy, 0, wy + 70); sky.addColorStop(0, "#3A4A8A"); sky.addColorStop(1, "#E08850"); p.fillStyle = sky; p.beginPath(); p.moveTo(wx, wy + 70); p.lineTo(wx, wy + 25); p.arc(wx + 25, wy + 25, 25, Math.PI, 0); p.lineTo(wx + 50, wy + 70); p.fill(); p.strokeStyle = "#5A4A40"; p.lineWidth = 3; p.stroke(); p.beginPath(); p.moveTo(wx + 25, wy); p.lineTo(wx + 25, wy + 70); p.stroke(); p.lineWidth = 1; p.fillStyle = "#FFF4C0"; p.fillRect(wx + 34, wy + 30, 2, 2);
+      // beams and ladders
+      for (const [lx, a, b] of BF.LADDERS) { const top = BF.yAt(a, lx) * C, bot = BF.yAt(b, lx) * C, X = lx * C; p.strokeStyle = "#8A6A3A"; p.lineWidth = 2; p.beginPath(); p.moveTo(X - 6, top); p.lineTo(X - 6, bot); p.moveTo(X + 6, top); p.lineTo(X + 6, bot); p.stroke(); for (let y = top + 6; y < bot; y += 8) { p.beginPath(); p.moveTo(X - 6, y); p.lineTo(X + 6, y); p.stroke(); } p.lineWidth = 1; }
+      BF.BEAMS.forEach((Bm, i) => { const x0 = Bm.x0 * C, x1 = Bm.x1 * C, y0 = BF.yAt(i, Bm.x0) * C, y1 = BF.yAt(i, Bm.x1) * C; p.fillStyle = "#7A4A22"; p.beginPath(); p.moveTo(x0, y0); p.lineTo(x1, y1); p.lineTo(x1, y1 + 7); p.lineTo(x0, y0 + 7); p.fill(); p.fillStyle = "#9A6A32"; p.beginPath(); p.moveTo(x0, y0); p.lineTo(x1, y1); p.lineTo(x1, y1 + 2); p.lineTo(x0, y0 + 2); p.fill(); p.fillStyle = "#3A3A40"; for (let x = Bm.x0 + 1; x < Bm.x1; x += 3) p.fillRect(x * C - 1, BF.yAt(i, x) * C + 3, 2, 2); });
+      // the brazier
+      const bx = 1 * C, by = 30 * C; p.fillStyle = "#3A3A40"; p.fillRect(bx - 10, by - 14, 22, 14); for (let k = 0; k < 4; k++) { const f = Math.sin(now / 80 + k) * 3; p.fillStyle = k % 2 ? "#FFB040" : "#FF6020"; p.beginPath(); p.moveTo(bx - 8 + k * 5, by - 14); p.quadraticCurveTo(bx - 6 + k * 5, by - 28 - f, bx - 3 + k * 5, by - 14); p.fill(); } const fg = p.createRadialGradient(bx, by - 18, 2, bx, by - 18, 60); fg.addColorStop(0, "rgba(255,150,60,0.3)"); fg.addColorStop(1, "rgba(255,150,60,0)"); p.fillStyle = fg; p.fillRect(bx - 60, by - 80, 120, 100);
+      // the bell and the troll
+      const sw = Math.sin(now / 400) * 0.15, bellX = 12 * C, bellY = 6 * C - 18; p.save(); p.translate(bellX, bellY - 16); p.rotate(sw); p.fillStyle = "#C8962A"; p.beginPath(); p.moveTo(-10, 16); p.quadraticCurveTo(-10, 0, 0, 0); p.quadraticCurveTo(10, 0, 10, 16); p.lineTo(13, 20); p.lineTo(-13, 20); p.fill(); p.fillStyle = "rgba(255,255,220,0.5)"; p.fillRect(-6, 4, 3, 10); p.restore();
+      if (L) { const heave = L.kegT < 0.4 ? 1 : 0, tx = 3.5 * C, ty = 6 * C; p.fillStyle = "#4A6A3A"; p.beginPath(); p.ellipse(tx, ty - 16, 14, 16, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#5A7A4A"; p.beginPath(); p.arc(tx, ty - 34, 9, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0E040"; p.fillRect(tx - 5, ty - 37, 3, 3); p.fillRect(tx + 2, ty - 37, 3, 3); p.fillStyle = "#F0F0E0"; p.fillRect(tx - 4, ty - 30, 2, 3); p.fillRect(tx + 2, ty - 30, 2, 3); p.strokeStyle = "#4A6A3A"; p.lineWidth = 5; p.beginPath(); p.moveTo(tx + 10, ty - 22); p.lineTo(tx + 18, heave ? ty - 40 : ty - 14); p.moveTo(tx - 10, ty - 22); p.lineTo(tx - 18, heave ? ty - 40 : ty - 14); p.stroke(); p.lineWidth = 1; if (heave) this.keg(p, tx, ty - 46, now); }
+      if (!L) return;
+      for (const k of L.kegs) this.keg(p, k.x * C, k.y * C - 7, k.rot);
+      for (const w of L.wisps) { const X = w.x * C, Y = w.y * C - 9, f = Math.sin(now / 90 + w.t); p.save(); p.shadowColor = "#A0E0FF"; p.shadowBlur = 12; p.fillStyle = "rgba(200,240,255,0.85)"; p.beginPath(); p.moveTo(X - 6, Y + 6); p.quadraticCurveTo(X - 7, Y - 6 - f * 2, X, Y - 12 - f * 3); p.quadraticCurveTo(X + 7, Y - 6, X + 6, Y + 6); p.fill(); p.restore(); p.fillStyle = "#203040"; p.fillRect(X - 3, Y - 2, 2, 2); p.fillRect(X + 1, Y - 2, 2, 2); }
+      const P = L.p; if (!P.dead || Math.floor(now / 100) % 2) { const X = P.x * C, Y = (P.y - P.h) * C, step = Math.sin(P.walk * 18) * 3; p.fillStyle = "rgba(0,0,0,0.3)"; if (!P.lad) { p.beginPath(); p.ellipse(X, P.y * C, 6, 2, 0, 0, Math.PI * 2); p.fill(); }
+        p.fillStyle = "#2A2A3A"; p.fillRect(X - 4, Y - 6, 3, 6 + (P.lad ? 0 : step)); p.fillRect(X + 1, Y - 6, 3, 6 - (P.lad ? 0 : step)); p.fillStyle = "#A02828"; p.fillRect(X - 5, Y - 16, 10, 11); p.fillStyle = "#F0C8A0"; p.beginPath(); p.arc(X, Y - 20, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C03030"; p.beginPath(); p.moveTo(X - 6, Y - 18); p.quadraticCurveTo(X, Y - 30, X + 6, Y - 18); p.fill();
+        if (P.lad) { p.fillStyle = "#F0C8A0"; p.fillRect(X - 8, Y - 18 + step, 3, 3); p.fillRect(X + 5, Y - 18 - step, 3, 3); } else { p.fillStyle = "#101010"; p.fillRect(X + P.face * 2 - 1, Y - 21, 2, 2); } }
+    },
+    keg(p, X, Y, rot) { p.save(); p.translate(X, Y); p.rotate(rot); p.fillStyle = "#8A5A28"; p.beginPath(); p.ellipse(0, 0, 7, 7, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#3A3A40"; p.lineWidth = 2; p.beginPath(); p.moveTo(-7, -3); p.lineTo(7, -3); p.moveTo(-7, 3); p.lineTo(7, 3); p.stroke(); p.strokeStyle = "#5A3A18"; p.lineWidth = 1; p.beginPath(); p.moveTo(0, -7); p.lineTo(0, 7); p.stroke(); p.restore(); },
+  });
+}
+
+// ---- 76zm-lander.js ----
+"use strict";
+// The Skyreach Landing, the window's side: a dusk sky going from violet to amber with stars and two moons, far isles in
+// silhouette drifting, the near isle's rock in layers with grass on top and roots underneath, the pads lit by beacon
+// posts (their multipliers over them, blinking); the sky-skiff - a hull under a small balloon - with a flame from its
+// burner, puffs of smoke as it burns; the readouts: fuel, speed down and across, the tilt, green when safe and red when
+// not. Up (W) to burn, Left and Right (A, D) to turn. The rules are 64zv-lander.js.
+CM.CG_TABLES.push(["lander", "The Skyreach Landing"]);
+{ const C = 8, LD = CM.LD;
+  Object.assign(CM.ARC.reg.lander, {
+    ui: { W: LD.W * C, H: LD.H * C, scale: 1, frame: "#2A2440", start: "Cast off", go: "Level 1. Bring her down gently!", over: "The skiff is towed home in pieces",
+      lore: "High over the Joker's roof a few rocks float, and the house keeps a little sky-skiff tethered there. \"Set it down on a lit pad,\" says the attendant. \"Slow, and straight. The smaller pads pay more. The rocks pay nothing.\"",
+      help: "Up or W to burn, Left and Right (A, D) to turn. Touch down on a lit pad slower than the green marks, nearly upright; ×2, ×3 and ×5 pads, more for fuel left and a softer touch. The pull grows each level; from level 4 a wind blows.",
+      keys: ["ArrowUp", "ArrowLeft", "ArrowRight", "KeyW", "KeyA", "KeyD"] },
+    input(L, H) { L.input((H.has("ArrowRight") || H.has("KeyD") ? 1 : 0) - (H.has("ArrowLeft") || H.has("KeyA") ? 1 : 0), H.has("ArrowUp") || H.has("KeyW")); },
+    lifeIcon(p, x, y) { p.fillStyle = "#E0C080"; p.beginPath(); p.arc(x, y - 2, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A5A2A"; p.fillRect(x - 3, y + 2, 6, 3); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "land") { ui.cgSfx("tablebell", 0.5); ui.arcBurst(fx, e.x * C, e.y * C, ["#FFE070", "#FFFFFF", "#A0F0A0"], 24, 120, -60); ui.arcPts(fx, e.x * C, e.y * C - 24, e.pts, "#FFE070"); }
+      else if (e.kind === "crash") { ui.cgSfx("slam", 0.6, 0.7); fx.shake = 0.4; ui.arcBurst(fx, e.x * C, e.y * C, ["#FF8030", "#FFE070", "#6A4A2A", "#FFFFFF"], 36, 200); ui.cgNote = `Wrecked - ${e.why}.`; }
+    },
+    draw(p, L, now, dt) {
+      const W = LD.W * C, H = LD.H * C, sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#2A1A4A"); sky.addColorStop(0.6, "#8A4A6A"); sky.addColorStop(1, "#F0A050"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
+      if (L) for (const [x, y, b] of L.stars) { p.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(now / 800 + b * 9)); p.fillStyle = "#FFF"; p.fillRect(x * C, y * C, 1.5, 1.5); } p.globalAlpha = 1;
+      p.fillStyle = "#F0E8D0"; p.beginPath(); p.arc(W * 0.8, 50, 16, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C8B8E0"; p.beginPath(); p.arc(W * 0.86, 30, 7, 0, Math.PI * 2); p.fill();
+      for (let k = 0; k < 4; k++) { const x = ((now / (300 + k * 120) + k * 140) % (W + 160)) - 80, y = 90 + k * 30; p.fillStyle = `rgba(60,30,70,${0.25 + k * 0.08})`; p.beginPath(); p.ellipse(x, y, 40 - k * 4, 8, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(x - 30, y); p.lineTo(x, y + 26 - k * 3); p.lineTo(x + 30, y); p.fill(); }
+      if (!L) return;
+      // the isle
+      p.beginPath(); p.moveTo(0, H); for (const [x, y] of L.ground) p.lineTo(x * C, y * C); p.lineTo(W, H); p.closePath(); const rock = p.createLinearGradient(0, 160, 0, H); rock.addColorStop(0, "#5A4A5A"); rock.addColorStop(1, "#2A1E2A"); p.fillStyle = rock; p.fill();
+      p.strokeStyle = "rgba(0,0,0,0.25)"; for (let k = 1; k < 5; k++) { p.beginPath(); for (const [x, y] of L.ground) p.lineTo(x * C, y * C + k * 12); p.stroke(); }
+      p.strokeStyle = "#5A9A40"; p.lineWidth = 3; p.beginPath(); L.ground.forEach(([x, y], i) => (i ? p.lineTo(x * C, y * C) : p.moveTo(x * C, y * C))); p.stroke(); p.lineWidth = 1;
+      for (const P of L.pads) { const x0 = P.x0 * C, x1 = P.x1 * C, y = P.y * C; p.fillStyle = "#C8A060"; p.fillRect(x0, y - 2, x1 - x0, 4); for (const bx of [x0, x1]) { p.fillStyle = "#3A3030"; p.fillRect(bx - 1, y - 14, 2, 12); const on = Math.floor(now / 400 + P.m) % 2; p.save(); p.shadowColor = "#FFE070"; p.shadowBlur = on ? 10 : 2; p.fillStyle = on ? "#FFE070" : "#8A7030"; p.beginPath(); p.arc(bx, y - 15, 3, 0, Math.PI * 2); p.fill(); p.restore(); } p.fillStyle = "#FFF0C0"; p.font = "bold 11px Georgia"; p.textAlign = "center"; p.fillText(`×${P.m}`, (x0 + x1) / 2, y - 8); p.textAlign = "left"; }
+      // the skiff
+      const S = L.s; if (!S.dead) { const X = S.x * C, Y = S.y * C; p.save(); p.translate(X, Y); p.rotate(S.a);
+        if (S.burn) { const f = 10 + Math.random() * 8; p.fillStyle = "#FFB040"; p.beginPath(); p.moveTo(-4, 8); p.lineTo(0, 8 + f); p.lineTo(4, 8); p.fill(); p.fillStyle = "#FFF0A0"; p.beginPath(); p.moveTo(-2, 8); p.lineTo(0, 8 + f * 0.5); p.lineTo(2, 8); p.fill(); }
+        p.strokeStyle = "#5A4030"; p.beginPath(); p.moveTo(-6, -2); p.lineTo(-5, -10); p.moveTo(6, -2); p.lineTo(5, -10); p.stroke(); p.fillStyle = "#E0C080"; p.beginPath(); p.ellipse(0, -16, 9, 10, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C03030"; p.fillRect(-9, -17, 18, 3);
+        p.fillStyle = "#8A5A2A"; p.beginPath(); p.moveTo(-8, -2); p.lineTo(8, -2); p.lineTo(5, 6); p.lineTo(-5, 6); p.fill(); p.strokeStyle = "#3A3030"; p.beginPath(); p.moveTo(-5, 6); p.lineTo(-8, 10); p.moveTo(5, 6); p.lineTo(8, 10); p.stroke(); p.restore();
+        if (S.burn && Math.random() < 0.5) this.puffs.push({ x: X - Math.sin(S.a) * 14, y: Y + Math.cos(S.a) * 14, r: 2, life: 1 });
+        // the drop line to the ground, to judge by
+        const gy = L.groundAt(S.x) * C; p.strokeStyle = "rgba(255,255,255,0.12)"; p.setLineDash([2, 4]); p.beginPath(); p.moveTo(X, Y + 10); p.lineTo(X, gy); p.stroke(); p.setLineDash([]); }
+      this.puffs = (this.puffs || []).filter((q) => (q.life -= dt) > 0); for (const q of this.puffs) { q.r += dt * 8; q.y += dt * 6; p.fillStyle = `rgba(200,190,200,${q.life * 0.4})`; p.beginPath(); p.arc(q.x, q.y, q.r, 0, Math.PI * 2); p.fill(); }
+      // readouts
+      const ok = (v, m) => (v <= m ? "#90F090" : "#FF8070"); p.fillStyle = "rgba(0,0,0,0.45)"; p.fillRect(6, 6, 132, 64); p.font = "bold 11px monospace";
+      p.fillStyle = "#F0E0B0"; p.fillText(`FUEL`, 12, 20); p.fillStyle = "#3A3030"; p.fillRect(48, 12, 84, 8); p.fillStyle = S.fuel / L.fuel0 < 0.25 ? "#FF7050" : "#F0C040"; p.fillRect(48, 12, 84 * S.fuel / L.fuel0, 8);
+      p.fillStyle = ok(S.vy, LD.safeV); p.fillText(`DOWN   ${S.vy.toFixed(1)}`, 12, 36); p.fillStyle = ok(Math.abs(S.vx), LD.safeH); p.fillText(`ACROSS ${S.vx.toFixed(1)}`, 12, 50); p.fillStyle = ok(Math.abs(S.a), LD.safeA); p.fillText(`TILT   ${Math.round(S.a * 57)}°`, 12, 64);
+      if (L.wind) { p.fillStyle = "#C0E0FF"; p.fillText(`WIND ${L.wind > 0 ? "→" : "←"} ${Math.abs(L.wind).toFixed(1)}`, W - 100, 20); }
+    },
+    puffs: [],
+  });
+}
+
+// ---- 76zn-rampart.js ----
+"use strict";
+// The Rampart Battery, the window's side: the night over the town - a deep sky with stars and a low moon, the hills,
+// the town wall and its six cottages (lit windows, chimneys smoking), the three mana wells glowing (their charges as
+// pips beneath, dark once struck); embers as falling sparks with smoke trails, bolts as thin streaks of blue light,
+// the bursts as rings of white and blue swelling and fading; the fire-drake flapping across; a cottage burning when
+// struck. The crosshair follows the mouse. Click to loose a bolt; the arrows move the crosshair and Space looses too.
+// The rules are 64zw-rampart.js.
+CM.CG_TABLES.push(["rampart", "The Rampart Battery"]);
+{ const RB = CM.RB;
+  Object.assign(CM.ARC.reg.rampart, {
+    ui: { W: RB.W, H: RB.H, scale: 1, frame: "#1A2030", start: "To the rampart", go: "Wave 1. Hold the wall!", over: "The last cottage burns", levelWord: "Wave",
+      lore: "When the Joker's town has a bad night, embers fall out of the sky. The house keeps three mana wells on the wall to put them out, and pays anyone who will man them. \"Mind the cottages,\" says the watch-captain. \"The house rents them.\"",
+      help: "Move the mouse and click (or the arrows and Space) to loose a bolt from the nearest well that has charges; it bursts where you aimed and puts out every ember in the ring. Each well holds ten charges a wave (the middle one fires fastest). At the end of a wave each charge left pays 5 and each cottage 100, more each wave. A lost cottage comes back every 10,000. The game ends when the last one burns.",
+      keys: ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"],
+      extraHud(p, L, W) { for (let i = 0; i < 6; i++) { p.fillStyle = L.cottages[i] ? "#F0C060" : "#3A3030"; p.fillRect(W - 100 + i * 15, 9, 10, 10); } } },
+    input(L, H, ui) { const mx = (H.has("ArrowRight") ? 1 : 0) - (H.has("ArrowLeft") ? 1 : 0), my = (H.has("ArrowDown") ? 1 : 0) - (H.has("ArrowUp") ? 1 : 0); const A = ui.rbAim = ui.rbAim || [RB.W / 2, RB.H / 2];
+      if (mx || my) { A[0] = CM.ARC.clamp(A[0] + mx * 300 / 60, 0, RB.W); A[1] = CM.ARC.clamp(A[1] + my * 300 / 60, 0, RB.ground - 30); ui.rbKeys = true; } else if (ui.arcMouse && !ui.rbKeys) { A[0] = ui.arcMouse[0]; A[1] = ui.arcMouse[1]; } },
+    press(L, code, ui) { if (code === "Space") { const A = ui.rbAim || [RB.W / 2, 200]; L.fire(A[0], A[1]); } },
+    click(L, x, y, ui) { ui.rbKeys = false; ui.rbAim = [x, y]; L.fire(x, y); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "fire") ui.cgSfx("zap", 0.18, 1.7); else if (e.kind === "empty") ui.cgSfx("miss", 0.25); else if (e.kind === "burst") ui.cgSfx("spell", 0.18, 1.9);
+      else if (e.kind === "out") { ui.arcBurst(fx, e.x, e.y, ["#FFB040", "#FFFFFF"], 5, 60, 40); } else if (e.kind === "drake") ui.cgSfx("monster", 0.35, 0.8); else if (e.kind === "drakedown") { ui.cgSfx("cardwin", 0.4); ui.arcBurst(fx, e.x, e.y, ["#C04020", "#FFE070"], 24, 160); ui.arcPts(fx, e.x, e.y - 10, e.pts); }
+      else if (e.kind === "burn") { ui.cgSfx(e.home ? "slam" : "hurt", 0.5, 0.8); fx.shake = 0.25; ui.arcBurst(fx, e.x, RB.ground - 10, ["#FF6020", "#FFB040", "#3A3030"], 26, 150); } else if (e.kind === "thud") ui.arcBurst(fx, e.x, RB.ground, ["#6A4A3A", "#FF8040"], 6, 60);
+      else if (e.kind === "held") { ui.cgNote = `Wave held: ${e.charges} charges and ${e.homes} cottages left - ${e.pts} points.`; } else if (e.kind === "rebuild") ui.cgSfx("cardwin", 0.4);
+    },
+    draw(p, L, now) {
+      const W = RB.W, H = RB.H, G = RB.ground, sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#060818"); sky.addColorStop(0.7, "#1A1A3A"); sky.addColorStop(1, "#3A2030"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
+      for (let k = 0; k < 70; k++) { p.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(now / 700 + k * 2.1)); p.fillStyle = "#FFF"; p.fillRect((k * 131) % W, (k * 37) % (G - 120), 1.5, 1.5); } p.globalAlpha = 1;
+      p.fillStyle = "#F0E8D0"; p.beginPath(); p.arc(W - 70, 70, 20, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(240,232,208,0.1)"; p.beginPath(); p.arc(W - 70, 70, 34, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#14142A"; p.beginPath(); p.moveTo(0, G - 40); for (let x = 0; x <= W; x += 40) p.lineTo(x, G - 40 - 20 * Math.abs(Math.sin(x / 90))); p.lineTo(W, G); p.lineTo(0, G); p.fill();
+      p.fillStyle = "#3A3440"; p.fillRect(0, G, W, H - G); for (let x = 0; x < W; x += 16) { p.fillStyle = "#4A4450"; p.fillRect(x + 1, G + 3, 14, 7); p.fillRect(x + 9, G + 13, 14, 7); } for (let x = 0; x < W; x += 24) { p.fillStyle = "#3A3440"; p.fillRect(x, G - 6, 12, 6); }
+      if (!L) return;
+      // cottages
+      L.homes.forEach((x, i) => { const up = L.cottages[i]; if (up) { p.fillStyle = "#6A5040"; p.fillRect(x - 12, G - 22, 24, 16); p.fillStyle = "#8A3A2A"; p.beginPath(); p.moveTo(x - 15, G - 22); p.lineTo(x, G - 34); p.lineTo(x + 15, G - 22); p.fill(); p.fillStyle = "#4A4040"; p.fillRect(x + 6, G - 34, 4, 8); p.fillStyle = Math.sin(now / 400 + i) > -0.8 ? "#FFD070" : "#C09040"; p.fillRect(x - 7, G - 17, 5, 5); p.fillRect(x + 2, G - 17, 5, 5);
+          p.fillStyle = "rgba(180,180,190,0.25)"; for (let k = 0; k < 3; k++) { const t = ((now / 1500 + k / 3 + i * 0.17) % 1); p.beginPath(); p.arc(x + 8 + t * 8, G - 36 - t * 30, 2 + t * 4, 0, Math.PI * 2); p.fill(); } }
+        else { p.fillStyle = "#2A2020"; p.fillRect(x - 12, G - 10, 24, 4); for (let k = 0; k < 3; k++) { p.fillStyle = k % 2 ? "#FF7020" : "#FFB040"; const f = Math.sin(now / 70 + k + i) * 3; p.beginPath(); p.moveTo(x - 8 + k * 7, G - 6); p.quadraticCurveTo(x - 6 + k * 7, G - 18 - f, x - 3 + k * 7, G - 6); p.fill(); } } });
+      // wells
+      L.wells.forEach((w) => { p.fillStyle = "#5A5464"; p.fillRect(w.x - 14, G - 14, 28, 14); if (!w.dark) { const gl = p.createRadialGradient(w.x, G - 16, 2, w.x, G - 16, 26); gl.addColorStop(0, "rgba(120,200,255,0.6)"); gl.addColorStop(1, "rgba(120,200,255,0)"); p.fillStyle = gl; p.fillRect(w.x - 26, G - 42, 52, 52); p.fillStyle = "#A0E0FF"; p.beginPath(); p.ellipse(w.x, G - 14, 10, 3, 0, 0, Math.PI * 2); p.fill(); }
+        for (let k = 0; k < RB.charges; k++) { p.fillStyle = k < w.n ? "#A0E0FF" : "#2A2A3A"; p.fillRect(w.x - 14 + (k % 5) * 6, G + 6 + Math.floor(k / 5) * 6, 4, 4); } });
+      for (const e of L.embers) { const tg = p.createLinearGradient(e.x0, e.y0, e.x, e.y); tg.addColorStop(0, "rgba(180,120,90,0)"); tg.addColorStop(1, "rgba(255,140,60,0.55)"); p.strokeStyle = tg; p.lineWidth = 2; p.beginPath(); p.moveTo(e.x0, e.y0); p.lineTo(e.x, e.y); p.stroke(); p.lineWidth = 1; p.save(); p.shadowColor = "#FF8030"; p.shadowBlur = 8; p.fillStyle = "#FFE0A0"; p.beginPath(); p.arc(e.x, e.y, 2.5, 0, Math.PI * 2); p.fill(); p.restore(); }
+      for (const b of L.bolts) { p.strokeStyle = "rgba(140,220,255,0.8)"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(b.x0, b.y0); p.lineTo(b.x, b.y); p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(255,255,255,0.5)"; p.beginPath(); p.moveTo(b.tx - 4, b.ty - 4); p.lineTo(b.tx + 4, b.ty + 4); p.moveTo(b.tx + 4, b.ty - 4); p.lineTo(b.tx - 4, b.ty + 4); p.stroke(); }
+      for (const B of L.bursts) { const g = p.createRadialGradient(B.x, B.y, 0, B.x, B.y, Math.max(1, B.r)); g.addColorStop(0, "rgba(255,255,255,0.95)"); g.addColorStop(0.6, "rgba(140,210,255,0.6)"); g.addColorStop(1, "rgba(80,140,255,0)"); p.fillStyle = g; p.beginPath(); p.arc(B.x, B.y, B.r, 0, Math.PI * 2); p.fill(); }
+      if (L.drake) { const D = L.drake, fl = Math.sin(now / 80) * 8, s = D.vx > 0 ? 1 : -1; p.save(); p.translate(D.x, D.y); p.scale(s, 1); p.fillStyle = "#802818"; p.beginPath(); p.ellipse(0, 0, 14, 5, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(-4, -2); p.lineTo(-10, -12 - fl); p.lineTo(6, -2); p.fill(); p.beginPath(); p.moveTo(12, -2); p.lineTo(20, -5); p.lineTo(14, 2); p.fill(); p.fillStyle = "#FFE040"; p.fillRect(15, -4, 2, 2); p.restore(); }
+      const A = this.aimOf(); if (A) { p.strokeStyle = "rgba(255,255,255,0.8)"; p.beginPath(); p.arc(A[0], A[1], 8, 0, Math.PI * 2); p.moveTo(A[0] - 13, A[1]); p.lineTo(A[0] - 4, A[1]); p.moveTo(A[0] + 4, A[1]); p.lineTo(A[0] + 13, A[1]); p.moveTo(A[0], A[1] - 13); p.lineTo(A[0], A[1] - 4); p.moveTo(A[0], A[1] + 4); p.lineTo(A[0], A[1] + 13); p.stroke(); }
+    },
+    aimOf() { return CM.ui && CM.ui.rbAim; },
+  });
+}
+
+// ---- 76zo-glimmerpop.js ----
+"use strict";
+// Glimmerpop, the window's side: the inside of a great glass still - a copper ceiling plate that comes down with chains,
+// bubbles of coloured glimmer with a shine and a soft inner glow (each colour its own rune so they read without colour),
+// a dotted aiming line that bounces off the walls, the brass launcher and the next bubble beside it, rings of light
+// where bubbles pop and the loose ones tumbling away, the danger line glowing as they near it. The mouse aims and a
+// click shoots; Left and Right aim and Space shoots too. The rules are 64zx-glimmerpop.js.
+CM.CG_TABLES.push(["glimmerpop", "Glimmerpop"]);
+{ const GP = CM.GP, COL = [["#E04050", "♥"], ["#40A0F0", "◆"], ["#50C060", "♣"], ["#F0C030", "★"], ["#B060E0", "●"], ["#F08030", "▲"], ["#E0E0F0", "✦"]];
+  Object.assign(CM.ARC.reg.glimmerpop, {
+    ui: { W: Math.round(GP.W), H: Math.round(GP.H), scale: 1.1, frame: "#5A3A18", start: "Light the still", go: "Level 1. Pop them all!",
+      lore: "In the alchemist's corner a great glass still bubbles over with glimmer, and the house pays to have it cleared. \"Three of a colour and they pop,\" says the alchemist. \"Knock out what holds the rest and they all fall. Don't let it reach the spout.\"",
+      help: "Aim with the mouse and click to shoot (or Left and Right to aim, Space to shoot). Shots bounce off the walls. Three or more of one colour joined pop; anything left hanging falls for a bonus that doubles with each one. The ceiling comes down every few shots. If the glimmer reaches the line, a life is lost.",
+      keys: ["ArrowLeft", "ArrowRight", "Space", "KeyA", "KeyD"] },
+    input(L, H, ui) { const t = (H.has("ArrowRight") || H.has("KeyD") ? 1 : 0) - (H.has("ArrowLeft") || H.has("KeyA") ? 1 : 0); if (t) { L.setAim(L.aim + t * 0.03); ui.gpKeys = true; } else if (ui.arcMouse && !ui.gpKeys) { const [mx, my] = ui.arcMouse; L.setAim(Math.atan2(Math.min(my, GP.H - 40) - (GP.H - 30), mx - GP.W / 2)); } },
+    press(L, code) { if (code === "Space") L.shoot(); },
+    click(L, x, y, ui) { ui.gpKeys = false; L.setAim(Math.atan2(Math.min(y, GP.H - 40) - (GP.H - 30), x - GP.W / 2)); L.shoot(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "shoot") ui.cgSfx("zap", 0.2, 1.6); else if (e.kind === "wall") ui.cgSfx("step", 0.1, 2); else if (e.kind === "stick") ui.cgSfx("bump", 0.2, 1.4);
+      else if (e.kind === "pop") { (this.rings = this.rings || []).push({ x: e.x, y: e.y, at: now, c: COL[e.k][0] }); ui.arcBurst(fx, e.x, e.y, [COL[e.k][0], "#FFFFFF"], 6, 100); }
+      else if (e.kind === "score") { ui.cgSfx(e.dropped ? "cardwin" : "coin", 0.4, e.dropped ? 1 : 1.5); ui.arcPts(fx, e.x, e.y - 10, e.pts, e.dropped ? "#FFE070" : "#FFF0B0"); }
+      else if (e.kind === "lower") { ui.cgSfx("grind", 0.4, 0.7); fx.shake = 0.12; } else if (e.kind === "die") { ui.cgSfx("hurt", 0.55); fx.shake = 0.35; }
+    },
+    bubble(p, x, y, k, now, r = GP.R) { const [c, rune] = COL[k]; const g = p.createRadialGradient(x - r * 0.35, y - r * 0.4, 1, x, y, r); g.addColorStop(0, "#FFFFFF"); g.addColorStop(0.25, c); g.addColorStop(1, "rgba(0,0,0,0.55)"); p.fillStyle = g; p.beginPath(); p.arc(x, y, r - 1, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "rgba(255,255,255,0.75)"; p.font = `bold ${Math.round(r * 0.8)}px Georgia`; p.textAlign = "center"; p.fillText(rune, x, y + r * 0.3); p.textAlign = "left"; p.strokeStyle = "rgba(255,255,255,0.25)"; p.beginPath(); p.arc(x, y, r - 1.5, 0, Math.PI * 2); p.stroke(); void now; },
+    draw(p, L, now) {
+      const W = GP.W, H = GP.H, bg = p.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#1A2830"); bg.addColorStop(1, "#0A1014"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      p.fillStyle = "rgba(160,220,255,0.05)"; for (let k = 0; k < 6; k++) { const y = ((now / 40 + k * 90) % H); p.beginPath(); p.arc(20 + (k * 71) % (W - 40), H - y, 3 + k % 3, 0, Math.PI * 2); p.fill(); }
+      p.fillStyle = "rgba(255,255,255,0.05)"; p.fillRect(8, 0, 6, H); p.fillRect(W - 14, 0, 4, H);
+      if (!L) return;
+      // the ceiling plate
+      p.fillStyle = "#8A5A2A"; p.fillRect(0, L.top - 10, W, 10); p.fillStyle = "#C88A40"; p.fillRect(0, L.top - 10, W, 3); p.strokeStyle = "#6A6A70"; for (let x = 30; x < W; x += 80) { p.beginPath(); p.moveTo(x, 0); p.lineTo(x, L.top - 10); p.stroke(); }
+      // the line
+      const near = L.grid.some((row, r) => row.some((v, c) => v >= 0 && GP.pos(r, c, L.top)[1] + GP.R * 4 > GP.line)); p.strokeStyle = near ? `rgba(255,80,60,${0.5 + 0.4 * Math.sin(now / 100)})` : "rgba(255,200,120,0.3)"; p.setLineDash([8, 6]); p.beginPath(); p.moveTo(0, GP.line); p.lineTo(W, GP.line); p.stroke(); p.setLineDash([]);
+      for (let r = 0; r < GP.ROWS; r++) for (let c = 0; c < L.cols(r); c++) { const k = L.grid[r][c]; if (k < 0) continue; const [x, y] = GP.pos(r, c, L.top), wob = L.dead ? Math.sin(now / 40 + r + c) * 2 : 0; this.bubble(p, x + wob, y, k, now); }
+      for (const f of L.falling) this.bubble(p, f.x, f.y, f.k, now);
+      this.rings = (this.rings || []).filter((q) => now - q.at < 350); for (const q of this.rings) { const t = (now - q.at) / 350; p.strokeStyle = q.c; p.globalAlpha = 1 - t; p.lineWidth = 3; p.beginPath(); p.arc(q.x, q.y, GP.R * (1 + t), 0, Math.PI * 2); p.stroke(); } p.globalAlpha = 1; p.lineWidth = 1;
+      // the aim, bounced
+      if (!L.ball && !L.dead) { let x = W / 2, y = H - 30, vx = Math.cos(L.aim), vy = Math.sin(L.aim); p.fillStyle = "rgba(255,255,255,0.55)"; for (let k = 0; k < 60; k++) { x += vx * 9; y += vy * 9; if (x < GP.R || x > W - GP.R) { vx = -vx; x = CM.ARC.clamp(x, GP.R, W - GP.R); } if (y < L.top + GP.R) break; if (k % 2 === 0) { p.beginPath(); p.arc(x, y, 1.6, 0, Math.PI * 2); p.fill(); } } }
+      if (L.ball) this.bubble(p, L.ball.x, L.ball.y, L.ball.k, now);
+      // the launcher
+      p.save(); p.translate(W / 2, H - 30); p.rotate(L.aim + Math.PI / 2); p.fillStyle = "#B08840"; p.fillRect(-6, -34, 12, 30); p.fillStyle = "#E0B860"; p.fillRect(-6, -34, 12, 4); p.restore();
+      p.fillStyle = "#6A4A28"; p.beginPath(); p.arc(W / 2, H - 22, 22, Math.PI, 0); p.fill(); if (!L.ball) this.bubble(p, W / 2, H - 30, L.cur, now, GP.R * 0.95);
+      p.fillStyle = "#E0D0B0"; p.font = "10px Georgia"; p.fillText("next", W / 2 + 40, H - 34); this.bubble(p, W / 2 + 52, H - 18, L.next, now, GP.R * 0.7);
+      p.fillStyle = "#C0D8E0"; p.font = "bold 11px monospace"; p.fillText(`DROP IN ${L.every - (L.shots % L.every)}`, 8, H - 8);
     },
   });
 }
