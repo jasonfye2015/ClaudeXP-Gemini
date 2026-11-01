@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+How to play, and practice (the fifty-sixth big update - v17.0)
+  (src/js/64zzp-practice.js, 76zzt-howto.js)
+  - Every one of the 55 tables has a How to play card: its picture large, what it's for, three or four steps, its keys
+    and how it pays. It opens by itself the first time the party sits down, and again from the "?" on the table's bar.
+  - Every table that takes a stake can be practised (the Practice switch on its bar, or "Try it in practice" on the
+    card): nothing is laid or won - no gold, tickets, cards, JXP or board places - and when practice ends (switched off,
+    or leaving the table or the Joker) the purse and the floor's whole books are put back exactly as they were, so
+    nothing bought in practice (bait, balls, a seat) can be kept. The free tables, the daily wheel, the lottery and
+    the idle works don't offer it.
+
 The house's books (the fifty-fifth big update - v16.9)
   tools/balance.js plays every game of chance many thousands of times (a plain, sensible way of playing each) and
   reads the games of skill from their pay tables; it writes BALANCE.md and the figures for the House odds page
