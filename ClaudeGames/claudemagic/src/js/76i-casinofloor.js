@@ -54,7 +54,7 @@ CM.CG_TABLES = [["claudeatro", "Claudeatro"], ["slots", "The Gilded Reels"], ["r
           const from = -(N + stops[i] - 1) * 64, to = -((2 + i) * N + r.stops[i] - 1) * 64;   // (round two to four times, on to the stop; the strip repeats, so the rest is the same picture)
           el.animate([{ transform: `translateY(${from}px)` }, { transform: `translateY(${to}px)` }], { duration: 1000 + i * 500, easing: "cubic-bezier(.15,.55,.25,1)" }).onfinish = () => {
             el.style.transform = `translateY(${-(N + r.stops[i] - 1) * 64}px)`; el.classList.add("stopped"); this.cgSfx("cardplace", 0.45, 0.8);
-            if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body");
+            if (i === 2) { clearInterval(tick); this.cgBusy = false; this.cgSlotLast = r; this.cgNote = r.won ? `${r.what}: ${r.won} gold!` : "Nothing on the line."; this.renderCasino(); const b2 = this.$("#casino-body"); if (!b2.querySelector(".slotwrap")) return;   // (the party went elsewhere while the reels turned)
               if (r.jackpot) { this.cgSfx("victory", 0.7); this.cgSfx("cardwin", 0.6); b2.querySelector(".slotwrap").classList.add("jackpot"); this.cgCoins(b2, 40); }
               else if (r.won >= (this.cgBet || 5) * 9) { this.cgSfx("victory", 0.45); this.cgCoins(b2, 18); }
               else if (r.won) { this.cgSfx("coin", 0.5); this.cgCoins(b2, 5); }

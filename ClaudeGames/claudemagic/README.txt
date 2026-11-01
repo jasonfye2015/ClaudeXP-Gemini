@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Life on the floor (the fifty-ninth big update - v17.3)
+  (src/js/64zzr-week.js, 76zzw-floorlife.js)
+  - The residents are about: over the gallery a band of the floor at night where the six residents and a few
+    visitors stroll between the tables and talk - about the floor, the party's big wins, the week's board and who the
+    party has just gone past on it. At a table, now and then one of them drops by and watches, and has a word when the
+    party wins big.
+  - The Joker's Week: each real week (Monday to Sunday) one game of skill - a cabinet (furthest level) or the
+    fairground or the pond (best score) - is the week's game, posted on a banner over the gallery with the party's
+    place. The residents and visitors put their bests on the week's board day by day; the party earns double JXP at
+    the week's game. When the week is out it pays by place (first 1,500 gold, 300 tickets and a rare card; second 800,
+    200 and a stronger card; third 400, 150 and a card; fourth to tenth 60 tickets), collected on the week's page any
+    time in the next four weeks.
+  - From the sweep (tools/sweep.py, run again): the tables' bar, grown with the new buttons, takes a second line on a
+    narrow window; the reels no longer trip if the party leaves while they turn. No script errors, nothing left running.
+
 The wardrobe and the books (the fifty-eighth big update - v17.2)
   (src/js/64zzq-wardrobe.js, 76zzv-wardrobe.js)
   - The Wardrobe (a door on the club strip): looks opened by the Joker level - six table felts (green, royal blue at 3,

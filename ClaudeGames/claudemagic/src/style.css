@@ -1274,3 +1274,14 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .bkbar { display: block; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.15); overflow: hidden; } .bkbar i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #E8B840); }
 .bkents { display: flex; flex-wrap: wrap; gap: 3px; } .bkents span { min-width: 22px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,0.08); color: #A09070; font-size: 11px; text-align: center; } .bkents span.on { background: #3A2A10; color: #FFE8A0; }
 .bkfoot { display: flex; justify-content: space-between; align-items: center; gap: 6px; } .bkfoot .small { color: #6A5030; } .bkpage p.small { color: #5A4A30; }
+/* ---- v17.3: life on the floor, and the Joker's Week ---- */
+.flband { position: relative; margin: 6px 0 4px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(240,192,64,0.35); } .flband canvas { display: block; width: 100%; height: 96px; }
+.fltalk { position: absolute; left: 10px; right: 10px; top: 6px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; pointer-events: none; }
+.fltalk span { max-width: 80%; padding: 2px 10px; border-radius: 10px; background: rgba(251,244,224,0.92); color: #2A2010; font: 12px Georgia, serif; box-shadow: 0 2px 6px rgba(0,0,0,0.5); animation: bgstamp 0.3s ease-out; } .fltalk b { color: #7A2A10; }
+.wkbar { display: block; width: 100%; margin: 0 0 8px; padding: 6px 12px; border-radius: 8px; text-align: left; background: linear-gradient(90deg, #2A1A3A, #3A2410); border: 1px solid #C89A30; color: #F8E8C8; font-size: 13px; } .wkbar b { color: #FFE070; } .wkbar .flready { font-style: normal; }
+.flguest { position: absolute; right: 8px; top: 8px; z-index: 5; display: flex; align-items: center; gap: 6px; max-width: 320px; padding: 4px 10px 4px 4px; border-radius: 24px; background: rgba(10,6,4,0.75); border: 1px solid rgba(240,192,64,0.4); font-size: 12px; color: #E8D8B8; pointer-events: none; }
+.flguest.talk { border-color: #FFE070; color: #FFF; } .cgtable { position: relative; }
+.wktop { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; } .wkinfo { flex: 1; min-width: 260px; } .wkinfo h4 { margin: 0 0 4px; color: #FFE070; } .wkinfo ol { margin: 0 0 6px 18px; padding: 0; }
+.wkwait { margin: 10px 0; padding: 8px 12px; border-radius: 8px; background: rgba(240,192,64,0.12); border: 1px dashed rgba(240,192,64,0.5); } .wkwait div { margin: 2px 0; }
+/* (the bar grew: on a narrow window it takes a second line rather than run off the edge) */
+.cgnav.cgbar { flex-wrap: wrap; row-gap: 4px; }
