@@ -95,7 +95,8 @@ void main() {
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
-  if (uSnow > 0.0 && up > 0.55) col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, uSnow * smoothstep(0.55, 0.8, up) * 0.88);   // snow lying on what faces up
+  if (uSnow > 0.0 && up > 0.55) { float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
+    col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
@@ -314,9 +315,10 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
-    const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
+    if (CM.seasonTurn && CM.game) { this.turnK = CM.seasonTurn(CM.game); this.leafK = CM.leafFall(CM.game); }   // (v24.2: how far the season has come in)
+    const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night), turn: this.turnK === undefined ? 1 : this.turnK });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
     const gl = this.gl;

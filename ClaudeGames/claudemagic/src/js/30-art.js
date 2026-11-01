@@ -1458,6 +1458,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
+  for (let v = 0; v < 3; v++) out[`tree:${v}:was`] = use(`tree.${v}.was`, () => CM.art.tree(v, null, CM.PREV_SEASON[CM.art.season || "autumn"]));   // (v24.2: as it was last season - the trees not yet turned)
   out.canopy = use("canopy", () => CM.art.canopy(1, CM.art.season || "summer"));
   out.ice = use("ice", () => CM.art.ice());
   out["far:trees"] = use("far.trees", () => CM.art.farTrees());

@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Seasons that turn (v24.2, UPGRADE_PLAN_19.md phase 2)
+  (src/js/76zzzze-seasons.js; 26-surface.js, 30-art.js, 36-looks.js, 40-render.js, 80-main.js)
+  - A run's season comes in over its first days instead of all at once: on the first day only a third of the trees
+    have turned - the rest still wear last season's crowns (green in autumn, gold in winter, bare in spring) - and a
+    few more turn each day until all have by the fourth.
+  - Through autumn the leaves come down and gather on the open ground, more each day.
+  - In winter the snow builds over the days it falls - in patches at first, then whole - and melts back the same way
+    on the days it doesn't.
+
 Living water (v24.1, UPGRADE_PLAN_19.md phase 1)
   (src/js/76zzzzd-water.js; 40-render.js, 45-fx.js, 80-main.js)
   - The Wood's river runs: its ripples are carried downstream with the current.
