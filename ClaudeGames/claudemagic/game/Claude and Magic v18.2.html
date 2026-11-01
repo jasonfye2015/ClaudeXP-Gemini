@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v18.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v18.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1356,6 +1356,21 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .bag-gs .gs-hero { position: relative; display: inline-flex; gap: 6px; align-items: center; min-width: 120px; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.3); overflow: hidden; }
 .bag-gs .gs-hero i { position: absolute; inset: 0 auto 0 0; background: rgba(232,184,74,0.22); } .bag-gs .gs-hero em, .bag-gs .gs-hero b { position: relative; font-style: normal; } .bag-gs .gs-hero b { margin-left: auto; color: #FFE8A0; }
 .gs-chip { margin-left: 8px; padding: 0 8px; border-radius: 8px; background: rgba(232,184,74,0.2); border: 1px solid rgba(232,184,74,0.5); color: #FFE8A0; font-size: 12px; font-weight: normal; }
+/* ---- v18.2: the skill trees ---- */
+.boon-badge.skill-badge { background: #5A3AA0; color: #F0E0FF; }
+.tsopenbtn { margin-bottom: 6px; } .tsopenbtn.ready { border-color: #C080FF; box-shadow: 0 0 10px rgba(192,128,255,0.5); } .tsopenbtn b { color: #E0C0FF; }
+.sheetbox { position: relative; } .tsview { position: absolute; inset: 0; z-index: 20; overflow-y: auto; padding: 14px 16px; background: radial-gradient(ellipse at 50% 0%, #2A1E3A, #120C18 70%); border-radius: inherit; }
+.tshead { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; } .tshead h3 { margin: 0; color: #FFE070; flex: 1; min-width: 220px; } .tspts { font-size: 13px; } .tspts b { color: #E0C0FF; font-size: 18px; }
+.tsnote { margin: 6px 0 10px; font-size: 13px; color: #D8C8E8; min-height: 18px; }
+.tscols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; } .tscol { position: relative; display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px; }
+.tsbr { display: flex; flex-direction: column; padding: 6px 10px; border-radius: 8px; background: rgba(0,0,0,0.35); border: 1px solid rgba(200,160,255,0.35); } .tsbr b { color: #FFE8A0; font-family: Georgia, serif; } .tsbr span { font-size: 11px; opacity: 0.8; } .tsbr em { font-size: 11px; color: #C8A8F0; font-style: normal; }
+.tsline { position: absolute; left: 50%; top: 62px; bottom: 30px; width: 4px; margin-left: -2px; border-radius: 2px; background: rgba(255,255,255,0.08); z-index: 0; } .tsline i { display: block; width: 100%; border-radius: 2px; background: linear-gradient(#C080FF, #FFE070); transition: height 0.4s; }
+.tsnode { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 7px 10px; border-radius: 8px; text-align: left; background: #1A1420; border: 1px solid rgba(255,255,255,0.12); color: #B8A8C8; cursor: default; opacity: 0.6; }
+.tsnode b { font-family: Georgia, serif; font-size: 13px; color: #E0D0F0; } .tsnode span { font-size: 11px; line-height: 1.3; } .tsnode i { position: absolute; top: 6px; right: 8px; font-size: 11px; font-style: normal; color: #C8A8F0; }
+.tsnode.open { opacity: 1; cursor: pointer; border-color: #C080FF; box-shadow: 0 0 10px rgba(192,128,255,0.35); } .tsnode.open:hover { transform: translateY(-1px); background: #241A30; }
+.tsnode.has { opacity: 1; border-color: #C89A30; background: linear-gradient(#2E2410, #1A1408); } .tsnode.has b { color: #FFE070; } .tsnode.full { box-shadow: 0 0 0 2px #FFE070; } .tsnode.full i { color: #FFE070; }
+.tsnode.cap { border-width: 2px; } .tsnode.cap b::before { content: "★ "; color: #FFE070; } .tsnode.pop { animation: bgstamp 0.4s ease-out; }
+@media (max-width: 760px) { .tscols { grid-template-columns: 1fr; } .tsline { display: none; } }
 </style>
 </head>
 <body>
@@ -1365,7 +1380,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "18.1", built: "2026-11-01" };
+const CM = window.CM = { version: "18.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24886,6 +24901,63 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzz-skilltree.js ----
+"use strict";
+// The skill trees (v18.2): every calling has three branches to grow along, a skill point for each level gained (so a
+// hero already at level 12 has eleven to spend), and fifteen ranks a branch across five tiers - a tier opens when two
+// more points are spent in its branch than the tier before (the fifth needs eight, and level 15). What a rank gives is
+// what the game already reckons with - a stat, attack, defence, health, magic, the gear's own kinds of bonus (to hit,
+// weak spots, spell power, mending each round, thorns, quickness, mana and health from each kill, gold and experience)
+// - so it bites everywhere a ring or a blade would. The capstones: two branches end in the traits of the path the hero
+// didn't choose at level 5 (its first, and its second), and the third in a presence that steadies the whole party. The
+// warriors' branches lean on blows, the casters' on spells. A tree can be unlearned for nothing in town, and spent again.
+// The window is 76zzzd-skilltree.js.
+{ const ST = CM.SKILLTREE = { tiers: [0, 2, 4, 6, 8], capLevel: 15 };
+  const CASTERS = ["Cleric", "Mage", "Druid", "Bard", "Necromancer", "Artificer"];
+  const SN = { str: "Strength", dex: "Dexterity", con: "Constitution", int: "Intelligence", wis: "Wisdom", luck: "Luck" };
+  ST.NAMES = { Knight: ["The Blade", "The Shield", "The Banner"], Paladin: ["The Oath", "The Ward", "The Pilgrim"], Rogue: ["The Knife", "The Shadow", "The Purse"], Ranger: ["The Bow", "The Wild", "The Trail"],
+    Cleric: ["The Word", "The Vigil", "The Flock"], Mage: ["The Flame", "The Ward-runes", "The Library"], Druid: ["The Thorn", "The Oak", "The Seasons"], Bard: ["The Song", "The Stage", "The Road"],
+    Monk: ["The Fist", "The Stillness", "The Way"], Necromancer: ["The Grave", "The Bone", "The Bargain"], Artificer: ["The Engine", "The Plating", "The Workshop"] };
+  // the three branches, shaped for the calling: [id, name, what, ranks, effect per rank]
+  ST.branches = (cls) => { const c = CM.CLASSES[cls] || CM.CLASSES.Knight, key = c.key, caster = CASTERS.includes(cls), N = ST.NAMES[cls] || ST.NAMES.Knight;
+    const off = caster ? [["a1", `Studied ${SN[key]}`, `+1 ${SN[key]}`, 3, { stat: { [key]: 1 } }], ["a2", "Deeper Power", "+1 to every spell", 3, { prop: { spellPower: 1 } }], ["a3", "Wellspring", "+4 magic", 2, { mp: 4 }], ["a4", "Feast on the Fallen", "+1 magic back for each foe slain", 2, { prop: { killMana: 1 } }]]
+      : [["a1", `Trained ${SN[key]}`, `+1 ${SN[key]}`, 3, { stat: { [key]: 1 } }], ["a2", "Heavy Blows", "+1 attack", 3, { atk: 1 }], ["a3", "Find the Gap", "+4% weak spots (critical hits)", 2, { prop: { crit: 0.04 } }], ["a4", "Drilled", "+5% to hit", 2, { prop: { hitBonus: 0.05 } }]];
+    const def = [["b1", "Hardened", "+1 Constitution", 3, { stat: { con: 1 } }], ["b2", "Braced", "+1 defence", 3, { df: 1 }], ["b3", "Deep Reserves", "+6 health", 2, { hp: 6 }], ["b4", "Second Breath", "+1 health mended each round of a fight", 2, { prop: { regen: 1 } }]];
+    const luck = [["c1", "Born Lucky", "+1 Luck", 3, { stat: { luck: 1 } }], ["c2", "Quick Study", "+4% experience from fights", 3, { prop: { xpBonus: 0.04 } }], ["c3", "Light Fingers", "+5% gold from fights", 2, { prop: { killGold: 0.05 } }], ["c4", "First to Move", "+2 quickness in a fight", 2, { prop: { init: 2 } }]];
+    const cap = (id, which) => [id, which === 3 ? "Steady Presence" : "The Other Road", which === 3 ? "+1 defence to the whole party, and +1 to every stat" : `The ${which === 1 ? "first" : "second"} trait of the path not taken`, 1, which === 3 ? { prop: { auraDf: 1 }, stat: { str: 1, dex: 1, con: 1, int: 1, wis: 1, luck: 1 } } : { other: which }];
+    return [{ id: "a", name: N[0], what: caster ? "Spells, and the power behind them" : "Blows, and where they land", nodes: off.concat([cap("a5", 1)]) },
+      { id: "b", name: N[1], what: "Standing up to it", nodes: def.concat([cap("b5", 2)]) }, { id: "c", name: N[2], what: "Luck, learning, and the spoils", nodes: luck.concat([cap("c5", 3)]) }]; };
+  ST.node = (cls, id) => { for (const B of ST.branches(cls)) for (const [k, ...rest] of B.nodes.map((n) => n)) if (k === id) return [k, ...rest]; return null; };
+  ST.points = (h) => Math.max(0, (h.level || 1) - 1);
+  ST.spent = (h) => Object.values(h.tree || {}).reduce((a, b) => a + b, 0);
+  ST.inBranch = (h, b) => Object.entries(h.tree || {}).filter(([k]) => k[0] === b).reduce((a, [, v]) => a + v, 0);
+  // the path the hero didn't take, and its trait for a capstone
+  ST.otherTrait = (h, which) => { const P = CM.PATHS[h.cls]; if (!P || !h.path) return null; const other = Object.keys(P).find((k) => k !== h.path); const T = other && P[other][which === 1 ? "t1" : "t2"]; return T || null; };
+  // can this rank be taken now? "" if so, else why not
+  ST.why = (h, id) => { const n = ST.node(h.cls, id); if (!n) return "No such skill."; const [k, , , max] = n, tier = Number(k[1]) - 1, have = (h.tree || {})[k] || 0;
+    if (have >= max) return "Learned in full."; if (ST.spent(h) >= ST.points(h)) return "No skill points left - one comes with each level gained.";
+    if (ST.inBranch(h, k[0]) < ST.tiers[tier]) return `Spend ${ST.tiers[tier]} points in this branch to reach it.`;
+    if (tier === 4 && h.level < ST.capLevel) return `The capstone opens at level ${ST.capLevel}.`; if (n[4].other && !ST.otherTrait(h, n[4].other)) return "Choose your path first (at level 5): this teaches a trait of the other one.";
+    return ""; };
+  // what the tree gives a hero, summed
+  ST.sum = (h) => { const t = h && h.tree; if (!t || !Object.keys(t).length) return null; const out = { stat: {}, prop: {}, atk: 0, df: 0, hp: 0, mp: 0, traits: [] };
+    for (const [k, r] of Object.entries(t)) { if (!r) continue; const n = ST.node(h.cls, k); if (!n) continue; const E = n[4];
+      for (const [s, v] of Object.entries(E.stat || {})) out.stat[s] = (out.stat[s] || 0) + v * r; for (const [p, v] of Object.entries(E.prop || {})) out.prop[p] = (out.prop[p] || 0) + v * r;
+      out.atk += (E.atk || 0) * r; out.df += (E.df || 0) * r; out.hp += (E.hp || 0) * r; out.mp += (E.mp || 0) * r; if (E.other) { const T = ST.otherTrait(h, E.other); if (T) out.traits.push(T.id); } }
+    return out; };
+  // ---- into the game's own reckonings ----
+  { const hs0 = CM.heroStat; CM.heroStat = function (h, s) { const v = hs0(h, s), S = ST.sum(h); return S && S.stat[s] ? v + S.stat[s] : v; }; }
+  { const gp0 = CM.gearProp; CM.gearProp = (h, prop) => { const v = gp0(h, prop), S = ST.sum(h); return S && S.prop[prop] ? v + S.prop[prop] : v; }; }
+  { const tr0 = CM.trait; CM.trait = function (h, id) { if (tr0(h, id)) return true; const S = ST.sum(h); return !!(S && S.traits.includes(id)); }; }
+  { const rc0 = CM.recompute; CM.recompute = function (h) { rc0(h); const S = ST.sum(h); if (S) { h.atk += S.atk; h.df += S.df; h.max += S.hp; if (h.maxmp || S.mp) h.maxmp += S.mp; h.hp = Math.min(h.hp, h.max); h.mp = Math.min(h.mp, h.maxmp); } return h; }; }
+  Object.assign(CM.Game.prototype, {
+    tsLearn(hero, id) { const h = typeof hero === "number" ? this.party[hero] : hero; if (!h) return "No such hero."; const why = ST.why(h, id); if (why) return why;
+      this.logAct && this.logAct("tsLearn", this.party.indexOf(h), id); h.tree = h.tree || {}; h.tree[id] = (h.tree[id] || 0) + 1; const ratio = h.max ? h.hp / h.max : 1; CM.recompute(h); h.hp = Math.max(1, Math.round(h.max * ratio)); this.sound && this.sound("spell"); this.emit && this.emit("change"); return ""; },
+    tsReset(hero) { const h = typeof hero === "number" ? this.party[hero] : hero; if (!h) return "No such hero."; if (this.inTown && !this.inTown()) return "Unlearning a tree takes quiet: in town, at home."; if (!ST.spent(h)) return "Nothing learned yet.";
+      this.logAct && this.logAct("tsReset", this.party.indexOf(h)); h.tree = {}; CM.recompute(h); this.emit && this.emit("change"); return ""; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -27910,7 +27982,7 @@ Object.assign(CM.UI.prototype, {
       div.classList.toggle("fallen", dead);
       div.classList.toggle("front", m.row === "front");
       div.querySelector(".name").innerHTML = `${this.esc(m.name)} <small>${m.cls} ${m.level}${m.row === "front" ? " ▴" : ""}</small>` + (dead ? " <i>(fallen)</i>" : "")
-        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "");
+        + (m.pending ? ` <span class="boon-badge">Boon!</span>` : "") + (CM.needsPath(m) ? ` <span class="boon-badge">Path!</span>` : "") + (CM.SKILLTREE && CM.SKILLTREE.points(m) > CM.SKILLTREE.spent(m) ? ` <span class="boon-badge skill-badge" title="Skill points to spend: open the hero's sheet">Skill!</span>` : "");
       div.querySelector(".gear").textContent = `${m.weapon.name} / ${m.armor.name}`;
       const ail = div.querySelector(".ail");
       ail.textContent = Object.keys(st).map((s) => `${CM.STATUSES[s].mark} ${CM.STATUSES[s].name}`).join("  ");
@@ -35720,6 +35792,35 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   CM.UI.prototype.levelFlourish = function (hero, level) { CM.levelJingle(); queue.push({ hero, level: level || hero.level }); if (!busy) next(this); };
   // a solo character's own level (Claudeablo): the jingle and a burst at the top of the view
   CM.soloLevelFlourish = (name, level) => { CM.levelJingle(); const v = document.querySelector("#view") || document.body, r = v.getBoundingClientRect(); CM.levelBurst({ left: r.left + r.width / 2 - 110, top: r.top + 24, width: 220, height: 40 }, "#FFB040", `${name} - level ${level}!`); };
+}
+
+// ---- 76zzzd-skilltree.js ----
+"use strict";
+// The skill trees, the window's side: a "Skill tree" button on every hero's sheet (with the points waiting), and the
+// tree itself over the sheet - three branches side by side, each a column of five tiers joined by a line that fills
+// as points go in; every node shows its name, what a rank gives, its ranks, and whether it can be taken (lit), is
+// learned (gold), or is still closed (and why, when pointed at). Click to spend a point. The capstones name the trait
+// they'd teach. In town, "Unlearn" gives the points back. The party card says "Skill!" while points wait. The rules
+// are 64zzz-skilltree.js.
+{ const ST = CM.SKILLTREE, rs0 = CM.UI.prototype.renderSheet;
+  CM.UI.prototype.renderSheet = function () { rs0.call(this); const g = this.game, h = g.party[this.sheetOf]; if (!h) return; const facts = this.$("#sheet-left .facts"); if (!facts || facts.querySelector("[data-tsopen]")) { if (this.tsOpen) this.tsRender(); return; }
+    const left = ST.points(h) - ST.spent(h), b = document.createElement("button"); b.dataset.tsopen = "1"; b.className = `tsopenbtn${left > 0 ? " ready" : ""}`; b.innerHTML = `Skill tree${left > 0 ? ` <b>${left} to spend</b>` : ""}`; facts.prepend(b);
+    b.addEventListener("click", () => { this.tsOpen = true; this.tsRender(); }); if (this.tsOpen) this.tsRender(); };
+  Object.assign(CM.UI.prototype, {
+    tsRender() { const g = this.game, h = g.party[this.sheetOf], box = this.$("#dlg-sheet .sheetbox"); if (!h || !box) return; let el = box.querySelector(".tsview"); if (!el) { el = document.createElement("div"); el.className = "tsview"; box.appendChild(el); }
+      const left = ST.points(h) - ST.spent(h), B = ST.branches(h.cls), town = g.inTown ? g.inTown() : false;
+      const node = (n, col) => { const [id, name, what, max, E] = n, have = (h.tree || {})[id] || 0, why = ST.why(h, id), open = !why, T = E.other ? ST.otherTrait(h, E.other) : null, tier = Number(id[1]);
+        const detail = E.other ? (T ? `Learn <b>${T.name}</b>: ${T.what}` : `A trait of the path not taken (choose a path at level 5)`) : what;
+        return `<button class="tsnode${have ? " has" : ""}${have >= max ? " full" : ""}${open ? " open" : ""}${tier === 5 ? " cap" : ""}" data-tsnode="${id}" title="${this.esc(why || "Click to learn a rank")}" ${open ? "" : "aria-disabled=\"true\""}><b>${this.esc(name)}</b><span>${detail}</span><i>${have} / ${max}</i></button>`; };
+      el.innerHTML = `<div class="tshead"><h3>${this.esc(h.name)}'s skill tree <span class="small">(${this.esc(h.cls)}, level ${h.level})</span></h3><span class="tspts"><b>${left}</b> point${left === 1 ? "" : "s"} to spend · ${ST.spent(h)} spent</span>
+        ${ST.spent(h) ? `<button data-tsreset ${town ? "" : "disabled"} title="${town ? "Give every point back" : "Unlearning takes quiet: in town"}">Unlearn</button>` : ""}<button class="primary" data-tsclose>Back to the sheet</button></div>
+        <div class="tsnote">${this.tsNote || "A point comes with every level gained. A tier opens with two more points spent in its branch; the last needs level 15."}</div>
+        <div class="tscols">${B.map((br) => { const inB = ST.inBranch(h, br.id); return `<div class="tscol"><div class="tsbr"><b>${this.esc(br.name)}</b><span>${this.esc(br.what)}</span><em>${inB} in this branch</em></div><div class="tsline"><i style="height:${Math.min(100, (inB / 8) * 100)}%"></i></div>${br.nodes.map((n) => node(n)).join("")}</div>`; }).join("")}</div>`;
+      el.querySelector("[data-tsclose]").addEventListener("click", () => { this.tsOpen = false; this.tsNote = ""; el.remove(); this.renderSheet(); this.refresh && this.refresh(); });
+      const rb = el.querySelector("[data-tsreset]"); if (rb) rb.addEventListener("click", () => { const why = g.tsReset(h); this.tsNote = why || "Unlearned: every point is yours to spend again."; this.tsRender(); });
+      el.querySelectorAll("[data-tsnode]").forEach((b) => b.addEventListener("click", () => { const why = g.tsLearn(h, b.dataset.tsnode); this.tsNote = why || `${this.esc(ST.node(h.cls, b.dataset.tsnode)[1])}: learned.`; if (!why) { b.classList.add("pop"); try { CM.audio.play("spell", 0.35, 0, 1.3); } catch (e) { /* quiet */ } } this.tsRender(); this.refresh && this.refresh(); })); },
+  });
+  const close0 = CM.UI.prototype.closeDialogs; CM.UI.prototype.closeDialogs = function () { this.tsOpen = false; const v = document.querySelector("#dlg-sheet .tsview"); if (v) v.remove(); return close0.call(this); };
 }
 
 // ---- 77-splash.js ----
