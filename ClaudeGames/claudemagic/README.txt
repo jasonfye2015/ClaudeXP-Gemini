@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+One name across the world (the seventy-third big update - v18.7)
+  (src/js/69h-renownlv.js, 76zzzh-renownlv.js)
+  - Every part of the world now earns renown, counted from its best ever so nothing pays twice: the Mage Tower (3 a
+    floor), the Fortress (5 a floor), Claudeita's cave (2 a depth, 15 a boss, 25 a win), Leshy's table (12 a game won),
+    Haven (3 a level reached), the pipe (10 a level), the island (2 a visit, to 40) and the Joker (3 a Joker level).
+    What a party had already done is counted in the first time.
+  - All the renown ever earned makes one renown level, 1 to 30 (spending it on the village never lowers it), shown in
+    the village's window with where it came from, and first on the Journal's Goals page.
+  - Its perks reach everywhere: more experience and weak spots in every fight (the solo runs too), Luck and then
+    every stat, Life in Haven, more Joker tickets, softer knocks down the pipe, health from each kill, gold from
+    kills, and +1 attack and defence. A level gained plays the level-up jingle.
+
 The tree goes with them (the seventy-second big update - v18.6)
   (src/js/69g-soloedge.js; small hooks in 64j-fortress.js, 64o-craftlife.js, 61g-cavemouth.js)
   What a hero has learned in the skill tree - and the weak spots, mending and spoils of their gear - now counts when
