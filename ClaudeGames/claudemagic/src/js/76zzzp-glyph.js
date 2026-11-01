@@ -47,16 +47,25 @@
         if (A.kind === "stairs") { if (/^[dD]$/.test(k) && r.L < GD.levels) { this.gdAsk = null; const why = g.glyphStairs(true); this.gdNow = [why || `Level ${g.glyphRun ? g.glyphRun.L : ""}.`]; this.gdLog.push(...this.gdNow); this.drawGlyph(); this.refresh(); } else if (/^[hH]$/.test(k) || (r.L >= GD.levels && /^[yY]$/.test(k))) { this.gdAsk = null; g.glyphStairs(false); this.refresh(); } return true; }
         if (A.kind === "up") { if (/^[yY]$/.test(k)) { this.gdAsk = null; g.glyphUp(); this.refresh(); } else { this.gdAsk = null; this.drawGlyph(); } return true; }
         const i = k.length === 1 ? k.charCodeAt(0) - 97 : -1; if (i >= 0 && i < r.pack.length) { this.gdAsk = null; this.glyphDo(A.cmd, i); } return true; }
+      if (this.gdOver && k === "Escape") { e.preventDefault(); this.gdOver = null; this.drawGlyph(); return true; }
       if (this.gdInv && k === "Escape") { e.preventDefault(); this.gdInv = false; this.drawGlyph(); return true; }
       const mv = MOVES[e.code] || (k.length === 1 && !e.shiftKey ? MOVES[k] : null); if (mv) { e.preventDefault(); this.gdInv = false; this.glyphDo("move", mv); return true; }
       if (k === "." || e.code === "Numpad5") { e.preventDefault(); this.glyphDo("wait"); return true; }
       if (k === "g" || k === ",") { e.preventDefault(); this.glyphDo("pick"); return true; }
       if (k === "i") { e.preventDefault(); this.gdInv = !this.gdInv; this.drawGlyph(); return true; }
-      if (k === ">") { e.preventDefault(); this.glyphStairsAsk(); return true; }
+      if (k === "?") { e.preventDefault(); this.gdOver = this.gdOver === "help" ? null : "help"; this.drawGlyph(); return true; }
+      if (k === "P") { e.preventDefault(); this.gdOver = this.gdOver === "log" ? null : "log"; this.drawGlyph(); return true; }
+      if (k === ">") { e.preventDefault(); if (!r.atDown() && r.seen.has(`${r.down[0]},${r.down[1]}`)) this.glyphTravel(); else this.glyphStairsAsk(); return true; }
       if (k === "<") { e.preventDefault(); if (r.atUp()) { this.gdAsk = { kind: "up" }; this.gdNow = ["Climb out and walk away? What this level gave stays here. [y/n]"]; } else this.gdNow = ["You can't go up here."]; this.drawGlyph(); return true; }
       if (ASK[k]) { e.preventDefault(); const [cmd, verb, ok] = ASK[k], can = r.pack.map((it, i) => [it, i]).filter(([it]) => ok(it)); if (!can.length) { this.gdNow = [`You don't have anything to ${verb}.`]; this.drawGlyph(); return true; }
         this.gdAsk = { cmd, ok }; this.gdInv = true; this.gdNow = [`What do you want to ${verb}? [${can.map(([, i]) => String.fromCharCode(97 + i)).join("")} or Esc]`]; this.drawGlyph(); return true; }
       return false; },
+    // travel: to the stairs down, a step at a time, until something shows itself or hurts
+    glyphTravel() { const r = this.game.glyphRun; let n = 0; const seen0 = () => r.mons.filter((m) => m.hp > 0 && !m.hidden && r.visible(m.x, m.y)).length;
+      const step = () => { const g = this.game, run = g.glyphRun; if (!run || run !== r || r.over || r.atDown() || n++ > 200) { this.drawGlyph(); return; } const back = r.distances(r.down[0], r.down[1]); let best = null;
+        for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]]) { if (!r.canStep(r.x, r.y, dx, dy) || r.monAt(r.x + dx, r.y + dy)) continue; const k = `${r.x + dx},${r.y + dy}`; if (!r.seen.has(k)) continue; const d = back.get(k); if (d !== undefined && (!best || d < best[2])) best = [dx, dy, d]; }
+        if (!best) { this.gdNow = ["You can't see a way there."]; this.drawGlyph(); return; } const hp = r.hp, before = seen0(); this.glyphDo("move", [best[0], best[1]]); if (r.hp < hp || seen0() > before || r.thingAt(r.x, r.y)) return; setTimeout(step, 35); };
+      step(); },
     glyphStairsAsk() { const r = this.game.glyphRun; if (!r.atDown()) { this.gdNow = ["You can't go down here."]; this.drawGlyph(); return; } if (r.L === GD.levels && !r.bossDown()) { this.gdNow = ["The way down is sealed while the Unwritten stands."]; this.drawGlyph(); return; }
       const paid = this.game.glyphStore().paid[r.L]; this.gdAsk = { kind: "stairs" }; this.gdNow = [r.L >= GD.levels ? "The last stairs. Climb out into the light? [y]" : `[D]own to level ${r.L + 1}, or [H]ome with everything?${paid ? "" : " (this level pays the party the first time)"}`]; this.drawGlyph(); },
     glyphClick(e) { const r = this.game.glyphRun, V = this.gdView; if (!r || !V) return; const c = this.$("#glyphcanvas"), b = c.getBoundingClientRect(), x = (e.clientX - b.left) * (c.width / b.width), y = (e.clientY - b.top) * (c.height / b.height);
@@ -88,7 +97,19 @@
         p.fillStyle = "rgba(0,0,0,0.92)"; p.fillRect(x0, y0, wpx, (lines.length + 2) * ch); p.strokeStyle = "#5A5A6A"; p.strokeRect(x0, y0, wpx, (lines.length + 2) * ch);
         p.fillStyle = "#F0F0C0"; p.fillText(head, x0 + 10, y0 + ch / 2 + 1);
         lines.forEach((l, i) => { const it = r.pack[i]; p.fillStyle = it ? (this.gdAsk && this.gdAsk.ok && !this.gdAsk.ok(it) ? "#555" : GD.colourOf(it)) : "#AAA"; p.fillText(l, x0 + 10, y0 + (i + 1.5) * ch + 1); });
-        this.gdView.inv = { x: x0, y: y0 + ch }; } else this.gdView.inv = null; },
+        this.gdView.inv = { x: x0, y: y0 + ch }; } else this.gdView.inv = null;
+      if (this.gdOver) { const lines = this.gdOver === "help" ? ["THE GLYPH DEEP - how to play", "", "arrows, number pad, h j k l y u b n   move; into a monster to fight it", "g or ,   pick up what's here          .  or 5   wait a turn", "q drink   r read   w wield   W wear   e eat   d drop", "i   your pack (* means found on this level)", ">   at the stairs down: down, or home with everything;", "    elsewhere: walk to the stairs, once you've seen them", "<   at the stairs up: climb out (this level's finds stay)", "P   the messages so far        ?   this help        Esc   close", "", "Doorways can't be passed diagonally. Lit rooms show whole.", "The first time each level's stairs are reached pays the party."] : ["Messages (newest last):", "", ...(this.gdLog || []).slice(-18)];
+        const x0 = cw * 6, y0 = ch * 3, w = c.width - cw * 12, hgt = (lines.length + 2) * ch; p.fillStyle = "rgba(0,0,0,0.95)"; p.fillRect(x0, y0, w, hgt); p.strokeStyle = "#2A6A3A"; p.strokeRect(x0, y0, w, hgt);
+        lines.forEach((l, i) => { p.fillStyle = i === 0 ? "#60F080" : "#D8D8D8"; p.fillText(l.slice(0, 96), x0 + cw, y0 + (i + 1.5) * ch); }); } },
+    // the end of a game: the tombstone, the trophy, or the tally
+    glyphEnd(E) { ensure(this); const box = this.$("#gd-body"), note = this.$("#gd-note"); note.textContent = "";
+      const pad = (t, n) => String(t).slice(0, n).padEnd(n);
+      const art = (E.how === "dead" ? ["                 ----------", "                /          \\", "               /    REST    \\", "              /      IN      \\", "             /     PEACE      \\", "            /                  \\",
+          `            |  ${pad(E.name, 16)}|`, `            |  level ${pad(E.level, 10)}|`, "            |  killed by       |", `            |  ${pad(E.cause, 16)}|`, "           *|     *  *  *      | *", "  _________)/\\_//(\/(/\)/\//\/|_)_______"]
+        : E.how === "won" ? ["              ___________", "             '._==_==_=_.'", "             .-\:      /-.", "            | (|:.     |) |", "             '-|:.     |-'", "               \::.    /", "                '::. .'", "                  ) (", "                _.' '._", "               '-------'", "          THE UNWRITTEN IS UNDONE"]
+        : ["     +---------------+", "     |  >  saved  <  |", "     +---------------+"]).join("\n");
+      box.innerHTML = `<pre class="gdattract">${this.esc(art)}</pre><p>${this.esc(E.how === "dead" ? `GAME OVER - ${E.name} the ${E.cls}, on level ${E.level}, after ${E.turns} turns and ${E.kills} kills.` : E.how === "won" ? `${E.name} the ${E.cls} beat the Glyph Deep in ${E.turns} turns on the last level.` : `${E.name} the ${E.cls} came home from level ${E.level}.`)}</p>${E.words.length ? `<p class="small">Home with them: ${this.esc(E.words.join("; "))}.</p>` : ""}`;
+      this.openDialog("#dlg-glyph"); },
   });
   // the action bar under the view while playing
   { const ra0 = CM.UI.prototype.renderActions; CM.UI.prototype.renderActions = function () { const g = this.game, box = this.$("#actions") || this.$(".actions"); if (g.mode !== "glyph") { if (box && box.dataset.mode && box.dataset.mode.startsWith("glyph")) box.dataset.mode = ""; return ra0.call(this); }
@@ -99,6 +120,7 @@
       add("Pack (i)", () => { this.gdInv = !this.gdInv; }); add("Pick up (g)", () => this.glyphDo("pick")); add("Wait (.)", () => this.glyphDo("wait"));
       add(r.atUp() ? "Climb out (this level's finds stay)" : "Walk away (this level's finds stay)", () => { g.leaveGlyph("fled"); this.refresh(); }); }; }
   { const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a); const on = this.game && this.game.mode === "glyph"; document.body.classList.toggle("inglyph", on); if (on) this.drawGlyph(); return out; }; }
+  { const close0 = CM.UI.prototype.closeDialogs; CM.UI.prototype.closeDialogs = function () { this.gdOver = null; return close0.call(this); }; }
   // the keys, before the game's own
   if (typeof window !== "undefined") window.addEventListener("keydown", (e) => { const ui = CM.ui, g = ui && ui.game; if (!g || g.mode !== "glyph" || !g.glyphRun || (ui.dialogOpen && ui.dialogOpen())) return; if (ui.glyphKey(e)) e.stopImmediatePropagation(); }, true);
   if (typeof window !== "undefined") window.addEventListener("resize", () => { const ui = CM.ui; if (ui && ui.game && ui.game.mode === "glyph") ui.drawGlyph(); });

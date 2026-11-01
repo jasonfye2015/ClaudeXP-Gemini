@@ -131,6 +131,17 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## The Glyph Deep (v20.0 - v20.2)
+
+Nobody put the cabinet by the road. The charcoal burner says it was there one morning under a roof of planks that
+wasn't there the night before, humming, with a coin slot that takes any coin and gives nothing back. Its screen is a
+dungeon drawn in letters, which is the most honest a dungeon has ever been: a rat is an r, a wall is a line, and you are
+an @ that knows exactly where it stands. It plays like the shaft dreams with the colour taken out - which is what it
+is: the Root dreams in the city's stuff, and among the city's stuff were the clerks' ledgers, and a ledger dreams in
+letters. The Unwritten at the bottom is the one entry nobody made: every account the city never closed, standing up.
+What comes out of the cabinet is real (the burner has a sword from it, and won't say what level), which the
+chronicler finds more upsetting than anything else in the Wood.
+
 ## The South Fields (v19.0 - v19.5)
 
 The bowl under the south wall was the city's kitchen garden when the city was a city: the palace's cooks grew there,

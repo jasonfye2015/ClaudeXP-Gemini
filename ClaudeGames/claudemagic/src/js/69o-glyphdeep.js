@@ -60,7 +60,9 @@
       if (xp) words.push(`${xp} experience`); if (gold + scrolls) words.push(`${gold + scrolls} gold`); if (tickets) words.push(`${tickets} tickets`); if (cards) words.push(`${cards} card${cards > 1 ? "s" : ""}`); if (bank.length) words.push(bank.map((t) => t.name).join(", "));
       if (words.length) this.say(`From the Glyph Deep: ${words.join("; ")}.`);
       this.glyphRun = null; this.setMode("explore"); if (this.floor && this.floor.number === -1) { this.floor.pos = CM.GLYPH_AT.slice(); }
-      this.saveVillage && this.saveVillage(); this.saveRun && this.saveRun(); this.emit("change"); return ""; },
+      this.saveVillage && this.saveVillage(); this.saveRun && this.saveRun(); this.emit("change");
+      this.emit && this.emit("glyphend", { how, name: h.name, cls: h.cls, level: r.L, turns: r.turn, kills: r.kills, words, cause: how === "dead" ? (r.killer || "something in the dark") : null });
+      return ""; },
   });
   CM.ACHIEVEMENTS.unwritten = { name: "Unwritten", what: "Beat the Unwritten on the twentieth level of the Glyph Deep", title: "of the Glyph Deep" };
   // Space at the cabinet
