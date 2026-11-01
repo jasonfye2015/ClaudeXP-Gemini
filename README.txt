@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Shadows (v22.2, UPGRADE_PLAN_17.md phase 2)
+  (src/js/76zzzv-shadows.js; 40-render.js, 80-main.js)
+  - Whatever stands on the ground - people, monsters, chests, props, trees - casts a shadow away from the light that
+    rules where it stands: by day on the surface, the sun, long to the west in the morning, short at noon and long to
+    the east at dusk; at night and below, the strongest lamp, torch or brazier near it, or else the party's own torch.
+  - A small soft shadow stays under each foot, so nothing floats.
+
 Surfaces (v22.1, UPGRADE_PLAN_17.md phase 1)
   (src/js/40-render.js)
   - Walls, floors and the ground take relief from their own pictures: a height is read off each picture's light and

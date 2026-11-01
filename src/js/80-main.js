@@ -454,7 +454,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     const lit = CM.isNight(game);
     if (renderer.index.shadow !== undefined) {                          // a soft shadow under whatever stands on the floor
-      const under = (x, y, w, dx = 0, dz = 0) => out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 });
+      const caster = CM.shadowCaster ? CM.shadowCaster(game, renderer, fl) : null;   // (v22.2: where the light comes from - the sun, a lamp, the party's torch: 76zzzv-shadows.js)
+      const under = (x, y, w, dx = 0, dz = 0) => { if (caster) for (const sp of caster(x, y, w, dx, dz)) out.push(sp); else out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 }); };
       for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
       for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
     }

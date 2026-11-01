@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v22.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v22.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1464,7 +1464,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "22.1", built: "2026-11-01" };
+const CM = window.CM = { version: "22.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9328,7 +9328,11 @@ CM.Renderer = class {
       const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const lift = s.lift || 0;
-      if (s.flat) {
+      if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
+        const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = (w * (s.len || 1)) / 2, hw = w / 2, ox = c * hl * 0.85, oz = sn * hl * 0.85, y0 = 0.0035;
+        const P = (a2, b2) => [cx + ox + c * a2 - sn * b2, y0, cz + oz + sn * a2 + c * b2];
+        corners = [P(-hl, hw), P(hl, hw), P(hl, -hw), P(-hl, -hw)];
+      } else if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
       } else if (s.axis && s.swing) {                                    // a door swung on its hinge (28-motion.js): toward the side away from the party
         const L = 0.94, sd = s.swingSide || 1, sw = s.swing, top = 0.97;
@@ -37859,6 +37863,25 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   { const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.lightBound && this.game && this.game.on && CM.renderer) { this.lightBound = true; this.game.on("fx", (e) => { if (e && FLARE[e.kind]) CM.lightFlare(CM.renderer, e.kind, e.at); }); } return rf0.apply(this, a); }; }
 }
 
+// ---- 76zzzv-shadows.js ----
+"use strict";
+// Shadows (v22.2, UPGRADE_PLAN_17.md): what stands on the floor - monsters, people, chests, props, trees - casts a
+// shadow away from the light that rules where it stands: by day on the surface, the sun, long at dawn and dusk and
+// short at noon; at night and below, the strongest lamp, torch or brazier near it, or else the party's own torch. A
+// small soft shadow stays under each foot. The renderer lays the cast one turned and stretched (40-render.js).
+{ const sunDir = (renderer) => { const sky = renderer.sky; if (!sky || sky.sun === null || !(sky.light > 0.15)) return null; const a = Math.PI * sky.sun, el = Math.max(0.06, Math.sin(a) * 0.5);   // (as the renderer's sun: east over the south to the west)
+    return { x: Math.cos(a), z: Math.sin(a), el, k: Math.min(1, (sky.light - 0.15) * 2) }; };
+  CM.shadowCaster = (game, renderer, fl) => { const S = fl.number === 0 || fl.number === -1 ? sunDir(renderer) : null, lights = renderer.lights || [], eye = renderer.eye || [fl.pos[0] + 0.5, 0.5, fl.pos[1] + 0.5];
+    return (x, y, w, dx = 0, dz = 0) => { const cx = x + 0.5 + dx, cz = y + 0.5 + dz, out = [{ x, y, dx, dz, layer: "shadow", flat: true, w: w * 0.8, alpha: 0.75 }];
+      let lx, lz, len, alpha;
+      if (S) { lx = -S.x; lz = -S.z; len = Math.min(3.2, 0.5 / Math.tan(S.el)); alpha = 0.55 * S.k; }
+      else { let best = null, bestK = 0; for (const L of lights) { const d = Math.hypot(L.x - cx, L.z - cz); if (d >= L.reach) continue; const k = (1 - d / L.reach) * (L.colour[0] + L.colour[1] + L.colour[2]); if (k > bestK) { bestK = k; best = L; } }
+        const src = best || { x: eye[0], z: eye[2], y: 0.62 }, d = Math.max(0.15, Math.hypot(cx - src.x, cz - src.z)); if (!best && d > 4) return out;
+        lx = (cx - src.x) / d; lz = (cz - src.z) / d; len = Math.min(2.6, 0.8 + d * 0.45); alpha = best ? 0.5 * Math.min(1, bestK) : 0.38; }
+      if (alpha > 0.04) out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 0.85, len, rot: Math.atan2(lz, lx), alpha });
+      return out; }; };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -38396,7 +38419,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
     const lit = CM.isNight(game);
     if (renderer.index.shadow !== undefined) {                          // a soft shadow under whatever stands on the floor
-      const under = (x, y, w, dx = 0, dz = 0) => out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 });
+      const caster = CM.shadowCaster ? CM.shadowCaster(game, renderer, fl) : null;   // (v22.2: where the light comes from - the sun, a lamp, the party's torch: 76zzzv-shadows.js)
+      const under = (x, y, w, dx = 0, dz = 0) => { if (caster) for (const sp of caster(x, y, w, dx, dz)) out.push(sp); else out.push({ x, y, dx, dz, layer: "shadow", flat: true, w: w * 1.1, alpha: 0.9 }); };
       for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
       for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
     }
