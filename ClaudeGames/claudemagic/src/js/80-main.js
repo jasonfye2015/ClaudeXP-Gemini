@@ -189,7 +189,7 @@ window.addEventListener("DOMContentLoaded", () => {
     CM.music.setEnabled(s.music !== false);
     CM.music.setVolume(s.musicVolume === undefined ? 0.5 : s.musicVolume);
     ui.$("#view .fps").classList.toggle("on", s.fps);
-    CM.fxSpeed = { normal: 1, fast: 2, instant: 6 }[s.speed] || 1;
+    CM.fxSpeed = { cinematic: 0.8, normal: 1, fast: 2, instant: 6 }[s.speed] || 1; CM.cinematic = s.speed === "cinematic";   // (v23.4: Cinematic slows a little and holds longer - 76zzzz-blows.js, 76zzzza-stage.js)
     CM.reducedMotion = s.motion === undefined ? Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) : Boolean(s.motion);
     document.getElementById("app").style.zoom = { normal: "", large: "1.15", larger: "1.32" }[s.text] || "";
     document.body.classList.toggle("contrast", Boolean(s.contrast));
