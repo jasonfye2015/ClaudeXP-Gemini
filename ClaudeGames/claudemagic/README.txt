@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The tree goes with them (the seventy-second big update - v18.6)
+  (src/js/69g-soloedge.js; small hooks in 64j-fortress.js, 64o-craftlife.js, 61g-cavemouth.js)
+  What a hero has learned in the skill tree - and the weak spots, mending and spoils of their gear - now counts when
+  they go somewhere alone:
+  - the Mage Tower, the Fortress and the island: weak spots (double blows), health and mana from each kill, more gold
+    and experience from each kill (attack, defence and health already came through);
+  - Claudeita's cave: the casting stat is the whole stat, tree included, and weak spots make the wands stronger;
+  - Claudeablo: the tree's stats become Haven's (Strength and attack, Dexterity, Intelligence and Wisdom as Magic,
+    Constitution as Vitality, health as Life, mana, aim as To Hit) while the hero is there - never saved into Haven;
+  - the pipe: the tree's defence takes 4% a point off every knock, to half at most.
+  The skill tree's window lists what it comes to for the hero, under "When alone".
+
 The world on one page (the seventy-first big update - v18.5)
   (src/js/69f-worldmap.js, 76zzzg-worldmap.js)
   - The world map (the World map button): a painted map of Caer Duin on its hill and the Keep-yard, the Deep Wood with

@@ -82,8 +82,9 @@ Object.assign(CM.Game.prototype, {
   craftBlow(o) {
     const cr = this.craft, h = cr.hero, eff = this.effective(h), sw = cr.satchel.best("sword"), power = (h.weapon ? h.weapon.power || 1 : 1) + (sw ? sw[1].power : 0);
     if (sw) this.craftWear(sw[0]);
-    return Math.max(1, Math.round(this.damage(eff.atk, power, o.m.df) * (h.cls === "Rogue" && this.craftLife().rnd.chance(0.25) ? 2 : 1)));
+    return Math.max(1, Math.round(this.damage(eff.atk, power, o.m.df) * this.craftCritMult()));
   },
+  craftCritMult() { return this.craft.hero.cls === "Rogue" && this.craftLife().rnd.chance(0.25) ? 2 : 1; },
   craftShotPower() { const h = this.craft.hero, A = CM.towerArms ? CM.towerArms(h) : null, st = A ? this.stat(h, A.stat) : 10; return Math.round(((A && A.arrows ? (h.weapon ? h.weapon.power : 2) : 2) + Math.floor(h.level * 1.3) + Math.max(0, CM.mod(st) * 2)) * CM.CL.shotMult); },
   craftStrike(o, dmg) {
     const L = this.craftLife(); o.m.hp -= dmg; o.hitAt = L.t; (L.events = L.events || []).push({ kind: "hit", mob: o, amount: dmg });
