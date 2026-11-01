@@ -19,7 +19,7 @@
     cgFireworks(tier, text) {
       tier = Math.max(1, Math.min(3, tier || 1)); const S = SHOW[tier], calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; sounds();
       let host = document.querySelector(".fwlayer"); if (host) host.remove(); host = document.createElement("div"); host.className = `fwlayer fw${tier}`;
-      host.innerHTML = `${calm ? "" : `<canvas></canvas>`}<div class="fwbanner"><b>${S.title}</b>${text ? `<span>${this.esc ? this.esc(text) : text}</span>` : ""}</div>`; document.body.appendChild(host);
+      host.innerHTML = `${calm ? "" : `<canvas></canvas>`}<div class="fwbanner"><b>${tier < 3 && /^Joker level/.test(text || "") ? "LEVEL UP!" : S.title}</b>${text ? `<span>${this.esc ? this.esc(text) : text}</span>` : ""}</div>`; document.body.appendChild(host);
       const life = (calm ? 2.6 : S.over + 2.8) * 1000; setTimeout(() => host.classList.add("out"), life - 600); setTimeout(() => host.remove(), life);
       if (calm) return; const cv = host.querySelector("canvas"), p = cv.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1); let W = 0, H = 0;
       const fit = () => { W = window.innerWidth; H = window.innerHeight; cv.width = W * dpr; cv.height = H * dpr; p.setTransform(dpr, 0, 0, dpr, 0, 0); }; fit();

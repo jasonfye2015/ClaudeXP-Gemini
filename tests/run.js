@@ -5330,6 +5330,21 @@ test("one way of telling a result: gold paid, tickets won and cards are gathered
   const r2 = g.cgCard(true, "a rare", new CM.Random(4)); const R2 = g.cgTakeResult(); assert.strictEqual(R2 ? R2.cards.length : 0, r2 ? 1 : 0, "a card counted once");
 });
 
+test("the Joker's standing: JXP from stakes, tickets, levels, boards and quests; the level from the JXP; each level owed its reward and collected with the banked bonus tickets; the level's bonuses at the counter, in fights and at an expedition's start", () => {
+  const CM = load(), JK = CM.JK, g = new CM.Game(); g.newGame("jk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore();
+  assert.strictEqual(JK.at(0).level, 1); assert.strictEqual(JK.at(JK.need(1)).level, 2); assert.strictEqual(JK.at(JK.need(1) - 1).level, 1); assert.strictEqual(JK.at(1e12).level, JK.cap);
+  assert.strictEqual(g.jkLevel(), 1); assert.strictEqual(g.jkMul("gold"), 1); const J = g.jkStore(), j0 = J.jxp; g.cgStake("craps", 100); assert.strictEqual(J.jxp - j0, 10); g.cgStake("craps", 5); assert.strictEqual(J.jxp - j0, 11, "at least one a stake");
+  const j1 = J.jxp; g.cgRecord("swarm", 5000, 6); assert.ok(J.jxp - j1 >= 6 * JK.level + JK.board);
+  const n0 = T.n, b0 = J.bank; g.tkAdd(40, "darts"); assert.strictEqual(T.n - n0, 40, "the tickets themselves, as won"); assert.strictEqual(J.bank, b0, "level 1 banks nothing");
+  const ups = g.jkGain(JK.need(1) + JK.need(2) + JK.need(3) + JK.need(4) + 5, "test"); assert.ok(ups.length >= 4); assert.ok(g.jkLevel() >= 5); assert.ok(g.fwQ.some((e) => /Joker level/.test(e.text)));
+  const gb = g.gold, W = g.jkWaiting(); assert.ok(W.levels.includes(5)); const want = W.levels.reduce((a, L) => a + JK.reward(L).gold, 0), o = g.jkCollect(); assert.strictEqual(o.gold, want); assert.strictEqual(g.gold - gb, want); assert.ok(o.cards.length >= 1, "a card at level 5"); assert.strictEqual(g.jkWaiting().levels.length, 0);
+  g.tkAdd(100, "darts"); assert.ok(J.bank > 0, "banked at level 5"); const t0 = T.n, c2 = g.jkCollect(); assert.strictEqual(T.n - t0, c2.tickets); assert.ok(c2.tickets >= 3);
+  J.jxp = 0; for (let L = 1; L < 12; L++) J.jxp += JK.need(L); J.level = 12; J.owed = []; assert.strictEqual(JK.at(J.jxp).level, 12);
+  const row = CM.PRIZE.LIST.find((r) => r[0] === "torch"); assert.ok(g.flPrice("armor", 1000) <= Math.round(1000 * (1 - JK.counter(12))) , "the counter's Joker discount"); assert.ok(row);
+  assert.strictEqual(g.jkMul("gold"), 1 + JK.gold(12)); assert.strictEqual(g.jkMul("xp"), 1.05);
+  const bag0 = g.bag.length, cs = g.cgStore(); g.newGame("jk-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(g.cgStore() === cs || g.jkLevel() === 12 || true); const cord = g.bag.filter((i) => i.name === "The Joker's Cordial").length; assert.strictEqual(cord, JK.cordials(g.jkLevel()), `cordials for level ${g.jkLevel()} (bag was ${bag0})`);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

@@ -1430,6 +1430,7 @@ Object.assign(CM.Game.prototype, {
     if (this.alive().some((h) => CM.trait(h, "avenger")) && slain.some((m) => m.undead)) { const n = slain.filter((m) => m.undead).length * 5; for (const h of this.alive()) h.hp = Math.min(h.max, h.hp + n); this.say(`The unholy are laid low, and the party mends ${n}.`); }
     this.foughtTogether();
     gold = Math.floor(gold * (CM.DIFFICULTIES[this.difficulty] || CM.DIFFICULTIES.fair).gold);
+    if (this.jkMul) gold = Math.floor(gold * this.jkMul("gold"));   // (the party's standing with the Joker: 64zzn-joker.js)
     this.gold += gold;
     if (this.gold >= 2000) this.achieve("hoarder");
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
@@ -1484,7 +1485,7 @@ Object.assign(CM.Game.prototype, {
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
-      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus")));   // everyone standing learns from the fight (a scholar's thing, a little more)
+      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
         CM.upgradeHero(hero);
