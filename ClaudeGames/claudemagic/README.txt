@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The polish pass (v15.1 onward)
+  Going through the casino's tables one by one for their looks: more polish and more animation, the games as they
+  were.
+  - v15.1, the Gilded Reels, Roulette, Blackjack and Jacks or Better:
+    The Gilded Reels in a red-and-gilt cabinet with a neon marquee, chasing bulbs and a lever that swings;
+    the reels blur as they spin, winning symbols pulse on a glowing payline, and the joker is drawn in
+    place of a missing emoji. Roulette's wheel shaded, with frets, brass diamonds on the track, a ball with a
+    shadow and a trail, and a marker set on the winning number. Blackjack's felt printed, the bet in chips
+    on its circle and a banner for the outcome. Jacks or Better in a glass-and-brass cabinet with an LED
+    line, the paytable lighting the hand as dealt and the held cards glowing. The floor's notices moved to
+    the lower corner.
+
 The Daily Challenge (the fortieth big update - v15.0)
   Each real day the Gilded Joker chalks up one challenge (src/js/64zp-daily.js; 76zg-daily.js), the same for every
   party that day: one of the ten scoring tables, picked by the date, with a bronze, a silver and a gold mark - the
