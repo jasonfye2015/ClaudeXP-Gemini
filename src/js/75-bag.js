@@ -13,6 +13,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    this.$("#btn-automanage").addEventListener("click", () => { const moved = g.amSet(!g.amOn()); this.bagRow = -1; this.note(g.amOn() ? (moved.length ? `Auto-manage on: ${moved.map((m) => `${m.hero} puts on ${m.item}`).join("; ")}.` : "Auto-manage on: everyone already wears the best of what they can.") : "Auto-manage off."); this.fillBag(); this.refresh && this.refresh(); });   // (64zzy-automanage.js)
     this.$("#btn-sell-island").addEventListener("click", () => { this.note(g.sellIslandStone()); this.fillBag(); });
     for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
       this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
@@ -40,6 +41,8 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, shop = g.shopping;
     this.$("#bag-title").textContent = `${CM.t(shop ? "bag.title.shop" : "bag.title.pack")}   -   ${CM.t("bag.gold", { n: g.gold })}   -   ${CM.t("bag.weight", { n: CM.bagWeight(g.bag), cap: CM.carryCap(g.party) })}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
     this.$("#shop-list").style.display = shop ? "" : "none";
+    { const b = this.$("#btn-automanage"); b.textContent = `Auto-manage: ${g.amOn() ? "Y" : "N"}`; b.classList.toggle("on", g.amOn());
+      const best = Math.max(1, ...g.party.map((h) => CM.gearScore(h))); this.$("#bag-gs").innerHTML = `<span class="gs-total">Party gear score <b>${CM.partyGearScore(g.party).toLocaleString("en")}</b></span>${g.party.map((h) => `<span class="gs-hero"><i style="width:${Math.round((100 * CM.gearScore(h)) / best)}%"></i><em>${this.esc(h.name)}</em><b>${CM.gearScore(h).toLocaleString("en")}</b></span>`).join("")}`; }
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
     for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";

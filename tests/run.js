@@ -5453,6 +5453,18 @@ test("the floor's spoils: tickets played for teach every hero (by the party's hi
   const R = g.cgTakeResult(); assert.ok(R && R.xp > 0 && R.items.length >= 1, "the spoils on the result");
 });
 
+test("gear score and auto-manage: a thing's score grows with its power, worth and rarity; a hero's and the party's add up what's worn; with auto-manage on, known gear coming into the pack goes to the leftmost hero it betters, the old piece back to the pack (and on to the next if it suits), and unknown or cursed things are left alone", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("am-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const R = new CM.Random(9);
+  const sw = (p, v) => ({ name: `Test Sword ${p}`, base: "Short Sword", kind: "weapon", slot: "weapon", power: p, value: v, props: {} });
+  assert.ok(CM.itemScore(sw(10, 400)) > CM.itemScore(sw(5, 400))); assert.ok(CM.itemScore(Object.assign(sw(5, 400), { props: { rarity: "rare" } })) > CM.itemScore(sw(5, 400)));
+  assert.strictEqual(CM.partyGearScore(g.party), g.party.reduce((a, h) => a + CM.gearScore(h), 0));
+  g.bag.length = 0; const before = g.party.map((h) => h.weapon); g.gain([sw(30, 900)], "test"); assert.strictEqual(g.bag.length, 1, "off: nothing moves");
+  const moved = g.amSet(true); assert.ok(moved.length >= 1); const who = g.party.findIndex((h) => h.weapon && h.weapon.power === 30); const first = g.party.findIndex((h) => g.amGain(h, sw(30, 900)) > 0 || (h.weapon && h.weapon.power === 30));
+  assert.strictEqual(who, first, "the leftmost who gains"); assert.ok(!g.bag.some((it) => it.power === 30));
+  const n0 = g.bag.length; g.gain([Object.assign(sw(40, 900), { unknown: true }), Object.assign(sw(45, 900), { props: { cursed: true } })], "test"); assert.strictEqual(g.bag.length, n0 + 2, "unknown and cursed left alone");
+  const gs0 = CM.partyGearScore(g.party); let it = CM.makeItem(10, R, "armor"); it.unknown = false; g.gain([it], "test"); assert.ok(CM.partyGearScore(g.party) >= gs0); g.amSet(false); assert.ok(!g.amOn()); same(before.length, 4);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v18.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v18.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1350,6 +1350,12 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 @property --lva { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
 @keyframes lvrun { to { --lva: 360deg; } } @keyframes lvpulse { 0%, 100% { box-shadow: 0 0 0 rgba(255,224,112,0); } 50% { box-shadow: 0 0 22px 6px rgba(255,224,112,0.75); } }
 @media (prefers-reduced-motion: reduce) { .member.lvup, .member.lvup::after { animation: none; box-shadow: 0 0 14px 4px rgba(255,224,112,0.7); } }
+/* ---- v18.1: gear score and auto-manage ---- */
+#btn-automanage.on { background: #2A5A2A; border-color: #80E080; color: #FFF; }
+.bag-gs { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 4px 0; font-size: 12px; } .bag-gs .gs-total b { color: #FFE070; font-size: 15px; }
+.bag-gs .gs-hero { position: relative; display: inline-flex; gap: 6px; align-items: center; min-width: 120px; padding: 2px 8px; border-radius: 4px; background: rgba(0,0,0,0.3); overflow: hidden; }
+.bag-gs .gs-hero i { position: absolute; inset: 0 auto 0 0; background: rgba(232,184,74,0.22); } .bag-gs .gs-hero em, .bag-gs .gs-hero b { position: relative; font-style: normal; } .bag-gs .gs-hero b { margin-left: auto; color: #FFE8A0; }
+.gs-chip { margin-left: 8px; padding: 0 8px; border-radius: 8px; background: rgba(232,184,74,0.2); border: 1px solid rgba(232,184,74,0.5); color: #FFE8A0; font-size: 12px; font-weight: normal; }
 </style>
 </head>
 <body>
@@ -1359,7 +1365,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "18.0", built: "2026-11-01" };
+const CM = window.CM = { version: "18.1", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24841,6 +24847,45 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzy-automanage.js ----
+"use strict";
+// Gear score and auto-manage (v18.1).
+// - Gear score: a number for each thing worn - its power (weighted by its slot: the weapon most, then the armour, the
+//   off hand, the helm, then boots, cloak, rings, amulets and trinkets), its worth, and its rarity (fine, rare,
+//   relic, unique more; cursed much less; a weapon a hero isn't at home with counts for less in their hands) - and so
+//   for each hero (all they wear) and the party (all four).
+// - Auto-manage (the pack's "Auto-manage: Y/N", kept in the settings): whenever gear comes into the pack - loot, a
+//   chest, the casino's spoils - and when it's switched on, every known piece is put on the first hero, left to right,
+//   who can wear it and is better for it by the gear score; what they took off goes back to the pack, and may suit the
+//   next hero along. Unknown things are left alone (they might be cursed: identify them first), cursed ones too, and
+//   nothing changes hands in a fight.
+{ const GS = CM.GEARSCORE = { W: { weapon: 1.2, armor: 1.0, offhand: 0.8, helm: 0.6, boots: 0.5, cloak: 0.5, ring: 0.5, amulet: 0.5, trinket: 0.5 },
+    RARITY: { common: 0, magic: 10, fine: 20, rare: 30, set: 30, relic: 45, unique: 60, cursed: -80 }, GEAR: ["weapon", "armor", "shield", "helm", "ring", "amulet", "trinket", "boots", "cloak"] };
+  GS.slotOf = (it) => it.slot || (it.kind === "shield" ? "offhand" : it.kind);
+  // a thing's score, in a hero's hands if one is given
+  CM.itemScore = (it, h) => { if (!it || (it.props && it.props.fists)) return 0; const w = GS.W[GS.slotOf(it)] || 0.5, r = GS.RARITY[CM.rarityOf(it)] || 0;
+    let s = (it.power || 0) * 10 * w + Math.sqrt(Math.max(0, it.value || 0)) * 2 + r; if (h && it.kind === "weapon" && CM.atHome && !CM.atHome(h, it)) s *= 0.7; return Math.max(0, Math.round(s)); };
+  CM.gearScore = (h) => CM.SLOTS.reduce((a, slot) => a + CM.itemScore(h[slot], h), 0);
+  CM.partyGearScore = (party) => (party || []).reduce((a, h) => a + CM.gearScore(h), 0);
+  const P = CM.Game.prototype, gain0 = P.gain;
+  Object.assign(P, {
+    amOn() { return !!(this.settings && this.settings.autoManage); },
+    amSet(on) { this.settings.autoManage = !!on; this.saveSettings && this.saveSettings(); return on ? this.amRun() : []; },
+    // what this hero would gain by wearing that (taking off what's there, and a shield for a two-handed weapon)
+    amGain(h, it) { if (!GS.GEAR.includes(it.kind) || it.unknown || (it.props && it.props.cursed) || CM.cantWear(h, it)) return 0; const slot = GS.slotOf(it), old = h[slot];
+      if (old && old.props && old.props.cursed) return 0; let g = CM.itemScore(it, h) - CM.itemScore(old, h); if (slot === "weapon" && it.props && it.props.twohanded && h.offhand) g -= CM.itemScore(h.offhand, h); return g; },
+    // everything known in the pack, to the first hero (left to right) it betters
+    amRun() { if (this.replaying || this.mode === "combat" || !this.party || !this.bag) return []; const moved = []; let guard = 0, changed = true;
+      while (changed && guard++ < 60) { changed = false;
+        for (let row = 0; row < this.bag.length && !changed; row++) { const it = this.bag[row]; if (!GS.GEAR.includes(it.kind)) continue;
+          for (const h of this.party) { if (this.amGain(h, it) <= 0) continue; const was = this.say; this.say = () => {}; let why; try { why = this.equip(h, row); } finally { this.say = was; }   // (logged as any equip: a film plays it back as it was done)
+            if (!why) { moved.push({ hero: h.name, item: it.name }); changed = true; } break; } } }
+      if (moved.length) { this.say(`Auto-manage: ${moved.map((m) => `${m.hero} puts on ${m.item}`).join("; ")}.`); this.emit && this.emit("change"); }
+      return moved; },
+    gain(items, how) { const out = gain0.call(this, items, how); if (this.amOn() && out && out.some((it) => GS.GEAR.includes(it.kind))) this.amRun(); return out; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -26354,8 +26399,8 @@ CM.UI = class {
   <div class="filters" id="bag-filters"></div>
   <div class="lists"><div class="list" id="bag-list"></div><div class="list" id="shop-list"></div></div>
   <div class="note" id="bag-note"></div>
-  <div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
-  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sell-island" title="Timber and stone from the heroes' Claudecraft satchels, by the stack of sixteen">Sell island timber and stone</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-bag-done" class="primary">Done</button></div>
+  <div class="bag-gs" id="bag-gs"></div><div class="give" id="bag-give"></div><div class="give" id="bag-belt"></div>
+  <div class="act"><button id="btn-buy">Buy</button><button id="btn-sell">Sell</button><button id="btn-sell-shown" title="Everything the filter shows (keys, relics and a Homecoming scroll that remembers a square are kept)">Sell all shown</button><button id="btn-sell-spare" title="Gear nobody wears, known and not cursed">Sell spare gear</button><button id="btn-sell-island" title="Timber and stone from the heroes' Claudecraft satchels, by the stack of sixteen">Sell island timber and stone</button><button id="btn-sort" title="Weapons, then armour, shields, helms, rings, amulets, then the rest - the best first">Sort the pack</button><button id="btn-automanage" title="When Y, known gear in the pack is put on the first hero (left to right) it improves, by gear score - as it comes in, and now. Unknown and cursed things are left alone.">Auto-manage: N</button><button id="btn-bag-done" class="primary">Done</button></div>
 </div>
 <div class="dialog" id="dlg-settings"><div class="box"><h2>Settings</h2>
   <div class="row"><label for="set-sound">Sound</label><input type="checkbox" id="set-sound"></div>
@@ -26659,7 +26704,7 @@ CM.UI = class {
         <small>${g.mode === "combat" ? "not in a fight" : h.row === "front" ? "takes the blows" : h.cls === "Rogue" || h.cls === "Ranger" ? "strikes from safety" : "safer, hits for half"}</small></div>
       <div class="rowpick"><span>Formation:</span>${Object.entries(CM.FORMATIONS).map(([id, f]) => `<button data-formation="${id}" class="${(g.formation || "line") === id ? "on" : ""}" title="${this.esc(f.what)}">${f.name}</button>`).join("")}
         <small>${this.esc(CM.FORMATIONS[g.formation || "line"].what)}</small></div>
-      <div class="list-title">Gear</div>
+      <div class="list-title">Gear <span class="gs-chip" title="The gear score of everything this hero wears">Gear score ${CM.gearScore ? CM.gearScore(h).toLocaleString("en") : 0}</span></div>
       ${CM.setWorn(h) ? `<div class="gold">${CM.SETS[CM.setWorn(h)].name} set, all three worn: ${CM.SETS[CM.setWorn(h)].what}.</div>` : ""}
       ${CM.relicsWorn(h) >= 2 ? `<div class="gold">The guardians' things, worn together: ${CM.RELIC_SET.two.what}${CM.relicsWorn(h) >= 3 ? "; " + CM.RELIC_SET.three.what : ""}.</div>` : ""}${h.oil && h.oil.fights > 0 ? `<div>Oiled: ${CM.ELEMENT_NAMES[h.oil.element]} on the weapon for ${CM.plural(h.oil.fights, "more fight")}.</div>` : ""}
       <div class="gear-list">${CM.SLOTS.map((slot) => { const it = h[slot]; return `<div><span class="slot">${CM.SLOT_NAMES[slot]}</span><span class="icon-slot" data-slot="${slot}"></span> ${it ? `<b class="rarity-${CM.rarityOf(it)}" title="${this.esc(CM.itemCard(it))}">${this.esc(it.unknown ? CM.baseName(it) : it.name)}</b> <small>${this.esc(CM.itemLabel(it))}</small>` : "<small>-</small>"}${it && !["weapon", "armor"].includes(slot) && g.mode !== "combat" ? ` <button data-off="${slot}">Take off</button>` : ""}</div>`; }).join("")}</div>`;
@@ -28416,6 +28461,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#btn-buy").addEventListener("click", () => { this.note(g.buy(this.shopRow)); this.fillBag(); });
     this.$("#btn-sell").addEventListener("click", () => { this.note(g.sell(this.bagRow)); this.fillBag(); });
     this.$("#btn-sort").addEventListener("click", () => { g.sortBag(); this.bagRow = -1; this.fillBag(); });
+    this.$("#btn-automanage").addEventListener("click", () => { const moved = g.amSet(!g.amOn()); this.bagRow = -1; this.note(g.amOn() ? (moved.length ? `Auto-manage on: ${moved.map((m) => `${m.hero} puts on ${m.item}`).join("; ")}.` : "Auto-manage on: everyone already wears the best of what they can.") : "Auto-manage off."); this.fillBag(); this.refresh && this.refresh(); });   // (64zzy-automanage.js)
     this.$("#btn-sell-island").addEventListener("click", () => { this.note(g.sellIslandStone()); this.fillBag(); });
     for (const [id, which] of [["#btn-sell-shown", () => this.bagFilter || "all"], ["#btn-sell-spare", () => "spare"]]) {
       this.$(id).addEventListener("click", () => {                         // a first click says what and for how much; a second, within a few seconds, sells
@@ -28443,6 +28489,8 @@ Object.assign(CM.UI.prototype, {
     const g = this.game, shop = g.shopping;
     this.$("#bag-title").textContent = `${CM.t(shop ? "bag.title.shop" : "bag.title.pack")}   -   ${CM.t("bag.gold", { n: g.gold })}   -   ${CM.t("bag.weight", { n: CM.bagWeight(g.bag), cap: CM.carryCap(g.party) })}${g.weightWord() ? ` (${g.weightWord().toLowerCase()})` : ""}`;
     this.$("#shop-list").style.display = shop ? "" : "none";
+    { const b = this.$("#btn-automanage"); b.textContent = `Auto-manage: ${g.amOn() ? "Y" : "N"}`; b.classList.toggle("on", g.amOn());
+      const best = Math.max(1, ...g.party.map((h) => CM.gearScore(h))); this.$("#bag-gs").innerHTML = `<span class="gs-total">Party gear score <b>${CM.partyGearScore(g.party).toLocaleString("en")}</b></span>${g.party.map((h) => `<span class="gs-hero"><i style="width:${Math.round((100 * CM.gearScore(h)) / best)}%"></i><em>${this.esc(h.name)}</em><b>${CM.gearScore(h).toLocaleString("en")}</b></span>`).join("")}`; }
     this.$("#btn-buy").style.display = shop ? "" : "none";
     this.$("#btn-sell").style.display = shop ? "" : "none";
     for (const id of ["#btn-sell-shown", "#btn-sell-spare"]) this.$(id).style.display = shop ? "" : "none";
