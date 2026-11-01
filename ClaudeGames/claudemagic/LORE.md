@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The town's draws (v16.2)
+
+Some nights the whole square comes out for the crier's drum; some nights the mill pond is the quietest place in Caer
+Duin, and an old woman sells worms from a shed and says the golden carp is older than the Joker. And when somebody wins
+big, the Joker's own powder-man sends rockets up over the roof, so the whole town knows.
+
 ## Evenings at the Joker (v16.1)
 
 Once the village came in, the Joker found things for it to do. A master of ceremonies with a stick of chalk runs a

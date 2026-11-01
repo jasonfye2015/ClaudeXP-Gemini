@@ -1129,3 +1129,32 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .flperks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
 .flperk { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: linear-gradient(#4A0A18, #2A0610); border: 1px solid #C89A30; color: #F8E8C8; } .flperk b { color: #FFE070; font-family: Georgia, serif; } .flperk button { align-self: flex-start; }
 .flnote .tkcount { color: #7A1A30; }
+/* ---- v16.2: fireworks, the Town Lottery, the Drop Board, the Fishing Pond ---- */
+.fwlayer { position: fixed; inset: 0; z-index: 10000; pointer-events: none; transition: opacity 0.6s; } .fwlayer.out { opacity: 0; } .fwlayer canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fwbanner { position: absolute; left: 50%; top: 22%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 6px; animation: fwin 0.7s cubic-bezier(.2,1.6,.4,1) both; text-align: center; }
+.fwbanner b { font: bold 64px Georgia, serif; letter-spacing: 3px; background: linear-gradient(#FFF8D0, #F0C040 55%, #B07010); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 10px rgba(255,200,80,0.8)) drop-shadow(0 4px 0 #5A3A08); animation: fwpulse 0.9s ease-in-out infinite alternate; }
+.fwbanner::before { content: ""; position: absolute; inset: -30px -60px; z-index: -1; border-radius: 50%; background: radial-gradient(closest-side, rgba(10,4,16,0.72), rgba(10,4,16,0)); }
+.fw3 .fwbanner b { font-size: 84px; } .fw1 .fwbanner b { font-size: 48px; }
+.fwbanner span { padding: 4px 16px; border-radius: 20px; background: rgba(20,10,30,0.75); color: #FFE8A0; font: bold 20px Georgia, serif; box-shadow: 0 0 0 2px #C89A30; }
+@keyframes fwin { from { transform: translate(-50%, -50%) scale(0.2); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+@keyframes fwpulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+@media (max-width: 600px) { .fwbanner b { font-size: 40px !important; } .fwbanner span { font-size: 15px; } }
+.lottery .ltpot { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin: 0 0 8px; padding: 6px 14px; border-radius: 8px; background: linear-gradient(#3A1A08, #1A0A04); border: 2px solid #C89A30; box-shadow: inset 0 0 18px rgba(240,192,64,0.3); }
+.lottery .ltpot span { color: #E8C880; font: bold 12px Georgia, serif; letter-spacing: 2px; } .lottery .ltpot b { font: bold 34px "Courier New", monospace; color: #FFD860; text-shadow: 0 0 10px #FF9A20, 0 0 2px #FFF; animation: ltglow 1.6s ease-in-out infinite alternate; }
+@keyframes ltglow { from { text-shadow: 0 0 6px #FF9A20, 0 0 2px #FFF; } to { text-shadow: 0 0 16px #FFB040, 0 0 4px #FFF; } }
+.lottery canvas.ltcanvas { border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+.ltcard { display: grid; grid-template-columns: repeat(10, 30px); gap: 3px; margin: 6px 0; } .ltcard button { width: 30px; height: 30px; padding: 0; border-radius: 50%; font: bold 12px Georgia, serif; background: #FBF4E0; color: #2A2010; border: 2px solid var(--c); }
+.ltcard button.on { background: var(--c); color: #FFF; box-shadow: 0 0 8px var(--c); transform: scale(1.08); }
+.ltslips, .ltresult { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; } .ltresult { flex-direction: column; }
+.ltslip { display: flex; align-items: center; gap: 3px; padding: 4px 8px; border-radius: 6px; background: #FBF4E0; box-shadow: 0 2px 6px rgba(0,0,0,0.4); } .ltslip b { margin-left: 6px; color: #3A2A10; font-size: 12px; }
+.ltslip i, .ltnews i { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; font: bold 11px Georgia, serif; font-style: normal; color: #2A2010; border: 2px solid var(--c); background: #FFF; transition: transform 0.3s; }
+.ltslip i.hit { background: var(--c); color: #FFF; transform: scale(1.18); box-shadow: 0 0 8px var(--c); } .ltnews { margin: 8px 0; } .ltnews div { margin: 2px 0; } .ltnews i { width: 18px; height: 18px; line-height: 18px; margin-right: 2px; font-size: 10px; }
+.plinko canvas.pkcanvas { border-radius: 10px; box-shadow: 0 0 0 4px #C89A30, 0 8px 20px rgba(0,0,0,0.6); }
+.pkbins { display: flex; gap: 2px; margin: 6px 0; } .pkbins i { flex: 1; min-width: 0; padding: 3px 0; border-radius: 3px; background: var(--c); color: #FFF; font: bold 10px Georgia, serif; font-style: normal; text-align: center; text-shadow: 0 1px 1px rgba(0,0,0,0.6); }
+.pond .pdwrap { position: relative; } .pond canvas.pdcanvas { display: block; border-radius: 10px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,0.6); max-width: 100%; }
+.pond .pdhint { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(0,0,0,0.6); color: #F0E8D0; font-size: 12px; white-space: nowrap; pointer-events: none; }
+.pond .pdbait { margin: 6px 0; font-size: 13px; } .pond .pdbait b { color: #FFE070; }
+.pdcatch { display: flex; gap: 10px; align-items: center; margin: 6px 0; padding: 8px; border-radius: 8px; background: linear-gradient(#2A4A5A, #14303A); border: 1px solid #80B0C0; animation: bgstamp 0.4s ease-out; }
+.pdcatch div { display: flex; flex-direction: column; } .pdcatch b { color: #FFF0C0; font-family: Georgia, serif; } .pdcatch span { font-size: 12px; } .pdnew { color: #FFE070; font-size: 12px; font-weight: bold; }
+.pdbook { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin: 4px 0 8px; } .pdbook div { display: flex; flex-direction: column; align-items: center; padding: 4px; border-radius: 6px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); }
+.pdbook div.got { background: rgba(60,110,130,0.3); border-color: rgba(128,192,224,0.4); } .pdbook b { font-size: 11px; } .pdbook span { font-size: 10px; opacity: 0.8; }

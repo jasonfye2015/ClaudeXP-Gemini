@@ -29,7 +29,7 @@ CM.CG_TABLES.push(["holdem", "The Residents' Game"]);
   Object.assign(CM.UI.prototype, {
     renderFloor(box) { if (this.cgView === "holdem") return this.cgHoldem(box); return floor0.call(this, box); },
     cgHoldem(box) {
-      const g = this.game, Hs = g.heStore(), T = g.heTable(), seated = !!T;
+      const g = this.game, Hs = g.heStore(), T = g.heTable(), seated = !!T; SEAT[1] = T && T.seats.length === 2 ? [360, 72] : [92, 222];   // (heads up, the one opponent sits across)
       box.innerHTML = `<div class="cgtable holdem"><h3>The Residents' Game</h3><p class="lore">Through a curtain at the back of the floor there's a round table where the village's own sit down of an evening - the tavern-keeper, the merchant, the smith, the librarian, the priest and the farmer's hand, four at a time. "Limit hold'em," says the dealer, a quiet woman with very quick hands. "Buy in, and it's you against them. The house only deals."</p>
         <canvas class="hecanvas" width="${W}" height="${H}"></canvas><div class="hectl"></div>
         <div class="cgnote">${this.cgNote || ""}</div>${this.heCard ? this.cgCardWon(this.heCard) : ""}
