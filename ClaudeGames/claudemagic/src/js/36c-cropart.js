@@ -17,7 +17,14 @@
       add(name, c); }
     return sub; };
   { const build0 = CM.art.build; CM.art.build = function (theme, look) { const set = build0.call(this, theme, look); if (!CM.art.crops.ready) return set;
-      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); return set; }; }
+      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); add("scarecrow", CM.art.scarecrow(set.size)); return set; }; }
+  // the scarecrow (v19.1): a post, a crossbar, a sacking head under a straw hat, a patched coat with straw at the cuffs
+  CM.art.scarecrow = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64;
+    p.fillStyle = "#6A4A28"; p.fillRect(30 * u, 16 * u, 4 * u, 48 * u); p.fillRect(12 * u, 26 * u, 40 * u, 4 * u);
+    p.fillStyle = "#7A5A9A"; p.fillRect(20 * u, 24 * u, 24 * u, 22 * u); p.fillStyle = "#5A4A7A"; p.fillRect(14 * u, 25 * u, 8 * u, 7 * u); p.fillRect(42 * u, 25 * u, 8 * u, 7 * u); p.fillStyle = "#B07A3A"; p.fillRect(26 * u, 34 * u, 7 * u, 6 * u);
+    p.fillStyle = "#E8C860"; for (const x of [11, 50]) { p.fillRect(x * u, 26 * u, 3 * u, 6 * u); } p.fillRect(23 * u, 46 * u, 18 * u, 3 * u);
+    p.fillStyle = "#D8C090"; p.beginPath(); p.arc(32 * u, 17 * u, 7 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3A2A1A"; p.fillRect(28 * u, 15 * u, 2 * u, 2 * u); p.fillRect(34 * u, 15 * u, 2 * u, 2 * u); p.fillRect(29 * u, 20 * u, 6 * u, 1 * u);
+    p.fillStyle = "#C8A040"; p.fillRect(20 * u, 10 * u, 24 * u, 3 * u); p.fillRect(25 * u, 4 * u, 14 * u, 7 * u); p.fillStyle = "#8A2A2A"; p.fillRect(25 * u, 9 * u, 14 * u, 2 * u); return c; };
   // what stands on a plot
   const SPOTS = [[-0.22, -0.14], [0.2, 0.16]];
   CM.plotFrame = (game, key) => { const st = game.plotStage(key), F = game.fields(), P = F.plots[key], fr = CP && CP.frames; if (!fr) return null;

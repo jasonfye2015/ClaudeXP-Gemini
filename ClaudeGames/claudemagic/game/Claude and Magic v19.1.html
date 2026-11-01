@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v19.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v19.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1420,6 +1420,12 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .fdthirst { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: #80C0FF; box-shadow: 0 0 3px #80C0FF; }
 .fdside { min-width: 0; } .fdpick { margin: 0 6px 6px 0; } .fdpick.on { box-shadow: 0 0 0 2px #F0C040; } .fdshelf { max-height: 300px; overflow-y: auto; }
 .fdseed { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2px 8px; align-items: center; padding: 4px 0; border-bottom: 1px dotted rgba(240,192,64,0.15); } .fdseed small { grid-column: 1; opacity: 0.7; font-size: 12px; } .fdseed span { font-weight: bold; }
+/* the South Fields' care (v19.1) */
+.fdcare { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 0 0 8px; padding: 6px 10px; border-radius: 6px; background: rgba(120,90,40,0.18); font-size: 13px; } .fdcare button.on { box-shadow: 0 0 0 2px #80C080; }
+.fdweed { position: absolute; left: 2px; bottom: 2px; width: 10px; height: 8px; background: radial-gradient(circle at 30% 70%, #4A8A2A 0 3px, transparent 3px), radial-gradient(circle at 70% 60%, #3A7A1A 0 3px, transparent 3px); }
+.fdplot.withered img { filter: sepia(1) brightness(0.6); } .fdplot.withered { background: repeating-linear-gradient(0deg, #6A4A2A 0 4px, #5A3C20 4px 6px); }
+.fdplot.giant { box-shadow: inset 0 0 0 2px #F0A040; } .fdgiant { position: absolute; left: 0; right: 0; top: 1px; font: bold 7px/1 sans-serif; color: #FFE0A0; text-shadow: 0 0 2px #000; font-style: normal; }
+.fdplot.comp::after { content: ""; position: absolute; left: 3px; top: 3px; width: 5px; height: 5px; border-radius: 50%; background: #A07040; box-shadow: 0 0 2px #000; }
 </style>
 </head>
 <body>
@@ -1429,7 +1435,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "19.0", built: "2026-11-01" };
+const CM = window.CM = { version: "19.1", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -8894,7 +8900,14 @@ CM.art.credits = function () {
       add(name, c); }
     return sub; };
   { const build0 = CM.art.build; CM.art.build = function (theme, look) { const set = build0.call(this, theme, look); if (!CM.art.crops.ready) return set;
-      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); return set; }; }
+      const add = (name, canvas) => { set.index[name] = set.layers.length; set.layers.push(canvas); }; set.sub = Object.assign({}, set.sub || {}, CM.art.packCrops(add, set.size, set.crisp)); add("scarecrow", CM.art.scarecrow(set.size)); return set; }; }
+  // the scarecrow (v19.1): a post, a crossbar, a sacking head under a straw hat, a patched coat with straw at the cuffs
+  CM.art.scarecrow = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64;
+    p.fillStyle = "#6A4A28"; p.fillRect(30 * u, 16 * u, 4 * u, 48 * u); p.fillRect(12 * u, 26 * u, 40 * u, 4 * u);
+    p.fillStyle = "#7A5A9A"; p.fillRect(20 * u, 24 * u, 24 * u, 22 * u); p.fillStyle = "#5A4A7A"; p.fillRect(14 * u, 25 * u, 8 * u, 7 * u); p.fillRect(42 * u, 25 * u, 8 * u, 7 * u); p.fillStyle = "#B07A3A"; p.fillRect(26 * u, 34 * u, 7 * u, 6 * u);
+    p.fillStyle = "#E8C860"; for (const x of [11, 50]) { p.fillRect(x * u, 26 * u, 3 * u, 6 * u); } p.fillRect(23 * u, 46 * u, 18 * u, 3 * u);
+    p.fillStyle = "#D8C090"; p.beginPath(); p.arc(32 * u, 17 * u, 7 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3A2A1A"; p.fillRect(28 * u, 15 * u, 2 * u, 2 * u); p.fillRect(34 * u, 15 * u, 2 * u, 2 * u); p.fillRect(29 * u, 20 * u, 6 * u, 1 * u);
+    p.fillStyle = "#C8A040"; p.fillRect(20 * u, 10 * u, 24 * u, 3 * u); p.fillRect(25 * u, 4 * u, 14 * u, 7 * u); p.fillStyle = "#8A2A2A"; p.fillRect(25 * u, 9 * u, 14 * u, 2 * u); return c; };
   // what stands on a plot
   const SPOTS = [[-0.22, -0.14], [0.2, 0.16]];
   CM.plotFrame = (game, key) => { const st = game.plotStage(key), F = game.fields(), P = F.plots[key], fr = CP && CP.frames; if (!fr) return null;
@@ -26966,6 +26979,78 @@ Object.assign(CM.Game.prototype, {
   if (CM.WORLDMAP) { CM.WORLDMAP.PLACES.push(["fields", "The South Fields", 0, () => FD.shed, "seeds, the can, the plots", false]); CM.WORLDMAP.byId.fields = CM.WORLDMAP.PLACES[CM.WORLDMAP.PLACES.length - 1]; }
 }
 
+// ---- 69k-fieldcare.js ----
+"use strict";
+// The South Fields, water and quality (v19.1, UPGRADE_PLAN_14.md phase 1).
+// - Thirst: a crop not watered stalls; four dry dawns in a row and it withers (the plot keeps its turned earth).
+// - Weeds: turned earth left bare three dawns grows weeds, and a growing plot catches them now and then; a weedy plot
+//   doesn't grow until they're pulled (Space, or a click, pulls them first). Pulled weeds are trimmings.
+// - Crows: a ripe plot left standing may be taken in the night, unless the fields have a scarecrow (the shed's).
+// - Quality, one to five stars, set when a crop is picked: two to start; one more if it was never dry, one if the plot
+//   was composted for it, one if the plot grew something else last (the soil rested), and now and then one for luck.
+//   A star is a quarter more on the price; the stars are in the produce's name.
+// - Trimmings and compost: every picking, pulled weed and withered plant leaves trimmings; five in the bin make a load
+//   of compost three dawns on. With "compost when sowing" on, each sowing takes a load if there is one.
+// - Giants: when a 3x3 of one giant kind (pumpkin, watermelon, melon, cabbage, cauliflower) stands ripe together at
+//   dawn, now and then it grows into one giant: picked, it gives fifteen to twenty, at its stars.
+// The window's side: 76zzzk-fieldcare.js.
+{ const FD = CM.SOUTHFIELDS, FC = CM.FIELDCARE = { wiltAfter: 4, weedAfter: 3, weedChance: 0.04, crowChance: 0.12, scarecrowGold: 60, binFor: 5, binDays: 3, giantChance: 0.3, giantKinds: ["pumpkin", "watermelon", "melon", "cabbage", "cauliflower"], bin: [11, 33], scarecrow: [33, 32] };
+  const G = CM.Game.prototype, keyOf = (x, y) => `${x},${y}`;
+  FC.roll = (g, what) => (CM.hashSeed(`${g.seed}:fieldcare:${what}:${g.fields().days}`) % 10000) / 10000;
+  FC.produce = (crop, q) => { const it = FD.produce(crop); if (q) { it.q = q; it.name = `${it.name} ${CM.stars ? CM.stars(q) : "*".repeat(q)}`; it.value = Math.round((it.value || 8) * (1 + 0.25 * (q - 1))); } return it; };
+  // the stars a plot would give if picked now
+  FC.quality = (g, key) => { const P = g.fields().plots[key]; if (!P || !P.crop) return 0; let q = 2; if (!P.everDry) q++; if (P.comp) q++; if (P.rested) q++; if (P.lucky) q++; return Math.max(1, Math.min(5, q)); };
+  const dawn0 = G.fieldsDawn, sow0 = G._fieldSow, tend0 = G._fieldTend, next0 = G.fieldNext, stage0 = G.plotStage, till0 = G._fieldTill;
+  Object.assign(G, {
+    fieldsDawn(day) { const held = Object.values(this.fields().plots).filter((P) => P.weed && P.crop && !P.ripe).map((P) => [P, P.g, P.ripe]);   // (a weedy plot doesn't grow)
+      dawn0.call(this, day); for (const [P, g, r] of held) { P.g = g; P.ripe = r; } const F = this.fields(); F.trim = F.trim || 0; F.bin = F.bin || []; const notes = [];
+      for (const [k, P] of Object.entries(F.plots)) { if (!P.t) continue;
+        if (P.crop && !P.ripe && (P.dry || 0) > 0) P.everDry = true;
+        if (P.crop && !P.ripe && (P.dry || 0) >= FC.wiltAfter) { notes.push(`the ${CM.CROPS[P.crop].name.toLowerCase()} withered`); P.last = P.crop; P.crop = null; P.g = 0; P.giant = null; P.withered = true; F.trim += 1; continue; }
+        if (!P.crop) { P.bare = (P.bare || 0) + 1; if (P.bare >= FC.weedAfter) P.weed = true; }
+        else if (!P.ripe && FC.roll(this, `weed:${k}`) < FC.weedChance) P.weed = true;
+        if (P.ripe) { P.standing = (P.standing || 0) + 1; if (P.standing >= 2 && !F.scarecrow && !P.giant && FC.roll(this, `crow:${k}`) < FC.crowChance) { notes.push(`crows had the ${CM.CROPS[P.crop].name.toLowerCase()}`); P.last = P.crop; P.crop = null; P.ripe = false; P.g = 0; P.standing = 0; } } }
+      // the bin
+      while (F.trim >= FC.binFor) { F.trim -= FC.binFor; F.bin.push(F.days + FC.binDays); } const ready = F.bin.filter((d) => d <= F.days).length; if (ready) { F.compost = (F.compost || 0) + ready; F.bin = F.bin.filter((d) => d > F.days); }
+      // giants: a 3x3 of one giant kind, all ripe
+      for (const [k, P] of Object.entries(F.plots)) { if (!P.ripe || P.giant || !FC.giantKinds.includes(P.crop)) continue; const [x, y] = k.split(",").map(Number), block = [];
+        for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) { const Q = F.plots[keyOf(x + dx, y + dy)]; if (Q && Q.ripe && Q.crop === P.crop && !Q.giant && this.isPlot(keyOf(x + dx, y + dy))) block.push(keyOf(x + dx, y + dy)); }
+        if (block.length === 9 && FC.roll(this, `giant:${k}`) < FC.giantChance) { const mid = keyOf(x + 1, y + 1); for (const b of block) F.plots[b].giant = mid; notes.push(`a giant ${CM.CROPS[P.crop].name.toLowerCase()} has grown`); } }
+      if (notes.length) this.say(`In the South Fields: ${notes.join("; ")}.`); },
+    _fieldTill(key) { const out = till0.call(this, key), P = this.fields().plots[key]; if (P) { P.bare = 0; P.weed = false; } return out; },
+    _fieldSow(key, crop, i) { const F = this.fields(), P = F.plots[key], rested = Boolean(P.last && P.last !== crop); const out = sow0.call(this, key, crop, i);
+      Object.assign(P, { everDry: false, rested, comp: false, lucky: FC.roll(this, `luck:${key}:${crop}`) < 0.15, bare: 0, standing: 0, giant: null, withered: false });
+      if (F.autoCompost && (F.compost || 0) > 0) { F.compost -= 1; P.comp = true; } return out; },
+    fieldNext(key) { const P = this.fields().plots[key]; if (P && P.t && P.weed) return "weed"; return next0.call(this, key); },
+    plotStage(key) { const P = this.fields().plots[key]; if (P && P.t && !P.crop && P.withered) return "withered"; return stage0.call(this, key); },
+    _fieldWeed(key) { const F = this.fields(), P = F.plots[key]; P.weed = false; P.bare = 0; F.trim = (F.trim || 0) + 1; this.sound && this.sound("step"); this.emit && this.emit("change"); this.saveVillage && this.saveVillage(); return ""; },
+    fieldWeed(key) { const why = this.fieldWhy(key); if (why) return why; const P = this.fields().plots[key]; if (!P || !P.weed) return "No weeds there."; this.logAct && this.logAct("fieldWeed", key); return this._fieldWeed(key); },
+    _fieldTend(key) { const P = this.fields().plots[key]; if (!this.fieldWhy(key) && P && P.t && P.weed) return this._fieldWeed(key); return tend0.call(this, key); },
+    // picking: the stars, the trimmings, the giant
+    _fieldPick(key) { const F = this.fields(), P = F.plots[key], K = CM.CROPS[P.crop], q = FC.quality(this, key), got = [];
+      if (P.giant) { const mid = P.giant, n = 15 + (CM.hashSeed(`${this.seed}:giant:${mid}:${F.days}`) % 6); for (let i = 0; i < n; i++) got.push(FC.produce(P.crop, q));
+        for (const [k, Q] of Object.entries(F.plots)) if (Q.giant === mid) { Q.last = Q.crop; Q.crop = null; Q.ripe = false; Q.g = 0; Q.giant = null; Q.picks = 0; Q.standing = 0; }
+        F.trim = (F.trim || 0) + 4; F.giants = (F.giants || 0) + 1; this.gain(got, "fields"); F.picked += 1; this.say(`The giant ${K.name.toLowerCase()} comes in on a barrow: ${n} of them, ${CM.stars ? CM.stars(q) : q}.`); this.sound && this.sound("coin"); this.emit && this.emit("change"); this.saveVillage && this.saveVillage(); return ""; }
+      for (let n = 0; n < (K.yields || 1); n++) got.push(FC.produce(P.crop, q));
+      if (CM.hashSeed(`${this.seed}:fieldseed:${key}:${F.days}:${F.picked}`) % 4 === 0) got.push(CM.seed(P.crop));
+      this.gain(got, "fields"); F.picked += 1; F.trim = (F.trim || 0) + 1; this.tally.fieldPicks = (this.tally.fieldPicks || 0) + 1; F.best = Math.max(F.best || 0, q);
+      if (K.regrow) { P.ripe = false; P.g = 0; P.need = K.regrow; P.picks = (P.picks || 0) + 1; P.standing = 0; P.everDry = false; } else { P.last = P.crop; P.crop = null; P.ripe = false; P.g = 0; P.picks = 0; P.standing = 0; P.comp = false; P.bare = 0; }
+      this.say(`${CM.plural(K.yields || 1, K.name)} from the field, ${CM.stars ? CM.stars(q) : q}${K.regrow ? `; it will fruit again in ${K.regrow} days` : ""}.`); this.sound && this.sound("coin"); this.emit && this.emit("change"); this.saveVillage && this.saveVillage(); return ""; },
+    fieldCompost(key) { const why = this.fieldWhy(key); if (why) return why; const F = this.fields(), P = F.plots[key]; if (!P || !P.crop || P.ripe) return "Compost goes on a growing crop."; if (P.comp) return "Composted already."; if (!(F.compost > 0)) return "No compost in the bin yet.";
+      this.logAct && this.logAct("fieldCompost", key); F.compost -= 1; P.comp = true; this.saveVillage && this.saveVillage(); this.emit && this.emit("change"); return ""; },
+    fieldAutoCompost(on) { this.logAct && this.logAct("fieldAutoCompost", Boolean(on)); this.fields().autoCompost = Boolean(on); this.saveVillage && this.saveVillage(); return ""; },
+    fieldBuyScarecrow() { if (!this.atFields()) return "The shed is at the fields."; const F = this.fields(); if (F.scarecrow) return "The fields have their scarecrow."; if (this.gold < FC.scarecrowGold) return `A scarecrow is ${FC.scarecrowGold} gold.`;
+      this.logAct && this.logAct("fieldBuyScarecrow"); this.gold -= FC.scarecrowGold; F.scarecrow = true; this.fieldsApply(); this.emit && this.emit("floor", this.floor); this.saveVillage && this.saveVillage(); this.emit && this.emit("change"); return ""; },
+  });
+  // the bin and the scarecrow on the floor
+  { const ap0 = G.fieldsApply; G.fieldsApply = function (fl) { ap0.call(this, fl); fl = fl || this.floor; if (!fl || fl.number !== 0 || this.fieldsLevel() < 1) return; fl.things[keyOf(...FC.bin)] = { type: "compostbin" }; if (this.fields().scarecrow) fl.things[keyOf(...FC.scarecrow)] = { type: "scarecrow" }; }; }
+  // Space at the bin: what's in it
+  { const use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.things[keyOf(fl.pos[0], fl.pos[1])];
+      if (t && fl.number === 0 && t.type === "compostbin") { this.logAct && this.logAct("use"); const F = this.fields(); this.say(`The compost bin: ${F.trim || 0} of ${FC.binFor} trimmings toward the next load, ${(F.bin || []).length} load${(F.bin || []).length === 1 ? "" : "s"} rotting down, ${F.compost || 0} ready.`); this.emit("fields", null); return; }
+      if (t && fl.number === 0 && t.type === "scarecrow") { this.logAct && this.logAct("use"); this.say("The scarecrow wears the merchant's old hat and looks pleased with itself. Nothing with wings comes near."); return; }
+      return use0.apply(this, a); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -36582,6 +36667,43 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   });
 }
 
+// ---- 76zzzk-fieldcare.js ----
+"use strict";
+// The South Fields, water and quality - the window's side (v19.1): weeds and withered plants on the plots (in the view
+// and on the board), the giant drawn over its nine plots, each plot's stars-to-be in its note; the bin, "compost when
+// sowing", a Compost mode for the board (a click composts instead of tending), and the shed's scarecrow.
+{ const FC = CM.FIELDCARE, CP = CM.cropPack;
+  // in the view
+  { const ps0 = CM.plotSprites; CM.plotSprites = (game, key, x, y) => { const P = game.fields().plots[key];
+      if (P && P.giant) { const out = ps0(game, key, x, y).filter((s) => s.layer === "shadow"); if (P.giant === key && CP.frames[P.crop]) out.push({ x, y, layer: `crop:${CP.frames[P.crop].s[3]}`, w: 1.9, h: 3.8, shade: 0.97 }); return out; }
+      let out = ps0(game, key, x, y);
+      if (P && P.t && !P.crop && P.withered && CP.frames[P.last]) out = out.concat([[-0.18, -0.1], [0.2, 0.14]].map(([dx, dz]) => ({ x, y, dx, dz, layer: `crop:${CP.frames[P.last].s[1]}`, w: 0.36, h: 0.72, shade: 0.42, tilt: 0.35 })));
+      if (P && P.weed) out.push({ x, y, dx: 0.28, dz: -0.24, layer: "prop:weed", w: 0.32, h: 0.32 }, { x, y, dx: -0.3, dz: 0.26, layer: "prop:weed", w: 0.28, h: 0.28 });
+      return out; }; }
+  const rf0 = CM.UI.prototype.renderFields;
+  Object.assign(CM.UI.prototype, {
+    renderFields() { rf0.call(this); const g = this.game, box = this.$("#fd-body"); if (!box || g.fieldsLevel() < 1) return; const F = g.fields(), here = g.atFields();
+      // each plot's marks: weeds, withered, a giant, its stars-to-be
+      box.querySelectorAll("[data-fd]").forEach((b) => { const k = b.dataset.fd, P = F.plots[k]; if (!P) return;
+        if (P.weed) { b.classList.add("weedy"); b.insertAdjacentHTML("beforeend", "<i class='fdweed'></i>"); b.title = `Weeds: click to pull them${P.crop ? " (it won't grow till they're out)" : ""}`; }
+        if (!P.crop && P.withered) { b.classList.add("withered"); if (!P.weed) b.title = `The ${CM.CROPS[P.last] ? CM.CROPS[P.last].name.toLowerCase() : "crop"} withered (four dry days). Click to sow again.`; }
+        if (P.giant) { b.classList.add("giant"); if (P.giant === k) b.insertAdjacentHTML("beforeend", "<i class='fdgiant'>GIANT</i>"); }
+        if (P.crop && !P.weed) { const q = FC.quality(g, k); b.title += ` - it would be ${CM.stars ? CM.stars(q) : q} picked now${P.comp ? " (composted)" : ""}${P.rested ? " (rested soil)" : ""}${P.everDry ? " (it went dry once)" : ""}`; }
+        if (P.comp) b.classList.add("comp");
+        if (this.fdMode === "compost") { const nb = b.cloneNode(true); b.replaceWith(nb); nb.addEventListener("click", () => { this.fdNote = g.fieldCompost(k) || "Composted."; this.renderFields(); }); } });
+      const binning = (F.bin || []).length, care = document.createElement("div"); care.className = "fdcare";
+      care.innerHTML = `<span>The bin: <b>${F.trim || 0}</b>/${FC.binFor} trimmings${binning ? `, ${binning} load${binning > 1 ? "s" : ""} rotting` : ""}, <b>${F.compost || 0}</b> compost ready</span>
+        <label><input type="checkbox" data-fdauto ${F.autoCompost ? "checked" : ""}> compost when sowing</label>
+        <button data-fdmode class="${this.fdMode === "compost" ? "on" : ""}" ${here && F.compost > 0 ? "" : "disabled"}>${this.fdMode === "compost" ? "Compost mode: click a crop (done)" : "Compost a crop..."}</button>
+        ${F.scarecrow ? "<span>A scarecrow keeps the crows off.</span>" : `<button data-fdcrow ${here ? "" : "disabled"}>Buy a scarecrow (${FC.scarecrowGold}g)</button>`}${F.best ? `<span>Best yet: ${CM.stars ? CM.stars(F.best) : F.best}${F.giants ? `, ${F.giants} giant${F.giants > 1 ? "s" : ""}` : ""}</span>` : ""}`;
+      const head = box.querySelector(".fdhead"); if (head) head.after(care);
+      care.querySelector("[data-fdauto]").addEventListener("change", (e) => { g.fieldAutoCompost(e.target.checked); this.renderFields(); });
+      care.querySelector("[data-fdmode]").addEventListener("click", () => { this.fdMode = this.fdMode === "compost" ? null : "compost"; this.renderFields(); });
+      const cb = care.querySelector("[data-fdcrow]"); if (cb) cb.addEventListener("click", () => { this.fdNote = g.fieldBuyScarecrow() || "The scarecrow goes up by the shed."; this.renderFields(); this.refresh && this.refresh(); }); },
+  });
+  const close0 = CM.UI.prototype.closeDialogs; CM.UI.prototype.closeDialogs = function () { this.fdMode = null; return close0.call(this); };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -37154,6 +37276,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "plot") { if (CM.plotSprites) for (const sp of CM.plotSprites(game, key, x, y)) out.push(sp); }   // (the South Fields: 69j-fields.js, 36c-cropart.js)
       else if (thing.type === "fieldshed") out.push({ x, y, layer: "house2", w: 0.95, h: 0.95 });
       else if (thing.type === "trough") out.push({ x, y, layer: "well", w: 0.75, h: 0.6 });
+      else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
+      else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });
