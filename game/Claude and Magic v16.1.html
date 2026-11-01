@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v16.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v16.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1119,6 +1119,29 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .bingo .bggrid span.d::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: rgba(200,30,40,0.38); box-shadow: inset 0 0 0 2px rgba(170,20,30,0.7); } .bingo .bggrid span.free { color: #C08020; } .bingo .bggrid span.stamp::after { animation: bgstamp 0.25s ease-out; }
 @keyframes bgstamp { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .bingo .bgcall.ready { animation: crwin 0.6s ease-in-out infinite; background: #F0C040; color: #2A1A08; }
+/* ---- v16.1: the counter grown, tournament night, quests, the VIP room ---- */
+.cgclub .flbtn { border-color: #C89A30; } .cgclub .flready { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: #F0C040; color: #2A1A08; font-size: 11px; }
+.cgclub .vipbtn { background: linear-gradient(#7A0A20, #4A0612); color: #F8E0A0; border-color: #D8B040; } .cgclub .vipbtn.locked { filter: saturate(0.4); opacity: 0.85; }
+.flcounter { margin: 6px 0 10px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(240,192,64,0.3); }
+.flcounter h4 { margin: 8px 0 6px; color: #F0D070; } .fllevel b { color: #FFE8A0; }
+.flbar { height: 8px; margin: 4px 0; border-radius: 4px; background: rgba(0,0,0,0.45); overflow: hidden; } .flbar i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #FFE070); }
+.flspecials { display: flex; flex-wrap: wrap; gap: 8px; } .flspecial { background: linear-gradient(#3A1A4A, #1E0E26) !important; border-color: #A070D0 !important; } .flspecial.sold { opacity: 0.45; }
+.flspecial .flstock { font-size: 11px; color: #D0B0FF; } .flspecial.vippass { background: linear-gradient(#5A0A1A, #2A0408) !important; border-color: #D8B040 !important; }
+.tkprize { position: relative; } .tkprize.bargain { box-shadow: 0 0 0 2px #E04040, 0 0 12px rgba(224,64,64,0.5); } .tkprize s { opacity: 0.6; margin-right: 4px; }
+.flribbon { position: absolute; top: 6px; right: -4px; padding: 1px 8px; background: #C02828; color: #FFF; font-size: 10px; font-style: normal; border-radius: 3px 0 0 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.fltourtop { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; } .flframe { display: flex; flex-direction: column; align-items: center; padding: 10px; border: 6px solid #B08830; border-radius: 6px; background: #1A1008; box-shadow: inset 0 0 0 2px #F0D070, 0 6px 14px rgba(0,0,0,0.6); }
+.flframe canvas { border-radius: 4px; } .flpurse { flex: 1; min-width: 260px; } .flpurse h4 { margin: 0 0 4px; color: #FFE070; } .flpurse ol { margin: 0 0 6px 18px; padding: 0; }
+.flstand { width: 100%; max-width: 560px; margin-top: 10px; border-collapse: collapse; background: #1E2420; font-family: "Comic Sans MS", Georgia, serif; color: #E8E8E0; box-shadow: inset 0 0 0 6px #6A4A2A; }
+.flstand th, .flstand td { padding: 3px 10px; text-align: left; border-bottom: 1px dashed rgba(255,255,255,0.12); } .flstand tr.top td { color: #FFE8A0; } .flstand tr.you td { background: rgba(240,192,64,0.25); color: #FFE070; font-weight: bold; }
+.flqgrid { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px; border-radius: 8px; background: #8A6440 repeating-radial-gradient(circle at 30% 30%, rgba(0,0,0,0.05) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 6px #5A3A20; }
+.flnote { position: relative; width: 230px; padding: 16px 12px 10px; background: #FBF4E0; color: #2A2010; transform: rotate(var(--r)); box-shadow: 0 4px 10px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 4px; }
+.flnote .pin { position: absolute; top: 4px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FF8080, #A01010); }
+.flnote .flgiver { font-size: 11px; font-style: italic; color: #6A5030; } .flnote b { font-family: Georgia, serif; } .flnote .small { color: #5A4A30; } .flnote .flreward { font-size: 12px; color: #4A3010; }
+.flnote.done { background: #F4F8D8; box-shadow: 0 0 0 3px #80C040, 0 4px 12px rgba(0,0,0,0.45); } .flnote .flbar { background: rgba(0,0,0,0.15); }
+.flvip .flvipart { display: block; max-width: 100%; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); }
+.flperks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
+.flperk { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: linear-gradient(#4A0A18, #2A0610); border: 1px solid #C89A30; color: #F8E8C8; } .flperk b { color: #FFE070; font-family: Georgia, serif; } .flperk button { align-self: flex-start; }
+.flnote .tkcount { color: #7A1A30; }
 </style>
 </head>
 <body>
@@ -1128,7 +1151,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "16.0", built: "2026-10-31" };
+const CM = window.CM = { version: "16.1", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -23743,6 +23766,125 @@ CM.LUCK = {
   if (CM.CLUB && !CM.CLUB.BOARDS.includes("bingo")) CM.CLUB.BOARDS.push("bingo");
 }
 
+// ---- 64zzi-floor.js ----
+"use strict";
+// The floor's evenings (v16.1): four things that run across the whole of the Gilded Joker.
+// - The prize counter grows and turns over: tickets spent raise it (glass cases, the velvet shelf, the Gilded Vault),
+//   each step a little off every price and a shelf more of the day's specials - a few things the counter doesn't
+//   always have, in short stock, changing each real day - and one everyday prize a quarter off as the day's bargain.
+// - Tournament night: each real day one arcade cabinet hosts a tournament against fifteen of the village and its
+//   visitors. Twenty-five gold enters for the night and buys three games; the best level reached (score breaking a tie)
+//   is set against the field's; settle up and the pot (nine-tenths of the entries) pays the first three, with tickets
+//   down to eighth and a card the first time the party wins each cabinet's tournament.
+// - Casino quests: three at a time, asked by the residents - play so many tables, lay or win so much, reach a level
+//   at a cabinet, make a board - counted from the floor's own doings; done, they pay gold, tickets and sometimes a
+//   card, and another takes their place. A quest can be swapped for ten tickets.
+// - The VIP back room: open to Platinum members, or to anyone with a pass from the counter (3,000 tickets). Inside, the
+//   house limits go to 5,000 gold a bet (a 1,000 chip on the rail, and 1,000 and 2,500 buy-ins at the residents'
+//   table) when the party asks for them, a drink on the house and twenty tickets each day, and a quiet word on the
+//   night's tournament. The window is 76zzi-floor.js.
+{ const FL = CM.FLOOR = {
+    LEVELS: [{ name: "The prize counter", spent: 0, slots: 3, off: 0 }, { name: "Glass cases", spent: 1500, slots: 4, off: 0.05 }, { name: "The velvet shelf", spent: 5000, slots: 5, off: 0.1 }, { name: "The Gilded Vault", spent: 12000, slots: 6, off: 0.15 }],
+    // [id, name, cost, what, stock, counter level needed]
+    SPECIALS: [
+      ["deepblade", "A deep-delve weapon", 450, "a weapon made three floors deeper than you've been", 2, 0], ["deepmail", "Deep-delve armour", 450, "armour made three floors deeper", 2, 0],
+      ["tonic", "A crate of tonics", 110, "three healing potions", 3, 0], ["manabox", "A crate of mana", 110, "three mana potions", 3, 0],
+      ["pack", "A card pack", 300, "three common cards", 2, 0], ["sack", "A sack of gold", 500, "60 gold", 1, 0], ["jokerbox", "The Joker's box", 180, "something from the shelves - a surprise", 3, 0],
+      ["feathers", "Two phoenix feathers", 520, "brings back the fallen, twice", 1, 1], ["relic", "A gilded relic", 900, "an enchanted piece, made deeper still", 1, 2], ["rarepack", "A rare pack", 1600, "two rare Claudescryption cards", 1, 3],
+    ],
+    bargain: 0.25,
+    TOUR: { fee: 25, tries: 3, field: 15, share: 0.9, PAY: [0.4, 0.25, 0.15], TICKETS: [12, 10, 8, 6, 5, 4, 3, 2] },
+    FOLK: ["Brother Ambrose", "Sable the cardsharp", "Old Fenwick", "the Hollin twins", "a dwarf from the caves", "Maud of the mill", "a travelling knight", "Pell the pickpocket", "the guard captain", "Ysolde the weaver", "the ferryman", "a bored noble", "the cook's boy", "Grandmother Rook", "a gnome tinker", "the smith", "the farmer's hand", "the librarian"],
+    GIVERS: ["the tavern-keeper", "the merchant", "the smith", "the librarian", "the priest", "the farmer's hand"],
+    CLASSIC: ["slots", "roulette", "blackjack", "craps", "bigwheel", "holdem", "bingo", "pachinko"],
+    VIP: { max: 5000, chip: 1000, pass: 3000, tickets: 20, buyins: [1000, 2500] },
+  };
+  FL.base = { max: CM.CG.max, chips: CM.CG.chips.slice() };
+  FL.day = () => (CM.DAILY ? CM.DAILY.key() : new Date().toISOString().slice(0, 10));
+  FL.level = (spent) => { let L = 0; FL.LEVELS.forEach((x, k) => { if (spent >= x.spent) L = k; }); return L; };
+  FL.price = (cost, lvl) => Math.max(1, Math.round(cost * (1 - FL.LEVELS[lvl].off)));
+  FL.arcade = () => Object.keys(CM.ARC.reg).sort();
+  const name = (id) => (CM.ARC.reg[id] ? CM.ARC.reg[id].name : ((CM.CG_TABLES || []).find(([k]) => k === id) || [])[1] || id);
+  FL.name = name;
+  const heal = (depth) => ({ name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 }), mana = (depth) => ({ name: "Mana Potion", kind: "mana", power: 12 + depth, value: 25 });
+  const enchanted = (depth, R, kind) => { let it = CM.makeItem(depth, R, kind); if (CM.affix) for (let k = 0; k < 6 && it && !(it.props && it.props.rarity && it.props.rarity !== "common"); k++) it = CM.affix(CM.makeItem(depth, R, it.kind), depth + 4, R) || it; return it; };
+  // the tournament's field for a day: who, how far, and a score for the tie
+  FL.field = (day, table) => { const R = new CM.Random(CM.hashSeed(`tour:${day}:${table}`)), who = R.shuffle(FL.FOLK.slice()).slice(0, FL.TOUR.field);
+    return who.map((w) => { const level = 1 + Math.floor(9 * Math.pow(R.next(), 1.7)); return { who: w, level, score: level * 1000 + R.int(0, 999) }; }).sort((a, b) => b.level - a.level || b.score - a.score); };
+  FL.tourTable = (day) => { const list = FL.arcade(), R = new CM.Random(CM.hashSeed(`tour-table:${day}`)); let t = list[R.int(0, list.length - 1)]; const D = CM.DAILY && CM.DAILY.pick ? CM.DAILY.pick(day).table : null; if (t === D) t = list[(list.indexOf(t) + 1) % list.length]; return t; };
+  // a quest for the board
+  FL.quest = (R) => { const giver = R.pick(FL.GIVERS), kinds = ["play", "stake", "paid", "tickets", "level", "board", "table"], kind = kinds[R.int(0, kinds.length - 1)]; let q;
+    if (kind === "play") { const n = R.int(3, 6); q = { n, text: `Try ${n} different tables.`, d: (n - 3) / 3 }; }
+    else if (kind === "stake") { const n = R.pick([200, 400, 600, 1000]); q = { n, text: `Lay ${n} gold in stakes on the floor.`, d: n / 1000 }; }
+    else if (kind === "paid") { const n = R.pick([150, 300, 500, 800]); q = { n, text: `Be paid ${n} gold by the tables.`, d: n / 800 }; }
+    else if (kind === "tickets") { const n = R.pick([40, 70, 100, 150]); q = { n, text: `Win ${n} prize tickets.`, d: n / 150 }; }
+    else if (kind === "level") { const table = R.pick(FL.arcade()), n = R.int(3, 6); q = { n, table, text: `Reach level ${n} at ${name(table)}.`, d: (n - 2) / 4 }; }
+    else if (kind === "board") { const table = R.pick(CM.CLUB.BOARDS); q = { n: 1, table, text: `Put a score on the board at ${name(table)}.`, d: 0.4 }; }
+    else { const table = R.pick(FL.CLASSIC), n = R.int(3, 8); q = { n, table, text: `Play ${name(table)} ${n} times.`, d: n / 10 }; }
+    const d = Math.max(0, Math.min(1, q.d)); return Object.assign(q, { kind, giver, got: 0, seen: [], reward: { gold: 60 + Math.round(240 * d / 10) * 10, tickets: 15 + Math.round(45 * d), card: d >= 0.6 ? (d >= 0.95 ? "better" : "common") : null } }); };
+  const st0 = CM.Game.prototype.cgStake, pay0 = CM.Game.prototype.cgPay, tk0 = CM.Game.prototype.tkAdd, rec0 = CM.Game.prototype.cgRecord, buy0 = CM.Game.prototype.tkBuy, sit0 = CM.Game.prototype.heSit;
+  Object.assign(CM.Game.prototype, {
+    flStore() { const F = this.cgStore(); F.fl = F.fl || { stock: {}, tour: {}, wins: {}, quests: [], qn: 0, qdone: 0, vip: { pass: false, high: false, day: "" } }; return F.fl; },
+    // ---- the counter ----
+    flLevel() { return FL.level(this.tkStore().spent); },
+    flSpecials(day) { day = day || FL.day(); const S = this.flStore(), lvl = this.flLevel(), R = new CM.Random(CM.hashSeed(`${this.seed}:specials:${day}`)), pool = R.shuffle(FL.SPECIALS.filter((s) => s[5] <= lvl).slice()), bought = S.stock[day] || {};
+      return pool.slice(0, FL.LEVELS[lvl].slots).map(([id, nm, cost, what, stock]) => ({ id, name: nm, cost: FL.price(cost, lvl), what, stock, left: stock - (bought[id] || 0) })); },
+    flBargain(day) { const R = new CM.Random(CM.hashSeed(`${this.seed}:bargain:${day || FL.day()}`)); return CM.PRIZE.LIST[R.int(0, CM.PRIZE.LIST.length - 1)][0]; },
+    flPrice(id, cost) { const lvl = this.flLevel(); let c = FL.price(cost, lvl); if (id === this.flBargain()) c = Math.max(1, Math.round(c * (1 - FL.bargain))); return c; },
+    tkBuy(id) { const row = CM.PRIZE.LIST.find((r) => r[0] === id); if (!row) return buy0.call(this, id); const T = this.tkStore(), price = this.flPrice(id, row[3]), credit = row[3] - price;
+      if (T.n < price) return { error: `That takes ${price} tickets; you have ${T.n}.` }; T.n += credit; const out = buy0.call(this, id); if (out.error) T.n -= credit; else { T.spent -= credit; out.price = price; } return out; },
+    flBuy(id) { const day = FL.day(), sp = this.flSpecials(day).find((s) => s.id === id); if (!sp) return { error: "Not on the shelf today." }; if (sp.left <= 0) return { error: "Sold out until tomorrow." };
+      const T = this.tkStore(); if (T.n < sp.cost) return { error: `That takes ${sp.cost} tickets; you have ${T.n}.` }; T.n -= sp.cost; T.spent += sp.cost; T.bought += 1; const S = this.flStore(); S.stock = { [day]: S.stock[day] || {} }; S.stock[day][id] = (S.stock[day][id] || 0) + 1;
+      const R = new CM.Random(CM.hashSeed(`${this.seed}:special:${T.bought}`)), depth = Math.max(3, this.cwDeepest ? this.cwDeepest() : 3), out = { name: sp.name, items: [], cards: [] }; let what = id;
+      if (what === "jokerbox") what = R.pick(["tonic", "manabox", "deepblade", "deepmail", "card", "feather"]);
+      const give = (it) => { if (it) { this.gain([it], "casino"); out.items.push(it); } };
+      if (what === "deepblade") give(CM.makeItem(depth + 3, R, "weapon")); else if (what === "deepmail") give(CM.makeItem(depth + 3, R, "armor"));
+      else if (what === "tonic") for (let k = 0; k < 3; k++) give(heal(depth)); else if (what === "manabox") for (let k = 0; k < 3; k++) give(mana(depth));
+      else if (what === "feathers" || what === "feather") for (let k = 0; k < (what === "feathers" ? 2 : 1); k++) give({ name: "Phoenix Feather", kind: "revive", power: 0, value: 120 });
+      else if (what === "relic") give(enchanted(depth + 4, R, R.chance(0.5) ? "weapon" : "armor"));
+      else if (what === "pack" || what === "rarepack" || what === "card") for (let k = 0; k < (what === "pack" ? 3 : what === "rarepack" ? 2 : 1); k++) { const c = this.cgTierCard(what === "rarepack" ? "rare" : "common", "From the prize counter's specials.", R); if (c) out.cards.push(c); }
+      else if (what === "sack") { out.gold = 60; this.gold += 60; }
+      this.saveCasino && this.saveCasino(); this.emit("change"); return out; },
+    // ---- tournament night ----
+    flTour(day) { day = day || FL.day(); const S = this.flStore(), table = FL.tourTable(day); S.tour = { [day]: S.tour[day] || { table, tries: 0, entered: false, armed: false, best: null, settled: null } }; return S.tour[day]; },
+    flTourEnter() { const N = this.flTour(); if (N.settled) return { error: "Tonight's tournament is settled." }; if (N.armed) return { error: "Your entry is waiting - go and play." };
+      if (N.tries >= FL.TOUR.tries) return { error: "That's your three games for the night." }; if (!N.entered) { const why = this.cgStake("tournament", FL.TOUR.fee); if (why) return { error: why }; N.entered = true; }
+      N.armed = true; this.saveCasino && this.saveCasino(); return { table: N.table, game: N.tries + 1 }; },
+    flStand(N) { N = N || this.flTour(); const field = FL.field(FL.day(), N.table).map((e) => Object.assign({}, e)); if (N.best) field.push({ who: "You", level: N.best.level, score: N.best.score, you: true });
+      return field.sort((a, b) => b.level - a.level || (b.you ? 1 : 0) - (a.you ? 1 : 0) || b.score - a.score); },
+    flTourSettle() { const N = this.flTour(), S = this.flStore(); if (N.settled) return N.settled; if (!N.best) return { error: "Play a tournament game first." }; if (N.armed) return { error: "Your entry is waiting - go and play." };
+      const stand = this.flStand(N), place = stand.findIndex((e) => e.you) + 1, pool = Math.floor((FL.TOUR.field + 1) * FL.TOUR.fee * FL.TOUR.share), gold = place <= 3 ? Math.floor(pool * FL.TOUR.PAY[place - 1]) : 0, tickets = FL.TOUR.TICKETS[place - 1] || 0, out = { place, gold, tickets, of: stand.length };
+      if (gold) this.cgPay("tournament", gold); if (tickets && this.tkAdd) this.tkAdd(tickets, "tournament");
+      if (place === 1 && !S.wins[N.table]) { S.wins[N.table] = true; out.card = this.cgTierCard("rare", `Tournament night: first at ${name(N.table)}!`, new CM.Random(CM.hashSeed(`${this.seed}:tour:card:${N.table}`))); }
+      N.settled = out; this.saveCasino && this.saveCasino(); this.emit("change"); return out; },
+    // ---- quests ----
+    flQuests() { const S = this.flStore(); while (S.quests.length < 3) { let q; for (let k = 0; k < 8; k++) { S.qn += 1; q = FL.quest(new CM.Random(CM.hashSeed(`${this.seed}:quest:${S.qn}`))); if (!S.quests.some((o) => o.kind === q.kind)) break; } S.quests.push(q); } return S.quests; },
+    flQuestTick(kind, amount, table, level) { const S = this.flStore(); if (!S.quests.length) return; for (const q of S.quests) { if (q.got >= q.n) continue;
+        if (q.kind === kind && kind === "play") { if (!q.seen.includes(table)) { q.seen.push(table); q.got = q.seen.length; } }
+        else if (q.kind === kind && (kind === "stake" || kind === "paid" || kind === "tickets")) q.got = Math.min(q.n, q.got + amount);
+        else if (q.kind === kind && q.table === table) { if (kind === "level") q.got = Math.max(q.got, Math.min(q.n, level || 0)); else if (kind === "board") q.got = 1; else if (kind === "table") q.got = Math.min(q.n, q.got + 1); } } },
+    flQuestCollect(i) { const S = this.flStore(), q = S.quests[i]; if (!q) return { error: "No such quest." }; if (q.got < q.n) return { error: "Not done yet." }; S.quests.splice(i, 1); S.qdone += 1;
+      const out = { text: q.text, giver: q.giver, gold: q.reward.gold, tickets: q.reward.tickets }; this.gold += q.reward.gold; if (this.tkAdd) tk0.call(this, q.reward.tickets, "quests");
+      if (q.reward.card) out.card = this.cgTierCard(q.reward.card, `A quest for ${q.giver}, done.`, new CM.Random(CM.hashSeed(`${this.seed}:questcard:${S.qdone}`))); this.flQuests(); this.saveCasino && this.saveCasino(); this.emit("change"); return out; },
+    flQuestSwap(i) { const S = this.flStore(), T = this.tkStore(); if (!S.quests[i]) return { error: "No such quest." }; if (T.n < 10) return { error: "Swapping a quest takes 10 tickets." }; T.n -= 10; T.spent += 10; S.quests.splice(i, 1); this.flQuests(); this.saveCasino && this.saveCasino(); return { ok: true }; },
+    // ---- the VIP room ----
+    vipUnlocked() { const F = this.cgStore(); return ((F.loyalty || {}).done || 0) >= 10 || this.flStore().vip.pass; },
+    vipOn() { return this.vipUnlocked() && this.flStore().vip.high; },
+    vipApply() { const on = this.vipOn(); CM.CG.max = on ? FL.VIP.max : FL.base.max; CM.CG.chips = on ? FL.base.chips.concat([FL.VIP.chip]) : FL.base.chips.slice(); return on; },
+    vipSet(high) { if (!this.vipUnlocked()) return "The back room is for Platinum members and pass-holders."; this.flStore().vip.high = !!high; this.vipApply(); this.saveCasino && this.saveCasino(); return ""; },
+    vipBuyPass() { const V = this.flStore().vip, T = this.tkStore(); if (this.vipUnlocked()) return { error: "You're already welcome in the back room." }; if (T.n < FL.VIP.pass) return { error: `A pass takes ${FL.VIP.pass} tickets; you have ${T.n}.` }; T.n -= FL.VIP.pass; T.spent += FL.VIP.pass; V.pass = true; this.saveCasino && this.saveCasino(); return { ok: true }; },
+    vipDaily() { const V = this.flStore().vip, day = FL.day(); if (!this.vipUnlocked()) return { error: "Members only." }; if (V.day === day) return { error: "The bar's already sent your drink over today." }; V.day = day;
+      const depth = Math.max(3, this.cwDeepest ? this.cwDeepest() : 3), it = heal(depth); it.name = "The Joker's Cordial"; this.gain([it], "casino"); if (this.tkAdd) tk0.call(this, FL.VIP.tickets, "vip"); this.saveCasino && this.saveCasino(); this.emit("change"); return { item: it, tickets: FL.VIP.tickets }; },
+    // ---- the floor's doings, counted ----
+    cgStake(game, bet) { const old = CM.CG.max; if (this.vipOn()) CM.CG.max = FL.VIP.max; let why; try { why = st0.call(this, game, bet); } finally { CM.CG.max = old; } if (!why && game !== "tournament") { this.flQuestTick("play", 0, game); this.flQuestTick("stake", Math.floor(bet), game); this.flQuestTick("table", 1, game); } return why; },
+    cgPay(game, amount) { const n = pay0.call(this, game, amount); if (n > 0) { this.flQuestTick("paid", n, game); if (!(this.cgStore().wagered || {})[game]) this.flQuestTick("play", 0, game); } return n; },
+    tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0) this.flQuestTick("tickets", k, why); return k; },
+    cgRecord(table, score, level) { const r = rec0.call(this, table, score, level); if (level) this.flQuestTick("level", 0, table, level); if (r > 0) this.flQuestTick("board", 1, table);
+      const N = this.flStore().tour[FL.day()]; if (N && N.armed && N.table === table) { N.armed = false; N.tries += 1; const e = { level: level || 0, score: Math.floor(score || 0) }; if (!N.best || e.level > N.best.level || (e.level === N.best.level && e.score > N.best.score)) N.best = e; } return r; },
+    heSit(buyin) { if (FL.VIP.buyins.includes(buyin) && this.vipOn()) { const B = CM.HE.BUYINS; B.push(buyin); try { return sit0.call(this, buyin); } finally { B.splice(B.indexOf(buyin), 1); } } return sit0.call(this, buyin); },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -33146,7 +33288,7 @@ CM.CG_TABLES.push(["holdem", "The Residents' Game"]);
     },
     heCtl() {
       const g = this.game, T = g.heTable(), el = this.$("#casino-body .hectl"); if (!el) return; let html;
-      if (!T) html = `<div class="row hebuy">${HE.BUYINS.map((b) => `<button class="primary" data-hesit="${b}">Buy in for ${b} gold${g.heStore().cleared[b] ? " ✓" : ""}</button>`).join("")}<button data-leave>Leave</button></div>`;
+      if (!T) html = `<div class="row hebuy">${HE.BUYINS.concat(g.vipOn && g.vipOn() ? CM.FLOOR.VIP.buyins : []).map((b) => `<button class="primary" data-hesit="${b}">Buy in for ${b} gold${g.heStore().cleared[b] ? " ✓" : ""}</button>`).join("")}<button data-leave>Leave</button></div>`;
       else if (T.stage === "hand" && T.toAct === 0) { const owe = HE.toCall(T, 0), size = HE.betSize(T), S = T.seats[0], capped = T.raises >= HE.cap || S.stack <= owe;
         html = `<div class="row heact">${owe ? `<button data-hea="fold">Fold</button>` : ""}<button class="primary" data-hea="call">${owe ? `Call ${Math.min(owe, S.stack)}` : "Check"}</button>${capped ? "" : `<button class="primary" data-hea="raise">${T.cur ? `Raise to ${T.cur + size}` : `Bet ${size}`}</button>`}</div>`; }
       else if (T.stage === "hand") html = `<div class="row heact"><span class="small">${HE.RES[T.seats[T.toAct].id].short} to act…</span></div>`;
@@ -33264,6 +33406,113 @@ CM.CG_TABLES.push(["bingo", "The Bell Hall"]);
         const gr = p.createRadialGradient(x - rr * 0.3, y - rr * 0.3, 2, x, y, rr); gr.addColorStop(0, "#FFFFFF"); gr.addColorStop(0.25, COLS[c]); gr.addColorStop(1, "#1A1A1A"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, rr, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FBF4E0"; p.beginPath(); p.arc(x, y, rr * 0.6, 0, Math.PI * 2); p.fill();
         p.fillStyle = "#1A1A22"; p.textAlign = "center"; p.font = `bold ${Math.round(rr * 0.5)}px Georgia`; p.fillText(String(Bb.n), x, y + rr * 0.32); p.font = `${Math.round(rr * 0.32)}px serif`; p.fillText(BGO.RUNES[c], x, y - rr * 0.2); p.textAlign = "left"; }
       else { p.fillStyle = "#F0E0B0"; p.font = "14px Georgia"; p.fillText(live ? "Eyes down…" : "Buy cards to play", 190, 115); }
+    },
+  });
+}
+
+// ---- 76zzi-floor.js ----
+"use strict";
+// The floor's evenings, the window's side: three more doors on the gallery's club strip - Tournament night (tonight's
+// cabinet in a gilt frame, the entry, the three games, and the standings chalked on a board with the party's line in
+// gold), Quests (the residents' requests pinned up as notes, each with its progress, its reward, collect or swap) and
+// the VIP room (red velvet, a chandelier that glitters, the host's welcome, the house limits switch, the day's drink);
+// and the prize counter's new head - its level and the way to the next, the day's specials in their own glass case with
+// their stock, the bargain ribboned, every price after the counter's discount. The rules are 64zzi-floor.js.
+{ const r5 = CM.UI.prototype.renderCasino, gal5 = CM.UI.prototype.cgGallery, prz5 = CM.UI.prototype.cgPrizes, FL = CM.FLOOR;
+  const ticket = (n) => `<span class="tkcount"><i class="tkt"></i>${n}</span>`;
+  const sArt = (p, id, w, h, now) => { const bg = p.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "#2A1A3A"); bg.addColorStop(1, "#140A1A"); p.fillStyle = bg; p.fillRect(0, 0, w, h); const cx = w / 2, cy = h / 2 + 2;
+    const bottle = (x, col) => { p.fillStyle = "rgba(210,230,240,0.85)"; p.fillRect(x - 3, cy - 16, 6, 8); p.fillStyle = col; p.beginPath(); p.arc(x, cy, 10, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.4)"; p.fillRect(x - 6, cy - 4, 3, 5); };
+    const card = (x, col, rot) => { p.save(); p.translate(x, cy); p.rotate(rot); p.fillStyle = "#F4ECD8"; p.fillRect(-11, -16, 22, 32); p.strokeStyle = col; p.lineWidth = 2; p.strokeRect(-9, -14, 18, 28); p.lineWidth = 1; p.restore(); };
+    if (id === "deepblade" || id === "relic") { p.save(); p.translate(cx, cy); p.rotate(-0.7); p.shadowColor = id === "relic" ? "#F0C040" : "#60A0FF"; p.shadowBlur = 12; p.fillStyle = "#D8E0F0"; p.fillRect(-3, -26, 6, 34); p.shadowBlur = 0; p.fillStyle = "#806020"; p.fillRect(-10, 8, 20, 4); p.fillRect(-2, 12, 4, 10); p.restore(); }
+    else if (id === "deepmail") { p.fillStyle = "#7A88A8"; p.beginPath(); p.moveTo(cx - 18, cy - 14); p.lineTo(cx + 18, cy - 14); p.lineTo(cx + 14, cy + 16); p.lineTo(cx - 14, cy + 16); p.fill(); p.fillStyle = "#60A0FF"; p.fillRect(cx - 2, cy - 10, 4, 22); }
+    else if (id === "tonic") [cx - 22, cx, cx + 22].forEach((x) => bottle(x, "#D02838")); else if (id === "manabox") [cx - 22, cx, cx + 22].forEach((x) => bottle(x, "#2850D0"));
+    else if (id === "pack") [-0.3, 0, 0.3].forEach((r, k) => card(cx - 14 + k * 14, "#8A6A40", r)); else if (id === "rarepack") [-0.2, 0.2].forEach((r, k) => card(cx - 8 + k * 16, "#B050D0", r));
+    else if (id === "sack") { p.fillStyle = "#A07040"; p.beginPath(); p.ellipse(cx, cy + 6, 20, 16, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A4A20"; p.fillRect(cx - 6, cy - 14, 12, 6); p.fillStyle = "#F0C040"; p.font = "bold 14px Georgia"; p.textAlign = "center"; p.fillText("G", cx, cy + 12); p.textAlign = "left"; }
+    else if (id === "feathers") for (let k = 0; k < 2; k++) { p.save(); p.translate(cx - 8 + k * 16, cy); p.rotate(-0.5 + k * 0.4); const g = p.createLinearGradient(0, -20, 0, 20); g.addColorStop(0, "#FFE060"); g.addColorStop(1, "#C02010"); p.fillStyle = g; p.beginPath(); p.ellipse(0, 0, 7, 20, 0, 0, Math.PI * 2); p.fill(); p.restore(); }
+    else { p.fillStyle = "#3A1A4A"; p.fillRect(cx - 18, cy - 14, 36, 30); p.fillStyle = "#F0C040"; p.fillRect(cx - 18, cy - 2, 36, 4); p.font = "bold 18px Georgia"; p.textAlign = "center"; p.fillText("♠", cx, cy - 18 + 14); p.textAlign = "left"; }
+    for (let k = 0; k < 4; k++) { const t = ((now || 0) / 900 + k * 0.25) % 1; p.fillStyle = `rgba(255,240,180,${0.8 * (1 - t)})`; p.fillRect((k * 29 + 9) % w, h - t * h, 2, 2); } };
+  Object.assign(CM.UI.prototype, {
+    renderCasino() { this.game.vipApply(); const v = this.cgView, box = this.$("#casino-body");
+      if (v === "tour") { this.cgTour(box); this.cgToasts && this.cgToasts(); } else if (v === "quests") { this.cgQuests(box); this.cgToasts && this.cgToasts(); } else if (v === "vip") { this.cgVip(box); this.cgToasts && this.cgToasts(); } else r5.call(this); },
+    cgGallery(box) {
+      gal5.call(this, box); const g = this.game, strip = box.querySelector(".cgclub"); if (!strip) return; const N = g.flTour(), ready = g.flQuests().filter((q) => q.got >= q.n).length, open = g.vipUnlocked();
+      const add = (view, html, cls) => { const b = document.createElement("button"); b.className = cls || ""; b.innerHTML = html; strip.appendChild(b); b.addEventListener("click", () => { this.cgView = view; this.caSfx("cardplace", 0.3); this.renderCasino(); }); };
+      add("tour", `Tournament night${N.armed ? " ✦" : ""}`, "flbtn"); add("quests", `Quests${ready ? ` <b class="flready">${ready}</b>` : ""}`, "flbtn"); add("vip", `${open ? "♛" : "🔒"} VIP room`, `flbtn vipbtn${open ? "" : " locked"}`);
+    },
+    // ---- the prize counter, grown ----
+    cgPrizes(box) {
+      prz5.call(this, box); const g = this.game, T = g.tkStore(), lvl = g.flLevel(), L = FL.LEVELS[lvl], nx = FL.LEVELS[lvl + 1], bargain = g.flBargain(), sp = g.flSpecials();
+      box.querySelectorAll("[data-tkbuy]").forEach((b) => { const id = b.dataset.tkbuy, row = CM.PRIZE.LIST.find((r) => r[0] === id), price = g.flPrice(id, row[3]); b.innerHTML = price < row[3] ? `<s>${row[3]}</s> ${ticket(price)}` : ticket(price); b.disabled = T.n < price; b.classList.toggle("primary", T.n >= price);
+        const card = b.closest(".tkprize"); if (card) { card.classList.toggle("dear", T.n < price); if (id === bargain) { card.classList.add("bargain"); card.insertAdjacentHTML("afterbegin", `<i class="flribbon">Today's bargain</i>`); } } });
+      const head = document.createElement("div"); head.className = "flcounter";
+      head.innerHTML = `<div class="fllevel"><b>${L.name}</b>${L.off ? ` · ${Math.round(L.off * 100)}% off everything` : ""}${nx ? `<div class="flbar"><i style="width:${Math.min(100, (100 * (T.spent - L.spent)) / (nx.spent - L.spent))}%"></i></div><span class="small">${nx.spent - T.spent} more tickets spent and the counter becomes ${nx.name.toLowerCase()}: ${Math.round(nx.off * 100)}% off and ${nx.slots} specials a day.</span>` : `<span class="small">The counter is as grand as it gets.</span>`}</div>
+        <h4>Today's specials <span class="small">- new stock every day</span></h4><div class="flspecials">${sp.map((s) => `<div class="tkprize flspecial${s.left <= 0 ? " sold" : T.n < s.cost ? " dear" : ""}"><canvas width="96" height="72" data-flart="${s.id}"></canvas><b>${s.name}</b><span>${s.what}</span><span class="flstock">${s.left > 0 ? `${s.left} left` : "Sold out"}</span><button class="${T.n >= s.cost && s.left > 0 ? "primary" : ""}" data-flbuy="${s.id}" ${T.n >= s.cost && s.left > 0 ? "" : "disabled"}>${ticket(s.cost)}</button></div>`).join("")}
+        ${g.vipUnlocked() ? "" : `<div class="tkprize flspecial vippass${T.n < FL.VIP.pass ? " dear" : ""}"><canvas width="96" height="72" data-flart="pass"></canvas><b>A VIP pass</b><span>the back room, for good</span><button class="${T.n >= FL.VIP.pass ? "primary" : ""}" data-flpass ${T.n >= FL.VIP.pass ? "" : "disabled"}>${ticket(FL.VIP.pass)}</button></div>`}</div>`;
+      const grid = box.querySelector(".tkgrid"), cats = box.querySelector(".cgcats"); (cats || grid).before(head); const now = performance.now();
+      head.querySelectorAll("[data-flart]").forEach((c) => { if (c.dataset.flart === "pass") { const p = c.getContext("2d"); p.fillStyle = "#4A0A1A"; p.fillRect(0, 0, 96, 72); p.fillStyle = "#F0C040"; p.fillRect(20, 18, 56, 36); p.fillStyle = "#4A0A1A"; p.font = "bold 16px Georgia"; p.textAlign = "center"; p.fillText("VIP", 48, 42); } else sArt(c.getContext("2d"), c.dataset.flart, c.width, c.height, now); });
+      head.querySelectorAll("[data-flbuy]").forEach((b) => b.addEventListener("click", () => { const o = g.flBuy(b.dataset.flbuy); if (o.error) { this.cgSfx("miss", 0.3); return; } this.cgSfx("cardwin", 0.5); if (o.gold) this.cgCoins(this.$("#casino-body"), 10);
+        this.tkOut = `<div class="tkout">${o.name}: ${[o.gold ? `<b>${o.gold} gold</b>` : "", ...o.items.map((it) => `<b class="rarity-${CM.rarityOf(it)}">${it.name}</b>`)].filter(Boolean).join(", ")}${o.items.length ? " - in the party's pack." : ""}${o.cards.map((c) => this.cgCardWon(c)).join("")}</div>`; this.renderCasino(); }));
+      const pass = head.querySelector("[data-flpass]"); if (pass) pass.addEventListener("click", () => { const o = g.vipBuyPass(); if (o.error) { this.cgSfx("miss", 0.3); return; } this.cgSfx("victory", 0.5); this.tkOut = `<div class="tkout">A VIP pass, gilt-edged. The back room's door is open to you.</div>`; this.renderCasino(); });
+    },
+    // ---- tournament night ----
+    cgTour(box) {
+      const g = this.game, N = g.flTour(), stand = g.flStand(N), pool = Math.floor((FL.TOUR.field + 1) * FL.TOUR.fee * FL.TOUR.share), def = CM.ARC.reg[N.table], S = N.settled, vip = g.vipUnlocked();
+      const action = S ? `<span>Settled: you came <b>${S.place}${["st", "nd", "rd"][S.place - 1] || "th"}</b> of ${S.of}${S.gold ? `, ${S.gold} gold` : ""}${S.tickets ? `, ${S.tickets} tickets` : ""}.</span>`
+        : N.armed ? `<button class="primary" data-flgo>Go to ${def.name} - game ${N.tries + 1} of ${FL.TOUR.tries}</button>`
+        : N.tries >= FL.TOUR.tries ? `<button class="primary" data-flsettle>Settle up</button>`
+        : `<button class="primary" data-flenter>${N.entered ? `Play game ${N.tries + 1} of ${FL.TOUR.tries}` : `Enter tonight (${FL.TOUR.fee} gold)`}</button>${N.best ? `<button data-flsettle>Settle up now</button>` : ""}`;
+      box.innerHTML = `<div class="fltour"><p class="lore">On a stand by the arcade wing, the Joker's master of ceremonies chalks up tonight's tournament: one cabinet, the village's best, and a purse. "Three games each," she says, rapping the board with her chalk. "Furthest level wins; score settles a tie."</p>
+        <div class="fltourtop"><div class="flframe"><canvas width="176" height="88" data-flthumb></canvas><b>${def.name}</b><span class="small">tonight's cabinet</span></div>
+        <div class="flpurse"><h4>The purse: ${pool} gold</h4><ol><li>First: ${Math.floor(pool * 0.4)} gold${g.flStore().wins[N.table] ? "" : " and a rare card, the first time"}</li><li>Second: ${Math.floor(pool * 0.25)} gold</li><li>Third: ${Math.floor(pool * 0.15)} gold</li><li>Fourth to eighth: ${FL.TOUR.TICKETS.slice(3).join(", ")} tickets</li></ol><div class="row">${action}</div><div class="small">The entry is ${FL.TOUR.fee} gold for the night and three games (each with the cabinet's own stake as usual). Your best counts. The board is fresh each day.${vip ? ` A word from the VIP host: tonight's leader got to level ${stand.find((e) => !e.you).level}.` : ""}</div></div></div>
+        <div class="cgnote">${this.cgNote || ""}</div>${S && S.card ? this.cgCardWon(S.card) : ""}
+        <table class="flstand"><tr><th>#</th><th>Who</th><th>Level</th><th>Score</th></tr>${stand.map((e, k) => `<tr class="${e.you ? "you" : ""}${k < 3 ? " top" : ""}"><td>${k + 1}</td><td>${e.who}</td><td>${e.level}</td><td>${e.score.toLocaleString("en")}</td></tr>`).join("")}</table></div>`;
+      this.cgClubHead(box, "Tournament night"); const q = (s) => box.querySelector(s), f = CM.CG_THUMB[N.table], c = q("[data-flthumb]"); if (f && c) f(c.getContext("2d"), c.width, c.height);
+      if (q("[data-flenter]")) q("[data-flenter]").addEventListener("click", () => { const r = g.flTourEnter(); if (r.error) { this.cgNote = r.error; this.renderCasino(); return; } this.cgSfx("door", 0.4); this.cgNote = `You're entered. ${def.name}, game ${r.game} - good luck!`; this.cgView = N.table; this.renderCasino(); });
+      if (q("[data-flgo]")) q("[data-flgo]").addEventListener("click", () => { this.cgView = N.table; this.cgNote = `Tournament game ${N.tries + 1} - start the cabinet.`; this.renderCasino(); });
+      if (q("[data-flsettle]")) q("[data-flsettle]").addEventListener("click", () => { const r = g.flTourSettle(); if (r.error) { this.cgNote = r.error; this.renderCasino(); return; } this.cgNote = r.place <= 3 ? `The master of ceremonies reads your name out: ${r.place === 1 ? "first" : r.place === 2 ? "second" : "third"}!` : `You finish ${r.place}th.`; this.cgSfx(r.place <= 3 ? "victory" : "tablebell", 0.5); if (r.gold) this.cgCoins(this.$("#casino-body"), 14); this.renderCasino(); });
+    },
+    // ---- quests ----
+    cgQuests(box) {
+      const g = this.game, Q = g.flQuests(), S = g.flStore();
+      box.innerHTML = `<div class="flquests"><p class="lore">A cork board by the cashier's cage, notes pinned three deep. The residents leave their requests here - the floor's own little errands - and the cashier pays out when they're done.</p>
+        <div class="flqgrid">${Q.map((q, i) => { const k = Math.min(1, q.got / q.n), done = q.got >= q.n; return `<div class="flnote${done ? " done" : ""}" style="--r:${(i - 1) * 1.5}deg"><i class="pin"></i><span class="flgiver">From ${q.giver}</span><b>${q.text}</b><div class="flbar"><i style="width:${k * 100}%"></i></div><span class="small">${q.kind === "level" ? `best level ${q.got}` : `${q.got} of ${q.n}`}</span>
+          <span class="flreward">${q.reward.gold} gold · ${ticket(q.reward.tickets)}${q.reward.card ? ` · a ${q.reward.card === "better" ? "stronger " : ""}card` : ""}</span><div class="row">${done ? `<button class="primary" data-flq="${i}">Collect</button>` : `${q.table ? `<button data-flqgo="${q.table}">Go there</button>` : ""}<button data-flqswap="${i}">Swap (10 tickets)</button>`}</div></div>`; }).join("")}</div>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.flCard ? this.cgCardWon(this.flCard) : ""}<div class="small">Quests done: ${S.qdone}. Progress counts from when a quest goes up on the board.</div></div>`;
+      this.cgClubHead(box, "Quests"); this.flCard = null;
+      box.querySelectorAll("[data-flq]").forEach((b) => b.addEventListener("click", () => { const r = g.flQuestCollect(Number(b.dataset.flq)); if (r.error) return; this.cgNote = `${r.giver[0].toUpperCase() + r.giver.slice(1)} is pleased: ${r.gold} gold and ${r.tickets} tickets${r.card ? `, and a card - ${r.card}` : ""}.`; this.flCard = r.card; this.cgSfx("victory", 0.5); this.cgCoins(this.$("#casino-body"), 10); this.renderCasino(); }));
+      box.querySelectorAll("[data-flqswap]").forEach((b) => b.addEventListener("click", () => { const r = g.flQuestSwap(Number(b.dataset.flqswap)); this.cgNote = r.error || "A fresh note goes up on the board."; this.cgSfx(r.error ? "miss" : "card", 0.35); this.renderCasino(); }));
+      box.querySelectorAll("[data-flqgo]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.flqgo; this.cgNote = ""; this.renderCasino(); }));
+    },
+    // ---- the VIP room ----
+    cgVip(box) {
+      const g = this.game, open = g.vipUnlocked(), on = g.vipOn(), V = g.flStore().vip, drunk = V.day === FL.day(), F = g.cgStore();
+      box.innerHTML = `<div class="flvip"><canvas class="flvipart" width="640" height="190"></canvas>
+        ${open ? `<p class="lore">Behind a door of buttoned red leather: low lamps, deep chairs, a chandelier that never stops glittering. The host - a tall woman in black velvet who knows everyone's name - bows you in. "Welcome back. The house is at your disposal."</p>
+          <div class="flperks"><div class="flperk"><b>House limits</b><span>${on ? `Up to ${FL.VIP.max.toLocaleString("en")} gold a bet, a ${FL.VIP.chip.toLocaleString("en")} chip on the rail, and ${FL.VIP.buyins.join(" and ")} gold buy-ins at the Residents' Game.` : `The floor's usual ${FL.base.max} gold a bet.`}</span><button class="${on ? "" : "primary"}" data-vipset="${on ? 0 : 1}">${on ? "Back to the usual limits" : "Raise the limits"}</button></div>
+          <div class="flperk"><b>A drink on the house</b><span>The Joker's Cordial (it heals) and ${FL.VIP.tickets} tickets, once a day.</span><button class="${drunk ? "" : "primary"}" data-vipdrink ${drunk ? "disabled" : ""}>${drunk ? "Enjoyed today" : "Ring for it"}</button></div>
+          <div class="flperk"><b>A quiet word</b><span>The host keeps an eye on tournament night: the leader's level shows on the board for you.</span><button data-vipgo="tour">Tournament night</button></div>
+          <div class="flperk"><b>The Velvet Table</b><span>The residents will play for the high buy-ins when the limits are up.</span><button data-vipgo="holdem">The Residents' Game</button></div></div>`
+        : `<p class="lore">A door of buttoned red leather with a brass plate: MEMBERS. A doorman in a velvet coat looks the party up and down. "Platinum members only," he says, "or a pass from the prize counter. No exceptions."</p><div class="flperks"><div class="flperk"><b>How to get in</b><span>Fill ten loyalty cards for Platinum (you have ${(F.loyalty || {}).done || 0}), or buy a pass at the prize counter for ${FL.VIP.pass} tickets (you have ${g.tkStore().n}).</span><button data-vipgo="prizes">The prize counter</button></div></div>`}
+        <div class="cgnote">${this.cgNote || ""}</div></div>`;
+      this.cgClubHead(box, "The VIP room"); const q = (s) => box.querySelector(s);
+      box.querySelectorAll("[data-vipset]").forEach((b) => b.addEventListener("click", () => { const why = g.vipSet(b.dataset.vipset === "1"); this.cgNote = why || (g.vipOn() ? "The host nods to the floor manager. The limits go up." : "The usual limits again."); this.cgBet = Math.min(this.cgBet || 5, CM.CG.max); this.cgSfx("tablebell", 0.4, 0.8); this.renderCasino(); }));
+      if (q("[data-vipdrink]")) q("[data-vipdrink]").addEventListener("click", () => { const r = g.vipDaily(); this.cgNote = r.error || `A waiter brings the Joker's Cordial on a silver tray, and ${r.tickets} tickets tucked under the glass.`; this.cgSfx(r.error ? "miss" : "coin", 0.4); this.renderCasino(); });
+      box.querySelectorAll("[data-vipgo]").forEach((b) => b.addEventListener("click", () => { this.cgView = b.dataset.vipgo; this.cgNote = ""; this.renderCasino(); }));
+      this.flVipCanvas = q(".flvipart"); this.flVipOpen = open;
+      if (!this.flVipLoop) { const loop = (now) => { if (!this.flVipCanvas || !this.flVipCanvas.isConnected || this.cgView !== "vip") { this.flVipLoop = null; return; } this.flVipFrame(now); this.flVipLoop = requestAnimationFrame(loop); }; this.flVipLoop = requestAnimationFrame(loop); }
+    },
+    flVipFrame(now) {
+      const p = this.flVipCanvas.getContext("2d"), W = 640, H = 190, open = this.flVipOpen;
+      const bg = p.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#2A0810"); bg.addColorStop(1, "#120408"); p.fillStyle = bg; p.fillRect(0, 0, W, H);
+      for (let k = 0; k < 14; k++) { p.fillStyle = k % 2 ? "rgba(140,20,40,0.35)" : "rgba(90,10,25,0.35)"; p.fillRect(k * 46, 0, 46, H); }
+      for (const side of [0, 1]) { const x0 = side ? W - 120 : 0; p.fillStyle = "#7A0A20"; p.beginPath(); p.moveTo(x0 + (side ? 120 : 0), 0); for (let y = 0; y <= H; y += 10) p.lineTo(x0 + (side ? 120 - (40 + Math.sin(y / 18 + now / 1500) * 6 + y * 0.25) : 40 + Math.sin(y / 18 + now / 1500) * 6 + y * 0.25), y); p.lineTo(x0 + (side ? 120 : 0), H); p.fill(); p.strokeStyle = "rgba(255,120,140,0.2)"; for (let k = 0; k < 4; k++) { p.beginPath(); p.moveTo(x0 + (side ? 120 - k * 12 : k * 12), 0); p.lineTo(x0 + (side ? 120 - k * 18 : k * 18), H); p.stroke(); } p.fillStyle = "#D0A030"; p.fillRect(x0 + (side ? 0 : 100), 90, 20, 6); }
+      const cx = W / 2; p.strokeStyle = "#B08830"; p.beginPath(); p.moveTo(cx, 0); p.lineTo(cx, 30); p.stroke(); p.fillStyle = "#D8B040"; p.beginPath(); p.ellipse(cx, 40, 60, 12, 0, 0, Math.PI * 2); p.fill();
+      for (let k = 0; k < 9; k++) { const x = cx - 56 + k * 14, fl = Math.sin(now / 90 + k) * 1.5; p.fillStyle = "#F8F0E0"; p.fillRect(x - 1.5, 26, 3, 10); p.fillStyle = "#FFC040"; p.beginPath(); p.ellipse(x, 23 + fl * 0.3, 2, 4 + fl * 0.4, 0, 0, Math.PI * 2); p.fill(); const gl = p.createRadialGradient(x, 23, 1, x, 23, 26); gl.addColorStop(0, "rgba(255,200,100,0.25)"); gl.addColorStop(1, "rgba(255,200,100,0)"); p.fillStyle = gl; p.fillRect(x - 26, 0, 52, 50); }
+      for (let k = 0; k < 16; k++) { const x = cx - 54 + (k % 8) * 15, y = 52 + Math.floor(k / 8) * 9, tw = (Math.sin(now / 200 + k * 1.7) + 1) / 2; p.fillStyle = `rgba(220,240,255,${0.4 + tw * 0.6})`; p.beginPath(); p.moveTo(x, y - 3); p.lineTo(x + 2, y); p.lineTo(x, y + 4); p.lineTo(x - 2, y); p.fill(); if (tw > 0.95) { p.fillStyle = "#FFFFFF"; p.fillRect(x - 5, y, 10, 1); p.fillRect(x, y - 5, 1, 10); } }
+      if (open) { for (const [x, w] of [[200, 50], [440, 50]]) { p.fillStyle = "#3A0A14"; p.fillRect(x - w / 2, 130, w, 40); p.fillStyle = "#5A1020"; p.beginPath(); p.ellipse(x, 130, w / 2, 10, 0, 0, Math.PI * 2); p.fill(); }
+        p.fillStyle = "#1A1014"; p.beginPath(); p.ellipse(cx, 150, 16, 34, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E8C8A0"; p.beginPath(); p.arc(cx, 106, 11, 0, Math.PI * 2); p.fill(); p.fillStyle = "#101010"; p.beginPath(); p.arc(cx, 102, 11, Math.PI, 0); p.fill(); p.fillStyle = "#C02040"; p.beginPath(); p.arc(cx + 4, 128, 3, 0, Math.PI * 2); p.fill();
+        p.fillStyle = "#C0C8D0"; p.fillRect(cx + 20, 124, 2, 18); p.fillStyle = "rgba(240,200,80,0.8)"; p.beginPath(); p.moveTo(cx + 14, 118); p.lineTo(cx + 28, 118); p.lineTo(cx + 21, 126); p.fill(); }
+      else { p.fillStyle = "#4A1A10"; p.fillRect(cx - 40, 90, 80, 100); p.strokeStyle = "#C09030"; p.lineWidth = 2; p.strokeRect(cx - 40, 90, 80, 100); p.lineWidth = 1; for (let y = 100; y < 190; y += 16) for (let x = cx - 30; x < cx + 40; x += 16) { p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.arc(x, y, 2, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#D8B040"; p.fillRect(cx - 24, 104, 48, 12); p.fillStyle = "#2A0810"; p.font = "bold 9px Georgia"; p.textAlign = "center"; p.fillText("MEMBERS", cx, 113); p.textAlign = "left"; }
     },
   });
 }

@@ -140,6 +140,13 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Evenings at the Joker (v16.1)
+
+Once the village came in, the Joker found things for it to do. A master of ceremonies with a stick of chalk runs a
+tournament every night; the residents pin their requests to a cork board by the cage; the prize clerk got glass cases,
+then velvet, then a vault. And behind a door of buttoned red leather there is a room the Joker doesn't talk about,
+where the limits are higher and the drinks are free.
+
 ## The village comes in (v16.0)
 
 For years the village wouldn't set foot on the Joker's floor. Then the Joker bought the old chapel next door, kept the

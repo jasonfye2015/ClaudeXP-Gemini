@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The floor's evenings (the forty-seventh big update - v16.1)
+  Four things across the whole Gilded Joker floor (src/js/64zzi-floor.js, 76zzi-floor.js), on the gallery's club strip:
+  - The prize counter grows with the tickets spent - glass cases, the velvet shelf, the Gilded Vault - each step 5%
+    more off every price and another of the day's specials: rotating stock that changes each real day (deep-delve
+    gear, crates of potions, card packs, phoenix feathers, gilded relics, rare packs, the Joker's box), a few of each.
+    One everyday prize is the day's bargain at a quarter off.
+  - Tournament night: each day one arcade cabinet hosts a tournament against fifteen villagers and visitors; 25 gold
+    enters for three games, the best level reached counts (score breaks ties); settle up for the purse (first, second
+    and third in gold, fourth to eighth in tickets, and a rare card the first time you win each cabinet's).
+  - Quests: three requests from the residents at a time - try so many tables, lay or win so much, reach a level at a
+    cabinet, make a board, play a table so often - paying gold, tickets and sometimes a card. Swap one for 10 tickets.
+  - The VIP room: for Platinum members, or with a pass from the counter (3,000 tickets). Raise the limits to 5,000 gold
+    a bet (a 1,000 chip, and 1,000 and 2,500 buy-ins at the Residents' Game), a daily drink and 20 tickets on the house,
+    and the tournament leader's level shown.
+
 The residents' table and the Bell Hall (the forty-sixth big update - v16.0)
   Two social games on the Gilded Joker's floor (src/js/64zzg-holdem.js, 64zzh-bingo.js; 76zzg-76zzh):
   - The Residents' Game: fixed-limit Texas hold'em against four of the village's six residents - the tavern-keeper
