@@ -228,7 +228,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const dying = new Map();                                               // foe -> when it fell
   const flashes = new Map();                                             // foe -> flash left
   const lunges = new Map();                                              // foe -> when it lunged at the party
-  const hits = new Map(), fledAt = new Map(), rising = new Map();       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
+  const hits = new Map(), fledAt = new Map(), rising = new Map(), weight = new Map();   // (weight: how hard it was last struck, 0..1 - v23.1)       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
   const fwdV = () => [Math.sin(renderer.yaw), 0, -Math.cos(renderer.yaw)], rightV = () => [Math.cos(renderer.yaw), 0, Math.sin(renderer.yaw)];
   const fromParty = (side = 0) => { const e = renderer.eye, f = fwdV(), r = rightV(); return [e[0] + f[0] * 0.3 + r[0] * side * 0.2, 0.4, e[2] + f[2] * 0.3 + r[2] * side * 0.2]; };
   const beforeParty = (d = 0.3) => { const e = renderer.eye, f = fwdV(); return [e[0] + f[0] * d, 0.45, e[2] + f[2] * d]; };
@@ -282,14 +282,14 @@ window.addEventListener("DOMContentLoaded", () => {
       default: break;
     }
   }
-  const fxKit = { fxs, renderer, ui, game, atFoe, fromParty, beforeParty, floatAt, later, foePlace, hits, lunges, flashes, rising, dying };   // (the recipes' tools, for the later files)
+  const fxKit = { fxs, renderer, ui, game, atFoe, fromParty, beforeParty, floatAt, later, foePlace, hits, lunges, flashes, rising, dying, weight };   // (the recipes' tools, for the later files)
   CM.fxKit = fxKit;
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
       case "intro": if (fx.foe) rising.set(fx.foe, now); break;
-      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, fx.crit ? fx.amount + "!" : String(fx.amount), fx.crit ? "crit" : fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
@@ -601,8 +601,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const place = foePlace(m);
         if (!place) return;
         if (m.hp <= 0 && !dying.has(m)) dying.set(m, now);
-        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 400) lunges.delete(m);
-        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
+        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 520) lunges.delete(m);
+        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), hitK: weight.get(m), windup: true, reach: m.boss || m.guardian ? 1.5 : CM.unmoved(m) ? 1.3 : 1, fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
           roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion });
         if (M.done) { dying.delete(m); return; }
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)

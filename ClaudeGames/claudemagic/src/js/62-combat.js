@@ -911,8 +911,9 @@ Object.assign(CM.Game.prototype, {
       if (wp.underHalf && hero.hp < hero.max / 2) dmg += wp.underHalf; }
     if (home && wclass === "axe" && hide === "hide") { dmg = Math.ceil(dmg * 1.15); how = " - the axe bites hide"; }
     if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
-    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
-    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; }
+    let crit = false;                                                    // (v23.1: shown as a crit - a flash, a hold, a gold number)
+    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; crit = true; }
+    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; crit = true; }
     else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.85));
@@ -960,7 +961,7 @@ Object.assign(CM.Game.prototype, {
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
     this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
-    this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+    this.emit("fx", { kind: "hit", foe: target, amount: dmg, crit, hero, frac: target.max ? dmg / target.max : 0 });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
     if (!weapon.unknown && target.hp > 0) {                               // the new words: a wound that bleeds, a chill, a blinding

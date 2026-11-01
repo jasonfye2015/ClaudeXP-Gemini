@@ -348,6 +348,8 @@ body.intower #towerhud { display: block; } body.intower #view .sky, body.intower
 /* ---- the words rising from a hit ---- */
 .float { position: absolute; transform: translate(-50%, -50%); font: bold 18px var(--serif); color: #FFF; text-shadow: 0 0 6px #000, 0 1px 2px #000; pointer-events: none; animation: rise 0.9s ease-out forwards; }
 .float.spell { color: #FFB060; }
+.float.crit { color: #FFD84A; font-size: 30px; text-shadow: 0 0 10px #A04000, 0 0 3px #000, 0 2px 3px #000; animation: critrise 1.1s ease-out forwards; }   /* (v23.1) */
+@keyframes critrise { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.8); } 15% { transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); margin-top: -56px; } }
 .float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 

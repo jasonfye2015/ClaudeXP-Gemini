@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v23.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v23.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -361,6 +361,8 @@ body.intower #towerhud { display: block; } body.intower #view .sky, body.intower
 /* ---- the words rising from a hit ---- */
 .float { position: absolute; transform: translate(-50%, -50%); font: bold 18px var(--serif); color: #FFF; text-shadow: 0 0 6px #000, 0 1px 2px #000; pointer-events: none; animation: rise 0.9s ease-out forwards; }
 .float.spell { color: #FFB060; }
+.float.crit { color: #FFD84A; font-size: 30px; text-shadow: 0 0 10px #A04000, 0 0 3px #000, 0 2px 3px #000; animation: critrise 1.1s ease-out forwards; }   /* (v23.1) */
+@keyframes critrise { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.8); } 15% { transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); margin-top: -56px; } }
 .float.miss { color: #B0B0B0; font-style: italic; font-size: 14px; }
 @keyframes rise { from { opacity: 1; margin-top: 0; } to { opacity: 0; margin-top: -48px; } }
 
@@ -1464,7 +1466,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "23.0", built: "2026-11-01" };
+const CM = window.CM = { version: "23.1", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6686,6 +6688,7 @@ CM.MOTION = {
   fallMs: 400, fadeMs: 300, fallTilt: (80 * Math.PI) / 180,
   fleeMs: 650, fleeBack: 1.4,
   riseMs: 1000,
+  windupMs: 110, windupBack: 0.07,                                       // (v23.1) a lunge drawn back before it comes
 };
 CM.motion = function (s) {
   const M = CM.MOTION, now = s.now, out = { forward: 0, back: 0, lift: 0, tilt: 0, scaleY: 1, scale: 1, flash: 0, alpha: 1, skew: 0, done: false };
@@ -6718,14 +6721,17 @@ CM.motion = function (s) {
     out.scaleY = 1 + Math.sin(now / M.breathMs + phase) * M.breath;     // breathing, each in its own time
     const rose = since(s.roseAt);
     if (rose < M.riseMs) { const k = rose / M.riseMs; out.lift = -(1 - k) * (1 - k) * 1.0; }   // (a guardian rises from the floor into its title)
-    const lunge = since(s.lungeAt), hit = since(s.hitAt);
-    const lunging = lunge < M.lungeIn + M.lungeOut && !(hit < lunge);     // (struck mid-lunge: the lunge is broken off)
-    if (lunging) out.forward = lunge < M.lungeIn ? M.lungeReach * (lunge / M.lungeIn) : M.lungeReach * (1 - (lunge - M.lungeIn) / M.lungeOut);
-    if (hit < M.flinchMs) out.back = M.flinchBack * Math.sin((Math.PI * hit) / M.flinchMs);
+    const wu = s.windup ? M.windupMs : 0, lunge = since(s.lungeAt) - wu, hit = since(s.hitAt), reach = M.lungeReach * (s.reach || 1);
+    if (s.windup && lunge < 0 && lunge >= -wu && !(hit < lunge + wu)) out.back = M.windupBack * (s.reach || 1) * Math.sin((Math.PI / 2) * (lunge + wu) / wu);   // (v23.1: drawn back first)
+    const lunging = lunge >= 0 && lunge < M.lungeIn + M.lungeOut && !(hit < lunge + wu);     // (struck mid-lunge: the lunge is broken off)
+    if (lunging) out.forward = lunge < M.lungeIn ? reach * (lunge / M.lungeIn) : reach * (1 - (lunge - M.lungeIn) / M.lungeOut);
+    const hk = s.hitK || 0, fms = M.flinchMs * (1 + 0.6 * hk);                // (v23.1: a heavy blow knocks it further, longer, and rocks it)
+    if (hit >= 0 && hit < fms) { out.back = M.flinchBack * (1 + 1.6 * hk) * Math.sin((Math.PI * hit) / fms); if (hk > 0.3) out.tilt = 0.2 * hk * Math.sin((2 * Math.PI * hit) / fms) * (s.phase % 2 > 1 ? 1 : -1); }
     if (s.sway) out.skew = Math.sin(now / 900 + phase) * 0.045 + Math.sin(now / 370 + phase * 2) * 0.012;
   }
   const hit = since(s.hitAt);
-  if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;                    // (the flash, even with motion reduced)
+  if (hit < 0) out.flash = 1;                                              // (v23.1: held white through a hit-stop)
+  else if (hit < M.flashMs) out.flash = 1 - hit / M.flashMs;               // (the flash, even with motion reduced)
   return out;
 };
 // things that move between two states (phase 2): a door swung open on its hinge, a portcullis lifted, a lever thrown.
@@ -9326,7 +9332,8 @@ CM.Renderer = class {
   zoomTo(k, ms = 500) { if (CM.reducedMotion) return; this.zoomAnim = { from: this.zoomNow || 1, to: k, t: 0, ms, back: true }; }
   rollTo(r, ms = 800) { if (CM.reducedMotion) return; this.rollAnim = { from: this.rollNow || 0, to: r, t: 0, ms }; }
   shake(strength) { if (CM.reducedMotion) return; this.shakeT = Math.max(this.shakeT || 0, Math.min(1, strength)); }   // the view judders, and settles
-  punch() { if (CM.reducedMotion) return; this.punchT = 1; }                                                            // the party leans into a blow
+  punch() { if (CM.reducedMotion) return; this.punchT = 1; }
+  nudge(side, k = 1) { if (CM.reducedMotion) return; this.nudgeT = 1; this.nudgeSide = side; this.nudgeK = k; }   // (v23.1) the view leans toward a heavy blow, and back                                                            // the party leans into a blow
 
   // where the camera is in grid terms (the cell it's heading for, while it steps)
   setSprites(list) { this.sprites = list; }
@@ -9487,9 +9494,10 @@ CM.Renderer = class {
     this.shakeT = (this.shakeT || 0) * Math.pow(0.0005, dt);              // a shake dies away in about a second
     if (this.shakeT < 0.01) this.shakeT = 0;
     this.punchT = Math.max(0, (this.punchT || 0) - dt / 0.22);
+    this.nudgeT = Math.max(0, (this.nudgeT || 0) - dt / 0.32); const nz = Math.sin((this.nudgeT || 0) * Math.PI) * (this.nudgeK || 0) * 0.07, ns = this.nudgeSide || 0;
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
     const E = this.perch ? [this.perch.x + 0.5, this.perch.h + EYE_HEIGHT, this.perch.y + 0.5] : this.eye;   // (on a gate tower's top: 61c-tower.js)
-    const eye = [E[0] + right[0] * jx + fwd[0] * pk, E[1] + this.bob + jy, E[2] + right[2] * jx + fwd[2] * pk];
+    const eye = [E[0] + right[0] * (jx + nz * ns) + fwd[0] * (pk + nz), E[1] + this.bob + jy - nz * 0.15, E[2] + right[2] * (jx + nz * ns) + fwd[2] * (pk + nz)];
     if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
     if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
     const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
@@ -9565,7 +9573,8 @@ CM.reducedMotion = false;                         // Settings > Reduce motion: n
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }
   get count() { return this.list.length; }
-  clear() { this.list = []; this.holdUntil = 0; }
+  clear() { this.list = []; this.holdUntil = 0; this.stopUntil = 0; }
+  hitStop(ms) { const now = this.now(); if (this.stopUntil > now) return; this.stopAt = now; this.stopUntil = now + ms; this.holdUntil = Math.max(this.holdUntil, now) + ms; }   // (v23.1: a heavy blow's moment)
   now() { return performance.now(); }
 
   // a thing flying from one point to another (world x, height, z) over `ms`, trailing sparks; `then` runs when it lands
@@ -9618,6 +9627,7 @@ CM.Effects = class {
 
   // the sprites of everything in flight right now; the expired fall off the list (a landing projectile runs its then)
   sprites(now = this.now()) {
+    if (this.stopUntil) { if (now < this.stopUntil) now = this.stopAt; else { const d = this.stopUntil - this.stopAt; for (const e of this.list) { e.t0 += d; if (e.last) e.last += d; if (e.lastTrail) e.lastTrail += d; if (e.lastMote) e.lastMote += d; } this.stopUntil = 0; now = this.now(); } }
     const out = [], keep = [], spawn = [];
     const put = (e, x, y, z, size, layer, alpha = 1) => out.push({ x: x - 0.5, y: z - 0.5, lift: Math.max(0, y - size / 2), w: size, h: size, layer, alpha, glow: e.glow });
     for (const e of this.list) {
@@ -13821,8 +13831,9 @@ Object.assign(CM.Game.prototype, {
       if (wp.underHalf && hero.hp < hero.max / 2) dmg += wp.underHalf; }
     if (home && wclass === "axe" && hide === "hide") { dmg = Math.ceil(dmg * 1.15); how = " - the axe bites hide"; }
     if (target.elite === "spectral" && rnd.chance(0.5)) { this.say(`${hero.name}'s blow passes through ${CM.the(target)}.`); this.emit("fx", { kind: "miss", foe: target }); return 0; }
-    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; }
-    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; }
+    let crit = false;                                                    // (v23.1: shown as a crit - a flash, a hold, a gold number)
+    if (hero.cls === "Rogue" && back) { dmg *= 2; how = " - a knife from behind"; crit = true; }
+    else if (!(home && wclass === "blunt") && (ambush || rnd.chance(this.critChance(hero) + (home && wclass === "dagger" ? 0.1 : 0)))) { dmg *= critMult; how = " - a weak spot"; crit = true; }
     else if (back && !reaches && !(this.formation === "wedge" && this.point() !== hero)) { dmg = Math.max(1, Math.ceil(dmg / 2)); how = ", reaching from the back row"; }
     if (this.formation === "loose") dmg = Math.max(1, Math.ceil(dmg * 0.85));
     if ((this.fed || 0) >= CM.HUNGER.weary) dmg = Math.max(1, Math.ceil(dmg * 0.85));
@@ -13870,7 +13881,7 @@ Object.assign(CM.Game.prototype, {
     this.splitIfHurt(target);
     if (target.asleep > 0) { target.asleep = 0; how += " - it wakes"; }
     this.say(`${hero.name} hits ${CM.the(target)}${note} for ${dmg}${how}.`);
-    this.emit("fx", { kind: "hit", foe: target, amount: dmg });
+    this.emit("fx", { kind: "hit", foe: target, amount: dmg, crit, hero, frac: target.max ? dmg / target.max : 0 });
     this.sound("hit");
     if (props.stun && target.hp > 0 && !CM.unmoved(target) && rnd.chance(props.stun)) { target.held = Math.max(target.held || 0, 1); this.say(`${CM.The(target)} reels from the blow.`); }
     if (!weapon.unknown && target.hp > 0) {                               // the new words: a wound that bleeds, a chill, a blinding
@@ -38108,6 +38119,32 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   };
 }
 
+// ---- 76zzzz-blows.js ----
+"use strict";
+// Blows that land (v23.1, UPGRADE_PLAN_18.md): a blow has weight. A critical hit - a weak spot found, a knife from
+// behind - flashes white, holds everything still for a moment (a hit-stop), nudges the view toward it and throws a big
+// gold number with a "!"; any heavy blow knocks its foe further back and rocks it (28-motion.js takes the weight); a
+// blow taken by the party pushes the view back a little. The rules mark the crit (62-combat.js strike).
+{ CM.blowFx = (K, fx) => {
+    if (!K || !K.renderer || !K.renderer.ok) return;
+    const now = performance.now(), cine = CM.cinematic ? 1.6 : 1, quick = CM.fxSpeed || 1;
+    if (fx.kind === "hit" && fx.foe) {
+      const k = Math.min(1, (fx.frac || 0) * 2.2 + (fx.crit ? 0.45 : 0));
+      K.weight.set(fx.foe, k);
+      if (fx.spell || CM.reducedMotion || quick >= 6) return;
+      if (fx.crit || k > 0.6) {
+        const stop = (fx.crit ? 95 : 55) * cine / quick, p = K.foePlace(fx.foe), side = p ? Math.sign(p.dx * Math.cos(K.renderer.yaw) + p.dz * Math.sin(K.renderer.yaw)) : 0;
+        K.fxs.hitStop(stop); K.hits.set(fx.foe, now + stop); K.flashes.set(fx.foe, 1);
+        K.renderer.nudge(side * 0.6, (fx.crit ? 1 : 0.6) * cine);
+        if (fx.crit) { const at = K.atFoe(fx.foe, 0.55); if (at) K.fxs.burst({ at, layer: "fx:spark", n: 18, size: 0.07, speed: 2.0, up: 1.8, ms: 600 }); K.ui.tint("rgba(255,255,255,0.35)", 120); K.renderer.shake(0.25 * cine); }
+      }
+    } else if (fx.kind === "hurt" && fx.hero && fx.hero.max && !CM.reducedMotion) {
+      const frac = fx.amount / fx.hero.max; if (frac > 0.08) K.later(() => K.renderer.nudge(0, -Math.min(1, frac * 3) * 0.8));
+    }
+  };
+  const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.blowBound && this.game && this.game.on && CM.fxKit) { this.blowBound = true; this.game.on("fx", (e) => CM.blowFx(CM.fxKit, e)); } return rf0.apply(this, a); };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -38419,7 +38456,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const dying = new Map();                                               // foe -> when it fell
   const flashes = new Map();                                             // foe -> flash left
   const lunges = new Map();                                              // foe -> when it lunged at the party
-  const hits = new Map(), fledAt = new Map(), rising = new Map();       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
+  const hits = new Map(), fledAt = new Map(), rising = new Map(), weight = new Map();   // (weight: how hard it was last struck, 0..1 - v23.1)       // foe -> when it was struck, when it ran, when it rose into its title (28-motion.js)
   const fwdV = () => [Math.sin(renderer.yaw), 0, -Math.cos(renderer.yaw)], rightV = () => [Math.cos(renderer.yaw), 0, Math.sin(renderer.yaw)];
   const fromParty = (side = 0) => { const e = renderer.eye, f = fwdV(), r = rightV(); return [e[0] + f[0] * 0.3 + r[0] * side * 0.2, 0.4, e[2] + f[2] * 0.3 + r[2] * side * 0.2]; };
   const beforeParty = (d = 0.3) => { const e = renderer.eye, f = fwdV(); return [e[0] + f[0] * d, 0.45, e[2] + f[2] * d]; };
@@ -38473,14 +38510,14 @@ window.addEventListener("DOMContentLoaded", () => {
       default: break;
     }
   }
-  const fxKit = { fxs, renderer, ui, game, atFoe, fromParty, beforeParty, floatAt, later, foePlace, hits, lunges, flashes, rising, dying };   // (the recipes' tools, for the later files)
+  const fxKit = { fxs, renderer, ui, game, atFoe, fromParty, beforeParty, floatAt, later, foePlace, hits, lunges, flashes, rising, dying, weight };   // (the recipes' tools, for the later files)
   CM.fxKit = fxKit;
   function spectacle(fx) {
     const now = performance.now();
     switch (fx.kind) {
       case "intent": renderer.zoomTo(0.9, 600); break;
       case "intro": if (fx.foe) rising.set(fx.foe, now); break;
-      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, String(fx.amount), fx.spell ? "spell" : ""); }); break;
+      case "hit": flashes.set(fx.foe, 1); hits.set(fx.foe, now); if (fx.foe && fx.foe.hp > 0) CM.audio.bark(fx.foe.kind || fx.foe.name, "hit"); later(() => { const at = atFoe(fx.foe, 0.55); if (at && !fx.spell) fxs.burst({ at, n: 7, size: 0.05, speed: 1.0, ms: 450 }); floatAt(fx.foe, fx.crit ? fx.amount + "!" : String(fx.amount), fx.crit ? "crit" : fx.spell ? "spell" : ""); }); break;
       case "miss": later(() => floatAt(fx.foe, "miss", "miss")); break;
       case "die": {
         dying.set(fx.foe, now);
@@ -38792,8 +38829,8 @@ window.addEventListener("DOMContentLoaded", () => {
         const place = foePlace(m);
         if (!place) return;
         if (m.hp <= 0 && !dying.has(m)) dying.set(m, now);
-        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 400) lunges.delete(m);
-        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
+        const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 520) lunges.delete(m);
+        const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), hitK: weight.get(m), windup: true, reach: m.boss || m.guardian ? 1.5 : CM.unmoved(m) ? 1.3 : 1, fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
           roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion });
         if (M.done) { dying.delete(m); return; }
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)

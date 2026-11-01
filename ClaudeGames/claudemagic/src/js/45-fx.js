@@ -9,7 +9,8 @@ CM.reducedMotion = false;                         // Settings > Reduce motion: n
 CM.Effects = class {
   constructor() { this.list = []; this.holdUntil = 0; }
   get count() { return this.list.length; }
-  clear() { this.list = []; this.holdUntil = 0; }
+  clear() { this.list = []; this.holdUntil = 0; this.stopUntil = 0; }
+  hitStop(ms) { const now = this.now(); if (this.stopUntil > now) return; this.stopAt = now; this.stopUntil = now + ms; this.holdUntil = Math.max(this.holdUntil, now) + ms; }   // (v23.1: a heavy blow's moment)
   now() { return performance.now(); }
 
   // a thing flying from one point to another (world x, height, z) over `ms`, trailing sparks; `then` runs when it lands
@@ -62,6 +63,7 @@ CM.Effects = class {
 
   // the sprites of everything in flight right now; the expired fall off the list (a landing projectile runs its then)
   sprites(now = this.now()) {
+    if (this.stopUntil) { if (now < this.stopUntil) now = this.stopAt; else { const d = this.stopUntil - this.stopAt; for (const e of this.list) { e.t0 += d; if (e.last) e.last += d; if (e.lastTrail) e.lastTrail += d; if (e.lastMote) e.lastMote += d; } this.stopUntil = 0; now = this.now(); } }
     const out = [], keep = [], spawn = [];
     const put = (e, x, y, z, size, layer, alpha = 1) => out.push({ x: x - 0.5, y: z - 0.5, lift: Math.max(0, y - size / 2), w: size, h: size, layer, alpha, glow: e.glow });
     for (const e of this.list) {

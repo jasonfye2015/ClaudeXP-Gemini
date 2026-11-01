@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Blows that land (v23.1, UPGRADE_PLAN_18.md phase 1)
+  (src/js/76zzzz-blows.js; 62-combat.js, 28-motion.js, 45-fx.js, 40-render.js, 80-main.js, style.css)
+  - A critical hit (a weak spot found, a knife from behind) is shown as one: the foe flashes white and everything in
+    the air holds still for a moment (a hit-stop), the view leans toward the blow, sparks fly, and the number comes
+    big and gold with a "!".
+  - Every blow has weight: a heavy one knocks its foe further back, for longer, and rocks it; a light one only makes
+    it flinch. A big blow taken by the party pushes the view back.
+  - A monster's lunge winds up first - it draws back, then comes - and a boss's or guardian's reaches further.
+  - Reduced motion keeps only the flash and the number; As good as instant skips the hold.
+
 Spells that travel (the eighty-ninth big update - v23.0, UPGRADE_PLAN_18.md phase 0)
   (src/js/76zzzy-spells.js; 45-fx.js, 80-main.js)
   - Every spell aimed at foes leaves its caster's hand - the hero's own side of the view - and travels: Magic Missile
