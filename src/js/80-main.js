@@ -1091,6 +1091,7 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
+        renderer.bloom = game.settings.glow === "off" || detailNow() === 0 ? 0 : game.settings.glow === "strong" ? 1.6 : 1.0;   // (v22.5: the glow, Settings; none at Low detail)
         renderer.grading = CM.gradeFor && game.floor ? CM.gradeFor(game, renderer) : null;   // (v22.4: the band's grade, the hour's colour, frost: 76zzzx-grade.js)
         renderer.air = CM.airFor && game.floor ? CM.airFor(game, renderer) : null;   // (v22.3: the air's body and the sunbeams, 76zzzw-air.js)
         renderer.lights = lightsNear(game.floor);

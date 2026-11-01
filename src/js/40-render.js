@@ -112,6 +112,25 @@ void main() {
   fragColor = vec4(col, t.a * vFx.y);
 }`;
 
+// (v22.5) the glow: the frame is drawn off screen, what is bright in it taken out at a quarter size, blurred, and laid
+// back over it - magic, portals, lamps, the sun softly haloed
+const POST_VERT = `#version 300 es
+in vec2 aP; out vec2 vT; void main() { vT = aP * 0.5 + 0.5; gl_Position = vec4(aP, 0.0, 1.0); }`;
+const BRIGHT_FRAG = `#version 300 es
+precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform vec2 uPx; uniform float uThresh; out vec4 o;
+void main() { vec3 c = vec3(0.0);
+  for (int i = 0; i < 4; i++) { vec2 off = vec2(float(i % 2) - 0.5, float(i / 2) - 0.5) * uPx * 2.0; vec3 s = texture(uSrc, vT + off).rgb; float l = max(s.r, max(s.g, s.b)); c += s * smoothstep(uThresh, 1.0, l); }
+  o = vec4(c * 0.25, 1.0); }`;
+const BLUR_FRAG = `#version 300 es
+precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform vec2 uDir; out vec4 o;
+void main() { vec3 c = texture(uSrc, vT).rgb * 0.227;
+  c += (texture(uSrc, vT + uDir * 1.385).rgb + texture(uSrc, vT - uDir * 1.385).rgb) * 0.316;
+  c += (texture(uSrc, vT + uDir * 3.231).rgb + texture(uSrc, vT - uDir * 3.231).rgb) * 0.070;
+  o = vec4(c, 1.0); }`;
+const COMPOSE_FRAG = `#version 300 es
+precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform sampler2D uGlow; uniform float uK; out vec4 o;
+void main() { vec3 s = texture(uSrc, vT).rgb, g = texture(uGlow, vT).rgb; o = vec4(s + g * uK * (1.0 - s * 0.5), 1.0); }`;
+
 const STRIDE = 10;                     // floats a vertex: pos 3, uv 3, shade 1, fx 3
 const EYE_HEIGHT = 0.5;
 
@@ -432,6 +451,53 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
   }
 
+  // (v22.5) the glow's targets, made again when the canvas changes size: a multisampled frame, its resolved picture, and
+  // two quarter-size pictures for the bright part and its blur
+  _post() {
+    const gl = this.gl, w = this.canvas.width, h = this.canvas.height, P = this.postT || (this.postT = {});
+    if (!P.progs) { const mk = (fs) => { const p = this._program(POST_VERT, fs); return p ? { p, u: (n) => gl.getUniformLocation(p, n) } : null; };
+      P.progs = { bright: mk(BRIGHT_FRAG), blur: mk(BLUR_FRAG), compose: mk(COMPOSE_FRAG) };
+      if (!P.progs.bright || !P.progs.blur || !P.progs.compose) { P.broken = true; this.error = ""; return null; }
+      P.vao = gl.createVertexArray(); gl.bindVertexArray(P.vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0); gl.bindVertexArray(null); }
+    if (P.w === w && P.h === h) return P;
+    for (const k of ["msFb", "sceneFb", "aFb", "bFb"]) if (P[k]) gl.deleteFramebuffer(P[k]);
+    for (const k of ["msCol", "msDep"]) if (P[k]) gl.deleteRenderbuffer(P[k]);
+    for (const k of ["scene", "a", "b"]) if (P[k]) gl.deleteTexture(P[k]);
+    const tex = (tw, th) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, tw, th, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return t; };
+    const fbFor = (t) => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0); return f; };
+    const samples = Math.min(4, gl.getParameter(gl.MAX_SAMPLES) || 0);
+    P.msFb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, P.msFb);
+    P.msCol = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, P.msCol); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.RGBA8, w, h); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, P.msCol);
+    P.msDep = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, P.msDep); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, w, h); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, P.msDep);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    P.qw = Math.max(1, w >> 2); P.qh = Math.max(1, h >> 2);
+    P.scene = tex(w, h); P.sceneFb = fbFor(P.scene); P.a = tex(P.qw, P.qh); P.aFb = fbFor(P.a); P.b = tex(P.qw, P.qh); P.bFb = fbFor(P.b);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_2D, null);
+    if (!ok) { P.broken = true; return null; }
+    P.w = w; P.h = h; return P;
+  }
+
+  _postEnd(P) {
+    const gl = this.gl, w = P.w, h = P.h, pr = P.progs, sky = this.sky;
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, P.msFb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, P.sceneFb);
+    gl.blitFramebuffer(0, 0, w, h, 0, 0, w, h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND); gl.bindVertexArray(P.vao); gl.activeTexture(gl.TEXTURE0);
+    const pass = (prog, fb, vw, vh, src, set) => { gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.viewport(0, 0, vw, vh); gl.useProgram(prog.p); gl.bindTexture(gl.TEXTURE_2D, src); gl.uniform1i(prog.u("uSrc"), 0); set(prog); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+    const day = sky ? Math.min(1, Math.max(0, (sky.light - 0.3) * 2)) : 0;   // (by day the whole sky is bright: only the brightest glows)
+    pass(pr.bright, P.aFb, P.qw, P.qh, P.scene, (p) => { gl.uniform2f(p.u("uPx"), 1 / w, 1 / h); gl.uniform1f(p.u("uThresh"), 0.48 + 0.42 * day); });
+    for (let i = 0; i < 2; i++) {
+      pass(pr.blur, P.bFb, P.qw, P.qh, P.a, (p) => gl.uniform2f(p.u("uDir"), (1 + i) / P.qw, 0));
+      pass(pr.blur, P.aFb, P.qw, P.qh, P.b, (p) => gl.uniform2f(p.u("uDir"), 0, (1 + i) / P.qh)); }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(pr.compose.p);
+    gl.bindTexture(gl.TEXTURE_2D, P.scene); gl.uniform1i(pr.compose.u("uSrc"), 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, P.a); gl.uniform1i(pr.compose.u("uGlow"), 1);
+    gl.uniform1f(pr.compose.u("uK"), (this.bloom || 0) * (1 - 0.4 * day)); gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindVertexArray(null); gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
+  }
+
   frame(dt) {
     if (!this.ok || !this.texture) return;
     this.time += dt;
@@ -456,6 +522,8 @@ CM.Renderer = class {
     this.viewProj = mat4Mul(proj, view);
     const t = this.theme, sky = t.sky ? this.sky || CM.sky(null) : null;
     const clear = sky ? sky.zenith : t.fog, fogc = sky ? sky.horizon : t.fog;
+    const post = this.bloom > 0 && !(this.postT && this.postT.broken) ? this._post() : null;   // (v22.5: the glow - drawn off screen first)
+    if (post) { gl.bindFramebuffer(gl.FRAMEBUFFER, post.msFb); gl.viewport(0, 0, post.w, post.h); }
     gl.clearColor(clear[0], clear[1], clear[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.program);
@@ -498,6 +566,7 @@ CM.Renderer = class {
       this._attributes();
       gl.drawArrays(gl.TRIANGLES, 0, dyn.length / STRIDE);
     }
+    if (post) this._postEnd(post);
   }
 
   // the colour of one pixel, for the tests: is anything being drawn?

@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Glow (v22.5, UPGRADE_PLAN_17.md phase 5 - the light and air plan done)
+  (src/js/40-render.js, 70-ui.js, 80-main.js)
+  - What is bright is softly haloed: torch flames, lamps and braziers, the portals and their runes, spells, gold, the
+    sun. The frame is drawn off screen (still smoothed at the edges), its bright part taken out at a quarter size,
+    blurred and laid back over it. By day only the brightest glows, so the sky does not.
+  - Settings > Glow: Soft (the default), Strong or Off; always off at Low detail, so a slow machine that steps its
+    Detail down sheds it first.
+
 Grade and hour (v22.4, UPGRADE_PLAN_17.md phase 4)
   (src/js/76zzzx-grade.js; 40-render.js, 80-main.js)
   - Each band its own grade - a lift in the shadows, a contrast, a saturation - not only a tint: the Lich King's

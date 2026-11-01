@@ -76,6 +76,7 @@ CM.UI = class {
   <div class="row"><label for="set-look">Theme - the look of the dungeon</label><select id="set-look"></select></div>
   <div class="small" id="set-look-note"></div>
   <div class="row"><label for="set-detail">Detail - the grass, stones and bones on the floors (when frames come late it is lowered first)</label><select id="set-detail"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+  <div class="row"><label for="set-glow">Glow - a soft halo on what's bright: magic, portals, lamps, the sun (off at Low detail)</label><select id="set-glow"><option value="soft">Soft</option><option value="strong">Strong</option><option value="off">Off</option></select></div>
   <div class="row"><label for="set-smooth">Smooth steps and turns (off: snap, the classic way)</label><input type="checkbox" id="set-smooth"></div>
   <div class="row"><label for="set-fps">Show frames per second (F3)</label><input type="checkbox" id="set-fps"></div>
   <div class="row"><label for="set-tap">Tap or click the view to move (the sides turn, the top walks, the bottom steps back)</label><input type="checkbox" id="set-tap"></div>
@@ -861,7 +862,7 @@ CM.UI = class {
     const smooth = this.$("#set-smooth"), fps = this.$("#set-fps"), look = this.$("#set-look"), titleLook = this.$("#look"), tap = this.$("#set-tap"), skipWalk = this.$("#set-skipwalk");
     const speed = this.$("#set-speed"), text = this.$("#set-text"), motion = this.$("#set-motion"), contrast = this.$("#set-contrast"), swapab = this.$("#set-swapab"), render = this.$("#set-render"), layout = this.$("#set-layout");
     layout.value = s.layout || "auto";
-    const detail = this.$("#set-detail"); detail.value = CM.DETAIL[s.detail] !== undefined ? s.detail : "medium";
+    const detail = this.$("#set-detail"); detail.value = CM.DETAIL[s.detail] !== undefined ? s.detail : "medium"; const glow = this.$("#set-glow"); glow.value = ["soft", "strong", "off"].includes(s.glow) ? s.glow : "soft";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
@@ -870,12 +871,12 @@ CM.UI = class {
     note();
     const apply = () => {
       s.sound = sound.checked; s.volume = vol.value / 100; s.music = music.checked; s.musicVolume = mvol.value / 100; s.smooth = smooth.checked; s.fps = fps.checked; s.season = this.$("#set-season").value || ""; s.autoLand = this.$("#set-autoland").checked; s.tapMove = tap.checked; s.skipWalk = skipWalk.checked;
-      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value; s.detail = detail.value;
+      s.speed = speed.value; s.text = text.value; s.motion = motion.checked; s.contrast = contrast.checked; s.swapAB = swapab.checked; s.render = render.value; s.layout = layout.value; s.detail = detail.value; s.glow = glow.value;
       g.saveSettings();
       g.emit("settings", s);
     };
     for (const el of [sound, vol, music, mvol, smooth, fps, tap, motion, contrast, swapab]) el.addEventListener("input", apply);
-    for (const el of [speed, text, render, layout, detail]) el.addEventListener("change", apply);
+    for (const el of [speed, text, render, layout, detail, glow]) el.addEventListener("change", apply);
     for (const sel of [look, titleLook]) sel.addEventListener("change", () => { s.look = sel.value; look.value = titleLook.value = s.look; note(); apply(); });
   }
 
