@@ -1097,13 +1097,14 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
-        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
+        renderer.snow = renderer.sky ? (CM.snowDepth ? CM.snowDepth(game) : CM.snowLying(game) ? 1 : 0) : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.wind = CM.windFor && game.floor ? CM.windFor(game, renderer) : null;   // (v24.0: 76zzzzc-wind.js)
         renderer.bloom = game.settings.glow === "off" || detailNow() === 0 ? 0 : game.settings.glow === "strong" ? 1.6 : 1.0;   // (v22.5: the glow, Settings; none at Low detail)
         renderer.grading = CM.gradeFor && game.floor ? CM.gradeFor(game, renderer) : null;   // (v22.4: the band's grade, the hour's colour, frost: 76zzzx-grade.js)
         renderer.air = CM.airFor && game.floor ? CM.airFor(game, renderer) : null;   // (v22.3: the air's body and the sunbeams, 76zzzw-air.js)
+        if (renderer.sky && CM.seasonTurn && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1) && (CM.seasonTurn(game) !== renderer.turnK || CM.leafFall(game) !== renderer.leafK)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number));   // (v24.2: a new day - more trees turned, more leaves down)
         renderer.lights = lightsNear(game.floor);
         stepAir(dt);
         const { out, hud } = sprites();

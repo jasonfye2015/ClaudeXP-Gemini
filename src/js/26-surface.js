@@ -92,6 +92,7 @@ CM.CROWNS = {
 };
 CM.crownOf = (variant, season) => (CM.CROWNS[variant] || CM.CROWNS[0])[CM.CROWNS[0][season] ? season : "summer"];
 CM.CANOPIES = { spring: [74, 128, 52], summer: [50, 96, 40], autumn: [150, 84, 40], winter: null };   // (winter: bare branches over the path)
+CM.PREV_SEASON = { spring: "winter", summer: "spring", autumn: "summer", winter: "autumn" };   // (v24.2: the season a tree may not have left yet)
 CM.treeVariant = (fl, x, y) => CM.hashSeed(`${fl.number}:tree:${x},${y}`) % 3;   // 0 an oak, 1 a fir, 2 a birch in its autumn
 // what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
 CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");
@@ -354,7 +355,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
   }
   for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
-    const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, layer = L(`tree:${v}`), h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
+    const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
+    const was = opts.turn !== undefined && opts.turn < 1 && (CM.hashSeed(`${fl.number}:turn:${key}`) % 100) / 100 >= opts.turn && index[`tree:${v}:was`] !== undefined;   // (v24.2: not turned yet)
+    const layer = L(was ? `tree:${v}:was` : `tree:${v}`);
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }

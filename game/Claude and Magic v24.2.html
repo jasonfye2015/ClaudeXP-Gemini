@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v24.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v24.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1482,7 +1482,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "24.1", built: "2026-11-01" };
+const CM = window.CM = { version: "24.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6099,6 +6099,7 @@ CM.CROWNS = {
 };
 CM.crownOf = (variant, season) => (CM.CROWNS[variant] || CM.CROWNS[0])[CM.CROWNS[0][season] ? season : "summer"];
 CM.CANOPIES = { spring: [74, 128, 52], summer: [50, 96, 40], autumn: [150, 84, 40], winter: null };   // (winter: bare branches over the path)
+CM.PREV_SEASON = { spring: "winter", summer: "spring", autumn: "summer", winter: "autumn" };   // (v24.2: the season a tree may not have left yet)
 CM.treeVariant = (fl, x, y) => CM.hashSeed(`${fl.number}:tree:${x},${y}`) % 3;   // 0 an oak, 1 a fir, 2 a birch in its autumn
 // what stands at a cell: null for open ground, else the solid's kind (the map's edge is the floor's default solid)
 CM.solidAt = (fl, x, y) => (CM.inBounds(fl, x, y) && fl.grid[y][x] === 0 ? null : (fl.kinds && fl.kinds[`${x},${y}`]) || fl.solidDefault || "wall");
@@ -6361,7 +6362,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
   }
   for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
-    const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, layer = L(`tree:${v}`), h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
+    const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
+    const was = opts.turn !== undefined && opts.turn < 1 && (CM.hashSeed(`${fl.number}:turn:${key}`) % 100) / 100 >= opts.turn && index[`tree:${v}:was`] !== undefined;   // (v24.2: not turned yet)
+    const layer = L(was ? `tree:${v}:was` : `tree:${v}`);
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }
@@ -8224,6 +8227,7 @@ CM.art.surfaceLayers = function (pick) {
   out["solid:crag"] = use("solid.crag", () => CM.art.crag(false)); out["solid:cavemouth"] = use("solid.cavemouth", () => CM.art.crag(true));   // (Claudeita's cave: 61g-cavemouth.js)
   out["solid:roof"] = use("solid.roof", () => CM.art.roof());
   for (let v = 0; v < 3; v++) out[`tree:${v}`] = use(`tree.${v}`, () => CM.art.tree(v, null, CM.art.season || "autumn"));   // (the run's season: CM.art.season, set before a set is built)
+  for (let v = 0; v < 3; v++) out[`tree:${v}:was`] = use(`tree.${v}.was`, () => CM.art.tree(v, null, CM.PREV_SEASON[CM.art.season || "autumn"]));   // (v24.2: as it was last season - the trees not yet turned)
   out.canopy = use("canopy", () => CM.art.canopy(1, CM.art.season || "summer"));
   out.ice = use("ice", () => CM.art.ice());
   out["far:trees"] = use("far.trees", () => CM.art.farTrees());
@@ -8730,7 +8734,7 @@ CM.art.buildStone = function (theme) {
   const fit = (canvas) => { if (canvas.width === S) return canvas; const c = artCanvas(S); c.getContext("2d").drawImage(canvas, 0, 0, S, S); return c; };
   const surface = CM.art.surfaceLayers((key, drawn) => {                   // the surface: photographs where the set has them, the plaster under the drawn timbers, bark on the trunks
     if (key === "solid.house" || key === "solid.door" || key === "solid.shop" || key === "solid.gable") return CM.art.packs.stone["solid.plaster"] ? CM.art.facade(key.slice(6), 1, photo("solid.plaster", false, 0, true)) : drawn();
-    if (key.startsWith("tree.")) return CM.art.tree(Number(key.slice(5)), CM.art.packs.stone["solid.bark"] || null, CM.art.season || "autumn");
+    if (key.startsWith("tree.")) { const [v, was] = key.slice(5).split("."); return CM.art.tree(Number(v), CM.art.packs.stone["solid.bark"] || null, was ? CM.PREV_SEASON[CM.art.season || "autumn"] : CM.art.season || "autumn"); }   // (v24.2: tree.N.was - last season's)
     if ((key === "ground.litter" || key === "ground.needles") && CM.art.packs.stone[key]) return CM.art.footShade(photo(key, false, 0, true));   // (the photograph, with the trunk's shade)
     if (key === "solid.roof" && CM.art.packs.stone[key]) { const c = photo(key, false, 0, true), q = c.getContext("2d"); q.fillStyle = "rgba(255,200,150,0.22)"; q.fillRect(0, 0, S, S); return c; }   // (slate, warmed a little)
     return CM.art.packs.stone[key] ? photo(key, false, 0, true) : drawn();
@@ -9095,7 +9099,8 @@ void main() {
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
-  if (uSnow > 0.0 && up > 0.55) col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, uSnow * smoothstep(0.55, 0.8, up) * 0.88);   // snow lying on what faces up
+  if (uSnow > 0.0 && up > 0.55) { float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
+    col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
@@ -9314,9 +9319,10 @@ CM.Renderer = class {
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
-    const props = CM.scatter(floor, this.seed, this.density, { season: this.season }).concat(CM.traceProps(floor));   // (and what the party left)
+    if (CM.seasonTurn && CM.game) { this.turnK = CM.seasonTurn(CM.game); this.leafK = CM.leafFall(CM.game); }   // (v24.2: how far the season has come in)
+    const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 }).concat(CM.traceProps(floor));   // (and what the party left)
     this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night) });   // (at night the town's windows are lit)
+    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: Boolean(this.night), turn: this.turnK === undefined ? 1 : this.turnK });   // (at night the town's windows are lit)
     this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
     this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
     const gl = this.gl;
@@ -38284,6 +38290,39 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.waterBound && this.game && this.game.on && CM.fxKit) { this.waterBound = true; this.game.on("moved", (x, y) => { if (CM.waterHere && CM.waterHere(x, y)) wade(CM.fxKit, x, y); }); } return rf0.apply(this, a); };
 }
 
+// ---- 76zzzze-seasons.js ----
+"use strict";
+// Seasons that turn (v24.2, UPGRADE_PLAN_19.md): a run's season comes in over its first days rather than all at once.
+// The trees turn a few at a time (the rest still wear last season's crowns: 26-surface.js, `tree:N:was`); through
+// autumn the leaves come down and gather on the ground, more each day; in winter the snow builds over the days it
+// falls - patchy at first, then whole - and melts back the same way on the days it doesn't (40-render.js uSnow).
+{ const day = (game) => (CM.dayOf ? Math.max(0, CM.dayOf(game)) : 0);
+  CM.seasonTurn = (game) => (CM.seasonOff ? 1 : Math.min(1, 0.35 + 0.2 * day(game)));   // (by the day: a third turned at the start, all by the fourth)
+  CM.leafFall = (game) => (CM.seasonOff || CM.season(game) !== "autumn" ? 0 : Math.min(1, Math.round((day(game) + 1) * 10 / 6) / 10));
+  CM.snowDepth = (game) => {
+    if (CM.season(game) !== "winter" || !game || game.seed === undefined) return 0;
+    if (CM.seasonOff) return CM.snowLying(game) ? 1 : 0;
+    const d = day(game), of = (n) => CM.weatherOf(game.seed, n, "winter") === "snow", frac = ((CM.minuteOf ? CM.minuteOf(game) : 720) % 1440) / 1440;
+    let depth = 0; for (let n = Math.max(0, d - 5); n < d; n++) depth = Math.min(1, Math.max(0, depth + (of(n) ? 0.45 : -0.22)));
+    depth = Math.min(1, Math.max(0, depth + (CM.weather(game) === "snow" ? 0.45 : -0.22) * frac));
+    return Math.round(depth * 20) / 20;
+  };
+  // the leaves down: more of them each day of autumn, on the open ground of the town and the land
+  const sc0 = CM.scatter;
+  CM.scatter = function (fl, seed, density, ctx = {}) {
+    const out = sc0.call(this, fl, seed, density, ctx), k = ctx.leafK || 0;
+    if (!k || !fl || !CM.isSurface(fl) || !density) return out;
+    const size = fl.grid.length, P = CM.PROPS.leaves;
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      if (fl.grid[y][x] !== 0 || fl.things[`${x},${y}`]) continue;
+      const h = CM.hashSeed(`${seed}:${fl.number}:fall:${x},${y}`); if ((h % 1000) / 1000 >= 0.3 * k) continue;
+      const s = P.size[0] + ((h >> 10) % 100) / 100 * (P.size[1] - P.size[0]);
+      out.push({ id: "leaves", how: "flat", layer: "prop:leaves", x, y, dx: ((h >> 3) % 50 - 25) / 100, dz: ((h >> 7) % 50 - 25) / 100, w: s, h: s, turn: ((h >> 12) % 628) / 100 });
+    }
+    return out;
+  };
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -39464,13 +39503,14 @@ window.addEventListener("DOMContentLoaded", () => {
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
         renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
-        renderer.snow = renderer.sky && CM.snowLying(game) ? 1 : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
+        renderer.snow = renderer.sky ? (CM.snowDepth ? CM.snowDepth(game) : CM.snowLying(game) ? 1 : 0) : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = Boolean(renderer.sky && renderer.sky.night) && (game.floor.number === 0 || game.floor.number === -1);   // the town's windows lit at dusk, and out at dawn: the floor's mesh made again
           if (night !== Boolean(renderer.night)) { renderer.night = night; if (renderer.ok && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number)); } }
         renderer.wind = CM.windFor && game.floor ? CM.windFor(game, renderer) : null;   // (v24.0: 76zzzzc-wind.js)
         renderer.bloom = game.settings.glow === "off" || detailNow() === 0 ? 0 : game.settings.glow === "strong" ? 1.6 : 1.0;   // (v22.5: the glow, Settings; none at Low detail)
         renderer.grading = CM.gradeFor && game.floor ? CM.gradeFor(game, renderer) : null;   // (v22.4: the band's grade, the hour's colour, frost: 76zzzx-grade.js)
         renderer.air = CM.airFor && game.floor ? CM.airFor(game, renderer) : null;   // (v22.3: the air's body and the sunbeams, 76zzzw-air.js)
+        if (renderer.sky && CM.seasonTurn && game.mode !== "title" && (game.floor.number === 0 || game.floor.number === -1) && (CM.seasonTurn(game) !== renderer.turnK || CM.leafFall(game) !== renderer.leafK)) renderer.setFloor(game.floor, CM.themeFor(game.floor.number));   // (v24.2: a new day - more trees turned, more leaves down)
         renderer.lights = lightsNear(game.floor);
         stepAir(dt);
         const { out, hud } = sprites();
