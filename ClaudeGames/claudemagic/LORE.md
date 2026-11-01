@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## Big nights (v16.3)
+
+Over the floor the Joker hung a marquee of bulbs with a number on it that only ever climbs, until the night it doesn't.
+The residents took to coming in with a purse and a challenge; the clerk by the cage took to chalking a rate for
+tickets; and once a day, for an hour, one game's bell rings double.
+
 ## The town's draws (v16.2)
 
 Some nights the whole square comes out for the crier's drum; some nights the mill pond is the quietest place in Caer

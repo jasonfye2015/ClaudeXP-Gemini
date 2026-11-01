@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The floor's big nights (the forty-ninth big update - v16.3)
+  Four things across the Gilded Joker (src/js/64zzk-floor2.js, 76zzn-floor2.js):
+  - The progressive jackpot: a marquee over the gallery (and a ticker on every table's bar). It starts at 1,000 gold,
+    takes 2% of every stake on the floor and a little each real hour, and must go by 4,000 - at a point the house
+    picks in secret. Once past it, the next stake at a jackpot table (the reels, video poker, the Joker's Wheel,
+    roulette, the Pin Garden, the Drop Board, Fortune Slips) wins the lot, with 150 tickets, a rare card and fireworks.
+  - Happy hour: each real day one ticket-paying game has an hour between noon and eleven at night when its tickets are
+    doubled; posted on the gallery all day, flashing while it's on, with a ribbon on the game's card.
+  - High-roller challenges: each real day one of the six residents brings a wager (200 to 1,000 gold, over the house
+    limit) - heads-up hold'em (first to take all the chips) or a score to beat at the Tavern Board, Rune-Roll or
+    Hoop-la. Take it or let it go; a win pays double, with tickets and a card the first time you beat each resident.
+  - The Ticket Exchange: sell tickets for gold or buy them with gold at rates that drift day to day (buying always
+    costs well over selling pays), with a chart of the last fortnight; daily limits.
+
 The town's draws (the forty-eighth big update - v16.2)
   Three new games and a celebration (src/js/64zzj-draws.js; 76zzj-fireworks.js, 76zzk-lottery.js, 76zzl-plinko.js, 76zzm-pond.js):
   - Fireworks: a big win - ten or twenty-five times the stake, a great deal of gold at once, a rare card, a hundred
