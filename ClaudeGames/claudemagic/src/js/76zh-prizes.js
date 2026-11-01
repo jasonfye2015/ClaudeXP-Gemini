@@ -1,8 +1,8 @@
 "use strict";
 // The Prize Counter, the window's side (the forty-first big update): a glass counter by the cashier's cage, its shelves
 // (gold, potions, gear, cards) laid out as little cards with a painted picture, a name, what it is and its price in
-// tokens; those you cannot yet afford dimmed. The tokens show in the gallery's strip and in every table's slim bar, and
-// a token earned at a table makes a little ticket hop up beside the count. The rules are 64zq-prizes.js.
+// tickets; those you cannot yet afford dimmed. The tickets show in the gallery's strip and in every table's slim bar, and
+// a ticket earned at a table makes a little ticket hop up beside the count. The rules are 64zq-prizes.js.
 { const gal2 = CM.UI.prototype.cgGallery, nav2 = CM.UI.prototype.cgNav, r4 = CM.UI.prototype.renderCasino, PRIZE = CM.PRIZE;
   // a prize's little picture
   const art = (p, id, w, h) => {
@@ -23,7 +23,7 @@
     else if (id === "helm") { p.fillStyle = "#A0A8B8"; p.beginPath(); p.arc(cx, cy + 2, 17, Math.PI, 0); p.lineTo(cx + 17, cy + 10); p.lineTo(cx - 17, cy + 10); p.fill(); p.fillStyle = "#3A3A48"; p.fillRect(cx - 11, cy, 22, 3); p.fillStyle = "#C03030"; p.beginPath(); p.moveTo(cx, cy - 14); p.quadraticCurveTo(cx + 12, cy - 24, cx + 17, cy - 14); p.lineTo(cx + 2, cy - 12); p.fill(); }
     else if (id === "card1") card("#8A6A40", "♦"); else if (id === "card2") card("#3A8AC0", "◆"); else if (id === "card3") card("#B050D0", "★");
   };
-  const ticket = (n) => `<span class="tkcount" title="Prize tokens - spend them at the prize counter"><i class="tkt"></i>${n}</span>`;
+  const ticket = (n) => `<span class="tkcount" title="Prize tickets - spend them at the prize counter"><i class="tkt"></i>${n}</span>`;
   Object.assign(CM.UI.prototype, {
     renderCasino() { if (this.cgView === "prizes") { this.cgPrizes(this.$("#casino-body")); this.cgToasts && this.cgToasts(); this.tkSeen = this.game.tkStore().n; return; } r4.call(this); this.tkSeen = this.game.tkStore().n; },
     cgGallery(box) {
@@ -31,7 +31,7 @@
       strip.querySelector("[data-cgclub='trophies']").after(b); b.addEventListener("click", () => { this.cgView = "prizes"; this.caSfx("cardplace", 0.3); this.renderCasino(); });
     },
     cgNav(box) { nav2.call(this, box); const bar = box.querySelector(".cgbar .cggold"); if (bar) { bar.insertAdjacentHTML("beforebegin", ticket(this.game.tkStore().n)); this.tkWatch(box); } },
-    // the count in a table's bar kept up while it is played, a ticket hopping up when tokens come
+    // the count in a table's bar kept up while it is played, a ticket hopping up when tickets come
     tkWatch(box) {
       if (this.tkTimer) clearInterval(this.tkTimer);
       this.tkTimer = setInterval(() => { const el = box.querySelector(".cgbar .tkcount"); if (!el || !el.isConnected) { clearInterval(this.tkTimer); this.tkTimer = null; return; } const n = this.game.tkStore().n; if (n === this.tkSeen) return; const d = n - (this.tkSeen || 0); this.tkSeen = n; el.lastChild.textContent = n;
@@ -40,11 +40,11 @@
     cgPrizes(box) {
       const g = this.game, T = g.tkStore(), shelf = this.tkShelf || "all";
       const rows = PRIZE.LIST.filter((r) => shelf === "all" || r[1] === shelf);
-      box.innerHTML = `<div class="cgprizes"><p class="lore">A long glass counter by the cashier's cage, lit from within: pouches of coin, stoppered potions, steel on velvet and cards in little frames. "Tokens only," says the clerk, and slides a felt tray across. "The tables hand them out - a few for every stake, a few for what the free tables pay, more for a name on the boards."</p>
-        <div class="tkhead">${ticket(T.n)}<span>You have <b>${T.n}</b> prize token${T.n === 1 ? "" : "s"}.</span><span class="tksub">Earned ${T.earned}, spent ${T.spent}.</span></div>
+      box.innerHTML = `<div class="cgprizes"><p class="lore">A long glass counter by the cashier's cage, lit from within: pouches of coin, stoppered potions, steel on velvet and cards in little frames. "Tickets only," says the clerk, and slides a felt tray across. "The tables hand them out - a few for every stake, a few for what the free tables pay, more for a name on the boards."</p>
+        <div class="tkhead">${ticket(T.n)}<span>You have <b>${T.n}</b> prize ticket${T.n === 1 ? "" : "s"}.</span><span class="tksub">Earned ${T.earned}, spent ${T.spent}.</span></div>
         <div class="cgcats">${[["all", "Everything"], ...PRIZE.SHELVES].map(([k, n]) => `<button data-tkshelf="${k}" class="${k === shelf ? "primary" : ""}">${n}</button>`).join("")}</div>
         <div class="tkgrid">${rows.map(([id, , name, cost, what]) => `<div class="tkprize ${T.n >= cost ? "" : "dear"}"><canvas width="96" height="72" data-tkart="${id}"></canvas><b>${name}</b><span>${what}</span><button class="${T.n >= cost ? "primary" : ""}" data-tkbuy="${id}" ${T.n >= cost ? "" : "disabled"}>${ticket(cost)}</button></div>`).join("")}</div>
-        ${this.tkOut || ""}<div class="small">How tokens come: one for every ${PRIZE.perStake} gold staked at any table, one for every ${PRIZE.perPay} gold a free table pays out, ${PRIZE.blind} for each blind beaten at Claudeatro (${PRIZE.boss} for a boss), ${PRIZE.board} for a place on a high-score board and ${PRIZE.record} for a new record. Odd gold is carried over. Gear is made for the deepest floor the party has reached.</div></div>`;
+        ${this.tkOut || ""}<div class="small">How tickets come: one for every ${PRIZE.perStake} gold staked at any table, one for every ${PRIZE.perPay} gold a free table pays out, ${PRIZE.blind} for each blind beaten at Claudeatro (${PRIZE.boss} for a boss), ${PRIZE.board} for a place on a high-score board and ${PRIZE.record} for a new record. Odd gold is carried over. Gear is made for the deepest floor the party has reached.</div></div>`;
       this.cgClubHead(box, "The Prize Counter"); box.querySelector(".cgbar .cggold").insertAdjacentHTML("beforebegin", ticket(T.n));
       box.querySelectorAll("[data-tkart]").forEach((c) => art(c.getContext("2d"), c.dataset.tkart, c.width, c.height));
       box.querySelectorAll("[data-tkshelf]").forEach((b) => b.addEventListener("click", () => { this.tkShelf = b.dataset.tkshelf; this.caSfx("card", 0.25); this.renderCasino(); }));

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1062,7 +1062,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.4", built: "2026-10-31" };
+const CM = window.CM = { version: "15.5", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -22545,13 +22545,13 @@ DAILY.pick = (key) => { const R = new CM.Random(CM.hashSeed(`gilded-joker-daily:
 // ---- 64zq-prizes.js ----
 "use strict";
 // The Prize Counter (the forty-first big update - v15.4): every table on the Gilded Joker's floor hands out prize
-// tokens, and a counter by the cashier's cage trades them for prizes. Tokens come in varying amounts: with every stake
+// tickets, and a counter by the cashier's cage trades them for prizes. Tickets come in varying amounts: with every stake
 // laid (one for each thirty gold staked), with the gold a free table pays (one for each fifty - the tables that take
-// stakes give tokens for the stake, not the win), for each blind beaten at Claudeatro, and for a place on a high-score board (more for a record).
+// stakes give tickets for the stake, not the win), for each blind beaten at Claudeatro, and for a place on a high-score board (more for a record).
 // Odd gold carries over, so small stakes add up. The counter sells pouches of gold, potions, gear (made for the party's
-// depth, the dearest enchanted) and Claudescryption cards; gold is the poorest buy on purpose, so tokens cannot be
-// turned back into the stakes that made them: a token buys at most an eighth of a gold, and even the fairest table
-// (99.5% back) loses more than its tokens can buy back. The window is 76zh-prizes.js.
+// depth, the dearest enchanted) and Claudescryption cards; gold is the poorest buy on purpose, so tickets cannot be
+// turned back into the stakes that made them: a ticket buys at most an eighth of a gold, and even the fairest table
+// (99.5% back) loses more than its tickets can buy back. The window is 76zh-prizes.js.
 CM.PRIZE = {
   perStake: 30, perPay: 50, bestReturn: 0.995, blind: 2, boss: 5, board: 3, record: 10,
   // [id, shelf, name, cost, what it is]
@@ -22570,17 +22570,17 @@ const PRIZE = CM.PRIZE;
   Object.assign(CM.Game.prototype, {
     tkStore() { const F = this.cgStore(); F.tk = F.tk || { n: 0, earned: 0, spent: 0, stakeGold: 0, payGold: 0, bought: 0, by: {} }; return F.tk; },
     tkAdd(n, why) { if (!(n > 0)) return 0; const T = this.tkStore(); T.n += n; T.earned += n; if (why) T.by[why] = (T.by[why] || 0) + n; return n; },
-    // gold counted toward tokens, the odd part kept for next time
+    // gold counted toward tickets, the odd part kept for next time
     tkFromGold(key, amount, per, why) { const T = this.tkStore(); T[key] = (T[key] || 0) + amount; const n = Math.floor(T[key] / per); T[key] -= n * per; return this.tkAdd(n, why); },
     cgStake(game, bet) { const why = stake1.call(this, game, bet); if (!why) this.tkFromGold("stakeGold", Math.floor(bet), PRIZE.perStake, game); return why; },
     cgPay(game, amount) { const n = pay1.call(this, game, amount); if (n > 0 && !(this.cgStore().wagered || {})[game]) this.tkFromGold("payGold", n, PRIZE.perPay, game); return n; },
     cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec1.call(this, table, score, level); if (r > 0) this.tkAdd((F.records || 0) > before ? PRIZE.record : PRIZE.board, table); return r; },
     casinoDeal(deck, wager) { const r = deal1.call(this, deck, wager); if (!r && wager > 0) this.tkFromGold("stakeGold", Math.floor(wager), PRIZE.perStake, "claudeatro"); return r; },
     casinoAfterHand(run, res) { const was = run.paidFor, out = after1.call(this, run, res); if (run.paidFor && run.paidFor !== was && run.lastBlind) { this.tkAdd(run.lastBlind.kind === "boss" ? PRIZE.boss : PRIZE.blind, "claudeatro"); } return out; },
-    // a prize bought: the tokens taken, the prize made real
+    // a prize bought: the tickets taken, the prize made real
     tkBuy(id) {
       const row = PRIZE.LIST.find((r) => r[0] === id); if (!row) return { error: "No such prize." }; const T = this.tkStore(), cost = row[3];
-      if (T.n < cost) return { error: `That takes ${cost} tokens; you have ${T.n}.` };
+      if (T.n < cost) return { error: `That takes ${cost} tickets; you have ${T.n}.` };
       T.n -= cost; T.spent += cost; T.bought += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:prize:${T.bought}`)), depth = Math.max(3, this.cwDeepest ? this.cwDeepest() : 3), out = { name: row[2] };
       if (id === "pouch" || id === "purse" || id === "chest") { out.gold = { pouch: 10, purse: 50, chest: 250 }[id]; this.gold += out.gold; }
       else if (id === "card1" || id === "card2" || id === "card3") out.card = this.cgTierCard({ card1: "common", card2: "better", card3: "rare" }[id], "Bought at the Gilded Joker's prize counter.", R);
@@ -30533,8 +30533,8 @@ CM.CG_THUMB = (() => {
 "use strict";
 // The Prize Counter, the window's side (the forty-first big update): a glass counter by the cashier's cage, its shelves
 // (gold, potions, gear, cards) laid out as little cards with a painted picture, a name, what it is and its price in
-// tokens; those you cannot yet afford dimmed. The tokens show in the gallery's strip and in every table's slim bar, and
-// a token earned at a table makes a little ticket hop up beside the count. The rules are 64zq-prizes.js.
+// tickets; those you cannot yet afford dimmed. The tickets show in the gallery's strip and in every table's slim bar, and
+// a ticket earned at a table makes a little ticket hop up beside the count. The rules are 64zq-prizes.js.
 { const gal2 = CM.UI.prototype.cgGallery, nav2 = CM.UI.prototype.cgNav, r4 = CM.UI.prototype.renderCasino, PRIZE = CM.PRIZE;
   // a prize's little picture
   const art = (p, id, w, h) => {
@@ -30555,7 +30555,7 @@ CM.CG_THUMB = (() => {
     else if (id === "helm") { p.fillStyle = "#A0A8B8"; p.beginPath(); p.arc(cx, cy + 2, 17, Math.PI, 0); p.lineTo(cx + 17, cy + 10); p.lineTo(cx - 17, cy + 10); p.fill(); p.fillStyle = "#3A3A48"; p.fillRect(cx - 11, cy, 22, 3); p.fillStyle = "#C03030"; p.beginPath(); p.moveTo(cx, cy - 14); p.quadraticCurveTo(cx + 12, cy - 24, cx + 17, cy - 14); p.lineTo(cx + 2, cy - 12); p.fill(); }
     else if (id === "card1") card("#8A6A40", "♦"); else if (id === "card2") card("#3A8AC0", "◆"); else if (id === "card3") card("#B050D0", "★");
   };
-  const ticket = (n) => `<span class="tkcount" title="Prize tokens - spend them at the prize counter"><i class="tkt"></i>${n}</span>`;
+  const ticket = (n) => `<span class="tkcount" title="Prize tickets - spend them at the prize counter"><i class="tkt"></i>${n}</span>`;
   Object.assign(CM.UI.prototype, {
     renderCasino() { if (this.cgView === "prizes") { this.cgPrizes(this.$("#casino-body")); this.cgToasts && this.cgToasts(); this.tkSeen = this.game.tkStore().n; return; } r4.call(this); this.tkSeen = this.game.tkStore().n; },
     cgGallery(box) {
@@ -30563,7 +30563,7 @@ CM.CG_THUMB = (() => {
       strip.querySelector("[data-cgclub='trophies']").after(b); b.addEventListener("click", () => { this.cgView = "prizes"; this.caSfx("cardplace", 0.3); this.renderCasino(); });
     },
     cgNav(box) { nav2.call(this, box); const bar = box.querySelector(".cgbar .cggold"); if (bar) { bar.insertAdjacentHTML("beforebegin", ticket(this.game.tkStore().n)); this.tkWatch(box); } },
-    // the count in a table's bar kept up while it is played, a ticket hopping up when tokens come
+    // the count in a table's bar kept up while it is played, a ticket hopping up when tickets come
     tkWatch(box) {
       if (this.tkTimer) clearInterval(this.tkTimer);
       this.tkTimer = setInterval(() => { const el = box.querySelector(".cgbar .tkcount"); if (!el || !el.isConnected) { clearInterval(this.tkTimer); this.tkTimer = null; return; } const n = this.game.tkStore().n; if (n === this.tkSeen) return; const d = n - (this.tkSeen || 0); this.tkSeen = n; el.lastChild.textContent = n;
@@ -30572,11 +30572,11 @@ CM.CG_THUMB = (() => {
     cgPrizes(box) {
       const g = this.game, T = g.tkStore(), shelf = this.tkShelf || "all";
       const rows = PRIZE.LIST.filter((r) => shelf === "all" || r[1] === shelf);
-      box.innerHTML = `<div class="cgprizes"><p class="lore">A long glass counter by the cashier's cage, lit from within: pouches of coin, stoppered potions, steel on velvet and cards in little frames. "Tokens only," says the clerk, and slides a felt tray across. "The tables hand them out - a few for every stake, a few for what the free tables pay, more for a name on the boards."</p>
-        <div class="tkhead">${ticket(T.n)}<span>You have <b>${T.n}</b> prize token${T.n === 1 ? "" : "s"}.</span><span class="tksub">Earned ${T.earned}, spent ${T.spent}.</span></div>
+      box.innerHTML = `<div class="cgprizes"><p class="lore">A long glass counter by the cashier's cage, lit from within: pouches of coin, stoppered potions, steel on velvet and cards in little frames. "Tickets only," says the clerk, and slides a felt tray across. "The tables hand them out - a few for every stake, a few for what the free tables pay, more for a name on the boards."</p>
+        <div class="tkhead">${ticket(T.n)}<span>You have <b>${T.n}</b> prize ticket${T.n === 1 ? "" : "s"}.</span><span class="tksub">Earned ${T.earned}, spent ${T.spent}.</span></div>
         <div class="cgcats">${[["all", "Everything"], ...PRIZE.SHELVES].map(([k, n]) => `<button data-tkshelf="${k}" class="${k === shelf ? "primary" : ""}">${n}</button>`).join("")}</div>
         <div class="tkgrid">${rows.map(([id, , name, cost, what]) => `<div class="tkprize ${T.n >= cost ? "" : "dear"}"><canvas width="96" height="72" data-tkart="${id}"></canvas><b>${name}</b><span>${what}</span><button class="${T.n >= cost ? "primary" : ""}" data-tkbuy="${id}" ${T.n >= cost ? "" : "disabled"}>${ticket(cost)}</button></div>`).join("")}</div>
-        ${this.tkOut || ""}<div class="small">How tokens come: one for every ${PRIZE.perStake} gold staked at any table, one for every ${PRIZE.perPay} gold a free table pays out, ${PRIZE.blind} for each blind beaten at Claudeatro (${PRIZE.boss} for a boss), ${PRIZE.board} for a place on a high-score board and ${PRIZE.record} for a new record. Odd gold is carried over. Gear is made for the deepest floor the party has reached.</div></div>`;
+        ${this.tkOut || ""}<div class="small">How tickets come: one for every ${PRIZE.perStake} gold staked at any table, one for every ${PRIZE.perPay} gold a free table pays out, ${PRIZE.blind} for each blind beaten at Claudeatro (${PRIZE.boss} for a boss), ${PRIZE.board} for a place on a high-score board and ${PRIZE.record} for a new record. Odd gold is carried over. Gear is made for the deepest floor the party has reached.</div></div>`;
       this.cgClubHead(box, "The Prize Counter"); box.querySelector(".cgbar .cggold").insertAdjacentHTML("beforebegin", ticket(T.n));
       box.querySelectorAll("[data-tkart]").forEach((c) => art(c.getContext("2d"), c.dataset.tkart, c.width, c.height));
       box.querySelectorAll("[data-tkshelf]").forEach((b) => b.addEventListener("click", () => { this.tkShelf = b.dataset.tkshelf; this.caSfx("card", 0.25); this.renderCasino(); }));
