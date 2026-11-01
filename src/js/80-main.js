@@ -123,6 +123,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("pipe", () => ui.openBrosPipe());
   game.on("fields", (k) => ui.openFields && ui.openFields(k));   // (the South Fields: 76zzzj-fields.js)
   game.on("glyphcab", () => ui.openGlyphCab && ui.openGlyphCab());     // (the Glyph Deep: 76zzzp-glyph.js)
+  game.on("glyphend", (E) => ui.glyphEnd && ui.glyphEnd(E));
   game.on("craftgate", () => ui.openCraftGate());
   game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)

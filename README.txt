@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Glyph Deep, finished (the eighty-third big update - v20.2, UPGRADE_PLAN_15.md phase 2 - the plan complete)
+  (src/js/76zzzp-glyph.js, 69o-glyphdeep.js)
+  - The end of a game on the cabinet's screen: a tombstone with the hero's name, the level and what killed them; a
+    trophy for the Unwritten undone; a tally for coming home; and what came home with them.
+  - ? shows how to play, P the messages so far; > away from the stairs walks you to them once they've been seen,
+    stopping when something shows itself or hurts you.
+  - LORE.md has the cabinet's story.
+
 The Glyph Deep, measured (the eighty-second big update - v20.1, UPGRADE_PLAN_15.md phase 1)
   (tools/glyphbot.js; the tuning at the top of src/js/64zzzc-glyph.js)
   - Traps, hidden in the floor until stepped on and shown (^) after: a dart, a pit that holds you a turn or two, a

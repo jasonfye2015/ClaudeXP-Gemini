@@ -69,7 +69,7 @@
     layTraps() { const R = this.rnd; this.traps = new Map(); const n = 1 + Math.floor(this.L / 4);
       for (let i = 0; i < n; i++) { const r = R.pick(this.rooms.filter((q) => q.room)), [x, y] = this.spot(r); if ((x === this.x && y === this.y) || this.tile(x, y) !== ".") continue; this.traps.set(key(x, y), { kind: R.pick(GD.TRAPS), found: false }); } }
     spring(x, y) { const T = this.traps && this.traps.get(key(x, y)); if (!T) return; T.found = true; const R = this.rnd, L = this.L;
-      if (T.kind === "dart") this.hurt(R.int(2, 5) + L * 2, "A little dart shoots out at you!");
+      this.killer = `a ${T.kind} trap`; if (T.kind === "dart") this.hurt(R.int(2, 5) + L * 2, "A little dart shoots out at you!");
       else if (T.kind === "pit") { this.stuck = 2; this.hurt(R.int(3, 6) + L, "You fall into a pit!"); }
       else if (T.kind === "teleport") { const r = R.pick(this.rooms.filter((q) => q.room)), [nx, ny] = this.spot(r); this.x = nx; this.y = ny; this.say("A trap door of light: you are somewhere else."); }
       else { for (const m of this.mons) m.asleep = false; this.say("A gong sounds deep in the floor. Everything on the level wakes."); } }
@@ -169,14 +169,14 @@
       if (m.boss) { m.cool = Math.max(0, m.cool - 1); if (m.cool === 0 && near <= 8 && this.mons.filter((q) => q.hp > 0 && q.ch === "?").length < 4) { m.cool = GD.bossWrites; let n = 0; for (const [dx, dy] of DIRS8) { if (n >= 1) break; const x = m.x + dx, y = m.y + dy; if (this.open(x, y) && !this.monAt(x, y) && !(x === this.x && y === this.y)) { this.addMon(GD.MINION, x, y, false); n++; } } if (n) this.say("The Unwritten writes, and loose glyphs crawl off its page."); }
         if (!m.blinked && m.hp < m.max / 2) { m.blinked = true; const r = this.roomOf(m.x, m.y); if (r) { const [x, y] = this.spot(r); m.x = x; m.y = y; this.say("The Unwritten smears itself across the room."); return; } } }
       if (near <= 1 && this.canStep(m.x, m.y, this.x - m.x, this.y - m.y)) { this.bite(m); return; }
-      if (m.ways === "breath" && m.cool-- <= 0 && near <= 6 && (m.x === this.x || m.y === this.y || Math.abs(m.x - this.x) === Math.abs(m.y - this.y)) && this.visible(m.x, m.y)) { m.cool = 4; const d = Math.max(1, Math.round(m.atk * 0.8) - Math.floor(this.heroDf() / 3)); this.hurt(d, `The ${m.name} breathes fire! (${d})`); return; }
+      if (m.ways === "breath" && m.cool-- <= 0 && near <= 6 && (m.x === this.x || m.y === this.y || Math.abs(m.x - this.x) === Math.abs(m.y - this.y)) && this.visible(m.x, m.y)) { m.cool = 4; const d = Math.max(1, Math.round(m.atk * 0.8) - Math.floor(this.heroDf() / 3)); this.killer = `a ${m.name}'s fire`; this.hurt(d, `The ${m.name} breathes fire! (${d})`); return; }
       const sees = this.visible(m.x, m.y) || near <= 2; if (sees) m.hunting = 12; else if (m.hunting) m.hunting--;
       if (m.ways === "erratic" && R.chance(0.4) || !m.hunting) { const [dx, dy] = R.pick(DIRS8); if (this.canStep(m.x, m.y, dx, dy) && !this.monAt(m.x + dx, m.y + dy) && !(m.x + dx === this.x && m.y + dy === this.y)) { m.x += dx; m.y += dy; } return; }
       let best = null; for (const [dx, dy] of DIRS8) { const nx = m.x + dx, ny = m.y + dy; if (!this.canStep(m.x, m.y, dx, dy) || this.monAt(nx, ny) || (nx === this.x && ny === this.y)) continue; const d = hd.get(key(nx, ny)); if (d !== undefined && (!best || d < best[2])) best = [nx, ny, d]; }
       if (best) { m.x = best[0]; m.y = best[1]; } }
     bite(m) { const R = this.rnd, h = this.hero; if (!R.chance(CM.clamp(0.62 + (m.level - h.level) * 0.03, 0.25, 0.92))) { this.say(`The ${m.name} misses.`); return; }
       const d = Math.max(1, m.atk + R.int(0, Math.max(1, Math.floor(m.atk / 2))) - Math.floor(this.heroDf() / 2)); if (m.ways === "drain") m.hp = Math.min(m.max, m.hp + Math.ceil(d / 2));
-      this.hurt(d, `The ${m.name} ${m.boss ? "writes on you" : "hits"}! (${d})`); }
+      this.killer = m.boss ? "the Unwritten" : `a ${m.name}`; this.hurt(d, `The ${m.name} ${m.boss ? "writes on you" : "hits"}! (${d})`); }
     hurt(d, words) { this.hp -= d; this.say(words); if (this.hp <= 0) { this.hp = 0; this.over = "dead"; this.say("You die..."); } }
   };
 }
