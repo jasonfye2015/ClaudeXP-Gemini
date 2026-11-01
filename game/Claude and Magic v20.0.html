@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v19.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v20.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1439,6 +1439,11 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 /* what the fields are for (v19.4) */
 .fduse { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: rgba(140,110,40,0.14); font-size: 13px; } @media (max-width: 760px) { .fduse { grid-template-columns: 1fr; } }
 .fduse p { margin: 6px 0; } .fduse button { margin: 0 4px 4px 0; }
+/* the Glyph Deep (v20.0) */
+#glyphcanvas { display: none; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 6; background: #000; cursor: pointer; }
+body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.inglyph #view .compass, body.inglyph #view .hint { display: none; }
+.glyphbox { max-width: 720px; background: #050805; border-color: #2A6A3A; } .gdtitle { font-family: Consolas, "Courier New", monospace; color: #60F080; letter-spacing: 0.2em; text-shadow: 0 0 8px rgba(96,240,128,0.6); }
+.gdattract { font: 13px/1.4 Consolas, "Courier New", monospace; color: #60F080; background: #000; padding: 8px 10px; border-radius: 4px; overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -1448,7 +1453,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "19.5", built: "2026-11-01" };
+const CM = window.CM = { version: "20.0", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -25141,6 +25146,178 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzzc-glyph.js ----
+"use strict";
+// The Glyph Deep (v20.0, UPGRADE_PLAN_15.md): the game inside the arcade cabinet by the Wood's road - a roguelike in
+// letters, turn by turn, twenty levels of rooms and corridors for one hero. This file is the game: the levels, the
+// monsters (the main game's numbers under the deep's own names and letters), the things, the hero's turn and the
+// monsters'. The cabinet, the rewards and the way home are 69o-glyphdeep.js; the screen is 76zzzp-glyph.js.
+//
+//   new CM.GlyphRun(game, heroIndex, level)  -> a run on that level
+//   run.act(cmd, arg)                        -> the hero's turn ("move" [dx,dy], "pick", "quaff" i, "read" i, "wield" i,
+//                                               "wear" i, "eat" i, "drop" i, "wait"); then the monsters'. Returns the
+//                                               messages; run.over is "dead" when the hero falls.
+//   run.atDown() / run.atUp()                -> standing on the stairs
+{ const GD = CM.GLYPH = { W: 80, H: 21, levels: 20, xpShare: 0.6, regenEvery: 9 };
+  // the deep's monsters: [letter, name, colour, the main game's kind for its numbers, speed, first level, last level, ways]
+  GD.MONSTERS = [
+    ["r", "cellar rat", "#B08A60", "Giant Rat", 1, 1, 6, ""], ["b", "cave bat", "#A080C0", "Giant Rat", 2, 1, 7, "erratic"], ["j", "grey ooze", "#90B090", "Sporeling", 0.5, 1, 8, ""],
+    ["g", "goblin", "#70B040", "Goblin", 1, 2, 9, ""], ["k", "knocker", "#C0A060", "Kobold", 1, 2, 8, ""], ["s", "web-spinner", "#C0C0C0", "Cellar Spider", 1, 4, 11, ""],
+    ["Z", "skeleton", "#E8E8D8", "Skeleton", 1, 4, 12, ""], ["w", "grey wolf", "#A0A0A8", "Wolf", 1.5, 5, 12, ""], ["o", "orc", "#C05040", "Orc", 1, 6, 13, ""],
+    ["z", "ghoul", "#7A9A6A", "Ghoul", 1, 7, 14, ""], ["i", "ember imp", "#F07040", "Foundry Imp", 1.5, 8, 15, ""], ["m", "mimic", "#F0C040", "Mimic", 1, 8, 18, "mimic"],
+    ["T", "troll", "#50A050", "Troll", 1, 9, 17, "regen"], ["W", "wraith", "#9090E0", "Wraith", 1, 10, 18, "drain"], ["O", "ogre", "#D09050", "Ogre", 1, 12, 19, ""],
+    ["h", "charnel hound", "#C06060", "Charnel Hound", 2, 12, 20, ""], ["G", "glass golem", "#A0E8F8", "Crystal Golem", 0.5, 13, 20, ""], ["V", "vampire", "#E03050", "Vampire", 1, 15, 20, "drain"],
+    ["D", "red drake", "#F05020", "Wyvern", 1, 16, 20, "breath"],
+  ];
+  GD.BOSS = ["&", "the Unwritten", "#FF60FF", "Demon", 1, 20, 20, "boss"];
+  GD.MINION = ["?", "loose glyph", "#E0A0FF", "Giant Rat", 2, 20, 20, ""];
+  // what a thing looks like on the floor
+  GD.glyphOf = (it) => ({ weapon: ")", armor: "[", shield: "[", helm: "[", ring: "=", amulet: "\"", heal: "!", mana: "!", ration: "%", seed: ",", gscroll: "?", gcard: "~", gtickets: "*", ggold: "$" })[it.kind] || "(";
+  GD.colourOf = (it) => ({ weapon: "#C0C8D0", armor: "#B09070", shield: "#B09070", helm: "#B09070", ring: "#F0D040", amulet: "#F0A040", heal: "#F06060", mana: "#6080FF", ration: "#C08040", seed: "#80D060", gscroll: "#F0F0C0", gcard: "#E080E0", gtickets: "#F0C040", ggold: "#F0D040" })[it.kind] || "#FFFFFF";
+  GD.SCROLLS = { mapping: "magic mapping", teleport: "teleportation", fire: "fire", enchantWeapon: "enchant weapon", enchantArmour: "enchant armour" };
+  GD.scroll = (sub) => ({ name: `Scroll of ${GD.SCROLLS[sub]}`, kind: "gscroll", sub, power: 0, value: 15 });
+  GD.depthOf = (L) => Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(L * 2.4)));
+  const DIRS8 = [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]];
+  const key = (x, y) => `${x},${y}`;
+
+  CM.GlyphRun = class {
+    constructor(game, heroIndex, level, carry) {
+      this.game = game; this.heroIndex = heroIndex; this.hero = game.party[heroIndex]; this.L = level; this.turn = 0; this.msgs = []; this.over = null;
+      this.rnd = new CM.Random(CM.hashSeed(`${game.seed}:glyph:${level}:${(game.village && game.village.glyph && game.village.glyph.runs) || 0}`));
+      Object.assign(this, { pack: [], gold: 0, levelGold: 0, xp: 0, kills: 0, wield: null, wear: null }, carry || {});
+      this.hp = Math.max(1, this.hero.hp); this.max = this.hero.max;
+      this.make();
+    }
+    // ---- the level ----
+    make() { const W = GD.W, H = GD.H, R = this.rnd, g = this.grid = Array.from({ length: H }, () => Array(W).fill(" "));
+      const cw = Math.floor(W / 3), ch = Math.floor(H / 3), rooms = [];
+      for (let cy = 0; cy < 3; cy++) for (let cx = 0; cx < 3; cx++) { const bx = cx * cw, by = cy * ch;
+        if (R.chance(0.82) || this.L === GD.levels && cx === 1 && cy === 1) { const big = this.L === GD.levels && cx === 1 && cy === 1, w = big ? cw - 4 : R.int(4, cw - 6), h = big ? ch - 2 : R.int(2, ch - 3), x0 = bx + R.int(2, Math.max(2, cw - w - 3)), y0 = by + R.int(1, Math.max(1, ch - h - 2));
+          rooms.push({ cx, cy, x0, y0, x1: x0 + w - 1, y1: y0 + h - 1, room: true }); }
+        else { const x = bx + R.int(3, cw - 4), y = by + R.int(2, ch - 3); rooms.push({ cx, cy, x0: x, y0: y, x1: x, y1: y, room: false }); } }
+      for (const r of rooms) if (r.room) { for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) g[y][x] = y === r.y0 - 1 || y === r.y1 + 1 ? "-" : x === r.x0 - 1 || x === r.x1 + 1 ? "|" : "."; }
+        else g[r.y0][r.x0] = "#";
+      this.rooms = rooms; const at = (cx, cy) => rooms.find((r) => r.cx === cx && r.cy === cy);
+      // a tree over the 3x3, and a couple more joins
+      const edges = []; for (let cy = 0; cy < 3; cy++) for (let cx = 0; cx < 3; cx++) { if (cx < 2) edges.push([at(cx, cy), at(cx + 1, cy)]); if (cy < 2) edges.push([at(cx, cy), at(cx, cy + 1)]); }
+      R.shuffle(edges); const set = new Map(rooms.map((r) => [r, r])), find = (r) => { while (set.get(r) !== r) r = set.get(r); return r; }; let extra = 2;
+      for (const [a, b] of edges) { const fa = find(a), fb = find(b); if (fa !== fb) { set.set(fa, fb); this.join(a, b); } else if (extra > 0 && R.chance(0.4)) { extra--; this.join(a, b); } }
+      // the stairs: up in one room, down in the one farthest from it
+      const real = rooms.filter((r) => r.room), start = this.L === GD.levels ? real.find((r) => !(r.cx === 1 && r.cy === 1)) || real[0] : R.pick(real); this.up = this.spot(start);
+      g[this.up[1]][this.up[0]] = "<"; this.x = this.up[0]; this.y = this.up[1];
+      const dist = this.distances(this.x, this.y); let far = null;
+      if (this.L === GD.levels) { const B = at(1, 1); far = [Math.floor((B.x0 + B.x1) / 2), Math.floor((B.y0 + B.y1) / 2) + 1]; }
+      else for (const r of real) if (r !== start) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const d = dist.get(key(x, y)); if (d !== undefined && (!far || d > far[2])) far = [x, y, d]; }
+      if (!far) far = this.spot(start); this.down = [far[0], far[1]]; g[this.down[1]][this.down[0]] = ">";
+      this.seen = new Set(); this.things = new Map(); this.mons = [];
+      this.stock(start); this.see(); }
+    join(a, b) { const g = this.grid, R = this.rnd; let p, q;
+      if (a.cy === b.cy) { const [l, r] = a.cx < b.cx ? [a, b] : [b, a]; p = l.room ? [l.x1 + 1, R.int(l.y0, l.y1)] : [l.x0, l.y0]; q = r.room ? [r.x0 - 1, R.int(r.y0, r.y1)] : [r.x0, r.y0];
+        if (l.room) g[p[1]][p[0]] = "+"; if (r.room) g[q[1]][q[0]] = "+"; const mx = R.int(Math.min(p[0] + 1, q[0] - 1), Math.max(p[0] + 1, q[0] - 1));
+        this.dig(p[0] + (l.room ? 1 : 0), p[1], mx, p[1]); this.dig(mx, p[1], mx, q[1]); this.dig(mx, q[1], q[0] - (r.room ? 1 : 0), q[1]); }
+      else { const [t, d] = a.cy < b.cy ? [a, b] : [b, a]; p = t.room ? [R.int(t.x0, t.x1), t.y1 + 1] : [t.x0, t.y0]; q = d.room ? [R.int(d.x0, d.x1), d.y0 - 1] : [d.x0, d.y0];
+        if (t.room) g[p[1]][p[0]] = "+"; if (d.room) g[q[1]][q[0]] = "+"; const my = R.int(Math.min(p[1] + 1, q[1] - 1), Math.max(p[1] + 1, q[1] - 1));
+        this.dig(p[0], p[1] + (t.room ? 1 : 0), p[0], my); this.dig(p[0], my, q[0], my); this.dig(q[0], my, q[0], q[1] - (d.room ? 1 : 0)); } }
+    dig(x0, y0, x1, y1) { const g = this.grid; for (let x = Math.min(x0, x1); x <= Math.max(x0, x1); x++) for (let y = Math.min(y0, y1); y <= Math.max(y0, y1); y++) if (g[y][x] === " ") g[y][x] = "#"; }
+    spot(r) { for (let t = 0; t < 80; t++) { const x = this.rnd.int(r.x0, r.x1), y = this.rnd.int(r.y0, r.y1); if (this.grid[y][x] === "." && !this.thingAt(x, y) && !(this.mons || []).some((m) => m.x === x && m.y === y)) return [x, y]; } return [r.x0, r.y0]; }
+    // what's put about: the monsters, the gold, the things
+    stock(start) { const R = this.rnd, L = this.L, real = this.rooms.filter((r) => r.room), others = real.filter((r) => r !== start);
+      const kinds = GD.MONSTERS.filter((m) => L >= m[5] && L <= m[6]); const n = 3 + Math.floor(L / 2) + R.int(0, 2);
+      for (let i = 0; i < n && kinds.length; i++) { const r = R.pick(others.length ? others : real), [x, y] = this.spot(r); if (x === this.x && y === this.y) continue; this.addMon(R.pick(kinds), x, y, R.chance(0.45)); }
+      if (L === GD.levels) { const B = this.rooms.find((r) => r.cx === 1 && r.cy === 1); this.addMon(GD.BOSS, Math.floor((B.x0 + B.x1) / 2), Math.floor((B.y0 + B.y1) / 2), false); }
+      for (let i = 0, k = R.int(3, 5); i < k; i++) { const [x, y] = this.spot(R.pick(real)); this.put(x, y, { kind: "ggold", n: R.int(4, 10) + L * R.int(3, 7), name: "gold" }); }
+      for (let i = 0, k = R.int(3, 5) + Math.floor(L / 5); i < k; i++) { const [x, y] = this.spot(R.pick(real)); this.put(x, y, this.makeThing()); } }
+    makeThing() { const R = this.rnd, L = this.L, d = GD.depthOf(L), roll = R.next();
+      if (roll < 0.2) return R.chance(0.7) ? { name: "Healing Potion", kind: "heal", power: 20 + L * 4, value: 20 + L } : { name: "Mana Potion", kind: "mana", power: 12 + L * 2, value: 25 };
+      if (roll < 0.34) return GD.scroll(R.pick(Object.keys(GD.SCROLLS)));
+      if (roll < 0.5) { const it = CM.makeItem(d, R, R.pick(["weapon", "armor", "shield", "helm"])); if (it && CM.affix && R.chance(0.15 + L * 0.02)) return CM.affix(it, d + 2, R); return it || CM.ration(); }
+      if (roll < 0.56) { const it = CM.makeItem(d, R, R.chance(0.6) ? "ring" : "amulet"); return it || CM.ration(); }
+      if (roll < 0.66) return CM.ration();
+      if (roll < 0.78) { const FS = CM.FIELDSEEDS, common = Object.keys(CM.CROPS).filter((c) => CM.CROPS[c].seedPrice), pool = L >= 14 && FS && R.chance(0.3) ? Object.keys(FS.CHARMED) : L >= 7 && FS && R.chance(0.5) ? FS.RARE : common; return CM.seed(R.pick(pool)); }
+      if (roll < 0.86) return { name: L >= 12 && R.chance(0.35) ? "a rare inscription card" : "an inscription card", kind: "gcard", rare: L >= 12 && R.chance(0.35), power: 0, value: 30 };
+      return { name: "a roll of prize tickets", kind: "gtickets", n: 5 + L * 2 + R.int(0, L), power: 0, value: 0 }; }
+    put(x, y, it) { const k = key(x, y); if (!this.things.has(k)) this.things.set(k, []); this.things.get(k).push(it); }
+    thingAt(x, y) { const t = this.things && this.things.get(key(x, y)); return t && t.length ? t[t.length - 1] : null; }
+    addMon(def, x, y, asleep) { const [ch, name, col, kind, speed, , , ways] = def, K = CM.monsterKind(kind) || CM.monsterKind("Goblin"), lvl = def === GD.BOSS ? 26 : Math.max(1, this.L + Math.floor(this.L / 4));
+      const M = CM.makeMonster(K, lvl, this.rnd); if (def === GD.BOSS) { M.max = M.hp = Math.round(M.max * 6); M.atk = Math.round(M.atk * 1.3); }
+      const m = { ch, name, col, x, y, hp: M.hp, max: M.max, atk: M.atk, df: M.df, xp: M.xp, level: lvl, speed, energy: 0, asleep, ways, boss: def === GD.BOSS, cool: 0 }; if (ways === "mimic") m.hidden = true; this.mons.push(m); return m; }
+    // ---- the map's rules ----
+    tile(x, y) { return y >= 0 && y < GD.H && x >= 0 && x < GD.W ? this.grid[y][x] : " "; }
+    open(x, y) { return [".", "#", "+", "<", ">"].includes(this.tile(x, y)); }
+    monAt(x, y) { return this.mons.find((m) => m.hp > 0 && m.x === x && m.y === y); }
+    // no slipping diagonally through a doorway
+    canStep(x, y, dx, dy) { const nx = x + dx, ny = y + dy; if (!this.open(nx, ny)) return false; if (dx && dy && (this.tile(x, y) === "+" || this.tile(nx, ny) === "+")) return false; return true; }
+    roomOf(x, y) { return this.rooms.find((r) => r.room && x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1); }
+    distances(x, y) { const out = new Map([[key(x, y), 0]]), q = [[x, y]]; while (q.length) { const [cx, cy] = q.shift(), d = out.get(key(cx, cy));
+      for (const [dx, dy] of DIRS8) { const nx = cx + dx, ny = cy + dy, k = key(nx, ny); if (!out.has(k) && this.canStep(cx, cy, dx, dy)) { out.set(k, d + 1); q.push([nx, ny]); } } } return out; }
+    // what the hero sees: the whole of a lit room they stand in, and a step around them
+    see() { this.vis = new Set(); const r = this.roomOf(this.x, this.y); if (r && this.tile(this.x, this.y) !== "+") for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) this.vis.add(key(x, y));
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) this.vis.add(key(this.x + dx, this.y + dy)); for (const k of this.vis) this.seen.add(k); }
+    visible(x, y) { return this.vis.has(key(x, y)); }
+    say(t) { this.msgs.push(t); }
+    atDown() { return this.x === this.down[0] && this.y === this.down[1]; }
+    atUp() { return this.x === this.up[0] && this.y === this.up[1]; }
+    bossDown() { return !this.mons.some((m) => m.boss && m.hp > 0); }
+    // ---- the hero's numbers: the game's own, with what's held in here ----
+    heroAtk() { const g = this.game, eff = g.effective(this.hero); return { atk: eff.atk, power: this.wield ? this.wield.power || 1 : (this.hero.weapon ? this.hero.weapon.power || 1 : 1) }; }
+    heroDf() { const g = this.game, h = this.hero; return g.effective(h).df + (CM.gearDefence ? CM.gearDefence(h) : 0) + (this.wear ? this.wear.power || 0 : 0); }
+    // ---- a turn ----
+    act(cmd, arg) { if (this.over) return []; this.msgs = []; const took = this.heroTurn(cmd, arg); if (took) { this.turn++; this.monsTurn(); if (this.turn % GD.regenEvery === 0 && this.hp < this.max) this.hp++; this.see(); } return this.msgs; }
+    heroTurn(cmd, arg) { const R = this.rnd;
+      if (cmd === "move") { const [dx, dy] = arg, nx = this.x + dx, ny = this.y + dy, m = this.monAt(nx, ny);
+        if (m && !(m.ways === "mimic" && m.hidden)) { this.strike(m); return true; }
+        if (m && m.ways === "mimic") { m.hidden = false; this.say("The gold grows teeth! It was a mimic."); return true; }
+        if (!this.canStep(this.x, this.y, dx, dy)) { if (dx && dy && this.open(nx, ny)) this.say("You can't squeeze diagonally through a doorway."); return false; }
+        this.x = nx; this.y = ny; const t = this.thingAt(nx, ny); if (t) { const all = this.things.get(key(nx, ny)); this.say(all.length > 1 ? `There are ${all.length} things here.` : `You see here ${t.kind === "ggold" ? `${t.n} gold` : t.name}.`); }
+        if (this.atDown()) this.say(this.L === GD.levels && !this.bossDown() ? "The way down is sealed while the Unwritten stands." : "There is a staircase down here. (>)"); return true; }
+      if (cmd === "wait") return true;
+      if (cmd === "pick") { const all = this.things.get(key(this.x, this.y)); if (!all || !all.length) { this.say("There is nothing here to pick up."); return false; }
+        for (const it of all.splice(0)) { if (it.kind === "ggold") { this.gold += it.n; this.levelGold += it.n; this.say(`${it.n} gold.`); continue; }
+          if (this.pack.length >= 26) { this.say("Your pack is full."); all.push(it); continue; } it.gfound = this.L; it.gsecure = false; this.pack.push(it); this.say(`${String.fromCharCode(97 + this.pack.length - 1)} - ${it.name}.`); } return true; }
+      const it = this.pack[arg]; if (["quaff", "read", "wield", "wear", "eat", "drop"].includes(cmd) && !it) { this.say("You don't have that."); return false; }
+      if (cmd === "quaff") { if (it.kind !== "heal" && it.kind !== "mana") { this.say("That isn't something to drink."); return false; } this.pack.splice(arg, 1);
+        if (it.kind === "heal") { const n = Math.min(this.max - this.hp, it.power); this.hp += n; this.say(`You feel better (${n}).`); } else { const h = this.hero; if (h.maxmp) h.mp = Math.min(h.maxmp, h.mp + it.power); this.say("Your mind clears."); } return true; }
+      if (cmd === "eat") { if (it.kind !== "ration") { this.say("That isn't food."); return false; } this.pack.splice(arg, 1); const n = Math.min(this.max - this.hp, Math.round(this.max * 0.2)); this.hp += n; this.say(`That hit the spot (${n}).`); return true; }
+      if (cmd === "read") { if (it.kind !== "gscroll") { this.say("There's nothing to read on that."); return false; } this.pack.splice(arg, 1); this.readScroll(it.sub); return true; }
+      if (cmd === "wield") { if (it.kind !== "weapon") { this.say("You can't wield that."); return false; } this.wield = it; this.say(`You wield ${it.name}.`); return true; }
+      if (cmd === "wear") { if (!["armor", "shield", "helm"].includes(it.kind)) { this.say("You can't wear that."); return false; } this.wear = it; this.say(`You put on ${it.name}.`); return true; }
+      if (cmd === "drop") { this.pack.splice(arg, 1); if (this.wield === it) this.wield = null; if (this.wear === it) this.wear = null; this.put(this.x, this.y, it); this.say(`You drop ${it.name}.`); return true; }
+      return false; }
+    readScroll(sub) { const R = this.rnd;
+      if (sub === "mapping") { for (let y = 0; y < GD.H; y++) for (let x = 0; x < GD.W; x++) if (this.tile(x, y) !== " ") this.seen.add(key(x, y)); this.say("A map forms in your mind."); }
+      else if (sub === "teleport") { const r = R.pick(this.rooms.filter((q) => q.room)), [x, y] = this.spot(r); this.x = x; this.y = y; this.say("You feel a wrenching sensation."); }
+      else if (sub === "fire") { let n = 0; for (const m of this.mons) if (m.hp > 0 && Math.abs(m.x - this.x) <= 2 && Math.abs(m.y - this.y) <= 2) { const d = R.int(8, 14) + this.L * 2; m.hp -= d; m.asleep = false; m.hidden = false; n++; if (m.hp <= 0) this.fall(m); } this.say(n ? "The scroll bursts into a ball of flame!" : "The scroll flares and burns away, harming nothing."); }
+      else if (sub === "enchantWeapon") { const w = this.wield || this.hero.weapon; if (w) { w.power = (w.power || 0) + 1; this.say(`Your ${w.name} glows blue for a moment.`); } else this.say("Your hands twitch."); }
+      else if (sub === "enchantArmour") { const a = this.wear || this.hero.armor; if (a) { a.power = (a.power || 0) + 1; if (!this.wear) CM.recompute(this.hero); this.say(`Your ${a.name} glows silver for a moment.`); } else this.say("Your skin itches."); } }
+    strike(m) { const g = this.game, R = this.rnd, h = this.hero, { atk, power } = this.heroAtk(); m.asleep = false;
+      if (!R.chance(CM.clamp(g.hitChance(h) - m.level * 0.004, 0.35, 0.97))) { this.say(`You miss the ${m.name}.`); return; }
+      let dmg = Math.max(1, atk + power + R.int(0, Math.max(1, Math.floor((atk + power) / 2))) - Math.floor(m.df / 2)); const crit = R.chance(g.critChance(h)); if (crit) dmg *= 2;
+      m.hp -= dmg; this.say(`You ${crit ? "smite" : "hit"} the ${m.name}${crit ? "!" : "."}`); if (m.hp <= 0) this.fall(m); }
+    fall(m) { m.hp = 0; this.kills++; this.xp += m.xp; this.say(m.boss ? "The Unwritten comes apart into loose letters, and they blow away." : `You kill the ${m.name}!`);
+      if (!m.boss && this.rnd.chance(0.25)) this.put(m.x, m.y, this.rnd.chance(0.5) ? { kind: "ggold", n: 3 + this.L * 3, name: "gold" } : this.makeThing()); }
+    // ---- the monsters' turn ----
+    monsTurn() { const R = this.rnd, hd = this.distances(this.x, this.y);
+      for (const m of this.mons) { if (m.hp <= 0) continue;
+        if (m.ways === "regen" && m.hp < m.max) m.hp = Math.min(m.max, m.hp + 2);
+        if (m.asleep) { if (this.visible(m.x, m.y) && Math.max(Math.abs(m.x - this.x), Math.abs(m.y - this.y)) <= 6 && R.chance(0.35)) m.asleep = false; continue; }
+        if (m.hidden && Math.max(Math.abs(m.x - this.x), Math.abs(m.y - this.y)) > 1) continue;
+        m.energy += m.speed; while (m.energy >= 1 && m.hp > 0 && !this.over) { m.energy -= 1; this.monAct(m, hd); } } }
+    monAct(m, hd) { const R = this.rnd, near = Math.max(Math.abs(m.x - this.x), Math.abs(m.y - this.y));
+      if (m.boss) { m.cool = Math.max(0, m.cool - 1); if (m.cool === 0 && this.mons.filter((q) => q.hp > 0 && q.ch === "?").length < 6) { m.cool = 5; let n = 0; for (const [dx, dy] of DIRS8) { if (n >= 2) break; const x = m.x + dx, y = m.y + dy; if (this.open(x, y) && !this.monAt(x, y) && !(x === this.x && y === this.y)) { this.addMon(GD.MINION, x, y, false); n++; } } if (n) this.say("The Unwritten writes, and loose glyphs crawl off its page."); }
+        if (!m.blinked && m.hp < m.max / 2) { m.blinked = true; const r = this.roomOf(m.x, m.y); if (r) { const [x, y] = this.spot(r); m.x = x; m.y = y; this.say("The Unwritten smears itself across the room."); return; } } }
+      if (near <= 1 && this.canStep(m.x, m.y, this.x - m.x, this.y - m.y)) { this.bite(m); return; }
+      if (m.ways === "breath" && m.cool-- <= 0 && near <= 6 && (m.x === this.x || m.y === this.y || Math.abs(m.x - this.x) === Math.abs(m.y - this.y)) && this.visible(m.x, m.y)) { m.cool = 4; const d = Math.max(1, Math.round(m.atk * 0.8) - Math.floor(this.heroDf() / 3)); this.hurt(d, `The ${m.name} breathes fire! (${d})`); return; }
+      const sees = this.visible(m.x, m.y) || near <= 2; if (sees) m.hunting = 12; else if (m.hunting) m.hunting--;
+      if (m.ways === "erratic" && R.chance(0.4) || !m.hunting) { const [dx, dy] = R.pick(DIRS8); if (this.canStep(m.x, m.y, dx, dy) && !this.monAt(m.x + dx, m.y + dy) && !(m.x + dx === this.x && m.y + dy === this.y)) { m.x += dx; m.y += dy; } return; }
+      let best = null; for (const [dx, dy] of DIRS8) { const nx = m.x + dx, ny = m.y + dy; if (!this.canStep(m.x, m.y, dx, dy) || this.monAt(nx, ny) || (nx === this.x && ny === this.y)) continue; const d = hd.get(key(nx, ny)); if (d !== undefined && (!best || d < best[2])) best = [nx, ny, d]; }
+      if (best) { m.x = best[0]; m.y = best[1]; } }
+    bite(m) { const R = this.rnd, h = this.hero; if (!R.chance(CM.clamp(0.62 + (m.level - h.level) * 0.03, 0.25, 0.92))) { this.say(`The ${m.name} misses.`); return; }
+      const d = Math.max(1, m.atk + R.int(0, Math.max(1, Math.floor(m.atk / 2))) - Math.floor(this.heroDf() / 2)); if (m.ways === "drain") m.hp = Math.min(m.max, m.hp + Math.ceil(d / 2));
+      this.hurt(d, `The ${m.name} ${m.boss ? "writes on you" : "hits"}! (${d})`); }
+    hurt(d, words) { this.hp -= d; this.say(words); if (this.hp <= 0) { this.hp = 0; this.over = "dead"; this.say("You die..."); } }
+  };
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -27290,6 +27467,82 @@ Object.assign(CM.Game.prototype, {
     RQ.byId.starred = RQ.KINDS[RQ.KINDS.length - 2]; RQ.byId.charmed = RQ.KINDS[RQ.KINDS.length - 1]; }
   // toward the renown level
   if (CM.RENOWNLV) CM.RENOWNLV.AREAS.push(["fields", "The South Fields", "1 a ten picked, 15 a giant, 20 a fair won, 1 a 200 gold sold", (g) => { const F = (g.village || {}).fields || {}; return Math.floor((F.picked || 0) / 10) + 15 * (F.giants || 0) + 20 * (F.fairWins || 0) + Math.floor((F.marketGold || 0) / 200); }]);
+}
+
+// ---- 69o-glyphdeep.js ----
+"use strict";
+// The Glyph Deep, the cabinet's side (v20.0, UPGRADE_PLAN_15.md): a lone arcade cabinet under a lean-to in a small
+// clearing north of the Wood's road, west of the fields. One hero plays (any of the party still standing), starting on
+// any level reached so far. The game is 64zzzc-glyph.js; the screen 76zzzp-glyph.js.
+//   At the down stairs: down to the next level with everything, or home with it all. The first time each level's
+//   stairs are reached, tickets, gold and a thing go straight to the party (once a level, ever).
+//   Level 20: the Unwritten seals the way down; beaten, and the stairs reached, the deep's great prize (once).
+//   The up stairs: home, without what this level gave. Death: home with a tenth of their health, without what this
+//   level gave (what the levels before gave is kept). Experience always.
+//   What comes home is the main game's own: weapons, armour, rings, amulets, potions, rations and seeds as they are;
+//   the inscription cards as Claudescryption cards; the tickets as the Joker's; unread scrolls sold back for gold.
+{ const GD = CM.GLYPH; CM.GLYPH_AT = [28, 28]; GD.clearing = [26, 27, 30, 29];
+  GD.reward = (L) => ({ tickets: 10 + 4 * L, gold: 20 * L });
+  GD.PRIZE = { tickets: 500, gold: 3000, items: 3, cards: 2, seeds: 3 };
+  // the cabinet laid on the Wood
+  { const mw = CM.makeWood; CM.makeWood = function (seed) { const fl = mw(seed), [x0, y0, x1, y1] = GD.clearing, k = (x, y) => `${x},${y}`;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { fl.grid[y][x] = 0; if (fl.kinds) delete fl.kinds[k(x, y)]; (fl.ground = fl.ground || {})[k(x, y)] = (x + y) % 3 ? "dirt" : "grass"; delete fl.things[k(x, y)]; }
+      fl.things[k(...CM.GLYPH_AT)] = { type: "glyphcab" }; fl.decor = (fl.decor || []).filter((d) => !(d.x >= x0 && d.x <= x1 && d.y >= y0 && d.y <= y1));
+      fl.rooms = (fl.rooms || []).concat({ x0, y0, x1, y1, name: "the arcade cabinet" }); return fl; }; }
+  const G = CM.Game.prototype;
+  Object.assign(G, {
+    glyphStore() { this.village = this.village || {}; const S = this.village.glyph = this.village.glyph || {}; S.best = S.best || 0; S.paid = S.paid || {}; S.runs = S.runs || 0; S.deaths = S.deaths || 0; return S; },
+    glyphChoices() { return this.party.map((h, i) => ({ i, name: h.name, cls: h.cls, level: h.level, why: h.hp <= 0 ? `${h.name} has fallen.` : "" })); },
+    glyphLevels() { return Math.min(GD.levels, this.glyphStore().best + 1); },
+    atGlyphCab() { const fl = this.floor; return Boolean(fl && fl.number === -1 && fl.pos[0] === CM.GLYPH_AT[0] && fl.pos[1] === CM.GLYPH_AT[1]); },
+    enterGlyph(i, level = 1) { const h = this.party[i]; if (!h || h.hp <= 0) return h ? `${h.name} has fallen.` : "No one."; if (this.mode !== "explore" || !this.atGlyphCab()) return "The cabinet is in the Wood, by the road.";
+      level = Math.max(1, Math.min(this.glyphLevels(), level | 0)); this.logAct && this.logAct("enterGlyph", i, level); const S = this.glyphStore(); S.runs++;
+      this.glyphRun = new CM.GlyphRun(this, i, level); S.best = Math.max(S.best, level); this.say(`${h.name} drops a coin in the slot. The screen goes black, and then: THE GLYPH DEEP - level ${level}.`);
+      this.setMode("glyph"); this.emit("glyph", this.glyphRun); this.saveVillage && this.saveVillage(); return ""; },
+    glyphAct(cmd, arg) { const r = this.glyphRun; if (!r || this.mode !== "glyph") return []; this.logAct && this.logAct("glyphAct", cmd, arg === undefined ? null : arg); const msgs = r.act(cmd, arg);
+      if (r.over === "dead") this.leaveGlyph("dead"); this.emit("change"); return msgs; },
+    // the stairs: the level's reward the first time, then down or home
+    glyphStairs(down = true) { const r = this.glyphRun; if (!r || !r.atDown()) return "The stairs down are somewhere else on this level."; if (r.L === GD.levels && !r.bossDown()) return "The way down is sealed while the Unwritten stands.";
+      this.logAct && this.logAct("glyphStairs", Boolean(down)); this.glyphPay(r.L); const S = this.glyphStore();
+      if (r.L >= GD.levels) { if (!S.boss) this.glyphPrize(); S.boss = true; return this.leaveGlyph("won"); }
+      if (!down) return this.leaveGlyph("out");
+      for (const it of r.pack) it.gsecure = true; const next = new CM.GlyphRun(this, r.heroIndex, r.L + 1, { pack: r.pack, gold: r.gold, levelGold: 0, xp: r.xp, kills: r.kills, wield: r.wield, wear: r.wear });
+      next.hp = r.hp; this.glyphRun = next; S.best = Math.max(S.best, next.L); this.saveVillage && this.saveVillage(); this.emit("glyph", next); this.emit("change"); return ""; },
+    glyphUp() { const r = this.glyphRun; if (!r || !r.atUp()) return "The stairs up are where you came in."; this.logAct && this.logAct("glyphUp"); return this.leaveGlyph("fled"); },
+    // the first time a level's stairs are reached: tickets, gold and a thing, to the party at once
+    glyphPay(L) { const S = this.glyphStore(); if (S.paid[L]) return null; S.paid[L] = true; const P = GD.reward(L), R = new CM.Random(CM.hashSeed(`${this.seed}:glyphpay:${L}`)), d = GD.depthOf(L) + 2;
+      let it = CM.makeItem(d, R, R.pick(["weapon", "armor", "shield", "helm", "ring", "amulet"])); if (it && CM.affix && L % 5 === 0) it = CM.affix(it, d + 4, R); if (it) it.unknown = false;
+      const things = [it].filter(Boolean); if (L === 15 && CM.FIELDSEEDS) things.push(CM.seed(R.pick(Object.keys(CM.FIELDSEEDS.CHARMED))));
+      this.gold += P.gold; if (this.tkAdd) this.tkAdd(P.tickets, "glyph"); if (things.length) this.gain(things, "glyph"); if (L === 10 && this.cgCard) this.cgCard(true, "Won in the Glyph Deep (level 10).", R);
+      this.say(`Level ${L} cleared for the first time: ${P.tickets} tickets, ${P.gold} gold${things.length ? ` and ${things.map((t) => t.name).join(", ")}` : ""}${L === 10 ? ", and a rare card" : ""} - sent to the party.`); this.saveVillage && this.saveVillage(); return P; },
+    // the deep's great prize, once
+    glyphPrize() { const P = GD.PRIZE, R = new CM.Random(CM.hashSeed(`${this.seed}:glyphprize`)), things = [];
+      for (let k = 0; k < P.items; k++) { let it = CM.makeItem(48, R, ["weapon", "armor", "amulet"][k]); if (it && CM.affix) it = CM.affix(CM.affix(it, 52, R), 54, R); if (it) { it.unknown = false; things.push(it); } }
+      if (CM.FIELDSEEDS) for (let k = 0; k < P.seeds; k++) things.push(CM.seed(R.pick(Object.keys(CM.FIELDSEEDS.CHARMED))));
+      this.gold += P.gold; if (this.tkAdd) this.tkAdd(P.tickets, "glyph"); this.gain(things, "glyph"); if (this.cgCard) for (let k = 0; k < P.cards; k++) this.cgCard(true, "The Glyph Deep's great prize.", R);
+      this.achieve && this.achieve("unwritten"); this.say(`THE GLYPH DEEP - YOU WIN. The cabinet rattles and pays out: ${P.tickets} tickets, ${P.gold} gold, ${things.filter((t) => t.kind !== "seed").map((t) => t.name).join(", ")}, ${P.seeds} charmed seeds and ${P.cards} rare cards.`); },
+    // home from the cabinet: "out"/"won" with everything, "fled" or "dead" without this level's finds
+    leaveGlyph(how) { const r = this.glyphRun; if (!r) return null; const h = r.hero, S = this.glyphStore(), xp = Math.round(r.xp * GD.xpShare); if (xp) { h.xp += xp; this.checkLevels && this.checkLevels(); }
+      let keep = r.pack, gold = r.gold; if (how === "dead" || how === "fled") { keep = r.pack.filter((it) => it.gsecure); gold = r.gold - r.levelGold; }
+      const bank = [], words = []; let tickets = 0, cards = 0, scrolls = 0;
+      for (const it of keep) { if (it.kind === "gtickets") tickets += it.n; else if (it.kind === "gcard") { cards++; if (this.cgCard) this.cgCard(Boolean(it.rare), "Found in the Glyph Deep.", r.rnd); } else if (it.kind === "gscroll") scrolls += it.value || 15; else { delete it.gfound; delete it.gsecure; bank.push(it); } }
+      this.gold += gold + scrolls; if (tickets && this.tkAdd) this.tkAdd(tickets, "glyph"); if (bank.length) this.gain(bank, "glyph");
+      if (how === "dead") { h.hp = Math.max(1, Math.round(h.max * 0.1)); S.deaths++; } else h.hp = Math.max(1, Math.min(h.max, r.hp));
+      this.say(how === "dead" ? `${h.name} slumps back from the cabinet, shaking. GAME OVER on level ${r.L}; what that level gave is gone.` : how === "fled" ? `${h.name} climbs back up the stairs and steps away from the cabinet, without what level ${r.L} gave.` : how === "won" ? `${h.name} steps back from the cabinet a hero of the Glyph Deep.` : `${h.name} steps away from the cabinet at the stairs of level ${r.L}, carrying everything.`);
+      if (xp) words.push(`${xp} experience`); if (gold + scrolls) words.push(`${gold + scrolls} gold`); if (tickets) words.push(`${tickets} tickets`); if (cards) words.push(`${cards} card${cards > 1 ? "s" : ""}`); if (bank.length) words.push(bank.map((t) => t.name).join(", "));
+      if (words.length) this.say(`From the Glyph Deep: ${words.join("; ")}.`);
+      this.glyphRun = null; this.setMode("explore"); if (this.floor && this.floor.number === -1) { this.floor.pos = CM.GLYPH_AT.slice(); }
+      this.saveVillage && this.saveVillage(); this.saveRun && this.saveRun(); this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.unwritten = { name: "Unwritten", what: "Beat the Unwritten on the twentieth level of the Glyph Deep", title: "of the Glyph Deep" };
+  // Space at the cabinet
+  { const use0 = G.use; G.use = function (...a) { const fl = this.floor, t = fl && this.mode === "explore" && fl.things[`${fl.pos[0]},${fl.pos[1]}`];
+      if (t && t.type === "glyphcab") { this.logAct && this.logAct("use"); this.say("An arcade cabinet stands under a little roof of planks, humming. Green letters crawl across its screen: THE GLYPH DEEP - INSERT COIN."); this.emit("glyphcab"); return; }
+      return use0.apply(this, a); }; }
+  // on the map, on the goals page, toward the renown level
+  if (CM.WORLDMAP) { CM.WORLDMAP.PLACES.push(["glyph", "The Glyph Deep (an arcade cabinet)", -1, () => CM.GLYPH_AT, "a roguelike in letters, twenty levels", true]); CM.WORLDMAP.byId.glyph = CM.WORLDMAP.PLACES[CM.WORLDMAP.PLACES.length - 1]; }
+  { const goals0 = G.wmGoals; if (goals0) G.wmGoals = function () { const out = goals0.call(this), S = this.glyphStore(); out.push({ area: "The Glyph Deep", text: S.boss ? "The Unwritten is beaten. The cabinet still plays, for the love of it." : S.best ? `Deepest so far: level ${S.best} of ${GD.levels}. The next level's stairs pay ${GD.reward(Math.min(GD.levels, S.best)).tickets} tickets the first time.` : "An arcade cabinet by the Wood's road: twenty levels of letters.", go: "glyph" }); return out; }; }
+  if (CM.RENOWNLV) CM.RENOWNLV.AREAS.push(["glyph", "The Glyph Deep", "4 a level's stairs, 100 for the Unwritten", (g) => { const S = (g.village || {}).glyph || {}; return 4 * Object.keys(S.paid || {}).length + (S.boss ? 100 : 0); }]);
 }
 
 // ---- 70-ui.js ----
@@ -36760,7 +37013,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
 { const WM = CM.WORLDMAP, W = 860, H = 480;
   // where each place sits on the painted map
   const AT = { home: [600, 300], well: [640, 262], tavern: [624, 236], merchant: [668, 236], smith: [620, 330], temple: [648, 168], library: [630, 196], guildhall: [672, 318], casino: [700, 214],
-    pipe: [678, 290], shaft: [752, 262], haven: [748, 220], gate: [782, 254], yard: [762, 300], farm: [330, 330], cabin: [210, 210], fortress: [330, 70], crag: [340, 430], woodgate: [470, 268], fields: [650, 338] };
+    pipe: [678, 290], shaft: [752, 262], haven: [748, 220], gate: [782, 254], yard: [762, 300], farm: [330, 330], cabin: [210, 210], fortress: [330, 70], crag: [340, 430], woodgate: [470, 268], fields: [650, 338], glyph: [405, 252] };
   const TZ = 1.25, CX = 670, CY = 255;   // (the town, drawn larger than the Wood so its doors don't crowd)
   for (const id of ["home", "well", "tavern", "merchant", "smith", "temple", "library", "guildhall", "casino", "pipe", "shaft", "haven", "gate", "yard", "fields"]) { const [x, y] = AT[id]; AT[id] = [CX + (x - 670) * TZ, CY + (y - 255) * TZ]; }
   const paint = (p, now) => { const t = now / 1000;
@@ -37045,6 +37298,112 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       return out; }; }
 }
 
+// ---- 76zzzp-glyph.js ----
+"use strict";
+// The Glyph Deep, the screen (v20.0): the cabinet's dialog (who plays, from which level, what's been paid), and the game
+// drawn as letters on a black screen laid over the view - two lines of messages at the top, the level's 80x21, two lines
+// of the hero's numbers at the bottom; the pack as a list over the map (i), prompts for what to drink, read, wield, wear,
+// eat or drop, and for the stairs. Keys: arrows, the number pad or hjklyubn to move and fight, g or , to pick up, q r w W
+// e d, . or 5 to wait, > and < at the stairs, i the pack, Esc to cancel. A click on the map steps toward it; a click in
+// the pack offers that thing. The game is 64zzzc-glyph.js, the cabinet's rules 69o-glyphdeep.js.
+{ const GD = CM.GLYPH, COLS = 80, ROWS = 25, TOP = 2;
+  const MOVES = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0], Numpad8: [0, -1], Numpad2: [0, 1], Numpad4: [-1, 0], Numpad6: [1, 0], Numpad7: [-1, -1], Numpad9: [1, -1], Numpad1: [-1, 1], Numpad3: [1, 1],
+    k: [0, -1], j: [0, 1], h: [-1, 0], l: [1, 0], y: [-1, -1], u: [1, -1], b: [-1, 1], n: [1, 1] };
+  const ASK = { q: ["quaff", "drink", (it) => it.kind === "heal" || it.kind === "mana"], r: ["read", "read", (it) => it.kind === "gscroll"], w: ["wield", "wield", (it) => it.kind === "weapon"],
+    W: ["wear", "wear", (it) => ["armor", "shield", "helm"].includes(it.kind)], e: ["eat", "eat", (it) => it.kind === "ration"], d: ["drop", "drop", () => true] };
+  const TILE_COL = { "-": "#8A8A9A", "|": "#8A8A9A", ".": "#5A5A64", "#": "#7A7A7A", "+": "#B08040", "<": "#F0F0F0", ">": "#F0F0F0" };
+  // the cabinet as the Wood shows it: a tall cabinet of dark wood, its marquee, the screen green with letters
+  CM.art.glyphCabinet = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64;
+    p.fillStyle = "#3A2418"; p.fillRect(16 * u, 6 * u, 32 * u, 58 * u); p.fillStyle = "#5A3A24"; p.fillRect(18 * u, 8 * u, 28 * u, 54 * u);
+    p.fillStyle = "#1A1A2A"; p.fillRect(18 * u, 8 * u, 28 * u, 8 * u); p.fillStyle = "#60F080"; p.font = `bold ${5 * u}px monospace`; p.textAlign = "center"; p.fillText("GLYPH DEEP", 32 * u, 14 * u);
+    p.fillStyle = "#061206"; p.fillRect(20 * u, 19 * u, 24 * u, 18 * u); p.fillStyle = "#50E070"; p.font = `${3.6 * u}px monospace`; p.textAlign = "left";
+    ["|....@.|", "|.g..$.|", "--+-----"].forEach((t, i) => p.fillText(t, 21 * u, (24 + i * 5) * u));
+    p.fillStyle = "#2A1A10"; p.fillRect(16 * u, 38 * u, 32 * u, 8 * u); p.fillStyle = "#C03030"; p.beginPath(); p.arc(26 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3060C0"; p.beginPath(); p.arc(36 * u, 42 * u, 2 * u, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#C0A040"; p.fillRect(30 * u, 50 * u, 4 * u, 6 * u); p.fillStyle = "#6A4A2A"; p.fillRect(8 * u, 2 * u, 48 * u, 4 * u); return c; };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); set.index.glyphcab = set.layers.length; set.layers.push(CM.art.glyphCabinet(set.size)); return set; }; }
+  const ensure = (ui) => { if (ui.$("#dlg-glyph")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-glyph";
+    d.innerHTML = `<div class="box glyphbox"><h2 class="gdtitle">THE GLYPH DEEP</h2><div id="gd-body"></div><div class="note" id="gd-note"></div><div class="row"><button data-gdclose>Walk away</button></div></div>`;
+    (ui.root || document.body).appendChild(d); d.querySelector("[data-gdclose]").addEventListener("click", () => ui.closeDialogs()); };
+  Object.assign(CM.UI.prototype, {
+    openGlyphCab() { ensure(this); const g = this.game, S = g.glyphStore(), box = this.$("#gd-body"), top = g.glyphLevels(); this.gdStart = Math.min(this.gdStart || top, top);
+      box.innerHTML = `<pre class="gdattract">  ----------        @ - you          $ gold     ! potion    ? scroll
+  |..@...>.|        a-z - monsters   ) weapon   [ armour    = ring
+  ----+-----        &  - the Unwritten  , seed  ~ card   * tickets</pre>
+        <p class="small">One of the party plays, alone, with their own health, arms and skills. Reach the stairs down (&gt;) to go deeper, or to come home with everything. The first time each level's stairs are reached, tickets, gold and a thing go to the party. Die, and they come back with a tenth of their health and without what that level gave. At level 20, the Unwritten.</p>
+        <p>Start on level <select data-gdlevel>${Array.from({ length: top }, (_, i) => i + 1).map((L) => `<option value="${L}" ${L === this.gdStart ? "selected" : ""}>${L}${S.paid[L] ? " (paid)" : ""}</option>`).join("")}</select> <span class="small">(any level reached so far)</span></p>
+        <div class="list-title">Who plays</div>${g.glyphChoices().map((c) => `<div class="recruit" style="grid-template-columns: 1fr auto"><div><b>${this.esc(c.name)}</b> <small>${this.esc(c.cls)}, level ${c.level}${c.why ? ` - ${this.esc(c.why)}` : ""}</small></div><button data-gdhero="${c.i}" ${c.why ? "disabled" : ""}>Play</button></div>`).join("")}
+        <p class="small">Levels paid: ${Object.keys(S.paid).length} of ${GD.levels}${S.boss ? " - the Unwritten is beaten" : ""}. Deaths: ${S.deaths}.</p>`;
+      box.querySelector("[data-gdlevel]").addEventListener("change", (e) => { this.gdStart = Number(e.target.value); });
+      box.querySelectorAll("[data-gdhero]").forEach((b) => b.addEventListener("click", () => { const why = g.enterGlyph(Number(b.dataset.gdhero), this.gdStart || 1); this.$("#gd-note").textContent = why || ""; if (!why) { this.closeDialogs(); this.gdLog = []; this.gdAsk = null; this.gdInv = false; this.refresh(); this.drawGlyph(); } }));
+      this.$("#gd-note").textContent = ""; this.openDialog("#dlg-glyph"); },
+    glyphCanvas() { let c = this.$("#glyphcanvas"); if (!c) { c = document.createElement("canvas"); c.id = "glyphcanvas"; this.$("#view").appendChild(c); c.addEventListener("mousedown", (e) => this.glyphClick(e)); }
+      const r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1), w = Math.max(320, Math.round(r.width * dpr)), h = Math.max(200, Math.round(r.height * dpr)); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return c; },
+    // one turn, and what it said
+    glyphDo(cmd, arg) { const g = this.game, r = g.glyphRun; if (!r) return; const before = { hp: r.hp, gold: r.gold }, msgs = g.glyphAct(cmd, arg) || [];
+      this.gdLog = (this.gdLog || []).concat(msgs).slice(-60); this.gdNow = msgs;
+      try { if (msgs.some((m) => /^You (hit|smite|kill)/.test(m))) CM.audio.play("hit", 0.35); if (r.hp < before.hp) CM.audio.play("hurt", 0.4); if (r.gold > before.gold) CM.audio.play("coin", 0.35); if (msgs.some((m) => /^You die/.test(m))) CM.audio.play("death", 0.5); } catch (e) { /* quiet */ }
+      this.drawGlyph(); this.refresh(); },
+    glyphKey(e) { const g = this.game, r = g.glyphRun; if (!r) return false; const k = e.key;
+      if (this.gdAsk) { e.preventDefault(); if (k === "Escape") { this.gdAsk = null; this.gdNow = ["Never mind."]; this.drawGlyph(); return true; } const A = this.gdAsk;
+        if (A.kind === "stairs") { if (/^[dD]$/.test(k) && r.L < GD.levels) { this.gdAsk = null; const why = g.glyphStairs(true); this.gdNow = [why || `Level ${g.glyphRun ? g.glyphRun.L : ""}.`]; this.gdLog.push(...this.gdNow); this.drawGlyph(); this.refresh(); } else if (/^[hH]$/.test(k) || (r.L >= GD.levels && /^[yY]$/.test(k))) { this.gdAsk = null; g.glyphStairs(false); this.refresh(); } return true; }
+        if (A.kind === "up") { if (/^[yY]$/.test(k)) { this.gdAsk = null; g.glyphUp(); this.refresh(); } else { this.gdAsk = null; this.drawGlyph(); } return true; }
+        const i = k.length === 1 ? k.charCodeAt(0) - 97 : -1; if (i >= 0 && i < r.pack.length) { this.gdAsk = null; this.glyphDo(A.cmd, i); } return true; }
+      if (this.gdInv && k === "Escape") { e.preventDefault(); this.gdInv = false; this.drawGlyph(); return true; }
+      const mv = MOVES[e.code] || (k.length === 1 && !e.shiftKey ? MOVES[k] : null); if (mv) { e.preventDefault(); this.gdInv = false; this.glyphDo("move", mv); return true; }
+      if (k === "." || e.code === "Numpad5") { e.preventDefault(); this.glyphDo("wait"); return true; }
+      if (k === "g" || k === ",") { e.preventDefault(); this.glyphDo("pick"); return true; }
+      if (k === "i") { e.preventDefault(); this.gdInv = !this.gdInv; this.drawGlyph(); return true; }
+      if (k === ">") { e.preventDefault(); this.glyphStairsAsk(); return true; }
+      if (k === "<") { e.preventDefault(); if (r.atUp()) { this.gdAsk = { kind: "up" }; this.gdNow = ["Climb out and walk away? What this level gave stays here. [y/n]"]; } else this.gdNow = ["You can't go up here."]; this.drawGlyph(); return true; }
+      if (ASK[k]) { e.preventDefault(); const [cmd, verb, ok] = ASK[k], can = r.pack.map((it, i) => [it, i]).filter(([it]) => ok(it)); if (!can.length) { this.gdNow = [`You don't have anything to ${verb}.`]; this.drawGlyph(); return true; }
+        this.gdAsk = { cmd, ok }; this.gdInv = true; this.gdNow = [`What do you want to ${verb}? [${can.map(([, i]) => String.fromCharCode(97 + i)).join("")} or Esc]`]; this.drawGlyph(); return true; }
+      return false; },
+    glyphStairsAsk() { const r = this.game.glyphRun; if (!r.atDown()) { this.gdNow = ["You can't go down here."]; this.drawGlyph(); return; } if (r.L === GD.levels && !r.bossDown()) { this.gdNow = ["The way down is sealed while the Unwritten stands."]; this.drawGlyph(); return; }
+      const paid = this.game.glyphStore().paid[r.L]; this.gdAsk = { kind: "stairs" }; this.gdNow = [r.L >= GD.levels ? "The last stairs. Climb out into the light? [y]" : `[D]own to level ${r.L + 1}, or [H]ome with everything?${paid ? "" : " (this level pays the party the first time)"}`]; this.drawGlyph(); },
+    glyphClick(e) { const r = this.game.glyphRun, V = this.gdView; if (!r || !V) return; const c = this.$("#glyphcanvas"), b = c.getBoundingClientRect(), x = (e.clientX - b.left) * (c.width / b.width), y = (e.clientY - b.top) * (c.height / b.height);
+      if (this.gdInv && V.inv) { const row = Math.floor((y - V.inv.y) / V.ch); if (x >= V.inv.x && row >= 0 && row < r.pack.length) { const it = r.pack[row], A = this.gdAsk; if (A && A.cmd && A.ok(it)) { this.gdAsk = null; this.glyphDo(A.cmd, row); return; }
+        const uses = Object.entries(ASK).filter(([, [, , ok]]) => ok(it)); if (uses.length === 1 || (uses.length && uses[0][0] !== "d")) { const [cmd] = uses[0][1]; if (cmd !== "drop") { this.glyphDo(cmd, row); return; } } } return; }
+      const gx = Math.floor(x / V.cw), gy = Math.floor(y / V.ch) - TOP; if (gy < 0 || gy >= GD.H) return; const dx = Math.sign(gx - r.x), dy = Math.sign(gy - r.y); if (dx || dy) this.glyphDo("move", [dx, dy]); else if (r.thingAt(r.x, r.y)) this.glyphDo("pick"); else if (r.atDown()) this.glyphStairsAsk(); },
+    // the screen
+    drawGlyph() { const r = this.game.glyphRun, c = this.glyphCanvas(), p = c.getContext("2d"); p.fillStyle = "#000"; p.fillRect(0, 0, c.width, c.height); if (!r) return;
+      const cw = c.width / COLS, ch = c.height / ROWS, fs = Math.floor(Math.min(cw * 1.62, ch * 0.92)); this.gdView = { cw, ch };
+      p.font = `${fs}px Consolas, "Courier New", monospace`; p.textBaseline = "middle"; p.textAlign = "center";
+      const put = (x, y, t, col, bg) => { if (bg) { p.fillStyle = bg; p.fillRect(x * cw, (y + TOP) * ch, cw, ch); } p.fillStyle = col; p.fillText(t, x * cw + cw / 2, (y + TOP) * ch + ch / 2 + 1); };
+      for (let y = 0; y < GD.H; y++) for (let x = 0; x < GD.W; x++) { const k = `${x},${y}`; if (!r.seen.has(k)) continue; const t = r.tile(x, y); if (t === " ") continue; const vis = r.visible(x, y); put(x, y, t, vis ? TILE_COL[t] || "#AAA" : "#33333C"); }
+      for (const [k, list] of r.things) { if (!list.length || !r.seen.has(k)) continue; const [x, y] = k.split(",").map(Number); if (!r.visible(x, y) && !r.seen.has(k)) continue; const it = list[list.length - 1]; put(x, y, GD.glyphOf(it), r.visible(x, y) ? GD.colourOf(it) : "#44444C"); }
+      for (const m of r.mons) if (m.hp > 0 && r.visible(m.x, m.y)) put(m.x, m.y, m.hidden ? "$" : m.ch, m.hidden ? "#F0D040" : m.col, m.boss ? "#2A002A" : null);
+      put(r.x, r.y, "@", "#FFFFFF", "#203040");
+      // the messages
+      p.textAlign = "left"; p.font = `${Math.floor(ch * 0.78)}px Consolas, "Courier New", monospace`; const now = this.gdNow || []; p.fillStyle = "#E8E8E8";
+      now.slice(-2).forEach((m, i) => p.fillText(m.slice(0, 110), 6, ch * (i + 0.5) + 1));
+      // the hero's numbers
+      const h = r.hero, at = r.heroAtk(), y1 = (ROWS - 2) * ch + ch / 2, y2 = (ROWS - 1) * ch + ch / 2, frac = r.hp / r.max;
+      p.fillStyle = "#C0C0C0"; p.fillText(`${h.name} the ${h.cls}    Dlvl:${r.L}  $:${r.gold}  HP:`, 6, y1); const w0 = p.measureText(`${h.name} the ${h.cls}    Dlvl:${r.L}  $:${r.gold}  HP:`).width;
+      p.fillStyle = frac > 0.5 ? "#60E060" : frac > 0.25 ? "#F0D040" : "#F05050"; p.fillText(`${r.hp}(${r.max})`, 6 + w0, y1); const w1 = p.measureText(`${r.hp}(${r.max})`).width;
+      p.fillStyle = "#C0C0C0"; p.fillText(`  Atk:${at.atk}+${at.power}  Def:${r.heroDf()}  T:${r.turn}  Kills:${r.kills}`, 6 + w0 + w1, y1);
+      p.fillText(`Wielding: ${r.wield ? r.wield.name : (h.weapon ? h.weapon.name : "bare hands")}   Wearing: ${r.wear ? r.wear.name : (h.armor ? h.armor.name : "nothing extra")}   Pack: ${r.pack.length}/26`, 6, y2);
+      // the pack, over the map
+      if (this.gdInv) { const lines = r.pack.length ? r.pack.map((it, i) => `${String.fromCharCode(97 + i)} - ${it.kind === "gtickets" ? `${it.n} prize tickets` : it.name}${it === r.wield ? " (wielded)" : it === r.wear ? " (worn)" : ""}${it.gsecure ? "" : " *"}`) : ["Your pack is empty."];
+        const head = this.gdAsk && this.gdAsk.cmd ? "Choose:" : "Your pack (* found on this level):", wpx = Math.min(c.width * 0.6, Math.max(p.measureText(head).width, ...lines.map((l) => p.measureText(l).width)) + 30), x0 = c.width - wpx - 8, y0 = TOP * ch;
+        p.fillStyle = "rgba(0,0,0,0.92)"; p.fillRect(x0, y0, wpx, (lines.length + 2) * ch); p.strokeStyle = "#5A5A6A"; p.strokeRect(x0, y0, wpx, (lines.length + 2) * ch);
+        p.fillStyle = "#F0F0C0"; p.fillText(head, x0 + 10, y0 + ch / 2 + 1);
+        lines.forEach((l, i) => { const it = r.pack[i]; p.fillStyle = it ? (this.gdAsk && this.gdAsk.ok && !this.gdAsk.ok(it) ? "#555" : GD.colourOf(it)) : "#AAA"; p.fillText(l, x0 + 10, y0 + (i + 1.5) * ch + 1); });
+        this.gdView.inv = { x: x0, y: y0 + ch }; } else this.gdView.inv = null; },
+  });
+  // the action bar under the view while playing
+  { const ra0 = CM.UI.prototype.renderActions; CM.UI.prototype.renderActions = function () { const g = this.game, box = this.$("#actions") || this.$(".actions"); if (g.mode !== "glyph") { if (box && box.dataset.mode && box.dataset.mode.startsWith("glyph")) box.dataset.mode = ""; return ra0.call(this); }
+      const r = g.glyphRun; if (!r || !box) return; const k = `glyph:${r.L}:${r.atDown()}:${r.atUp()}`; if (box.dataset.mode === k) return; box.dataset.mode = k; box.innerHTML = "";
+      const add = (text, fn, cls) => { const b = document.createElement("button"); b.textContent = text; if (cls) b.className = cls; b.addEventListener("click", () => { fn(); this.drawGlyph(); }); box.appendChild(b); };
+      if (r.atDown()) add(r.L >= GD.levels ? "Climb out into the light (>)" : `Down to level ${r.L + 1} (> then D)`, () => { if (r.L >= GD.levels) g.glyphStairs(false); else { const why = g.glyphStairs(true); this.gdNow = [why || `Level ${g.glyphRun ? g.glyphRun.L : ""}.`]; } this.refresh(); }, "primary");
+      if (r.atDown() && r.L < GD.levels) add("Home with everything (> then H)", () => { g.glyphStairs(false); this.refresh(); });
+      add("Pack (i)", () => { this.gdInv = !this.gdInv; }); add("Pick up (g)", () => this.glyphDo("pick")); add("Wait (.)", () => this.glyphDo("wait"));
+      add(r.atUp() ? "Climb out (this level's finds stay)" : "Walk away (this level's finds stay)", () => { g.leaveGlyph("fled"); this.refresh(); }); }; }
+  { const rf0 = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a); const on = this.game && this.game.mode === "glyph"; document.body.classList.toggle("inglyph", on); if (on) this.drawGlyph(); return out; }; }
+  // the keys, before the game's own
+  if (typeof window !== "undefined") window.addEventListener("keydown", (e) => { const ui = CM.ui, g = ui && ui.game; if (!g || g.mode !== "glyph" || !g.glyphRun || (ui.dialogOpen && ui.dialogOpen())) return; if (ui.glyphKey(e)) e.stopImmediatePropagation(); }, true);
+  if (typeof window !== "undefined") window.addEventListener("resize", () => { const ui = CM.ui; if (ui && ui.game && ui.game.mode === "glyph") ui.drawGlyph(); });
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -37250,6 +37609,7 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("claudeablo", () => ui.openClaudeablo());
   game.on("pipe", () => ui.openBrosPipe());
   game.on("fields", (k) => ui.openFields && ui.openFields(k));   // (the South Fields: 76zzzj-fields.js)
+  game.on("glyphcab", () => ui.openGlyphCab && ui.openGlyphCab());     // (the Glyph Deep: 76zzzp-glyph.js)
   game.on("craftgate", () => ui.openCraftGate());
   game.on("signname", (key) => ui.openSignName(key));
   game.on("craft", () => { craftIn = {}; if (!ui.ccStart()) { game.say("The gate shimmers, but this window cannot draw what is beyond it (no WebGL)."); game.leaveCraft(); } ui.refresh(); });                             // (Super Claude Bros: 76g-claudebros.js)
@@ -37620,6 +37980,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "compostbin") out.push({ x, y, layer: renderer.sub && renderer.sub["prop:rotcrate"] ? "prop:rotcrate" : "well", w: 0.7, h: 0.6 });
       else if (thing.type === "scarecrow") out.push({ x, y, layer: "scarecrow", w: 0.8, h: 1.1 });
       else if (thing.type === "silo") out.push({ x, y, layer: "silo", w: 1.0, h: 1.5 });
+      else if (thing.type === "glyphcab") out.push({ x, y, layer: "glyphcab", w: 0.85, h: 1.3, glow: 0.25 + 0.08 * Math.sin(now / 300) });   // (the Glyph Deep's cabinet)
       else if (thing.type === "shrine") out.push({ x, y, layer: "altar", w: 0.8, h: 0.7 });
       else if (thing.type === "burner") out.push({ x, y, layer: "npc:hermit", w: 0.8, h: 0.85 });
       else if (thing.type === "rivals") out.push({ x, y, layer: "monster:Sellsword", w: 0.85, h: 0.85 });

@@ -1392,6 +1392,29 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Glyph Deep (the eighty-first big update - v20.0, UPGRADE_PLAN_15.md phase 0)
+  (src/js/64zzzc-glyph.js the game, 69o-glyphdeep.js the cabinet's rules, 76zzzp-glyph.js the screen)
+  - An arcade cabinet under a lean-to in a clearing north of the Wood's road: Space at it, choose who plays (one of the
+    party, alone, with their real health, arms, armour and skill tree) and from which level (any reached so far).
+  - Inside, a roguelike in letters, our own: twenty levels of rooms, doors and corridors, lit rooms seen whole, what's
+    been seen remembered; turn by turn, moving into a monster fights it (the main game's hit, weak-spot and damage
+    rules); nineteen monsters by depth with their own ways (fast, erratic, slow, regenerating trolls, draining wraiths
+    and vampires, fire-breathing drakes, mimics that look like gold) and, on level 20, the Unwritten, who writes loose
+    glyphs into the fight and smears across its room when hurt.
+  - Things: $ gold, ! potions, ? scrolls (mapping, teleport, fire, enchant weapon, enchant armour), ) [ weapons and
+    armour (wield and wear them inside), = " rings and amulets, % rations, , seeds for the South Fields, ~ inscription
+    cards, * prize tickets. Keys: arrows / number pad / hjklyubn, g pick up, q r w W e d, . wait, > and <, i the pack;
+    or click: a square to step toward it, a thing in the pack to use it.
+  - At the stairs down: down to the next level with everything, or home with it all. The first time each level's
+    stairs are reached, tickets, gold and a thing (better every fifth level; a rare card at 10, a charmed seed at 15)
+    go straight to the party - once a level, ever. Beating the Unwritten and taking the last stairs pays the great
+    prize once: 500 tickets, 3,000 gold, three high-end enchanted pieces, two rare cards and three charmed seeds.
+  - Death: home with a tenth of their health and without what that level gave (the levels before are kept); the
+    stairs up or walking away the same. Experience always.
+  - What comes home is the game's own: the weapons, armour, jewellery, potions, rations and seeds go in the pack to
+    use and wear; cards to the Claudescryption collection; tickets to the Joker; unread scrolls sold back for gold.
+  - On the world map and the Goals page; toward the renown level (4 a level's stairs, 100 for the Unwritten).
+
 The South Fields, finished (the eightieth big update - v19.5, UPGRADE_PLAN_14.md phase 5 - the plan complete)
   (src/js/76zzzo-fieldlife.js; the hands painted in 36c-cropart.js; tools/fieldbot.js and FIELDS.md)
   - The field through the year: frost on bare turned plots in winter, blossom along the rows in spring, fallen leaves
