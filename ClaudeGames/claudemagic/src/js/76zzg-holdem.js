@@ -40,7 +40,7 @@ CM.CG_TABLES.push(["holdem", "The Residents' Game"]);
     },
     heCtl() {
       const g = this.game, T = g.heTable(), el = this.$("#casino-body .hectl"); if (!el) return; let html;
-      if (!T) html = `<div class="row hebuy">${HE.BUYINS.map((b) => `<button class="primary" data-hesit="${b}">Buy in for ${b} gold${g.heStore().cleared[b] ? " ✓" : ""}</button>`).join("")}<button data-leave>Leave</button></div>`;
+      if (!T) html = `<div class="row hebuy">${HE.BUYINS.concat(g.vipOn && g.vipOn() ? CM.FLOOR.VIP.buyins : []).map((b) => `<button class="primary" data-hesit="${b}">Buy in for ${b} gold${g.heStore().cleared[b] ? " ✓" : ""}</button>`).join("")}<button data-leave>Leave</button></div>`;
       else if (T.stage === "hand" && T.toAct === 0) { const owe = HE.toCall(T, 0), size = HE.betSize(T), S = T.seats[0], capped = T.raises >= HE.cap || S.stack <= owe;
         html = `<div class="row heact">${owe ? `<button data-hea="fold">Fold</button>` : ""}<button class="primary" data-hea="call">${owe ? `Call ${Math.min(owe, S.stack)}` : "Check"}</button>${capped ? "" : `<button class="primary" data-hea="raise">${T.cur ? `Raise to ${T.cur + size}` : `Bet ${size}`}</button>`}</div>`; }
       else if (T.stage === "hand") html = `<div class="row heact"><span class="small">${HE.RES[T.seats[T.toAct].id].short} to act…</span></div>`;

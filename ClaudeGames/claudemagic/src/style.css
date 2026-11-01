@@ -1106,3 +1106,26 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .bingo .bggrid span.d::after { content: ""; position: absolute; inset: 2px; border-radius: 50%; background: rgba(200,30,40,0.38); box-shadow: inset 0 0 0 2px rgba(170,20,30,0.7); } .bingo .bggrid span.free { color: #C08020; } .bingo .bggrid span.stamp::after { animation: bgstamp 0.25s ease-out; }
 @keyframes bgstamp { from { transform: scale(1.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .bingo .bgcall.ready { animation: crwin 0.6s ease-in-out infinite; background: #F0C040; color: #2A1A08; }
+/* ---- v16.1: the counter grown, tournament night, quests, the VIP room ---- */
+.cgclub .flbtn { border-color: #C89A30; } .cgclub .flready { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: #F0C040; color: #2A1A08; font-size: 11px; }
+.cgclub .vipbtn { background: linear-gradient(#7A0A20, #4A0612); color: #F8E0A0; border-color: #D8B040; } .cgclub .vipbtn.locked { filter: saturate(0.4); opacity: 0.85; }
+.flcounter { margin: 6px 0 10px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(240,192,64,0.3); }
+.flcounter h4 { margin: 8px 0 6px; color: #F0D070; } .fllevel b { color: #FFE8A0; }
+.flbar { height: 8px; margin: 4px 0; border-radius: 4px; background: rgba(0,0,0,0.45); overflow: hidden; } .flbar i { display: block; height: 100%; background: linear-gradient(90deg, #C89A30, #FFE070); }
+.flspecials { display: flex; flex-wrap: wrap; gap: 8px; } .flspecial { background: linear-gradient(#3A1A4A, #1E0E26) !important; border-color: #A070D0 !important; } .flspecial.sold { opacity: 0.45; }
+.flspecial .flstock { font-size: 11px; color: #D0B0FF; } .flspecial.vippass { background: linear-gradient(#5A0A1A, #2A0408) !important; border-color: #D8B040 !important; }
+.tkprize { position: relative; } .tkprize.bargain { box-shadow: 0 0 0 2px #E04040, 0 0 12px rgba(224,64,64,0.5); } .tkprize s { opacity: 0.6; margin-right: 4px; }
+.flribbon { position: absolute; top: 6px; right: -4px; padding: 1px 8px; background: #C02828; color: #FFF; font-size: 10px; font-style: normal; border-radius: 3px 0 0 3px; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.fltourtop { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; } .flframe { display: flex; flex-direction: column; align-items: center; padding: 10px; border: 6px solid #B08830; border-radius: 6px; background: #1A1008; box-shadow: inset 0 0 0 2px #F0D070, 0 6px 14px rgba(0,0,0,0.6); }
+.flframe canvas { border-radius: 4px; } .flpurse { flex: 1; min-width: 260px; } .flpurse h4 { margin: 0 0 4px; color: #FFE070; } .flpurse ol { margin: 0 0 6px 18px; padding: 0; }
+.flstand { width: 100%; max-width: 560px; margin-top: 10px; border-collapse: collapse; background: #1E2420; font-family: "Comic Sans MS", Georgia, serif; color: #E8E8E0; box-shadow: inset 0 0 0 6px #6A4A2A; }
+.flstand th, .flstand td { padding: 3px 10px; text-align: left; border-bottom: 1px dashed rgba(255,255,255,0.12); } .flstand tr.top td { color: #FFE8A0; } .flstand tr.you td { background: rgba(240,192,64,0.25); color: #FFE070; font-weight: bold; }
+.flqgrid { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px; border-radius: 8px; background: #8A6440 repeating-radial-gradient(circle at 30% 30%, rgba(0,0,0,0.05) 0 2px, transparent 2px 6px); box-shadow: inset 0 0 0 6px #5A3A20; }
+.flnote { position: relative; width: 230px; padding: 16px 12px 10px; background: #FBF4E0; color: #2A2010; transform: rotate(var(--r)); box-shadow: 0 4px 10px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 4px; }
+.flnote .pin { position: absolute; top: 4px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FF8080, #A01010); }
+.flnote .flgiver { font-size: 11px; font-style: italic; color: #6A5030; } .flnote b { font-family: Georgia, serif; } .flnote .small { color: #5A4A30; } .flnote .flreward { font-size: 12px; color: #4A3010; }
+.flnote.done { background: #F4F8D8; box-shadow: 0 0 0 3px #80C040, 0 4px 12px rgba(0,0,0,0.45); } .flnote .flbar { background: rgba(0,0,0,0.15); }
+.flvip .flvipart { display: block; max-width: 100%; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); }
+.flperks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; margin-top: 8px; }
+.flperk { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 8px; background: linear-gradient(#4A0A18, #2A0610); border: 1px solid #C89A30; color: #F8E8C8; } .flperk b { color: #FFE070; font-family: Georgia, serif; } .flperk button { align-self: flex-start; }
+.flnote .tkcount { color: #7A1A30; }

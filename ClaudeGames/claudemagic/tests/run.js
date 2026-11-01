@@ -5088,7 +5088,7 @@ test("the Prize Counter: tokens for stakes, payouts (the free tables too), board
   // buying: too dear, then each prize
   T().n = 10; assert.ok(g.tkBuy("chest").error); assert.strictEqual(T().n, 10);
   T().n = 100000; const bag0 = g.bag.length, cards0 = g.cgStore().cards.length;
-  for (const [id, shelf, , cost] of PRIZE.LIST) { const t0 = T().n, gold0 = g.gold, o = g.tkBuy(id); assert.ok(!o.error, id); assert.strictEqual(t0 - T().n, cost, id);
+  for (const [id, shelf, , cost] of PRIZE.LIST) { const t0 = T().n, gold0 = g.gold, price = g.flPrice ? g.flPrice(id, cost) : cost, o = g.tkBuy(id); assert.ok(!o.error, id); assert.strictEqual(t0 - T().n, price, id);
     if (shelf === "gold") assert.ok(g.gold - gold0 > 0 && g.gold - gold0 < cost, id); else if (shelf === "cards") assert.ok(o.card, id); else assert.ok(o.item && o.item.name, id); }
   assert.strictEqual(g.bag.length - bag0, PRIZE.LIST.filter((r) => r[1] === "potions" || r[1] === "gear").length); assert.strictEqual(g.cgStore().cards.length - cards0, 3);
   // no loop: the gold a staked gold coin earns back as tokens is less than the edge of the fairest table
@@ -5243,6 +5243,21 @@ test("the Bell Hall: a card's numbers sit in their columns with a free middle; t
   const G = g.bgBuy("copper", 1, false); assert.ok(g.bgCall().error, "nothing daubed"); assert.ok(g.bgBuy("copper", 1, false).error, "one game at a time"); let r; do { r = g.bgDraw(); } while (r.won === undefined); assert.strictEqual(G.stage, "done"); assert.ok(r.hallWho.length >= 1, "an undaubed card can't win");
   let spent = 0, back = 0; for (let k = 0; k < 600; k++) { const H = g.bgBuy("silver", 2, true); spent += 2 * H.price; let out; for (;;) { out = g.bgDraw(); if (out.won !== undefined) break; if (g.bgDone(H).some(Boolean)) { out = g.bgCall(); break; } } back += out.won; }
   assert.ok(back / spent > 0.7 && back / spent < 1.0, `bingo returns ${back / spent}`);
+});
+
+test("the floor's evenings: the counter grows with tickets spent and takes its discount and the day's bargain; the day's specials come in short stock; tournament night counts the best of three games against the day's field and pays by place; quests count the floor's doings and pay once; the VIP room opens on Platinum or a pass and lifts the limits", () => {
+  const CM = load(), FL = CM.FLOOR, g = new CM.Game(); g.newGame("fl-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 100000; const T = g.tkStore();
+  assert.strictEqual(g.flLevel(), 0); T.spent = 5200; assert.strictEqual(g.flLevel(), 2); const row = CM.PRIZE.LIST.find((r) => r[0] === "heal"), want = g.flPrice("heal", row[3]); assert.ok(want < row[3]);
+  T.n = 10000; const n0 = T.n, o = g.tkBuy("heal"); assert.ok(!o.error); assert.strictEqual(n0 - T.n, want, "the discounted price"); const b = g.flBargain(), br = CM.PRIZE.LIST.find((r) => r[0] === b); assert.ok(g.flPrice(b, br[3]) <= Math.round(FL.price(br[3], 2) * 0.75) + 1);
+  const sp = g.flSpecials(); assert.strictEqual(sp.length, FL.LEVELS[2].slots); assert.strictEqual(JSON.stringify(sp), JSON.stringify(g.flSpecials()), "the same all day"); const one = sp[0]; for (let k = 0; k < one.stock; k++) assert.ok(!g.flBuy(one.id).error); assert.ok(g.flBuy(one.id).error, "sold out");
+  const N = g.flTour(); assert.ok(CM.ARC.reg[N.table]); const gold0 = g.gold; assert.ok(!g.flTourEnter().error); assert.strictEqual(g.gold, gold0 - FL.TOUR.fee); assert.ok(g.flTourEnter().error, "entry waiting");
+  g.cgRecord(N.table, 5000, 12); assert.strictEqual(N.tries, 1); assert.strictEqual(N.best.level, 12); assert.ok(!g.flTourEnter().error); g.cgRecord(N.table, 100, 2); assert.strictEqual(N.best.level, 12, "the best counts");
+  const st = g.flStand(); assert.strictEqual(st.length, FL.TOUR.field + 1); assert.ok(st[0].you, "level 12 tops the field"); const r = g.flTourSettle(); assert.strictEqual(r.place, 1); assert.strictEqual(r.gold, Math.floor((FL.TOUR.field + 1) * FL.TOUR.fee * FL.TOUR.share * 0.4)); assert.ok(r.card); assert.ok(g.flTourEnter().error, "settled");
+  const Q = g.flQuests(); assert.strictEqual(Q.length, 3); Q[0] = Object.assign(Q[0], { kind: "stake", n: 30, got: 0, table: undefined }); Q[1] = Object.assign(Q[1], { kind: "play", n: 2, got: 0, seen: [] }); Q[2] = Object.assign(Q[2], { kind: "level", n: 4, got: 0, table: "joust" });
+  assert.ok(g.flQuestCollect(0).error); g.cgStake("slots", 20); g.cgStake("craps", 15); g.cgRecord("joust", 900, 5); assert.ok(Q[0].got >= 30 && Q[1].got === 2 && Q[2].got === 4);
+  const gq = g.gold, c = g.flQuestCollect(0); assert.ok(!c.error); assert.strictEqual(g.gold, gq + c.gold); assert.strictEqual(g.flQuests().length, 3);
+  assert.ok(!g.vipUnlocked()); assert.ok(g.vipSet(true)); assert.ok(g.cgStake("slots", 2000), "over the usual limit"); T.n = 5000; assert.ok(!g.vipBuyPass().error); assert.ok(g.vipUnlocked()); assert.strictEqual(g.vipSet(true), ""); assert.strictEqual(g.cgStake("slots", 2000), "");
+  assert.ok(!g.heSit(2500).error, "a VIP buy-in"); g.heStore().live.stage = "between"; g.heLeave(); assert.ok(!g.vipDaily().error); assert.ok(g.vipDaily().error, "once a day"); g.vipSet(false); assert.strictEqual(CM.CG.max, FL.base.max);
 });
 
 (async () => {
