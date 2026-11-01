@@ -1312,3 +1312,8 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .chroom h4 { margin: 12px 0 6px; color: #F0D070; } .chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .chcard { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 10px; background: linear-gradient(#1A1018, #0E080E); border: 1px solid rgba(255,255,255,0.12); opacity: 0.75; } .chcard.own { opacity: 1; border-color: #C89A30; } .chcard.on { border: 2px solid #FFE070; box-shadow: 0 0 14px rgba(255,224,112,0.4); }
 .chcard .chicon { font-size: 30px; } .chcard b { color: #FFE8A0; font-family: Georgia, serif; } .chcard p { margin: 0; font-size: 13px; } .chcard i { color: #D0B0FF; } .chlock { font-size: 18px; opacity: 0.6; }
+/* ---- v17.7: into the Joker - the street door's choice ---- */
+.jfdoor h3 { margin: 0 0 6px; color: #FFE070; } .jfchoice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 10px 0; }
+.jfcard { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; text-align: left; background: linear-gradient(#2A1A10, #160E08); border: 2px solid #C89A30; color: inherit; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.jfcard:hover, .jfcard:focus-visible { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.6), 0 0 0 2px #FFE070; } .jfcard canvas { width: 100%; height: auto; border-radius: 8px; } .jfcard b { font: bold 20px Georgia, serif; color: #FFE070; } .jfcard span { font-size: 13px; opacity: 0.9; }
+@media (max-width: 700px) { .jfchoice { grid-template-columns: 1fr; } }

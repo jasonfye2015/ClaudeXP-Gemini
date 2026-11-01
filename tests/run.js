@@ -5420,6 +5420,17 @@ test("the Joker's charms: earned ones read from the floor's books, bought ones f
   assert.strictEqual(CH.slots(1), 1); assert.strictEqual(CH.slots(20), 2); assert.strictEqual(CH.slots(45), 3);
 });
 
+test("into the Joker: floor -9 is made the same every time, with every table, the house's counters, the residents and the street door; the party walks in from the town and out to the street outside the casino's door; a table underfoot says its name; its theme is the Joker's", () => {
+  const CM = load(); CM.CG_TABLES = CM.CG_TABLES || [["slots", "The Gilded Reels"], ["darts", "The Tavern Board"], ["bigwheel", "The Joker's Wheel"], ["plinko", "The Drop Board"], ["bingo", "The Bell Hall"], ["lottery", "The Town Lottery"], ["pond", "The Fishing Pond"]]; CM.CG_INFO = CM.CG_INFO || { slots: { cat: "luck", line: "Reels" }, darts: { cat: "fair", line: "Darts" } };
+  const a = CM.makeFloor(CM.JOKER_FLOOR, "x"), b = CM.makeFloor(CM.JOKER_FLOOR, "y"); same(a.grid, b.grid, "the same for every seed"); assert.strictEqual(CM.themeFor(CM.JOKER_FLOOR).name, "The Gilded Joker");
+  const T = Object.values(a.things); for (const [id] of CM.CG_TABLES) assert.ok(T.some((t) => t.type === "cgtable" && t.id === id), `${id} has its place`); assert.strictEqual(T.filter((t) => t.type === "cgservice").length, CM.JOKER_SERVICES.length); assert.ok(T.some((t) => t.type === "jokerexit")); assert.ok(T.some((t) => t.type === "cgresident"));
+  for (const [k, t] of Object.entries(a.things)) { const [x, y] = k.split(",").map(Number); assert.strictEqual(a.grid[y][x], 0, `${t.type} stands on the floor`); }
+  const g = new CM.Game(); g.newGame("jf-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.strictEqual(g.floor.number, 0); assert.strictEqual(g.jfEnter(), ""); assert.strictEqual(g.floor.number, CM.JOKER_FLOOR); same(g.floor.pos, a.start);
+  const at = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "cgtable"); assert.ok(/^at /.test(CM.placeOf(g.floor, ...at.split(",").map(Number))));
+  g.jfLeave(); assert.strictEqual(g.floor.number, 0); const d = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "building" && g.floor.things[k].id === "casino").split(",").map(Number); assert.strictEqual(Math.abs(g.floor.pos[0] - d[0]) + Math.abs(g.floor.pos[1] - d[1]), 1, "on the street by the door");
+  assert.ok(g.jfLeave === undefined || g.floor.number === 0); g.floor.number = 5; assert.ok(g.jfEnter(), "only from the town"); g.floor.number = 0;
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
