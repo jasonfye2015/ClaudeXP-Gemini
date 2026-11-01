@@ -1360,3 +1360,9 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 @media (max-width: 760px) { .tscols { grid-template-columns: 1fr; } .tsline { display: none; } }
 /* ---- v18.3: island tempering at the smith ---- */
 .temperbox { margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(240,192,64,0.4); } .temperbox h4 { margin: 0 0 4px; color: #F0D070; }
+/* ---- v18.4: the request board ---- */
+.rqbox { max-width: 860px; } .rqgrid { display: flex; flex-wrap: wrap; gap: 14px; padding: 12px; border-radius: 8px; background: #8A6440 repeating-radial-gradient(circle at 30% 30%, rgba(0,0,0,0.05) 0 2px, transparent 2px 6px); }
+.rqnote { position: relative; width: 240px; padding: 16px 12px 10px; background: #FBF4E0; color: #2A2010; transform: rotate(var(--r)); box-shadow: 0 4px 10px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 4px; }
+.rqnote .pin { position: absolute; top: 4px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #80B0FF, #1040A0); }
+.rqnote b { font-family: Georgia, serif; } .rqgiver { font-size: 11px; font-style: italic; color: #6A5030; } .rqplace { font-size: 12px; color: #5A2A10; } .rqpay { font-size: 12px; color: #4A3A10; font-weight: bold; } .rqnote .small { color: #5A4A30; }
+.rqnote.ready { box-shadow: 0 0 0 3px #80C040, 0 4px 12px rgba(0,0,0,0.45); } .rqnote.done { background: #EAF2D8; opacity: 0.8; }

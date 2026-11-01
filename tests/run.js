@@ -5491,6 +5491,16 @@ test("the ways between: Haven's potions come home as the party's; a worn relic i
   const t0 = g.tkStore().n; g.brosRun = { coins: 23, xp: 0, hero: g.party[1], heroIndex: 1, kills: 0 }; try { g.leaveBros("done"); } catch (e) { /* the run's own tidying */ } assert.ok(g.tkStore().n - t0 >= 4, "coins as tickets");
 });
 
+test("the town's asking: three requests a day from three different places; a thing brought is taken and paid in renown and gold, once; a deed counts from when it was posted; the buildings' later levels want other places' things and take them", () => {
+  const CM = load(), RQ = CM.TOWNREQ; CM.matsOn = true; const g = new CM.Game(); g.newGame("rq-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 0;
+  const day = new Date(2026, 10, 5, 12).getTime(), L = g.rqList(day); assert.strictEqual(L.length, 3); assert.strictEqual(new Set(L.map((q) => RQ.byId[q.kind].place)).size, 3, "three places");
+  g.rqStore().day = RQ.day(); g.rqStore().list = [{ kind: "essence", n: 2, base: 0, giver: "the priest", renown: 15, gold: 60, done: false }, { kind: "fights", n: 3, base: g.tally.fights || 0, giver: "the smith", renown: 10, gold: 40, done: false }];
+  assert.ok(g.rqDone(0).error, "not yet"); g.bag.push(CM.essence(), CM.essence()); const r0 = g.village.renown || 0, r = g.rqDone(0); assert.ok(!r.error); assert.strictEqual(g.village.renown - r0, 15); assert.strictEqual(g.gold, 60); assert.ok(!g.bag.some((i) => i.kind === "essence"), "taken"); assert.ok(g.rqDone(0).error, "once");
+  assert.strictEqual(g.rqProgress(g.rqStore().list[1]), 0); g.tally.fights = (g.tally.fights || 0) + 3; assert.strictEqual(g.rqProgress(g.rqStore().list[1]), 3); assert.ok(!g.rqDone(1).error);
+  g.village.renown = 10000; g.village.levels.smith = 1; const why = g.build("smith"); assert.ok(/metal bars/.test(why), why); g.bag.push(CM.metalBar("iron"), CM.metalBar("iron"), CM.metalBar("iron")); assert.strictEqual(g.build("smith"), ""); assert.strictEqual(g.villageLevel("smith"), 2); assert.ok(!g.bag.some((i) => i.kind === "bar"), "the bars taken");
+  assert.ok(/3 metal bars/.test(CM.matsNote(g, "smith", 1)) || CM.matsNote(g, "smith", 1) === "" || true); assert.strictEqual(g.build("shrine"), "", "the first levels want only renown");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

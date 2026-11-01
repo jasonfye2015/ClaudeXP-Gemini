@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The town's asking (the seventieth big update - v18.4)
+  (src/js/69e-requests.js, 76zzzf-requests.js)
+  - The request board at the well (the town's Requests button): three notes a day from the residents, each wanting
+    something from a different part of the world - island timber, stone or bars, a gem or an essence from the dungeon,
+    meat or food, something from Haven, Joker tickets - or a deed done since it was posted: a floor reached, fights won,
+    Claudescryption hands, a trip down the pipe or into Haven, fish from the Pond, a night at the Joker. Done, a note
+    pays renown and gold; one left undone stays on the board the next day.
+  - Village upgrades want other places' things: the later levels of the smith, library, shrine, home, tavern,
+    merchant, guildhall, garden and farm ask for island bars and stone, gems and essences, Haven's finds or meat as
+    well as renown, shown beside the cost and taken when the building goes up. Early levels are as they were.
+
 The ways between (the sixty-ninth big update - v18.3)
   (src/js/64zzza-links.js, 76zzze-links.js)
   - Haven's potions come home: potions a hero found in Claudeablo (beyond those they went in with, which stay there as
