@@ -142,7 +142,7 @@ in short lines, and never about himself.
 
 ## The Prize Counter (v15.4)
 
-Gold on the tables, tokens in the hand: the house had pink paper tickets printed by the thousand and set a glass
+Gold on the tables, tickets in the hand: the house had pink paper tickets printed by the thousand and set a glass
 counter by the cashier's cage to take them. The clerk behind it has never been seen to smile, but she counts very fast,
 and she keeps the good steel at the back, where you have to ask for it.
 

@@ -1,12 +1,12 @@
 "use strict";
 // The Prize Counter (the forty-first big update - v15.4): every table on the Gilded Joker's floor hands out prize
-// tokens, and a counter by the cashier's cage trades them for prizes. Tokens come in varying amounts: with every stake
+// tickets, and a counter by the cashier's cage trades them for prizes. Tickets come in varying amounts: with every stake
 // laid (one for each thirty gold staked), with the gold a free table pays (one for each fifty - the tables that take
-// stakes give tokens for the stake, not the win), for each blind beaten at Claudeatro, and for a place on a high-score board (more for a record).
+// stakes give tickets for the stake, not the win), for each blind beaten at Claudeatro, and for a place on a high-score board (more for a record).
 // Odd gold carries over, so small stakes add up. The counter sells pouches of gold, potions, gear (made for the party's
-// depth, the dearest enchanted) and Claudescryption cards; gold is the poorest buy on purpose, so tokens cannot be
-// turned back into the stakes that made them: a token buys at most an eighth of a gold, and even the fairest table
-// (99.5% back) loses more than its tokens can buy back. The window is 76zh-prizes.js.
+// depth, the dearest enchanted) and Claudescryption cards; gold is the poorest buy on purpose, so tickets cannot be
+// turned back into the stakes that made them: a ticket buys at most an eighth of a gold, and even the fairest table
+// (99.5% back) loses more than its tickets can buy back. The window is 76zh-prizes.js.
 CM.PRIZE = {
   perStake: 30, perPay: 50, bestReturn: 0.995, blind: 2, boss: 5, board: 3, record: 10,
   // [id, shelf, name, cost, what it is]
@@ -25,17 +25,17 @@ const PRIZE = CM.PRIZE;
   Object.assign(CM.Game.prototype, {
     tkStore() { const F = this.cgStore(); F.tk = F.tk || { n: 0, earned: 0, spent: 0, stakeGold: 0, payGold: 0, bought: 0, by: {} }; return F.tk; },
     tkAdd(n, why) { if (!(n > 0)) return 0; const T = this.tkStore(); T.n += n; T.earned += n; if (why) T.by[why] = (T.by[why] || 0) + n; return n; },
-    // gold counted toward tokens, the odd part kept for next time
+    // gold counted toward tickets, the odd part kept for next time
     tkFromGold(key, amount, per, why) { const T = this.tkStore(); T[key] = (T[key] || 0) + amount; const n = Math.floor(T[key] / per); T[key] -= n * per; return this.tkAdd(n, why); },
     cgStake(game, bet) { const why = stake1.call(this, game, bet); if (!why) this.tkFromGold("stakeGold", Math.floor(bet), PRIZE.perStake, game); return why; },
     cgPay(game, amount) { const n = pay1.call(this, game, amount); if (n > 0 && !(this.cgStore().wagered || {})[game]) this.tkFromGold("payGold", n, PRIZE.perPay, game); return n; },
     cgRecord(table, score, level) { const F = this.cgStore(), before = F.records || 0, r = rec1.call(this, table, score, level); if (r > 0) this.tkAdd((F.records || 0) > before ? PRIZE.record : PRIZE.board, table); return r; },
     casinoDeal(deck, wager) { const r = deal1.call(this, deck, wager); if (!r && wager > 0) this.tkFromGold("stakeGold", Math.floor(wager), PRIZE.perStake, "claudeatro"); return r; },
     casinoAfterHand(run, res) { const was = run.paidFor, out = after1.call(this, run, res); if (run.paidFor && run.paidFor !== was && run.lastBlind) { this.tkAdd(run.lastBlind.kind === "boss" ? PRIZE.boss : PRIZE.blind, "claudeatro"); } return out; },
-    // a prize bought: the tokens taken, the prize made real
+    // a prize bought: the tickets taken, the prize made real
     tkBuy(id) {
       const row = PRIZE.LIST.find((r) => r[0] === id); if (!row) return { error: "No such prize." }; const T = this.tkStore(), cost = row[3];
-      if (T.n < cost) return { error: `That takes ${cost} tokens; you have ${T.n}.` };
+      if (T.n < cost) return { error: `That takes ${cost} tickets; you have ${T.n}.` };
       T.n -= cost; T.spent += cost; T.bought += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:prize:${T.bought}`)), depth = Math.max(3, this.cwDeepest ? this.cwDeepest() : 3), out = { name: row[2] };
       if (id === "pouch" || id === "purse" || id === "chest") { out.gold = { pouch: 10, purse: 50, chest: 250 }[id]; this.gold += out.gold; }
       else if (id === "card1" || id === "card2" || id === "card3") out.card = this.cgTierCard({ card1: "common", card2: "better", card3: "rare" }[id], "Bought at the Gilded Joker's prize counter.", R);
