@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v17.6 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v17.7 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1325,6 +1325,11 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .chroom h4 { margin: 12px 0 6px; color: #F0D070; } .chgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .chcard { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 10px; background: linear-gradient(#1A1018, #0E080E); border: 1px solid rgba(255,255,255,0.12); opacity: 0.75; } .chcard.own { opacity: 1; border-color: #C89A30; } .chcard.on { border: 2px solid #FFE070; box-shadow: 0 0 14px rgba(255,224,112,0.4); }
 .chcard .chicon { font-size: 30px; } .chcard b { color: #FFE8A0; font-family: Georgia, serif; } .chcard p { margin: 0; font-size: 13px; } .chcard i { color: #D0B0FF; } .chlock { font-size: 18px; opacity: 0.6; }
+/* ---- v17.7: into the Joker - the street door's choice ---- */
+.jfdoor h3 { margin: 0 0 6px; color: #FFE070; } .jfchoice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 10px 0; }
+.jfcard { display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; text-align: left; background: linear-gradient(#2A1A10, #160E08); border: 2px solid #C89A30; color: inherit; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+.jfcard:hover, .jfcard:focus-visible { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.6), 0 0 0 2px #FFE070; } .jfcard canvas { width: 100%; height: auto; border-radius: 8px; } .jfcard b { font: bold 20px Georgia, serif; color: #FFE070; } .jfcard span { font-size: 13px; opacity: 0.9; }
+@media (max-width: 700px) { .jfchoice { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
@@ -1334,7 +1339,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "17.6", built: "2026-11-01" };
+const CM = window.CM = { version: "17.7", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -10353,6 +10358,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
+    else if (CM.isJokerFloor && CM.isJokerFloor(number)) { /* (the Joker's floor says its own: 64zzv-jokerfloor.js) */ }
     else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : number === -1 ? `${CM.WOOD_THEME.name}: ${CM.hourWord(CM.hourOf(this))} under the trees.` : CM.isUndercroft(number) ? `${CM.UNDERCROFT_NAMES[-number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-number - 2].slice(1)}: standing water, and old streets under the hill.` : number < 0 ? "A cave under the Wood: roots in the roof, and the first bands' kinds in the dark." : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
@@ -10540,6 +10546,7 @@ Object.assign(CM.Game.prototype, {
           remains: "Bones in torn gear, four of them, and a name you know from the Hall of Fame. (Space to see what they left)",
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
+          cgtable: thing.type === "cgtable" ? CM.jokerDescribe(thing) : "", cgservice: thing.type === "cgservice" ? CM.jokerDescribe(thing) : "", cgresident: thing.type === "cgresident" ? CM.jokerDescribe(thing) : "", jokerexit: thing.type === "jokerexit" ? CM.jokerDescribe(thing) : "",   // (the Joker's floor)
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
@@ -10658,6 +10665,7 @@ Object.assign(CM.Game.prototype, {
   // ---- light ----
   burn() {
     if (this.floor && this.floor.number === 0) return;                   // (daylight: nothing burns in the town)
+    if (this.floor && this.floor.special === "joker") return;            // (the Joker's lamps: nothing burns in the casino)
     if (this.floor && this.floor.number === -1 && !CM.isNight(this)) return;   // (nor in the Wood by day)
     if (this.spellLight > 0) {
       this.spellLight -= 1;
@@ -10795,6 +10803,10 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "burner") { this.burner(); return; }
     if (thing && thing.type === "farm") { this.farmDawns(); this.emit("farm", {}); this.say(this.villageLevel("farm") >= 1 ? `The farm: ${this.farm().rows.filter(Boolean).length} of ${this.farmRows()} rows planted, ${CM.season(this)}.` : "A fallow field in the first glade, waiting for the town's renown."); return; }
     if (thing && thing.type === "shrine") { this.emit("talk", { title: "The ruined shrine", text: CM.WOOD_LINES.shrine }); this.say(CM.WOOD_LINES.shrine); if (!thing.read) { thing.read = true; this.remember("carving", CM.WOOD_LINES.shrine, { key: "wood.shrine" }); this.saveRun(); } return; }
+    if (thing && thing.type === "cgtable") { this.emit("building", `cg:${thing.id}`); return; }   // (the Joker's floor: 64zzv-jokerfloor.js)
+    if (thing && thing.type === "cgservice") { this.emit("building", `cgview:${thing.view}`); return; }
+    if (thing && thing.type === "cgresident") { this.jfTalk(thing); return; }
+    if (thing && thing.type === "jokerexit") { this.jfLeave(); return; }
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "signpost") { this.say(`The signpost reads: ${thing.text}`); return; }
     if (thing && thing.type === "cross") { this.say("Cut into the cross's steps, worn almost smooth: HERE THE MARKET, BY THE KING'S LEAVE. Someone has scratched out the last three words and someone else has cut them again."); return; }
@@ -24637,6 +24649,73 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   });
 }
 
+// ---- 64zzv-jokerfloor.js ----
+"use strict";
+// Into the Joker (v17.7): the Gilded Joker as a place to walk - floor -9 in the save, "the Gilded Joker" in words, made
+// the same for every seed. A foyer from the street door (the way back out), and the great hall: the house's services
+// along the north wall (the prize counter, the tournament's easel, the quest board, the VIP door, the exchange, the
+// high-roller's table, the house's books, the wardrobe, the collections, the almanac, the charm case, the ledger, the
+// Joker's standing, the week's board, the Hall of Champions, the loyalty desk, the trophy cabinet), and every table on
+// the floor in rows - the fairground to the west, the card tables and the wheels in the middle, the cabinets of the
+// arcade wing to the east - with the six residents standing about at their favourites. Walk onto a table and press
+// Space to sit down at it (the window opens at that table); onto a resident to hear what they say; onto the door to go
+// back out into the town. The window's side - the door's choice, the pictures - is 76zzza-walk.js.
+{ const JF = CM.JOKER_FLOOR = -9;
+  CM.isJokerFloor = (n) => n === JF;
+  CM.JOKER_THEME = Object.assign({}, CM.THEMES[2], {
+    name: "The Gilded Joker", floors: [JF, JF], stone: [112, 34, 46], mortar: [196, 150, 64], floor: [118, 30, 42], ceiling: [36, 20, 28], moss: [200, 160, 60],
+    fog: [0.004, 0.003, 0.003], torch: [1.0, 0.86, 0.62], reach: 14, bones: 0, grade: [1.05, 0.98, 0.93], joker: true, lightColour: [1.0, 0.82, 0.55] });
+  CM.JOKER_CATS = ["fair", "tables", "luck", "prizes", "puzzles", "idle", "arcade"];
+  CM.JOKER_AREAS = { fair: "the fairground yard", tables: "the card tables", luck: "the wheels and the slips", prizes: "the prize machines", puzzles: "the quiet tables", idle: "the workshops", arcade: "the arcade wing" };
+  CM.JOKER_SERVICES = [["prizes", "The prize counter"], ["tour", "Tournament night's easel"], ["quests", "The quest board"], ["vip", "The VIP room's door"], ["exchange", "The ticket exchange"], ["highroller", "The high-roller's table"], ["odds", "The house's books"],
+    ["wardrobe", "The wardrobe"], ["books", "The collection books"], ["almanac", "The Joker's Almanac"], ["charms", "The charm case"], ["history", "Your ledger"], ["standing", "The Joker's standing"], ["week", "The week's board"], ["hall", "The Hall of Champions"], ["loyalty", "The loyalty desk"], ["trophies", "The trophy cabinet"]];
+  CM.JOKER_FAVOURITES = { tavern: "bigwheel", merchant: "plinko", smith: "darts", library: "bingo", priest: "lottery", farm: "pond" };
+  const SIZE = 37, FOYER = [15, 23, 21, 30], START = [18, 26], EXIT = [18, 29];
+  CM.makeJokerFloor = function () {
+    const grid = []; for (let y = 0; y < SIZE; y++) grid.push(new Array(SIZE).fill(1));
+    const carve = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) grid[y][x] = 0; };
+    carve(2, 2, SIZE - 3, 21); carve(...FOYER); carve(17, 21, 19, 23);                      // (the hall, the foyer, the arch between)
+    const things = {}, key = (x, y) => `${x},${y}`, rooms = [{ x0: FOYER[0], y0: FOYER[1], x1: FOYER[2], y1: FOYER[3], name: "the foyer" }];
+    things[key(...EXIT)] = { type: "jokerexit" };
+    CM.JOKER_SERVICES.forEach(([view, name], i) => { things[key(2 + 2 * i, 2)] = { type: "cgservice", view, name }; });
+    // the tables, by kind, filling the hall's columns west to east
+    const order = (CM.CG_TABLES || []).slice().sort((a, b) => CM.JOKER_CATS.indexOf((CM.CG_INFO[a[0]] || { cat: "tables" }).cat) - CM.JOKER_CATS.indexOf((CM.CG_INFO[b[0]] || { cat: "tables" }).cat));
+    const spots = []; for (let x = 4; x <= SIZE - 5; x += 3) for (let y = 5; y <= 20; y += 3) spots.push([x, y]);
+    order.forEach(([id], i) => { const s = spots[i] || [FOYER[0] + (i % 2 ? 6 : 0), FOYER[1] + 1 + Math.floor((i - spots.length) / 2) * 2]; things[key(...s)] = { type: "cgtable", id }; });
+    for (const [who, fav] of Object.entries(CM.JOKER_FAVOURITES)) { const at = Object.keys(things).find((k) => things[k].type === "cgtable" && things[k].id === fav); if (!at) continue; const [x, y] = at.split(",").map(Number);
+      const c = [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].find(([a, b]) => grid[b] && grid[b][a] === 0 && !things[key(a, b)]); if (c) things[key(...c)] = { type: "cgresident", who }; }
+    const seen = []; for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) seen.push([x, y]);   // (lit: the whole hall is on the map)
+    return { number: JF, grid, things, features: {}, dark: [], seen, decor: [], rooms, special: "joker", pos: START.slice(), facing: 0, start: START.slice() };
+  };
+  // the floor's own: its theme, its making
+  { const tf0 = CM.themeFor; CM.themeFor = (n) => (n === JF ? CM.JOKER_THEME : tf0(n)); const mf0 = CM.makeFloor; CM.makeFloor = (n, seed, gen) => (n === JF ? CM.makeJokerFloor(seed) : mf0(n, seed, gen)); }
+  // where the party stands, in words: the area by the nearest table, and the table it's at
+  CM.jokerPlace = (fl, x, y) => { const t = fl.things[`${x},${y}`];
+    if (t && t.type === "cgtable") return `at ${((CM.CG_TABLES || []).find(([k]) => k === t.id) || [])[1] || t.id}`; if (t && t.type === "cgservice") return `at ${t.name.replace(/^The /, "the ")}`; if (t && t.type === "jokerexit") return "the street door";
+    const r = (fl.rooms || []).find((q) => x >= q.x0 && x <= q.x1 && y >= q.y0 && y <= q.y1); if (r) return r.name; if (y <= 3) return "the north wall";
+    let best = null, bd = 1e9; for (const [k, q] of Object.entries(fl.things)) { if (q.type !== "cgtable") continue; const [a, b] = k.split(",").map(Number), d = Math.abs(a - x) + Math.abs(b - y); if (d < bd) { bd = d; best = q; } }
+    return best ? CM.JOKER_AREAS[(CM.CG_INFO[best.id] || { cat: "tables" }).cat] || "the floor" : "the floor"; };
+  { const po0 = CM.placeOf; CM.placeOf = (fl, x, y) => (fl && fl.number === JF ? CM.jokerPlace(fl, x, y) : po0(fl, x, y)); }
+  // what's underfoot, said when the party steps onto it
+  CM.jokerDescribe = (t) => { if (t.type === "cgtable") { const nm = ((CM.CG_TABLES || []).find(([k]) => k === t.id) || [])[1] || t.id; return `${nm}: ${(CM.CG_INFO[t.id] || {}).line || ""} (Space to sit down)`; }
+    if (t.type === "cgservice") return `${t.name}. (Space)`; if (t.type === "jokerexit") return "The street door, and the town beyond. (Space to go out)";
+    if (t.type === "cgresident") { const R = CM.HE && CM.HE.RES[t.who]; return R ? `${R.name.charAt(0).toUpperCase() + R.name.slice(1)} is here, by ${(((CM.CG_TABLES || []).find(([k]) => k === CM.JOKER_FAVOURITES[t.who]) || [])[1]) || "the tables"}. (Space to talk)` : ""; } return ""; };
+  CM.JOKER_TALK = { tavern: ["\"The wheel's my table. Number one, every time - it comes up more than you'd think.\"", "\"Pull up a stool, love. The Joker's kind tonight.\""], merchant: ["\"The Drop Board's middle risk is the honest one. Read the books on the wall if you don't believe me.\"", "\"Never stake what you can't count.\""],
+    smith: ["\"Darts. Steady hand. That's all it is.\"", "\"Treble twenty. Again. Again.\""], library: ["\"Bingo is mostly patience. I have a great deal of patience.\"", "\"The house's odds are posted on the north wall. Fewer people read them than you'd hope.\""],
+    priest: ["\"Six numbers. I pray for none of them; it seems only fair.\"", "\"Fortune is a poor god to pray to, but a fine one to watch.\""], farm: ["\"I've seen the golden carp! Well. I've seen its shadow.\"", "\"The eels come up after dark. Bring worms.\""] };
+  const P = CM.Game.prototype;
+  Object.assign(P, {
+    // in through the street door, from the town
+    jfEnter() { if (!this.floor || this.floor.number !== 0) return "The Joker's doors are in town."; this.logAct && this.logAct("jokerEnter"); this.sound && this.sound("door"); this.enterFloor(JF, "rope", START.slice()); this.floor.facing = 0;
+      this.say("Through the street door, out of the night and into the Gilded Joker: warm light, red carpet, the clatter of the reels and the murmur of the crowd. The tables go back further than seems possible."); this.emit("floor", this.floor); this.emit("change"); return ""; },
+    // back out to the street outside the door
+    jfLeave() { const town = this.floorAt(0), door = Object.keys(town.things).find((k) => town.things[k].type === "building" && town.things[k].id === "casino"), [dx, dy] = (door || "27,14").split(",").map(Number);
+      const out = CM.DIRS.map(([a, b]) => [dx + a, dy + b]).find(([x, y]) => town.grid[y] && town.grid[y][x] === 0 && !town.things[`${x},${y}`]) || [dx, dy + 1];
+      this.sound && this.sound("door"); this.enterFloor(0, "rope", out); this.floor.facing = 2; this.say("Out through the street door, into the town again."); this.emit("floor", this.floor); this.emit("change"); },
+    jfTalk(t) { const R = CM.HE && CM.HE.RES[t.who], L = CM.JOKER_TALK[t.who]; if (!R || !L) return; const line = L[(this.tally.steps || 0) % L.length]; this.say(`${R.name.charAt(0).toUpperCase() + R.name.slice(1)}: ${line}`); this.emit("talk", { title: R.name.charAt(0).toUpperCase() + R.name.slice(1), text: line }); },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -26393,7 +26472,7 @@ CM.UI = class {
     game.on("riddle", (k) => this.askRiddle(k));
     game.on("choice", (c) => this.askChoice(c));
     this.$("#view .sky").addEventListener("click", () => { if (game.mode !== "title") this.openCalendar(); });
-    game.on("building", (id) => { if (id === "casino") this.openCasino(); else if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
+    game.on("building", (id) => { if (id === "casino") { if (this.cgDoor) this.cgDoor(); else this.openCasino(); } else if (String(id).startsWith("cg:")) { this.cgOpenTo = id.slice(3); this.openCasino(); } else if (String(id).startsWith("cgview:")) { this.cgOpenTo = id.slice(7); this.openCasino(); } else if (id === "home" && game.homeLevel() >= 1) this.openHome(); else if (id === "tavern") this.openTavern(); else if (id === "merchant") game.openBag(true); else if (id === "smith") this.openSmith(); else if (id === "library" && game.villageLevel("library") >= 1) this.openLibrary(); else if (id === "temple" && game.villageLevel("shrine") >= 1) this.openTemple(); else if (id === "guildhall" && game.villageLevel("guildhall") >= 1) this.openGuild(); else if (id === "garden" && game.villageLevel("garden") >= 1) this.openGarden(); else if (id === "chronicler" && game.villageLevel("chronicler") >= 1) this.openChronicler(); else this.openBuilding(id); });
     this.$("#btn-library-build").addEventListener("click", () => { this.$("#library-note").textContent = game.build("library") || "The library rises a level."; this.openLibrary(true); });
     this.$("#btn-sign-ok").addEventListener("click", () => { game.craftNameSign(this.ccSignKey, this.$("#sign-name").value); this.closeDialogs(); });
     this.$("#sign-name").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); game.craftNameSign(this.ccSignKey, this.$("#sign-name").value); this.closeDialogs(); } e.stopPropagation(); });
@@ -27581,8 +27660,8 @@ Object.assign(CM.UI.prototype, {
     const fl = g.floor;
     if (fl) {
       this.drawSky();
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 || fl.special === "joker" ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "joker" ? `The Gilded Joker - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -34803,6 +34882,8 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
     src.connect(bp); bp.connect(g); g.connect(A.master || ctx.destination); src.start(); AMB.src = src; AMB.gain = g; };
   const ambLevel = (k) => { if (AMB.gain && A.ctx) AMB.gain.gain.setTargetAtTime(A.enabled === false ? 0 : k, A.ctx.currentTime, 0.6); };
   const ambStop = () => { clearTimeout(AMB.timer); AMB.timer = null; if (AMB.src && A.ctx) { const s = AMB.src, g = AMB.gain; g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.4); setTimeout(() => { try { s.stop(); s.disconnect(); } catch (e) { /* gone */ } }, 2000); } AMB.src = null; AMB.gain = null; };
+  const onJoker = () => { const g = CM.game; return !!(g && g.floor && CM.isJokerFloor && CM.isJokerFloor(g.floor.number)); };
+  CM.CASINO_AIR = (on) => { try { if (on) { if (M.playing !== "casino") M.start("casino"); murmur(); ambLevel(0.14); } else { const d = document.querySelector("#dlg-casino"); if (!d || !d.classList.contains("on")) ambStop(); } } catch (e) { /* quiet */ } };   // (the Joker's floor: its own air, as the window's)
   const BELL = () => { const ctx = A.ctx; if (!ctx || !A.master) return; const at = ctx.currentTime + 0.02; for (const [hz, v] of [[1318, 0.03], [2637, 0.012], [1975, 0.008]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hz; g.gain.setValueAtTime(v, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 1.4); o.connect(g); g.connect(A.master); o.start(at); o.stop(at + 1.5); } };
   const SEASON = { spring: { name: "Blossom nights", c: ["#F4B8D0", "#3A5A3A"] }, summer: { name: "Midsummer revels", c: ["#FFD870", "#1A3A5A"] }, autumn: { name: "The Harvest Fair", c: ["#E08030", "#5A2A10"] }, winter: { name: "Midwinter at the Joker", c: ["#E8F4FF", "#1A2A4A"] } };
   const seasonOf = (g) => (CM.season ? CM.season(g) : "autumn");
@@ -34833,7 +34914,7 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
   Object.assign(CM.UI.prototype, {
     openCasino() { const out = open10.call(this); try { if (M.playing !== "casino") { this.cgPrevTune = M.playing; M.start("casino"); } murmur(); ambLevel(0.16); this.cgAmbience(); } catch (e) { /* quiet */ } this.cgSeasonDress(); return out; },
     closeDialogs() { const dlg = this.$("#dlg-casino"), was = dlg && dlg.classList.contains("on"), out = close10.call(this);
-      if (was && !dlg.classList.contains("on")) { ambStop(); if (M.playing === "casino") { if (this.cgPrevTune) M.start(this.cgPrevTune); else M.stop(); } this.cgPrevTune = null; const d = dlg.querySelector(".cgdrift"); if (d) d.remove(); } return out; },
+      if (was && !dlg.classList.contains("on")) { const d = dlg.querySelector(".cgdrift"); if (d) d.remove(); if (onJoker()) { ambLevel(0.14); return out; } ambStop(); if (M.playing === "casino") { if (this.cgPrevTune) M.start(this.cgPrevTune); else M.stop(); } this.cgPrevTune = null; } return out; },   // (back onto the Joker's floor: the music and the murmur go on)
     renderCasino() { const out = r10.call(this); ambLevel(this.cgView === "gallery" ? 0.16 : 0.07); return out; },
     // now and then: a bell from the reels, coins, chips, a cheer
     cgAmbience() { clearTimeout(AMB.timer); const go = () => { const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) { AMB.timer = null; return; } const k = this.cgView === "gallery" ? 1 : 0.4, r = Math.random();
@@ -35296,6 +35377,85 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   });
 }
 
+// ---- 76zzza-walk.js ----
+"use strict";
+// Into the Joker, the window's side: the street door asks how the party would come in - "Enter the Joker" (walk the
+// floor: the window closes and the party steps into the hall) or "See the games" (the gallery, as it was) - and the
+// floor's furniture is drawn for the renderer: the reels' cabinets, the round card tables, the wheels on their
+// stands, the arcade cabinets with their screens lit, the fairground's striped booths, the pond's tub, and the
+// house's counters along the north wall; and the six residents as figures in their own colours. The rules are
+// 64zzv-jokerfloor.js; the sprites go to 80-main.js through CM.jfLayer.
+{ const S = 256, cv = () => { const c = document.createElement("canvas"); c.width = S; c.height = S; return c; };
+  const shade = (p, x, y, w) => { p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(x, y, w, w * 0.16, 0, 0, Math.PI * 2); p.fill(); };
+  const gold = (p, y0, y1) => { const g = p.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, "#FFE8A0"); g.addColorStop(0.5, "#D8A830"); g.addColorStop(1, "#8A5A10"); return g; };
+  const PAINT = {
+    slot: (p) => { shade(p, 128, 246, 70); p.fillStyle = "#5A0E18"; p.fillRect(64, 70, 128, 172); p.fillStyle = gold(p, 40, 80); p.beginPath(); p.roundRect(56, 34, 144, 44, 10); p.fill(); p.fillStyle = "#3A0810"; p.fillRect(66, 44, 124, 24);
+      for (let k = 0; k < 12; k++) { p.fillStyle = k % 2 ? "#FFF6A0" : "#FFC040"; p.beginPath(); p.arc(68 + k * 11, 39, 3, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#FFE070"; p.font = "bold 15px Georgia"; p.textAlign = "center"; p.fillText("JOKER", 128, 62);
+      p.fillStyle = gold(p, 86, 150); p.fillRect(72, 86, 112, 66); for (let i = 0; i < 3; i++) { p.fillStyle = "#FBF6E8"; p.fillRect(78 + i * 35, 92, 30, 54); p.fillStyle = ["#C02020", "#E0A020", "#C02020"][i]; p.font = "bold 28px Georgia"; p.fillText(["7", "★", "7"][i], 93 + i * 35, 129); }
+      p.strokeStyle = "#E03030"; p.lineWidth = 2; p.beginPath(); p.moveTo(74, 119); p.lineTo(182, 119); p.stroke(); p.fillStyle = "#8A1A28"; p.fillRect(72, 160, 112, 40); p.fillStyle = "#2A0408"; p.fillRect(92, 208, 72, 14); p.fillStyle = gold(p, 200, 240); p.fillRect(64, 232, 128, 10);
+      p.strokeStyle = "#C8C8D0"; p.lineWidth = 5; p.beginPath(); p.moveTo(194, 130); p.lineTo(214, 90); p.stroke(); p.fillStyle = "#E02030"; p.beginPath(); p.arc(214, 86, 10, 0, Math.PI * 2); p.fill(); p.textAlign = "left"; },
+    table: (p) => { shade(p, 128, 246, 104); p.fillStyle = "#3A2210"; p.fillRect(90, 170, 14, 72); p.fillRect(152, 170, 14, 72); p.fillStyle = gold(p, 120, 180); p.beginPath(); p.ellipse(128, 160, 112, 46, 0, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#1E6A3A"; p.beginPath(); p.ellipse(128, 156, 100, 38, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(240,220,150,0.5)"; p.beginPath(); p.ellipse(128, 156, 76, 26, 0, 0, Math.PI * 2); p.stroke();
+      for (const [x, r] of [[100, -0.2], [124, 0], [148, 0.2]]) { p.save(); p.translate(x, 150); p.rotate(r); p.fillStyle = "#FBF8F0"; p.fillRect(-10, -14, 20, 28); p.fillStyle = r ? "#1A1A22" : "#C02028"; p.font = "bold 13px Georgia"; p.fillText(r ? "K" : "A", -5, 4); p.restore(); }
+      for (let k = 0; k < 4; k++) { p.fillStyle = ["#C02828", "#1E3A9A", "#E0B040", "#1A1A1A"][k]; p.beginPath(); p.ellipse(70 + k * 8, 166 - k * 3, 11, 4, 0, 0, Math.PI * 2); p.fill(); }
+      p.strokeStyle = "#5A4A30"; p.lineWidth = 2; p.beginPath(); p.moveTo(128, 0); p.lineTo(128, 50); p.stroke(); p.fillStyle = "#2A4A2A"; p.beginPath(); p.moveTo(98, 76); p.lineTo(158, 76); p.lineTo(146, 50); p.lineTo(110, 50); p.fill(); p.fillStyle = "rgba(255,240,180,0.25)"; p.beginPath(); p.moveTo(98, 76); p.lineTo(158, 76); p.lineTo(220, 156); p.lineTo(36, 156); p.fill(); },
+    wheel: (p) => { shade(p, 128, 246, 64); p.fillStyle = "#5A3A1A"; p.beginPath(); p.moveTo(100, 244); p.lineTo(120, 150); p.lineTo(136, 150); p.lineTo(156, 244); p.fill(); const cx = 128, cy = 102, R = 84, C = ["#E05050", "#F0A030", "#F0D040", "#60C060", "#40A0E0", "#8060D0", "#E060B0", "#40C0B0"];
+      p.fillStyle = gold(p, 10, 190); p.beginPath(); p.arc(cx, cy, R + 10, 0, Math.PI * 2); p.fill(); for (let i = 0; i < 16; i++) { p.fillStyle = C[i % 8]; p.beginPath(); p.moveTo(cx, cy); p.arc(cx, cy, R, (i * Math.PI) / 8, ((i + 1) * Math.PI) / 8); p.fill(); }
+      for (let k = 0; k < 16; k++) { const a = (k * Math.PI) / 8; p.fillStyle = "#FFF6C0"; p.beginPath(); p.arc(cx + Math.cos(a) * (R + 5), cy + Math.sin(a) * (R + 5), 3, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#F0C040"; p.beginPath(); p.arc(cx, cy, 16, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#C02030"; p.beginPath(); p.moveTo(cx - 10, 0); p.lineTo(cx + 10, 0); p.lineTo(cx, 26); p.fill(); },
+    arcade: (p) => { shade(p, 128, 246, 66); p.fillStyle = "#1A1430"; p.beginPath(); p.moveTo(72, 242); p.lineTo(72, 40); p.lineTo(184, 40); p.lineTo(184, 242); p.fill(); p.fillStyle = "#2A2050"; p.fillRect(80, 48, 96, 30); p.fillStyle = "#FF60C0"; p.font = "bold 16px Georgia"; p.textAlign = "center"; p.fillText("ARCADE", 128, 69); p.textAlign = "left";
+      p.fillStyle = "#06061A"; p.fillRect(82, 86, 92, 76); const g = p.createRadialGradient(128, 124, 4, 128, 124, 60); g.addColorStop(0, "rgba(120,220,255,0.6)"); g.addColorStop(1, "rgba(60,80,200,0.1)"); p.fillStyle = g; p.fillRect(82, 86, 92, 76);
+      for (let k = 0; k < 6; k++) { p.fillStyle = ["#F06080", "#60D0F0", "#A0E060"][k % 3]; p.fillRect(92 + k * 13, 100 + (k % 2) * 8, 8, 6); } p.fillStyle = "#FFE070"; p.fillRect(124, 146, 8, 8);
+      p.fillStyle = "#3A2A60"; p.beginPath(); p.moveTo(72, 168); p.lineTo(184, 168); p.lineTo(196, 190); p.lineTo(60, 190); p.fill(); p.fillStyle = "#E02030"; p.beginPath(); p.arc(100, 178, 6, 0, Math.PI * 2); p.fill(); p.fillStyle = "#30A0F0"; p.beginPath(); p.arc(150, 178, 6, 0, Math.PI * 2); p.fill(); p.arc(166, 178, 6, 0, Math.PI * 2); p.fill();
+      p.fillStyle = "#6040A0"; p.fillRect(72, 40, 6, 202); p.fillRect(178, 40, 6, 202); },
+    booth: (p) => { shade(p, 128, 246, 104); p.fillStyle = "#6A4A28"; p.fillRect(40, 60, 10, 182); p.fillRect(206, 60, 10, 182); for (let k = 0; k < 8; k++) { p.fillStyle = k % 2 ? "#F0E8D8" : "#C03040"; p.beginPath(); p.moveTo(34 + k * 24, 46); p.lineTo(58 + k * 24, 46); p.lineTo(58 + k * 24, 74); p.quadraticCurveTo(46 + k * 24, 86, 34 + k * 24, 74); p.fill(); }
+      p.fillStyle = "#C89A30"; p.fillRect(34, 36, 188, 12); p.fillStyle = "#3A2410"; p.fillRect(46, 92, 164, 80); for (let r = 0; r < 2; r++) for (let k = 0; k < 6; k++) { p.fillStyle = ["#3A9A50", "#3A70C0", "#D0A020", "#C02830"][(k + r) % 4]; p.fillRect(62 + k * 24, 120 + r * 26, 9, 22); p.fillRect(64 + k * 24, 112 + r * 26, 5, 9); }
+      p.fillStyle = "#8A5A30"; p.fillRect(40, 176, 176, 20); p.fillStyle = "#6A4A28"; p.fillRect(48, 196, 160, 46); },
+    counter: (p, label) => { shade(p, 128, 246, 110); p.fillStyle = "#4A2A14"; p.fillRect(22, 130, 212, 112); p.fillStyle = "#6A3E1E"; for (let k = 0; k < 5; k++) p.fillRect(30 + k * 42, 150, 34, 82); p.fillStyle = gold(p, 120, 136); p.fillRect(16, 120, 224, 14);
+      p.fillStyle = "#1E140C"; p.fillRect(40, 14, 176, 70); p.strokeStyle = "#C89A30"; p.lineWidth = 4; p.strokeRect(40, 14, 176, 70); p.fillStyle = "#FFE070"; p.textAlign = "center"; const words = String(label || "The house").replace(/^The /, "").toUpperCase().split(" "), mid = Math.ceil(words.length / 2), l1 = words.slice(0, mid).join(" "), l2 = words.slice(mid).join(" "); let fs = l2 ? 17 : 20; p.font = `bold ${fs}px Georgia`; while (fs > 9 && Math.max(p.measureText(l1).width, p.measureText(l2).width) > 164) { fs -= 1; p.font = `bold ${fs}px Georgia`; } p.fillText(l1, 128, l2 ? 42 : 54); if (l2) p.fillText(l2, 128, 66); p.textAlign = "left";
+      p.strokeStyle = "#5A3A1A"; p.lineWidth = 3; p.beginPath(); p.moveTo(60, 84); p.lineTo(60, 120); p.moveTo(196, 84); p.lineTo(196, 120); p.stroke(); p.fillStyle = gold(p, 100, 120); p.beginPath(); p.arc(180, 116, 9, Math.PI, 0); p.fill(); },
+    pond: (p) => { shade(p, 128, 246, 104); p.fillStyle = "#6A4A28"; p.beginPath(); p.ellipse(128, 196, 104, 44, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2A5A6A"; p.beginPath(); p.ellipse(128, 190, 92, 36, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(255,255,255,0.35)"; for (let k = 0; k < 3; k++) { p.beginPath(); p.ellipse(150, 192, 10 + k * 10, 4 + k * 3, 0, 0, Math.PI * 2); p.stroke(); }
+      p.fillStyle = "#3A7A30"; p.beginPath(); p.arc(90, 186, 14, 0.3, Math.PI * 2); p.lineTo(90, 186); p.fill(); p.strokeStyle = "#5A3A1A"; p.lineWidth = 4; p.beginPath(); p.moveTo(40, 240); p.quadraticCurveTo(80, 60, 170, 40); p.stroke(); p.lineWidth = 1; p.strokeStyle = "rgba(255,255,255,0.7)"; p.beginPath(); p.moveTo(170, 40); p.lineTo(150, 188); p.stroke(); p.fillStyle = "#E02020"; p.fillRect(147, 182, 6, 8); },
+  };
+  const KIND = { slots: "slot", pachinko: "slot", scratch: "slot", cascade: "slot", claw: "slot", plinko: "slot", roulette: "wheel", bigwheel: "wheel", prizewheel: "wheel", lottery: "wheel", pond: "pond" };
+  CM.jfLayer = (t) => { if (t.type === "cgservice") return `jf:svc:${t.view}`; const k = KIND[t.id]; if (k) return `jf:${k}`; const cat = (CM.CG_INFO[t.id] || {}).cat; return cat === "arcade" ? "jf:arcade" : cat === "fair" ? "jf:booth" : "jf:table"; };
+  // the residents, as figures in their own colours
+  if (CM.HE) for (const [id, R] of Object.entries(CM.HE.RES)) CM.art.PEOPLE[`res_${id}`] = { name: R.name, colour: R.col, body: "biped", head: "round", eyes: "#F0E8D0", extras: [], calm: true };
+  { const bd0 = CM.art.buildDrawn; CM.art.buildDrawn = function (theme) { const out = bd0.call(this, theme); for (const [k, f] of Object.entries(PAINT)) { const c = cv(); f(c.getContext("2d")); out.index[`jf:${k}`] = out.layers.length; out.layers.push(c); }
+      for (const [view, name] of CM.JOKER_SERVICES || []) { const c = cv(); PAINT.counter(c.getContext("2d"), name); out.index[`jf:svc:${view}`] = out.layers.length; out.layers.push(c); } return out; }; }
+  // the hall's own surfaces, whatever the look: red carpet with a gold figure, damask panels with gilt rails, a coffered ceiling
+  const SURF = {
+    floor: (p) => { p.fillStyle = "#7A1626"; p.fillRect(0, 0, S, S); p.strokeStyle = "rgba(230,180,80,0.55)"; p.lineWidth = 3; for (const [cx, cy] of [[0, 0], [S, 0], [0, S], [S, S], [S / 2, S / 2]]) { p.beginPath(); p.moveTo(cx, cy - 46); p.lineTo(cx + 46, cy); p.lineTo(cx, cy + 46); p.lineTo(cx - 46, cy); p.closePath(); p.stroke(); }
+      p.fillStyle = "rgba(240,190,90,0.6)"; for (const [cx, cy] of [[S / 2, S / 2], [0, 0], [S, 0], [0, S], [S, S]]) { p.beginPath(); p.arc(cx, cy, 7, 0, Math.PI * 2); p.fill(); } p.fillStyle = "rgba(40,0,10,0.35)"; for (const [cx, cy] of [[S / 2, 0], [0, S / 2], [S, S / 2], [S / 2, S]]) { p.beginPath(); p.arc(cx, cy, 30, 0, Math.PI * 2); p.fill(); }
+      const R = new CM.Random(7); for (let k = 0; k < 2200; k++) { p.fillStyle = `rgba(${R.chance(0.5) ? "0,0,0" : "255,200,200"},0.05)`; p.fillRect(R.next() * S, R.next() * S, 2, 2); } },
+    wall: (p) => { p.fillStyle = "#4A0E1A"; p.fillRect(0, 0, S, S); for (let y = 0; y < S; y += 32) for (let x = (y / 32) % 2 ? 16 : 0; x < S; x += 32) { p.fillStyle = "rgba(200,120,80,0.12)"; p.beginPath(); p.ellipse(x + 8, y + 16, 7, 12, 0, 0, Math.PI * 2); p.fill(); }
+      p.fillStyle = "#3A2210"; p.fillRect(0, S - 70, S, 70); p.fillStyle = "#5A3418"; for (let x = 6; x < S; x += 64) p.fillRect(x, S - 62, 52, 54); const g = (y, h) => { const q = p.createLinearGradient(0, y, 0, y + h); q.addColorStop(0, "#FFE8A0"); q.addColorStop(0.5, "#C8961E"); q.addColorStop(1, "#7A5208"); p.fillStyle = q; p.fillRect(0, y, S, h); };
+      g(S - 78, 10); g(10, 8); p.strokeStyle = "rgba(240,190,80,0.5)"; p.lineWidth = 3; p.strokeRect(24, 30, S - 48, S - 124); },
+    ceiling: (p) => { p.fillStyle = "#1E0E14"; p.fillRect(0, 0, S, S); for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { p.fillStyle = "#2E1620"; p.fillRect(x * 128 + 12, y * 128 + 12, 104, 104); p.strokeStyle = "#B08830"; p.lineWidth = 4; p.strokeRect(x * 128 + 12, y * 128 + 12, 104, 104); p.fillStyle = "rgba(255,220,140,0.5)"; p.beginPath(); p.arc(x * 128 + 64, y * 128 + 64, 10, 0, Math.PI * 2); p.fill(); } },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (!theme || !theme.joker) return set; const N = set.size || S;
+      for (const [layer, f] of [["floor", SURF.floor], ["wall", SURF.wall], ["wall2", SURF.wall], ["wallbones", SURF.wall], ["wallsecret", SURF.wall], ["ceiling", SURF.ceiling]]) { const i = set.index[layer]; if (i === undefined) continue; const c = cv(); f(c.getContext("2d"));
+        let out = c; if (N !== S) { out = document.createElement("canvas"); out.width = N; out.height = N; out.getContext("2d").drawImage(c, 0, 0, N, N); } set.layers[i] = out; }
+      return set; }; }
+  // the street door: walk in, or see the games
+  const r20 = CM.UI.prototype.renderCasino;
+  Object.assign(CM.UI.prototype, {
+    cgDoor() { this.cgOpenTo = "door"; this.openCasino(); },
+    renderCasino() { if (this.cgView !== "door") return r20.call(this); const box = this.$("#casino-body"), g = this.game;
+      box.innerHTML = `<div class="jfdoor"><h3>The Gilded Joker</h3><p class="lore">The doorman, in a coat of red and gold, holds the door and bows. "Good evening. Will you walk the floor tonight - or shall I fetch you the list of tables?"</p>
+        <div class="jfchoice"><button class="jfcard" data-jfenter><canvas width="300" height="170" data-jfhall></canvas><b>Enter the Joker</b><span>Walk the floor: the tables, the arcade wing, the fairground yard and the house's counters - and the residents, about.</span></button>
+        <button class="jfcard" data-jfsee><canvas width="300" height="170" data-jfgames></canvas><b>See the games</b><span>The gallery: every table on one page, searched, sorted and starred.</span></button></div>
+        <div class="row"><button data-leave>Back to the street</button></div></div>`;
+      const hall = box.querySelector("[data-jfhall]").getContext("2d"), H = 170, W = 300; { const bg = hall.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#2A1018"); bg.addColorStop(1, "#5A1A24"); hall.fillStyle = bg; hall.fillRect(0, 0, W, H);
+        hall.fillStyle = "#7A1E2A"; hall.beginPath(); hall.moveTo(0, H); hall.lineTo(W, H); hall.lineTo(W / 2 + 40, 70); hall.lineTo(W / 2 - 40, 70); hall.fill(); for (let k = 0; k < 4; k++) { hall.fillStyle = `rgba(255,220,140,${0.5 - k * 0.1})`; hall.beginPath(); hall.arc(60 + k * 60, 30, 10, 0, Math.PI * 2); hall.fill(); }
+        for (const [x, y, s, k] of [[60, 120, 1, "slot"], [240, 120, 1, "arcade"], [110, 92, 0.6, "table"], [190, 92, 0.6, "wheel"]]) { const c = cv(); PAINT[k](c.getContext("2d")); hall.drawImage(c, x - 40 * s, y - 60 * s, 80 * s, 80 * s); } }
+      { const c = box.querySelector("[data-jfgames]"), p = c.getContext("2d"); p.fillStyle = "#1A140E"; p.fillRect(0, 0, W, H); ["slots", "roulette", "pond", "plinko", "darts", "holdem"].forEach((id, i) => { const f = CM.CG_THUMB[id]; if (!f) return; p.save(); p.translate(10 + (i % 3) * 96, 12 + Math.floor(i / 3) * 78); p.scale(0.5, 0.82); f(p, 176, 82); p.restore(); }); }
+      box.querySelector("[data-jfenter]").addEventListener("click", () => { if (!g.floor || g.floor.number !== 0) { this.cgView = "gallery"; this.renderCasino(); return; } this.cgLeaving = true; try { g.cgVisitEnd && g.cgVisitEnd(); this.closeDialogs(); } finally { this.cgLeaving = false; } g.jfEnter(); this.refresh && this.refresh(); });
+      box.querySelector("[data-jfsee]").addEventListener("click", () => { this.cgView = "gallery"; this.caSfx("cardplace", 0.35); this.renderCasino(); });
+      box.querySelector("[data-leave]").addEventListener("click", () => { this.cgLeaving = true; try { g.cgVisitEnd && g.cgVisitEnd(); this.closeDialogs(); } finally { this.cgLeaving = false; } }); },
+  });
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -35420,9 +35580,9 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const uc = CM.isUndercroft(number) || CM.isTowerFloor(number);   // (the Undercroft and the Mage Tower: sets of their own)
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk;   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
@@ -35430,7 +35590,7 @@ window.addEventListener("DOMContentLoaded", () => {
       while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -35479,10 +35639,12 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
   const tuneFor = () => (game.mode === "combat" ? (game.foes.some((m) => CM.unmoved(m) && m.hp > 0) ? "boss" : "battle") : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
-    : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
+    : game.floor && CM.isJokerFloor && CM.isJokerFloor(game.floor.number) ? "casino" : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
   const soundscape = () => {
     const mode = game.mode;
-    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : soundBand(game.floor ? game.floor.number : 1));
+    const joker = game.floor && CM.isJokerFloor && CM.isJokerFloor(game.floor.number);
+    CM.audio.ambience(!joker && (mode === "explore" || mode === "combat" || mode === "camp"), mode === "camp" ? 4 : soundBand(game.floor ? game.floor.number : 1));
+    if (CM.CASINO_AIR) CM.CASINO_AIR(joker);   // (on the Joker's floor: the floor's own murmur, 76zzq-atmos.js)
     CM.music.start(tuneFor());
   };
   game.on("mode", soundscape);
@@ -35838,6 +36000,9 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
+      else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
+      else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });

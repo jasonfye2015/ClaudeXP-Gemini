@@ -41,9 +41,9 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const uc = CM.isUndercroft(number) || CM.isTowerFloor(number);   // (the Undercroft and the Mage Tower: sets of their own)
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk;   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
@@ -51,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
       while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
     }
     renderer.setTextures(artCache[key]);
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -100,10 +100,12 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("spin", (facing) => (game.settings.smooth ? renderer.spinTo(facing) : renderer.turnTo(facing, 0)));
   // ---- what's heard: the depth's ambience and tune, the fight's, the camp's, the title's - and the ending's ----
   const tuneFor = () => (game.mode === "combat" ? (game.foes.some((m) => CM.unmoved(m) && m.hp > 0) ? "boss" : "battle") : game.mode === "camp" ? "camp" : game.mode === "title" ? ui.ending || "title"
-    : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
+    : game.floor && CM.isJokerFloor && CM.isJokerFloor(game.floor.number) ? "casino" : `depth${CM.themeIndex(game.floor ? game.floor.number : 1)}`);
   const soundscape = () => {
     const mode = game.mode;
-    CM.audio.ambience(mode === "explore" || mode === "combat" || mode === "camp", mode === "camp" ? 4 : soundBand(game.floor ? game.floor.number : 1));
+    const joker = game.floor && CM.isJokerFloor && CM.isJokerFloor(game.floor.number);
+    CM.audio.ambience(!joker && (mode === "explore" || mode === "combat" || mode === "camp"), mode === "camp" ? 4 : soundBand(game.floor ? game.floor.number : 1));
+    if (CM.CASINO_AIR) CM.CASINO_AIR(joker);   // (on the Joker's floor: the floor's own murmur, 76zzq-atmos.js)
     CM.music.start(tuneFor());
   };
   game.on("mode", soundscape);
@@ -459,6 +461,9 @@ window.addEventListener("DOMContentLoaded", () => {
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
       else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
+      else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
+      else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });

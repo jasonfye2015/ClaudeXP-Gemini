@@ -27,6 +27,8 @@
     src.connect(bp); bp.connect(g); g.connect(A.master || ctx.destination); src.start(); AMB.src = src; AMB.gain = g; };
   const ambLevel = (k) => { if (AMB.gain && A.ctx) AMB.gain.gain.setTargetAtTime(A.enabled === false ? 0 : k, A.ctx.currentTime, 0.6); };
   const ambStop = () => { clearTimeout(AMB.timer); AMB.timer = null; if (AMB.src && A.ctx) { const s = AMB.src, g = AMB.gain; g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.4); setTimeout(() => { try { s.stop(); s.disconnect(); } catch (e) { /* gone */ } }, 2000); } AMB.src = null; AMB.gain = null; };
+  const onJoker = () => { const g = CM.game; return !!(g && g.floor && CM.isJokerFloor && CM.isJokerFloor(g.floor.number)); };
+  CM.CASINO_AIR = (on) => { try { if (on) { if (M.playing !== "casino") M.start("casino"); murmur(); ambLevel(0.14); } else { const d = document.querySelector("#dlg-casino"); if (!d || !d.classList.contains("on")) ambStop(); } } catch (e) { /* quiet */ } };   // (the Joker's floor: its own air, as the window's)
   const BELL = () => { const ctx = A.ctx; if (!ctx || !A.master) return; const at = ctx.currentTime + 0.02; for (const [hz, v] of [[1318, 0.03], [2637, 0.012], [1975, 0.008]]) { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = hz; g.gain.setValueAtTime(v, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 1.4); o.connect(g); g.connect(A.master); o.start(at); o.stop(at + 1.5); } };
   const SEASON = { spring: { name: "Blossom nights", c: ["#F4B8D0", "#3A5A3A"] }, summer: { name: "Midsummer revels", c: ["#FFD870", "#1A3A5A"] }, autumn: { name: "The Harvest Fair", c: ["#E08030", "#5A2A10"] }, winter: { name: "Midwinter at the Joker", c: ["#E8F4FF", "#1A2A4A"] } };
   const seasonOf = (g) => (CM.season ? CM.season(g) : "autumn");
@@ -57,7 +59,7 @@
   Object.assign(CM.UI.prototype, {
     openCasino() { const out = open10.call(this); try { if (M.playing !== "casino") { this.cgPrevTune = M.playing; M.start("casino"); } murmur(); ambLevel(0.16); this.cgAmbience(); } catch (e) { /* quiet */ } this.cgSeasonDress(); return out; },
     closeDialogs() { const dlg = this.$("#dlg-casino"), was = dlg && dlg.classList.contains("on"), out = close10.call(this);
-      if (was && !dlg.classList.contains("on")) { ambStop(); if (M.playing === "casino") { if (this.cgPrevTune) M.start(this.cgPrevTune); else M.stop(); } this.cgPrevTune = null; const d = dlg.querySelector(".cgdrift"); if (d) d.remove(); } return out; },
+      if (was && !dlg.classList.contains("on")) { const d = dlg.querySelector(".cgdrift"); if (d) d.remove(); if (onJoker()) { ambLevel(0.14); return out; } ambStop(); if (M.playing === "casino") { if (this.cgPrevTune) M.start(this.cgPrevTune); else M.stop(); } this.cgPrevTune = null; } return out; },   // (back onto the Joker's floor: the music and the murmur go on)
     renderCasino() { const out = r10.call(this); ambLevel(this.cgView === "gallery" ? 0.16 : 0.07); return out; },
     // now and then: a bell from the reels, coins, chips, a cheer
     cgAmbience() { clearTimeout(AMB.timer); const go = () => { const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) { AMB.timer = null; return; } const k = this.cgView === "gallery" ? 1 : 0.4, r = Math.random();

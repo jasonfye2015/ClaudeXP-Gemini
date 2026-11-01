@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Into the Joker (the sixty-third big update - v17.7)
+  (src/js/64zzv-jokerfloor.js, 76zzza-walk.js; hooks in 60-game.js, 61-explore.js, 70-ui.js, 73-play.js, 80-main.js)
+  - The street door now asks: "Enter the Joker" or "See the games" (the gallery, as it was).
+  - Entering walks the party into the Gilded Joker as a place - floor -9, the same for every seed, its own set of
+    surfaces (red carpet with a gold figure, damask walls over a gilt rail and panelling, a coffered ceiling), its own
+    music and murmur, and no torch burning. A foyer from the street door, and the great hall: every table on the floor
+    in rows by kind (the fairground to the west, the card tables, wheels and machines, the arcade wing to the east),
+    each drawn as what it is (a reel cabinet, a round card table under its lamp, a wheel on its stand, an arcade
+    cabinet, a striped fairground booth, the pond's tub), and the house's seventeen counters along the north wall, each
+    with its sign. The six residents stand by their favourite tables.
+  - Step onto a table and press Space to sit down (its window opens there); a counter opens its page; a resident has
+    a word; the street door goes back out into the town beside the casino's door.
+
 The Joker's charms (the sixty-second big update - v17.6)
   (src/js/64zzu-charms.js, 76zzz-charms.js; 62-combat.js asks chPhoenix when a hero would fall)
   Eleven charms, kept with the floor's books and worn into the world - one at a time, two from Joker level 20, three
