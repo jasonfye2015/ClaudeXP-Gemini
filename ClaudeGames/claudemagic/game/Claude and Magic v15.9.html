@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1099,6 +1099,10 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .hoopla .paytable tr.won td { background: rgba(240,192,64,0.2); color: #FFE070; }
 .hoopla .skballs { display: flex; gap: 6px; margin: 6px 0; } .hoopla .skballs span.ring { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; }
 .hoopla .sktotal { font-size: 18px; margin-bottom: 6px; } .hoopla .sktotal b { color: #FFE070; }
+/* ---- v15.9: Gryphon Joust, the Courier's Round, the Undercroft Sprint, the Rune Bastion, the Vault Runes ---- */
+.vault .vrlevels { flex-wrap: wrap; gap: 4px; } .vault .vrlevels button { min-width: 44px; } .vault .vrlevels button.done { border-color: #C89A30; }
+.vault .vrwrap { display: flex; justify-content: center; margin: 6px 0; } .vault .vrcanvas { border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.7); cursor: pointer; }
+.bastion .arccanvas { cursor: crosshair; }
 </style>
 </head>
 <body>
@@ -1108,7 +1112,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.8", built: "2026-10-31" };
+const CM = window.CM = { version: "15.9", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -23373,6 +23377,156 @@ CM.LUCK = {
   CM.ARC.add("range", { name: "The Crossbow Range", Level: CB.Level, marks: [2, 3, 5] });
 }
 
+// ---- 64zzf-arc2.js ----
+"use strict";
+// Four more arcade cabinets on the common works (v15.9), and a free puzzle:
+// - Gryphon Joust (CM.GJ): a rider on a gryphon over a lava pit - flap (Space) and steer; meeting a rival knight, the
+//   higher lance wins; a fallen knight leaves an egg to catch before it hatches. A wave cleared clears the level.
+// - The Courier's Round (CM.CO): a courier rides up the market street throwing scrolls into the letter-boxes of the lit
+//   houses; dogs, carts and puddles to dodge; deliver enough of the round to clear the street.
+// - The Undercroft Sprint (CM.US): an endless run down the old tunnels - jump the pits and spikes, slide under the beams,
+//   duck the bats, gather the coins; each stretch reached clears a level, and the run grows quicker.
+// - The Rune Bastion (CM.RBT): tower defence - goblins march the winding road toward the gate; set fire, frost and
+//   arcane runes beside it with the mana their deaths bring; each wave held clears a level. Leaks cost the gate's hearts.
+// - The Vault Runes (CM.VR): a rune-lock - a grid of runes where touching one turns it and its neighbours; light them all
+//   to open the vault. Free; each vault opened the first time pays gold and, every third, a card; tickets each time.
+// The windows are 76zzb-joust.js, 76zzc-courier.js, 76zzd-sprint.js, 76zze-bastion.js and 76zzf-vault.js.
+{ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  // ---- Gryphon Joust ----
+  const GJ = CM.GJ = { W: 480, H: 380, lava: 340, lives: 3, PLAT: [[0, 270, 110], [370, 270, 110], [150, 200, 180], [20, 120, 120], [340, 120, 120], [180, 60, 120]] };
+  GJ.Level = class {
+    constructor(n, seed, keep) { this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: GJ.lives, extraGiven: false }); this.foes = []; this.eggs = []; this.spawnQ = Math.min(8, 2 + n); this.spawnT = 1; this.spawn(); }
+    spawn() { this.p = { x: GJ.W / 2, y: GJ.PLAT[2][1] - 14, vx: 0, vy: 0, face: 1, dead: 0, guard: 1.5, flapT: 0 }; this.ctl = 0; }
+    input(mx) { this.ctl = mx; }
+    flap() { const P = this.p; if (P.dead) return; P.vy = Math.max(-260, P.vy - 190); P.flapT = 0.2; this.events.push({ kind: "flap" }); }
+    rider(o, dt, ax) { o.vx = clamp(o.vx + ax * 420 * dt, -170, 170); o.vx *= 1 - 0.6 * dt; o.vy += 360 * dt; o.x += o.vx * dt; o.y += o.vy * dt; if (o.x < -10) o.x += GJ.W + 20; if (o.x > GJ.W + 10) o.x -= GJ.W + 20; if (o.y < 10) { o.y = 10; o.vy = Math.abs(o.vy) * 0.5; }
+      for (const [px, py, pw] of GJ.PLAT) if (o.vy > 0 && o.x > px - 6 && o.x < px + pw + 6 && o.y + 14 >= py && o.y + 14 - o.vy * dt <= py + 2) { o.y = py - 14; o.vy = 0; o.vx *= 1 - 4 * dt; } if (ax) o.face = Math.sign(ax); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const P = this.p;
+      if (P.dead) { P.dead -= dt; if (P.dead <= 0) { P.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; } this.spawn(); } }
+      else { this.rider(P, dt, this.ctl); P.flapT -= dt; if (P.guard > 0) P.guard -= dt; if (P.y > GJ.lava) this.lose(); }
+      if (this.spawnQ > 0 && (this.spawnT -= dt) <= 0) { this.spawnT = 1.6; this.spawnQ--; const [px, py, pw] = this.rnd.pick(GJ.PLAT.slice(0, 5)); this.foes.push({ x: px + pw / 2, y: py - 14, vx: 0, vy: -100, face: this.rnd.chance(0.5) ? 1 : -1, ai: 0, kind: this.n >= 4 && this.rnd.chance(0.3) ? "shadow" : this.n >= 2 && this.rnd.chance(0.4) ? "hunter" : "bounder" }); this.events.push({ kind: "arrive" }); }
+      for (const F of this.foes) { F.ai -= dt; const sp = { bounder: 0.6, hunter: 0.85, shadow: 1.1 }[F.kind] * (1 + 0.05 * this.n); if (F.ai <= 0) { F.ai = 0.25 + this.rnd.next() * 0.35; const wantY = P.dead ? 150 : P.y - 30 * sp; if (F.y > wantY || F.y > GJ.lava - 60) { F.vy = Math.max(-240, F.vy - 170 * sp); this.events.push({ kind: "foeflap" }); } F.dir = P.dead ? F.face : Math.sign(((P.x - F.x + GJ.W * 1.5) % GJ.W) - GJ.W / 2) || 1; } this.rider(F, dt, F.dir * sp); if (F.y > GJ.lava) F.gone = true; }
+      // the meeting of lances
+      if (!P.dead && P.guard <= 0) for (const F of this.foes) { if (F.gone || Math.abs(F.x - P.x) > 22 || Math.abs(F.y - P.y) > 20) continue;
+        if (P.y < F.y - 4) { F.gone = true; const pts = { bounder: 500, hunter: 750, shadow: 1500 }[F.kind]; this.score += pts; this.eggs.push({ x: F.x, y: F.y, vy: -60, t: 6, kind: F.kind }); this.events.push({ kind: "unhorse", x: F.x, y: F.y, pts }); P.vy = -120; }
+        else if (F.y < P.y - 4) { this.lose(); break; } else { const d = Math.sign(P.x - F.x) || 1; P.vx = d * 160; F.vx = -d * 160; this.events.push({ kind: "clash" }); } }
+      this.foes = this.foes.filter((F) => !F.gone);
+      for (const E of this.eggs) { E.vy += 360 * dt; E.y += E.vy * dt; for (const [px, py, pw] of GJ.PLAT) if (E.vy > 0 && E.x > px && E.x < px + pw && E.y + 6 >= py && E.y - E.vy * dt + 6 <= py + 2) { E.y = py - 6; E.vy = 0; } if (E.y > GJ.lava) E.gone = true; E.t -= dt;
+        if (!P.dead && E.t < 5.6 && Math.abs(E.x - P.x) < 18 && Math.abs(E.y - P.y) < 22) { E.gone = true; this.score += 250; this.events.push({ kind: "egg", x: E.x, y: E.y, pts: 250 }); }
+        else if (E.t <= 0) { E.gone = true; this.foes.push({ x: E.x, y: E.y - 8, vx: 0, vy: -140, face: 1, ai: 0, kind: E.kind === "bounder" ? "hunter" : "shadow" }); this.events.push({ kind: "hatch" }); } }
+      this.eggs = this.eggs.filter((E) => !E.gone);
+      if (!this.extraGiven && this.score >= 15000) { this.extraGiven = true; this.lives += 1; this.events.push({ kind: "extra" }); }
+      if (!this.spawnQ && !this.foes.length && !this.eggs.length && !P.dead) { this.stage = "clear"; this.events.push({ kind: "clear" }); }
+    }
+    lose() { const P = this.p; if (P.dead) return; this.lives -= 1; P.dead = 1.8; this.events.push({ kind: "die", x: P.x, y: P.y }); }
+  };
+  CM.ARC.add("joust", { name: "Gryphon Joust", Level: GJ.Level, marks: [2, 4, 6] });
+
+  // ---- the Courier's Round ----
+  const CO = CM.CO = { W: 400, H: 460, lives: 3, houseGap: 150 };
+  CO.Level = class {
+    constructor(n, seed, keep) { const R = this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: CO.lives });
+      this.houses = []; for (let k = 0; k < 10; k++) this.houses.push({ y: -k * CO.houseGap - 200, sub: R.chance(0.6) || k % 3 === 0, done: false, tint: R.int(0, 4) }); this.need = Math.ceil(this.houses.filter((h) => h.sub).length * 0.6); this.dist = 10 * CO.houseGap + 260 + CO.H; this.reset(); }
+    reset() { this.p = { x: 250, dead: 0, guard: 1 }; this.scroll = 0; this.scrolls = 12; this.flying = []; this.obs = []; this.obsT = 1; this.got = 0; this.houses.forEach((h) => { h.done = false; }); this.ctl = 0; }
+    input(mx) { this.ctl = mx; }
+    throwIt() { if (this.p.dead || this.scrolls <= 0) return; this.scrolls -= 1; this.flying.push({ x: this.p.x - 10, y: CO.H - 80, vx: -260, vy: -40, t: 0 }); this.events.push({ kind: "throw" }); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const P = this.p;
+      if (P.dead) { P.dead -= dt; if (P.dead <= 0) { P.dead = 0; if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } else this.reset(); } return; }
+      const sp = 70 + 8 * this.n; this.scroll += sp * dt; P.x = clamp(P.x + this.ctl * 170 * dt, 190, 370); if (P.guard > 0) P.guard -= dt;
+      if ((this.obsT -= dt) <= 0) { this.obsT = Math.max(0.6, 1.8 - 0.1 * this.n) * (0.6 + this.rnd.next() * 0.8); const kind = this.rnd.pick(["dog", "cart", "puddle", "barrel"]); this.obs.push({ kind, x: 200 + this.rnd.next() * 165, y: -this.scroll - 40, vx: kind === "dog" ? (this.rnd.chance(0.5) ? 70 : -70) : 0 }); }
+      for (const O of this.obs) { O.x += O.vx * dt; if (O.x < 195 || O.x > 370) O.vx = -O.vx; const sy = O.y + this.scroll; if (P.guard <= 0 && Math.abs(sy - (CO.H - 70)) < 18 && Math.abs(O.x - P.x) < 18) { if (O.kind === "puddle") { P.x = clamp(P.x + (this.rnd.chance(0.5) ? 40 : -40), 190, 370); O.hit = true; this.events.push({ kind: "splash" }); } else { this.lives -= 1; P.dead = 1.6; this.events.push({ kind: "die", x: P.x, why: O.kind }); return; } } }
+      this.obs = this.obs.filter((O) => !O.hit && O.y + this.scroll < CO.H + 40);
+      for (const F of this.flying) { F.t += dt; F.x += F.vx * dt; F.y += F.vy * dt; F.vy += 60 * dt;
+        for (const h of this.houses) { const hy = h.y + this.scroll; if (h.sub && !h.done && F.x < 175 && F.x > 120 && Math.abs(F.y - (hy + 50)) < 26) { h.done = true; F.gone = true; this.got += 1; const pts = 100 + Math.round(80 * (1 - Math.abs(F.y - (hy + 50)) / 26)); this.score += pts; this.events.push({ kind: "deliver", x: 150, y: hy + 50, pts }); } }
+        if (F.x < 60 || F.t > 1.4) F.gone = true; }
+      this.flying = this.flying.filter((F) => !F.gone);
+      if (this.scroll >= this.dist) { if (this.got >= this.need) { this.score += this.scrolls * 25; this.stage = "clear"; this.events.push({ kind: "clear", got: this.got }); } else { this.lives -= 1; P.dead = 1.6; this.events.push({ kind: "short", got: this.got, need: this.need }); } }
+      // a bundle of scrolls by the road now and then
+      if (this.scrolls < 4 && !this.bundle && this.rnd.chance(dt * 0.4)) this.bundle = { x: 220 + this.rnd.next() * 130, y: -this.scroll - 30 };
+      if (this.bundle) { const sy = this.bundle.y + this.scroll; if (Math.abs(sy - (CO.H - 70)) < 18 && Math.abs(this.bundle.x - P.x) < 20) { this.scrolls += 8; this.bundle = null; this.events.push({ kind: "bundle" }); } else if (sy > CO.H + 20) this.bundle = null; }
+    }
+  };
+  CM.ARC.add("courier", { name: "The Courier's Round", Level: CO.Level, marks: [2, 4, 6] });
+
+  // ---- the Undercroft Sprint ----
+  const US = CM.US = { W: 520, H: 300, ground: 240, lives: 3, px: 110 };
+  US.Level = class {
+    constructor(n, seed, keep) { this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: US.lives }); this.len = 3600 + 400 * n; this.speed = 230 + 18 * n; this.x = 0; this.things = []; this.nextAt = 500; this.p = { y: 0, vy: 0, slide: 0, guard: 0, onGround: true }; this.coins = 0; }
+    jump() { const P = this.p; if (P.onGround) { P.vy = -470; P.onGround = false; P.slide = 0; this.events.push({ kind: "jump" }); } }
+    slide() { const P = this.p; if (P.onGround) { P.slide = 0.6; this.events.push({ kind: "slide" }); } else P.vy = Math.max(P.vy, 300); }
+    gen() { const R = this.rnd, k = R.pick(this.n >= 2 ? ["pit", "spikes", "beam", "bat", "pit", "spikes"] : ["pit", "spikes", "beam", "spikes"]); const t = { kind: k, x: this.nextAt, w: k === "pit" ? 60 + R.int(0, 30) + this.n * 3 : 26 };
+      this.things.push(t); if (R.chance(0.7)) for (let c = 0; c < 4; c++) this.things.push({ kind: "coin", x: this.nextAt - 120 + c * 30, y: k === "beam" ? 18 : R.chance(0.5) ? 70 : 20 }); this.nextAt += Math.max(170, 320 - 10 * this.n) + R.int(0, 160); }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt; const P = this.p, sp = this.speed * (1 + Math.min(0.3, this.x / this.len * 0.3)); this.x += sp * dt; while (this.nextAt < this.x + US.W + 100 && this.nextAt < this.len - 200) this.gen();
+      P.vy += 1300 * dt; P.y += P.vy * dt; const wx = this.x + US.px, pit = this.things.find((t) => t.kind === "pit" && wx > t.x + 8 && wx < t.x + t.w - 8);
+      if (P.y >= 0 && !pit) { P.y = 0; P.vy = 0; P.onGround = true; } else P.onGround = false; if (P.slide > 0) P.slide -= dt; if (P.guard > 0) P.guard -= dt;
+      if (P.y > 120) { this.hurt("pit"); P.y = 0; P.vy = 0; P.guard = 1.5; this.x += 140; }
+      const h = P.slide > 0 ? 18 : 40;
+      for (const t of this.things) { if (t.done) continue; const dx = t.x + (t.w || 0) / 2 - wx;
+        if (t.kind === "coin") { if (Math.abs(t.x - wx) < 14 && Math.abs(-P.y + 10 - t.y) < 26) { t.done = true; this.coins += 1; this.score += 10; this.events.push({ kind: "coin" }); } continue; }
+        if (P.guard > 0 || Math.abs(dx) > (t.w || 20) / 2 + 8) continue;
+        if (t.kind === "spikes" && P.y > -18) this.hurt("spikes", t); else if (t.kind === "beam" && h > 24) this.hurt("beam", t); else if (t.kind === "bat" && !(P.slide > 0) && P.y > -50) this.hurt("bat", t); }
+      this.score += Math.round(sp * dt * 0.1);
+      if (this.x >= this.len) { this.stage = "clear"; this.events.push({ kind: "clear" }); }
+    }
+    hurt(why, t) { if (this.p.guard > 0) return; this.lives -= 1; this.p.guard = 1.5; if (t) t.done = true; this.events.push({ kind: "hurt", why }); if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); } }
+  };
+  CM.ARC.add("sprint", { name: "The Undercroft Sprint", Level: US.Level, marks: [2, 4, 6] });
+
+  // ---- the Rune Bastion ----
+  const RBT = CM.RBT = { C: 32, W: 16, H: 11, hearts: 15,
+    PATH: [[0, 2], [5, 2], [5, 8], [2, 8], [2, 5], [10, 5], [10, 1], [13, 1], [13, 8], [8, 8], [8, 10]],
+    TOWERS: { fire: { cost: 30, range: 2.3, rate: 1.1, dmg: 26, splash: 0.9, col: "#F06030" }, frost: { cost: 25, range: 2.0, rate: 0.9, dmg: 7, slow: 0.5, col: "#60C0F0" }, arcane: { cost: 45, range: 3.6, rate: 0.75, dmg: 20, col: "#B070F0" } },
+    FOES: { goblin: { hp: 34, sp: 1.6, mana: 6, pts: 20 }, wolf: { hp: 26, sp: 2.8, mana: 7, pts: 30 }, ogre: { hp: 130, sp: 0.95, mana: 20, pts: 80 } } };
+  RBT.cells = (() => { const out = []; for (let i = 0; i < RBT.PATH.length - 1; i++) { const [x0, y0] = RBT.PATH[i], [x1, y1] = RBT.PATH[i + 1]; const dx = Math.sign(x1 - x0), dy = Math.sign(y1 - y0); let x = x0, y = y0; while (x !== x1 || y !== y1) { out.push([x, y]); x += dx; y += dy; } } out.push(RBT.PATH[RBT.PATH.length - 1]); return out; })();
+  RBT.onPath = new Set(RBT.cells.map(([x, y]) => `${x},${y}`));
+  RBT.Level = class {
+    constructor(n, seed, keep) { this.rnd = new CM.Random(seed); this.n = n; this.t = 0; this.events = []; this.stage = "play"; Object.assign(this, keep || { score: 0, lives: RBT.hearts, mana: 80, towers: [] }); this.towers = (this.towers || []).map((t) => ({ ...t, cd: 0 }));
+      const R = this.rnd; this.queue = []; const count = 8 + 3 * n; for (let k = 0; k < count; k++) this.queue.push(n >= 5 && k % 6 === 5 ? "ogre" : n >= 3 && R.chance(0.3) ? "wolf" : n >= 2 && k === count - 1 ? "ogre" : "goblin");
+      this.foes = []; this.shots = []; this.sendT = 5; this.hpMul = 1 + 0.18 * (n - 1); this.started = false; }
+    canBuild(x, y) { return x >= 0 && y >= 0 && x < RBT.W && y < RBT.H && !RBT.onPath.has(`${x},${y}`) && !this.towers.some((t) => t.x === x && t.y === y); }
+    build(kind, x, y) { const T = RBT.TOWERS[kind]; if (!T || !this.canBuild(x, y)) return "Not there."; if (this.mana < T.cost) return `That rune takes ${T.cost} mana.`; this.mana -= T.cost; this.towers.push({ kind, x, y, lvl: 1, cd: 0 }); this.events.push({ kind: "build", x, y, what: kind }); return ""; }
+    upgrade(x, y) { const t = this.towers.find((q) => q.x === x && q.y === y); if (!t || t.lvl >= 3) return "It is as strong as it gets."; const cost = Math.round(RBT.TOWERS[t.kind].cost * 0.8 * t.lvl); if (this.mana < cost) return `Strengthening takes ${cost} mana.`; this.mana -= cost; t.lvl += 1; this.events.push({ kind: "upgrade", x, y }); return ""; }
+    update(dt) {
+      if (this.stage !== "play") return; this.t += dt;
+      if (this.queue.length && (this.sendT -= dt) <= 0) { this.sendT = Math.max(0.45, 1.1 - 0.04 * this.n); const kind = this.queue.shift(), F = RBT.FOES[kind]; this.foes.push({ kind, d: 0, hp: F.hp * this.hpMul, max: F.hp * this.hpMul, slow: 0, id: this.t }); }
+      for (const f of this.foes) { const F = RBT.FOES[f.kind]; f.d += F.sp * (f.slow > 0 ? 0.5 : 1) * dt; if (f.slow > 0) f.slow -= dt; if (f.d >= RBT.cells.length - 1) { f.gone = true; this.lives -= f.kind === "ogre" ? 3 : 1; this.events.push({ kind: "leak" }); } }
+      const pos = (f) => { const i = Math.min(RBT.cells.length - 2, Math.floor(f.d)), k = f.d - i, [x0, y0] = RBT.cells[i], [x1, y1] = RBT.cells[i + 1]; return [x0 + (x1 - x0) * k + 0.5, y0 + (y1 - y0) * k + 0.5]; };
+      for (const t of this.towers) { const T = RBT.TOWERS[t.kind]; t.cd -= dt; if (t.cd > 0) continue; let best = null; for (const f of this.foes) { if (f.gone) continue; const [fx, fy] = pos(f); if (Math.hypot(fx - t.x - 0.5, fy - t.y - 0.5) <= T.range + 0.3 * (t.lvl - 1) && (!best || f.d > best.d)) best = f; }
+        if (!best) continue; t.cd = 1 / (T.rate * (1 + 0.25 * (t.lvl - 1))); const [fx, fy] = pos(best), dmg = T.dmg * (1 + 0.6 * (t.lvl - 1)); this.shots.push({ kind: t.kind, x0: t.x + 0.5, y0: t.y + 0.5, x1: fx, y1: fy, at: this.t });
+        const hit = (f, d) => { f.hp -= d; if (T.slow) f.slow = 1.2; if (f.hp <= 0 && !f.gone) { f.gone = true; const F = RBT.FOES[f.kind]; this.mana += F.mana; this.score += F.pts; const [x, y] = pos(f); this.events.push({ kind: "fall", x, y, pts: F.pts }); } };
+        if (T.splash) { for (const f of this.foes) { const [x, y] = pos(f); if (Math.hypot(x - fx, y - fy) < T.splash) hit(f, dmg); } } else hit(best, dmg); this.events.push({ kind: "shot", what: t.kind }); }
+      this.foes = this.foes.filter((f) => !f.gone); this.shots = this.shots.filter((s) => this.t - s.at < 0.25);
+      if (this.lives <= 0) { this.stage = "over"; this.events.push({ kind: "over" }); return; }
+      if (!this.queue.length && !this.foes.length) { const bonus = 25 + 5 * this.n; this.mana += bonus; this.score += this.lives * 10; this.stage = "clear"; this.events.push({ kind: "held", bonus }); }
+    }
+    pos(f) { const i = Math.min(RBT.cells.length - 2, Math.floor(f.d)), k = f.d - i, [x0, y0] = RBT.cells[i], [x1, y1] = RBT.cells[i + 1]; return [x0 + (x1 - x0) * k + 0.5, y0 + (y1 - y0) * k + 0.5]; }
+  };
+  CM.ARC.add("bastion", { name: "The Rune Bastion", Level: RBT.Level, keep: (L) => ({ score: L.score, lives: L.lives, mana: L.mana, towers: L.towers.map(({ kind, x, y, lvl }) => ({ kind, x, y, lvl })) }), marks: [3, 5, 8] });
+
+  // ---- the Vault Runes ----
+  const VR = CM.VR = { gold: (n) => 10 + 6 * n, tickets: (n) => 2 + Math.floor(n / 2) };
+  VR.size = (n) => (n <= 3 ? [3, 3] : n <= 6 ? [4, 4] : n <= 10 ? [5, 5] : n <= 15 ? [6, 5] : [6, 6]);
+  // a lock: from all lit, a few touches undone; the same each time for a level
+  VR.Lock = class {
+    constructor(n, seed) { const [w, h] = VR.size(n), R = new CM.Random(seed); this.n = n; this.w = w; this.h = h; this.cross = n >= 8; this.on = Array.from({ length: h }, () => Array(w).fill(true)); this.moves = 0; this.par = 0;
+      const k = Math.min(w * h - 2, 3 + Math.floor(n * 0.8)), used = new Set(); while (used.size < k) { const x = R.int(0, w - 1), y = R.int(0, h - 1); if (used.has(`${x},${y}`)) continue; used.add(`${x},${y}`); this.flip(x, y, true); } this.par = k; if (this.solved()) this.flip(0, 0, true); }
+    nb(x, y) { const o = [[x, y], [x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]; if (this.cross) o.push([x + 1, y + 1], [x - 1, y - 1], [x + 1, y - 1], [x - 1, y + 1]); return o.filter(([a, b]) => a >= 0 && b >= 0 && a < this.w && b < this.h); }
+    flip(x, y, quiet) { for (const [a, b] of this.nb(x, y)) this.on[b][a] = !this.on[b][a]; if (!quiet) this.moves += 1; }
+    solved() { return this.on.every((r) => r.every(Boolean)); }
+  };
+  Object.assign(CM.Game.prototype, {
+    vrStore() { const F = this.cgStore(); F.vr = F.vr || { done: {}, best: {}, opened: 0 }; return F.vr; },
+    vrNew(n) { const S = this.vrStore(); n = Math.max(1, Math.min(n, (Object.keys(S.done).length || 0) + 1)); this.vrLive = new VR.Lock(n, CM.hashSeed(`${this.seed}:vault:${n}`)); if (this.cgStamp) this.cgStamp("vault"); return this.vrLive; },
+    vrTouch(x, y) { const L = this.vrLive; if (!L || L.open) return null; L.flip(x, y); if (!L.solved()) return { moved: true };
+      L.open = true; const S = this.vrStore(), n = L.n, first = !S.done[n], out = { open: true, n, moves: L.moves, par: L.par, first }; S.opened += 1; S.best[n] = Math.min(S.best[n] || 1e9, L.moves); const tk = VR.tickets(n) + (L.moves <= L.par ? 2 : 0); if (this.tkAdd) this.tkAdd(tk, "vault"); out.tickets = tk;
+      if (first) { S.done[n] = true; out.gold = VR.gold(n); this.cgPay("vault", out.gold); if (n % 3 === 0) out.card = this.cgTierCard(CM.cardTierFor(n), `The Vault Runes: vault ${n} opened!`, new CM.Random(CM.hashSeed(`${this.seed}:vault:card:${n}`))); }
+      this.saveCasino && this.saveCasino(); this.emit("change"); return out; },
+  });
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -31145,6 +31299,11 @@ CM.CG_INFO = {
   prizewheel: { cat: "luck", line: "A free spin every day." },
   rings: { cat: "fair", line: "Ten rings over the bottle necks." },
   range: { cat: "fair", line: "A crossbow at tin ducks, dragons and stars." },
+  joust: { cat: "arcade", line: "Gryphons over a lava lake; the higher lance wins." },
+  courier: { cat: "arcade", line: "Scrolls into the lit houses' boxes; mind the dog." },
+  sprint: { cat: "arcade", line: "Run the undercroft: jump, slide, gather coins." },
+  bastion: { cat: "arcade", line: "Set fire, frost and arcane runes by the goblins' road." },
+  vault: { cat: "puzzles", line: "Light every rune to open the vault. Free." },
 };
 CM.CG_CATS = [["all", "All"], ["tables", "Cards & tables"], ["arcade", "Arcade"], ["puzzles", "Puzzles"], ["idle", "Idle & builders"], ["luck", "Luck"], ["fair", "Fairground"], ["prizes", "Prizes"]];
 // a little picture for each table, painted on a small canvas
@@ -31197,6 +31356,11 @@ CM.CG_THUMB = (() => {
     prizewheel: (p, w, h) => { bg(p, w, h, "#2A4A6A", "#1A2A40"); const c = ["#E05050", "#F0A030", "#F0D040", "#60C060", "#40A0E0", "#8060D0", "#E060B0", "#40C0B0"]; for (let i = 0; i < 8; i++) { p.fillStyle = c[i]; p.beginPath(); p.moveTo(w / 2, h / 2); p.arc(w / 2, h / 2, 34, (i * Math.PI) / 4, ((i + 1) * Math.PI) / 4); p.fill(); } circ(p, w / 2, h / 2, 6, "#F0C040"); p.fillStyle = "#FFE070"; p.font = "bold 10px Georgia"; p.fillText("FREE", 8, 14); },
     rings: (p, w, h) => { bg(p, w, h, "#C03040", "#5A1A20"); p.fillStyle = "#6A4A2A"; p.beginPath(); p.moveTo(20, h - 6); p.lineTo(w - 20, h - 6); p.lineTo(w - 40, 30); p.lineTo(40, 30); p.fill(); const c = ["#D0A020", "#3A70C0", "#3A9A50"]; for (let r = 0; r < 3; r++) for (let k = 0; k < 5; k++) { p.fillStyle = r === 0 && k === 2 ? "#C02830" : c[r]; p.fillRect(50 + k * 18 - r * 4 + r * 0, 32 + r * 14, 5, 12); } p.strokeStyle = "#E0B070"; p.lineWidth = 3; p.beginPath(); p.ellipse(w / 2 + 20, 20, 9, 4, 0, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; },
     range: (p, w, h) => { bg(p, w, h, "#1A2448", "#4A3050"); p.fillStyle = "#B08A40"; p.fillRect(0, 30, w, 3); p.fillRect(0, 56, w, 3); circ(p, 40, 22, 8, "#F0D040"); circ(p, 100, 48, 7, "#4AA050"); p.fillStyle = "#FFD840"; p.beginPath(); for (let k = 0; k < 10; k++) { const r = k % 2 ? 3 : 7, a = (k * Math.PI) / 5; p.lineTo(140 + Math.cos(a) * r, 22 + Math.sin(a) * r); } p.fill(); p.strokeStyle = "#F04030"; p.beginPath(); p.arc(100, 48, 10, 0, Math.PI * 2); p.stroke(); p.fillStyle = "#3A80C0"; p.fillRect(0, h - 10, w, 10); },
+    joust: (p, w, h) => { bg(p, w, h, "#140A14", "#5A1A10"); p.fillStyle = "#F05010"; p.fillRect(0, h - 12, w, 12); p.fillStyle = "#FFB030"; p.fillRect(0, h - 12, w, 2); p.fillStyle = "#4A4250"; p.fillRect(10, 52, 50, 6); p.fillRect(w - 60, 52, 50, 6); p.fillRect(w / 2 - 30, 30, 60, 6); p.fillStyle = "#E0B040"; p.beginPath(); p.ellipse(40, 40, 10, 6, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(36, 38); p.lineTo(28, 24); p.lineTo(44, 38); p.fill(); p.strokeStyle = "#D8C090"; p.beginPath(); p.moveTo(42, 34); p.lineTo(62, 30); p.stroke(); p.fillStyle = "#C04030"; p.beginPath(); p.ellipse(w - 40, 44, 10, 6, 0, 0, Math.PI * 2); p.fill(); circ(p, w / 2, 24, 4, "#F0ECD8"); },
+    courier: (p, w, h) => { bg(p, w, h, "#5A7A3A", "#4A6A30"); p.fillStyle = "#5A5450"; p.fillRect(w * 0.55, 0, w * 0.45, h); p.fillStyle = "#C8B898"; p.fillRect(8, 8, 60, 40); p.fillStyle = "#A04030"; p.fillRect(4, 4, 68, 12); p.fillStyle = "#FFD870"; p.fillRect(16, 26, 12, 10); p.fillRect(46, 26, 12, 10); p.fillStyle = "#8A2A20"; p.fillRect(78, 26, 12, 8); p.fillStyle = "#F0E6CC"; p.fillRect(96, 30, 12, 4); p.fillStyle = "#A8A8B0"; p.beginPath(); p.ellipse(w * 0.72, h - 20, 6, 12, 0, 0, Math.PI * 2); p.fill(); circ(p, w * 0.72, h - 22, 5, "#3A6A3A"); },
+    sprint: (p, w, h) => { bg(p, w, h, "#0E0C14", "#2A2634"); p.fillStyle = "#4A4250"; p.fillRect(0, h - 18, w, 18); p.fillStyle = "#000"; p.fillRect(w * 0.6, h - 18, 24, 18); p.fillStyle = "#2A2634"; p.fillRect(30, 6, 14, h - 24); circ(p, 37, 22, 4, "#FFB040"); p.fillStyle = "#3A4A6A"; p.beginPath(); p.ellipse(w * 0.35, h - 36, 5, 9, 0.2, 0, Math.PI * 2); p.fill(); circ(p, w * 0.36, h - 48, 5, "#2A3450"); p.strokeStyle = "#C03030"; p.lineWidth = 2; p.beginPath(); p.moveTo(w * 0.34, h - 44); p.lineTo(w * 0.24, h - 40); p.stroke(); p.lineWidth = 1; for (let k = 0; k < 3; k++) circ(p, w * 0.5 + k * 14, h - 34, 3.5, "#F0C040"); },
+    bastion: (p, w, h) => { bg(p, w, h, "#4F9040", "#3A7A30"); p.fillStyle = "#B8956A"; p.fillRect(0, 18, w * 0.6, 12); p.fillRect(w * 0.6 - 12, 18, 12, h - 18); p.fillStyle = "#7A7480"; p.fillRect(w * 0.6 - 22, h - 14, 32, 14); p.fillStyle = "#F06030"; p.beginPath(); p.moveTo(30, 48); p.quadraticCurveTo(36, 30, 42, 48); p.fill(); p.fillStyle = "#A0E0FF"; p.beginPath(); p.moveTo(70, 34); p.lineTo(76, 46); p.lineTo(70, 52); p.lineTo(64, 46); p.fill(); p.fillStyle = "#4A3A60"; p.fillRect(w - 40, 34, 8, 22); circ(p, w - 36, 32, 3, "#B070F0"); circ(p, 20, 24, 4, "#5A9A40"); circ(p, 40, 24, 4, "#5A9A40"); },
+    vault: (p, w, h) => { bg(p, w, h, "#3A3430", "#141010"); circ(p, w / 2, h / 2, 34, "#3A3840"); p.strokeStyle = "#7A7680"; p.lineWidth = 3; p.beginPath(); p.arc(w / 2, h / 2, 34, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) { p.fillStyle = (x + y) % 2 ? "#2E2C34" : "#C89A30"; p.fillRect(w / 2 - 22 + x * 15, h / 2 - 22 + y * 15, 13, 13); } },
     claw: (p, w, h) => { bg(p, w, h, "#2A1A40", "#4A1A30"); p.strokeStyle = "#CCC"; p.beginPath(); p.moveTo(w / 2, 4); p.lineTo(w / 2, 30); p.stroke(); p.strokeStyle = "#B06A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(w / 2 - 8, 42); p.lineTo(w / 2, 30); p.lineTo(w / 2 + 8, 42); p.stroke(); for (const [x, c] of [[30, "#B08040"], [60, "#3A5AA0"], [100, "#D0D8E8"], [130, "#F0E8D0"]]) circ(p, x, h - 18, 10, c); },
   };
 })();
@@ -32449,6 +32613,272 @@ CM.CG_TABLES.push(["range", "The Crossbow Range"]);
       if (L) { const m = ui.arcMouse || [W / 2, H / 2], sw = ui.cbSway = [Math.sin(now / 430) * 4 + Math.sin(now / 170) * 1.5, Math.cos(now / 510) * 3 + Math.sin(now / 230) * 1.5], ax = m[0] + sw[0], ay = m[1] + sw[1]; p.strokeStyle = "rgba(255,80,60,0.9)"; p.lineWidth = 1.5; p.beginPath(); p.arc(ax, ay, 12, 0, Math.PI * 2); p.moveTo(ax - 18, ay); p.lineTo(ax - 6, ay); p.moveTo(ax + 6, ay); p.lineTo(ax + 18, ay); p.moveTo(ax, ay - 18); p.lineTo(ax, ay - 6); p.moveTo(ax, ay + 6); p.lineTo(ax, ay + 18); p.stroke(); p.lineWidth = 1;
         p.fillStyle = "rgba(0,0,0,0.55)"; p.fillRect(6, H - 22, 200, 18); p.fillStyle = "#FFE070"; p.font = "bold 11px monospace"; p.fillText(`BOLTS ${"|".repeat(L.bolts)}`, 10, H - 9); p.fillStyle = L.t < 8 ? "#FF7060" : "#F0E0B0"; p.fillText(`${Math.max(0, Math.ceil(L.t))}s`, 172, H - 9);
         const k = Math.min(1, L.got / L.need); p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(W - 130, H - 22, 124, 14); p.fillStyle = k >= 1 ? "#80F080" : "#F0C040"; p.fillRect(W - 128, H - 20, 120 * k, 10); }
+    },
+  });
+}
+
+// ---- 76zzb-joust.js ----
+"use strict";
+// Gryphon Joust, the window's side: a cavern over a lava lake - the lava heaving and glowing, bubbles bursting and a
+// heat-shimmer of embers rising; floating ledges of dark stone with moss; the rider on a gryphon whose wings beat on
+// each flap, the rivals on dun, crimson and shadow-black mounts with their lances couched; a rider unhorsed tumbles in
+// sparks and leaves an egg that wobbles faster as it nears hatching. Left and right to steer, Space or Up to flap.
+// The rules are 64zzf-arc2.js.
+CM.CG_TABLES.push(["joust", "Gryphon Joust"]);
+{ const GJ = CM.GJ, W = GJ.W, H = GJ.H, KIT = { me: ["#E0B040", "#3A6AD0"], bounder: ["#B08A60", "#C04030"], hunter: ["#909098", "#40A060"], shadow: ["#3A3048", "#9050E0"] };
+  const rider = (p, o, kit, now, flap) => { const f = o.face || 1, beat = flap ? Math.sin(now / 40) : Math.sin(now / 260) * 0.3; p.save(); p.translate(o.x, o.y); p.scale(f, 1);
+    p.fillStyle = kit[0]; p.beginPath(); p.ellipse(0, 4, 13, 7, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(12, -1, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0C040"; p.beginPath(); p.moveTo(16, -2); p.lineTo(22, 0); p.lineTo(16, 2); p.fill(); p.fillStyle = "#101010"; p.fillRect(13, -3, 2, 2);
+    p.fillStyle = kit[0]; p.beginPath(); p.moveTo(-12, 4); p.lineTo(-20, 0 + Math.sin(now / 120) * 2); p.lineTo(-18, 8); p.fill();
+    p.fillStyle = "rgba(255,255,255,0.15)"; p.beginPath(); p.moveTo(-4, 0); p.lineTo(-14, -10 - beat * 12); p.lineTo(6, -2); p.fill(); p.fillStyle = kit[0]; p.globalAlpha = 0.85; p.beginPath(); p.moveTo(-2, 1); p.lineTo(-10, -12 - beat * 14); p.lineTo(8, 0); p.fill(); p.globalAlpha = 1;
+    p.fillStyle = "#6A5040"; p.fillRect(-4, 9, 3, 6); p.fillRect(4, 9, 3, 6); p.fillStyle = kit[1]; p.fillRect(-3, -10, 8, 10); p.fillStyle = "#C8C8D0"; p.beginPath(); p.arc(1, -13, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = kit[1]; p.fillRect(-1, -19, 4, 3);
+    p.strokeStyle = "#D8C090"; p.lineWidth = 2; p.beginPath(); p.moveTo(-2, -5); p.lineTo(26, -9); p.stroke(); p.lineWidth = 1; p.fillStyle = "#E0E0E8"; p.beginPath(); p.moveTo(26, -11); p.lineTo(31, -9); p.lineTo(26, -7); p.fill(); p.restore(); };
+  Object.assign(CM.ARC.reg.joust, {
+    ui: { W, H, scale: 1.1, frame: "#4A1A10", start: "Mount up", go: "Wave 1 - hold the high air!", over: "Unhorsed for good", levelWord: "Wave",
+      lore: "Below the Joker's cellars a cavern opens over a lake of fire, and riders on gryphons joust above it for the house's purse. \"Keep your lance higher than his,\" says the old ostler. \"And mind the eggs.\"",
+      help: "Left and right to steer, Space or Up to flap. Meet a rival higher and he's unhorsed; lower and you are. Catch the egg he leaves before it hatches a worse rider. The lava takes anyone who sinks too low. Clear the wave to go on; an extra mount at 15,000.",
+      keys: ["ArrowLeft", "ArrowRight", "KeyA", "KeyD", "Space", "ArrowUp", "KeyW"] },
+    lifeIcon(p, x, y) { p.fillStyle = "#E0B040"; p.beginPath(); p.ellipse(x, y + 2, 6, 4, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(x - 2, y); p.lineTo(x - 6, y - 6); p.lineTo(x + 3, y); p.fill(); },
+    input(L, held) { L.input((held.has("ArrowRight") || held.has("KeyD") ? 1 : 0) - (held.has("ArrowLeft") || held.has("KeyA") ? 1 : 0)); },
+    press(L, code) { if (code === "Space" || code === "ArrowUp" || code === "KeyW") L.flap(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "flap") ui.cgSfx("step", 0.15, 0.7); else if (e.kind === "arrive") { ui.cgSfx("door", 0.2, 1.4); }
+      else if (e.kind === "unhorse") { ui.cgSfx("slam", 0.4, 1.3); ui.arcBurst(fx, e.x, e.y, ["#FFE070", "#FFFFFF", "#F08040"], 16, 150); ui.arcPts(fx, e.x, e.y - 20, `+${e.pts}`, "#FFE070"); fx.shake = 0.12; }
+      else if (e.kind === "egg") { ui.cgSfx("coin", 0.35, 1.3); ui.arcPts(fx, e.x, e.y - 14, `+${e.pts}`, "#C0F0FF"); ui.arcBurst(fx, e.x, e.y, ["#F0F0E0", "#C0F0FF"], 8, 80); }
+      else if (e.kind === "hatch") ui.cgSfx("hurt", 0.25, 1.6); else if (e.kind === "clash") ui.cgSfx("tablebell", 0.3, 0.9);
+      else if (e.kind === "die") { ui.cgSfx("hurt", 0.45); ui.arcBurst(fx, e.x, e.y, ["#F06030", "#FFC040", "#FFFFFF"], 24, 180); fx.shake = 0.35; }
+      else if (e.kind === "extra") { ui.cgSfx("cardwin", 0.4); ui.arcPts(fx, W / 2, H / 2, "EXTRA MOUNT", "#80FF80"); }
+    },
+    draw(p, L, now) {
+      const sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#140A14"); sky.addColorStop(0.7, "#3A1410"); sky.addColorStop(1, "#7A2A10"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
+      p.fillStyle = "#1E1018"; p.beginPath(); p.moveTo(0, 0); for (let x = 0; x <= W; x += 24) p.lineTo(x, 14 + 12 * Math.abs(Math.sin(x * 0.07))); p.lineTo(W, 0); p.fill();
+      for (let k = 0; k < 18; k++) { const t = (now / 3000 + k * 0.13) % 1, x = (k * 97 + Math.sin(now / 700 + k) * 10) % W; p.fillStyle = `rgba(255,${120 + k * 5},40,${0.6 * (1 - t)})`; p.fillRect(x, GJ.lava - t * 260, 2, 2); }
+      for (const [px, py, pw] of GJ.PLAT) { const g = p.createLinearGradient(0, py, 0, py + 14); g.addColorStop(0, "#5A5060"); g.addColorStop(1, "#2A2230"); p.fillStyle = g; p.beginPath(); p.moveTo(px, py); p.lineTo(px + pw, py); p.lineTo(px + pw - 8, py + 10); p.lineTo(px + pw / 2, py + 18); p.lineTo(px + 8, py + 10); p.fill(); p.fillStyle = "#4A7A3A"; p.fillRect(px + 2, py - 2, pw - 4, 3);
+        p.fillStyle = "rgba(255,120,40,0.18)"; p.fillRect(px + 6, py + 12, pw - 12, 3); }
+      if (L) { for (const E of L.eggs) { const wob = Math.sin(now / (E.t < 2 ? 50 : 160)) * (E.t < 2 ? 0.35 : 0.12); p.save(); p.translate(E.x, E.y); p.rotate(wob); p.fillStyle = "#F0ECD8"; p.beginPath(); p.ellipse(0, 0, 5, 7, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = KIT[E.kind][1]; p.fillRect(-3, -1, 2, 2); p.fillRect(1, 2, 2, 2); p.restore(); }
+        for (const F of L.foes) rider(p, F, KIT[F.kind], now, F.vy < -40);
+        const P = L.p; if (!P.dead && !(P.guard > 0 && Math.floor(now / 90) % 2)) rider(p, P, KIT.me, now, P.flapT > 0); }
+      const lv = p.createLinearGradient(0, GJ.lava, 0, H); lv.addColorStop(0, "#FFB030"); lv.addColorStop(0.3, "#F05010"); lv.addColorStop(1, "#801000"); p.fillStyle = lv; p.beginPath(); p.moveTo(0, H); for (let x = 0; x <= W; x += 10) p.lineTo(x, GJ.lava + 6 + Math.sin(x / 26 + now / 400) * 3 + Math.sin(x / 9 + now / 230) * 1.5); p.lineTo(W, H); p.fill();
+      for (let k = 0; k < 5; k++) { const t = (now / 900 + k * 0.37) % 1, x = (k * 113 + 40) % W; p.strokeStyle = `rgba(255,220,120,${1 - t})`; p.beginPath(); p.arc(x, GJ.lava + 12, 2 + t * 6, Math.PI, 0); p.stroke(); }
+    },
+  });
+}
+
+// ---- 76zzc-courier.js ----
+"use strict";
+// The Courier's Round, the window's side: the market street from above, scrolling toward the courier on a stout grey
+// pony - cobbles, the gutter, lamp-posts throwing pools of light; on the left the houses, roofs in their own colours,
+// the subscribers' windows lit and their letter-boxes on posts by the walk, the others dark; a scroll thrown spins
+// across the walk, and a box that takes one flips its little flag up with a puff of sparkles; dogs dash, carts trundle,
+// puddles ripple and barrels roll. Left and right to ride, Space to throw. The rules are 64zzf-arc2.js.
+CM.CG_TABLES.push(["courier", "The Courier's Round"]);
+{ const CO = CM.CO, W = CO.W, H = CO.H, ROOF = ["#A04030", "#406090", "#6A7A30", "#805A9A", "#9A7A40"];
+  Object.assign(CM.ARC.reg.courier, {
+    ui: { W, H, scale: 1, frame: "#3A2A1A", start: "Take the satchel", go: "Street 1 - the round begins!", over: "The round is lost", levelWord: "Street",
+      lore: "The Joker's house newsletter goes out every morning to the subscribers on Market Row, and the courier is paid by the box. \"Lit windows want a scroll,\" says the postmistress. \"Dark ones don't. Mind the miller's dog.\"",
+      help: "Left and right to ride along the road, Space to throw a scroll to the left - time it so the scroll meets a lit house's letter-box. Deliver to most of the street's subscribers to clear it. Dogs, carts and barrels throw you; puddles skid you. Grab a bundle when you run low.",
+      keys: ["ArrowLeft", "ArrowRight", "KeyA", "KeyD", "Space"],
+      extraHud(p, L, Wd) { p.fillStyle = "#F0E0B0"; p.font = "11px monospace"; p.fillText(`✉ ${L.got}/${L.need}  ✎ ${L.scrolls}`, Wd - 150, 19); for (let k = 0; k < L.lives; k++) { p.fillStyle = "#A0A0A8"; p.beginPath(); p.ellipse(Wd - 16 - k * 16, 14, 5, 7, 0, 0, Math.PI * 2); p.fill(); } } },
+    input(L, held) { L.input((held.has("ArrowRight") || held.has("KeyD") ? 1 : 0) - (held.has("ArrowLeft") || held.has("KeyA") ? 1 : 0)); },
+    press(L, code) { if (code === "Space") L.throwIt(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "throw") ui.cgSfx("card", 0.3, 1.2);
+      else if (e.kind === "deliver") { ui.cgSfx("coin", 0.4, 1.2); ui.arcBurst(fx, e.x, e.y, ["#FFE070", "#FFFFFF", "#80E0FF"], 12, 100, 100); ui.arcPts(fx, e.x, e.y - 16, `+${e.pts}`, "#FFE070"); }
+      else if (e.kind === "splash") { ui.cgSfx("step", 0.3, 0.6); ui.arcBurst(fx, L.p.x, H - 70, ["#80B0E0", "#C0E0FF"], 10, 90); }
+      else if (e.kind === "die") { ui.cgSfx("hurt", 0.45); ui.cgSfx("slam", 0.3); ui.arcBurst(fx, e.x, H - 70, ["#E0D0B0", "#FFFFFF", "#806040"], 20, 150); fx.shake = 0.3; ui.cgNote = { dog: "The miller's dog had you over!", cart: "Into the side of a cart!", barrel: "A rolling barrel took the pony's legs." }[e.why] || ""; }
+      else if (e.kind === "short") { ui.cgSfx("cardlose", 0.4); ui.cgNote = `Only ${e.got} of the ${e.need} boxes the round needs - back to the start of the street.`; }
+      else if (e.kind === "bundle") { ui.cgSfx("tablebell", 0.3, 1.3); ui.arcPts(fx, L.p.x, H - 90, "+8 SCROLLS", "#C0F0FF"); }
+    },
+    draw(p, L, now) {
+      const sc = L ? L.scroll : (now / 20) % 600;
+      p.fillStyle = "#5A7A3A"; p.fillRect(0, 0, 180, H); p.fillStyle = "#7A7068"; p.fillRect(176, 0, 14, H); p.fillStyle = "#5A5450"; p.fillRect(190, 0, W - 190, H);
+      for (let y = -40 + (sc % 20); y < H; y += 20) for (let x = 190 + (Math.floor((y - sc) / 20) % 2 ? 10 : 0); x < W; x += 20) { p.fillStyle = "rgba(0,0,0,0.12)"; p.fillRect(x, y, 19, 1); p.fillRect(x, y, 1, 19); }
+      p.fillStyle = "#3A3430"; p.fillRect(W - 12, 0, 12, H); p.fillStyle = "rgba(255,255,255,0.08)"; for (let y = (sc % 40) - 40; y < H; y += 40) p.fillRect(282, y, 4, 20);
+      for (let y = (sc % 200) - 200; y < H; y += 200) { p.fillStyle = "rgba(255,220,140,0.12)"; p.beginPath(); p.arc(183, y + 60, 50, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2A2420"; p.fillRect(181, y + 56, 4, 8); p.fillStyle = "#FFE0A0"; p.beginPath(); p.arc(183, y + 54, 3, 0, Math.PI * 2); p.fill(); }
+      const houses = L ? L.houses : [0, 1, 2, 3, 4].map((k) => ({ y: -k * CO.houseGap + 300 + (sc % CO.houseGap), sub: k % 2 === 0, done: false, tint: k }));
+      for (const h of houses) { const y = h.y + (L ? sc : 0); if (y > H + 20 || y < -140) continue;
+        p.fillStyle = "rgba(0,0,0,0.3)"; p.fillRect(18, y + 8, 110, 96); p.fillStyle = "#C8B898"; p.fillRect(12, y + 4, 106, 92); p.fillStyle = ROOF[h.tint]; p.beginPath(); p.moveTo(8, y + 2); p.lineTo(122, y + 2); p.lineTo(108, y + 30); p.lineTo(22, y + 30); p.fill(); p.fillStyle = "rgba(0,0,0,0.2)"; p.fillRect(8, y + 26, 114, 4);
+        for (const wx of [24, 82]) { p.fillStyle = h.sub ? "#FFD870" : "#3A3A48"; if (h.sub) { p.shadowColor = "#FFC040"; p.shadowBlur = 8; } p.fillRect(wx, y + 44, 20, 16); p.shadowBlur = 0; p.fillStyle = "#5A3A20"; p.fillRect(wx + 9, y + 44, 2, 16); }
+        p.fillStyle = "#6A4020"; p.fillRect(56, y + 70, 18, 26); p.fillStyle = "#9A8A70"; p.fillRect(118, y + 82, 58, 8);
+        if (h.sub) { const my = y + 50; p.fillStyle = "#4A3A2A"; p.fillRect(149, my, 3, 16); p.fillStyle = h.done ? "#3A70C0" : "#8A2A20"; p.fillRect(142, my - 8, 18, 11); p.fillStyle = "#101010"; p.fillRect(144, my - 4, 10, 2);
+          if (h.done) { p.fillStyle = "#F0C040"; p.fillRect(159, my - 16, 2, 10); p.beginPath(); p.moveTo(161, my - 16); p.lineTo(168, my - 13 + Math.sin(now / 150)); p.lineTo(161, my - 10); p.fill(); } else if (Math.floor(now / 400) % 2) { p.strokeStyle = "rgba(255,230,120,0.6)"; p.strokeRect(140, my - 10, 22, 15); } } }
+      if (L) { if (L.bundle) { const by = L.bundle.y + sc; p.fillStyle = "#E8DCC0"; for (let k = 0; k < 3; k++) p.fillRect(L.bundle.x - 8 + k * 3, by - 6 + k * 2, 14, 4); p.strokeStyle = "#A02020"; p.strokeRect(L.bundle.x - 9, by - 7, 18, 12); }
+        for (const O of L.obs) { const x = O.x, y = O.y + sc;
+          if (O.kind === "puddle") { p.fillStyle = "rgba(60,100,160,0.6)"; p.beginPath(); p.ellipse(x, y, 20, 10, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(200,230,255,0.5)"; p.beginPath(); p.ellipse(x, y, 8 + (now / 60) % 10, 4 + (now / 120) % 5, 0, 0, Math.PI * 2); p.stroke(); }
+          else if (O.kind === "dog") { const leg = Math.sin(now / 50) * 3, d = Math.sign(O.vx) || 1; p.fillStyle = "#8A5A30"; p.beginPath(); p.ellipse(x, y, 12, 6, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(x + 11 * d, y - 1, 5, 0, Math.PI * 2); p.fill(); p.fillRect(x - 8, y + 4 + leg, 3, 4); p.fillRect(x + 5, y + 4 - leg, 3, 4); p.fillStyle = "#101010"; p.fillRect(x + 14 * d, y - 2, 2, 2); }
+          else if (O.kind === "cart") { p.fillStyle = "#7A5030"; p.fillRect(x - 16, y - 14, 32, 28); p.fillStyle = "#A07040"; p.fillRect(x - 13, y - 11, 26, 22); p.fillStyle = "#5A9A40"; for (let k = 0; k < 4; k++) { p.beginPath(); p.arc(x - 6 + (k % 2) * 12, y - 4 + Math.floor(k / 2) * 9, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#2A2020"; p.fillRect(x - 19, y - 8, 3, 16); p.fillRect(x + 16, y - 8, 3, 16); }
+          else { p.save(); p.translate(x, y); p.rotate(now / 200); p.fillStyle = "#8A5A30"; p.fillRect(-10, -8, 20, 16); p.fillStyle = "#3A3030"; p.fillRect(-10, -6, 20, 2); p.fillRect(-10, 4, 20, 2); p.restore(); } }
+        for (const F of L.flying) { p.save(); p.translate(F.x, F.y); p.rotate(F.t * 18); p.fillStyle = "#F0E6CC"; p.fillRect(-7, -2.5, 14, 5); p.fillStyle = "#A02020"; p.fillRect(-1, -3, 2, 6); p.restore(); }
+        const P = L.p, py = H - 70; if (!(P.guard > 0 && Math.floor(now / 90) % 2)) { const bob = Math.sin(now / 90) * 1.5; p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(P.x + 3, py + 4, 12, 20, 0, 0, Math.PI * 2); p.fill();
+          p.fillStyle = P.dead ? "#606068" : "#A8A8B0"; p.beginPath(); p.ellipse(P.x, py, 9, 18, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.ellipse(P.x, py - 20 + bob, 5, 7, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#3A3030"; p.fillRect(P.x - 1, py - 14, 2, 8);
+          p.fillStyle = "#3A6A3A"; p.beginPath(); p.arc(P.x, py + 1 + bob, 7, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E0C090"; p.beginPath(); p.arc(P.x, py - 2 + bob, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A5A30"; p.fillRect(P.x - 11, py - 2, 5, 9); }
+        const k = Math.min(1, L.scroll / L.dist); p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(W - 10, 10, 6, H - 20); p.fillStyle = "#F0C040"; p.fillRect(W - 9, 10 + (H - 20) * (1 - k), 4, (H - 20) * k); }
+    },
+  });
+}
+
+// ---- 76zzd-sprint.js ----
+"use strict";
+// The Undercroft Sprint, the window's side: a run down the old tunnels in three depths of parallax - far arches in the
+// gloom, nearer pillars with torches guttering, the flagged floor rushing by; the runner (a hooded thief with a
+// trailing scarf) in a running cycle, a tuck when jumping and a skid of dust when sliding; pits with a glimpse of the
+// drop, rusted spikes, low beams with hanging chains, bats that flap at head height, coins that spin and chime. Space or
+// Up to jump, Down to slide (or to drop quickly from a jump). The rules are 64zzf-arc2.js.
+CM.CG_TABLES.push(["sprint", "The Undercroft Sprint"]);
+{ const US = CM.US, W = US.W, H = US.H, G = US.ground;
+  Object.assign(CM.ARC.reg.sprint, {
+    ui: { W, H, scale: 1.15, frame: "#2A2430", start: "Start running", go: "Stretch 1 - run!", over: "The tunnels win", levelWord: "Stretch",
+      lore: "Under the Joker's cellars the old undercroft runs on for miles, and the house pays by the stretch for anyone who can run it. \"Don't stop,\" says the bored guard at the gate. \"Nobody who stops gets paid.\"",
+      help: "Space or Up to jump the pits and spikes, Down to slide under the beams (or drop quickly from a jump). Bats fly at head height - jump high over them or slide under. Coins as you go. Reach the end of each stretch; three knocks and you're done.",
+      keys: ["Space", "ArrowUp", "KeyW", "ArrowDown", "KeyS"],
+      extraHud(p, L, Wd) { p.fillStyle = "#F0D060"; p.font = "11px monospace"; p.fillText(`◎${L.coins} ${Math.round(L.x / 10)}/${Math.round(L.len / 10)}m`, Wd - 175, 19); for (let k = 0; k < L.lives; k++) { p.fillStyle = "#E05050"; p.beginPath(); p.arc(Wd - 16 - k * 16, 12, 3.5, 0, Math.PI * 2); p.arc(Wd - 10 - k * 16, 12, 3.5, 0, Math.PI * 2); p.lineTo(Wd - 13 - k * 16, 20); p.fill(); } } },
+    press(L, code) { if (code === "Space" || code === "ArrowUp" || code === "KeyW") L.jump(); else L.slide(); },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "jump") ui.cgSfx("step", 0.25, 1.5); else if (e.kind === "slide") { ui.cgSfx("step", 0.25, 0.6); ui.arcBurst(fx, US.px, G, ["#8A7A68", "#A09080"], 8, 70, 100); }
+      else if (e.kind === "coin") { ui.cgSfx("coin", 0.2, 1.4 + Math.random() * 0.3); ui.arcBurst(fx, US.px + 10, G - 30 + L.p.y, ["#FFE070", "#FFFFFF"], 4, 60, 0); }
+      else if (e.kind === "hurt") { ui.cgSfx("hurt", 0.45); fx.shake = 0.3; ui.arcBurst(fx, US.px, G - 20 + L.p.y, ["#F06040", "#FFFFFF"], 14, 140); ui.cgNote = { pit: "Down a pit - the guard hauls you out.", spikes: "Spikes!", beam: "Straight into a beam.", bat: "A bat in the face!" }[e.why] || ""; }
+    },
+    draw(p, L, now) {
+      const x = L ? L.x : now / 4; p.fillStyle = "#0E0C14"; p.fillRect(0, 0, W, H);
+      p.fillStyle = "#1A1824"; for (let k = -1; k < 6; k++) { const ax = k * 120 - ((x * 0.2) % 120); p.beginPath(); p.moveTo(ax, G); p.lineTo(ax, 90); p.arc(ax + 50, 90, 50, Math.PI, 0); p.lineTo(ax + 100, G); p.lineTo(ax + 92, G); p.lineTo(ax + 92, 92); p.arc(ax + 50, 92, 42, 0, Math.PI, true); p.lineTo(ax + 8, G); p.fill(); }
+      for (let k = -1; k < 4; k++) { const px = k * 200 - ((x * 0.55) % 200); p.fillStyle = "#2A2634"; p.fillRect(px, 30, 26, G - 30); p.fillStyle = "#363040"; p.fillRect(px - 4, 30, 34, 10); const fl = Math.sin(now / 60 + k) * 2;
+        const gl = p.createRadialGradient(px + 13, 70, 2, px + 13, 70, 60); gl.addColorStop(0, "rgba(255,170,60,0.35)"); gl.addColorStop(1, "rgba(255,170,60,0)"); p.fillStyle = gl; p.fillRect(px - 50, 10, 126, 130); p.fillStyle = "#FFB040"; p.beginPath(); p.moveTo(px + 9, 74); p.quadraticCurveTo(px + 13 + fl, 56, px + 17, 74); p.fill(); p.fillStyle = "#5A3A20"; p.fillRect(px + 11, 74, 4, 10); }
+      p.fillStyle = "#3A3440"; p.fillRect(0, 0, W, 22); p.fillStyle = "#2A2430"; for (let k = 0; k < W / 30 + 2; k++) p.fillRect(k * 30 - (x % 30), 16, 2, 6);
+      const pits = L ? L.things.filter((t) => t.kind === "pit") : [];
+      p.fillStyle = "#4A4250"; p.fillRect(0, G, W, H - G); for (let k = 0; k < W / 40 + 2; k++) { p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(k * 40 - (x % 40), G, 1, H - G); } p.fillStyle = "#6A6070"; p.fillRect(0, G, W, 3);
+      for (const t of pits) { const sx = t.x - x; if (sx > W || sx + t.w < 0) continue; const g = p.createLinearGradient(0, G, 0, H); g.addColorStop(0, "#08060C"); g.addColorStop(1, "#000"); p.fillStyle = g; p.fillRect(sx, G, t.w, H - G); p.fillStyle = "#2A2430"; p.fillRect(sx - 2, G, 2, 20); p.fillRect(sx + t.w, G, 2, 20); }
+      if (L) { for (const t of L.things) { const sx = t.x - x; if (sx < -60 || sx > W + 60) continue;
+          if (t.kind === "coin") { if (t.done) continue; const s = Math.abs(Math.cos(now / 150 + t.x)); p.fillStyle = "#F0C040"; p.beginPath(); p.ellipse(sx, G - t.y - 10, 6 * s + 1, 6, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFF0A0"; p.fillRect(sx - 1, G - t.y - 14, 2 * s, 3); }
+          else if (t.kind === "spikes") { const bx = t.x - x + 13; p.fillStyle = "#8A8070"; for (let k = 0; k < 4; k++) { p.beginPath(); p.moveTo(bx - 13 + k * 7, G); p.lineTo(bx - 9.5 + k * 7, G - 16); p.lineTo(bx - 6 + k * 7, G); p.fill(); } p.fillStyle = "#6A3020"; p.fillRect(bx - 13, G - 2, 28, 2); }
+          else if (t.kind === "beam") { const bx = t.x - x + 13; p.fillStyle = "#5A3A20"; p.fillRect(bx - 4, 22, 8, G - 40 - 22); p.fillStyle = "#7A5030"; p.fillRect(bx - 20, G - 44, 44, 12); p.strokeStyle = "#8A8A90"; for (let k = 0; k < 2; k++) { p.beginPath(); p.moveTo(bx - 12 + k * 26, G - 32); p.lineTo(bx - 12 + k * 26 + Math.sin(now / 300 + k) * 3, G - 22); p.stroke(); } }
+          else if (t.kind === "bat") { if (t.done) continue; const bx = t.x - x + 13, by = G - 34 + Math.sin(now / 200 + t.x) * 5, f = Math.sin(now / 45) * 8; p.fillStyle = "#3A2040"; p.beginPath(); p.ellipse(bx, by, 6, 5, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(bx - 4, by); p.lineTo(bx - 16, by - f); p.lineTo(bx - 10, by + 3); p.moveTo(bx + 4, by); p.lineTo(bx + 16, by - f); p.lineTo(bx + 10, by + 3); p.fill(); p.fillStyle = "#FF4040"; p.fillRect(bx - 3, by - 2, 2, 2); p.fillRect(bx + 1, by - 2, 2, 2); } }
+        const P = L.p, px = US.px, py = G + P.y; if (!(P.guard > 0 && Math.floor(now / 90) % 2)) { p.save(); p.translate(px, py);
+          if (P.slide > 0) { p.fillStyle = "#3A4A6A"; p.beginPath(); p.ellipse(0, -9, 16, 8, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E0C090"; p.beginPath(); p.arc(12, -12, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C03030"; p.fillRect(-20, -14, 10, 3); }
+          else { const run = P.onGround ? Math.sin(now / 55) : 0.6, tuck = P.onGround ? 0 : 1; p.strokeStyle = "#2A2A3A"; p.lineWidth = 4; p.beginPath(); p.moveTo(0, -18); p.lineTo(run * 8, -8 + tuck * 2); p.lineTo(run * 6 + (tuck ? 4 : 0), 0 - tuck * 6); p.moveTo(0, -18); p.lineTo(-run * 8, -8 + tuck * 2); p.lineTo(-run * 6 - 2, 0 - tuck * 4); p.stroke(); p.lineWidth = 1;
+            p.fillStyle = "#3A4A6A"; p.beginPath(); p.ellipse(0, -26, 7, 11, 0.15, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2A3450"; p.beginPath(); p.arc(2, -40, 6.5, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E0C090"; p.beginPath(); p.arc(4, -39, 3.5, 0, Math.PI * 2); p.fill();
+            p.strokeStyle = "#C03030"; p.lineWidth = 3; p.beginPath(); p.moveTo(-3, -34); p.quadraticCurveTo(-14, -34 + Math.sin(now / 80) * 4, -22, -30 + Math.sin(now / 60) * 5); p.stroke(); p.lineWidth = 1; }
+          p.restore(); } }
+      const fog = p.createLinearGradient(0, 0, W, 0); fog.addColorStop(0, "rgba(0,0,0,0.5)"); fog.addColorStop(0.15, "rgba(0,0,0,0)"); fog.addColorStop(0.85, "rgba(0,0,0,0)"); fog.addColorStop(1, "rgba(0,0,0,0.5)"); p.fillStyle = fog; p.fillRect(0, 0, W, H);
+      if (L) { const k = Math.min(1, L.x / L.len); p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(8, H - 14, W - 16, 6); p.fillStyle = "#F0C040"; p.fillRect(9, H - 13, (W - 18) * k, 4); }
+    },
+  });
+}
+
+// ---- 76zze-bastion.js ----
+"use strict";
+// The Rune Bastion, the window's side: a green valley with a dirt road winding from a goblin cave to the bastion's
+// gate; grass that stirs, flowers, the road's ruts; rune-stones set beside it - a fire brazier that spits fireballs and
+// scorches where they burst, a frost crystal whose beam rimes its target blue, an arcane obelisk with motes circling it
+// that throws a crackling bolt - each with pips for its strength; goblins, wolves and ogres trudging with their health
+// above them and a puff of smoke when they fall, mana floating up. The tray below picks the rune to set; click a set
+// rune to strengthen it. The rules are 64zzf-arc2.js.
+CM.CG_TABLES.push(["bastion", "The Rune Bastion"]);
+{ const RBT = CM.RBT, C = RBT.C, GW = RBT.W * C, GH = RBT.H * C, W = GW, H = GH + 44, KINDS = ["fire", "frost", "arcane"], NAMES = { fire: "Fire", frost: "Frost", arcane: "Arcane" };
+  const tower = (p, kind, X, Y, lvl, now, cd) => { const T = RBT.TOWERS[kind]; p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(X + 17, Y + 26, 12, 5, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A8478"; p.fillRect(X + 6, Y + 14, 20, 14); p.fillStyle = "#A8A294"; p.fillRect(X + 6, Y + 14, 20, 3);
+    if (kind === "fire") { p.fillStyle = "#4A3A30"; p.fillRect(X + 8, Y + 10, 16, 5); const f = Math.sin(now / 70) * 2; p.fillStyle = "#F06030"; p.beginPath(); p.moveTo(X + 9, Y + 11); p.quadraticCurveTo(X + 16 + f, Y - 6, X + 23, Y + 11); p.fill(); p.fillStyle = "#FFD040"; p.beginPath(); p.moveTo(X + 12, Y + 11); p.quadraticCurveTo(X + 16 - f, Y + 1, X + 20, Y + 11); p.fill(); }
+    else if (kind === "frost") { p.fillStyle = "#A0E0FF"; p.shadowColor = "#60C0F0"; p.shadowBlur = 8; p.beginPath(); p.moveTo(X + 16, Y - 4 + Math.sin(now / 400) * 1.5); p.lineTo(X + 23, Y + 9); p.lineTo(X + 16, Y + 15); p.lineTo(X + 9, Y + 9); p.fill(); p.shadowBlur = 0; p.fillStyle = "rgba(255,255,255,0.7)"; p.fillRect(X + 14, Y + 3, 2, 6); }
+    else { p.fillStyle = "#4A3A60"; p.beginPath(); p.moveTo(X + 11, Y + 15); p.lineTo(X + 14, Y - 4); p.lineTo(X + 18, Y - 4); p.lineTo(X + 21, Y + 15); p.fill(); p.fillStyle = "#D0A0FF"; p.fillRect(X + 15, Y + 2, 2, 8); for (let k = 0; k < 3; k++) { const a = now / 400 + (k * Math.PI * 2) / 3; p.fillStyle = T.col; p.beginPath(); p.arc(X + 16 + Math.cos(a) * 11, Y + 6 + Math.sin(a) * 4, 2, 0, Math.PI * 2); p.fill(); } }
+    for (let k = 0; k < lvl; k++) { p.fillStyle = "#FFE070"; p.beginPath(); p.arc(X + 11 + k * 5, Y + 22, 1.8, 0, Math.PI * 2); p.fill(); } };
+  Object.assign(CM.ARC.reg.bastion, {
+    ui: { W, H, scale: 1.05, frame: "#2A4A2A", start: "Man the walls", go: "Wave 1 - set your runes!", over: "The gate is broken", levelWord: "Wave",
+      lore: "The Joker keeps a little bastion in a painted valley behind the arcade, and every evening the goblins come for it. \"Set the runes by the road,\" says the old warden, \"and spend what they drop on more. Don't let them reach my gate.\"",
+      help: "Pick a rune in the tray (or 1, 2, 3) and click the grass beside the road to set it: fire (30 mana) bursts on a crowd, frost (25) slows, arcane (45) reaches far and hits hard. Click a set rune to strengthen it (to three pips). Foes that fall give mana; each that reaches the gate costs a heart (an ogre three). Runes and mana carry on to the next wave.",
+      keys: ["Digit1", "Digit2", "Digit3"],
+      extraHud(p, L, Wd) { p.fillStyle = "#C0A0FF"; p.font = "bold 12px monospace"; p.fillText(`✦ ${L.mana}`, Wd - 170, 19); p.fillStyle = "#F08080"; p.fillText(`♥ ${L.lives}`, Wd - 100, 19); p.fillStyle = "#F0E0B0"; p.font = "11px monospace"; p.fillText(`${L.queue.length + L.foes.length} left`, Wd - 58, 19); } },
+    press(L, code, ui) { ui.rbPick = KINDS[Number(code.slice(5)) - 1] || ui.rbPick; },
+    click(L, x, y, ui) {
+      if (y >= GH) { const k = Math.floor(x / (W / 4)); if (k < 3) { ui.rbPick = KINDS[k]; ui.cgSfx("card", 0.25, 1.3); } return; }
+      const cx = Math.floor(x / C), cy = Math.floor(y / C), had = L.towers.find((t) => t.x === cx && t.y === cy), why = had ? L.upgrade(cx, cy) : L.build(ui.rbPick || "fire", cx, cy);
+      if (why) { ui.cgSfx("miss", 0.25); ui.rbWhy = { text: why, at: performance.now() }; } },
+    event(ui, e, now, L, fx) {
+      if (e.kind === "build" || e.kind === "upgrade") { ui.cgSfx(e.kind === "build" ? "slam" : "cardwin", 0.3, 1.3); ui.arcBurst(fx, e.x * C + 16, e.y * C + 16, ["#FFE070", RBT.TOWERS[(L.towers.find((t) => t.x === e.x && t.y === e.y) || {}).kind || "fire"].col, "#FFFFFF"], 14, 90); }
+      else if (e.kind === "shot") ui.cgSfx(e.what === "fire" ? "zap" : e.what === "frost" ? "step" : "zap", 0.08, e.what === "arcane" ? 1.8 : e.what === "frost" ? 2 : 0.9);
+      else if (e.kind === "fall") { ui.cgSfx("coin", 0.15, 1.6); ui.arcBurst(fx, e.x * C, e.y * C, ["#A0A0A0", "#606060", "#C0A0FF"], 8, 60, -40); ui.arcPts(fx, e.x * C, e.y * C - 8, `+${RBT.FOES[(e.pts === 80 ? "ogre" : e.pts === 30 ? "wolf" : "goblin")].mana}✦`, "#D0B0FF"); }
+      else if (e.kind === "leak") { ui.cgSfx("hurt", 0.4); fx.shake = 0.2; }
+      else if (e.kind === "held") ui.cgNote = `The wave is held: +${e.bonus} mana for the next.`;
+    },
+    draw(p, L, now, dt, ui) {
+      for (let y = 0; y < RBT.H; y++) for (let x = 0; x < RBT.W; x++) { p.fillStyle = (x * 7 + y * 13) % 3 ? "#4A8A3A" : "#4F9040"; p.fillRect(x * C, y * C, C, C); }
+      for (let k = 0; k < 60; k++) { const x = (k * 97) % GW, y = (k * 53) % GH; if (RBT.onPath.has(`${Math.floor(x / C)},${Math.floor(y / C)}`)) continue; const s = Math.sin(now / 600 + k) * 1.5; p.strokeStyle = "#6AB050"; p.beginPath(); p.moveTo(x, y + 4); p.lineTo(x + s, y - 2); p.stroke(); if (k % 7 === 0) { p.fillStyle = k % 2 ? "#F0E060" : "#F080A0"; p.fillRect(x + 3, y, 3, 3); } }
+      for (const [x, y] of RBT.cells) { p.fillStyle = "#A08058"; p.fillRect(x * C - 1, y * C - 1, C + 2, C + 2); } for (const [x, y] of RBT.cells) { p.fillStyle = "#B8956A"; p.fillRect(x * C + 3, y * C + 3, C - 6, C - 6); p.fillStyle = "rgba(0,0,0,0.08)"; p.fillRect(x * C + 9, y * C + 3, 2, C - 6); p.fillRect(x * C + 21, y * C + 3, 2, C - 6); }
+      const [sx, sy] = RBT.PATH[0]; p.fillStyle = "#2A2420"; p.beginPath(); p.arc(sx * C + 6, sy * C + 16, 16, Math.PI / 2, -Math.PI / 2, true); p.fill(); p.fillStyle = "#101010"; p.beginPath(); p.arc(sx * C + 6, sy * C + 16, 10, Math.PI / 2, -Math.PI / 2, true); p.fill();
+      const [gx, gy] = RBT.PATH[RBT.PATH.length - 1]; p.fillStyle = "#7A7480"; p.fillRect(gx * C - 14, gy * C + 4, C + 28, C - 4); for (let k = 0; k < 5; k++) p.fillRect(gx * C - 14 + k * 13, gy * C - 2, 8, 6); p.fillStyle = "#4A2A18"; p.beginPath(); p.moveTo(gx * C + 6, gy * C + C); p.lineTo(gx * C + 6, gy * C + 16); p.arc(gx * C + 16, gy * C + 16, 10, Math.PI, 0); p.lineTo(gx * C + 26, gy * C + C); p.fill(); p.fillStyle = "#C03030"; p.fillRect(gx * C + 15, gy * C - 16, 2, 14); p.beginPath(); p.moveTo(gx * C + 17, gy * C - 16); p.lineTo(gx * C + 27, gy * C - 12 + Math.sin(now / 200)); p.lineTo(gx * C + 17, gy * C - 8); p.fill();
+      if (L) { const m = ui.arcMouse, mx = m ? Math.floor(m[0] / C) : -1, my = m ? Math.floor(m[1] / C) : -1, hov = L.towers.find((t) => t.x === mx && t.y === my);
+        if (m && m[1] < GH) { const kind = hov ? hov.kind : ui.rbPick || "fire", T = RBT.TOWERS[kind], r = (T.range + 0.3 * ((hov ? hov.lvl : 1) - 1)) * C; p.fillStyle = hov || L.canBuild(mx, my) ? "rgba(255,255,255,0.12)" : "rgba(255,60,60,0.15)"; p.strokeStyle = "rgba(255,255,255,0.35)"; p.beginPath(); p.arc(mx * C + 16, my * C + 16, r, 0, Math.PI * 2); p.fill(); p.stroke(); p.strokeStyle = hov || L.canBuild(mx, my) ? "#FFE070" : "#F04040"; p.strokeRect(mx * C + 1, my * C + 1, C - 2, C - 2); }
+        for (const t of L.towers) tower(p, t.kind, t.x * C, t.y * C, t.lvl, now);
+        for (const f of L.foes) { const [fx_, fy_] = L.pos(f), X = fx_ * C, Y = fy_ * C, step = Math.sin(now / 90 + f.id * 7) * 2, big = f.kind === "ogre";
+          p.fillStyle = "rgba(0,0,0,0.25)"; p.beginPath(); p.ellipse(X, Y + (big ? 11 : 7), big ? 11 : 7, 3, 0, 0, Math.PI * 2); p.fill();
+          if (f.kind === "wolf") { p.fillStyle = "#808088"; p.beginPath(); p.ellipse(X, Y, 10, 5, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(X + 8, Y - 3, 4, 0, Math.PI * 2); p.fill(); p.fillRect(X - 7, Y + 3 + step, 2, 4); p.fillRect(X + 5, Y + 3 - step, 2, 4); }
+          else { const s = big ? 1.6 : 1; p.fillStyle = big ? "#8A6A40" : "#5A9A40"; p.beginPath(); p.ellipse(X, Y - 2 * s, 5 * s, 7 * s, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(X, Y - 10 * s, 4 * s, 0, Math.PI * 2); p.fill(); p.fillStyle = "#FFE040"; p.fillRect(X - 2 * s, Y - 11 * s, 1.5 * s, 1.5 * s); p.fillRect(X + 1 * s, Y - 11 * s, 1.5 * s, 1.5 * s); p.fillStyle = "#3A2A20"; p.fillRect(X - 3 * s, Y + 4 * s + step * 0.5, 2 * s, 3 * s); p.fillRect(X + 1 * s, Y + 4 * s - step * 0.5, 2 * s, 3 * s); if (big) { p.fillStyle = "#5A3A20"; p.fillRect(X + 6, Y - 18, 3, 16); } }
+          if (f.slow > 0) { p.fillStyle = "rgba(140,210,255,0.35)"; p.beginPath(); p.arc(X, Y - 4, big ? 13 : 9, 0, Math.PI * 2); p.fill(); }
+          const k = Math.max(0, f.hp / f.max); p.fillStyle = "rgba(0,0,0,0.6)"; p.fillRect(X - 10, Y - (big ? 28 : 20), 20, 3); p.fillStyle = k > 0.5 ? "#60E060" : k > 0.25 ? "#F0C040" : "#F04040"; p.fillRect(X - 10, Y - (big ? 28 : 20), 20 * k, 3); }
+        for (const s of L.shots) { const T = RBT.TOWERS[s.kind], a = 1 - (L.t - s.at) / 0.25, x0 = s.x0 * C, y0 = s.y0 * C - 8, x1 = s.x1 * C, y1 = s.y1 * C; p.globalAlpha = Math.max(0, a);
+          if (s.kind === "fire") { const k = 1 - a; p.fillStyle = "#FFB040"; p.beginPath(); p.arc(x0 + (x1 - x0) * Math.min(1, k * 2), y0 + (y1 - y0) * Math.min(1, k * 2), 4, 0, Math.PI * 2); p.fill(); if (k > 0.5) { p.fillStyle = "rgba(255,120,40,0.5)"; p.beginPath(); p.arc(x1, y1, RBT.TOWERS.fire.splash * C * (k - 0.3), 0, Math.PI * 2); p.fill(); } }
+          else if (s.kind === "frost") { p.strokeStyle = "#B0E8FF"; p.lineWidth = 3; p.beginPath(); p.moveTo(x0, y0); p.lineTo(x1, y1); p.stroke(); p.lineWidth = 1; }
+          else { p.strokeStyle = T.col; p.lineWidth = 2; p.beginPath(); p.moveTo(x0, y0); for (let k = 1; k < 6; k++) p.lineTo(x0 + ((x1 - x0) * k) / 6 + (Math.random() - 0.5) * 8, y0 + ((y1 - y0) * k) / 6 + (Math.random() - 0.5) * 8); p.lineTo(x1, y1); p.stroke(); p.lineWidth = 1; }
+          p.globalAlpha = 1; } }
+      // the tray
+      p.fillStyle = "#2A2018"; p.fillRect(0, GH, W, 44); p.fillStyle = "#4A3A28"; p.fillRect(0, GH, W, 2);
+      KINDS.forEach((kind, k) => { const X = k * (W / 4), on = (ui.rbPick || "fire") === kind, T = RBT.TOWERS[kind]; p.fillStyle = on ? "rgba(255,224,112,0.18)" : "rgba(255,255,255,0.04)"; p.fillRect(X + 4, GH + 5, W / 4 - 8, 34); if (on) { p.strokeStyle = "#FFE070"; p.strokeRect(X + 4.5, GH + 5.5, W / 4 - 9, 33); }
+        tower(p, kind, X + 6, GH + 9, 1, now); p.fillStyle = "#F0E0B0"; p.font = "bold 12px Georgia"; p.fillText(`${k + 1} ${NAMES[kind]}`, X + 42, GH + 21); p.fillStyle = L && L.mana < T.cost ? "#C06060" : "#C0A0FF"; p.font = "11px monospace"; p.fillText(`${T.cost} ✦`, X + 42, GH + 35); });
+      p.fillStyle = ui.rbWhy && performance.now() - ui.rbWhy.at < 2500 ? "#F0A080" : "#B0A890"; p.font = "10px Georgia"; const tip = ui.rbWhy && performance.now() - ui.rbWhy.at < 2500 ? ui.rbWhy.text : "Click a set rune|to strengthen it"; tip.split("|").forEach((t, k, a) => p.fillText(t, W * 0.75, GH + 24 + (k - (a.length - 1) / 2) * 12));
+    },
+  });
+}
+
+// ---- 76zzf-vault.js ----
+"use strict";
+// The Vault Runes, the window's side: a round vault door of dark iron set in the stone, its face a grid of rune-plates;
+// a lit rune glows gold with a soft pulse and its sigil burns, a dark one is cold slate; touching a plate turns it and
+// its neighbours with a little rotating flip and a chime that rises with the lit count; the bolts round the rim draw
+// back one by one as the runes light, and when all are lit the great wheel spins and the door swings open on a heap of
+// gold. Free to play: each vault opened pays tickets, the first time gold, and every third vault a card. The rules are
+// 64zzf-arc2.js.
+CM.CG_TABLES.push(["vault", "The Vault Runes"]);
+{ const floor0 = CM.UI.prototype.renderFloor, VR = CM.VR, S = 340, GLYPH = ["ᚠ", "ᚢ", "ᚦ", "ᚨ", "ᚱ", "ᚲ", "ᚷ", "ᚹ", "ᚺ", "ᚾ", "ᛁ", "ᛃ", "ᛇ", "ᛈ", "ᛉ", "ᛊ", "ᛏ", "ᛒ", "ᛖ", "ᛗ", "ᛚ", "ᛜ", "ᛞ", "ᛟ"];
+  Object.assign(CM.UI.prototype, {
+    renderFloor(box) { if (this.cgView === "vault") return this.cgVault(box); return floor0.call(this, box); },
+    cgVault(box) {
+      const g = this.game, St = g.vrStore(), top = Object.keys(St.done).length + 1, L = g.vrLive, n = L ? L.n : Math.min(top, this.vrN || top);
+      const btns = []; for (let k = Math.max(1, top - 11); k <= top; k++) btns.push(`<button data-vrn="${k}" class="${k === n ? "primary" : ""}${St.done[k] ? " done" : ""}">${k}${St.done[k] ? " ✓" : ""}${k % 3 === 0 && !St.done[k] ? " ♦" : ""}</button>`);
+      box.innerHTML = `<div class="cgtable vault"><h3>The Vault Runes</h3><p class="lore">In the deepest cellar the Joker keeps a row of old dwarf vaults, each sealed with a rune-lock. \"Light every rune and the door's yours to open,\" says the vault-keeper. \"Touch one and its neighbours turn with it. That's the whole trick, and nobody gets it quick.\"</p>
+        <div class="row vrlevels">${btns.join("")}</div>
+        <div class="vrwrap"><canvas class="vrcanvas" width="${S}" height="${S}"></canvas></div>
+        <div class="cgnote">${this.cgNote || ""}</div>${this.vrCard ? this.cgCardWon(this.vrCard) : ""}
+        <div class="row"><button class="primary" data-vrgo>${L && L.open ? "The next vault" : L ? "Start this vault again" : "Try the lock"}</button><button data-leave>Leave</button></div>
+        <div class="small">Touch a rune to turn it and the runes beside it${n >= 8 ? " (from vault 8, the corners too)" : ""}; light them all to open the vault. Free to try. Each vault opened gives ${VR.tickets(n)} tickets (2 more within ${L ? L.par : "the keeper's"} touches); the first time, ${VR.gold(n)} gold, and every third vault a card. Opened ${St.opened} time${St.opened === 1 ? "" : "s"}; ${Object.keys(St.done).length} vaults beaten.${St.best[n] ? ` Your best on vault ${n}: ${St.best[n]} touches.` : ""}</div></div>`;
+      const q = (s) => box.querySelector(s); q("[data-leave]").addEventListener("click", () => this.closeDialogs());
+      const start = (k) => { g.vrNew(k); this.vrN = k; this.vrFx = { flips: [], at: performance.now() }; this.vrCard = null; this.cgNote = `Vault ${g.vrLive.n}: light every rune.`; this.cgSfx("door", 0.35, 0.8); this.renderCasino(); };
+      box.querySelectorAll("[data-vrn]").forEach((b) => b.addEventListener("click", () => start(Number(b.dataset.vrn))));
+      q("[data-vrgo]").addEventListener("click", () => start(L && L.open ? Math.min(top, L.n + 1) : n));
+      const cv = this.vrCanvas = q(".vrcanvas");
+      cv.addEventListener("mousemove", (e) => { const r = cv.getBoundingClientRect(); this.vrMouse = [((e.clientX - r.left) / r.width) * S, ((e.clientY - r.top) / r.height) * S]; });
+      cv.addEventListener("mousedown", (e) => { const Lv = g.vrLive; if (!Lv || Lv.open) return; const c = this.vrCell(Lv, ...this.vrMouse); if (!c) return; const before = Lv.on.flat().filter(Boolean).length, r = g.vrTouch(c[0], c[1]), now = performance.now(), fx = this.vrFx = this.vrFx || { flips: [] };
+        for (const [a, b] of Lv.nb(c[0], c[1])) fx.flips.push({ x: a, y: b, at: now + (a === c[0] && b === c[1] ? 0 : 60) }); const lit = Lv.on.flat().filter(Boolean).length; this.cgSfx("tablebell", 0.22, 0.7 + (lit / (Lv.w * Lv.h)) * 1.1); if (lit < before) this.cgSfx("step", 0.15, 0.6);
+        if (r && r.open) { fx.open = now; this.cgSfx("victory", 0.6); if (r.card) setTimeout(() => this.cgSfx("cardwin", 0.5), 600); this.vrCard = r.card; this.cgNote = `Vault ${r.n} opened in ${r.moves} touches${r.moves <= r.par ? " - as quick as the keeper" : ""}: ${r.tickets} tickets${r.gold ? `, ${r.gold} gold for the first time` : ""}${r.card ? `, and a card - ${r.card}` : ""}.`; setTimeout(() => { this.renderCasino(); if (r.gold) this.cgCoins(this.$("#casino-body"), 14); }, 1400); } });
+      if (!this.vrLoop) { const loop = (now) => { if (!this.vrCanvas || !this.vrCanvas.isConnected || this.cgView !== "vault") { this.vrLoop = null; return; } this.vrFrame(now); this.vrLoop = requestAnimationFrame(loop); }; this.vrLoop = requestAnimationFrame(loop); }
+    },
+    vrGeom(Lv) { const cs = Math.min(52, Math.floor(200 / Math.max(Lv.w, Lv.h))); return { cs, x0: S / 2 - (Lv.w * cs) / 2, y0: S / 2 - (Lv.h * cs) / 2 }; },
+    vrCell(Lv, mx, my) { const { cs, x0, y0 } = this.vrGeom(Lv), x = Math.floor((mx - x0) / cs), y = Math.floor((my - y0) / cs); return x >= 0 && y >= 0 && x < Lv.w && y < Lv.h ? [x, y] : null; },
+    vrFrame(now) {
+      const p = this.vrCanvas.getContext("2d"), Lv = this.game.vrLive, fx = this.vrFx || { flips: [] }, cx = S / 2, cy = S / 2, R = S / 2 - 12;
+      const bg = p.createRadialGradient(cx, cy, 40, cx, cy, S * 0.75); bg.addColorStop(0, "#3A3430"); bg.addColorStop(1, "#141010"); p.fillStyle = bg; p.fillRect(0, 0, S, S);
+      for (let k = 0; k < 14; k++) { p.strokeStyle = "rgba(0,0,0,0.35)"; p.strokeRect((k % 4) * 110 - 10 + (Math.floor(k / 4) % 2) * 55, Math.floor(k / 4) * 110, 110, 110); }
+      const open = fx.open ? Math.min(1, (now - fx.open) / 1200) : 0, lit = Lv ? Lv.on.flat().filter(Boolean).length / (Lv.w * Lv.h) : 0;
+      if (open > 0) { p.fillStyle = "#0A0806"; p.beginPath(); p.arc(cx, cy, R, 0, Math.PI * 2); p.fill(); for (let k = 0; k < 40; k++) { const a = (k * 2.4) % (Math.PI * 2), d = (k * 37) % (R * 0.7); p.fillStyle = k % 3 ? "#F0C040" : "#FFE890"; p.beginPath(); p.ellipse(cx + Math.cos(a) * d, cy + 40 + Math.sin(a) * d * 0.4, 7, 4, 0, 0, Math.PI * 2); p.fill(); } const gl = p.createRadialGradient(cx, cy + 40, 10, cx, cy + 40, R); gl.addColorStop(0, `rgba(255,220,120,${0.5 * open})`); gl.addColorStop(1, "rgba(255,220,120,0)"); p.fillStyle = gl; p.fillRect(0, 0, S, S); }
+      p.save(); p.translate(cx, cy); if (open > 0) p.scale(1 - open * 0.85, 1); p.translate(-cx, -cy);
+      const door = p.createRadialGradient(cx - 40, cy - 40, 20, cx, cy, R); door.addColorStop(0, "#5A5860"); door.addColorStop(1, "#24222A"); p.fillStyle = door; p.beginPath(); p.arc(cx, cy, R, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#7A7680"; p.lineWidth = 6; p.stroke(); p.lineWidth = 1;
+      for (let k = 0; k < 16; k++) { const a = (k / 16) * Math.PI * 2, back = lit * 16 > k ? 8 : 0; p.fillStyle = back ? "#3A3840" : "#A8A4B0"; p.beginPath(); p.arc(cx + Math.cos(a) * (R - 10 + back), cy + Math.sin(a) * (R - 10 + back), 5, 0, Math.PI * 2); p.fill(); }
+      p.save(); p.translate(cx, cy); p.rotate(open * Math.PI * 2 + lit * 0.4); p.strokeStyle = "rgba(160,150,170,0.35)"; p.lineWidth = 3; p.beginPath(); p.arc(0, 0, R - 34, 0, Math.PI * 2); p.stroke(); for (let k = 0; k < 6; k++) { p.rotate(Math.PI / 3); p.beginPath(); p.moveTo(0, R - 44); p.lineTo(0, R - 24); p.stroke(); } p.lineWidth = 1; p.restore();
+      if (Lv) { const { cs, x0, y0 } = this.vrGeom(Lv), hov = this.vrMouse && !Lv.open ? this.vrCell(Lv, ...this.vrMouse) : null, hn = hov ? Lv.nb(hov[0], hov[1]).map(([a, b]) => `${a},${b}`) : [];
+        for (let y = 0; y < Lv.h; y++) for (let x = 0; x < Lv.w; x++) { const on = Lv.on[y][x], f = fx.flips.filter((q) => q.x === x && q.y === y).pop(), k = f ? Math.min(1, Math.max(0, (now - f.at) / 220)) : 1, X = x0 + x * cs, Y = y0 + y * cs, sq = Math.abs(Math.cos(k * Math.PI)), show = k < 0.5 ? !on : on;
+          p.save(); p.translate(X + cs / 2, Y + cs / 2); p.scale(sq * 0.9 + 0.1, 1); const pulse = 0.7 + 0.3 * Math.sin(now / 400 + x + y);
+          p.fillStyle = show ? "#6A5020" : "#2E2C34"; p.fillRect(-cs / 2 + 3, -cs / 2 + 3, cs - 6, cs - 6); if (show) { const gg = p.createRadialGradient(0, 0, 2, 0, 0, cs * 0.6); gg.addColorStop(0, `rgba(255,224,112,${0.7 * pulse})`); gg.addColorStop(1, "rgba(255,180,60,0.1)"); p.fillStyle = gg; p.fillRect(-cs / 2 + 3, -cs / 2 + 3, cs - 6, cs - 6); }
+          p.strokeStyle = show ? "#F0C850" : "#4A4852"; p.lineWidth = 2; p.strokeRect(-cs / 2 + 3, -cs / 2 + 3, cs - 6, cs - 6); p.lineWidth = 1;
+          p.fillStyle = show ? "#FFF4C0" : "#5A5864"; if (show) { p.shadowColor = "#FFC040"; p.shadowBlur = 10; } p.font = `bold ${Math.round(cs * 0.5)}px serif`; p.textAlign = "center"; p.fillText(GLYPH[(x * 5 + y * 7 + Lv.n) % GLYPH.length], 0, cs * 0.18); p.shadowBlur = 0; p.textAlign = "left"; p.restore();
+          if (hn.includes(`${x},${y}`)) { p.strokeStyle = hov[0] === x && hov[1] === y ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.35)"; p.strokeRect(X + 1.5, Y + 1.5, cs - 3, cs - 3); } }
+        p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(cx - 70, y0 + Lv.h * cs + 10, 140, 20); p.fillStyle = "#F0E0B0"; p.font = "12px Georgia"; p.textAlign = "center"; p.fillText(`Vault ${Lv.n} · ${Lv.moves} touch${Lv.moves === 1 ? "" : "es"} (keeper ${Lv.par})`, cx, y0 + Lv.h * cs + 24); p.textAlign = "left"; }
+      else { p.fillStyle = "#F0E0B0"; p.font = "18px Georgia"; p.textAlign = "center"; p.fillText("A sealed vault", cx, cy); p.font = "13px Georgia"; p.fillText("Try the lock", cx, cy + 22); p.textAlign = "left"; }
+      p.restore();
     },
   });
 }
