@@ -5513,6 +5513,23 @@ test("the world on one page: every place on the map can be gone to from the town
   assert.ok(G.every((x) => !x.go || WM.byId[x.go]), "every Go names a place");
 });
 
+test("the tree goes with them: weak spots and a kill's spoils in the Fortress, the tree's stats in Haven (and gone again on the way out), and its defence down the pipe", () => {
+  const CM = load(), SE = CM.SOLOEDGE, g = new CM.Game(); g.newGame("edge-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const k = g.party.findIndex((h) => CM.FORT_FIGHTERS.includes(h.cls) && h.cls !== "Rogue"), h = g.party[k]; assert.ok(k >= 0);
+  g.enterFloor(-1, "rope", CM.FORTRESS.front.slice()); g.mode = "explore"; assert.strictEqual(g.enterFortress(k), ""); let r = g.fortRun;
+  r.edgeRnd = { chance: () => true }; assert.strictEqual(r.critMult(), 1, "no weak spots learned, none found");
+  h.tree = { a3: 2, c2: 3, c3: 2 }; CM.recompute(h); assert.ok(Math.abs(SE.of(h).crit - 0.08) < 1e-9); assert.strictEqual(r.critMult(), 2, "the tree's weak spots, in the Fortress");
+  const o = r.mons[0], xp0 = r.xp, gold0 = r.gold; o.m.xp = 100; o.m.gold = 40; r.fall(o); assert.strictEqual(r.xp - xp0, 100 + Math.round(100 * SE.of(h).xpBonus)); assert.strictEqual(r.gold - gold0, 20 + Math.round(20 * SE.of(h).killGold));
+  assert.ok(SE.lines(h).some((x) => /Weak spots 8%/.test(x)));
+  g.leaveFortress("fled"); g.mode = "explore"; g.enterFloor(0, "rope", CM.PORTAL_YARD.ablo.slice());
+  const j = g.party.findIndex((x) => x !== h && x.hp > 0); const hj = g.party[j], key = (CM.CLASSES[hj.cls] || CM.CLASSES.Knight).key; hj.tree = { a1: 3, b1: 2 }; CM.recompute(hj);
+  assert.strictEqual(g.enterClaudeablo(j), ""); const pl = g.abloWorld.player; const want = SE.ablo(hj); assert.ok(want.vit === 2, "Constitution to Vitality");
+  assert.strictEqual(JSON.stringify(pl.edge), JSON.stringify(want)); const vit = pl.vit; g.leaveClaudeablo(); assert.ok(!pl.edge); assert.strictEqual(pl.vit, vit - 2, "gone on the way out");
+  assert.ok(!("edge" in JSON.parse(JSON.stringify(g.abloStore().heroes[CM.abloKey(hj)]))), "never saved");
+  g.mode = "explore"; g.enterFloor(0, "rope", CM.TOWN_PIPE.slice()); const hb = g.party[j]; hb.hp = hb.max; hb.tree = { b2: 3 }; CM.recompute(hb); hb.hp = hb.max; assert.strictEqual(g.enterBros(j), ""); const br = g.brosRun;
+  const hp0 = hb.hp; br.hurt(0.25); assert.strictEqual(hp0 - hb.hp, Math.max(1, Math.round(hb.max * 0.25 * 0.88)), "the tree's defence takes the sting out");
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

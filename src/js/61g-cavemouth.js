@@ -51,8 +51,8 @@ Object.assign(CM.Game.prototype, {
     if (c.why) return c.why;
     if (this.mode !== "explore" || !this.floor || this.floor.number !== -1) return "The cave's mouth is in the Wood.";
     const K = this.caveStore(), picks = [...new Set(rackPicks)].filter((k) => K.wands[k]).slice(0, CM.CAVE_RACK.carry);
-    const stat = Math.max(h.stats ? h.stats.int || 10 : 10, h.stats ? h.stats.wis || 10 : 10);
-    const hpMax = Math.round(60 + h.max * 2.5), dmgScale = 1 + (h.level - 1) * 0.06 + Math.max(0, stat - 10) * 0.03;
+    const stat = Math.max(this.stat(h, "int"), this.stat(h, "wis"));
+    const hpMax = Math.round(60 + h.max * 2.5), dmgScale = (1 + (h.level - 1) * 0.06 + Math.max(0, stat - 10) * 0.03) * (1 + (CM.SOLOEDGE ? CM.SOLOEDGE.of(h).crit : 0));
     K.runs += 1; this.saveVillage && this.saveVillage();
     const seed = CM.hashSeed(`${this.seed}:claudeita:${K.runs}`);
     this.logAct && this.logAct("enterClaudeita", i);

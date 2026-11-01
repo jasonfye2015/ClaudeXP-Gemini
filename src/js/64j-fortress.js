@@ -179,7 +179,7 @@ CM.FortRun = class {
     this.cool = T.swingCd; this.swingAt = this.t; let hit = 0;
     const inArc = (x, y, r) => { const d = Math.hypot(x - this.x, y - this.y); if (d > T.reach + r) return false; let a = Math.atan2(y - this.y, x - this.x) - this.face; a = Math.atan2(Math.sin(a), Math.cos(a)); return Math.abs(a) <= T.arc / 2 || d < 0.45; };
     for (const o of this.living()) if (inArc(o.x, o.y, T.monR * (o.scale || 1))) {
-      const dmg = Math.max(1, Math.round(g.damage(eff.atk, power, o.m.df) * (h.cls === "Rogue" && this.rnd.chance(0.25) ? 2 : 1)));
+      const dmg = Math.max(1, Math.round(g.damage(eff.atk, power, o.m.df) * this.critMult()));
       o.m.hp -= dmg; o.hitAt = this.t; hit++;
       const k = Math.hypot(o.x - this.x, o.y - this.y) || 1, push = o.boss ? 0.05 : 0.22; if (this.free(o.x + ((o.x - this.x) / k) * push, o.y + ((o.y - this.y) / k) * push, T.monR)) { o.x += ((o.x - this.x) / k) * push; o.y += ((o.y - this.y) / k) * push; }   // (a blow knocks it back)
       this.events.push({ kind: "hit", at: [o.x, o.y], amount: dmg, mon: o });
@@ -188,6 +188,7 @@ CM.FortRun = class {
     for (const L of this.lairs) if (L.hp > 0 && inArc(L.x, L.y, 0.4)) { const dmg = Math.max(1, Math.round(g.damage(eff.atk, power, 0) * 0.6)); L.hp -= dmg; L.hitAt = this.t; hit++; this.events.push({ kind: "lairhit", at: [L.x, L.y], amount: dmg }); if (L.hp <= 0) { this.xp += 12 + this.n * 4; this.events.push({ kind: "lairdown", at: [L.x, L.y] }); } }
     this.events.push({ kind: "swing", hit });
   }
+  critMult() { return this.hero.cls === "Rogue" && this.rnd.chance(0.25) ? 2 : 1; }   // (a weak spot found: a Rogue's quarter of blows)
   fall(o) {
     o.fellAt = this.t; this.kills += 1; this.xp += o.m.xp; const gold = Math.round(o.m.gold * 0.5); this.gold += gold; this.floorGold += gold;
     this.events.push({ kind: "die", at: [o.x, o.y], mon: o });
