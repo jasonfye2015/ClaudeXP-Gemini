@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Water and quality (the seventy-sixth big update - v19.1, UPGRADE_PLAN_14.md phase 1)
+  (src/js/69k-fieldcare.js, 76zzzk-fieldcare.js)
+  - Thirst: an unwatered crop stalls, and four dry dawns in a row wither it.
+  - Weeds on bare turned earth after three dawns, and now and then among the crops; a weedy plot doesn't grow until
+    they're pulled (Space or a click pulls them first).
+  - Crows take a ripe plot left standing two dawns, unless the fields have a scarecrow (60 gold at the shed).
+  - Stars, one to five, set at picking: two to start, one if never dry, one if composted, one if the plot grew
+    something else last, and sometimes one for luck. A star is a quarter more on the price, and shows in the name.
+  - Trimmings (pickings, pulled weeds, withered plants) go in the compost bin; five make a load, ready three dawns on.
+    Compost a growing crop by hand, or turn on "compost when sowing".
+  - Giants: a ripe 3x3 of pumpkin, watermelon, melon, cabbage or cauliflower may become one giant crop overnight,
+    drawn over all nine plots; picked, it gives fifteen to twenty at its stars.
+
 The South Fields (the seventy-fifth big update - v19.0, UPGRADE_PLAN_14.md phase 0)
   (src/js/69j-fields.js, 76zzzj-fields.js, 36c-cropart.js; the crops' pictures in 35b-croppack.js from tools/cropsheet.py)
   - The open bowl under the town's south wall becomes farmland: a new village building with four levels (24, 48, 72

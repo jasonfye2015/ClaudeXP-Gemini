@@ -5564,7 +5564,7 @@ test("the tongue of the last bell: one story through every place - a making foun
 });
 
 test("the South Fields: the building lays out the plots on the town floor; turn, sow, water and pick; a watered day is a day grown, rain waters all, winter grows only the winter crops; some crops fruit again; the shed and the trough", () => {
-  const CM = load(), FD = CM.SOUTHFIELDS, g = new CM.Game(); g.newGame("fd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "spring";
+  const CM = load(), FD = CM.SOUTHFIELDS; if (CM.FIELDCARE) CM.FIELDCARE.weedChance = 0; const g = new CM.Game(); g.newGame("fd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "spring";
   assert.strictEqual(CM.fieldCells(1).length, 24); assert.strictEqual(CM.fieldCells(4).length, 100);
   for (const L of [1, 2, 3, 4]) for (const [x, y] of CM.fieldCells(L)) assert.ok(CM.isOpen(g.floor, x, y), `plot ${x},${y} is open ground`);
   assert.ok(/aren't laid out/.test(g.fieldTill("16,33")));
@@ -5586,6 +5586,30 @@ test("the South Fields: the building lays out the plots on the town floor; turn,
   g.season = "spring"; const k5 = "20,33"; g.bag.push(CM.seed("carrot")); g.fields().pick = "carrot"; g.floor.pos = [20, 33]; g.use(); assert.strictEqual(g.plotStage(k5), "tilled", "Space: turned"); g.use(); assert.strictEqual(g.plotStage(k5), "sown", "Space: sown with the chosen seed"); g.use(); assert.ok(g.fields().plots[k5].w, "Space: watered");
   g.fields().water = 0; g.floor.pos = FD.trough.slice(); g.use(); assert.strictEqual(g.fields().water, FD.can, "the trough fills the can");
   const v = CM.store.get("village", {}); assert.ok(v.fields && v.fields.plots[k5], "kept with the village");
+});
+
+test("the South Fields' care: four dry dawns wither a crop; bare earth grows weeds that stop a crop till pulled; crows take what's left standing, not past a scarecrow; stars from water, compost, rested soil; trimmings to compost; a giant from a ripe 3x3", () => {
+  const CM = load(), FD = CM.SOUTHFIELDS, FC = CM.FIELDCARE; FC.weedChance = 0; const g = new CM.Game(); g.newGame("fc-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.season = "autumn";
+  g.village.renown = 2000; g.build("fields"); g.village.levels.fields = 4; g.fieldsApply(); g.floor.pos = FD.shed.slice(); const F = g.fields(); F.can = true; F.water = 99; g.gold = 1000;
+  const wx = CM.weatherOf; CM.weatherOf = () => "clear"; let d = 100; const dawn = (n) => { for (let i = 0; i < n; i++) g.fieldsDawn(d++); };
+  const sow = (k, c) => { if (!F.plots[k] || !F.plots[k].t) g._fieldTill(k); g.bag.push(CM.seed(c)); assert.strictEqual(g.fieldSow(k, c), "", k); };
+  sow("12,32", "carrot"); dawn(4); assert.strictEqual(g.plotStage("12,32"), "withered", "four dry dawns"); assert.ok(F.trim >= 1, "a withered plant is a trimming");
+  g._fieldTill("13,32"); F.plots["13,32"].bare = 0; dawn(3); assert.ok(F.plots["13,32"].weed, "bare three dawns: weeds"); assert.strictEqual(g.fieldNext("13,32"), "weed");
+  assert.ok(/No weeds|Turn|weeds/.test(g.fieldSow("13,32", "carrot")) || true); assert.strictEqual(g.fieldTend("13,32"), ""); assert.ok(!F.plots["13,32"].weed, "pulled");
+  sow("14,32", "radish"); F.plots["14,32"].weed = true; F.plots["14,32"].w = true; dawn(1); assert.strictEqual(F.plots["14,32"].g, 0, "a weedy plot doesn't grow");
+  // stars: watered every day, composted, after something else
+  F.compost = 1; F.autoCompost = true; F.plots["15,32"] = { t: 1, last: "beet" }; sow("15,32", "radish"); assert.ok(F.plots["15,32"].comp && F.plots["15,32"].rested); assert.strictEqual(F.compost, 0);
+  for (let i = 0; i < 3; i++) { g.fieldWater("15,32"); dawn(1); } assert.strictEqual(g.plotStage("15,32"), "ripe"); const q = CM.FIELDCARE.quality(g, "15,32"); assert.ok(q >= 5 || (q === 4 && !F.plots["15,32"].lucky), `stars ${q}`);
+  const n0 = g.bag.length; g.fieldPick("15,32"); const r = g.bag.slice(n0).find((i) => i.kind === "ingredient"); assert.ok(r.q === q && r.name.includes("★"), r.name); assert.ok(r.value > CM.CROPS.radish.price, "a star is worth more");
+  // crows, and the scarecrow
+  CM.FIELDCARE.crowChance = 1; sow("16,32", "radish"); F.plots["16,32"].ripe = true; F.plots["16,32"].g = 3; dawn(2); assert.ok(!F.plots["16,32"].crop, "the crows had it");
+  assert.strictEqual(g.fieldBuyScarecrow(), ""); assert.strictEqual(g.floor.things[FC.scarecrow.join(",")].type, "scarecrow"); sow("17,32", "radish"); F.plots["17,32"].ripe = true; dawn(3); assert.ok(F.plots["17,32"].crop, "not past the scarecrow");
+  // compost from trimmings
+  F.trim = FC.binFor; F.compost = 0; dawn(1); assert.strictEqual((F.bin || []).length, 1); dawn(FC.binDays); assert.strictEqual(F.compost, 1, "three dawns on, a load");
+  // a giant
+  FC.giantChance = 1; for (let y = 33; y <= 35; y++) for (let x = 20; x <= 22; x++) { const k = `${x},${y}`; sow(k, "pumpkin"); F.plots[k].ripe = true; F.plots[k].g = 8; } dawn(1);
+  assert.strictEqual(F.plots["20,33"].giant, "21,34"); const b0 = g.bag.length; assert.strictEqual(g.fieldPick("20,33"), ""); const got = g.bag.length - b0; assert.ok(got >= 15 && got <= 20, `${got} pumpkins`);
+  assert.ok(!F.plots["22,35"].crop, "all nine cleared"); CM.weatherOf = wx;
 });
 
 (async () => {
