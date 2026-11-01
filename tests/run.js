@@ -3587,7 +3587,7 @@ test("the Mage Tower, from outside: a portal yard by the shaft with a lit portal
   const CM = load();
   const town = CM.makeTown("mt-1"), P = CM.PORTAL_YARD;
   assert.strictEqual(town.things[P.tower.join(",")].type, "portal"); for (const p of P.plinths) assert.strictEqual(town.things[p.join(",")].type, p === P.cabin || p === P.claudeita ? "portal" : "plinth");   // (the plinths lit for the cabin, v11.1, and the cave, v11.3)
-  assert.strictEqual(CM.townPlace(town, ...P.tower), "The Keep-yard", "in the Keep-yard, by the shaft");
+  assert.ok(/Keep-yard|Portal Court/.test(CM.townPlace(town, ...P.tower)), "in the Keep-yard's Portal Court, by the shaft (v21.0)");
   const land = CM.makeWood("mt-1");
   for (let y = CM.MAGE_TOWER.at[1] - 1; y <= CM.MAGE_TOWER.at[1] + 1; y++) for (let x = CM.MAGE_TOWER.at[0] - 1; x <= CM.MAGE_TOWER.at[0] + 1; x++) assert.strictEqual(CM.solidAt(land, x, y), "magetower");
   assert.strictEqual(land.things[CM.MAGE_DOOR.join(",")].type, "magedoor"); assert.strictEqual(land.things[CM.MAGE_PORTAL_LAND.join(",")].type, "portal");
@@ -5725,6 +5725,17 @@ test("the Glyph Deep's portals: a green one in the Keep-yard to the cabinet's cl
   g.floor.pos = P.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify([CM.GLYPH_AT[0], CM.GLYPH_AT[1] + 1]), "by the cabinet");
   const back = g.floor.things[CM.GLYPH_PORTAL.join(",")]; assert.ok(back && back.to === "town"); g.floor.pos = CM.GLYPH_PORTAL.slice(); g.use();
   assert.strictEqual(g.floor.number, 0); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(P), "home to the green portal");
+});
+
+test("the Portal Court: the yard grown to 7x9 inside, every portal in its place on the walls by kind, each reached from the opening without stepping on another, the shaft clear; home from each Wood portal to its own twin", () => {
+  const CM = load(), PC = CM.PORTALCOURT; const g = new CM.Game(); g.newGame("pc-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; const fl = g.floor, [x0, y0, x1, y1] = CM.TOWN_YARD;
+  assert.strictEqual((x1 - x0 - 1) * (y1 - y0 - 1), 63); for (const [k, at, , , kind] of PC.PORTALS) { const t = fl.things[at.join(",")]; assert.ok(t && t.type === "portal" && t.to === PC.TO[k], k); assert.ok(kind === "world" ? at[0] === x1 - 1 : at[1] === y0 + 1 || at[1] === y1 - 1, `${k} on its wall`); }
+  assert.strictEqual(Object.values(fl.things).filter((t) => t.type === "plinth").length, 0, "no dark plinths left");
+  const portals = new Set(PC.PORTALS.map(([, at]) => at.join(","))), from = [x0, 20];
+  for (const [k, at] of PC.PORTALS) { const d = CM.distances(fl.grid, from, (x, y) => CM.passable(fl, x, y) && (!portals.has(`${x},${y}`) || (x === at[0] && y === at[1]))); assert.ok(d.has(at.join(",")), `${k} reached`); }
+  const ds = CM.distances(fl.grid, from, (x, y) => CM.passable(fl, x, y) && !portals.has(`${x},${y}`)); assert.ok(ds.has(CM.TOWN_AT.shaft.join(",")), "the shaft reached past no portal");
+  for (const [k, back] of [["cabin", CM.CABIN.portal], ["claudeita", CM.CLAUDEITA.portal], ["fortress", CM.FORTRESS.portal], ["glyph", CM.GLYPH_PORTAL]]) {
+    g.enterFloor(-1, "rope", back.slice()); g.mode = "explore"; g.floor.pos = back.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.strictEqual(g.floor.pos.join(","), CM.PORTAL_YARD[k].join(","), `${k}'s twin home to its own portal`); }
 });
 
 (async () => {

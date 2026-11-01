@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Portal Court (the eighty-fourth big update - v21.0, UPGRADE_PLAN_16.md phase 0)
+  (src/js/69p-portalcourt.js, 76zzzq-portalcourt.js)
+  - The Keep-yard's walls pushed out to make a Portal Court, 7x9 inside (it was 5x5), still open to Shaft Lane.
+  - The shaft in the middle; the Wood's portals on the north wall (the Mage Tower, Leshy's cabin, Claudeita's cave)
+    and the south wall (the Fortress, the Glyph Deep); the world gates - one hero into another game - on the east
+    (Haven's red portal, the Neather Gate). Every portal and the shaft can be walked to from the opening without
+    stepping on another; the old dark plinths are gone, the postern is in the new north-east corner.
+  - Each portal has a name stone at its foot, cut and gilded, a brazier either side burning in its own colour, and a
+    ring of runes on the flagstones before it. Standing on one, the place is named for it.
+  - Home through any Wood portal lands on its own twin in the court.
+
 The Glyph Deep's portals (v20.3)
   (src/js/69o-glyphdeep.js; the green picture in 76zzzp-glyph.js)
   - A green portal on the Keep-yard's south row (between the Fortress's portal and Claudeita's) sets the party down by
