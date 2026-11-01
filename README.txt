@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The court's keepers (the eighty-seventh big update - v21.3, UPGRADE_PLAN_16.md phase 3 - the plan complete)
+  (src/js/69s-courtkeepers.js, 76zzzt-courtkeepers.js)
+  - The noticeboard in the court's south-east corner: every place beyond the court in its own colour - the shaft, the
+    seven portals, the Wayfarer's Stone - with its next step and who may go.
+  - The Portal-warden by the east wall, a keeper in a grey-blue coat with a lantern on a staff: talk to them for how
+    the court works (the walls by kind, the badges, the stone, the winch), and a word on something worth doing next.
+  - The shaft's lift: at the shaft, with camps reached, Space offers the winch - the first floor, or the merchant's
+    camp beneath any floor reached - instead of the old straight drop to the deepest camp.
+
 The portals' own looks (the eighty-sixth big update - v21.2, UPGRADE_PLAN_16.md phase 2)
   (src/js/69r-portallooks.js, 76zzzs-portallooks.js)
   - Every portal drawn as its own place: the Mage Tower's rune-cut violet stone, Leshy's roots and antlers, Claudeita's

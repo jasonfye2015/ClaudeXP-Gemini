@@ -5761,6 +5761,17 @@ test("the portals' own looks, the rules: standing at a court portal it says wher
   g.mode = "explore"; g.floor.pos = CM.FORTRESS.portal.slice(); g.use(); assert.strictEqual(g.floor.number, 0); assert.strictEqual(seen.filter((k) => k === "fortress").length, 2, "and home again");
 });
 
+test("the court's keepers: the noticeboard lists every place beyond the court with its next step; the Portal-warden talks and points at something worth doing; the shaft's lift goes to the first floor or any camp reached, and no further", () => {
+  const CM = load(), PC = CM.PORTALCOURT, CK = CM.COURTKEEPERS; const g = new CM.Game(); g.newGame("ck-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.strictEqual(g.floor.things[PC.BOARD.join(",")].type, "courtboard"); assert.strictEqual(g.floor.things[PC.WARDEN.join(",")].type, "warden");
+  const rows = CK.board(g); assert.strictEqual(rows.length, PC.PORTALS.length + 2); assert.ok(rows.every((r) => r.status), "every row has its next step");
+  let shown = 0; g.on("courtboard", () => shown++); g.floor.pos = PC.BOARD.slice(); g.use(); assert.strictEqual(shown, 1);
+  let talk = null; g.on("talk", (T) => { talk = T; }); g.floor.pos = PC.WARDEN.slice(); g.use(); assert.ok(talk && talk.title === "The Portal-warden" && talk.lines.length === 1);
+  g.floor.pos = CM.TOWN_AT.shaft.slice(); assert.ok(/camps you've reached/.test(g.shaftLift(5))); g.camps = [5]; assert.strictEqual(g.shaftLift(5), ""); assert.strictEqual(g.floor.number, 5); assert.strictEqual(g.mode, "camp");
+  const h = new CM.Game(); h.newGame("ck-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); h.mode = "explore"; h.floor.pos = CM.TOWN_AT.shaft.slice(); assert.strictEqual(h.shaftLift(0), ""); assert.strictEqual(h.floor.number, 1);
+  for (const at of [PC.BOARD, PC.WARDEN, CM.WAYSTONE.court]) for (const [, p] of PC.PORTALS) assert.notStrictEqual(at.join(","), p.join(","));
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it

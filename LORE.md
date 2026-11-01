@@ -131,6 +131,16 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## The Portal Court (v21.0 - v21.3)
+
+The Keep-yard was the old keep's wall round the shaft's mouth and nothing else. The portals came one at a time, each
+wherever there was room, until the yard was a cupboard of doors. The court that replaced it was the village's idea and
+the Portal-warden's insistence: the warden turned up the week the eighth portal lit, with a broom and a ledger, and has
+not said who sent them. The warden calls the portals "the doors" and the shaft "the well", sweeps the rune rings every
+morning (they don't need it), and keeps the noticeboard in a hand the chronicler swears is older than the warden is.
+The Wayfarer's Stone was found, not cut: it was the old keep's boundary stone, face down in the yard, and the runes on
+it were already the names of the Wood's places, including two nobody has found yet.
+
 ## The Glyph Deep (v20.0 - v20.2)
 
 Nobody put the cabinet by the road. The charcoal burner says it was there one morning under a roof of planks that
