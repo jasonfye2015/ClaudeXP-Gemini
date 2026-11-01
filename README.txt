@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The floor's spoils (the sixty-fifth big update - v17.9)
+  (src/js/64zzx-spoils.js; shown on the result card, 76zzp-controls.js)
+  Time at the tables now counts like time in the dungeon. Every play (worth two tickets) and every ticket won by
+  playing gives every hero standing experience (0.4 + 0.35 x the party's highest level, per ticket), and every fifty
+  turn up a piece of gear to wear - weapon, armour, shield, helm, ring, amulet, boots or cloak - made for the depth of
+  the party's highest level, sometimes enchanted, into the pack. Tickets handed over (the Almanac, the visit card, the
+  Joker's bank, the books, quests, the story, the daily wheel) and practice don't count. The pace is held to a
+  dungeon's whatever the stakes: at most 25 tickets' worth a real minute, banked up to six minutes' worth.
+
 The Joker's story (the sixty-fourth big update - v17.8)
   (src/js/64zzw-story.js, 76zzzb-story.js)
   - Five chapters told by the Joker himself - in his alcove at the end of the foyer on his floor, or from the story's

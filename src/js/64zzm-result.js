@@ -11,6 +11,6 @@
     cgCard(rare, why, rnd) { const c = card0.call(this, rare, why, rnd); if (c && !this.cgTiering) res(this).cards.push(c); return c; },
     cgTierCard(tier, why, R) { this.cgTiering = true; let c; try { c = tier0.call(this, tier, why, R); } finally { this.cgTiering = false; } if (c) res(this).cards.push(c); return c; },
     // what has been won since last asked
-    cgTakeResult() { const R = this.cgRes; this.cgRes = null; return R && (R.gold || R.tickets || R.cards.length) ? R : null; },
+    cgTakeResult() { const R = this.cgRes; this.cgRes = null; return R && (R.gold || R.tickets || R.cards.length || (R.items || []).length) ? R : null; },
   });
 }

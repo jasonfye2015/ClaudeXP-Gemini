@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v17.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v17.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1340,6 +1340,8 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .stround b { color: #FFE8A0; font-size: 13px; } .stround.now { border: 2px solid #FFE070; box-shadow: 0 0 12px rgba(255,224,112,0.35); } .stround.done { border-color: #70C080; background: rgba(60,120,70,0.25); } .stround em { color: #80E090; font-style: normal; } .stcount { color: #FFD0E8; }
 .stbubble { margin: 6px 0 10px; padding: 8px 12px; border-radius: 12px; background: #FBF4E0; color: #2A2010; font: italic 14px Georgia, serif; display: inline-block; }
 .stend p { font: italic 15px/1.6 Georgia, serif; } .stend p.small { font: 13px Georgia, serif; }
+/* ---- v17.9: the floor's spoils on the result card ---- */
+.cgresult .cgrxp { color: #C8E8FF; } .cgresult .cgrxp b { font-size: 18px; color: #E0F4FF; } .cgresult .cgritems { flex-basis: 100%; justify-content: center; font-size: 13px; color: #F0E6D0; }
 </style>
 </head>
 <body>
@@ -1349,7 +1351,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "17.8", built: "2026-11-01" };
+const CM = window.CM = { version: "17.9", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -24323,7 +24325,7 @@ CM.LUCK = {
     cgCard(rare, why, rnd) { const c = card0.call(this, rare, why, rnd); if (c && !this.cgTiering) res(this).cards.push(c); return c; },
     cgTierCard(tier, why, R) { this.cgTiering = true; let c; try { c = tier0.call(this, tier, why, R); } finally { this.cgTiering = false; } if (c) res(this).cards.push(c); return c; },
     // what has been won since last asked
-    cgTakeResult() { const R = this.cgRes; this.cgRes = null; return R && (R.gold || R.tickets || R.cards.length) ? R : null; },
+    cgTakeResult() { const R = this.cgRes; this.cgRes = null; return R && (R.gold || R.tickets || R.cards.length || (R.items || []).length) ? R : null; },
   });
 }
 
@@ -24800,6 +24802,37 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   { const w0 = P.wdOpen; P.wdOpen = function (kind, id) { return w0.call(this, kind, id) || (kind === "hat" && id === "goldcrown" && !!this.stStore().done); }; }
   // the Joker's alcove, at the foyer's end on his floor
   if (CM.makeJokerFloor) { const mk0 = CM.makeJokerFloor; CM.makeJokerFloor = function (...a) { const fl = mk0.apply(this, a); fl.things["20,24"] = { type: "cgservice", view: "story", name: "The Joker's alcove" }; return fl; }; }
+}
+
+// ---- 64zzx-spoils.js ----
+"use strict";
+// The floor's spoils (v17.9): time at the tables now counts as time in the dungeon. Every play (worth two tickets), and every ticket won by playing,
+// teaches the whole party (experience to every hero standing, at a rate set by the party's highest level) and, every
+// fifty tickets, turns up a piece of gear to wear - a weapon, armour, a shield, a helm, a ring, an amulet, boots or a
+// cloak - made for the depth of the party's highest level, now and then enchanted. Tickets handed over rather than
+// played for (the Almanac, the visit card, the Joker's bank, the books, the quests, the story, the daily wheel...)
+// don't count, nor does practice. And the floor keeps a dungeon's pace whatever the stakes: the spoils come from at
+// most 25 tickets a real minute, banked up to six minutes' worth so a big win still pays in full.
+{ const SP = CM.SPOILS = { play: 2, per: 50, rate: 25, cap: 150, enchant: 0.15, xp: (L) => 0.4 + 0.35 * L,
+    GEAR: ["weapon", "weapon", "armor", "armor", "shield", "helm", "ring", "amulet", "boots", "cloak"],
+    SKIP: ["joker", "almanac", "visits", "books", "story", "week", "quests", "vip", "prizewheel", "loyalty", "achievements"] };
+  const P = CM.Game.prototype, tk0 = P.tkAdd, st0 = P.cgStake;
+  Object.assign(P, {
+    spStore() { const F = this.cgStore(); F.spoils = F.spoils || { tk: 0, n: 0, xp: 0, items: 0, bucket: SP.cap, at: 0 }; return F.spoils; },
+    spLevel() { return Math.max(1, ...(this.party || []).map((h) => h.level || 1)); },
+    // tickets played for: the party's share of experience, and the gear that turns up
+    spEarn(k, now) { const S = this.spStore(); now = now === undefined ? Date.now() : now;
+      if (S.at) S.bucket = Math.min(SP.cap, S.bucket + ((now - S.at) / 60000) * SP.rate); S.at = now; const use = Math.min(k, Math.floor(S.bucket)); if (use <= 0) return null; S.bucket -= use;
+      const L = this.spLevel(), xp = Math.max(1, Math.round(use * SP.xp(L))), heroes = (this.alive ? this.alive() : this.party || []), out = { xp, items: [] };
+      for (const h of heroes) h.xp = (h.xp || 0) + xp; S.xp += xp; if (heroes.length && this.checkLevels) this.checkLevels();
+      S.tk += use; while (S.tk >= SP.per) { S.tk -= SP.per; S.n += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:spoils:${S.n}`)), depth = Math.max(1, Math.min(CM.BOTTOM || 50, L));
+        let it = CM.makeItem(depth, R, R.pick(SP.GEAR)); if (it && CM.affix && R.chance(SP.enchant)) it = CM.affix(it, depth + 2, R) || it;
+        if (it) { this.gain([it], "casino"); out.items.push(it); S.items += 1; } }
+      const res = this.cgRes = this.cgRes || { gold: 0, tickets: 0, cards: [] }; res.xp = (res.xp || 0) + xp; res.items = (res.items || []).concat(out.items);
+      this.saveCasino && this.saveCasino(); return out; },
+    cgStake(game, bet) { const why = st0.call(this, game, bet); if (!why && !this.cgPractice && !SP.SKIP.includes(game) && this.party && this.party.length) this.spEarn(SP.play); return why; },   // (a play counts too: the luck tables pay few tickets)
+    tkAdd(n, why) { const k = tk0.call(this, n, why); if (k > 0 && !this.cgPractice && !SP.SKIP.includes(why) && this.party && this.party.length) this.spEarn(k); return k; },
+  });
 }
 
 // ---- 65-village.js ----
@@ -34919,9 +34952,9 @@ CM.FISH_ART = (p, id, x, y, len, a = 0) => { const L = len, Hh = { eel: 0.12, pi
     cgResultFlush() { const g = this.game; if (this.cgBusy || this.cgView === "summary" || !g.cgTakeResult) return; const R = g.cgTakeResult(); if (!R) return; this.cgResultShow(R); },
     cgResultShow(R) {
       const dlg = this.$("#dlg-casino"); if (!dlg || !dlg.classList.contains("on")) return; const host = dlg.querySelector(".casinobox") || dlg; let C = this.cgResCard;
-      if (!C || !C.el.isConnected) { const el = document.createElement("div"); el.className = "cgresult"; el.setAttribute("role", "status"); host.appendChild(el); C = this.cgResCard = { el, gold: 0, tickets: 0, cards: [], shown: { gold: 0, tickets: 0 } }; }
-      C.gold += R.gold; C.tickets += R.tickets; C.cards = C.cards.concat(R.cards); const big = C.gold >= 200 || C.cards.length;
-      C.el.className = `cgresult on${big ? " big" : ""}`; C.el.innerHTML = `<b class="cgrtitle">${big ? "A fine win!" : "You win"}</b><span class="cgrgold" ${C.gold ? "" : "hidden"}><i class="cgrcoin"></i><em>+0</em> gold</span><span class="cgrtk" ${C.tickets ? "" : "hidden"}><i class="tkt"></i><em>+0</em> tickets</span>${C.cards.length ? `<span class="cgrcards">${C.cards.slice(-3).map((c) => `<i>${(CM.CARDS[c] || ["🂠"])[0]}</i>${this.esc ? this.esc(c) : c}`).join(", ")}</span>` : ""}`;
+      if (!C || !C.el.isConnected) { const el = document.createElement("div"); el.className = "cgresult"; el.setAttribute("role", "status"); host.appendChild(el); C = this.cgResCard = { el, gold: 0, tickets: 0, cards: [], xp: 0, items: [], shown: { gold: 0, tickets: 0 } }; }
+      C.gold += R.gold; C.tickets += R.tickets; C.cards = C.cards.concat(R.cards); C.xp += R.xp || 0; C.items = C.items.concat(R.items || []); const big = C.gold >= 200 || C.cards.length || C.items.length;
+      C.el.className = `cgresult on${big ? " big" : ""}`; C.el.innerHTML = `<b class="cgrtitle">${big ? "A fine win!" : "You win"}</b><span class="cgrgold" ${C.gold ? "" : "hidden"}><i class="cgrcoin"></i><em>+0</em> gold</span><span class="cgrtk" ${C.tickets ? "" : "hidden"}><i class="tkt"></i><em>+0</em> tickets</span>${C.xp ? `<span class="cgrxp"><b>+${money(C.xp)}</b> XP each</span>` : ""}${C.items.length ? `<span class="cgritems">${C.items.slice(-3).map((it) => `<b class="rarity-${CM.rarityOf ? CM.rarityOf(it) : "common"}">${this.esc ? this.esc(it.name) : it.name}</b>`).join(", ")}${C.items.length > 3 ? ` and ${C.items.length - 3} more` : ""} - in the pack</span>` : ""}${C.cards.length ? `<span class="cgrcards">${C.cards.slice(-3).map((c) => `<i>${(CM.CARDS[c] || ["🂠"])[0]}</i>${this.esc ? this.esc(c) : c}`).join(", ")}</span>` : ""}`;
       const eg = C.el.querySelector(".cgrgold em"), et = C.el.querySelector(".cgrtk em"), from = { ...C.shown }, t0 = performance.now(), dur = 650;
       const tick = (now) => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); C.shown.gold = Math.round(from.gold + (C.gold - from.gold) * e); C.shown.tickets = Math.round(from.tickets + (C.tickets - from.tickets) * e); if (eg) eg.textContent = `+${money(C.shown.gold)}`; if (et) et.textContent = `+${money(C.shown.tickets)}`; if (k < 1 && C.el.isConnected) requestAnimationFrame(tick); };
       requestAnimationFrame(tick); clearTimeout(C.timer); C.timer = setTimeout(() => { C.el.classList.remove("on"); setTimeout(() => { if (C === this.cgResCard) { C.el.remove(); this.cgResCard = null; } }, 400); }, big ? 4200 : 3000);
