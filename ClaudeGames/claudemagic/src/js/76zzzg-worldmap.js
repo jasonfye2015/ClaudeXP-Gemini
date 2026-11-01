@@ -9,9 +9,9 @@
 { const WM = CM.WORLDMAP, W = 860, H = 480;
   // where each place sits on the painted map
   const AT = { home: [600, 300], well: [640, 262], tavern: [624, 236], merchant: [668, 236], smith: [620, 330], temple: [648, 168], library: [630, 196], guildhall: [672, 318], casino: [700, 214],
-    pipe: [678, 290], shaft: [752, 262], haven: [748, 220], gate: [782, 254], yard: [762, 300], farm: [330, 330], cabin: [210, 210], fortress: [330, 70], crag: [340, 430], woodgate: [470, 268] };
+    pipe: [678, 290], shaft: [752, 262], haven: [748, 220], gate: [782, 254], yard: [762, 300], farm: [330, 330], cabin: [210, 210], fortress: [330, 70], crag: [340, 430], woodgate: [470, 268], fields: [650, 338] };
   const TZ = 1.25, CX = 670, CY = 255;   // (the town, drawn larger than the Wood so its doors don't crowd)
-  for (const id of ["home", "well", "tavern", "merchant", "smith", "temple", "library", "guildhall", "casino", "pipe", "shaft", "haven", "gate", "yard"]) { const [x, y] = AT[id]; AT[id] = [CX + (x - 670) * TZ, CY + (y - 255) * TZ]; }
+  for (const id of ["home", "well", "tavern", "merchant", "smith", "temple", "library", "guildhall", "casino", "pipe", "shaft", "haven", "gate", "yard", "fields"]) { const [x, y] = AT[id]; AT[id] = [CX + (x - 670) * TZ, CY + (y - 255) * TZ]; }
   const paint = (p, now) => { const t = now / 1000;
     const sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#D8C8A0"); sky.addColorStop(1, "#C8B488"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
     p.strokeStyle = "rgba(90,60,20,0.15)"; for (let k = 0; k < 40; k++) { p.beginPath(); p.moveTo(0, k * 12); p.lineTo(W, k * 12 + 4); p.stroke(); }
