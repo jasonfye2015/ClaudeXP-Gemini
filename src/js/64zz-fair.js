@@ -33,7 +33,7 @@ CM.FAIR = {
     // a dart at where the hand was when it let go; a ball let go at an aim with a power
     faThrow(kind, a, b) {
       const S = this.faState(kind), K = FA[kind]; if (!S || S.stage !== "play") return { error: "No game on." }; const R = new CM.Random(CM.hashSeed(`${S.seed}:${S.throws.length}`));
-      let x, y, sc; if (kind === "darts") { const g = () => (R.next() + R.next() + R.next() - 1.5) * 0.8; x = a + g() * K.scatter; y = b + g() * K.scatter; sc = FA.dartScore(x, y); } else { [x, y] = FA.skeeAt(CM.ARC.clamp(a, -1, 1), CM.ARC.clamp(b, 0, 1), R); sc = FA.skeeScore(x, y); }
+      let x, y, sc; if (K.throwAt) { sc = K.throwAt(CM.ARC.clamp(a, -1, 1), CM.ARC.clamp(b, 0, 1), R); x = sc.x; y = sc.y; } else if (kind === "darts") { const g = () => (R.next() + R.next() + R.next() - 1.5) * 0.8; x = a + g() * K.scatter; y = b + g() * K.scatter; sc = FA.dartScore(x, y); } else { [x, y] = FA.skeeAt(CM.ARC.clamp(a, -1, 1), CM.ARC.clamp(b, 0, 1), R); sc = FA.skeeScore(x, y); }
       S.throws.push({ x, y, pts: sc.pts, label: sc.label }); S.score += sc.pts; const total = kind === "darts" ? K.rounds * K.per : K.balls, out = { x, y, ...sc, score: S.score, n: S.throws.length };
       if (S.throws.length >= total) Object.assign(out, this.faEnd(kind)); this.saveCasino && this.saveCasino(); return out;
     },

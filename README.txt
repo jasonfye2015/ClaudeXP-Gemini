@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The luck and the fair (the forty-fourth big update - v15.8)
+  A new Luck shelf and two more fairground stalls (src/js/64zzd-luck.js, 64zze-fair2.js; 76zv-76zza):
+  - The Pin Garden: pachinko - balls a gold apiece, shot with a handle through brass pins into start pockets, windmill
+    cups and a tulip that spins three drums (three alike: Fever, 60 balls and a card); balls exchanged any time at 85
+    gold a hundred and a ticket a ten. The handle has its sweet spots.
+  - The Joker's Wheel: a big wheel of 54 slots paying 1 to 40 to 1; the Joker brings a rare card.
+  - Fortune Slips: copper, silver and gold scratch cards scratched with the mouse; three alike wins, three cards a card.
+  - The Prize Wheel: a free spin each real day for tickets, gold, a potion or a card.
+  - Hoop-la: ten rings at a table of bottles (green 1, blue 2, gold 5, the red one 10); gold by points, a ticket a point.
+  - The Crossbow Range: a shooting gallery on the arcade works - ducks, dragons, stars and the keeper's lantern on
+    three rails, bullseyes double, a mark to make each round.
+
 Six more tables (the forty-third big update - v15.7)
   - Bones (64zy-craps.js; 76zp): craps at the true odds - Pass and Don't Pass, the Odds behind (2:1, 3:2, 6:5), the
     Field, Place 6 and 8 at 7:6 and Any Seven at 4:1; tumbling dice; a card for a shooter who makes four points.
