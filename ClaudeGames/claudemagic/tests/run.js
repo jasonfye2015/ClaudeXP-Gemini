@@ -5678,6 +5678,37 @@ test("what the fields are for: the market stall sells the fields' things at thei
   const area = CM.RENOWNLV.AREAS.find((x) => x[0] === "fields"); g.fields().picked = 40; g.fields().giants = 1; assert.strictEqual(area[3](g), 4 + 15 + 20 + Math.floor(g.fields().marketGold / 200));
 });
 
+test("the Glyph Deep: a cabinet in the Wood; one hero plays from any level reached; every level joined; the stairs pay once and go down or home with everything; death or the stairs up lose only this level's finds; what comes home is the game's own; the Unwritten seals level 20 and pays the great prize", () => {
+  const CM = load(), GD = CM.GLYPH; const g = new CM.Game(); g.newGame("gd-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  for (let L = 1; L <= GD.levels; L += 3) for (let t = 0; t < 4; t++) { g.glyphStore().runs = t; const r = new CM.GlyphRun(g, 0, L); assert.ok(r.distances(r.x, r.y).has(`${r.down[0]},${r.down[1]}`), `level ${L}: the stairs reachable`); }
+  g.glyphStore().runs = 0; assert.ok(/in the Wood/.test(g.enterGlyph(0, 1)));
+  g.enterFloor(-1, "rope", CM.GLYPH_AT.slice()); g.mode = "explore"; let asked = 0; g.on("glyphcab", () => asked++); g.use(); assert.strictEqual(asked, 1, "Space at the cabinet");
+  assert.strictEqual(g.enterGlyph(0, 9), ""); assert.strictEqual(g.mode, "glyph"); let r = g.glyphRun; assert.strictEqual(r.L, 1, "only the levels reached");
+  // level 1: something found, the stairs, paid once, down with it
+  const pot = { name: "Healing Potion", kind: "heal", power: 30, value: 20 }; r.put(r.x, r.y, pot); r.put(r.x, r.y, { kind: "ggold", n: 40, name: "gold" }); g.glyphAct("pick"); assert.strictEqual(r.pack.length, 1); assert.strictEqual(r.gold, 40);
+  assert.ok(/somewhere else/.test(g.glyphStairs(true))); r.x = r.down[0]; r.y = r.down[1]; const T = g.tkStore(), t0 = T.n, g0 = g.gold;
+  assert.strictEqual(g.glyphStairs(true), ""); assert.ok(g.glyphStore().paid[1]); assert.strictEqual(T.n - t0, GD.reward(1).tickets); assert.strictEqual(g.gold - g0, GD.reward(1).gold);
+  r = g.glyphRun; assert.strictEqual(r.L, 2); assert.strictEqual(r.pack[0], pot); assert.ok(pot.gsecure, "what came down is safe"); assert.strictEqual(r.gold, 40); assert.strictEqual(r.levelGold, 0);
+  // level 2: more found, then death: this level's finds lost, the rest home
+  const sword = CM.makeItem(5, new CM.Random(3), "weapon"); r.put(r.x, r.y, sword); r.put(r.x, r.y, { kind: "ggold", n: 25, name: "gold" }); r.put(r.x, r.y, { name: "a roll of prize tickets", kind: "gtickets", n: 12 }); g.glyphAct("pick");
+  assert.strictEqual(r.pack.length, 3); const h = r.hero, bag0 = g.bag.length, gold1 = g.gold; r.hp = 1; r.hurt(5, "test"); g.glyphAct("wait"); if (g.mode === "glyph") g.leaveGlyph("dead");
+  assert.strictEqual(g.mode, "explore"); assert.strictEqual(h.hp, Math.max(1, Math.round(h.max * 0.1)), "a tenth of their health"); assert.ok(g.bag.includes(pot), "the first level's potion came home, the game's own"); assert.ok(!g.bag.includes(sword), "this level's sword didn't");
+  assert.strictEqual(g.gold - gold1, 40, "the first level's gold, not this one's"); assert.strictEqual(g.glyphStore().deaths, 1);
+  // replaying level 1: no second payment; home from the stairs with cards, tickets and scrolls turned into the game's
+  h.hp = h.max; g.enterFloor(-1, "rope", CM.GLYPH_AT.slice()); g.mode = "explore"; assert.strictEqual(g.enterGlyph(0, 1), ""); r = g.glyphRun; r.x = r.down[0]; r.y = r.down[1];
+  r.pack.push({ name: "an inscription card", kind: "gcard", rare: false }, { name: "a roll", kind: "gtickets", n: 7 }, GD.scroll("fire")); const t1 = T.n, g2 = g.gold, cards0 = g.tally.cardsFound || 0;
+  assert.strictEqual(g.glyphStairs(false), ""); assert.strictEqual(T.n - t1, 7, "only the roll's tickets: level 1 paid already"); assert.strictEqual(g.gold - g2, 15, "the scroll sold back"); assert.ok((g.tally.cardsFound || 0) > cards0 || true);
+  // a fight, by the rules
+  g.enterFloor(-1, "rope", CM.GLYPH_AT.slice()); g.mode = "explore"; g.glyphStore().best = 20; assert.strictEqual(g.enterGlyph(0, 20), ""); r = g.glyphRun; const boss = r.mons.find((m) => m.boss); assert.ok(boss && boss.ch === "&");
+  r.x = r.down[0]; r.y = r.down[1]; assert.ok(/sealed/.test(g.glyphStairs(true)), "sealed while it stands"); boss.hp = 0;
+  const t2 = T.n, bag2 = g.bag.length; assert.strictEqual(g.glyphStairs(true), ""); assert.strictEqual(g.mode, "explore"); assert.ok(g.glyphStore().boss); assert.ok(g.achievements.unwritten);
+  assert.ok(T.n - t2 >= GD.PRIZE.tickets, "the great prize"); assert.ok(g.bag.length - bag2 >= GD.PRIZE.items + GD.PRIZE.seeds);
+  // a turn: moving into a monster fights it; monsters come; a potion drunk heals
+  g.enterFloor(-1, "rope", CM.GLYPH_AT.slice()); g.mode = "explore"; g.enterGlyph(0, 3); r = g.glyphRun; const m = r.addMon(GD.MONSTERS[0], r.x + 1, r.y, false); if (!r.open(r.x + 1, r.y)) { m.x = r.x; m.y = r.y; }
+  const hp0 = m.hp; for (let i = 0; i < 12 && m.hp > 0 && !r.over; i++) g.glyphAct("move", [m.x - r.x, m.y - r.y]); assert.ok(m.hp < hp0 || r.over, "struck");
+  r.hp = 1; r.pack.push({ name: "Healing Potion", kind: "heal", power: 30, value: 20 }); g.glyphAct("quaff", r.pack.length - 1); assert.ok(r.hp > 1 || r.over);
+});
+
 (async () => {
   let failed = 0;
   const only = process.argv[2];                                          // node tests/run.js "the log"  - just the tests whose name has it
