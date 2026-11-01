@@ -37,6 +37,9 @@ CM.CG_TABLES.push(["swarm", "The Gloomwing Swarm"]);
       const Lv = L || this.swLastDrawn; if (L) this.swLastDrawn = L;
       // the sky
       p.fillStyle = "#06061A"; p.fillRect(0, 0, cv.width, cv.height);
+      for (const [nx, ny, nr, nc] of [[cv.width * 0.25, cv.height * 0.35, 180, "rgba(110,50,160,0.16)"], [cv.width * 0.8, cv.height * 0.6, 160, "rgba(40,90,170,0.14)"], [cv.width * 0.55, cv.height * 0.15, 120, "rgba(170,60,110,0.1)"]]) { const ng = p.createRadialGradient(nx, ny + Math.sin(now / 9000) * 10, 10, nx, ny, nr); ng.addColorStop(0, nc); ng.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = ng; p.fillRect(nx - nr, ny - nr, nr * 2, nr * 2); }
+      { const mx = cv.width - 70, my = TOP + 60; p.fillStyle = "rgba(230,230,210,0.08)"; p.beginPath(); p.arc(mx, my, 34, 0, Math.PI * 2); p.fill(); p.fillStyle = "#D8D4C0"; p.beginPath(); p.arc(mx, my, 22, 0, Math.PI * 2); p.fill(); p.fillStyle = "#06061A"; p.beginPath(); p.arc(mx + 9, my - 5, 20, 0, Math.PI * 2); p.fill(); }
+      for (let k = 0; k < 14; k++) { const x = (k * 151 + 37) % cv.width, y = TOP + ((k * 71 + now / 1000 * 90) % (cv.height - TOP)); p.fillStyle = "rgba(220,230,255,0.7)"; p.fillRect(x, y, 1, 4); }
       for (let k = 0; k < 70; k++) { const x = (k * 97) % cv.width, sp = 10 + (k % 3) * 14, y = TOP + ((k * 53 + now / 1000 * sp) % (cv.height - TOP)); p.fillStyle = ["#6070A0", "#A0B0E0", "#F0E0A0"][k % 3]; p.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(now / 500 + k)); p.fillRect(x, y, k % 5 ? 1 : 2, k % 5 ? 1 : 2); } p.globalAlpha = 1;
       p.fillStyle = "#100C20"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "THE GLOOMWING SWARM", 8, 19);
       if (Lv) { p.fillText(`STAGE ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.swSkiff(p, cv.width - 14 - k * 18, 14, 0.55, now); }
@@ -58,7 +61,7 @@ CM.CG_TABLES.push(["swarm", "The Gloomwing Swarm"]);
     },
     swEvent(e, now, L) {
       const fx = this.swFx, burst = (x, y, cols, n = 16) => { for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 120; fx.parts.push({ x: x * C, y: y * C, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.4, c: cols[k % cols.length] }); } };
-      if (e.kind === "fire") this.cgSfx("zap", 0.15, 1.8);
+      if (e.kind === "fire") { this.cgSfx("zap", 0.15, 1.8); for (const x of L.shipXs()) for (let k = 0; k < 4; k++) fx.parts.push({ x: x * C, y: (CM.SW.shipY - 1) * C, vx: (Math.random() - 0.5) * 50, vy: -40 - Math.random() * 60, life: 0.18, c: k % 2 ? "#FFFFFF" : "#80F0FF" }); }
       else if (e.kind === "kill") { this.cgSfx("shatter", 0.35, 1.1 + Math.random() * 0.3); burst(e.f.x, e.f.y, e.f.kind === "warden" ? ["#80E070", "#F0D060", "#FFF"] : e.f.kind === "moth" ? ["#F09040", "#60D0E0", "#FFF"] : ["#B070F0", "#F0E0FF"]); fx.pts.push({ x: e.f.x * C, y: e.f.y * C, n: e.pts, at: now }); }
       else if (e.kind === "dent") this.cgSfx("bump", 0.35, 1.5); else if (e.kind === "dive") this.cgSfx("monster", 0.12, 1.7); else if (e.kind === "ember") this.cgSfx("wandboom", 0.12, 2);
       else if (e.kind === "beam") this.cgSfx("spell", 0.4, 0.6); else if (e.kind === "captured") this.cgSfx("cardlose", 0.5);

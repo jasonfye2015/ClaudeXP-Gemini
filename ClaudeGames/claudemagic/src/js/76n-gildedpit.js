@@ -140,10 +140,10 @@ const PIT_FS = "precision mediump float; uniform sampler2D tex; uniform vec3 bul
       const grid = (S && S.out.grid) || this.pitGrid || [["seven", "bell", "clover", "cherry", "lemon"], ["lemon", "seven", "bell", "clover", "cherry"], ["cherry", "lemon", "seven", "bell", "clover"]], syms = Object.keys(PT.SYMS);
       for (let c = 0; c < 5; c++) { const stopAt = S ? S.at + 500 + c * 260 : 0, spinning = S && now < stopAt;
         for (let r = 0; r < 3; r++) { const x = ox + c * cw, y = oy + r * ch; p.fillStyle = "#F4EEDC"; p.fillRect(x + 3, y + 3, cw - 6, ch - 6); const s = spinning ? syms[Math.floor(now / 50 + c * 3 + r) % syms.length] : grid[r][c]; this.pitSym(p, s, x + cw / 2, y + ch / 2 + (spinning ? ((now / 3) % 30) - 15 : 0), spinning); } }
-      p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(ox, oy, 480, 12); p.fillRect(ox, oy + 276, 480, 12);
+      p.fillStyle = "rgba(0,0,0,0.25)"; p.fillRect(ox, oy, 480, 12); p.fillRect(ox, oy + 276, 480, 12); { const gs = p.createLinearGradient(0, oy, 0, oy + 288); gs.addColorStop(0, "rgba(255,255,255,0.10)"); gs.addColorStop(0.45, "rgba(255,255,255,0)"); gs.addColorStop(0.55, "rgba(0,0,0,0)"); gs.addColorStop(1, "rgba(0,0,0,0.18)"); p.fillStyle = gs; p.fillRect(ox, oy, 480, 288); }
       if (S && now > S.at + 500 + 4 * 260) {
         if (!S.done) { S.done = true; this.pitGrid = S.out.grid; this.pitAfterSpin(S.out); }
-        for (const L of S.out.lines) { p.strokeStyle = L.kind === "eyes" ? "#B040FF" : "#FFE040"; p.lineWidth = 6; p.shadowColor = p.strokeStyle; p.shadowBlur = 12; p.beginPath();
+        for (const L of S.out.lines) { p.strokeStyle = L.kind === "eyes" ? "#B040FF" : "#FFE040"; p.lineWidth = 5 + 2 * Math.sin(now / 90); p.shadowColor = p.strokeStyle; p.shadowBlur = 10 + 8 * Math.sin(now / 90); p.beginPath();
           if (L.kind === "row") { p.moveTo(ox + L.c * cw + 10, oy + L.r * ch + ch / 2); p.lineTo(ox + (L.c + L.len) * cw - 10, oy + L.r * ch + ch / 2); }
           else if (L.kind === "col") { p.moveTo(ox + L.c * cw + cw / 2, oy + 8); p.lineTo(ox + L.c * cw + cw / 2, oy + 3 * ch - 8); }
           else if (L.kind === "diag") { const r0 = L.dir > 0 ? 0 : 2; p.moveTo(ox + L.c * cw + cw / 2, oy + r0 * ch + ch / 2); p.lineTo(ox + (L.c + 2) * cw + cw / 2, oy + (r0 + 2 * L.dir) * ch + ch / 2); }

@@ -56,13 +56,16 @@ CM.CG_TABLES.push(["cascade", "The Gilded Cascade"]);
       // the pusher
       const f = B.face(), [pl, py] = proj(0, f), [pr] = proj(CS.W, f), [bl, by] = proj(0, 0), [br] = proj(CS.W, 0);
       const brass = p.createLinearGradient(0, by, 0, py); brass.addColorStop(0, "#5A4018"); brass.addColorStop(1, "#C8A040"); p.fillStyle = brass; p.beginPath(); p.moveTo(bl, by); p.lineTo(br, by); p.lineTo(pr, py); p.lineTo(pl, py); p.closePath(); p.fill();
-      p.fillStyle = "#8A6420"; p.fillRect(pl, py - 2, pr - pl, 10); p.strokeStyle = "rgba(255,240,180,0.6)"; p.beginPath(); p.moveTo(pl, py - 2); p.lineTo(pr, py - 2); p.stroke();
+      p.fillStyle = "#8A6420"; p.fillRect(pl, py - 2, pr - pl, 10); p.strokeStyle = "rgba(255,240,180,0.6)"; p.beginPath(); p.moveTo(pl, py - 2); p.lineTo(pr, py - 2); p.stroke(); { const gx = pl + ((now / 1600) % 1) * (pr - pl); const hg = p.createLinearGradient(gx - 30, 0, gx + 30, 0); hg.addColorStop(0, "rgba(255,250,220,0)"); hg.addColorStop(0.5, "rgba(255,250,220,0.55)"); hg.addColorStop(1, "rgba(255,250,220,0)"); p.fillStyle = hg; p.fillRect(gx - 30, py - 2, 60, 10); }
       // the discs, back to front; a dropped one falls into its place
       const L = B.discs.slice().sort((a, b) => a.y - b.y);
       for (const d of L) { const dr = fx.drops.find((q) => q.id === d.id), k = dr ? Math.min(1, (now - dr.at) / 260) : 1, [sx, sy, w] = proj(d.x, d.y); this.csDisc(p, d, sx, sy - (1 - k) * 90, w, now); }
       fx.drops = fx.drops.filter((q) => now - q.at < 300);
       // over the edge: tumbling into the tray, or away down a gutter
       fx.falls = fx.falls.filter((o) => now - o.at < 600); for (const o of fx.falls) { const t = (now - o.at) / 600, [sx, sy, w] = proj(Math.max(-20, Math.min(CS.W + 20, o.x)), Math.min(CS.D, o.y)); p.globalAlpha = 1 - t; this.csDisc(p, o.d, sx + (o.where === "gutter" ? (o.x < 0 ? -1 : 1) * 30 * t : 0), sy + t * t * 80, w * (1 - 0.3 * t), now); p.globalAlpha = 1; }
+      // light across the glass, now and then
+      { const sw = ((now / 4200) % 1) * (VW + 300) - 150; const gs = p.createLinearGradient(sw - 60, 0, sw + 60, VH); gs.addColorStop(0, "rgba(255,255,255,0)"); gs.addColorStop(0.5, "rgba(255,255,255,0.07)"); gs.addColorStop(1, "rgba(255,255,255,0)"); p.fillStyle = gs; p.fillRect(lx1 - 40, TOP - 10, rx1 - lx1 + 80, ly1 - TOP + 10); }
+      if (fx.falls.some((o) => o.where === "front")) { const t = Math.max(...fx.falls.filter((o) => o.where === "front").map((o) => 1 - (now - o.at) / 600)); const tg = p.createRadialGradient(VW / 2, ly1 + 30, 10, VW / 2, ly1 + 30, 200); tg.addColorStop(0, `rgba(255,220,120,${0.35 * t})`); tg.addColorStop(1, "rgba(255,220,120,0)"); p.fillStyle = tg; p.fillRect(0, ly1 - 40, VW, 160); }
       // glass and frame
       p.fillStyle = "rgba(180,220,255,0.05)"; p.fillRect(lx1 - 40, TOP - 10, rx1 - lx1 + 80, ly1 - TOP + 10); p.strokeStyle = "#C8A040"; p.lineWidth = 6; p.beginPath(); p.moveTo(lx0 - 8, ly0 - 10); p.lineTo(lx1 - 34, ly1); p.moveTo(rx0 + 8, ly0 - 10); p.lineTo(rx1 + 34, ly1); p.stroke(); p.lineWidth = 1;
       // the marquee and its chasing lamps

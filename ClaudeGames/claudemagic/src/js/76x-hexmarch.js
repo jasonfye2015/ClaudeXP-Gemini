@@ -42,6 +42,9 @@ CM.CG_TABLES.push(["hexmarch", "The Hexmarch"]);
       const Lv = L || this.hxLastDrawn; if (L) this.hxLastDrawn = L;
       // the cellar: a dark brick wall, the floor line
       p.fillStyle = "#0C0A10"; p.fillRect(0, 0, cv.width, cv.height); p.fillStyle = "#16121C"; for (let y = TOP; y < cv.height; y += 14) for (let x = ((y / 14) % 2) * 14 - 14; x < cv.width; x += 28) p.fillRect(x + 1, y + 1, 26, 12);
+      for (const tx of [14, cv.width - 14]) { const ty = TOP + 150, fl = 0.8 + 0.2 * Math.sin(now / 70 + tx) * Math.sin(now / 131 + tx); const tg = p.createRadialGradient(tx, ty, 4, tx, ty, 150 * fl); tg.addColorStop(0, "rgba(255,160,70,0.3)"); tg.addColorStop(1, "rgba(255,160,70,0)"); p.fillStyle = tg; p.fillRect(tx - 160, ty - 160, 320, 320);
+        p.fillStyle = "#3A2A1A"; p.fillRect(tx - 3, ty, 6, 16); p.fillStyle = "#FF8030"; p.beginPath(); p.moveTo(tx - 5, ty); p.quadraticCurveTo(tx, ty - 16 * fl, tx + 5, ty); p.fill(); p.fillStyle = "#FFE080"; p.beginPath(); p.moveTo(tx - 2, ty); p.quadraticCurveTo(tx, ty - 8 * fl, tx + 2, ty); p.fill(); }
+      { const fg = p.createLinearGradient(0, cv.height - 70, 0, cv.height); fg.addColorStop(0, "rgba(200,80,120,0)"); fg.addColorStop(1, "rgba(200,80,120,0.12)"); p.fillStyle = fg; p.fillRect(0, cv.height - 70, cv.width, 70); }
       p.fillStyle = "#140E18"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "THE HEXMARCH", 8, 19);
       if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.hxCannon(p, cv.width - 16 - k * 20, 16, 0.55); }
       if (!Lv) { p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("The Hexmarch", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
@@ -61,7 +64,7 @@ CM.CG_TABLES.push(["hexmarch", "The Hexmarch"]);
     },
     hxEvent(e, now, L) {
       const fx = this.hxFx, C2 = C, burst = (x, y, cols, n = 14) => { for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, v = 40 + Math.random() * 110; fx.parts.push({ x: x * C2, y: y * C2, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.35 + Math.random() * 0.35, c: cols[k % cols.length] }); } };
-      if (e.kind === "beat") this.cgSfx("bump", 0.12, e.n ? 0.55 : 0.48); else if (e.kind === "fire") this.cgSfx("zap", 0.2, 1.7);
+      if (e.kind === "beat") this.cgSfx("bump", 0.12, e.n ? 0.55 : 0.48); else if (e.kind === "fire") { this.cgSfx("zap", 0.2, 1.7); for (let k = 0; k < 6; k++) fx.parts.push({ x: L.p.x * C2, y: (CM.HX.gunY - 0.8) * C2, vx: (Math.random() - 0.5) * 70, vy: -30 - Math.random() * 70, life: 0.16, c: k % 2 ? "#FFFFFF" : "#80F0FF" }); }
       else if (e.kind === "kill") { this.cgSfx("shatter", 0.3, 1.3); burst(e.f.x, e.f.y, [COL[e.f.kind], "#FFFFFF"]); }
       else if (e.kind === "comet") { this.cgSfx("coin", 0.6); fx.pts.push({ x: e.x * C2, y: 2.5 * C2, n: e.pts, at: now }); burst(e.x, 2.5, ["#FFF4D0", "#FFC060"], 20); }
       else if (e.kind === "cometcome") this.cgSfx("spell", 0.25, 1.5); else if (e.kind === "clash") this.cgSfx("card", 0.3, 1.8);
