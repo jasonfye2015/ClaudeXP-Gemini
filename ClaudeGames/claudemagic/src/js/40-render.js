@@ -19,7 +19,7 @@ uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; 
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
-uniform vec3 uTorchPos;                                                         // (v22.0) where the party's torch is held: a little to the side and up
+uniform vec3 uTorchPos; uniform float uBump;   // (v22.0) where the party's torch is held, a little to the side and up; (v22.1) the relief's strength - 0 for all but walls, floors and the ground
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
 uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist;                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
@@ -47,18 +47,34 @@ void main() {
   float r2 = uReach * uReach;
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
   if (dot(n, uEye - vWorld) < 0.0) n = -n;
-  vec3 tl = uTorchPos - vWorld; float tface = 0.5 + 0.5 * max(dot(n, tl / max(length(tl), 0.001)), 0.0);   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
+  float spec = 0.0; vec3 n0 = n;
+  if (uBump > 0.0 && vFx.z < 0.5) {                                        // (v22.1) relief: walls, floors and the ground take it from their own pictures
+    vec2 px = 1.0 / vec2(shared ? textureSize(uShared, 0).xy : textureSize(uTex, 0).xy), uv = vUV.xy;
+    float lz = shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
+    #define HT(o) dot((shared ? texture(uShared, vec3(uv + (o), lz)) : texture(uTex, vec3(uv + (o), lz))).rgb, vec3(0.3, 0.59, 0.11))
+    float hu = HT(vec2(px.x, 0.0)) - HT(vec2(-px.x, 0.0)), hv = HT(vec2(0.0, px.y)) - HT(vec2(0.0, -px.y));
+    vec3 dpx = dFdx(vWorld), dpy = dFdy(vWorld); vec2 dux = dFdx(uv), duy = dFdy(uv);
+    vec3 r1 = cross(dpy, n), r2 = cross(n, dpx); float det = dot(dpx, r1);
+    vec3 grad = sign(det) * (hu * 0.5 / max(px.x, 1e-6) * (r1 * dux.x + r2 * duy.x) + hv * 0.5 / max(px.y, 1e-6) * (r1 * dux.y + r2 * duy.y));
+    n = normalize(abs(det) * n - uBump * 0.02 * grad);
+    vec3 v = normalize(uEye - vWorld), lt = normalize(uTorchPos - vWorld);
+    spec = pow(max(dot(reflect(-lt, n), v), 0.0), 24.0) * (0.06 + 0.5 * uWet * step(0.7, n.y));   // (a little sheen on stone, more on wet ground)
+  }
+  vec3 tl = uTorchPos - vWorld, tdir = tl / max(length(tl), 0.001); float tface = 0.5 + 0.5 * max(dot(n0, tdir), 0.0);
+  float relief = clamp(max(dot(n, tdir), 0.0) / max(dot(n0, tdir), 0.25), 0.35, 1.6);   // (v22.1: how much more or less a raised or sunk bit faces the torch than the flat wall does)
+  tface *= mix(1.0, relief, min(1.0, uBump));   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
-  if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n.y), 0.7));   // walls facing the sun lit, the others in shade
+  if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n0.y), 0.7));   // walls facing the sun lit, the others in shade
   vec3 extra = vec3(0.0);
   for (int i = 0; i < 24; i++) {
     if (i >= uLights) break;
     vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
     float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
-    float face = 0.35 + 0.65 * max(dot(n, L / max(ld, 0.001)), 0.0);
+    vec3 Ld = L / max(ld, 0.001); float face = (0.35 + 0.65 * max(dot(n0, Ld), 0.0)) * mix(1.0, clamp(max(dot(n, Ld), 0.0) / max(dot(n0, Ld), 0.25), 0.35, 1.6), min(1.0, uBump));
     extra += uLightCol[i] * fall * face;
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
   if (uSnow > 0.0 && up > 0.55) col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, uSnow * smoothstep(0.55, 0.8, up) * 0.88);   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
@@ -112,7 +128,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -220,7 +236,7 @@ CM.Renderer = class {
     if (this.prepared && this.prepared.art === art) { const P = this.prepared, gl = this.gl; this.prepared = null;   // (ready ahead: swapped in)
       if (P.shared) { if (this.shared) gl.deleteTexture(this.shared); this.shared = P.shared; this.sharedKey = P.sharedKey; }
       if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; const index = {}; P.own.forEach((n, i) => { index[n] = i; }); P.rest.forEach((n, i) => { index[n] = 1000 + i; });
-        this.index = index; this.sub = art.sub || {}; this.crisp = Boolean(art.crisp); return; }
+        this.index = index; this.sub = art.sub || {}; this.crisp = Boolean(art.crisp); this.bumpK = /^stone/.test(art.sharedKey || "") ? 1.0 : art.crisp ? 0.45 : 0.7; return; }
       gl.deleteTexture(P.texture); }                                     // (the shared set moved on meanwhile: made the ordinary way)
     else if (this.prepared) this._dropPrepared();
     const gl = this.gl, names = Object.keys(art.index), own = [], rest = [];
@@ -242,6 +258,7 @@ CM.Renderer = class {
     this.index = index;
     this.sub = art.sub || {};
     this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
+    this.bumpK = /^stone/.test(art.sharedKey || "") ? 1.0 : art.crisp ? 0.45 : 0.7;   // (v22.1: how deep the relief, by the look)
   }
 
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
@@ -440,9 +457,11 @@ CM.Renderer = class {
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1f(this.loc.uBump, CM.reliefOff ? 0 : (this.bumpK || 0.7) * (CM.reliefScale || 1));   // (v22.1: the relief on the floor's own mesh only)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
+    gl.uniform1f(this.loc.uBump, 0);
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);
