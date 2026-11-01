@@ -140,6 +140,12 @@ the Trapper: names no one in the town knows), and keeps the Moon for last. He ha
 the city, and nobody has ever asked him anything he answered. Rules for writing him: he speaks in the present tense,
 in short lines, and never about himself.
 
+## The luck wing and the stalls (v15.8)
+
+The house bought a travelling fair's leftovers for the price of a cart: a row of pin cabinets from somewhere far east,
+a painted wheel, a booth of slips in three drawers, a ring-toss table and a crossbow range with its tin ducks. The
+doorman was given a wheel of his own, and told to let everyone spin it once a day.
+
 ## Bones, the fair and the quiet corners (v15.7)
 
 A dice table came in from a river-boat that sank with everything but the table. The taproom got its dartboard back and

@@ -5040,7 +5040,7 @@ test("the casino's gallery: every table on the floor has its line, its kind and 
   const fs = require("fs"), path = require("path"), dir = path.join(__dirname, "..", "src", "js"), all = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => fs.readFileSync(path.join(dir, f), "utf8")).join("\n");
   const ids = []; for (const m of all.matchAll(/CM\.CG_TABLES = \[(.*?)\];/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]); for (const m of all.matchAll(/CM\.CG_TABLES\.push\((.*?)\);/g)) for (const n of m[1].matchAll(/\["(\w+)"/g)) ids.push(n[1]);
   assert.ok(ids.length >= 27); const gal = fs.readFileSync(path.join(dir, "76ze-gallery.js"), "utf8"), info = gal.slice(gal.indexOf("CM.CG_INFO"), gal.indexOf("CM.CG_CATS")), thumbs = gal.slice(gal.indexOf("CM.CG_THUMB"));
-  for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes|fair)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
+  for (const id of ids) { assert.ok(new RegExp(`\\b${id}: \\{ cat: "(tables|arcade|puzzles|idle|prizes|fair|luck)"`).test(info), `${id} has a line in the gallery`); assert.ok(new RegExp(`\\b${id}: \\(p, w, h\\)`).test(thumbs), `${id} has a picture`); }
 });
 
 test("the Joker's Club: boards keep the ten best and count records broken; a game's end puts its score on its board; the loyalty card stamps each different table, fills at eight, and pays when collected with membership rising; achievements unlock from the floor's records and pay once, when collected", () => {
@@ -5172,6 +5172,24 @@ test("the Trapfinder's Grid: the first stone is safe with its neighbours; empty 
   let tx, ty; for (let y = 0; y < 9 && tx === undefined; y++) for (let x = 0; x < 9; x++) if (B.mine[y][x]) { tx = x; ty = y; break; } B.toggle(tx, ty); assert.ok(B.flag[ty][tx]); B.reveal(tx, ty); assert.strictEqual(B.stage, "play", "a pennant guards it"); B.toggle(tx, ty); B.reveal(tx, ty); assert.strictEqual(B.stage, "lost");
   const g = new CM.Game(); g.newGame("tf-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const W = g.tfNew("cellar"); W.reveal(0, 0); for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) if (!W.mine[y][x]) W.reveal(x, y); assert.strictEqual(W.stage, "won");
   const gold0 = g.gold, r = g.tfWin(); assert.strictEqual(g.gold - gold0, TF.SIZES.cellar.gold); assert.ok(r.card); assert.strictEqual(g.tfWin(), null);
+});
+
+test("the luck games: pachinko balls bought, shot, pocketed and exchanged (gold and tickets, short of what they cost); the big wheel pays its number's odds; a scratch slip pays three alike and never shows a false three; the prize wheel turns once a day", () => {
+  const CM = load(), L = CM.LUCK, g = new CM.Game(); g.newGame("lk-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000;
+  assert.ok(g.pcShoot(0.5).error, "no balls"); assert.strictEqual(g.pcBuy(100), ""); assert.strictEqual(g.pcState().balls, 100);
+  const a = L.PC.fall(0.6, 7), b = L.PC.fall(0.6, 7); assert.strictEqual(JSON.stringify(a), JSON.stringify(b), "the same shot, the same fall"); assert.ok(a.path.length > 20);
+  let pocketed = 0; for (let k = 0; k < 60; k++) { const r = g.pcShoot(0.9); if (r.pays) pocketed++; } assert.ok(pocketed > 0); const held = g.pcState().balls, gold0 = g.gold, tk0 = g.tkStore().n, ex = g.pcExchange(); assert.strictEqual(ex.gold, Math.floor(held * 0.85)); assert.strictEqual(g.gold - gold0, ex.gold); assert.strictEqual(g.tkStore().n - tk0 >= ex.tickets, true); assert.strictEqual(g.pcState().balls, 0);
+  assert.strictEqual(L.BW.SLOTS.length, 54); assert.strictEqual(L.BW.SLOTS.filter((x) => x === 1).length, 24); const h = new CM.Game(); h.newGame("bw-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); h.gold = 1e6; let staked = 0, back = 0; for (let k = 0; k < 3000; k++) { const r = h.bwSpin({ 1: 10 }); staked += 10; back += r.back; } assert.ok(back / staked > 0.8 && back / staked < 0.98, `ones return ${back / staked}`);
+  for (let k = 0; k < 200; k++) { const S = h.scBuy(k % 3 ? "copper" : "silver"); const cnt = {}; for (const v of S.syms) cnt[v] = (cnt[v] || 0) + 1; const threes = Object.entries(cnt).filter(([, n]) => n >= 3).map(([v]) => v); if (S.prize) assert.deepStrictEqual(threes.map(String).join(), String(S.prize)); else if (S.card) assert.strictEqual(threes.join(), "card"); else assert.strictEqual(threes.length, 0); h.scClaim(); }
+  g.dlDay = "2026-11-02"; assert.ok(g.pwReady()); const r1 = g.pwSpin(); assert.ok(!r1.error && r1.label); assert.ok(g.pwSpin().error, "once a day"); g.dlDay = "2026-11-03"; assert.ok(!g.pwSpin().error);
+});
+
+test("Hoop-la and the Crossbow Range: a ring over a neck scores its bottle and ten rings end the game paying by the table; a bolt that hits scores, a bullseye doubles, the lantern costs; the round's mark clears it and falling short costs a life", () => {
+  const CM = load(), FA = CM.FAIR, R = new CM.Random(1); let hit = 0; for (let k = 0; k < 200; k++) { const o = FA.rings.throwAt(0.15, 0.9, R); if (o.pts) { hit++; assert.ok(FA.BOTTLES.some((b) => b.x === o.x && b.y === o.y && b.pts === o.pts)); } } assert.ok(hit > 5 && hit < 150);
+  const g = new CM.Game(); g.newGame("hp-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 500; assert.ok(!g.faStart("rings", 20).error); let out; for (let k = 0; k < 10; k++) out = g.faThrow("rings", 0.15, 0.9); assert.ok(out.over); assert.strictEqual(out.gold, Math.round(20 * FA.pay("rings", out.score)));
+  const CB = CM.CB, L = new CB.Level(1, 3); L.targets = [{ id: 1, kind: "duck", x: 100, y: 70, dir: 1, v: 0, hit: 0, bob: 0 }, { id: 2, kind: "lantern", x: 300, y: 140, dir: 1, v: 0, hit: 0, bob: 0 }, { id: 3, kind: "dragon", x: 200, y: 210, dir: 1, v: 0, hit: 0, bob: 0 }];
+  L.shoot(100, 70); assert.strictEqual(L.score, 20, "a bullseye doubles"); L.shoot(300 + 9, 140); assert.strictEqual(L.score, 0, "the lantern costs"); L.shoot(200 + 10, 210); assert.strictEqual(L.score, 25); assert.strictEqual(L.bolts, CB.bolts - 3);
+  L.got = L.need; L.update(0.01); assert.strictEqual(L.stage, "clear"); const M = new CB.Level(1, 4); M.t = 0.001; M.update(0.01); assert.strictEqual(M.lives, 1);
 });
 
 (async () => {
