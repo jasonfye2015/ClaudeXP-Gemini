@@ -39,6 +39,8 @@ CM.CG_TABLES.push(["runestep", "Runestep Pyramid"]);
         if (out && out.over) { const S = g.rpState(); this.cgNote = `The glimmerkin's light goes out on level ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
       const Lv = L || this.rpLastDrawn; if (L) this.rpLastDrawn = L; const T = THEME[((Lv ? Lv.n : 1) - 1) % THEME.length];
       const bg = p.createLinearGradient(0, 0, 0, cv.height); bg.addColorStop(0, "#0C0818"); bg.addColorStop(1, "#1A1028"); p.fillStyle = bg; p.fillRect(0, 0, cv.width, cv.height);
+      for (let k = 0; k < 60; k++) { p.fillStyle = k % 6 ? "rgba(180,170,230,0.6)" : "rgba(255,240,200,0.9)"; p.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(now / 1100 + k * 1.3)); p.fillRect((k * 137) % cv.width, (k * 61) % cv.height, k % 8 ? 1 : 2, k % 8 ? 1 : 2); } p.globalAlpha = 1;
+      for (let b = 0; b < 3; b++) { p.fillStyle = ["rgba(80,220,160,0.05)", "rgba(120,120,240,0.05)", "rgba(200,100,220,0.04)"][b]; p.beginPath(); p.moveTo(0, 60 + b * 20); for (let x = 0; x <= cv.width; x += 20) p.lineTo(x, 60 + b * 20 + Math.sin(x / 90 + now / 2600 + b * 2) * 22); p.lineTo(cv.width, 0); p.lineTo(0, 0); p.fill(); }
       p.fillStyle = "#120C1C"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "RUNESTEP PYRAMID", 8, 19);
       if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.rpHopper(p, cv.width - 16 - k * 18, 16, "dl", 0.45, now); }
       p.save(); p.translate(0, TOP);

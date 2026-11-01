@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v15.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v15.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1027,6 +1027,17 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 .mint .mnpress::after { animation: mnstar 12s linear infinite; }
 @keyframes mnstar { to { transform: rotate(360deg); } }
 .mint .mnpress { box-shadow: 0 0 0 4px #5A3A10, 0 0 0 7px #C8A040, 0 10px 22px rgba(0,0,0,0.6), 0 0 30px rgba(255,200,80,0.25); }
+
+/* ---- v15.3 polish: Claudeatro's lobby ---- */
+#casino-body .lobby { position: relative; padding: 14px 18px; border-radius: 16px; background: radial-gradient(ellipse at 50% 20%, rgba(60,140,90,0.35), rgba(10,40,24,0.25) 70%); box-shadow: inset 0 0 0 2px rgba(200,160,64,0.45), inset 0 0 40px rgba(0,0,0,0.45); }
+#casino-body .lobby h2 { text-shadow: 0 0 10px rgba(240,192,64,0.55), 0 2px 0 #3A2408; letter-spacing: 1px; }
+#casino-body .lobby .wagers button { border-radius: 18px; transition: transform 0.12s, box-shadow 0.12s; }
+#casino-body .lobby .wagers button:hover:not([disabled]) { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+#casino-body .lobby .wagers button.primary { box-shadow: 0 0 10px rgba(240,192,64,0.6); }
+#casino-body .lobby .decks .deck { transition: transform 0.15s, box-shadow 0.15s; }
+#casino-body .lobby .decks .deck:not(.locked):hover { transform: translateY(-3px) rotate(-0.5deg); box-shadow: 0 6px 14px rgba(0,0,0,0.55); }
+#casino-body .lobby .decks .deck.sel { box-shadow: 0 0 0 2px #F0C040, 0 0 16px rgba(240,192,64,0.55); animation: cadecksel 2.4s ease-in-out infinite; }
+@keyframes cadecksel { 50% { box-shadow: 0 0 0 2px #F0C040, 0 0 24px rgba(240,192,64,0.8); } }
 </style>
 </head>
 <body>
@@ -1036,7 +1047,7 @@ body.incraft #craftcanvas, body.incraft #crafthud { display: block; } body.incra
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "15.2", built: "2026-10-31" };
+const CM = window.CM = { version: "15.3", built: "2026-10-31" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29707,6 +29718,8 @@ CM.CG_TABLES.push(["shatterpane", "Shatterpane"]);
       if (!Lv) { p.fillStyle = "rgba(255,240,200,0.9)"; p.font = "bold 24px Georgia, serif"; p.textAlign = "center"; p.fillText("Shatterpane", cv.width / 2, cv.height / 2); p.textAlign = "left"; return; }
       p.save(); p.translate(0, TOP);
       const wy = PN.top * C, wh = Lv.grid.length * PN.bh * C, glow = p.createRadialGradient(cv.width / 2, wy + wh / 2, 10, cv.width / 2, wy + wh / 2, cv.width * 0.7); glow.addColorStop(0, "rgba(255,210,140,0.35)"); glow.addColorStop(1, "rgba(255,210,140,0.03)"); p.fillStyle = glow; p.fillRect(0, wy - 8, cv.width, wh + 16);
+      { const ax = cv.width / 2; p.fillStyle = "#2A2420"; p.beginPath(); p.moveTo(0, wy - 6); p.lineTo(0, wy - 30); p.quadraticCurveTo(ax, wy - 120, cv.width, wy - 30); p.lineTo(cv.width, wy - 6); p.closePath(); p.fill(); p.strokeStyle = "#4A4036"; p.lineWidth = 2; for (let k = 1; k < 9; k++) { const t = k / 9, x = t * cv.width, y = (1 - t) * (1 - t) * (wy - 30) + 2 * (1 - t) * t * (wy - 120) + t * t * (wy - 30); p.beginPath(); p.moveTo(x, y); p.lineTo(x, wy - 6); p.stroke(); } p.lineWidth = 1; }
+      p.save(); p.globalCompositeOperation = "lighter"; for (let gy = 0; gy < Lv.grid.length; gy += 2) for (let gx = 0; gx < PN.cols; gx++) { const v = Lv.grid[gy][gx]; if (!v || v === 9) continue; const [r, g2, b] = [[200, 60, 70], [60, 110, 210], [230, 180, 60], [70, 170, 100], [150, 80, 190], [60, 180, 190]][Lv.tints[gy][gx]], X = (gx + 0.5) * PN.bw * C, fl = 0.016 + 0.008 * Math.sin(now / 900 + gx); p.fillStyle = `rgba(${r},${g2},${b},${fl})`; p.beginPath(); p.moveTo(X - 10, wy + wh); p.lineTo(X + 10, wy + wh); p.lineTo(X + 26, cv.height); p.lineTo(X - 6, cv.height); p.closePath(); p.fill(); } p.restore();
       p.strokeStyle = "#3A2C20"; p.lineWidth = 6; p.strokeRect(3, wy - 6, cv.width - 6, wh + 12); p.lineWidth = 1;
       for (let gy = 0; gy < Lv.grid.length; gy++) for (let gx = 0; gx < PN.cols; gx++) { const v = Lv.grid[gy][gx]; if (!v) continue; const X = gx * PN.bw * C, Y = (PN.top + gy * PN.bh) * C, w = PN.bw * C, h = PN.bh * C;
         if (v === 9) { p.fillStyle = "#3A3A44"; p.fillRect(X + 1, Y + 1, w - 2, h - 2); p.fillStyle = "#6A6A78"; p.fillRect(X + 1, Y + 1, w - 2, 2); p.fillStyle = "#9090A0"; p.fillRect(X + 4, Y + h / 2 - 1, 2, 2); p.fillRect(X + w - 6, Y + h / 2 - 1, 2, 2); continue; }
@@ -29781,6 +29794,8 @@ CM.CG_TABLES.push(["starstone", "Starstone Drift"]);
       const Lv = L || this.sdLastDrawn; if (L) this.sdLastDrawn = L;
       p.fillStyle = "#04040E"; p.fillRect(0, 0, cv.width, cv.height);
       const neb = p.createRadialGradient(cv.width * 0.7, cv.height * 0.35, 10, cv.width * 0.7, cv.height * 0.35, cv.width * 0.6); neb.addColorStop(0, "rgba(90,40,120,0.35)"); neb.addColorStop(0.5, "rgba(30,40,100,0.15)"); neb.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = neb; p.fillRect(0, TOP, cv.width, cv.height - TOP);
+      { const n2 = p.createRadialGradient(cv.width * 0.2, cv.height * 0.75, 10, cv.width * 0.2, cv.height * 0.75, cv.width * 0.4); n2.addColorStop(0, "rgba(40,110,120,0.22)"); n2.addColorStop(1, "rgba(0,0,0,0)"); p.fillStyle = n2; p.fillRect(0, TOP, cv.width, cv.height - TOP);
+        const px = cv.width * 0.12, py = TOP + 46; p.fillStyle = "#6A5A8A"; p.beginPath(); p.arc(px, py, 14, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.15)"; p.beginPath(); p.arc(px - 4, py - 4, 8, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(220,200,255,0.55)"; p.lineWidth = 2; p.beginPath(); p.ellipse(px, py, 24, 6, -0.3, 0, Math.PI * 2); p.stroke(); p.lineWidth = 1; }
       for (let k = 0; k < 90; k++) { p.fillStyle = k % 7 ? "#7080B0" : "#F0E0C0"; p.globalAlpha = 0.35 + 0.35 * Math.abs(Math.sin(now / 900 + k * 1.7)); p.fillRect((k * 151) % cv.width, TOP + ((k * 89) % (cv.height - TOP)), k % 9 ? 1 : 2, k % 9 ? 1 : 2); } p.globalAlpha = 1;
       p.fillStyle = "#0C0A18"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "STARSTONE DRIFT", 8, 19);
       if (Lv) { p.fillText(`WAVE ${Lv.n}`, cv.width / 2 - 26, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.sdShip(p, cv.width - 14 - k * 16, 14, -Math.PI / 2, 0.6, false, now); }
@@ -29870,7 +29885,11 @@ CM.CG_TABLES.push(["moatleap", "Moatleap"]);
       p.save(); p.translate(0, TOP); const W = cv.width;
       // the ground: wall, moat, verge, road, bank
       p.fillStyle = "#5A5048"; p.fillRect(0, 0, W, C); for (let x = 0; x < W; x += 16) { p.fillStyle = (x / 16) % 2 ? "#4A4038" : "#6A6058"; p.fillRect(x, 2, 15, 12); p.fillRect(x + 8, 16, 15, 12); }
+      for (const bx of [MQ.BAYS[1] * C + C + 18, MQ.BAYS[3] * C - 18]) { p.fillStyle = "#4A3A20"; p.fillRect(bx, 1, 2, 20); const wv = Math.sin(now / 200 + bx) * 2; p.fillStyle = "#A02838"; p.beginPath(); p.moveTo(bx + 2, 2); p.lineTo(bx + 14, 5 + wv); p.lineTo(bx + 2, 11); p.closePath(); p.fill(); p.fillStyle = "#F0C040"; p.fillRect(bx + 5, 5, 3, 3); }
       p.fillStyle = "#1E4A78"; p.fillRect(0, C, W, 5 * C); p.strokeStyle = "rgba(160,210,255,0.25)"; for (let k = 0; k < 24; k++) { const x = (k * 71 + now / 30) % W, y = C + ((k * 37) % (5 * C)); p.beginPath(); p.moveTo(x, y); p.quadraticCurveTo(x + 6, y - 3, x + 12, y); p.stroke(); }
+      for (let k = 0; k < 10; k++) { const x = (k * 97 + 30) % W, y = C + 8 + ((k * 61) % (5 * C - 16)), gl = Math.max(0, Math.sin(now / 400 + k * 2)); if (gl > 0.7) { p.fillStyle = `rgba(255,255,230,${(gl - 0.7) * 2.5})`; p.fillRect(x, y, 6, 1); p.fillRect(x + 2, y - 1, 2, 3); } }
+      for (const [lx, ly] of [[18, C + 12], [W - 26, C * 3 + 10], [40, C * 5 + 14], [W - 60, C + 20]]) { p.fillStyle = "#3A7A3A"; p.beginPath(); p.arc(lx, ly, 7, 0.4, Math.PI * 2); p.lineTo(lx, ly); p.fill(); p.fillStyle = "#F0A0C0"; p.beginPath(); p.arc(lx + 2, ly - 1, 2, 0, Math.PI * 2); p.fill(); }
+      p.strokeStyle = "#5A7A30"; p.lineWidth = 2; for (let k = 0; k < 14; k++) { const x = (k * 53 + 7) % W, sw = Math.sin(now / 600 + k) * 2; p.beginPath(); p.moveTo(x, MQ.VERGE * C); p.quadraticCurveTo(x + sw, MQ.VERGE * C - 6, x + sw * 1.6, MQ.VERGE * C - 11); p.stroke(); } p.lineWidth = 1;
       p.fillStyle = "#3A7A30"; p.fillRect(0, MQ.VERGE * C, W, C); p.fillStyle = "#4A8A3A"; for (let x = 4; x < W; x += 11) p.fillRect(x, MQ.VERGE * C + 4 + (x % 3) * 6, 2, 6);
       p.fillStyle = "#3A3632"; p.fillRect(0, (MQ.VERGE + 1) * C, W, 5 * C); p.fillStyle = "#4A4640"; for (let r = 0; r < 5; r++) for (let x = (r % 2) * 10; x < W; x += 20) p.fillRect(x + 1, (MQ.VERGE + 1 + r) * C + 6, 16, 8); p.fillStyle = "rgba(240,220,160,0.35)"; for (let r = 1; r < 5; r++) for (let x = 6; x < W; x += 30) p.fillRect(x, (MQ.VERGE + 1 + r) * C - 1, 14, 2);
       p.fillStyle = "#3A7A30"; p.fillRect(0, MQ.START * C, W, C);
@@ -29965,6 +29984,8 @@ CM.CG_TABLES.push(["runestep", "Runestep Pyramid"]);
         if (out && out.over) { const S = g.rpState(); this.cgNote = `The glimmerkin's light goes out on level ${S.last.level}. ${S.won} gold back${S.last.cards.length ? `, and ${S.last.cards.length} card${S.last.cards.length > 1 ? "s" : ""}` : ""}.`; this.cgSfx("cardlose", 0.5); this.renderCasino(); if (S.won) this.cgCoins(this.$("#casino-body"), 12); return; } }
       const Lv = L || this.rpLastDrawn; if (L) this.rpLastDrawn = L; const T = THEME[((Lv ? Lv.n : 1) - 1) % THEME.length];
       const bg = p.createLinearGradient(0, 0, 0, cv.height); bg.addColorStop(0, "#0C0818"); bg.addColorStop(1, "#1A1028"); p.fillStyle = bg; p.fillRect(0, 0, cv.width, cv.height);
+      for (let k = 0; k < 60; k++) { p.fillStyle = k % 6 ? "rgba(180,170,230,0.6)" : "rgba(255,240,200,0.9)"; p.globalAlpha = 0.4 + 0.4 * Math.abs(Math.sin(now / 1100 + k * 1.3)); p.fillRect((k * 137) % cv.width, (k * 61) % cv.height, k % 8 ? 1 : 2, k % 8 ? 1 : 2); } p.globalAlpha = 1;
+      for (let b = 0; b < 3; b++) { p.fillStyle = ["rgba(80,220,160,0.05)", "rgba(120,120,240,0.05)", "rgba(200,100,220,0.04)"][b]; p.beginPath(); p.moveTo(0, 60 + b * 20); for (let x = 0; x <= cv.width; x += 20) p.lineTo(x, 60 + b * 20 + Math.sin(x / 90 + now / 2600 + b * 2) * 22); p.lineTo(cv.width, 0); p.lineTo(0, 0); p.fill(); }
       p.fillStyle = "#120C1C"; p.fillRect(0, 0, cv.width, TOP); p.fillStyle = "#FFE070"; p.font = "bold 14px monospace"; p.fillText(Lv ? `SCORE ${Lv.score}` : "RUNESTEP PYRAMID", 8, 19);
       if (Lv) { p.fillText(`LEVEL ${Lv.n}`, cv.width / 2 - 30, 19); for (let k = 0; k < Math.min(6, Lv.lives); k++) this.rpHopper(p, cv.width - 16 - k * 18, 16, "dl", 0.45, now); }
       p.save(); p.translate(0, TOP);
@@ -30093,6 +30114,8 @@ CM.CG_TABLES.push(["claw", "The Wishing Claw"]);
       things.push({ z: cz - 0.01, draw: () => this.cwClawDraw(p, cx, cz, cy, open, held, tier, now) });
       things.sort((a, b) => b.z - a.z).forEach((t) => t.draw());
       fx.falls = fx.falls.filter((f) => now - f.at < 600); for (const f of fx.falls) { const k = (now - f.at) / 600; p.globalAlpha = 1 - k; this.cwPrize(p, f.q, sx(f.q.x, f.q.z), sy(f.q.z) + k * 40, scale(f.q.z) / 40 * (1 - k * 0.5), tier); p.globalAlpha = 1; }
+      { const sp = p.createRadialGradient(CWID / 2, CEIL, 10, CWID / 2, FRONT - 40, 260); sp.addColorStop(0, "rgba(255,240,200,0.12)"); sp.addColorStop(1, "rgba(255,240,200,0)"); p.fillStyle = sp; p.fillRect(18, CEIL, CWID - 36, FRONT - CEIL); }
+      { const sw = ((now / 5200) % 1) * (CWID + 200) - 100; p.save(); p.globalAlpha = 0.08; p.fillStyle = "#FFFFFF"; p.beginPath(); p.moveTo(sw, 30); p.lineTo(sw + 40, 30); p.lineTo(sw - 60, FRONT); p.lineTo(sw - 100, FRONT); p.closePath(); p.fill(); p.restore(); }
       // the glass
       const gl = p.createLinearGradient(0, 0, cv.width, cv.height); gl.addColorStop(0, "rgba(255,255,255,0.08)"); gl.addColorStop(0.45, "rgba(255,255,255,0)"); gl.addColorStop(0.55, "rgba(255,255,255,0.05)"); gl.addColorStop(1, "rgba(255,255,255,0)"); p.fillStyle = gl; p.fillRect(18, 30, cv.width - 36, FRONT - 22);
       if (L && (L.stage === "x" || L.stage === "z")) { p.fillStyle = L.time < 5 ? "#FF6050" : "#FFE070"; p.font = "bold 16px monospace"; p.fillText(`${Math.ceil(L.time)}`, cv.width - 44, 46); }
@@ -30198,6 +30221,9 @@ CM.CG_TABLES.push(["pinball", "Wyrmhold Pinball"]);
         p.fillStyle = "#F0E8E0"; p.beginPath(); p.moveTo(x0 + nx * r0, y0 + ny * r0); p.lineTo(x1 + nx * r1, y1 + ny * r1); p.arc(x1, y1, r1, Math.atan2(ny, nx), Math.atan2(ny, nx) + Math.PI); p.lineTo(x0 - nx * r0, y0 - ny * r0); p.arc(x0, y0, r0, Math.atan2(-ny, -nx), Math.atan2(-ny, -nx) + Math.PI); p.closePath(); p.fill(); p.strokeStyle = "#C03030"; p.lineWidth = 2; p.stroke(); p.lineWidth = 1; p.fillStyle = "#808890"; p.beginPath(); p.arc(x0, y0, 3, 0, Math.PI * 2); p.fill(); }
       // the plunger
       const pull = Gd ? Gd.pull : 0, pt = Y(34.6) + pull * 14; p.strokeStyle = "#A0A0A8"; p.lineWidth = 2; p.beginPath(); for (let k = 0; k <= 10; k++) p.lineTo(X(18.95) + (k % 2 ? 6 : -6), pt + 2 + (k * (cv.height - pt - 4)) / 10); p.stroke(); p.lineWidth = 1; p.fillStyle = "#C03030"; p.fillRect(X(18.5), pt, X(19.4) - X(18.5), 5);
+      if (Gd) { const D = Gd.dragon, c0 = T.circles.find((q) => q.kind === "dragon"); if (c0) for (let k = 0; k < 10; k++) { const a = Math.PI + (k / 9) * Math.PI, on = (Math.floor(now / 140) + k) % 5 === 0 || k < (3 + D.level - D.hp) * 2; p.fillStyle = on ? "#FFE070" : "rgba(255,224,112,0.18)"; p.beginPath(); p.arc(X(c0.x) + Math.cos(a) * (c0.r * K + 14), Y(c0.y) + Math.sin(a) * (c0.r * K + 14), 2.5, 0, Math.PI * 2); p.fill(); } }
+      { const gx = ((now / 2400) % 1); p.save(); p.strokeStyle = "rgba(255,255,255,0.55)"; p.lineWidth = 3; p.lineCap = "round"; for (const s of T.segs) { if (s.kind || s.oneWay) continue; const x0 = X(s.a[0]), y0 = Y(s.a[1]), x1 = X(s.b[0]), y1 = Y(s.b[1]), t0 = gx, t1 = Math.min(1, gx + 0.08); if (Math.hypot(x1 - x0, y1 - y0) < 40) continue; p.beginPath(); p.moveTo(x0 + (x1 - x0) * t0, y0 + (y1 - y0) * t0); p.lineTo(x0 + (x1 - x0) * t1, y0 + (y1 - y0) * t1); p.stroke(); } p.restore(); }
+      if (Gd) { this.pbTrails = this.pbTrails || new WeakMap(); for (const b of Gd.balls) { const tr = this.pbTrails.get(b) || []; tr.push([X(b.x), Y(b.y)]); if (tr.length > 6) tr.shift(); this.pbTrails.set(b, tr); tr.forEach(([tx, ty], k) => { p.fillStyle = `rgba(220,230,255,${(k / tr.length) * 0.22})`; p.beginPath(); p.arc(tx, ty, PB.r * K * (0.5 + k / 12), 0, Math.PI * 2); p.fill(); }); p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(X(b.x) + 3, Y(b.y) + 4, PB.r * K, PB.r * K * 0.7, 0, 0, Math.PI * 2); p.fill(); } }
       // balls
       if (Gd) for (const b of Gd.balls) { const x = X(b.x), y = Y(b.y), r = PB.r * K, gr = p.createRadialGradient(x - r * 0.4, y - r * 0.4, 1, x, y, r); gr.addColorStop(0, "#FFFFFF"); gr.addColorStop(0.4, "#C8D0D8"); gr.addColorStop(1, "#5A6068"); p.fillStyle = gr; p.beginPath(); p.arc(x, y, r, 0, Math.PI * 2); p.fill(); }
       fx.pts = fx.pts.filter((q) => now - q.at < 900); for (const q of fx.pts) { p.globalAlpha = 1 - (now - q.at) / 900; p.fillStyle = q.c || "#FFF0B0"; p.font = `bold ${q.big ? 16 : 11}px Georgia`; p.textAlign = "center"; p.fillText(q.text, q.x, q.y - (now - q.at) / 30); p.textAlign = "left"; } p.globalAlpha = 1;
@@ -30391,7 +30417,7 @@ CM.CG_THUMB = (() => {
       const news = this.game.cgNews(); if (!news.length) return; const dlg = this.$("#dlg-casino") || document.body; let host = dlg.querySelector(".cgtoasts"); if (!host) { host = document.createElement("div"); host.className = "cgtoasts"; dlg.appendChild(host); }
       for (const n of news.splice(0)) { const t = document.createElement("div"); t.className = `cgtoast t-${n.kind}`;
         t.textContent = n.kind === "stamp" ? `Loyalty stamp: ${nameOf(n.table)} (${n.n}/${CLUB.stamps})` : n.kind === "loyalty" ? `Loyalty card full! ${n.member} member - collect it on the loyalty card.` : n.kind === "record" ? `New record at ${nameOf(n.table)}: ${n.score.toLocaleString("en")}!` : n.kind === "board" ? `High-score board: #${n.rank} at ${nameOf(n.table)} (${n.score.toLocaleString("en")})` : n.kind === "ach" ? `Achievement: ${n.name} (${n.tier}) - collect it in Achievements` : n.kind === "daily" ? `Daily challenge: the ${["bronze", "silver", "gold"][n.tier]} mark at ${nameOf(n.table)}! Collect it in the gallery.` : "";
-        host.appendChild(t); if (n.kind === "ach" || n.kind === "loyalty" || n.kind === "record" || n.kind === "daily") this.cgSfx("cardwin", 0.35); setTimeout(() => t.classList.add("out"), 6000); setTimeout(() => t.remove(), 6800); }
+        host.appendChild(t); while (host.children.length > 3) host.firstChild.remove(); if (n.kind === "ach" || n.kind === "loyalty" || n.kind === "record" || n.kind === "daily") this.cgSfx("cardwin", 0.35); setTimeout(() => t.classList.add("out"), 6000); setTimeout(() => t.remove(), 6800); }
       this.game.saveCasino && this.game.saveCasino();
     },
   });

@@ -65,7 +65,7 @@
       const news = this.game.cgNews(); if (!news.length) return; const dlg = this.$("#dlg-casino") || document.body; let host = dlg.querySelector(".cgtoasts"); if (!host) { host = document.createElement("div"); host.className = "cgtoasts"; dlg.appendChild(host); }
       for (const n of news.splice(0)) { const t = document.createElement("div"); t.className = `cgtoast t-${n.kind}`;
         t.textContent = n.kind === "stamp" ? `Loyalty stamp: ${nameOf(n.table)} (${n.n}/${CLUB.stamps})` : n.kind === "loyalty" ? `Loyalty card full! ${n.member} member - collect it on the loyalty card.` : n.kind === "record" ? `New record at ${nameOf(n.table)}: ${n.score.toLocaleString("en")}!` : n.kind === "board" ? `High-score board: #${n.rank} at ${nameOf(n.table)} (${n.score.toLocaleString("en")})` : n.kind === "ach" ? `Achievement: ${n.name} (${n.tier}) - collect it in Achievements` : n.kind === "daily" ? `Daily challenge: the ${["bronze", "silver", "gold"][n.tier]} mark at ${nameOf(n.table)}! Collect it in the gallery.` : "";
-        host.appendChild(t); if (n.kind === "ach" || n.kind === "loyalty" || n.kind === "record" || n.kind === "daily") this.cgSfx("cardwin", 0.35); setTimeout(() => t.classList.add("out"), 6000); setTimeout(() => t.remove(), 6800); }
+        host.appendChild(t); while (host.children.length > 3) host.firstChild.remove(); if (n.kind === "ach" || n.kind === "loyalty" || n.kind === "record" || n.kind === "daily") this.cgSfx("cardwin", 0.35); setTimeout(() => t.classList.add("out"), 6000); setTimeout(() => t.remove(), 6800); }
       this.game.saveCasino && this.game.saveCasino();
     },
   });

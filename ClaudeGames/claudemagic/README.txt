@@ -1395,6 +1395,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
 The polish pass (v15.1 onward)
   Going through the casino's tables one by one for their looks: more polish and more animation, the games as they
   were.
+  - v15.3, the last seven - Shatterpane to Claudeatro:
+    Shatterpane's window under a stone arch, its coloured light falling faintly to the floor. Starstone Drift
+    with a second nebula and a ringed planet far off. Moatleap: lily pads and reeds on the moat, sunlight
+    glinting on the water, banners on the wall. Runestep Pyramid under stars and a slow aurora. Wyrmhold
+    Pinball: lamps round the dragon that light as it weakens, a chrome glint along the rails, the ball's shadow
+    and trail. The Wishing Claw: a spotlight on the pit and reflections drifting over the glass. Claudeatro's
+    lobby on a gilt-edged felt, with pill-shaped wagers that lift and the chosen deck glowing. No more than
+    three of the floor's notices at once.
   - v15.2, sixteen tables more, from Runefall to the Hexmarch:
     Runefall lit by two flickering torches, its embers smouldering, a ring where each rune is struck, the
     Well's water moving and the slate's edges in shadow. Lantern Lane Dash at night: pools of lamplight round

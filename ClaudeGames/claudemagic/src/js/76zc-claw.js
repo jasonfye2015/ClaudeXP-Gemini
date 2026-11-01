@@ -60,6 +60,8 @@ CM.CG_TABLES.push(["claw", "The Wishing Claw"]);
       things.push({ z: cz - 0.01, draw: () => this.cwClawDraw(p, cx, cz, cy, open, held, tier, now) });
       things.sort((a, b) => b.z - a.z).forEach((t) => t.draw());
       fx.falls = fx.falls.filter((f) => now - f.at < 600); for (const f of fx.falls) { const k = (now - f.at) / 600; p.globalAlpha = 1 - k; this.cwPrize(p, f.q, sx(f.q.x, f.q.z), sy(f.q.z) + k * 40, scale(f.q.z) / 40 * (1 - k * 0.5), tier); p.globalAlpha = 1; }
+      { const sp = p.createRadialGradient(CWID / 2, CEIL, 10, CWID / 2, FRONT - 40, 260); sp.addColorStop(0, "rgba(255,240,200,0.12)"); sp.addColorStop(1, "rgba(255,240,200,0)"); p.fillStyle = sp; p.fillRect(18, CEIL, CWID - 36, FRONT - CEIL); }
+      { const sw = ((now / 5200) % 1) * (CWID + 200) - 100; p.save(); p.globalAlpha = 0.08; p.fillStyle = "#FFFFFF"; p.beginPath(); p.moveTo(sw, 30); p.lineTo(sw + 40, 30); p.lineTo(sw - 60, FRONT); p.lineTo(sw - 100, FRONT); p.closePath(); p.fill(); p.restore(); }
       // the glass
       const gl = p.createLinearGradient(0, 0, cv.width, cv.height); gl.addColorStop(0, "rgba(255,255,255,0.08)"); gl.addColorStop(0.45, "rgba(255,255,255,0)"); gl.addColorStop(0.55, "rgba(255,255,255,0.05)"); gl.addColorStop(1, "rgba(255,255,255,0)"); p.fillStyle = gl; p.fillRect(18, 30, cv.width - 36, FRONT - 22);
       if (L && (L.stage === "x" || L.stage === "z")) { p.fillStyle = L.time < 5 ? "#FF6050" : "#FFE070"; p.font = "bold 16px monospace"; p.fillText(`${Math.ceil(L.time)}`, cv.width - 44, 46); }
