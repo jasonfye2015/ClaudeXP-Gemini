@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The sweep (the fiftieth big update - v16.4)
+  tools/sweep.py opens all 55 tables in a real browser engine at a normal and a narrow window, plays a few rounds with
+  clicks and keys, and reports script errors, loops or timers left running after leaving, and anything that runs off
+  the edge. Its first run found no errors and no leaks; sixteen tables' side panels ran off a narrow window, and now
+  drop under their pictures instead.
+
 The floor's big nights (the forty-ninth big update - v16.3)
   Four things across the Gilded Joker (src/js/64zzk-floor2.js, 76zzn-floor2.js):
   - The progressive jackpot: a marquee over the gallery (and a ticker on every table's bar). It starts at 1,000 gold,
