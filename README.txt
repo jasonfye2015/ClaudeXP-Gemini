@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The tongue of the last bell (the seventy-fourth big update - v18.8)
+  (src/js/69i-thread.js, 76zzzi-thread.js; the canon in LORE.md)
+  One story through every part of the world, in a new Journal page, "The last bell". In the Undercroft's bell-yard the
+  Bell-Founder's Boy swings a bell with no tongue. The portals round the shaft open on what the Root dreams, and it
+  dreams in the city's stuff, so the tongue's ten makings are out there: the bell-yard itself, the dungeon's bell-rope
+  grooves (past floor 15, or Brother Cael's bell), the Mage Tower's tenth floor, Haven's eighth level, the island (a
+  homestead or the Hollow Mason), a boss of Claudeita's cave, the Fortress's fifth floor, the Brass Warden down the
+  pipe, three games won at Leshy's table, and Joker level 10. Each is found by doing the deed (and whatever a party
+  has already done counts), with its own page. All ten and a metal bar go to the smith (200 gold) to be cast; the
+  tongue, taken down to the bell-yard, answers him (150 renown, the title "who Answered the Bell"). After that the
+  Lich King rises a fifth short, every time. The Goals page shows the next step, with Go.
+
 One name across the world (the seventy-third big update - v18.7)
   (src/js/69h-renownlv.js, 76zzzh-renownlv.js)
   - Every part of the world now earns renown, counted from its best ever so nothing pays twice: the Mage Tower (3 a

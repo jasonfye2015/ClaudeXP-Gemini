@@ -131,6 +131,21 @@ came; the boy is still there, ringing a bell with no tongue. The Night of Bells,
 it does not remember making. This does not contradict the king's lie (the water was let in on the queen's side of the
 city); it is a second, smaller lie of the hill's own, and it is the town's, not the king's.
 
+## The tongue of the last bell (v18.8)
+
+The thread that runs through every place. The portals in the Keep-yard stand round the shaft's mouth, and they do not
+open on other places: they open on what the Root dreams (a mage's ledger in the Tower says so). It dreams in what it
+was fed, which is the city - so its dreams are made of Caer Duin's stone, bronze and people, and pieces of the city's
+last bell turn up in them. The Bell-Founder's Boy in the bell-yard swings a bell whose tongue was never hung; Haven's
+cracked bells were all cast tongueless by a founder "from a hill a long way off" so the thing below wouldn't know
+which answered; the Iron Marshal's ninth order is NO BELLS; the Brass Warden carries Orrin Vale's founder's stamp;
+Leshy holds the town's card and has never played it; the Joker sold the tongue of the bell over his door the year the
+lower town went under, and someone has paid the pawn's interest every year since. The smith casts the tongue from all
+ten. Hung and rung, it is the lower town's first bell in two hundred years, and the answer the cross asked for (WE WILL
+LISTEN FOR IT). The Boy sits down. The Lich King, ever after, hears it in the stone when he rises, and something in
+him that was a man stops to listen: he rises a fifth short. Nobody says who paid the Joker's interest. (It was the
+chronicler's family, and the chronicler doesn't know it.)
+
 ## Leshy's cabin (v11.1)
 
 Leshy is not of Caer Duin and does not say where he is from. The woodcutters say the cabin was empty for years and then
