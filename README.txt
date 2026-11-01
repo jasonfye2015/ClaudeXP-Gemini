@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Surfaces (v22.1, UPGRADE_PLAN_17.md phase 1)
+  (src/js/40-render.js)
+  - Walls, floors and the ground take relief from their own pictures: a height is read off each picture's light and
+    dark and turned into a facing per pixel, so the torch, a brazier or the sun rakes across stone, brick and earth -
+    the mortar and the cracks fall back, the faces of the stones catch the light.
+  - Deepest in the Stone look, gentler in Drawn, light in Pixel (the tiles stay crisp). Stone keeps a faint sheen and
+    wet ground a stronger one. Figures, props and the sky are left flat.
+
 Light (the eighty-eighth big update - v22.0, UPGRADE_PLAN_17.md phase 0)
   (src/js/76zzzu-light.js; 40-render.js, 26-surface.js, 80-main.js)
   - Up to twenty-four lights a frame (from twelve), in the town, the Wood and every floor below.
