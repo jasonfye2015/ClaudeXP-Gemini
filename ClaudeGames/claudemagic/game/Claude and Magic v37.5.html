@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v37.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v37.5 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "37.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "37.5", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28990,7 +28990,7 @@ Object.assign(CM.Game.prototype, {
 // scar is a small trait for good, one of six, two of them double-edged: Hardened (+1 Constitution), Watchful (+1
 // Dexterity), Lucky to be Alive (+1 Luck), Grim (+1 Strength, -1 Wisdom), Shaken (+1 Wisdom, -1 Dexterity), Slow to
 // Heal (+1 Intelligence, -1 Constitution). The portrait shows it; the sheet tells it (76zzzzzzd-scars.js).
-//   h.scars = [{where, by, floor, trait}];  CM.SCAR_TRAITS
+//   h.marks = [{where, by, floor, trait}] (v37.5: their own list - h.scars is the camp's healed-wound scars, 63-camp.js);  CM.SCAR_TRAITS
 { CM.SCAR_TRAITS = {
     hardened: { name: "Hardened", stats: { con: 1 }, what: "+1 Constitution" }, watchful: { name: "Watchful", stats: { dex: 1 }, what: "+1 Dexterity" },
     lucky: { name: "Lucky to be Alive", stats: { luck: 1 }, what: "+1 Luck" }, grim: { name: "Grim", stats: { str: 1, wis: -1 }, what: "+1 Strength, -1 Wisdom" },
@@ -29001,15 +29001,18 @@ Object.assign(CM.Game.prototype, {
   const hurt0 = G.hurt; G.hurt = function (h, dmg, by, opts) { const out = hurt0.call(this, h, dmg, by, opts);
     if (h && !h.thrall && h.hp > 0 && h.hp <= h.max * CM.SCAR_AT && !h.nearDeath) h.nearDeath = { by: by ? (by.name || by.kind || "something") : "something", floor: this.floor ? this.floor.number : 0, element: opts && opts.element };
     return out; };
-  G.giveScar = function (h, why) { h.scars = h.scars || []; if (h.scars.length >= CM.SCARS_MOST) return null;
-    const ids = Object.keys(CM.SCAR_TRAITS), k = CM.hashSeed(`${this.seed}:scar:${h.name}:${h.scars.length}:${why.floor}`), trait = ids[k % ids.length], where = CM.SCAR_PLACES[(k >>> 4) % CM.SCAR_PLACES.length];
+  G.giveScar = function (h, why) { h.marks = h.marks || []; if (h.marks.length >= CM.SCARS_MOST) return null;
+    const ids = Object.keys(CM.SCAR_TRAITS), k = CM.hashSeed(`${this.seed}:scar:${h.name}:${h.marks.length}:${why.floor}`), trait = ids[k % ids.length], where = CM.SCAR_PLACES[(k >>> 4) % CM.SCAR_PLACES.length];
     const T = CM.SCAR_TRAITS[trait]; for (const [s, d] of Object.entries(T.stats)) h.stats[s] = Math.max(1, Math.min(25, h.stats[s] + d)); CM.recompute(h);
-    const S = { where, by: why.by, floor: why.floor, trait, burn: why.element === "fire" }; h.scars.push(S); this.tally.scars = (this.tally.scars || 0) + 1;
+    const S = { where, by: why.by, floor: why.floor, trait, burn: why.element === "fire" }; h.marks.push(S); this.tally.marks = (this.tally.marks || 0) + 1;
     this.say(`${h.name} lived through it, and will carry it: a scar ${where}, from ${why.by.startsWith("The ") ? why.by : CM.the ? CM.the({ name: why.by }) : why.by} on floor ${why.floor}. ${T.name}: ${T.what}.`);
-    if (h.scars.length >= CM.SCARS_MOST && this.achieve) this.achieve("scarred"); return S; };
+    if (h.marks.length >= CM.SCARS_MOST && this.achieve) this.achieve("scarred"); return S; };
   CM.ACHIEVEMENTS.scarred = { name: "Map of Old Wounds", what: "A hero with three scars", title: "the Scarred" };
   const wf0 = G.wonFight; G.wonFight = function (...a) { const near = (this.party || []).map((h) => h.nearDeath), out = wf0.apply(this, a); (this.party || []).forEach((h, i) => { if (near[i] && h.hp > 0) this.giveScar(h, near[i]); delete h.nearDeath; }); return out; };
   const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "mode" && a[0] === "explore") for (const h of this.party || []) delete h.nearDeath; return em0.call(this, ev, ...a); };   /* (a fight fled or lost: no scar from it) */
+  // (v37.5) a hero from v34.2 - v37.4 kept these in h.scars, beside the camp's ids: moved to their own list
+  CM.splitMarks = (h) => { if (!h || !Array.isArray(h.scars) || !h.scars.some((s) => s && typeof s === "object")) return h; h.marks = (h.marks || []).concat(h.scars.filter((s) => s && typeof s === "object")); h.scars = h.scars.filter((s) => typeof s === "string"); return h; };
+  const up0 = CM.upgradeHero; if (up0) CM.upgradeHero = function (h, ...a) { return up0.call(this, CM.splitMarks(h), ...a); };
 }
 
 // ---- 69zk-letters.js ----
@@ -41631,14 +41634,14 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
 // marks; a burn a blotch), and the sheet's Scars - each with its place, its giver, its floor and its trait. The party's
 // cards are drawn again when a scar is new. Rules: 69zj-scars.js.
 { const P = CM.UI.prototype, base = P.portrait, LINES = [[0.3, 0.3, 0.45, 0.42], [0.62, 0.48, 0.7, 0.66], [0.38, 0.7, 0.58, 0.74], [0.6, 0.26, 0.66, 0.4], [0.32, 0.5, 0.4, 0.58], [0.25, 0.36, 0.28, 0.5]];
-  P.portrait = function (who, size) { const c = base.call(this, who, size); if (!who || typeof who === "string" || !(who.scars || []).length || !c.getContext) return c;
-    const p = c.getContext("2d"), S = size; who.scars.forEach((s, i) => { const L = LINES[CM.SCAR_PLACES.indexOf(s.where) >= 0 ? CM.SCAR_PLACES.indexOf(s.where) : i % LINES.length];
+  P.portrait = function (who, size) { const c = base.call(this, who, size); if (!who || typeof who === "string" || !(who.marks || []).length || !c.getContext) return c;
+    const p = c.getContext("2d"), S = size; who.marks.forEach((s, i) => { const L = LINES[CM.SCAR_PLACES.indexOf(s.where) >= 0 ? CM.SCAR_PLACES.indexOf(s.where) : i % LINES.length];
       if (s.burn) { p.fillStyle = "rgba(150,60,50,0.55)"; p.beginPath(); p.ellipse(S * (L[0] + L[2]) / 2, S * (L[1] + L[3]) / 2, S * 0.07, S * 0.05, 0.4, 0, Math.PI * 2); p.fill(); return; }
       p.strokeStyle = "rgba(120,40,40,0.75)"; p.lineWidth = Math.max(1, S / 28); p.beginPath(); p.moveTo(S * L[0], S * L[1]); p.lineTo(S * L[2], S * L[3]); p.stroke();
       p.strokeStyle = "rgba(240,210,190,0.7)"; p.lineWidth = Math.max(1, S / 60); for (let k = 1; k < 4; k++) { const x = S * (L[0] + (L[2] - L[0]) * k / 4), y = S * (L[1] + (L[3] - L[1]) * k / 4); p.beginPath(); p.moveTo(x - S * 0.02, y + S * 0.015); p.lineTo(x + S * 0.02, y - S * 0.015); p.stroke(); } });
     return c; };
-  let count = -1; const rf0 = P.refresh; P.refresh = function (...a) { const g = this.game; if (g && g.party) { const n = g.party.reduce((k, h) => k + (h.scars || []).length, 0); if (n !== count) { count = n; const box = this.$ && this.$("#party"); if (box) box.dataset.signature = ""; } } return rf0.apply(this, a); };
-  CM.sheetExtra((ui, h) => (h.scars || []).length ? `<div class="list-title">Scars</div><div class="boons">${h.scars.map((s) => { const T = CM.SCAR_TRAITS[s.trait]; return `<div><b>${ui.esc(T.name)}</b> - a scar ${ui.esc(s.where)}, from ${ui.esc(s.by)} on floor ${s.floor}: ${ui.esc(T.what)}</div>`; }).join("")}</div>` : "");
+  let count = -1; const rf0 = P.refresh; P.refresh = function (...a) { const g = this.game; if (g && g.party) { const n = g.party.reduce((k, h) => k + (h.marks || []).length + (h.scars || []).length, 0); if (n !== count) { count = n; const box = this.$ && this.$("#party"); if (box) box.dataset.signature = ""; } } return rf0.apply(this, a); };
+  CM.sheetExtra((ui, h) => (h.marks || []).length + (h.scars || []).length ? `<div class="list-title">Scars</div><div class="boons">${(h.scars || []).filter((s) => CM.SCARS[s]).map((s) => `<div><b>${ui.esc(CM.SCARS[s].name[0].toUpperCase() + CM.SCARS[s].name.slice(1))}</b> - from a wound healed: ${ui.esc(CM.SCARS[s].what)}</div>`).join("")}${(h.marks || []).map((s) => { const T = CM.SCAR_TRAITS[s.trait]; return `<div><b>${ui.esc(T.name)}</b> - a scar ${ui.esc(s.where)}, from ${ui.esc(s.by)} on floor ${s.floor}: ${ui.esc(T.what)}</div>`; }).join("")}</div>` : "");
 }
 
 // ---- 76zzzzzze-letters.js ----
