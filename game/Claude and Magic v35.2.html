@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v35.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v35.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "35.1", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "35.2", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29191,6 +29191,35 @@ Object.assign(CM.Game.prototype, {
   const rest0 = G.rest; if (rest0) G.rest = function (...a) { const g0 = this.gold, out = rest0.apply(this, a); if (this.gold < g0 && this.hasTrick("guard")) {   /* (rested: the bed was paid for) */ this.cheer && this.cheer(5); this.say(`${this.petName("dog")} keeps watch all night: everyone sleeps deeper for it.`); } return out; };
 }
 
+// ---- 69zo-ponygear.js ----
+"use strict";
+// The pony's gear (v35.2, UPGRADE_PLAN_30.md): bought at the farm (or the kennel and stable), kept with the pony in the
+// village. Saddlebags: twenty more carried on the land, besides the pony's thirty. A blanket: the snow no longer slows the
+// party on the Wood's ways - the extra minute a step and the slower walk are gone. A cart: the fields' produce rides to
+// the Square's stall in it, and sells a tenth higher; and the silo can be sold from the fields themselves.
+//   CM.PONY_GEAR; game.ponyGear(); game.buyPonyGear(id)
+{ CM.PONY_GEAR = { saddlebags: { name: "Saddlebags", gold: 90, what: "twenty more carried on the land" }, blanket: { name: "A blanket", gold: 70, what: "the snow no longer slows the party in the Wood" },
+    cart: { name: "A cart", gold: 200, what: "the fields' produce sells a tenth higher, and the silo can be sold from the fields" } };
+  const G = CM.Game.prototype, PG = CM.PONY_GEAR;
+  Object.assign(G, {
+    ponyGear() { const p = this.pets().pony; if (!p) return {}; return (p.gear = p.gear || {}); },
+    hasPonyGear(id) { return Boolean(this.petName("pony") && this.ponyGear()[id]); },
+    buyPonyGearWhy(id) { const T = PG[id]; if (!T) return "No such thing."; if (!this.petName("pony")) return "There's no pony to fit it to."; if (!((this.atFarm && this.atFarm()) || (this.atKennel && this.atKennel()))) return "The pony's gear is fitted at the farm (or the stable, once there is one).";
+      if (this.ponyGear()[id]) return "It has one."; if (this.gold < T.gold) return `${T.gold} gold.`; return ""; },
+    buyPonyGear(id) { const why = this.buyPonyGearWhy(id); if (why) return why; this.logAct && this.logAct("buyPonyGear", id); this.gold -= PG[id].gold; this.ponyGear()[id] = true; this.saveVillage && this.saveVillage();
+      this.say(`${PG[id].name} for ${this.petName("pony")}: ${PG[id].what}.`); this.saveRun && this.saveRun(); this.emit("change"); return ""; },
+  });
+  const snowy = (g) => g.floor && g.floor.number === -1 && CM.snowDepth && CM.snowDepth(g) >= (CM.WEATHERPLAY ? CM.WEATHERPLAY.snowFrom : 0.3);
+  const ow0 = G.overweight; G.overweight = function (...a) { const o = ow0.apply(this, a); if (!this.hasPonyGear("saddlebags") || !this.floor || !(this.floor.number === 0 || this.floor.number === -1)) return o;
+    const cap = CM.carryCap(this.party) + (this.followerCarry ? this.followerCarry() : 0) + CM.PETS.ponyCarry + 20; return CM.bagWeight(this.bag) / cap; };
+  const wp0 = G.walkPace; G.walkPace = function (...a) { const p = wp0.apply(this, a); return this.hasPonyGear("blanket") && snowy(this) ? p / 1.5 : p; };
+  const burn0 = G.burn; G.burn = function (...a) { const c0 = this.clock || 0, out = burn0.apply(this, a); if (this.hasPonyGear("blanket") && snowy(this) && (this.clock || 0) > c0) this.clock -= 1; return out; };
+  const ms0 = G.marketSell; if (ms0) G.marketSell = function (from = "pack") { const cart = this.hasPonyGear("cart"), fieldsHere = cart && from === "silo" && this.atFields && this.atFields(), fl = this.floor, n0 = fl ? fl.number : null;
+    if (fieldsHere && fl) fl.number = 0; let r; try { r = ms0.call(this, from); } finally { if (fieldsHere && fl) fl.number = n0; }
+    if (cart && r && !r.error && r.gold > 0) { const more = Math.round(r.gold / 10); this.gold += more; r.gold += more; this.say(`${this.petName("pony")} hauled it in the cart, fresh: ${more} gold more.`); }
+    return r; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -41257,6 +41286,18 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     more.appendChild(box); return out; };
   const rf0 = CM.UI.prototype.refresh;
   CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a), g = this.game, el = this.$ && this.$("#side .pets"); if (el && g && g.dens && g.mode !== "title") { const open = g.dens().filter((d) => !d.cleared); if (open.length && !/den/.test(el.textContent)) el.textContent += ` - ${open.length} den${open.length === 1 ? "" : "s"} found in the Wood`; } return out; };
+}
+
+// ---- 76zzzzzzh-ponygear.js ----
+"use strict";
+// The pony's gear - the window's side (v35.2): the farm's window fits it. Rules: 69zo-ponygear.js.
+{ const of0 = CM.UI.prototype.openFarm;
+  CM.UI.prototype.openFarm = function (...a) { const out = of0.apply(this, a), g = this.game, more = this.$("#farm-more"); if (!more || !g.ponyGear || !g.petName("pony")) return out;
+    let box = more.querySelector(".ponygear"); if (box) box.remove(); box = document.createElement("div"); box.className = "ponygear"; box.innerHTML = `<div class="list-title">${this.esc(g.petName("pony"))}'s gear</div>`;
+    for (const [id, T] of Object.entries(CM.PONY_GEAR)) { const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const has = g.ponyGear()[id], why = g.buyPonyGearWhy(id);
+      row.innerHTML = `<div><b>${this.esc(T.name)}</b> <small>${this.esc(T.what)}</small></div>`; const b = document.createElement("button"); b.textContent = has ? "Fitted" : `${T.gold} gold`; b.disabled = Boolean(why); if (why && !has) b.title = why;
+      b.addEventListener("click", () => { this.$("#farm-note").textContent = g.buyPonyGear(id) || "Fitted."; this.openFarm(); this.refresh(); }); row.appendChild(b); box.appendChild(row); }
+    more.appendChild(box); return out; };
 }
 
 // ---- 77-splash.js ----

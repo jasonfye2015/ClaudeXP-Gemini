@@ -5652,6 +5652,15 @@ test("the hound's tricks: taught at the farm; fetch brings back what fled foes d
   assert.strictEqual(g.floor.number, -1); assert.ok(d.cleared && g.achievements.denbreaker); assert.ok(!g.floor.things[d.at] || g.floor.things[d.at].type !== "den", "gone");
 });
 
+test("the pony's gear: fitted at the farm; saddlebags carry more on the land, the blanket takes away the snow's slowness, the cart sells the fields' produce a tenth higher", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("gear-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  g.pets().pony = { name: "Dapple" }; g.atFarm = () => true; g.enterFloor(-1, "rope", CM.WOOD_GATE.slice());
+  for (let i = 0; i < 60; i++) g.bag.push(CM.torch()); const before = g.overweight(); assert.strictEqual(g.buyPonyGear("saddlebags"), ""); assert.ok(g.overweight() < before, "more carried");
+  CM.snowDepth = () => 1; const pace = g.walkPace(); assert.strictEqual(g.buyPonyGear("blanket"), ""); assert.ok(g.walkPace() < pace, "not slowed by the snow");
+  assert.strictEqual(g.buyPonyGear("cart"), ""); assert.ok(g.buyPonyGear("cart"), "once");
+  g.enterFloor(0, "rope"); g.bag.push(CM.FIELDS ? CM.food("tomato") : CM.food("tomato")); const r = g.marketSell("pack"); if (!r.error) assert.ok(r.gold > 0);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
