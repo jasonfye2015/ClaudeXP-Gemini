@@ -1460,3 +1460,20 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 /* the court's keepers (v21.3) */
 .ckbox { max-width: 640px; } .ckrows { display: flex; flex-direction: column; gap: 6px; } .ckrow { display: grid; grid-template-columns: 10px 1fr; gap: 10px; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.03); }
 .ckrow > i { border-radius: 4px; background: var(--c); box-shadow: 0 0 6px var(--c); } .ckgo { display: flex; flex-direction: column; align-items: flex-start; text-align: left; padding: 8px 10px; }
+
+/* (v25.0) windows that move: in and out, buttons that press, the purse counting, things flying to the pack */
+.dialog.on { animation: dlgfade 0.18s ease-out; }
+.dialog.on > .box { animation: dlgrise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.15); }
+@keyframes dlgfade { from { background: rgba(0,0,0,0); } }
+@keyframes dlgrise { from { opacity: 0; transform: translateY(18px) scale(0.97); } }
+.dlg-ghost { position: fixed !important; margin: 0 !important; z-index: 30; pointer-events: none; animation: dlgout 0.18s ease-in forwards; }
+@keyframes dlgout { to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+button { transition: transform 0.08s, box-shadow 0.12s, background 0.12s; }
+button:active:not(:disabled) { transform: translateY(1px) scale(0.97); box-shadow: inset 0 2px 4px rgba(0,0,0,0.45); }
+#side .purse.up { animation: purseup 0.9s ease-out; } #side .purse.down { animation: pursedown 0.9s ease-out; }
+@keyframes purseup { 0% { color: #FFF4B0; text-shadow: 0 0 8px rgba(255,220,100,0.9); } 100% { } }
+@keyframes pursedown { 0% { color: #FF9A80; } 100% { } }
+.flyitem { position: fixed; z-index: 40; pointer-events: none; filter: drop-shadow(0 0 6px rgba(255,220,140,0.8)); }
+button.bump { animation: bagbump 0.3s ease-out; } @keyframes bagbump { 40% { transform: scale(1.12); box-shadow: 0 0 10px rgba(232,200,112,0.7); } }
+body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
+@media (prefers-reduced-motion: reduce) { .dialog.on, .dialog.on > .box, .dlg-ghost, #side .purse.up, #side .purse.down { animation: none; } }
