@@ -144,7 +144,7 @@ window.addEventListener("DOMContentLoaded", () => {
   ui.onEnding = soundscape;
   const STEPS = ["step", "step_water", "step_hall", "step_cold"];        // a footfall for each depth (the Deep's bands borrow one)
   const soundBand = (n) => CM.AMBIENCE_OF[CM.themeIndex(n)] || 0;
-  game.on("sound", (name) => CM.audio.play(name === "step" && game.floor ? STEPS[soundBand(game.floor.number)] || "step" : name));
+  game.on("sound", (name) => { if (name === "step" && game.floor) { const band = STEPS[soundBand(game.floor.number)] || "step"; CM.audio.play(CM.stepSound ? CM.stepSound(game, band) : band); } else CM.audio.play(name); });   // (v28.3: the ground underfoot - 76zzzzt-footsteps.js)
   game.on("near", (kind, d, pan) => CM.audio.near(kind, 1 - d / 8, pan || 0));
   game.on("magetower", () => ui.openMageTower());
   game.on("cabin", () => ui.openCabin());

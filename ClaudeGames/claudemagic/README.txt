@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Footsteps by the ground (v28.3, UPGRADE_PLAN_23.md phase 3 - the sound plan done)
+  (src/js/76zzzzt-footsteps.js; 80-main.js)
+  - A step sounds like what is underfoot: a sharp click on the town's cobbles and flagstones, a soft brush through
+    grass, moss and the leaf litter, a dull fall on earth and the roads, a hollow knock on boards (the bridge, the
+    houses' rooms - the forge and the temple are stone), a splash in water, a crunch in snow lying. Below ground, each
+    depth's own footfall as before, and a splash in its puddles.
+
 The place's own sound (v28.2, UPGRADE_PLAN_23.md phase 2)
   (src/js/76zzzzs-placeamb.js)
   - Over the depth's ambience, loops of the place itself, made by the game when first wanted, each as loud as the
