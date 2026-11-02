@@ -360,7 +360,7 @@ CM.UI = class {
     const eff = g.effective(h);
     const left = this.$("#sheet-left");
     left.innerHTML = "";
-    left.appendChild(this.portrait(h.cls, 96));
+    left.appendChild(this.portrait(h, 96));
     const facts = document.createElement("div");
     facts.className = "facts";
     facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
@@ -795,7 +795,7 @@ CM.UI = class {
     for (const h of g.party) {
       const div = document.createElement("div");
       div.className = h.hp > 0 ? "standing" : "fallen";
-      div.appendChild(this.portrait(h.cls, 56));
+      div.appendChild(this.portrait(h, 56));
       const who = document.createElement("div");
       who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? (won ? "comes home" : "stood to the last") : "fell"}</small>`;
       div.appendChild(who);
@@ -1028,7 +1028,7 @@ CM.UI = class {
     for (const h of g.party) {
       const div = document.createElement("div");
       div.className = h.hp > 0 ? "standing" : "fallen";
-      div.appendChild(this.portrait(h.cls, 56));
+      div.appendChild(this.portrait(h, 56));
       const who = document.createElement("div");
       who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? "stands" : "fell"}</small>`;
       div.appendChild(who);
