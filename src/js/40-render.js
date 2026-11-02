@@ -39,6 +39,7 @@ uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    
 uniform float uStars; uniform float uAurora; uniform vec4 uCloud; uniform vec3 uCloudCol; uniform float uFlash;   // (v30.2: the sky - stars, the aurora, the clouds (offset x, z, cover), their colour, a lightning flash)
 uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uCeil;   // (v30.3: the floor's map - walls in red, water in green - its size, the soft corners' strength, a ceiling overhead)
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
+uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
 uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
@@ -141,6 +142,22 @@ void main() {
     else { ao = 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.32, vWorld.y)) - uCeil * 0.26 * smoothstep(0.7, 1.0, vWorld.y); }
     light *= mix(1.0, ao, uAO); extra *= mix(1.0, ao, uAO); }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  vec3 ageGlow = vec3(0.0);
+  if (dot(uAge, vec4(1.0)) > 0.0 && uBump > 0.0 && abs(n0.y) < 0.7) {     // (v30.7) the deeper, the older: what the years have done to the walls
+    float a = abs(n0.x) > abs(n0.z) ? vWorld.z : vWorld.x, y = vWorld.y;
+    if (uAge.x > 0.0) { vec2 q = vec2(a, y) * 3.2; float rg = 1.0 - abs(2.0 * vnoise(q + vnoise(q * 2.7) * 0.6) - 1.0), patchK = smoothstep(0.45, 0.65, vnoise(vec2(a, y) * 0.8 + 3.0));
+      col *= 1.0 - 0.6 * smoothstep(0.93, 0.985, rg) * patchK * uAge.x; }
+    if (uAge.y > 0.0) { float cx = a * 5.0, id = floor(cx), h = hash(vec2(id, 7.0)), L = 0.25 + 0.55 * hash(vec2(id, 9.0)), top = 1.0 - L;
+      float x0 = 0.5 + 0.22 * sin(y * 9.0 + h * 20.0) + 0.08 * sin(y * 23.0 + h * 7.0), wdt = 0.07 * smoothstep(top, 1.0, y);
+      float root = step(0.55, h) * smoothstep(top, top + 0.05, y) * (1.0 - smoothstep(wdt * 0.6, wdt, abs(fract(cx) - x0)));
+      col = mix(col, vec3(0.16, 0.11, 0.07) * (uTorch * light + extra) * uGrade, root * uAge.y * 0.9); }
+    if (uAge.z > 0.0) { float m = smoothstep(0.6, 0.78, vnoise(vec2(a, y) * 4.0 + 11.0)) * (1.0 - smoothstep(0.05, 0.55, y)); vec2 g = vec2(a, y) * 40.0, gid = floor(g);
+      vec2 jit = (vec2(hash(gid + 2.3), hash(gid + 5.9)) - 0.5) * 0.5; float cs = 0.12 + 0.18 * hash(gid + 8.1), cap = step(0.86, hash(gid)) * smoothstep(cs, cs * 0.4, length(fract(g) - 0.5 - jit));
+      ageGlow += vec3(0.25, 0.95, 0.7) * (m * 0.28 + cap * m * 0.9) * uAge.z * (0.8 + 0.2 * sin(uTime * 1.3 + a * 3.0)); }
+    if (uAge.w > 0.0) { float vn = vnoise(vec2(a, y) * 2.0), vein = smoothstep(0.035, 0.0, abs(sin((a * 2.6 + y * 1.7 + vn * 3.5) * 3.14159)) - 0.008) * smoothstep(0.48, 0.66, vnoise(vec2(a, y) * 0.9 + 5.0));
+      vec3 hue = 0.5 + 0.5 * cos(6.2832 * (dot(vdir, vec3(0.6, 0.3, 0.5)) * 1.5 + vec3(0.0, 0.33, 0.67)));
+      col = mix(col, hue * (uTorch * light + extra) * 1.1, vein * uAge.w * 0.45); ageGlow += hue * vein * uAge.w * 0.04; }
+  }
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
   if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
@@ -169,6 +186,7 @@ void main() {
     col = mix(col, vec3(0.82, 0.9, 1.0) * (uTorch * light + extra) * uGrade, fr);
   }
   col += t.rgb * vShade * uFlash * 0.9;                                   /* (v30.2: the lightning, whitening all) */
+  col += ageGlow * (1.0 - fog);                                           /* (v30.7: the fungus's own light) */
   col = mix(col, uFog + vec3(0.6, 0.65, 0.8) * uFlash, fog);
   col += shafts(vdir, d);
   { float lum = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(lum), col, uLook.y); col = max((col - 0.18) * uLook.x + 0.18 + uLift * (1.0 - col), 0.0); }   // (v22.4: the grade - saturation, contrast about the dark's middle, the lift)
@@ -251,7 +269,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -740,7 +758,7 @@ CM.Renderer = class {
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.surfTex || this.texture); gl.uniform1i(this.loc.uSurf, 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.mapTex || null); gl.uniform1i(this.loc.uMap, 3); gl.uniform1f(this.loc.uMapN, this.mapTex ? this.mapN : 0); gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1f(this.loc.uAO, CM.aoOff ? 0 : this.ao === undefined ? 1 : this.ao); gl.uniform1f(this.loc.uCeil, sky ? 0 : 1); gl.uniform1f(this.loc.uSparkle, this.sparkle || 0); gl.uniform1f(this.loc.uPush, sky && !CM.reducedMotion && !this.inspect ? 1 : 0);   // (v30.6: grass parted - not in the inspect camera's pictures)   // (v30.3: soft corners; CM.aoOff for an A/B)
+    gl.uniform1f(this.loc.uAO, CM.aoOff ? 0 : this.ao === undefined ? 1 : this.ao); gl.uniform1f(this.loc.uCeil, sky ? 0 : 1); gl.uniform1f(this.loc.uSparkle, this.sparkle || 0); gl.uniform4fv(this.loc.uAge, !sky && this.age ? this.age : [0, 0, 0, 0]); gl.uniform1f(this.loc.uPush, sky && !CM.reducedMotion && !this.inspect ? 1 : 0);   // (v30.6: grass parted - not in the inspect camera's pictures)   // (v30.3: soft corners; CM.aoOff for an A/B)
     gl.uniform1f(this.loc.uBump, CM.reliefOff ? 0 : (this.bumpK || 0.7) * (CM.reliefScale || 1));   // (v22.1: the relief on the floor's own mesh only)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
