@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Floor moods (v37.0, UPGRADE_PLAN_32.md phase 0)
+  (src/js/69zw-moods.js; 76zzzzzzo-moods.js (each mood's look); tests/run.js (the nodes test knows an overgrown floor grows two more))
+  - About one floor in seven from the third down (by the run's seed; never a guardian's, a camp's or a special floor)
+    has a mood, named as the party comes onto it and in the side panel. Flooded: water stands in a third of the halls,
+    and the torch burns half again as fast. Overgrown: roots and vines on the walls, a green cast, and two more things
+    growing to gather. Frozen: frost over everything, breath showing, glints - and the cold numbs the monsters' blows.
+    Haunted: a pale fog, drained colour and wandering wisps; the dead are a sixth harder to put down, and the heart sinks.
+
 The news board (v36.4, UPGRADE_PLAN_31.md phase 4)
   (src/js/69zv-crier.js; 76zzzzzzn-crier.js ("The Crier" in town, and on the court's noticeboard))
   - The Caer Duin Crier, a sheet a week: the week's expeditions and the deepest reached, the fallen remembered, a
