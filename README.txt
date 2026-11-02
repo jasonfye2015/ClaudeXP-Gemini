@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The tray (v25.3, UPGRADE_PLAN_20.md phase 3 - the interface and feel plan done)
+  (src/js/76zzzzm-tray.js; style.css)
+  - What matters and passes comes up as a small toast in the lower corner of the view, as well as in the log: a hero
+    gaining a level, a town request ready to hand in and its reward when it is, seeds found, a rare (or better) find,
+    a card for the deck, the party's renown level rising.
+  - Each has its own mark and colour; four at most stack up; they fade after a few seconds, and a pointer over one
+    holds it. A click opens its page: the hero's sheet, the requests, the pack, the village.
+  - Not while a film plays.
+
 Tooltips that compare (v25.2, UPGRADE_PLAN_20.md phase 2)
   (src/js/69u-compare.js, 76zzzzl-tips.js; style.css)
   - Hovering a thing anywhere it is listed - the pack, a shop, a chest, the belt, the stash - brings up a tooltip of
