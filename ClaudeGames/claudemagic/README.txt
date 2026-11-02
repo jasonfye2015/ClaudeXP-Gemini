@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Camp scenes (v34.0, UPGRADE_PLAN_29.md phase 0)
+  (src/js/69zh-fireside.js; 76zzzzzzb-fireside.js (the fire, and CM.addAction for the actions row))
+  - Coming into a camp, the four sit round the fire - painted, the fire alive, each in its light, the fallen's place
+    left empty - and talk over what happened since the last camp: who is hurt, what was found, a guardian slain, how
+    many fell to them, who fell, the purse, the torch. The lines are theirs, by who they are and what happened.
+  - Once a camp (not under Automatic or a film); the camp's "Round the fire" button brings it back.
+
 The daily challenge, scored (v33.3, UPGRADE_PLAN_28.md phase 3)
   (src/js/69zg-daily.js; 76zzzzzza-daily.js (the day's party on the new party's screen; the days on the title screen))
   - Today's dungeon keeps its seed and two mutators, and now sets the rest for everyone: the day's party (the classic
