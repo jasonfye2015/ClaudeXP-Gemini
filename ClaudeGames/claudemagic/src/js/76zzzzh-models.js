@@ -22,7 +22,7 @@
   };
   { const build0 = CM.art.build; CM.art.build = function (theme, look) { const set = build0.call(this, theme, look); for (const k of ["wood", "dark", "end", "iron", "bark", "awning"]) { set.index[`model:${k}`] = set.layers.length; set.layers.push(paint(set.size, k)); } return set; }; }
   // the geometry: quad(a, b, c, d, layer, shade, uvRect) - a, b at the foot
-  CM.propModel = (p, quad, index) => {
+  const pm = CM.propModel = (p, quad, index) => {
     const L = (k) => index[`model:${k}`], cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), s = Math.sin(p.turn);
     if (L("wood") === undefined) return false;
     const at = (x, y, z) => [cx + x * c - z * s, y, cz + x * s + z * c];
@@ -40,6 +40,7 @@
       if (cap !== null) for (const t of axis === "y" ? [1] : [0, 1]) for (let i = 0; i < n; i += 2) { const k0 = (i / n) * Math.PI * 2, k1 = ((i + 1) / n) * Math.PI * 2, k2 = ((i + 2) / n) * Math.PI * 2, C = axis === "y" ? [o[0], o[1] + t * len, o[2]] : [o[0] + t * len, o[1], o[2]];
         quad(at(...C), at(...ring(t, k0)), at(...ring(t, k1)), at(...ring(t, k2)), cap, sh * 0.95, [0.32, 0.32, 0.68, 0.68]); }
     };
+    if (p.kitOnly) return { L, at, box, cyl };                                 // (v24.6: the kit, for the rooms' furniture)
     const w = p.w, h = p.h;
     switch (p.id) {
       case "barrel": { const r = w / 2, H = Math.min(h, w * 1.3); cyl([0, 0, 0], r * 0.9, H, "y", 12, L("wood"), L("end"), 1, 0.12);
@@ -63,4 +64,5 @@
       default: return false;
     }
   };
+  CM.modelKit = (p, quad, index) => { const k = pm(Object.assign({}, p, { kitOnly: true }), quad, index); return k && k.box ? k : null; };
 }

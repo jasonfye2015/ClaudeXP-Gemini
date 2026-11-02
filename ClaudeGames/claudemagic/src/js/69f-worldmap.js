@@ -20,10 +20,11 @@
   ];
   WM.byId = Object.fromEntries(WM.PLACES.map((p) => [p[0], p]));
   Object.assign(CM.Game.prototype, {
-    wmCanTravel() { if (this.mode !== "explore" || !this.floor) return "Fast travel goes from the town or the Wood."; if (this.floor.number !== 0 && this.floor.number !== -1 && !(CM.isJokerFloor && CM.isJokerFloor(this.floor.number))) return "Fast travel goes from the town or the Wood - the shaft and the portals bring you back up."; return ""; },
+    wmCanTravel() { if (this.mode !== "explore" || !this.floor) return "Fast travel goes from the town or the Wood."; if (this.floor.number !== 0 && this.floor.number !== -1 && !(CM.isJokerFloor && CM.isJokerFloor(this.floor.number)) && this.floor.special !== "interior") return "Fast travel goes from the town or the Wood - the shaft and the portals bring you back up."; return ""; },
     // there in a step: onto the place's square, facing a way out; a door that opens, opened
     wmTravel(id) { const P = WM.byId[id]; if (!P) return "No such place."; const why = this.wmCanTravel(); if (why) return why; const at = P[3](); if (!at) return "That place isn't there.";
       if (this.floor.special === "joker" && this.jfLeave) this.jfLeave();
+      if (this.floor.special === "interior" && this.intLeave) this.intLeave();   // (v24.6: out of the room first)
       this.logAct && this.logAct("wmTravel", id); this.stopTravel && this.travel && this.stopTravel(); this.enterFloor(P[2], "rope", at.slice()); const fl = this.floor; fl.pos = at.slice();
       const open = CM.openNeighbours ? CM.openNeighbours(fl, at[0], at[1]) : []; if (open.length && CM.DIRS.indexOf(open[0]) >= 0) fl.facing = CM.DIRS.indexOf(open[0]);
       this.look && this.look(); this.emit("moved", at[0], at[1]); this.emit("floor", fl); this.emit("change"); this.say(`To ${P[1].replace(/^The /, "the ")}.`);

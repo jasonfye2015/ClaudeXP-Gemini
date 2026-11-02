@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Interiors (v24.6, UPGRADE_PLAN_19.md phase 6 - the world plan done)
+  (src/js/69t-interiors.js, 76zzzzi-interiors.js; 61-explore.js, 63-camp.js, 69f-worldmap.js, 73-play.js, 76zzzzh-models.js, 80-main.js)
+  - The town's houses can be walked into. Through the door of the Hanged Lantern, the Merchant's House, the Smith's
+    forge, the Library, the Temple, the Guildhall, the Chronicler's House or your own house, the party steps into a
+    furnished room of its own: the tavern's bar and kegs, tables, stools and hearth; the merchant's shelves, crates and
+    barrels; the forge's fires, anvils and racks; the library's and the chronicler's walls of books and reading
+    tables; the temple's altar, pews and candles; the guildhall's long tables; at home the hearth, a table and a bed.
+  - The furniture is solid - built, not pictured - and stands in the way; the rooms are lit by their own candles,
+    lamps and fires, and have their own walls, floors and ceilings: plaster and timber, stone, panelling, pale stone.
+  - Space at the keeper (at home, the hearth) opens the same window the door used to; every service works inside as
+    it did at the door. The door in the south wall goes back out onto the doorstep. Fast travel leaves the room first.
+  - A house not yet raised still opens its window at the door. Going in or out is a step, a minute on the clock.
+  - Automatic and the films keep to the door's window, as before; Automatic steps out of a room before it goes on.
+
 Real 3-D props (v24.5, UPGRADE_PLAN_19.md phase 5)
   (src/js/76zzzzh-models.js; 26-surface.js)
   - Barrels, crates, carts, the market's stalls, fallen logs and stumps are built as small solid models in the floor's

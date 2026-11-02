@@ -136,6 +136,7 @@ Object.assign(CM.Game.prototype, {
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           cgtable: thing.type === "cgtable" ? CM.jokerDescribe(thing) : "", cgservice: thing.type === "cgservice" ? CM.jokerDescribe(thing) : "", cgresident: thing.type === "cgresident" ? CM.jokerDescribe(thing) : "", jokerexit: thing.type === "jokerexit" ? CM.jokerDescribe(thing) : "",   // (the Joker's floor)
+          intexit: thing.type === "intexit" ? CM.interiorDescribe(thing) : "", intkeeper: thing.type === "intkeeper" ? CM.interiorDescribe(thing) : "", inthearth: thing.type === "inthearth" ? CM.interiorDescribe(thing) : "",   // (v24.6: the rooms)
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
@@ -396,6 +397,8 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "cgservice") { this.emit("building", `cgview:${thing.view}`); return; }
     if (thing && thing.type === "cgresident") { this.jfTalk(thing); return; }
     if (thing && thing.type === "jokerexit") { this.jfLeave(); return; }
+    if (thing && thing.type === "intexit") { this.intLeave(); return; }                                         // (v24.6: out of a room, into the street)
+    if (thing && (thing.type === "intkeeper" || thing.type === "inthearth")) { this.emit("building", thing.id); return; }   // (the keeper: the window the door used to open)
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "signpost") { this.say(`The signpost reads: ${thing.text}`); return; }
     if (thing && thing.type === "cross") { this.say("Cut into the cross's steps, worn almost smooth: HERE THE MARKET, BY THE KING'S LEAVE. Someone has scratched out the last three words and someone else has cut them again."); return; }
