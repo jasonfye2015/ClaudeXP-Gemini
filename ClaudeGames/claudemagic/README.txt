@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Spell colours in the room (v31.4, UPGRADE_PLAN_26.md phase 4)
+  (src/js/76zzzzzm-spelllight.js; 40-render.js (a room's flash below ground))
+  - A bolt in flight carries its light along the walls: a fireball orange, frost blue, force violet, holy gold, poison
+    and acid green, shadow purple (where it lands it already flared).
+  - Lightning flashes the whole room white, below ground as under the sky (not with Reduce motion).
+
 Focus (v31.3, UPGRADE_PLAN_26.md phase 3)
   (src/js/76zzzzzl-focus.js; 40-render.js (the screen pass softens the frame, holding the eye on a spot))
   - While a dialog is open the view behind it goes soft, and comes back sharp when it closes.
