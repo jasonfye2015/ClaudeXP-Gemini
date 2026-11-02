@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The news board (v36.4, UPGRADE_PLAN_31.md phase 4)
+  (src/js/69zv-crier.js; 76zzzzzzn-crier.js ("The Crier" in town, and on the court's noticeboard))
+  - The Caer Duin Crier, a sheet a week: the week's expeditions and the deepest reached, the fallen remembered, a
+    record broken, the South Fields' ribbons and takings, the Gilded Joker's wagered and paid, new legends on the Row,
+    new plaques in the hall of feats, the town's works raised - or a quiet week, said so.
+  - "The Crier" among the town's actions, and pinned to the court's noticeboard; the last eight weeks turned with the
+    arrows. This finishes plan 31 (set 3).
+
 Building the town (v36.3, UPGRADE_PLAN_31.md phase 3)
   (src/js/69zu-works.js; 76zzzzzzm-works.js ("Town works", the bathhouse, the watchtower and the banners drawn))
   - "Town works" among the town's actions: four works raised with gold and the island's timber and stone. The old wall
