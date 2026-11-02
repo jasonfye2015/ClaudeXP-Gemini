@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Positioning (v38.0, UPGRADE_PLAN_33.md phase 0)
+  (src/js/69zzb-position.js)
+  - A weapon with the reach word strikes from the back row at full, as a polearm in practised hands does.
+  - A shield turns some of the blows aimed at the hero beside its bearer in the same row (a third of its own chance,
+    for half).
+  - Two heroes of the front row who strike the same foe in one round flank it: the second blow a fifth harder.
+
 Scars kept apart (v37.5, UPGRADE_PLAN_29.md (a fix to phase 2))
   (src/js/69zj-scars.js, 76zzzzzzd-scars.js)
   - The game already had scars - the trait left by a third healed wound at the camp, kept as a list of names the temple's
