@@ -344,7 +344,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
     band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
-    const far = (side) => L(fl.number === -1 && side === 1 ? "far:hill" : "far:trees"), W = 8, H = 7;   // (from the land, the town's hill stands in the east)
+    const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), W = 8, H = 7;   // (from the land, the town's hill stands in the east)
     for (let t = -E; t < size + E; t += W) {
       const t1 = Math.min(t + W, size + E);
       quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
@@ -353,6 +353,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
       ring += 4;
     }
+    if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
   }
   for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
