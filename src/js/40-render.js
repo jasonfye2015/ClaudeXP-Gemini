@@ -260,6 +260,8 @@ CM.Renderer = class {
   }
   _layer(tex, layer, i, size, crisp) {
     const gl = this.gl;
+    if (!layer) return;                                                  // (v26.3: a picture the worker left out - never wanted here)
+    if (typeof ImageData !== "undefined" && layer instanceof ImageData && layer.width !== size) { const c = Object.assign(document.createElement("canvas"), { width: layer.width, height: layer.height }); c.getContext("2d").putImageData(layer, 0, 0); layer = c; }
     let src = layer;
     if (layer.width !== size) {                                          // (a picture of another size: drawn to the set's size first)
       if (!this._scratch || this._scratch.width !== size) this._scratch = Object.assign(document.createElement("canvas"), { width: size, height: size });

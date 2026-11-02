@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v26.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v26.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "26.2", built: "2026-11-01" };
+const CM = window.CM = { version: "26.3", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9315,6 +9315,8 @@ CM.Renderer = class {
   }
   _layer(tex, layer, i, size, crisp) {
     const gl = this.gl;
+    if (!layer) return;                                                  // (v26.3: a picture the worker left out - never wanted here)
+    if (typeof ImageData !== "undefined" && layer instanceof ImageData && layer.width !== size) { const c = Object.assign(document.createElement("canvas"), { width: layer.width, height: layer.height }); c.getContext("2d").putImageData(layer, 0, 0); layer = c; }
     let src = layer;
     if (layer.width !== size) {                                          // (a picture of another size: drawn to the set's size first)
       if (!this._scratch || this._scratch.width !== size) this._scratch = Object.assign(document.createElement("canvas"), { width: size, height: size });
@@ -39105,6 +39107,71 @@ Object.assign(CM.UI.prototype, {
   },
 });
 
+// ---- 79-artworker.js ----
+"use strict";
+// Painting off the main thread (v26.3, UPGRADE_PLAN_21.md): the sets of pictures are painted in a worker, where the
+// browser has one that can paint (an OffscreenCanvas), so that making a set never stops the screen. The worker is the
+// game's own code - everything before 80-main.js, as the page has it - with a few stand-ins for the page; it is given
+// the looks' packs as bitmaps once they are decoded. While the party plays, the sets it will want next are painted
+// there ahead of time - the next band's down the shaft, the town's and the Wood's from below - and come back as
+// bitmaps that go straight to the graphics card. Asked for a set it hasn't got, the page paints it the old way.
+// the theme of a floor, as the page's useTheme chooses it (the worker has the same)
+CM.themeOfFloor = (number, dream) => { const jk = CM.isJokerFloor && CM.isJokerFloor(number), ins = CM.isInterior && CM.isInterior(number), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk || ins;
+  const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : ins ? CM.themeFor(number) : uc ? CM.UNDERCROFT_THEME : null;
+  return special || (dream ? CM.dreamTheme(CM.THEMES[CM.themeIndex(number)]) : CM.THEMES[CM.themeIndex(number)]); };
+{ if (typeof self !== "undefined" && self.CM_WORKER) { /* (inside the worker: nothing of this here) */ } else {
+  const AW = CM.ARTWORKER = { on: false, ready: {}, asked: new Set(), worker: null, made: 0, ms: 0 };
+
+  const WORKER_SIDE = `
+    self.CM_WORKER = true;
+    onmessage = async (e) => { const m = e.data;
+      if (m.init) { CM.art.packs.atlas = m.atlas || null; for (const [k, b] of m.stone || []) CM.art.packs.stone[k] = b; CM.art.packs.ready = true; if (CM.art.crops && m.crops) { CM.art.crops.atlas = m.crops; CM.art.crops.ready = true; } postMessage({ inited: true }); return; }
+      if (m.build) { try { const t = performance.now(); const was = CM.art.season; CM.art.season = m.season;
+          let set; try { set = CM.art.build(CM.themeOfFloor(m.number, m.dream), m.look); } finally { CM.art.season = was; }
+          // each picture as the page will send it up: the small ones as bitmaps (they are packed four to a layer there),
+          // the rest as raw pixels at the size their texture takes (the quickest way up), the shared ones left out when the
+          // page holds them already, the outdoors' below ground not at all
+          const look = String(set.sharedKey || "drawn:drawn").split(":")[1] || "drawn", Z = CM.art.LAYER_SIZES[look] || CM.art.LAYER_SIZES.drawn, own = Math.min(set.size || 256, Z.own), names = [], transfer = [];
+          for (const [n, i] of Object.entries(set.index)) names[i] = n;
+          const layers = await Promise.all(set.layers.map(async (c, i) => { const n = names[i]; if (!n || !c) return null;
+            const theme = CM.art.isThemeLayer(n, set.theme), sfc = CM.art.isSurfaceLayer(n), small = CM.art.isPackable(n);
+            if (sfc && !theme) return null; if (!theme && !small && m.skipShared) return null;
+            if (small) { const b = await createImageBitmap(c); transfer.push(b); return b; }
+            const size = theme && sfc && !CM.art.isPhotoLayer(n) ? Z.surf : theme ? own : Z.shared, o = new OffscreenCanvas(size, size), p = o.getContext("2d");
+            p.imageSmoothingEnabled = !set.crisp; p.drawImage(c, 0, 0, size, size); const d = p.getImageData(0, 0, size, size); transfer.push(d.data.buffer); return { w: size, h: size, px: d.data.buffer }; }));
+          postMessage({ key: m.key, index: set.index, sub: set.sub || {}, size: set.size, crisp: Boolean(set.crisp), sharedKey: set.sharedKey, layers, partial: Boolean(m.skipShared), ms: performance.now() - t }, transfer);
+        } catch (err) { postMessage({ key: m.key, err: String(err && err.stack || err).slice(0, 400) }); } } };`;
+  const SHIM = [
+    "self.window = self; const noop = () => {};",
+    "const el = () => ({ style: {}, dataset: {}, classList: { add: noop, remove: noop, toggle: noop, contains: () => false }, appendChild: noop, removeChild: noop, addEventListener: noop, removeEventListener: noop, setAttribute: noop, querySelector: () => null, querySelectorAll: () => [], insertAdjacentElement: noop, getContext: () => null, getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }) });",
+    "self.document = { createElement: (t) => t === 'canvas' ? new OffscreenCanvas(1, 1) : el(), body: el(), documentElement: el(), head: el(), addEventListener: noop, removeEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, fonts: { ready: Promise.resolve() } };",
+    "self.localStorage = { getItem: () => null, setItem: noop, removeItem: noop, key: () => null, length: 0 }; self.matchMedia = () => ({ matches: false, addEventListener: noop }); self.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16); self.cancelAnimationFrame = noop; self.Image = class { set src(v) {} };",
+    "self.CM_WORKER = true;",
+  ].join("\n");
+  AW.start = () => {
+    if (AW.worker || CM.artWorkerOff || typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") return;
+    let src = null; try { src = [...document.scripts].map((s) => s.textContent).find((t) => t.includes("// ---- " + "00-util.js ----")); } catch (e) { /* (no script to read) */ }
+    if (!src) return; const cut = src.indexOf("// ---- " + "80-main.js ----")   /* (in two pieces: this file holds the words too) */; if (cut < 0) return;
+    let w; try { w = new Worker(URL.createObjectURL(new Blob([SHIM + "\n" + src.slice(0, cut) + "\n;" + WORKER_SIDE], { type: "text/javascript" }))); } catch (e) { return; }
+    AW.worker = w;
+    w.onerror = () => { AW.on = false; AW.worker = null; };                  // (a worker that fails: the old way, quietly)
+    w.onmessage = (e) => { const m = e.data; if (m.inited) { AW.on = true; return; }
+      if (m.err || !m.key) { AW.asked.delete(m.key); return; }
+      const layers = m.layers.map((l) => (l && l.px ? new ImageData(new Uint8ClampedArray(l.px), l.w, l.h) : l));
+      AW.ready[m.key] = { index: m.index, sub: m.sub, size: m.size, crisp: m.crisp, sharedKey: m.sharedKey, layers, partial: m.partial, theme: AW.themes[m.key], fromWorker: true }; AW.made++; AW.ms += m.ms; };
+    const bmp = (im) => (im ? createImageBitmap(im) : Promise.resolve(null));
+    Promise.all([bmp(CM.art.packs.atlas), Promise.all(Object.entries(CM.art.packs.stone).map(([k, im]) => bmp(im).then((b) => [k, b]))), bmp(CM.art.crops && CM.art.crops.ready ? CM.art.crops.atlas : null)])
+      .then(([atlas, stone, crops]) => { const list = [atlas, crops, ...stone.map((s) => s[1])].filter(Boolean); w.postMessage({ init: true, atlas, stone, crops }, list); }).catch(() => { AW.worker = null; });
+  };
+  AW.themes = {};
+  // ask for a set ahead (the page's own key for it); taken when the page wants it
+  CM.artAhead = (key, number, look, season, dream) => { if (!AW.on || AW.ready[key] || AW.asked.has(key)) return; AW.asked.add(key); AW.themes[key] = CM.themeOfFloor(number, dream); AW.worker.postMessage({ build: true, key, number, look, season, dream: Boolean(dream), skipShared: Boolean(CM.renderer && CM.renderer.sharedKey && CM.renderer.sharedKey.startsWith(`${look}:`)) }); };
+  CM.artTake = (key) => { const s = AW.ready[key]; if (!s) return null; delete AW.ready[key]; AW.asked.delete(key); return s; };
+  CM.artForget = (key) => { AW.asked.delete(key); };
+  // once the packs are decoded (and the crops'), the worker is started
+  const load0 = CM.art.load; CM.art.load = function (...a) { const p = load0.apply(this, a); Promise.resolve(p).then(() => { const t0 = performance.now(), wait = () => { if ((CM.art.crops && CM.art.crops.ready) || performance.now() - t0 > 8000) setTimeout(AW.start, 1200); else setTimeout(wait, 250); }; wait(); }); return p; };
+} }
+
 // ---- 80-main.js ----
 "use strict";
 // Where it all starts: the game, the window, the renderer, the sounds and the music wired together, the keys, and the
@@ -39149,13 +39216,23 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   // a set, built once and kept (half a dozen at a time)
   function setFor(key, special, i, look) {
+    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { artCache[key] = pre; cacheOrder.push(key); } }   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
-      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
-    }
+    } else { const k = cacheOrder.indexOf(key); if (k >= 0) { cacheOrder.splice(k, 1); cacheOrder.push(key); } }   // (the one in use is the last to go)
+    while (cacheOrder.length > 8) delete artCache[cacheOrder.shift()];        // (the sets share their drawn canvases: eight kept)
     return artCache[key];
   }
+  // (v26.3) the sets the party will want next, painted ahead in the worker: the next band's, the town's and the Wood's
+  const keyOfFloor = (number) => { const i = CM.themeIndex(number), look = lookNow(), season = CM.season ? CM.season(game) : "summer", T = CM.themeOfFloor ? CM.themeOfFloor(number, game.dream) : null;
+    const special = number === 0 || number === -1 || CM.isUndercroft(number) || CM.isTowerFloor(number) || (CM.isJokerFloor && CM.isJokerFloor(number)) || (CM.isInterior && CM.isInterior(number));
+    return special && T ? `${look}:${T.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`; };
+  const paintAhead = () => { if (!CM.artAhead || !game.floor || game.mode === "title") return; const n = game.floor.number, want = [];
+    if (n >= 1 && n % 1 === 0) want.push(n + 1, 0, -1); else if (n === 0) want.push(1, -1); else if (n === -1) want.push(0, 1);
+    const look = lookNow(), season = CM.season ? CM.season(game) : "summer";
+    for (const f of want) { const key = keyOfFloor(f); if (!artCache[key]) CM.artAhead(key, f, look, season, game.dream); } };
+  let aheadTimer = 0;
   // (v21.4) while the title is up: the town's set built and sent to the graphics card a slice a frame, so a new
   // expedition (which starts in town) doesn't stop to do it
   let townReady = null;
@@ -39208,6 +39285,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setCamera(demoCell[0], demoCell[1], demoCell[2]);
     renderer.setSprites([]);
   }
+  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 2500); });   // (v26.3: a while after arriving, when the floor is settled)
   game.on("floor", (floor) => {
     scaleGrace = performance.now() + 3000;
     if (!renderer.ok) return;
