@@ -232,6 +232,7 @@ void main() { vec3 c = texture(uSrc, vT).rgb * 0.227;
 const COMPOSE_FRAG = `#version 300 es
 precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform sampler2D uGlow; uniform float uK; out vec4 o;
 uniform float uTime; uniform float uAspect; uniform int uHeatN; uniform vec4 uHeat[8]; uniform float uHeatAll; uniform float uBreath;
+uniform sampler2D uSoft; uniform vec4 uFocus;   // (v31.3: the frame softened, and where the eye is held - centre, radius (0: none held), how soft)
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -240,7 +241,9 @@ void main() { vec2 uv = vT;
     float m = exp(-d.x * d.x / (r * r * 0.5)) * smoothstep(-0.2 * r, 0.3 * r, d.y) * (1.0 - smoothstep(0.6 * r, 3.2 * r, d.y));
     uv += vec2(sin(vT.y * 95.0 - uTime * 7.0 + vT.x * 23.0), 0.5 * cos(vT.y * 71.0 - uTime * 5.3)) * 0.0028 * H.w * m; }
   if (uHeatAll > 0.0) uv += vec2(sin(vT.y * 60.0 - uTime * 4.0 + vT.x * 11.0), 0.0) * 0.0016 * uHeatAll * (1.0 - smoothstep(0.0, 0.6, vT.y));
-  vec3 s = texture(uSrc, uv).rgb, g = texture(uGlow, vT).rgb, c = s + g * uK * (1.0 - s * 0.5);
+  vec3 s = texture(uSrc, uv).rgb, g = texture(uGlow, vT).rgb;
+  if (uFocus.w > 0.0) { vec2 fd = (vT - uFocus.xy) * vec2(uAspect, 1.0); float fm = uFocus.z > 0.0 ? smoothstep(uFocus.z * 0.6, uFocus.z * 1.7, length(fd)) : 1.0; s = mix(s, texture(uSoft, uv).rgb, fm * uFocus.w); }
+  vec3 c = s + g * uK * (1.0 - s * 0.5);
   if (uBreath > 0.0) { float ph = fract(uTime / 4.4), puff = smoothstep(0.0, 0.1, ph) * (1.0 - smoothstep(0.1, 0.62, ph));
     vec2 p = vec2((vT.x - 0.5 - ph * 0.04) * uAspect, vT.y - (0.0 + ph * 0.3)); float n = vnoise(vT * 9.0 + vec2(0.0, -uTime * 0.8));
     float m = exp(-dot(p, p) / (0.02 + ph * 0.08)) * (0.55 + 0.45 * n); c = mix(c, vec3(0.9, 0.93, 0.97) * (0.4 + 0.6 * max(c.r, 0.4)), clamp(m * puff * uBreath * 0.9, 0.0, 0.75)); }
@@ -670,9 +673,9 @@ CM.Renderer = class {
       P.vao = gl.createVertexArray(); gl.bindVertexArray(P.vao); const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0); gl.bindVertexArray(null); }
     if (P.w === w && P.h === h) return P;
-    for (const k of ["msFb", "sceneFb", "aFb", "bFb"]) if (P[k]) gl.deleteFramebuffer(P[k]);
+    for (const k of ["msFb", "sceneFb", "aFb", "bFb", "cFb", "dFb"]) if (P[k]) gl.deleteFramebuffer(P[k]);
     for (const k of ["msCol", "msDep"]) if (P[k]) gl.deleteRenderbuffer(P[k]);
-    for (const k of ["scene", "a", "b"]) if (P[k]) gl.deleteTexture(P[k]);
+    for (const k of ["scene", "a", "b", "c", "d"]) if (P[k]) gl.deleteTexture(P[k]);
     const tex = (tw, th) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, tw, th, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
       for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v); return t; };
     const fbFor = (t) => { const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0); return f; };
@@ -682,13 +685,13 @@ CM.Renderer = class {
     P.msDep = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, P.msDep); gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, w, h); gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, P.msDep);
     const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
     P.qw = Math.max(1, w >> 2); P.qh = Math.max(1, h >> 2);
-    P.scene = tex(w, h); P.sceneFb = fbFor(P.scene); P.a = tex(P.qw, P.qh); P.aFb = fbFor(P.a); P.b = tex(P.qw, P.qh); P.bFb = fbFor(P.b);
+    P.scene = tex(w, h); P.sceneFb = fbFor(P.scene); P.a = tex(P.qw, P.qh); P.aFb = fbFor(P.a); P.b = tex(P.qw, P.qh); P.bFb = fbFor(P.b); P.c = tex(P.qw, P.qh); P.cFb = fbFor(P.c); P.d = tex(P.qw, P.qh); P.dFb = fbFor(P.d);   // (v31.3: c and d, the whole frame softened)
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_2D, null);
     if (!ok) { P.broken = true; return null; }
     P.w = w; P.h = h; return P;
   }
 
-  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath)); }   // (v30.4: what else asks for the screen pass)
+  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01)); }   // (v30.4: what else asks for the screen pass)
   _postEnd(P) {
     const gl = this.gl, w = P.w, h = P.h, pr = P.progs, sky = this.sky, F = this.screen || {};
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, P.msFb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, P.sceneFb);
@@ -700,6 +703,9 @@ CM.Renderer = class {
       for (let i = 0; i < 2; i++) {
         pass(pr.blur, P.bFb, P.qw, P.qh, P.a, (p) => gl.uniform2f(p.u("uDir"), (1 + i) / P.qw, 0));
         pass(pr.blur, P.aFb, P.qw, P.qh, P.b, (p) => gl.uniform2f(p.u("uDir"), 0, (1 + i) / P.qh)); } }
+    const focus = F.focus > 0.01 ? F.focus : 0;
+    if (focus) { pass(pr.blur, P.cFb, P.qw, P.qh, P.scene, (p) => gl.uniform2f(p.u("uDir"), 2 / w, 0)); pass(pr.blur, P.dFb, P.qw, P.qh, P.c, (p) => gl.uniform2f(p.u("uDir"), 0, 1 / P.qh));
+      pass(pr.blur, P.cFb, P.qw, P.qh, P.d, (p) => gl.uniform2f(p.u("uDir"), 2 / P.qw, 0)); pass(pr.blur, P.dFb, P.qw, P.qh, P.c, (p) => gl.uniform2f(p.u("uDir"), 0, 2 / P.qh)); }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(pr.compose.p);
     gl.bindTexture(gl.TEXTURE_2D, P.scene); gl.uniform1i(pr.compose.u("uSrc"), 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, P.a); gl.uniform1i(pr.compose.u("uGlow"), 1);
@@ -708,9 +714,11 @@ CM.Renderer = class {
       for (const s of F.heat || []) { if (n >= 8 || !m) break; const cx = m[0] * s[0] + m[4] * s[1] + m[8] * s[2] + m[12], cy = m[1] * s[0] + m[5] * s[1] + m[9] * s[2] + m[13], cw = m[3] * s[0] + m[7] * s[1] + m[11] * s[2] + m[15];
         if (cw <= 0.2) continue; const x = cx / cw * 0.5 + 0.5, y = cy / cw * 0.5 + 0.5; if (x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue; heat.set([x, y, Math.min(0.3, 0.3 / cw), s[3]], n * 4); n++; }
       gl.uniform1f(u("uTime"), CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(u("uAspect"), w / h); gl.uniform1i(u("uHeatN"), CM.reducedMotion ? 0 : n); gl.uniform4fv(u("uHeat"), heat);
-      gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uBreath"), F.breath || 0); }
+      gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uBreath"), F.breath || 0);
+      gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, P.d); gl.uniform1i(u("uSoft"), 2); gl.activeTexture(gl.TEXTURE0);
+      const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindVertexArray(null); gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
   }
 

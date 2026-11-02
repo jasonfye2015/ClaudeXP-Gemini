@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Focus (v31.3, UPGRADE_PLAN_26.md phase 3)
+  (src/js/76zzzzzl-focus.js; 40-render.js (the screen pass softens the frame, holding the eye on a spot))
+  - While a dialog is open the view behind it goes soft, and comes back sharp when it closes.
+  - When a boss or a guardian makes its entrance, all but it goes soft and the room comes back into focus as the
+    entrance ends (not with Reduce motion).
+
 Living portraits (v31.2, UPGRADE_PLAN_26.md phase 2)
   (src/js/76zzzzzk-portraits.js (the party's cards, redrawn from their own pictures))
   - The heroes on the party's cards blink now and then and glance aside (a helmed face that shows no eyes doesn't).
