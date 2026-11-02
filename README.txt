@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Seasons of the year (v33.1, UPGRADE_PLAN_28.md phase 1)
+  (src/js/69ze-seasons.js; 76zzzzzy-seasons.js (the Calendar's trial))
+  - Each season (the real date's, or the one pinned in the Settings) has its trial, done once a season: spring's Thaw
+    (the tenth floor within three days), summer's Long Day (a guardian slain on the first day, while the sun is up),
+    autumn's Wild Hunt (forty beasts in one expedition), winter's Long Hunger (the fifteenth floor with nothing eaten).
+  - Each pays its own: the Thaw-water Charm, the Ring of the Long Day, the Huntsman's Ring, the Rime-hunger Torc. The
+    Calendar (K) tells the season's trial and how far the run has come; all four are a feat.
+
 The hall of feats (v33.0, UPGRADE_PLAN_28.md phase 0)
   (src/js/69zd-feats.js; 76zzzzzx-feats.js (the hall, from the Mage Tower's doors))
   - Twenty feats more, kept with the achievements (and so titles too): a run's ten dishes, three feasts, fifty chests,

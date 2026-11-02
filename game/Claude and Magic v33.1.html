@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v33.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v33.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "33.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "33.1", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28809,6 +28809,45 @@ Object.assign(CM.Game.prototype, {
   const wf0 = G.wonFight; G.wonFight = function (...a) { const out = wf0.apply(this, a); this.checkFeats(); return out; };
 }
 
+// ---- 69ze-seasons.js ----
+"use strict";
+// Seasons of the year (v33.1, UPGRADE_PLAN_28.md): each season of the year (the real date's, or the season pinned in
+// the Settings) brings its trial, done once a season: spring's Thaw (the tenth floor within three days of setting
+// out), summer's Long Day (a guardian slain on the run's first day, in daylight), autumn's Wild Hunt (forty beasts slain
+// in one expedition), winter's Long Hunger (the fifteenth floor with no meal or dish eaten all the way). Each pays a
+// thing only that season gives, into the pack; the four together are a feat.
+//   CM.SEASON_TRIALS[season] -> {name, what, reward()};  game.trialKey(); game.trialDone(); game.trialProgress()
+{ const ring = (name, props, value) => ({ name, base: name, kind: "ring", slot: "ring", power: 2, value, unknown: false, props: Object.assign({ rarity: "unique", seasonal: true }, props) });
+  const amulet = (name, props, value) => ({ name, base: name, kind: "amulet", slot: "amulet", power: 0, value, unknown: false, props: Object.assign({ rarity: "unique", seasonal: true }, props) });
+  const ST = CM.SEASON_TRIALS = {
+    spring: { name: "The Thaw", what: "reach the tenth floor within three days of setting out", reward: () => amulet("Thaw-water Charm", { df: 2, stats: { con: 2 }, regen: 1 }, 600) },
+    summer: { name: "The Long Day", what: "slay a guardian on the run's first day, while the sun is up", reward: () => ring("Ring of the Long Day", { stat: "str", stats: { luck: 1 }, init: 1 }, 650) },
+    autumn: { name: "The Wild Hunt", what: "slay forty beasts in one expedition", reward: () => ring("Huntsman's Ring", { stat: "dex", crit: 0.05, vsHide: 1.2 }, 650) },
+    winter: { name: "The Long Hunger", what: "reach the fifteenth floor with no meal or dish eaten all the way down", reward: () => amulet("Rime-hunger Torc", { df: 2, stats: { wis: 2, con: 1 } }, 700) },
+  };
+  for (const s of Object.keys(ST)) { const it = ST[s].reward(); CM.BASES[it.name] = { id: it.name, kind: it.kind, slot: it.slot, tier: 3, group: it.kind }; }
+  CM.ACHIEVEMENTS.seasoned = { name: "A Year Round", what: "Do every season's trial", title: "of the Seasons" }; if (CM.FEATS2) CM.FEATS2.seasoned = (g) => { const V = g.vext("seasons"); return ["spring", "summer", "autumn", "winter"].every((s) => Object.keys(V).some((k) => k.endsWith(`-${s}`))); };
+  const G = CM.Game.prototype, year = () => new Date().getFullYear();
+  Object.assign(G, {
+    trialKey() { const s = CM.season(this); return `${s === "winter" && new Date().getMonth() < 2 ? year() - 1 : year()}-${s}`; },
+    trialDone() { return Boolean(this.vext("seasons")[this.trialKey()]); },
+    trialProgress() { const s = CM.season(this), T = this.tally || {}, day = CM.dayOf ? CM.dayOf(this) : 0, deep = this.deepestReached ? this.deepestReached() : 0;
+      if (s === "spring") return day <= 2 ? `floor ${deep} of 10, day ${day + 1} of 3` : "past the third day";
+      if (s === "summer") return day === 0 ? "the first day: a guardian before dusk" : "past the first day";
+      if (s === "autumn") return `${T.beasts || 0} of 40 beasts`;
+      return (T.ateAny ? "a meal was eaten" : `floor ${deep} of 15, nothing eaten`); },
+    trialCheck(how) { if (this.replaying || this.film || this.trialDone()) return; const s = CM.season(this), T = this.tally || {}, day = CM.dayOf ? CM.dayOf(this) : 0, deep = this.deepestReached ? this.deepestReached() : 0;
+      const ok = s === "spring" ? deep >= 10 && day <= 2 : s === "summer" ? how === "guardian" && day === 0 && !CM.isNight(this) : s === "autumn" ? (T.beasts || 0) >= 40 : deep >= 15 && !T.ateAny;
+      if (!ok) return; const V = this.vext("seasons"), it = ST[s].reward(); V[this.trialKey()] = { date: CM.today ? CM.today() : "", seed: this.seed, item: it.name }; this.saveVillage && this.saveVillage();
+      this.gain([it], "trial"); this.sound && this.sound("toll"); this.say(`${ST[s].name}: done, this ${s}. The season gives what only it gives: ${it.name}.`); this.checkFeats && this.checkFeats(); },
+  });
+  const wf0 = G.wonFight; G.wonFight = function (...a) { const slain = (this.foes || []).filter((m) => !m.fled && !m.summoned), beasts = slain.filter((m) => ((CM.monsterKind && CM.monsterKind(m.kind || m.name)) || {}).body === "beast").length;
+    const out = wf0.apply(this, a); if (beasts) this.tally.beasts = (this.tally.beasts || 0) + beasts; this.trialCheck("fight"); return out; };
+  const sg0 = G.slayGuardian; G.slayGuardian = function (m) { const out = sg0.call(this, m); if (m && !m.echo) this.trialCheck("guardian"); return out; };
+  const em0 = G.emit; G.emit = function (ev, ...a) { if (this.meal && this.tally && !this.tally.ateAny) this.tally.ateAny = true; if (ev === "floor") this.trialCheck("floor"); return em0.call(this, ev, ...a); };   /* (any meal at all, from any table, breaks the hunger) */
+
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40689,6 +40728,21 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   CM.UI.prototype.openMageTower = function (...a) { const out = om0.apply(this, a), box = this.$("#dlg-magetower .box"); if (!box) return out;
     let b = box.querySelector(".hallbtn"); if (!b) { b = document.createElement("button"); b.className = "hallbtn"; b.textContent = "The hall of feats, at the Tower's foot"; const lore = box.querySelector(".lore"); if (lore) lore.after(b); else box.prepend(b); b.addEventListener("click", () => this.openFeats()); }
     return out; };
+}
+
+// ---- 76zzzzzy-seasons.js ----
+"use strict";
+// Seasons of the year - the window's side (v33.1): the Calendar (K) tells this season's trial, how far this run has
+// come at it, and the trials done in other seasons; the side panel's date line marks a trial still open. Rules:
+// 69ze-seasons.js.
+{ const oc0 = CM.UI.prototype.openCalendar;
+  CM.UI.prototype.openCalendar = function (...a) { const out = oc0.apply(this, a), g = this.game, body = this.$("#calendar-body"); if (!body || !g.trialKey) return out;
+    const s = CM.season(g), T = CM.SEASON_TRIALS[s], V = g.vext("seasons"), done = V[g.trialKey()], it = T.reward();
+    const past = Object.entries(V).filter(([k]) => k !== g.trialKey()).map(([k, v]) => `${k.split("-")[1]} ${k.split("-")[0]}: ${v.item}`);
+    const d = document.createElement("div"); d.className = "trialbox";
+    d.innerHTML = `<div class="list-title">This ${s}'s trial: ${this.esc(T.name)}</div><p class="small">To ${this.esc(T.what)}. ${done ? `<b>Done</b> (${this.esc(done.date || "")}): ${this.esc(done.item)}.` : `Once a season; it gives <b>${this.esc(it.name)}</b> (${this.esc(CM.itemLabel ? CM.itemLabel(it) : "")}). This run: ${this.esc(g.trialProgress())}.`}</p>`
+      + `<p class="small">The year's four: ${Object.entries(CM.SEASON_TRIALS).map(([k, t]) => `${k} - ${this.esc(t.name)}`).join("; ")}.${past.length ? ` Done before: ${this.esc(past.join("; "))}.` : ""}</p>`;
+    body.prepend(d); return out; };
 }
 
 // ---- 77-splash.js ----
