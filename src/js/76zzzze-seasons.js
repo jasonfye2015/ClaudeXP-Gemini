@@ -6,14 +6,7 @@
 { const day = (game) => (CM.dayOf ? Math.max(0, CM.dayOf(game)) : 0);
   CM.seasonTurn = (game) => (CM.seasonOff ? 1 : Math.min(1, 0.35 + 0.2 * day(game)));   // (by the day: a third turned at the start, all by the fourth)
   CM.leafFall = (game) => (CM.seasonOff || CM.season(game) !== "autumn" ? 0 : Math.min(1, Math.round((day(game) + 1) * 10 / 6) / 10));
-  CM.snowDepth = (game) => {
-    if (CM.season(game) !== "winter" || !game || game.seed === undefined) return 0;
-    if (CM.seasonOff) return CM.snowLying(game) ? 1 : 0;
-    const d = day(game), of = (n) => CM.weatherOf(game.seed, n, "winter") === "snow", frac = ((CM.minuteOf ? CM.minuteOf(game) : 720) % 1440) / 1440;
-    let depth = 0; for (let n = Math.max(0, d - 5); n < d; n++) depth = Math.min(1, Math.max(0, depth + (of(n) ? 0.45 : -0.22)));
-    depth = Math.min(1, Math.max(0, depth + (CM.weather(game) === "snow" ? 0.45 : -0.22) * frac));
-    return Math.round(depth * 20) / 20;
-  };
+  // (CM.snowDepth: in the rules since v27.0 - 69v-weather.js - for the snow slows the Wood)
   // the leaves down: more of them each day of autumn, on the open ground of the town and the land
   const sc0 = CM.scatter;
   CM.scatter = function (fl, seed, density, ctx = {}) {

@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Weather that matters (the ninety-third big update - v27.0, UPGRADE_PLAN_22.md phase 0)
+  (src/js/69v-weather.js; 40-render.js, 76zzzze-seasons.js)
+  - Rain, after dark in the Wood, burns a torch twice as fast, and now and then a gust and the rain put it out for a
+    few steps - dark until it is lit again. A lantern, shut in its glass, minds neither.
+  - Mist on the surface shortens the party's sight: two squares ahead, not four, on the map, and the view closes in.
+  - Snow lying in the Wood slows the party: every step there takes two minutes, and the walk is heavier.
+
 Faster loading (v26.4, UPGRADE_PLAN_21.md phase 4 - the performance plan done)
   (src/js/50-audio.js, 40-render.js, 79-artworker.js, 76zzzzk-livemap.js, 80-main.js, 00-util.js)
   - The game's own start - from its code running to the title - went from 647 ms to 426 ms of the page's time: the 56
