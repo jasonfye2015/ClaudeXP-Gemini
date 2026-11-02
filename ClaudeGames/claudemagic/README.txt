@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Sound in its place (the ninety-fourth big update - v28.0, UPGRADE_PLAN_23.md phase 0)
+  (src/js/76zzzzq-sound3d.js)
+  - Monsters are heard from where they are: now and then the nearest one awake within nine squares calls - from the
+    side it stands on, louder the nearer it is, and dull and low when a wall stands between, or it is behind you.
+  - Every sound takes the room it is made in: a large room or the Dwarven Halls and the Lich King's Palace ring, a
+    cave rings longest, a corridor is dry, the town and the Wood hardly answer, a house's room is close and warm.
+
 A dog and a pony (v27.2, UPGRADE_PLAN_22.md phase 2 - the gameplay plan done)
   (src/js/69x-pets.js, 76zzzzp-pets.js)
   - Animals of the party's own, bought at the farm in the Wood and kept in the village between runs - not hired help,
