@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Grass that moves aside (v30.6, UPGRADE_PLAN_25.md phase 6)
+  (40-render.js (the vertex shader: what grows bends away from the party))
+  - What grows tall - grass, reeds, crops, ferns, flowers - bends away from where the party stands, more the closer
+    it is, and springs back as the party walks on. Trees and hedges stand firm. Off with Reduce motion.
+
 Smoke and chimneys (v30.5, UPGRADE_PLAN_25.md phase 5)
   (src/js/76zzzzze-smoke.js (the air's motes: torch and fire smoke))
   - The wall torches' smoke rises and, under a ceiling, gathers and runs along it; braziers, the camp's fire and fire
