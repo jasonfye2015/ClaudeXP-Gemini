@@ -156,7 +156,11 @@ CM.audio = {
       grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),
       shatter: () => this._mix(N(0.3, 0.4, 0.95, 53), this._after(0.05, T(Array.from({ length: 10 }, (_, i) => [2000 + i * 300, 0.02]), "sine", 0.1)), this._after(0.4, this._sweep(300, 60, 0.8, "sine", 0.12))),
     };
-    for (const [name, make] of Object.entries(recipes)) this.buffers[name] = this._buffer(make());
+    for (const [name, make] of Object.entries(recipes)) Object.defineProperty(this.buffers, name, { configurable: true, enumerable: true,   // (v26.4: made when first wanted - all of them at the start was a quarter of a second)
+      get: () => { const b = this._buffer(make()); Object.defineProperty(this.buffers, name, { value: b, writable: true, configurable: true, enumerable: true }); return b; },
+      set: (v) => { Object.defineProperty(this.buffers, name, { value: v, writable: true, configurable: true, enumerable: true }); } });
+    { const names = Object.keys(recipes); let i = 0; const idle = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (f) => setTimeout(() => f({ timeRemaining: () => 8 }), 50);   // (and the rest made in the idle moments after)
+      const step = (dl) => { while (i < names.length && dl.timeRemaining() > 4) void this.buffers[names[i++]]; if (i < names.length) idle(step); }; setTimeout(() => idle(step), 2500); }
     this.ambients = {};
   },
 

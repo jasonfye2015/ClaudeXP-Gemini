@@ -24,5 +24,10 @@ Timeline uses (QtWebEngine, Chromium 140), on this machine (v25.3):
   stops the screen; the old way where it hasn't.
 
 ## v26.4 - faster loading (45)
-- The built sets kept between visits (the pixels, by look and season, in the browser's own store), so a second start
-  only uploads them; thrown away when the game's version changes.
+- Planned: the built sets kept between visits in the browser's store, so a second start only uploads them. Built and
+  measured, and taken out again: reading two sets back from IndexedDB took 3.1 s in this browser, painting them 0.25 s
+  (and the Pixel packs decode in about 1.3 s, so the title never waited long for them). Instead, what the start
+  measured as slow was made quick: the 56 sounds made when first wanted (and the rest in idle moments), not all at the
+  start (272 ms); the shaders compiled beside the start (KHR_parallel_shader_compile); the worker painting in software
+  and only after a floor has settled (v26.3's paintings had stalled the frame 270-400 ms when they came back); and the
+  side map drawn again only when something on it changes (a tenth of the work).

@@ -90,6 +90,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
   let demoCell = null;
   function showDemo() {
+    CM.titleAt = CM.titleAt || Math.round(performance.now());           // (v26.4: when the title's view first came up - for the measure)
     renderer.seed = "title";
     useTheme(1);
     prepareTown();                                                     // (v21.4: the town's set, built with the title's in the one moment of loading, and sent up a slice a frame behind it)
@@ -110,7 +111,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setCamera(demoCell[0], demoCell[1], demoCell[2]);
     renderer.setSprites([]);
   }
-  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 2500); });   // (v26.3: a while after arriving, when the floor is settled)
+  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 6000); });   // (v26.3: a while after arriving, when the floor is settled)
   game.on("floor", (floor) => {
     scaleGrace = performance.now() + 3000;
     if (!renderer.ok) return;
@@ -231,7 +232,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
   soundscape();
-  CM.art.load().then(() => { if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
+  CM.art.load().then(() => { CM.startLog.push([Math.round(performance.now()), "packs decoded"]); if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
 
   // ---- spectacle: what flies, bursts and shakes for each thing that happens; CM.Effects (45-fx.js) carries them ----
   const fxs = new CM.Effects();

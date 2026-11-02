@@ -16,12 +16,16 @@
     const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size, z = ZOOMS[this.mapZoom || 0] || 1;
     const ox = CM.clamp(W / 2 - (fl.pos[0] + 0.5) * cell * z, W - W * z, 0), oy = CM.clamp(W / 2 - (fl.pos[1] + 0.5) * cell * z, W - W * z, 0);
     this.mapView = { z, ox, oy, cell };
-    p.setTransform(1, 0, 0, 1, 0, 0); p.fillStyle = "#2A2218"; p.fillRect(0, 0, W, W);
-    p.setTransform(z, 0, 0, z, ox, oy); draw0.call(this, canvas);
+    // (v26.4) the map itself drawn again only when something on it changed - a step, a square seen, a thing come or gone,
+    // a note, the zoom; between, only what moves is drawn over a picture of it
+    const T = trails.get(fl.number) || [], tk = Object.keys(fl.things).join(";"), key = [fl.number, fl.seen.length, fl.pos[0], fl.pos[1], fl.facing, tk, Object.keys(fl.notes || {}).length, g.travel && g.travel.to ? g.travel.to.join(",") : "", z, W, this.game.settings.look].join("|");
+    if (!this.mapBase || this.mapBase.width !== W) { this.mapBase = document.createElement("canvas"); this.mapBase.width = this.mapBase.height = W; this.mapBaseKey = null; }
+    if (key !== this.mapBaseKey) { const b = this.mapBase, q = b.getContext("2d"); q.setTransform(1, 0, 0, 1, 0, 0); q.fillStyle = "#2A2218"; q.fillRect(0, 0, W, W); q.setTransform(z, 0, 0, z, ox, oy); draw0.call(this, b); q.setTransform(1, 0, 0, 1, 0, 0); this.mapBaseKey = key; }
+    p.setTransform(1, 0, 0, 1, 0, 0); p.drawImage(this.mapBase, 0, 0); p.setTransform(z, 0, 0, z, ox, oy);
     const now = performance.now(), C = (x, y) => [(x + 0.5) * cell, (y + 0.5) * cell], seen = this.seenSet && this.seenFor === fl.seen.length + ":" + fl.number ? this.seenSet : (this.seenSet = new Set(fl.seen.map(([a, b]) => `${a},${b}`)));
     this.seenFor = fl.seen.length + ":" + fl.number;
     // the trail: the last steps, fading
-    const T = trails.get(fl.number) || []; for (let i = 0; i < T.length; i++) { const [x, y] = T[i], [cx, cy] = C(x, y), k = (i + 1) / T.length; p.fillStyle = `rgba(32,160,64,${0.08 + 0.4 * k})`; p.beginPath(); p.arc(cx, cy, cell * (0.1 + 0.08 * k), 0, Math.PI * 2); p.fill(); }
+    for (let i = 0; i < T.length; i++) { const [x, y] = T[i], [cx, cy] = C(x, y), k = (i + 1) / T.length; p.fillStyle = `rgba(32,160,64,${0.08 + 0.4 * k})`; p.beginPath(); p.arc(cx, cy, cell * (0.1 + 0.08 * k), 0, Math.PI * 2); p.fill(); }
     // what glows, and the monsters in reach
     for (const [k, t] of Object.entries(fl.things)) { if (!seen.has(k)) continue; const [x, y] = k.split(",").map(Number), [cx, cy] = C(x, y);
       const col = glowOf(fl, x, y, t);

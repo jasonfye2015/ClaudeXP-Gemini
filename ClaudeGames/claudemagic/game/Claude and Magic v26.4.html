@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v26.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v26.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "26.3", built: "2026-11-01" };
+const CM = window.CM = { version: "26.4", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9239,10 +9239,11 @@ CM.Renderer = class {
     const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, depth: true, preserveDrawingBuffer: true });
     if (!gl) { this.error = "This needs WebGL 2, and the browser hasn't got it."; return; }
     this.gl = gl;
-    this.program = this._program(VERT, FRAG);
+    this.parallel = gl.getExtension("KHR_parallel_shader_compile");   // (v26.4: the shaders compiled beside the start, not in its way)
+    this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -9271,6 +9272,21 @@ CM.Renderer = class {
     this.resize();
   }
 
+  _locate() { for (const n of this._locNames) this.loc[n] = this.gl.getUniformLocation(this.program, n); this.linked = true; }
+  // (v26.4) compiled and linked without waiting: the driver does it beside the start; the first frame that finds it
+  // done looks up its uniforms (and finds out, then, if it failed)
+  _programLater(vs, fs) {
+    const gl = this.gl, mk = (kind, src) => { const s = gl.createShader(kind); gl.shaderSource(s, src); gl.compileShader(s); return s; }, v = mk(gl.VERTEX_SHADER, vs), f = mk(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
+    gl.attachShader(p, v); gl.attachShader(p, f);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.linkProgram(p); this._pend = { p, v, f }; return p;
+  }
+  _ready() {
+    if (this.linked) return true; const gl = this.gl, P = this._pend;
+    if (P && !gl.getProgramParameter(P.p, this.parallel.COMPLETION_STATUS_KHR)) return false;
+    if (P && !gl.getProgramParameter(P.p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + (gl.getShaderInfoLog(P.v) || "") + (gl.getShaderInfoLog(P.f) || "") + (gl.getProgramInfoLog(P.p) || ""); this.ok = false; return false; }
+    this._locate(); this._pend = null; return true;
+  }
   _program(vs, fs) {
     const gl = this.gl;
     const make = (kind, src) => {
@@ -9372,6 +9388,7 @@ CM.Renderer = class {
     for (const n of S.packed) index[n] = index[S.sub[n][0]];                     // (a packed one answers by its layer: the sprites read the corner from sub)
     return index; }
   setTextures(art, gentle) {
+    { const T = CM.texAt = CM.texAt || {}; if (!T[art.sharedKey]) { T[art.sharedKey] = Math.round(performance.now()); CM.startLog.push([T[art.sharedKey], `up ${art.sharedKey}${art.fromStore ? " (kept)" : ""}`]); } }   // (v26.4: when each look's pictures first went up)
     if (this.prepared && this.prepared.art === art) { const P = this.prepared, gl = this.gl; this.prepared = null;   // (ready ahead: swapped in)
       if (P.shared) { if (this.shared) gl.deleteTexture(this.shared); this.shared = P.shared; this.sharedKey = P.sharedKey; }
       if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; if (this.surfTex) gl.deleteTexture(this.surfTex); this.surfTex = P.surfTex;
@@ -9625,7 +9642,7 @@ CM.Renderer = class {
   }
 
   frame(dt) {
-    if (!this.ok || !this.texture) return;
+    if (!this.ok || !this.texture || !this._ready()) return;
     this.time += dt;
     this._advance(dt);
     this.lightNow += (this.light - this.lightNow) * Math.min(1, dt * 4);
@@ -10071,7 +10088,11 @@ CM.audio = {
       grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),
       shatter: () => this._mix(N(0.3, 0.4, 0.95, 53), this._after(0.05, T(Array.from({ length: 10 }, (_, i) => [2000 + i * 300, 0.02]), "sine", 0.1)), this._after(0.4, this._sweep(300, 60, 0.8, "sine", 0.12))),
     };
-    for (const [name, make] of Object.entries(recipes)) this.buffers[name] = this._buffer(make());
+    for (const [name, make] of Object.entries(recipes)) Object.defineProperty(this.buffers, name, { configurable: true, enumerable: true,   // (v26.4: made when first wanted - all of them at the start was a quarter of a second)
+      get: () => { const b = this._buffer(make()); Object.defineProperty(this.buffers, name, { value: b, writable: true, configurable: true, enumerable: true }); return b; },
+      set: (v) => { Object.defineProperty(this.buffers, name, { value: v, writable: true, configurable: true, enumerable: true }); } });
+    { const names = Object.keys(recipes); let i = 0; const idle = typeof requestIdleCallback !== "undefined" ? requestIdleCallback : (f) => setTimeout(() => f({ timeRemaining: () => 8 }), 50);   // (and the rest made in the idle moments after)
+      const step = (dl) => { while (i < names.length && dl.timeRemaining() > 4) void this.buffers[names[i++]]; if (i < names.length) idle(step); }; setTimeout(() => idle(step), 2500); }
     this.ambients = {};
   },
 
@@ -38914,12 +38935,16 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     const p = canvas.getContext("2d"), W = canvas.width, size = fl.grid.length, cell = W / size, z = ZOOMS[this.mapZoom || 0] || 1;
     const ox = CM.clamp(W / 2 - (fl.pos[0] + 0.5) * cell * z, W - W * z, 0), oy = CM.clamp(W / 2 - (fl.pos[1] + 0.5) * cell * z, W - W * z, 0);
     this.mapView = { z, ox, oy, cell };
-    p.setTransform(1, 0, 0, 1, 0, 0); p.fillStyle = "#2A2218"; p.fillRect(0, 0, W, W);
-    p.setTransform(z, 0, 0, z, ox, oy); draw0.call(this, canvas);
+    // (v26.4) the map itself drawn again only when something on it changed - a step, a square seen, a thing come or gone,
+    // a note, the zoom; between, only what moves is drawn over a picture of it
+    const T = trails.get(fl.number) || [], tk = Object.keys(fl.things).join(";"), key = [fl.number, fl.seen.length, fl.pos[0], fl.pos[1], fl.facing, tk, Object.keys(fl.notes || {}).length, g.travel && g.travel.to ? g.travel.to.join(",") : "", z, W, this.game.settings.look].join("|");
+    if (!this.mapBase || this.mapBase.width !== W) { this.mapBase = document.createElement("canvas"); this.mapBase.width = this.mapBase.height = W; this.mapBaseKey = null; }
+    if (key !== this.mapBaseKey) { const b = this.mapBase, q = b.getContext("2d"); q.setTransform(1, 0, 0, 1, 0, 0); q.fillStyle = "#2A2218"; q.fillRect(0, 0, W, W); q.setTransform(z, 0, 0, z, ox, oy); draw0.call(this, b); q.setTransform(1, 0, 0, 1, 0, 0); this.mapBaseKey = key; }
+    p.setTransform(1, 0, 0, 1, 0, 0); p.drawImage(this.mapBase, 0, 0); p.setTransform(z, 0, 0, z, ox, oy);
     const now = performance.now(), C = (x, y) => [(x + 0.5) * cell, (y + 0.5) * cell], seen = this.seenSet && this.seenFor === fl.seen.length + ":" + fl.number ? this.seenSet : (this.seenSet = new Set(fl.seen.map(([a, b]) => `${a},${b}`)));
     this.seenFor = fl.seen.length + ":" + fl.number;
     // the trail: the last steps, fading
-    const T = trails.get(fl.number) || []; for (let i = 0; i < T.length; i++) { const [x, y] = T[i], [cx, cy] = C(x, y), k = (i + 1) / T.length; p.fillStyle = `rgba(32,160,64,${0.08 + 0.4 * k})`; p.beginPath(); p.arc(cx, cy, cell * (0.1 + 0.08 * k), 0, Math.PI * 2); p.fill(); }
+    for (let i = 0; i < T.length; i++) { const [x, y] = T[i], [cx, cy] = C(x, y), k = (i + 1) / T.length; p.fillStyle = `rgba(32,160,64,${0.08 + 0.4 * k})`; p.beginPath(); p.arc(cx, cy, cell * (0.1 + 0.08 * k), 0, Math.PI * 2); p.fill(); }
     // what glows, and the monsters in reach
     for (const [k, t] of Object.entries(fl.things)) { if (!seen.has(k)) continue; const [x, y] = k.split(",").map(Number), [cx, cy] = C(x, y);
       const col = glowOf(fl, x, y, t);
@@ -39139,7 +39164,7 @@ CM.themeOfFloor = (number, dream) => { const jk = CM.isJokerFloor && CM.isJokerF
             if (small) { const b = await createImageBitmap(c); transfer.push(b); return b; }
             const size = theme && sfc && !CM.art.isPhotoLayer(n) ? Z.surf : theme ? own : Z.shared, o = new OffscreenCanvas(size, size), p = o.getContext("2d");
             p.imageSmoothingEnabled = !set.crisp; p.drawImage(c, 0, 0, size, size); const d = p.getImageData(0, 0, size, size); transfer.push(d.data.buffer); return { w: size, h: size, px: d.data.buffer }; }));
-          postMessage({ key: m.key, index: set.index, sub: set.sub || {}, size: set.size, crisp: Boolean(set.crisp), sharedKey: set.sharedKey, layers, partial: Boolean(m.skipShared), ms: performance.now() - t }, transfer);
+          postMessage({ key: m.key, number: m.number, index: set.index, sub: set.sub || {}, size: set.size, crisp: Boolean(set.crisp), sharedKey: set.sharedKey, layers, partial: Boolean(m.skipShared), ms: performance.now() - t }, transfer);
         } catch (err) { postMessage({ key: m.key, err: String(err && err.stack || err).slice(0, 400) }); } } };`;
   const SHIM = [
     "self.window = self; const noop = () => {};",
@@ -39147,15 +39172,18 @@ CM.themeOfFloor = (number, dream) => { const jk = CM.isJokerFloor && CM.isJokerF
     "self.document = { createElement: (t) => t === 'canvas' ? new OffscreenCanvas(1, 1) : el(), body: el(), documentElement: el(), head: el(), addEventListener: noop, removeEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, fonts: { ready: Promise.resolve() } };",
     "self.localStorage = { getItem: () => null, setItem: noop, removeItem: noop, key: () => null, length: 0 }; self.matchMedia = () => ({ matches: false, addEventListener: noop }); self.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16); self.cancelAnimationFrame = noop; self.Image = class { set src(v) {} };",
     "self.CM_WORKER = true;",
+    "{ const gc0 = OffscreenCanvas.prototype.getContext; OffscreenCanvas.prototype.getContext = function (kind, o) { return gc0.call(this, kind, kind === '2d' ? Object.assign({ willReadFrequently: true }, o || {}) : o); }; }",   /* (painted in software: the graphics card is the page's) */
   ].join("\n");
   AW.start = () => {
     if (AW.worker || CM.artWorkerOff || typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") return;
     let src = null; try { src = [...document.scripts].map((s) => s.textContent).find((t) => t.includes("// ---- " + "00-util.js ----")); } catch (e) { /* (no script to read) */ }
     if (!src) return; const cut = src.indexOf("// ---- " + "80-main.js ----")   /* (in two pieces: this file holds the words too) */; if (cut < 0) return;
+    CM.startLog.push([Math.round(performance.now()), "worker starting"]);
     let w; try { w = new Worker(URL.createObjectURL(new Blob([SHIM + "\n" + src.slice(0, cut) + "\n;" + WORKER_SIDE], { type: "text/javascript" }))); } catch (e) { return; }
     AW.worker = w;
     w.onerror = () => { AW.on = false; AW.worker = null; };                  // (a worker that fails: the old way, quietly)
-    w.onmessage = (e) => { const m = e.data; if (m.inited) { AW.on = true; return; }
+    w.onmessage = (e) => { const m = e.data; if (m.inited) { AW.on = true; CM.startLog.push([Math.round(performance.now()), "worker ready"]); return; }
+      CM.startLog.push([Math.round(performance.now()), `worker painted ${m.key} (${Math.round(m.ms || 0)} ms there)`]);
       if (m.err || !m.key) { AW.asked.delete(m.key); return; }
       const layers = m.layers.map((l) => (l && l.px ? new ImageData(new Uint8ClampedArray(l.px), l.w, l.h) : l));
       AW.ready[m.key] = { index: m.index, sub: m.sub, size: m.size, crisp: m.crisp, sharedKey: m.sharedKey, layers, partial: m.partial, theme: AW.themes[m.key], fromWorker: true }; AW.made++; AW.ms += m.ms; };
@@ -39265,6 +39293,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const demo = CM.makeFloor(1, "title");                                 // the corridor behind the title
   let demoCell = null;
   function showDemo() {
+    CM.titleAt = CM.titleAt || Math.round(performance.now());           // (v26.4: when the title's view first came up - for the measure)
     renderer.seed = "title";
     useTheme(1);
     prepareTown();                                                     // (v21.4: the town's set, built with the title's in the one moment of loading, and sent up a slice a frame behind it)
@@ -39285,7 +39314,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setCamera(demoCell[0], demoCell[1], demoCell[2]);
     renderer.setSprites([]);
   }
-  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 2500); });   // (v26.3: a while after arriving, when the floor is settled)
+  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 6000); });   // (v26.3: a while after arriving, when the floor is settled)
   game.on("floor", (floor) => {
     scaleGrace = performance.now() + 3000;
     if (!renderer.ok) return;
@@ -39406,7 +39435,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
   soundscape();
-  CM.art.load().then(() => { if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
+  CM.art.load().then(() => { CM.startLog.push([Math.round(performance.now()), "packs decoded"]); if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
 
   // ---- spectacle: what flies, bursts and shakes for each thing that happens; CM.Effects (45-fx.js) carries them ----
   const fxs = new CM.Effects();
