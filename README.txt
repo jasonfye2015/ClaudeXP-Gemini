@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Ending scenes (v42.4, UPGRADE_PLAN_37.md phase 4)
+  (src/js/76zzzzzzzp-endcard.js, src/js/76zzzzzzzm-titletown.js)
+  - A run's end opens on a painted card of how it ended: the place, in its band's own stone, seen down a corridor;
+    the party along the front, those who stand standing and the fallen laid down and greyed; and what ended it at
+    the back - the foe still standing, or for a won run the crown in a gold light - with a line saying where and by
+    what.
+  - The town behind the title (v42.1) now waits until the title has stood clear of its card for a moment before it
+    builds, so the first key and a slow machine's start are not held up by it.
+
 A map that remembers (v42.3, UPGRADE_PLAN_37.md phase 3)
   (src/js/76zzzzzzzo-mapmemory.js)
   - The parchment keeps the expedition's story in little ink sketches in the corner of each square it happened on:

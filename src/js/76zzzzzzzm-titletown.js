@@ -4,7 +4,7 @@
 // weather (the sky, the light, the rain on the ground, the snow), the props of the street standing about. The town's
 // pictures are the ones the title already readies (80-main.js prepareTown); leaving the title gives the renderer back
 // the corridor's, so whatever comes next finds things as it left them. Reduced motion: the view stands still.
-{ let townArt = null, active = false, savedArt = null, calling = false, route = null, town = null, t0 = 0;
+{ let townArt = null, active = false, savedArt = null, calling = false, route = null, town = null, t0 = 0, quietSince = 0;
   const realGame = () => { const d = new Date(), start = new Date(d.getFullYear(), 0, 1), day = Math.floor((d - start) / 86400000) + 1, mins = d.getHours() * 60 + d.getMinutes();
     return Object.assign(Object.create(CM.game), { clock: day * 1440 + mins - CM.CLOCK.start, season: CM.seasonOfDate(d), seed: `title-${d.getFullYear()}` }); };
   const longestStreet = (fl) => { const N = fl.grid.length, open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0; let best = null;
@@ -17,7 +17,8 @@
     const st0 = r.setTextures; r.setTextures = function (art, gentle) { if (!calling) { active = false; savedArt = art; } return st0.call(this, art, gentle); };   /* (the game's own: it has taken the pictures back) */
     const sf0 = r.setFloor; r.setFloor = function (floor, theme) { if (!calling && active) { active = false; if (theme !== CM.TOWN_THEME && savedArt) own(this, () => st0.call(this, savedArt, false)); } return sf0.call(this, floor, theme); };   /* (the game's next floor on the town's pictures: the corridor's given back first) */
     const fr0 = r.frame; r.frame = function (dt) { const g = CM.game;
-      if (g && g.mode === "title" && townArt && this.ok && !CM.titleTownOff) {
+      const clear = g && g.mode === "title" && !document.getElementById("splash"); if (!clear) quietSince = 0; else if (!quietSince) quietSince = performance.now();
+      if (g && g.mode === "title" && townArt && this.ok && !CM.titleTownOff && (active || (quietSince && performance.now() - quietSince > 2500))) {   /* (v42.4: only once the title has stood a while - the town's mesh is a moment's work, and not under the card or the first key) */
         if (!active) { if (!town) { town = CM.makeFloor(0, "title"); route = longestStreet(town); } if (!route) return fr0.call(this, dt);
           own(this, () => this.setTextures(townArt, false)); const P = realGame(); this.season = P.season; this.night = CM.isNight(P) ? 0.7 : 0; own(this, () => this.setFloor(town, CM.TOWN_THEME)); active = true; t0 = performance.now(); }
         const P = realGame(), sky = CM.sky(P), w = CM.weather(P); this.sky = sky; this.light = CM.isNight(P) ? 0.8 : 1.3; this.wet = w === "rain" ? 1 : 0; this.snow = w === "snow" ? 1 : 0; this.lights = [];
