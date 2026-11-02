@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Boss phases (v38.4, UPGRADE_PLAN_33.md phase 4)
+  (src/js/69zzf-phases.js; 76zzzzzzv-phases.js (the card, the sting, the music held high))
+  - At half its health each guardian without a second form, and the Lich King, changes once: the Drowned Queen calls her
+    court, the Mycelial Mind puts the front row to sleep, the Crystal Tyrant grows a thicker carapace, the Foundry
+    Master burns white (blows half again), the Bone Patriarch pulls himself together, the Root of the World puts out
+    new shoots and hardens, the Bell-Founder's Boy rings the bell, and the Lich King's crown blazes - the dead rise round
+    him and his blows grow harder. The three shallow guardians keep their own second forms.
+  - Every change, theirs included, shows a card with the boss's name, sounds the entrance's sting, shakes the view, and
+    holds the fight's music at its height to the end. This finishes plan 33 (set 5).
+
 Surrender and parley (v38.3, UPGRADE_PLAN_33.md phase 3)
   (src/js/69zze-surrender.js; 76zzzzzzu-surrender.js (the choice answered; quarter given under Automatic))
   - Foes who can speak (kobolds, goblins, orcs, trolls, ogres, dark elves, imps, sellswords, hedge-wizards, hags,

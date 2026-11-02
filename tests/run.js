@@ -5813,6 +5813,15 @@ test("surrender and parley: speaking foes badly beaten may throw down their weap
   const rat = g.tune({ name: "Giant Rat", kind: "Giant Rat", hp: 2, max: 30, atk: 4, df: 0 }); g.foes = [rat]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat(); g.combat.round = 3; offered = null; g.afterBlows(); assert.ok(!offered, "a rat doesn't parley");
 });
 
+test("boss phases: every guardian without a second form, and the Lich King, changes at half its health - once - with its own tactic; the change is told and shown", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("phase-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(35, "down");
+  for (const id of Object.keys(CM.GUARDIANS)) assert.ok(CM.BOSS_PHASES[id] || CM.GUARDIANS[id].form2, id);
+  let shown = 0; g.on("fx", (fx) => { if (fx.kind === "bossphase") shown++; });
+  const t = { name: "The Crystal Tyrant", kind: "Crystal Golem", guardian: "tyrant", hp: 400, max: 400, atk: 30, df: 5 }; g.foes = [t]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat();
+  t.hp = 210; g.afterBlows(); assert.ok(!t.phase2, "not before half"); t.hp = 190; g.afterBlows(); assert.ok(t.phase2 && t.df === 11 && shown === 1); g.afterBlows(); assert.strictEqual(shown, 1, "once");
+  const q = { name: "The Drowned Queen", kind: "Drowned", guardian: "queen", hp: 100, max: 300, atk: 20, df: 3 }; g.foes = [q]; g.combat.foes = g.foes; g.afterBlows(); assert.ok(g.foes.length === 3 && g.foes.slice(1).every((m) => m.summoned), "her court");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

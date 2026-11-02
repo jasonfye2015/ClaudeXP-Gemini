@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v38.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v38.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "38.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "38.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29754,6 +29754,40 @@ Object.assign(CM.Game.prototype, {
   const ch0 = G.choose; G.choose = function (k, i, ...a) { if (k === "surrender") return this.answerSurrender(i); return ch0.call(this, k, i, ...a); };   /* (the 1 and 2 keys on the choice) */
 }
 
+// ---- 69zzf-phases.js ----
+"use strict";
+// Boss phases (v38.4, UPGRADE_PLAN_33.md): every guardian and the Lich King changes halfway through the fight - a new
+// form of words and a tactic of its own - and the window turns the music and shows a card (76zzzzzzv-phases.js). The
+// three shallow guardians keep the second forms they had (at a third, 62-combat.js); the rest, at half their health:
+// the Drowned Queen calls her drowned court; the Mycelial Mind bursts with spores and puts the front row to sleep; the
+// Crystal Tyrant grows a carapace (much harder to hurt); the Foundry Master stokes himself white-hot (his blows half again);
+// the Bone Patriarch pulls himself together (a quarter of his health back, once); the Root of the World puts out new
+// shoots (two more rootlings) and hardens; the Bell-Founder's Boy rings the bell (the party's heart shaken); the Lich
+// King's crown blazes - two skeletons up and his blows harder.
+//   CM.BOSS_PHASES[id]; foe.phase2
+{ const P = CM.BOSS_PHASES = {
+    queen: { text: "The Drowned Queen lifts her arms, and the water at her feet stands up into shapes: her court has come.", summon: ["Drowned", 2] },
+    mind: { text: "The Mycelial Mind splits open in a cloud of pale spores. The front row's eyes grow heavy.", sleepFront: true },
+    tyrant: { text: "The Crystal Tyrant cracks - and closes over itself in a new skin of crystal, thicker than the last.", df: 6 },
+    master: { text: "The Foundry Master tears open his own furnace door. He burns white now, and the air shakes round him.", atk: 1.5 },
+    patriarch: { text: "The Bone Patriarch pulls his scattered bones back to him with a sound like a cart of firewood falling.", heal: 0.25 },
+    root: { text: "The Root of the World puts out new shoots from the stone, and its old wood hardens.", summon: ["Rootling", 2], df: 3 },
+    bell: { text: "The Boy rings the bell. It isn't a sound so much as a weight, and everyone feels it in their chest.", morale: -15 },
+    lich: { text: "The Lich King's crown blazes cold, and the dead stand up around the throne at his word.", skeletons: 2, atk: 1.25 },
+  };
+  const G = CM.Game.prototype;
+  G.bossPhase = function (m) { const id = m.boss ? "lich" : m.guardian, Ph = P[id]; if (!Ph || m.phase2 || m.echo) return false; m.phase2 = true;
+    this.say(Ph.text); if (Ph.atk) m.atk = Math.round(m.atk * Ph.atk); if (Ph.df) m.df = (m.df || 0) + Ph.df; if (Ph.heal) m.hp = Math.min(m.max, m.hp + Math.round(m.max * Ph.heal)); if (Ph.morale && this.cheer) this.cheer(Ph.morale, "the bell");
+    if (Ph.summon) { const K = CM.monsterKind(Ph.summon[0]); if (K) for (let i = 0; i < Ph.summon[1]; i++) { const s = this.tune(CM.makeMonster(K, Math.max(3, this.floor ? this.floor.number : 5), new CM.Random(CM.hashSeed(`${this.seed}:phase:${id}:${i}`)))); s.summoned = true; this.foes.push(s); } }
+    if (Ph.skeletons && this.summonSkeletons) this.summonSkeletons(Ph.skeletons);
+    if (Ph.sleepFront) for (const h of this.alive().filter((x) => x.row === "front")) if (this.afflict) this.afflict(h, "sleep", "the spores");
+    this.tally.phases = (this.tally.phases || 0) + 1; this.emit("fx", { kind: "bossphase", foe: m, text: Ph.text }); return true; };
+  const ab0 = G.afterBlows; G.afterBlows = function (...a) { const out = ab0.apply(this, a); if (this.mode !== "combat") return out;
+    for (const m of this.foes || []) { if (m.hp <= 0 || m.phase2) continue; const id = m.boss ? "lich" : m.guardian; if (!P[id]) { if (m.form2 && !m.phaseShown && CM.GUARDIANS[m.guardian]) { m.phaseShown = true; this.emit("fx", { kind: "bossphase", foe: m, text: CM.GUARDIANS[m.guardian].form2.text }); } continue; }
+      if (m.hp <= m.max / 2) this.bossPhase(m); }
+    return out; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -42119,6 +42153,20 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   CM.UI.prototype.askChoice = function (c, ...a) { if (c && c.surrender) { const g = this.game; if ((g.autoOn && g.autoOn()) || g.film) { g.answerSurrender(0); this.refresh(); return; }
       const out = ac0.call(this, c, ...a), box = this.$("#choice-options"); if (box) for (const [i, b] of [...box.querySelectorAll("button")].entries()) { const nb = b.cloneNode(true); b.replaceWith(nb); nb.addEventListener("click", () => { this.closeDialogs(); g.answerSurrender(i); this.refresh(); }); } return out; }
     return ac0.call(this, c, ...a); };
+}
+
+// ---- 76zzzzzzv-phases.js ----
+"use strict";
+// Boss phases - the window's side (v38.4): when a guardian or the Lich King changes, a card with its name and the words
+// of the change, the entrance's sting, a shake, and the fight's music held at its height until the fight is done.
+// Rules: 69zzf-phases.js.
+{ let height = false;
+  if (CM.music && CM.music.setDanger) { const sd0 = CM.music.setDanger.bind(CM.music); CM.music.setDanger = (k) => sd0(height ? 1 : k); }
+  const rf0 = CM.UI.prototype.refresh; let bound = false;
+  CM.UI.prototype.refresh = function (...a) { const g = this.game; if (!bound && g && g.on) { bound = true;
+      g.on("fx", (fx) => { if (!fx || fx.kind !== "bossphase" || !fx.foe) return; height = true; try { this.titleCard(fx.foe.name, "changes"); } catch (e) { /* */ } try { CM.music && CM.music.motif && CM.music.motif("entrance"); } catch (e) { /* */ } if (CM.renderer && CM.renderer.shake) CM.renderer.shake(0.5); });
+      g.on("mode", (m) => { if (m !== "combat") height = false; }); }
+    return rf0.apply(this, a); };
 }
 
 // ---- 77-splash.js ----
