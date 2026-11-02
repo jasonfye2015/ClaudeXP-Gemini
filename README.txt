@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A dog and a pony (v27.2, UPGRADE_PLAN_22.md phase 2 - the gameplay plan done)
+  (src/js/69x-pets.js, 76zzzzp-pets.js)
+  - Animals of the party's own, bought at the farm in the Wood and kept in the village between runs - not hired help,
+    so they take no follower's place (the farm's dog Grip can still be hired besides).
+  - The hound goes everywhere: it growls at a trap two squares off (marked on the map) and scratches at the wall where
+    a hidden door is; on the land by day it digs now and then - an old purse, a herb, a seed. 60 gold.
+  - The pony carries thirty more on the surface, walks the land quicker - every other step on the Wood's roads and
+    tracks costs no time - and waits tethered at the shaft's head; it does not go below. 220 gold.
+  - The side panel says who is along.
+
 Things that break (v27.1, UPGRADE_PLAN_22.md phase 1 - below ground only)
   (src/js/69w-breakables.js, 76zzzzo-breakables.js; 61-explore.js, 80-main.js)
   - Crates, barrels and urns stand about the dungeon's rooms (urns in the Catacombs and the Ossuary). Walk through one

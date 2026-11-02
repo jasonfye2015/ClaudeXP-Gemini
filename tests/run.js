@@ -5483,6 +5483,15 @@ test("things that break: crates, barrels and urns stand in the dungeon's rooms (
   assert.ok(g.burningAt(x, y)); g.clock += 31; assert.ok(!g.burningAt(x, y), "and burns out");
 });
 
+test("a dog and a pony: bought at the farm and kept in the village; the hound marks a trap two squares off and scratches at a hidden door, and digs on the land by day; the pony carries more and quickens the land, and stays above", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("pet-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  assert.ok(g.buyPet("dog"), "only at the farm"); g.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); const farm = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "farm"); g.floor.pos = farm.split(",").map(Number);
+  assert.strictEqual(g.buyPet("dog"), ""); assert.strictEqual(g.buyPet("pony"), ""); assert.ok(g.petName("dog") && g.petName("pony")); assert.strictEqual(g.gold, 1000 - CM.PETS.dog.price - CM.PETS.pony.price);
+  g.clock = 1440 + 6 * 60; let dug = 0; const bag = g.bag.length, gold = g.gold; for (let i = 0; i < 300; i++) { g.clock += 1; g.steps = (g.steps || 0) + 1; g.light = { kind: "torch", left: 300 }; g.burn(); } dug = g.bag.length - bag + (g.gold > gold ? 1 : 0); assert.ok(dug >= 1, "it digs");
+  const heavy = []; for (let i = 0; i < 60; i++) heavy.push(CM.torch()); g.bag.push(...heavy); const withPony = g.overweight(); const p = g.pets().pony; g.pets().pony = null; const without = g.overweight(); g.pets().pony = p; assert.ok(withPony < without, "the pony carries");
+  g.enterFloor(3, "down"); const fl = g.floor, [x, y] = fl.pos; fl.features[`${x + 1},${y}`] = { type: "trapdoor", known: false }; g.look(); assert.ok(fl.features[`${x + 1},${y}`].known, "the hound growls at a trap");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
