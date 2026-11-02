@@ -5431,6 +5431,21 @@ test("into the Joker: floor -9 is made the same every time, with every table, th
   assert.ok(g.jfLeave === undefined || g.floor.number === 0); g.floor.number = 5; assert.ok(g.jfEnter(), "only from the town"); g.floor.number = 0;
 });
 
+test("interiors: a standing house is walked into - a furnished room, the same for every seed; the keeper opens the house's window and the rules count the room as in town; furniture blocks the way; out by the door onto the street; a door costs a minute, not hours; a house not yet raised still opens at the door", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("in-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const a = CM.makeFloor(CM.INTERIORS.tavern.n, "x"), b = CM.makeFloor(CM.INTERIORS.tavern.n, "y"); same(a.grid, b.grid, "the same for every seed"); assert.ok(a.furniture.length >= 8, "furnished");
+  for (const id of Object.keys(CM.INTERIORS)) { const f = CM.makeFloor(CM.INTERIORS[id].n, "s"), D = CM.distances(f.grid, f.start, (x, y) => CM.passable(f, x, y)), T = Object.entries(f.things);
+    for (const [k, t] of T) assert.ok(D.has(k), `${id}: the ${t.type} can be reached`); }
+  const B = CM.TOWN_BLOCKS.tavern; g.floor.pos = B.door.slice(); const c0 = g.clock; let opened = null; g.on("building", (id) => { opened = id; });
+  g.use(); assert.strictEqual(opened, "tavern", "the rules still open the window at the door (Automatic, films)"); opened = null;
+  assert.ok(g.intEnter("tavern")); assert.strictEqual(g.floor.number, CM.INTERIORS.tavern.n, "in through the door (by hand: the window's side)"); assert.ok(g.clock - c0 <= 2, "a minute, not hours"); assert.ok(g.inTown(), "a room in town is in town"); assert.strictEqual(opened, null);
+  const fur = Object.keys(g.floor.features).find((k) => g.floor.features[k].type === "furniture").split(",").map(Number); assert.ok(!CM.passable(g.floor, ...fur), "furniture is in the way");
+  const keep = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "intkeeper").split(",").map(Number); g.floor.pos = keep; g.use(); assert.strictEqual(opened, "tavern", "the keeper opens the tavern's window");
+  g.floor.pos = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "intexit").split(",").map(Number); g.use(); assert.strictEqual(g.floor.number, 0); same(g.floor.pos, B.door, "back on the doorstep");
+  assert.ok(!g.intEnter("library"), "the library not yet raised: no room to walk into"); assert.strictEqual(g.floor.number, 0);
+  g.intEnter("smith"); const ap = new CM.Autopilot(g); ap.step(); assert.strictEqual(g.floor.number, 0, "Automatic steps out of a room first");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

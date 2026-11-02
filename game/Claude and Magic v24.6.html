@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v24.5 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v24.6 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1482,7 +1482,7 @@ body.inglyph #glyphcanvas { display: block; } body.inglyph #view .sky, body.ingl
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "24.5", built: "2026-11-01" };
+const CM = window.CM = { version: "24.6", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -10764,7 +10764,7 @@ CM.Game = class {
     this.saveRun();
     if (fresh && this.has("pilgrim")) this.checkLevels();
     if (fl.wing !== undefined) { if (fresh) this.say(`${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)}: ${CM.WINGS[fl.wing].smell}. The only way on is the way down to the main stair.`); if (fresh && fl.secretWing) this.achieve("secretfloor"); else if (fresh) this.achieve("wings"); }
-    else if (CM.isJokerFloor && CM.isJokerFloor(number)) { /* (the Joker's floor says its own: 64zzv-jokerfloor.js) */ }
+    else if ((CM.isJokerFloor && CM.isJokerFloor(number)) || (CM.isInterior && CM.isInterior(number))) { /* (the Joker's floor and the town's rooms say their own: 64zzv-jokerfloor.js, 69t-interiors.js) */ }
     else if (fresh || how !== "fall") this.say(number === 0 ? CM.t("town.arrive", { name: CM.TOWN_THEME.name }) : number === -1 ? `${CM.WOOD_THEME.name}: ${CM.hourWord(CM.hourOf(this))} under the trees.` : CM.isUndercroft(number) ? `${CM.UNDERCROFT_NAMES[-number - 2].charAt(0).toUpperCase() + CM.UNDERCROFT_NAMES[-number - 2].slice(1)}: standing water, and old streets under the hill.` : number < 0 ? "A cave under the Wood: roots in the roof, and the first bands' kinds in the dark." : `Floor ${number}, ${CM.bandName(this, number)}.` + (number === CM.LAST_FLOOR ? (this.dream ? "  A smell of bread rises from somewhere ahead." : "  A terrible cold rises from somewhere ahead...") : ""));
     if (fresh && fl.special && CM.SPECIALS[fl.special]) this.say(CM.SPECIALS[fl.special].note);
     if (fresh && fl.hazard && CM.HAZARDS[CM.themeIndex(number)] && !this.hazardsSeen(fl.hazard)) this.say(CM.HAZARDS[CM.themeIndex(number)].note);
@@ -10953,6 +10953,7 @@ Object.assign(CM.Game.prototype, {
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           cgtable: thing.type === "cgtable" ? CM.jokerDescribe(thing) : "", cgservice: thing.type === "cgservice" ? CM.jokerDescribe(thing) : "", cgresident: thing.type === "cgresident" ? CM.jokerDescribe(thing) : "", jokerexit: thing.type === "jokerexit" ? CM.jokerDescribe(thing) : "",   // (the Joker's floor)
+          intexit: thing.type === "intexit" ? CM.interiorDescribe(thing) : "", intkeeper: thing.type === "intkeeper" ? CM.interiorDescribe(thing) : "", inthearth: thing.type === "inthearth" ? CM.interiorDescribe(thing) : "",   // (v24.6: the rooms)
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
           well: "The square's well, under its little roof, and the notice board beside it. (Space to look down it)",
@@ -11213,6 +11214,8 @@ Object.assign(CM.Game.prototype, {
     if (thing && thing.type === "cgservice") { this.emit("building", `cgview:${thing.view}`); return; }
     if (thing && thing.type === "cgresident") { this.jfTalk(thing); return; }
     if (thing && thing.type === "jokerexit") { this.jfLeave(); return; }
+    if (thing && thing.type === "intexit") { this.intLeave(); return; }                                         // (v24.6: out of a room, into the street)
+    if (thing && (thing.type === "intkeeper" || thing.type === "inthearth")) { this.emit("building", thing.id); return; }   // (the keeper: the window the door used to open)
     if (thing && thing.type === "building") { this.tally.visited = this.tally.visited || []; if (!this.tally.visited.includes(thing.id)) this.tally.visited.push(thing.id); this.emit("building", thing.id); return; }
     if (thing && thing.type === "signpost") { this.say(`The signpost reads: ${thing.text}`); return; }
     if (thing && thing.type === "cross") { this.say("Cut into the cross's steps, worn almost smooth: HERE THE MARKET, BY THE KING'S LEAVE. Someone has scratched out the last three words and someone else has cut them again."); return; }
@@ -14618,7 +14621,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
-      const rnd = this.rnd, depth = this.floor.number === 0 ? Math.max(3, this.partyLevel() + 1) : this.floor.number + 3;
+      const rnd = this.rnd, depth = (this.floor.number === 0 || this.floor.special === "interior") ? Math.max(3, this.partyLevel() + 1) : this.floor.number + 3;
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
@@ -14628,14 +14631,14 @@ Object.assign(CM.Game.prototype, {
       if (depth >= 7 && !this.bag.some((i) => i.kind === "trapkit")) this.stock.push(CM.trapKit());
       if (depth >= 10) this.stock.push(CM.flask("smoke"), CM.elixir("stoneskin"));
       if (depth >= 14) this.stock.push(CM.lockpick(true));
-      if (this.floor.number === 0) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
-      if (this.floor.number === 0 && CM.festivalIs(this, "letter")) for (const it of this.stock) if (it.kind === "pick") it.value = Math.ceil(it.value / 2);   // (the Dwarves' Letter)
-      if (this.floor.number === 0 && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
-      if (this.floor.number === 0 && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c) && !CM.CROPS[c].rare) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
-      if (this.floor.number === 0) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
+      if ((this.floor.number === 0 || this.floor.special === "interior")) this.stock.push(Object.assign(CM.scroll("homecoming"), { value: CM.homecomingPrice(this) }), CM.pick("copper"));
+      if ((this.floor.number === 0 || this.floor.special === "interior") && CM.festivalIs(this, "letter")) for (const it of this.stock) if (it.kind === "pick") it.value = Math.ceil(it.value / 2);   // (the Dwarves' Letter)
+      if ((this.floor.number === 0 || this.floor.special === "interior") && this.villageLevel("smith") >= 2) this.stock.push(CM.pick("iron"));
+      if ((this.floor.number === 0 || this.floor.special === "interior") && this.villageLevel("farm") >= 1) for (const c of Object.keys(CM.CROPS)) if (this.canSow(c) && !CM.CROPS[c].rare) this.stock.push(Object.assign(CM.seed(c), { value: CM.festivalIs(this, "sowing") ? 5 : 10 }));   // (the season's seed, for the farm; half at the Sowing)
+      if ((this.floor.number === 0 || this.floor.special === "interior")) this.stock.push(Object.assign(CM.dish("bread"), { value: 25 }), Object.assign(CM.dish("porridge"), { value: 25 }));   // (the simple dishes, at a price)   // (the way home, sold only at home: the price climbs with the deepest floor reached)
       const staples = ["weapon", "armor", "shield", "helm", "heal", "greaterheal", "torch", "ration", "antidote"];   // the rest rotates: a third of it is not on the table at this camp
       if (this.floor.number > 0) this.stock = this.stock.filter((it, i) => staples.includes(it.kind) || CM.hashSeed(`${this.seed}:stock:${this.floor.number}:${i}:${it.kind}`) % 3 !== 0);
-      if (this.floor.number === 0 && ((this.village || {}).perks || {}).merchant) for (const it of this.stock) it.value = Math.ceil(it.value * 0.9);   // (the merchant's errand: a tenth off, for good)   // (the Merchant's House in town carries it all)
+      if ((this.floor.number === 0 || this.floor.special === "interior") && ((this.village || {}).perks || {}).merchant) for (const it of this.stock) it.value = Math.ceil(it.value * 0.9);   // (the merchant's errand: a tenth off, for good)   // (the Merchant's House in town carries it all)
       for (const it of this.stock) it.value = CM.priceAt(it.value, this.floor.number);
       this.deliverOrders();
       if (depth >= 13 && !this.bag.some((i) => i.kind === "kit")) this.stock.push(CM.fieldKit());
@@ -27088,10 +27091,11 @@ Object.assign(CM.Game.prototype, {
   ];
   WM.byId = Object.fromEntries(WM.PLACES.map((p) => [p[0], p]));
   Object.assign(CM.Game.prototype, {
-    wmCanTravel() { if (this.mode !== "explore" || !this.floor) return "Fast travel goes from the town or the Wood."; if (this.floor.number !== 0 && this.floor.number !== -1 && !(CM.isJokerFloor && CM.isJokerFloor(this.floor.number))) return "Fast travel goes from the town or the Wood - the shaft and the portals bring you back up."; return ""; },
+    wmCanTravel() { if (this.mode !== "explore" || !this.floor) return "Fast travel goes from the town or the Wood."; if (this.floor.number !== 0 && this.floor.number !== -1 && !(CM.isJokerFloor && CM.isJokerFloor(this.floor.number)) && this.floor.special !== "interior") return "Fast travel goes from the town or the Wood - the shaft and the portals bring you back up."; return ""; },
     // there in a step: onto the place's square, facing a way out; a door that opens, opened
     wmTravel(id) { const P = WM.byId[id]; if (!P) return "No such place."; const why = this.wmCanTravel(); if (why) return why; const at = P[3](); if (!at) return "That place isn't there.";
       if (this.floor.special === "joker" && this.jfLeave) this.jfLeave();
+      if (this.floor.special === "interior" && this.intLeave) this.intLeave();   // (v24.6: out of the room first)
       this.logAct && this.logAct("wmTravel", id); this.stopTravel && this.travel && this.stopTravel(); this.enterFloor(P[2], "rope", at.slice()); const fl = this.floor; fl.pos = at.slice();
       const open = CM.openNeighbours ? CM.openNeighbours(fl, at[0], at[1]) : []; if (open.length && CM.DIRS.indexOf(open[0]) >= 0) fl.facing = CM.DIRS.indexOf(open[0]);
       this.look && this.look(); this.emit("moved", at[0], at[1]); this.emit("floor", fl); this.emit("change"); this.say(`To ${P[1].replace(/^The /, "the ")}.`);
@@ -27946,6 +27950,97 @@ Object.assign(CM.Game.prototype, {
       if (t && t.type === "courtboard") { this.logAct && this.logAct("use"); this.say("The court's noticeboard: every place beyond the portals, chalked up and rubbed out and chalked up again."); this.emit("courtboard"); return; }
       if (t && t.type === "warden") { this.logAct && this.logAct("use"); this.talkWarden(); return; }
       return use0.apply(this, a); }; }
+}
+
+// ---- 69t-interiors.js ----
+"use strict";
+// Interiors (v24.6, UPGRADE_PLAN_19.md): the town's houses can be walked into. Through the door of the Hanged Lantern,
+// the Merchant's House, the forge, the Library, the Temple, the Guildhall, the Chronicler's House or the party's own
+// house, the party steps into a furnished room of its own - a counter with the keeper behind it, shelves, tables and
+// benches, a hearth, an anvil, bookcases, pews and an altar, a bed - and Space at the keeper (or at home, the hearth)
+// opens the same window the door used to. The door in the south wall goes back out into the street. A building not
+// yet raised still opens its window at the door, as before. Floors -21 to -28 in the save; nothing burns indoors, and
+// the shops' rules count a room as being in town (Game.inTown). The furniture is solid (76zzzzh-models.js's kit).
+{ const IN = CM.INTERIORS = {
+    tavern: { n: -21, who: "res_tavern", name: "the Hanged Lantern", style: "inn", keeper: "The landlady, behind the bar" },
+    merchant: { n: -22, who: "res_merchant", name: "the Merchant's House", style: "inn", keeper: "The merchant, at the counter" },
+    smith: { n: -23, who: "res_smith", name: "the Smith's forge", style: "forge", keeper: "The smith, by the anvil" },
+    library: { n: -24, who: "res_library", name: "the Library", style: "library", keeper: "The librarian, at the desk" },
+    temple: { n: -25, who: "res_priest", name: "the Temple", style: "temple", keeper: "The priest, at the altar" },
+    guildhall: { n: -26, who: "adventurer", name: "the Guildhall", style: "hall", keeper: "The guildmaster, at the counter" },
+    chronicler: { n: -27, who: "res_library", name: "the Chronicler's House", style: "library", keeper: "The chronicler, at the desk" },
+    home: { n: -28, who: null, name: "your house", style: "inn", keeper: "The hearth" },
+  };
+  const BY_N = {}; for (const [id, R] of Object.entries(IN)) BY_N[R.n] = id;
+  CM.isInterior = (n) => BY_N[n] !== undefined;
+  CM.interiorOf = (n) => BY_N[n] || null;
+  // may the party walk in? only once the house stands (the rest still open their window at the door)
+  CM.interiorOpen = (game, id) => { if (!IN[id] || CM.interiorsOff) return false;
+    if (id === "tavern" || id === "merchant" || id === "smith") return true; if (id === "home") return game.homeLevel() >= 1;
+    return game.villageLevel(id === "temple" ? "shrine" : id) >= 1; };
+  // the themes: a set of its own for each style (its walls, floor and ceiling painted below)
+  const base = CM.THEMES[2];
+  const theme = (id) => Object.assign({}, base, { name: IN[id].name.charAt(0).toUpperCase() + IN[id].name.slice(1), floors: [IN[id].n, IN[id].n], fog: [0.02, 0.014, 0.01], torch: [1.0, 0.86, 0.66], reach: 9,
+    bones: 0, grade: IN[id].style === "temple" ? [1.0, 0.98, 1.02] : [1.04, 0.99, 0.94], interior: IN[id].style, lightColour: [1.0, 0.78, 0.5] });
+  const THEMES = {}; for (const id of Object.keys(IN)) THEMES[IN[id].n] = theme(id);
+  // the rooms: a 9 x 8 room, the door in the south wall, a clear way from the door to the keeper
+  const SIZE = 13, START = [6, 9], EXIT = [6, 10], KEEP = [6, 3];
+  const F = (id, x, y, o = {}) => Object.assign({ id, x, y }, o);
+  const N = Math.PI, E = -Math.PI / 2, W = Math.PI / 2, S = 0;          // (which way a thing's front faces: into the room)
+  const counter = [3, 4, 5, 7, 8, 9].map((x) => F("counter", x, 4, { turn: S }));
+  const LAYOUT = {
+    tavern: [...counter, F("barrel", 3, 2), F("barrel", 4, 2), F("shelf", 8, 2, { turn: S, dz: -0.3 }), F("shelf", 9, 2, { turn: S, dz: -0.3 }), F("hearth", 2, 6, { turn: E, dx: -0.3 }),
+      F("table", 3, 7), F("stool", 3, 8), F("stool", 4, 7), F("table", 9, 7), F("stool", 9, 8), F("stool", 8, 7), F("table", 9, 5), F("stool", 10, 5)],
+    merchant: [...counter, F("shelf", 3, 2, { turn: S, dz: -0.3 }), F("shelf", 4, 2, { turn: S, dz: -0.3 }), F("shelf", 8, 2, { turn: S, dz: -0.3 }), F("shelf", 9, 2, { turn: S, dz: -0.3 }),
+      F("crate", 2, 7), F("crate", 2, 8), F("barrel", 3, 8), F("crate", 10, 6), F("barrel", 10, 7), F("barrel", 10, 8), F("table", 8, 7)],
+    smith: [F("anvil", 5, 4), F("anvil", 7, 4, { turn: W }), F("hearth", 2, 4, { turn: E, dx: -0.3, forge: true }), F("hearth", 2, 5, { turn: E, dx: -0.3, forge: true }), F("barrel", 3, 7), F("shelf", 10, 5, { turn: W, dx: 0.3 }),
+      F("shelf", 10, 6, { turn: W, dx: 0.3 }), F("crate", 9, 8), F("table", 9, 3)],
+    library: [F("counter", 5, 4), F("counter", 7, 4), ...[2, 3, 4, 8, 9, 10].map((x) => F("shelf", x, 2, { turn: S, dz: -0.3, books: true })), ...[5, 6, 7, 8].map((y) => F("shelf", 2, y, { turn: E, dx: -0.3, books: true })),
+      ...[5, 6, 7, 8].map((y) => F("shelf", 10, y, { turn: W, dx: 0.3, books: true })), F("table", 4, 7), F("stool", 4, 8), F("table", 8, 7), F("stool", 8, 8)],
+    temple: [F("altar", 6, 2), ...[3, 4, 8, 9].flatMap((x) => [F("pew", x, 5), F("pew", x, 7)]), F("shelf", 2, 3, { turn: E, dx: -0.3, books: true }), F("shelf", 10, 3, { turn: W, dx: 0.3, books: true })],
+    guildhall: [...counter, F("shelf", 3, 2, { turn: S, dz: -0.3 }), F("shelf", 9, 2, { turn: S, dz: -0.3 }), F("table", 3, 7), F("table", 4, 7), F("stool", 3, 8), F("stool", 4, 8), F("table", 8, 7), F("table", 9, 7), F("stool", 8, 8), F("stool", 9, 8),
+      F("shelf", 2, 5, { turn: E, dx: -0.3 }), F("shelf", 10, 5, { turn: W, dx: 0.3 })],
+    chronicler: [F("counter", 5, 4), F("counter", 7, 4), ...[3, 4, 8, 9].map((x) => F("shelf", x, 2, { turn: S, dz: -0.3, books: true })), F("shelf", 2, 6, { turn: E, dx: -0.3, books: true }), F("shelf", 10, 6, { turn: W, dx: 0.3, books: true }), F("table", 4, 7), F("table", 8, 7)],
+    home: [F("hearth", 6, 2, { turn: S, dz: -0.3 }), F("table", 4, 6), F("stool", 4, 7), F("stool", 3, 6), F("bed", 9, 7), F("crate", 10, 8), F("shelf", 2, 4, { turn: E, dx: -0.3 }), F("barrel", 10, 3)],
+  };
+  const LIGHTS = { tavern: [["candelabra", 6, 5], ["ember", 3, 6]], merchant: [["candelabra", 6, 6]], smith: [["ember", 3, 4], ["ember", 3, 5]], library: [["candle", 4, 7], ["candle", 8, 7], ["candelabra", 6, 6]],
+    temple: [["candelabra", 4, 2], ["candelabra", 8, 2], ["candle", 6, 3]], guildhall: [["candelabra", 6, 6]], chronicler: [["candle", 4, 7], ["candle", 8, 7]], home: [["ember", 6, 3], ["candle", 4, 6]] };
+  CM.makeInterior = (n) => {
+    const id = BY_N[n], grid = []; for (let y = 0; y < SIZE; y++) grid.push(new Array(SIZE).fill(1));
+    for (let y = 2; y <= 9; y++) for (let x = 2; x <= 10; x++) grid[y][x] = 0; grid[EXIT[1]][EXIT[0]] = 0;
+    const things = {}, features = {}, key = (x, y) => `${x},${y}`, furniture = [];
+    things[key(...EXIT)] = { type: "intexit", id };
+    if (id === "home") things[key(6, 3)] = { type: "inthearth", id }; else if (id !== "smith") things[key(...KEEP)] = { type: "intkeeper", id }; else things[key(6, 5)] = { type: "intkeeper", id };
+    for (const f of LAYOUT[id]) { furniture.push({ id: f.id, how: "model", layer: `prop:${f.id}`, x: f.x, y: f.y, dx: f.dx || 0, dz: f.dz || 0, w: f.id === "counter" || f.id === "shelf" || f.id === "pew" ? 0.98 : 0.8, h: 0.8, turn: f.turn || 0, books: f.books, forge: f.forge });
+      if (f.id !== "stool") features[key(f.x, f.y)] = { type: "furniture" }; }
+    const seen = []; for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) seen.push([x, y]);
+    const decor = (LIGHTS[id] || []).map(([kind, x, y]) => ({ kind, x, y, light: true }));
+    return { number: n, grid, things, features, dark: [], seen, decor, rooms: [{ x0: 2, y0: 2, x1: 10, y1: 9, name: IN[id].name }], special: "interior", interior: id, name: IN[id].name, furniture, pos: START.slice(), facing: 0, start: START.slice() };
+  };
+  { const tf0 = CM.themeFor; CM.themeFor = (n) => (THEMES[n] || tf0(n)); const mf0 = CM.makeFloor; CM.makeFloor = (n, seed, gen) => (BY_N[n] !== undefined ? CM.makeInterior(n) : mf0(n, seed, gen)); }
+  // furniture stands in the way
+  { const p0 = CM.passable; CM.passable = function (floor, x, y) { const f = floor.features[`${x},${y}`]; if (f && f.type === "furniture") return false; return p0.call(this, floor, x, y); }; }
+  // what the room is made of: only its own furniture, and nothing on its walls but its lamps
+  { const sc0 = CM.scatter; CM.scatter = function (fl, seed, density, ctx) { if (fl && fl.special === "interior") return (fl.furniture || []).map((p) => Object.assign({}, p)); return sc0.call(this, fl, seed, density, ctx); }; }
+  { const fm0 = CM.floorMesh; CM.floorMesh = function (fl, th, index, opts = {}) { return fm0.call(this, fl, th, index, fl && fl.special === "interior" ? Object.assign({}, opts, { decals: false }) : opts); }; }
+  // where the party stands, in words, and what is underfoot
+  { const po0 = CM.placeOf; CM.placeOf = (fl, x, y) => { if (!fl || fl.special !== "interior") return po0(fl, x, y); const t = fl.things[`${x},${y}`]; return t && t.type === "intexit" ? "by the door" : t && (t.type === "intkeeper" || t.type === "inthearth") ? (t.type === "inthearth" ? "at the hearth" : "at the counter") : fl.name; }; }
+  CM.interiorDescribe = (t) => { const R = IN[t.id]; if (!R) return ""; if (t.type === "intexit") return "The door, and the street outside. (Space to go out)";
+    if (t.type === "inthearth") return "Your own hearth: the house's rooms, the stash and the kitchen. (Space)"; return `${R.keeper}. (Space)`; };
+  const P = CM.Game.prototype;
+  { const it0 = P.inTown; P.inTown = function () { return it0.call(this) || Boolean(this.floor && this.floor.special === "interior" && this.mode === "explore"); }; }
+  { const bu0 = P.burn; P.burn = function (...a) { if (this.floor && this.floor.special === "interior") return; return bu0.apply(this, a); }; }
+  { const ef0 = P.enterFloor; P.enterFloor = function (number, how, at) {   // (a door is a step, not a stair: a minute, not an hour a floor)
+      const from = this.floor ? this.floor.number : null, inside = (n) => n !== null && BY_N[n] !== undefined, c = this.clock || 0, out = ef0.call(this, number, how, at);
+      if (inside(number) || inside(from)) this.clock = c + 1; return out; }; }
+  Object.assign(P, {
+    intEnter(id) { const R = IN[id]; if (!R || !this.floor || this.floor.number !== 0 || !CM.interiorOpen(this, id)) return false; this.logAct && this.logAct("intEnter", id); this.sound && this.sound("door"); this.enterFloor(R.n, "rope", START.slice()); this.floor.facing = 0;
+      this.say(`In through the door of ${R.name}.`); this.emit("floor", this.floor); this.emit("change"); return true; },
+    intLeave() { const id = this.floor && this.floor.interior, B = id && CM.TOWN_BLOCKS[id]; if (!B) return; const [dx, dy] = B.door, [x0, y0, x1, y1] = B.rect;
+      const facing = dy > y1 ? 2 : dy < y0 ? 0 : dx > x1 ? 1 : 3; this.sound && this.sound("door"); this.enterFloor(0, "rope", [dx, dy]); this.floor.facing = facing; this.say("Out through the door, into the street."); this.emit("floor", this.floor); this.emit("change"); },
+  });
+  // Automatic steps out of a room before it goes on (a room is not a place it has errands in)
+  { const st0 = CM.Autopilot.prototype.step; CM.Autopilot.prototype.step = function (...a) { const g = this.game; if (g && g.floor && g.floor.special === "interior" && g.mode === "explore") { g.intLeave(); return "out of the room"; } return st0.apply(this, a); }; }
 }
 
 // ---- 70-ui.js ----
@@ -29448,8 +29543,8 @@ Object.assign(CM.UI.prototype, {
     const fl = g.floor;
     if (fl) {
       this.drawSky();
-      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 || fl.special === "joker" ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
-      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "joker" ? `The Gilded Joker - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
+      this.$("#view .compass").textContent = `${CM.DIR_NAMES[fl.facing]}   -   ${fl.wing !== undefined ? fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1) : fl.number === 0 || fl.number === -1 || fl.special === "joker" || fl.special === "interior" ? CM.placeOf(fl, fl.pos[0], fl.pos[1]) || CM.t("town.compass") : fl.special === "cave" ? "A cave" : "Floor " + fl.number}`;
+      this.$("#side .where").textContent = fl.wing !== undefined ? `${fl.wingName.charAt(0).toUpperCase() + fl.wingName.slice(1)} - beside floor ${Math.floor(fl.number)}` : fl.number === 0 ? `${CM.TOWN_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.number === -1 ? `${CM.WOOD_THEME.name} - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}, ${CM.hourWord(CM.hourOf(g))}` : fl.special === "joker" ? `The Gilded Joker - ${CM.placeOf(fl, fl.pos[0], fl.pos[1])}` : fl.special === "interior" ? `${fl.name.charAt(0).toUpperCase() + fl.name.slice(1)}${CM.placeOf(fl, fl.pos[0], fl.pos[1]) !== fl.name ? " - " + CM.placeOf(fl, fl.pos[0], fl.pos[1]) : ""}` : fl.special === "cave" ? `${CM.WOOD_THEME.name} - a cave` : `${CM.themeFor(fl.number).name} - floor ${fl.number}`;
     }
     this.$("#side .purse").textContent = `Gold: ${g.gold.toLocaleString()}   Potions: ${g.potionCount()}`;
     const light = this.$("#side .light"), l = g.light || {};
@@ -38510,7 +38605,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   };
   { const build0 = CM.art.build; CM.art.build = function (theme, look) { const set = build0.call(this, theme, look); for (const k of ["wood", "dark", "end", "iron", "bark", "awning"]) { set.index[`model:${k}`] = set.layers.length; set.layers.push(paint(set.size, k)); } return set; }; }
   // the geometry: quad(a, b, c, d, layer, shade, uvRect) - a, b at the foot
-  CM.propModel = (p, quad, index) => {
+  const pm = CM.propModel = (p, quad, index) => {
     const L = (k) => index[`model:${k}`], cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), s = Math.sin(p.turn);
     if (L("wood") === undefined) return false;
     const at = (x, y, z) => [cx + x * c - z * s, y, cz + x * s + z * c];
@@ -38528,6 +38623,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       if (cap !== null) for (const t of axis === "y" ? [1] : [0, 1]) for (let i = 0; i < n; i += 2) { const k0 = (i / n) * Math.PI * 2, k1 = ((i + 1) / n) * Math.PI * 2, k2 = ((i + 2) / n) * Math.PI * 2, C = axis === "y" ? [o[0], o[1] + t * len, o[2]] : [o[0] + t * len, o[1], o[2]];
         quad(at(...C), at(...ring(t, k0)), at(...ring(t, k1)), at(...ring(t, k2)), cap, sh * 0.95, [0.32, 0.32, 0.68, 0.68]); }
     };
+    if (p.kitOnly) return { L, at, box, cyl };                                 // (v24.6: the kit, for the rooms' furniture)
     const w = p.w, h = p.h;
     switch (p.id) {
       case "barrel": { const r = w / 2, H = Math.min(h, w * 1.3); cyl([0, 0, 0], r * 0.9, H, "y", 12, L("wood"), L("end"), 1, 0.12);
@@ -38551,6 +38647,67 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       default: return false;
     }
   };
+  CM.modelKit = (p, quad, index) => { const k = pm(Object.assign({}, p, { kitOnly: true }), quad, index); return k && k.box ? k : null; };
+}
+
+// ---- 76zzzzi-interiors.js ----
+"use strict";
+// Interiors, the window's side (v24.6): the keepers as figures, the rooms' painted walls, floors and ceilings by style,
+// and the furniture's pictures and shapes (76zzzzh-models.js's kit). The rules are 69t-interiors.js.
+{ const IN = CM.INTERIORS;
+  // the keepers, as figures
+  CM.interiorLayer = (t) => { const R = IN[t.id]; return R && R.who ? `npc:${R.who}` : null; };
+  // the painted surfaces of each style: plaster and timber over planks, the forge's stone, the library's panelling, the temple's pale stone; a beamed ceiling
+  const S0 = 256, cv = () => { const c = document.createElement("canvas"); c.width = S0; c.height = S0; return c; };
+  const noise = (p, n, cols, seed) => { const R = new CM.Random(seed); for (let k = 0; k < n; k++) { p.fillStyle = cols[k % cols.length]; p.fillRect(R.next() * S0, R.next() * S0, 2 + R.next() * 3, 2 + R.next() * 3); } };
+  const SURF = {
+    planks: (p) => { p.fillStyle = "#7A5634"; p.fillRect(0, 0, S0, S0); for (let i = 0; i < 4; i++) { p.fillStyle = i % 2 ? "#6E4C2C" : "#84603A"; p.fillRect(0, i * 64, S0, 62); p.fillStyle = "#3A2614"; p.fillRect(0, i * 64 + 62, S0, 2); p.fillRect(((i * 97) % 200) + 20, i * 64, 2, 62); } noise(p, 900, ["rgba(40,24,10,0.15)", "rgba(200,160,110,0.08)"], 3); },
+    flags: (p) => { p.fillStyle = "#6E6862"; p.fillRect(0, 0, S0, S0); p.strokeStyle = "#3A3632"; p.lineWidth = 3; for (const [x, y, w, h] of [[0, 0, 128, 100], [128, 0, 128, 140], [0, 100, 90, 156], [90, 100, 166, 80], [128, 140, 128, 116], [90, 180, 38, 76]]) p.strokeRect(x, y, w, h); noise(p, 1400, ["rgba(0,0,0,0.12)", "rgba(255,255,255,0.06)"], 5); },
+    plaster: (p) => { p.fillStyle = "#D8CCB4"; p.fillRect(0, 0, S0, S0); noise(p, 1200, ["rgba(120,100,70,0.08)", "rgba(255,255,255,0.1)"], 7); p.fillStyle = "#4A3220"; p.fillRect(0, 0, S0, 14); p.fillRect(0, S0 - 34, S0, 34); p.fillRect(0, 0, 14, S0);
+      p.save(); p.translate(14, S0 - 34); p.rotate(-0.72); p.fillRect(0, -7, 300, 14); p.restore(); p.fillStyle = "#5A3E28"; p.fillRect(0, S0 - 34, S0, 4); },
+    stone: (p) => { p.fillStyle = "#5E5A56"; p.fillRect(0, 0, S0, S0); p.fillStyle = "#3A3632"; for (let y = 0; y < S0; y += 42) { p.fillRect(0, y, S0, 3); for (let x = (y / 42) % 2 ? 0 : 40; x < S0; x += 80) p.fillRect(x, y, 3, 42); } noise(p, 1400, ["rgba(0,0,0,0.12)", "rgba(255,240,220,0.06)"], 9); },
+    pale: (p) => { p.fillStyle = "#C8C2B6"; p.fillRect(0, 0, S0, S0); p.fillStyle = "#9A948A"; for (let y = 0; y < S0; y += 52) { p.fillRect(0, y, S0, 2); for (let x = (y / 52) % 2 ? 0 : 64; x < S0; x += 128) p.fillRect(x, y, 2, 52); } p.fillStyle = "#B8A070"; p.fillRect(0, S0 - 30, S0, 6); noise(p, 800, ["rgba(0,0,0,0.06)"], 11); },
+    panel: (p) => { p.fillStyle = "#5A3A20"; p.fillRect(0, 0, S0, S0); for (let x = 8; x < S0; x += 64) { p.fillStyle = "#6A4626"; p.fillRect(x, 20, 48, S0 - 60); p.strokeStyle = "#3A2410"; p.lineWidth = 3; p.strokeRect(x, 20, 48, S0 - 60); } p.fillStyle = "#C89A40"; p.fillRect(0, 8, S0, 4); noise(p, 600, ["rgba(0,0,0,0.12)"], 13); },
+    beams: (p) => { p.fillStyle = "#3A2A1E"; p.fillRect(0, 0, S0, S0); p.fillStyle = "#5A4028"; p.fillRect(0, 100, S0, 56); p.fillStyle = "#2A1C10"; p.fillRect(0, 154, S0, 4); noise(p, 600, ["rgba(0,0,0,0.15)", "rgba(200,170,120,0.05)"], 15); },
+  };
+  const STYLE = { inn: { floor: "planks", wall: "plaster", ceiling: "beams" }, forge: { floor: "flags", wall: "stone", ceiling: "beams" }, library: { floor: "planks", wall: "panel", ceiling: "beams" }, temple: { floor: "flags", wall: "pale", ceiling: "pale" }, hall: { floor: "planks", wall: "stone", ceiling: "beams" } };
+  { const b0 = CM.art.build; CM.art.build = function (th, look) { const set = b0.call(this, th, look); if (!th || !th.interior) return set; const St = STYLE[th.interior] || STYLE.inn, Nn = set.size || S0;
+      for (const [layer, kind] of [["floor", St.floor], ["wall", St.wall], ["wall2", St.wall], ["wallbones", St.wall], ["wallsecret", St.wall], ["ceiling", St.ceiling]]) { const i = set.index[layer]; if (i === undefined) continue; const c = cv(); SURF[kind](c.getContext("2d"));
+        let out = c; if (Nn !== S0) { out = document.createElement("canvas"); out.width = Nn; out.height = Nn; out.getContext("2d").drawImage(c, 0, 0, Nn, Nn); } set.layers[i] = out; }
+      return set; }; }
+  // the furniture's own pictures: book spines, cloth, stone, the fire in a hearth
+  const paint = (size, kind) => { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), s = size / 64, R = new CM.Random(CM.hashSeed(`int:${kind}`));
+    if (kind === "books") { p.fillStyle = "#3A2614"; p.fillRect(0, 0, size, size); for (let row = 0; row < 3; row++) { let x = 2; while (x < 62) { const w = 3 + Math.floor(R.next() * 4), h = 13 + Math.floor(R.next() * 6); p.fillStyle = ["#8A2A22", "#2A4A6A", "#3A6A3A", "#8A6A2A", "#5A2A5A", "#6A4A2A"][Math.floor(R.next() * 6)]; p.fillRect(x * s, (row * 21 + 20 - h) * s, w * s, h * s); x += w + 0.5; } p.fillStyle = "#5A3E24"; p.fillRect(0, (row * 21 + 20) * s, size, 2 * s); } }
+    else if (kind === "cloth") { p.fillStyle = "#8A2A2A"; p.fillRect(0, 0, size, size); p.fillStyle = "#C8A048"; p.fillRect(0, 6 * s, size, 3 * s); p.fillRect(0, 55 * s, size, 3 * s); }
+    else if (kind === "linen") { p.fillStyle = "#E8E0CC"; p.fillRect(0, 0, size, size); p.fillStyle = "#5A6A9A"; for (let y = 0; y < 64; y += 8) p.fillRect(0, y * s, size, 3 * s); }
+    else if (kind === "stone") { p.fillStyle = "#7A746C"; p.fillRect(0, 0, size, size); p.fillStyle = "#4A4640"; for (let y = 0; y < 64; y += 16) { p.fillRect(0, y * s, size, s); for (let x = (y / 16) % 2 ? 0 : 12; x < 64; x += 24) p.fillRect(x * s, y * s, s, 16 * s); } }
+    else if (kind === "fire") { const g = p.createRadialGradient(size / 2, size * 0.8, 2, size / 2, size * 0.7, size * 0.6); g.addColorStop(0, "#FFF2A0"); g.addColorStop(0.35, "#FF9A30"); g.addColorStop(0.7, "#A0300C"); g.addColorStop(1, "#200804"); p.fillStyle = g; p.fillRect(0, 0, size, size); }
+    return c; };
+  { const b1 = CM.art.build; CM.art.build = function (th, look) { const set = b1.call(this, th, look); for (const k of ["books", "cloth", "linen", "stone", "fire"]) { set.index[`model:${k}`] = set.layers.length; set.layers.push(paint(set.size, k)); } return set; }; }
+  // the furniture's shapes (the kit: boxes and cylinders in the piece's own frame; its front faces +z)
+  { const pm0 = CM.propModel; CM.propModel = (p, quad, index) => {
+      if (!["counter", "shelf", "table", "stool", "pew", "hearth", "anvil", "altar", "bed"].includes(p.id)) return pm0(p, quad, index);
+      const K = CM.modelKit(p, quad, index); if (!K) return false; const { box, at, L } = K, Q = (a, b, c, d, layer, sh) => quad(at(...a), at(...b), at(...c), at(...d), layer, sh);
+      switch (p.id) {
+        case "counter": box(-0.49, 0, -0.22, 0.49, 0.46, 0.22, L("wood"), L("dark")); box(-0.5, 0.46, -0.25, 0.5, 0.5, 0.25, L("dark"), L("wood")); return true;
+        case "shelf": box(-0.46, 0, -0.16, 0.46, 0.88, 0.16, L("dark"), L("dark")); Q([-0.43, 0.03, 0.161], [0.43, 0.03, 0.161], [0.43, 0.85, 0.161], [-0.43, 0.85, 0.161], p.books ? L("books") : L("wood"), 0.95);
+          if (!p.books) for (const y of [0.3, 0.58]) box(-0.43, y, 0.0, 0.43, y + 0.03, 0.2, L("dark"), L("wood")); return true;
+        case "table": box(-0.4, 0.38, -0.3, 0.4, 0.43, 0.3, L("dark"), L("wood")); for (const [x, z] of [[-0.36, -0.26], [0.32, -0.26], [-0.36, 0.22], [0.32, 0.22]]) box(x, 0, z, x + 0.04, 0.38, z + 0.04, L("dark"), null); return true;
+        case "stool": box(-0.13, 0.22, -0.13, 0.13, 0.26, 0.13, L("dark"), L("wood")); for (const [x, z] of [[-0.11, -0.11], [0.08, -0.11], [-0.11, 0.08], [0.08, 0.08]]) box(x, 0, z, x + 0.03, 0.22, z + 0.03, L("dark"), null); return true;
+        case "pew": box(-0.46, 0.2, -0.14, 0.46, 0.25, 0.14, L("dark"), L("wood")); box(-0.46, 0.25, -0.16, 0.46, 0.55, -0.12, L("wood"), L("dark")); for (const x of [-0.44, 0.4]) box(x, 0, -0.14, x + 0.04, 0.2, 0.14, L("dark"), null); return true;
+        case "hearth": box(-0.48, 0, -0.18, 0.48, 0.72, 0.2, L("stone"), L("stone")); box(-0.52, 0.72, -0.2, 0.52, 0.78, 0.26, L("stone"), L("stone"));
+          Q([-0.3, 0.02, 0.202], [0.3, 0.02, 0.202], [0.3, p.forge ? 0.42 : 0.5, 0.202], [-0.3, p.forge ? 0.42 : 0.5, 0.202], L("fire"), 1.4); return true;
+        case "anvil": box(-0.2, 0, -0.1, 0.2, 0.22, 0.1, L("dark"), L("dark")); box(-0.08, 0.22, -0.06, 0.08, 0.3, 0.06, L("iron"), L("iron")); box(-0.24, 0.3, -0.09, 0.22, 0.38, 0.09, L("iron"), L("iron")); return true;
+        case "altar": box(-0.45, 0, -0.22, 0.45, 0.5, 0.22, L("stone"), L("stone")); box(-0.46, 0.5, -0.23, 0.46, 0.53, 0.23, L("cloth"), L("cloth")); return true;
+        case "bed": box(-0.42, 0, -0.32, 0.42, 0.24, 0.42, L("dark"), L("linen")); box(-0.36, 0.24, 0.24, 0.36, 0.3, 0.4, L("linen"), L("linen")); box(-0.44, 0, 0.42, 0.44, 0.5, 0.46, L("dark"), L("dark")); return true;
+        default: return false;
+      } }; }
+  // indoors, only a little dust in the lamplight
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const g = CM.game; if (g && g.floor && g.floor.special === "interior") return [{ id: "mote", rate: 2 }]; return k0.call(this, env); }; }
+  // the door, by hand: a house that stands is walked into (the rules still say "building"; Automatic and a film keep to the door's window)
+  { const em0 = CM.Game.prototype.emit; CM.Game.prototype.emit = function (event, ...args) {
+      if (event === "building" && CM.ui && this.floor && this.floor.number === 0 && CM.INTERIORS[args[0]] && !this.replaying && !(this.film && this.film.playing) && !(this.autoOn && this.autoOn()) && CM.interiorOpen(this, args[0]) && this.intEnter(args[0])) return;
+      return em0.call(this, event, ...args); }; }
 }
 
 // ---- 77-splash.js ----
@@ -38695,13 +38852,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk;   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), ins = Boolean(CM.isInterior && CM.isInterior(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk || ins;   // (v24.6: a room in town, its own set)   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : ins ? number : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : ins ? CM.themeFor(number) : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     const art = setFor(key, special, i, look);
     renderer.setTextures(art, game.mode === "title");                  // (behind the title card: a slice a frame, 40-render.js)
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : ins ? number : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -39142,6 +39299,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
       else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
       else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
+      else if (thing.type === "intexit") out.push({ x, y, layer: "door_open", face: 2, w: 0.7, h: 0.92, lift: 0.04, glow: 0.2 });   // (v24.6: the door back out, in the south wall)
+      else if (thing.type === "intkeeper") { const L = CM.interiorLayer(thing); if (L && renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.7, h: 0.85, lift: Math.sin(now / 1100 + x) * 0.006 }); }
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });

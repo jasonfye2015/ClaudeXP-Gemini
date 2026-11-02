@@ -59,13 +59,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk;   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
-    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
-    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
+    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), ins = Boolean(CM.isInterior && CM.isInterior(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk || ins;   // (v24.6: a room in town, its own set)   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
+    if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : ins ? number : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
+    const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : ins ? CM.themeFor(number) : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;
     const art = setFor(key, special, i, look);
     renderer.setTextures(art, game.mode === "title");                  // (behind the title card: a slice a frame, 40-render.js)
-    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
+    themeOn = number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : ins ? number : CM.isTowerFloor(number) ? -5 : -4) : i; lookOn = look; dreamOn = Boolean(game.dream);
   }
   // the theme changed, or its pack has arrived: the view and every portrait and icon follow
   function relook() {
@@ -506,6 +506,8 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
       else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
       else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
+      else if (thing.type === "intexit") out.push({ x, y, layer: "door_open", face: 2, w: 0.7, h: 0.92, lift: 0.04, glow: 0.2 });   // (v24.6: the door back out, in the south wall)
+      else if (thing.type === "intkeeper") { const L = CM.interiorLayer(thing); if (L && renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.7, h: 0.85, lift: Math.sin(now / 1100 + x) * 0.006 }); }
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
       else if (thing.type === "ucdown" || thing.type === "ucback") out.push({ x, y, layer: "hatch", w: 0.9, flat: true, shade: 0.75 });
       else if (thing.type === "ucup") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
