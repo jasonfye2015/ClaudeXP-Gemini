@@ -5787,6 +5787,15 @@ test("positioning: a reach word strikes from the back row at full; a shield turn
   K.offhand = { name: "Tower Shield", kind: "shield", slot: "offhand", power: 2, unknown: false, props: {} }; for (let i = 0; i < 200; i++) { R.hp = R.max; g.hurt(R, 5, m, {}); } assert.ok((g.tally.shieldsBeside || 0) > 0, "the shield beside");
 });
 
+test("combos, more: a blow then the Rogue's on the same foe is the feint, a shot then a shot the volley, holy then fire smite and sear, the Knight's bash then a blow hammer and anvil - each more harm, and remembered", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("combo-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
+  const K = g.party.find((h) => h.cls === "Knight"), R = g.party.find((h) => h.cls === "Rogue"), m = g.tune({ name: "Orc", kind: "Orc", hp: 900, max: 900, atk: 10, df: 0 }); g.foes = [m]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat();
+  g.combat.round = 5; g.strike(K, m, "", { sure: true }); g.strike(R, m, "", { sure: true }); assert.ok((g.combos || {}).feint, "the feint");
+  g.combat.round = 6; g.strike(K, m, "", { sure: true, bash: true }); g.strike(R, m, "", { sure: true }); assert.ok((g.combos || {}).anvil, "hammer and anvil");
+  g.combat.round = 7; g.spellHit(m, 10, "Smite:", "holy"); g.spellHit(m, 10, "Fire:", "fire"); assert.ok((g.combos || {}).smitesear, "smite and sear");
+  const before = m.hp; g.combat.round = 8; g.strike(K, m, "", { sure: true }); g.combat.round = 9; g.strike(R, m, "", { sure: true }); assert.ok(g.tally.combos2 >= 3);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
