@@ -5735,6 +5735,20 @@ test("floor moods: about one floor in seven from the third has a mood by the see
   assert.ok(g.tally.moods >= 1, "named coming onto it");
 });
 
+test("puzzle rooms: about one floor in five holds a puzzle made for it and always solvable - statues turned to face the altar, or mirrors tilted to bounce the sunbeam onto the plate - and solving it raises a chest", () => {
+  const CM = load(); let statues = 0, beams = 0, fs = null, fb = null;
+  for (let n = 2; n <= 80; n++) { const fl = CM.makeFloor(n, "pz-1", 2); if (!fl.puzzle) continue; if (fl.puzzle.kind === "statues") { statues++; fs = fs || n; } else { beams++; fb = fb || n; } }
+  assert.ok(statues + beams >= 6, `${statues} ${beams}`); assert.ok(statues && beams, "both kinds");
+  const g = new CM.Game(); g.newGame("pz-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.enterFloor(fs, "down"); g.mode = "explore"; const fl = g.floor; assert.ok(!g.puzzleCheck(), "not yet");
+  for (const [k, t] of Object.entries(fl.things)) if (t.type === "statue") { fl.pos = k.split(",").map(Number); let n = 0; while (t.face !== t.want && n++ < 4) g.use(); }
+  assert.ok(fl.puzzle.solved && fl.things[fl.puzzle.chestAt].type === "chest", "the chest rises"); assert.ok(g.achievements.puzzler);
+  g.enterFloor(fb, "down"); const f2 = g.floor; assert.ok(!g.beamPath().hit, "the beam starts astray");
+  const mirrors = Object.entries(f2.things).filter(([, t]) => t.type === "mirror"); let solved = false;
+  for (let m = 0; m < 4 && !solved; m++) { mirrors[0][1].tilt = m & 1 ? "\\" : "/"; mirrors[1][1].tilt = m & 2 ? "\\" : "/"; solved = g.puzzleCheck(); }
+  assert.ok(solved && f2.puzzle.solved, "some tilt of the two mirrors brings the beam to the plate");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
