@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Monsters, closer up (v39.0, UPGRADE_PLAN_34.md phase 0)
+  (src/js/76zzzzzzw-mondetail.js (a detail pass over every monster picture, and its recoil frame))
+  - Every monster picture gets a detail pass: fur strokes on beasts, scales on the scaled, rivets and plate seams on the
+    armoured and the big, rags on the dead, a rim of torchlight down one side, a soft shadow below, and a dark ink line.
+  - A painted recoil frame (thrown back, washed pale) shows in the instant a monster is struck.
+
 Boss phases (v38.4, UPGRADE_PLAN_33.md phase 4)
   (src/js/69zzf-phases.js; 76zzzzzzv-phases.js (the card, the sting, the music held high))
   - At half its health each guardian without a second form, and the Lich King, changes once: the Drowned Queen calls her
