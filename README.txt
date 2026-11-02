@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The town by season (v40.4, UPGRADE_PLAN_35.md phase 4)
+  (src/js/76zzzzzzzf-townseason.js)
+  - In winter snow lies on Caer Duin's roofs, icicles hang from the eaves and drifts bank against the walls.
+  - In spring the window boxes are pink and white and blossom drifts down from the trees; in summer the boxes are red
+    with geraniums; in autumn sheaves of the harvest lean by the walls, with pumpkins beside them.
+
 Ceilings (v40.3, UPGRADE_PLAN_35.md phase 3)
   (src/js/76zzzzzzze-ceilings.js)
   - Stone ribs spring across the bays of halls and of any room of twenty squares or more; timber beams cross the
