@@ -5602,6 +5602,16 @@ test("bonds and rivals: an old friend steps in front of a badly hurt friend's bl
   assert.strictEqual(g.rivalOf(C), D);
 });
 
+test("scars and stories: a hero brought to a tenth of their health in a fight that is won keeps a scar with its giver and floor and a trait's stats, three at most; a fight fled leaves none", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("scar-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
+  const h = g.party[0], m = { name: "Orc", kind: "Orc", hp: 0, max: 30, atk: 9, df: 0 }, before = JSON.stringify(h.stats);
+  g.foes = [m]; g.mode = "combat"; g.combat = { foes: g.foes, round: 1, order: [], index: 0 }; h.hp = h.max; g.hurt(h, h.max - 1, m, {}); assert.ok(h.nearDeath);
+  g.wonFight(); assert.strictEqual((h.scars || []).length, 1); assert.strictEqual(h.scars[0].by, "Orc"); assert.strictEqual(h.scars[0].floor, 3); assert.notStrictEqual(JSON.stringify(h.stats), before, "a trait");
+  for (let i = 0; i < 4; i++) { h.hp = h.max; g.foes = [Object.assign({}, m)]; g.mode = "combat"; g.hurt(h, h.max - 1, m, {}); g.wonFight(); }
+  assert.strictEqual(h.scars.length, 3, "three at most"); assert.ok(g.achievements.scarred);
+  const k = g.party[1]; k.hp = k.max; g.mode = "combat"; g.hurt(k, k.max - 1, m, {}); g.setMode("explore"); assert.ok(!k.nearDeath && !(k.scars || []).length, "fled: no scar");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

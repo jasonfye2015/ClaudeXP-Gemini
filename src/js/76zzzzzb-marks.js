@@ -35,7 +35,7 @@
   { const d0 = CM.deathStyleOf; CM.deathStyleOf = (m, game) => { const st = d0(m, game);
       if (m && game && game.mode === "combat" && game.foeKey && !fell.has(m)) { fell.add(m); const K = CM.monsterKind ? CM.monsterKind(m.kind || m.name || "") || {} : {};
         const layer = st === "sink" || K.body === "ghost" ? null : STYLE[st] || "mark:blood";
-        if (layer) { const [x, y] = game.foeKey.split(",").map(Number), h = CM.hashSeed(`${m.name}:${game.clock}:${x},${y}`); MK.add(game, { x, y, dx: ((h % 100) / 100 - 0.5) * 0.5, dz: (((h >> 7) % 100) / 100 - 0.5) * 0.5, layer, w: 0.55 + (h % 30) / 100, spin: (h % 628) / 100 }); } }
+        if (layer) { const [x, y] = game.foeKey.split(",").map(Number), h = CM.hashSeed(`${m.name}:${game.clock}:${x},${y}`); MK.add(game, { x, y, dx: ((h % 100) / 100 - 0.5) * 0.5, dz: (((h >>> 7) % 100) / 100 - 0.5) * 0.5, layer, w: 0.55 + (h % 30) / 100, spin: (h % 628) / 100 }); } }
       return st; }; }
   // fire that lands: a scorch where it struck
   const FIRE = new Set(["firebolt", "fire", "fireball", "flamestrike", "inferno", "burn", "dragonbreath", "flame"]);

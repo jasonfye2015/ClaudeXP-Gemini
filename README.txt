@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Scars and stories (v34.2, UPGRADE_PLAN_29.md phase 2)
+  (src/js/69zj-scars.js; 76zzzzzzd-scars.js (scars on the portraits and in the sheet); 69za-enchant.js and 76zzzzzb-marks.js (a hash read signed, read whole))
+  - A hero brought to a tenth of their health or less in a fight that is won keeps a scar - three at most: drawn on
+    the portrait (a burn from fire), and written in the sheet with where it is, what gave it and on which floor.
+  - Each scar is a small trait for good: Hardened, Watchful, Lucky to be Alive, or the double-edged Grim, Shaken and
+    Slow to Heal. A fight fled leaves none. Three scars on one hero is a feat.
+  - (A hash read as a signed number could leave a scar's place unnamed, the enchanter's offers lopsided and a mark
+    off its square; read whole now.)
+
 Bonds and rivals (v34.1, UPGRADE_PLAN_29.md phase 1)
   (src/js/69zi-rivals.js; 76zzzzzzc-sheetx.js (the sheet's rival, and CM.sheetExtra))
   - Old friends (forty fights side by side) now cover each other: a blow meant for a friend under a third of their
