@@ -5629,6 +5629,14 @@ test("retirement to Legends' Row: a hero of level fifty is offered it, retires f
   assert.ok(g.legendTeach(0, 1), "once a run");
 });
 
+test("followers who level: five new floors make a follower seasoned and ten a veteran - tougher, the porter carrying more, the rank in the name", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("frank-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.follower = { id: "porter", name: "Hew", hp: 22, max: 22, floors: 0 }; const carry0 = g.followerCarry(), hp0 = g.follower.max;
+  for (let n = 1; n <= 5; n++) g.enterFloor(n, "down"); assert.strictEqual(g.followerRank(), 1); assert.ok(/seasoned/.test(g.followerName())); assert.strictEqual(g.followerCarry(), carry0 + 10); assert.strictEqual(g.follower.max, hp0 + 4);
+  for (let n = 6; n <= 10; n++) g.enterFloor(n, "down"); assert.strictEqual(g.followerRank(), 2); assert.ok(/veteran/.test(g.followerName()));
+  g.enterFloor(3, "up"); assert.strictEqual(g.follower.deep, 10, "a floor seen before doesn't count");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

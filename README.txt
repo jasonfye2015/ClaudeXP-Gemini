@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Followers who level (v35.0, UPGRADE_PLAN_30.md phase 0)
+  (src/js/69zm-followranks.js)
+  - A follower who comes through five new floors is seasoned, through ten a veteran: four more health a rank, and
+    better at their trade - the porter carries ten more a rank; the torchbearer cups the flame against a gust, then
+    spots a trap a square off; the hedge-wizard mends twice a floor, then keeps her light half again as long; the
+    farm's dog goes five floors deeper a rank. The rank is in their name on the side panel.
+
 Retirement to Legends' Row (v34.4, UPGRADE_PLAN_29.md phase 4)
   (src/js/69zl-legends.js; 76zzzzzzf-legends.js (Legends' Row among the town's actions); 76zzzzzzb-fireside.js (an action button shown only while it applies))
   - A hero who reaches level fifty is offered it: to retire from the party to a house of their own on Legends' Row in
