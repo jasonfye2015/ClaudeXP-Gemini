@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The house furnished (v32.3, UPGRADE_PLAN_27.md phase 3)
+  (src/js/69zc-furnish.js; 76zzzzzw-furnish.js (two more rooms in the house's window))
+  - Eight furnishings for the party's house, bought with gold in town - a hearth rug, a pantry shelf, a brass lamp, a
+    strongbox, a bookcase, a shrine nook, a weapon rack, an armour stand - each a small good that every run setting out
+    from the house carries (good heart, rations, a trimmed torch, gold, or +1 to a stat for every hero).
+  - The guardians' trophies mounted on the trophy wall, two a level of the house past the first: each gives every hero
+    who sets out +1 to its guardian's own stat. This finishes plan 27 (set 7).
+
 Brewing at the still (v32.2, UPGRADE_PLAN_27.md phase 2)
   (src/js/69zb-stillbook.js; 76zzzzzv-stillbook.js (the still's book in the fields and a Journal page))
   - Recipe pages lie in the dungeon - one chest in eight from the second floor down, a fallen party's remains one time

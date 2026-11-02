@@ -5533,6 +5533,18 @@ test("brewing at the still: recipe pages turn up in chests below the first floor
   assert.ok(!g.bag.some((it) => it.kind === "ingredient" && it.ingredient === R.ing), "used up");
 });
 
+test("the house furnished: furnishings bought in town for gold and trophies mounted (as many as the house's levels allow) are kept in the village, and every run that sets out carries their good", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("home-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000;
+  g.village.built = g.village.built || {}; g.villageLevel = (id) => (id === "home" ? 3 : 0);
+  g.mode = "explore"; assert.ok(g.inTown()); assert.strictEqual(g.buyFurnish("rug"), ""); assert.strictEqual(g.buyFurnish("bookcase"), ""); assert.ok(g.buyFurnish("rug"), "once");
+  assert.strictEqual(g.gold, 5000 - CM.FURNISH.rug.gold - CM.FURNISH.bookcase.gold);
+  g.trophies = { rat: { date: "x" }, knight: { date: "x" }, forge: { date: "x" }, queen: { date: "x" }, mind: { date: "x" } };
+  for (const id of ["rat", "knight", "forge", "queen"]) assert.strictEqual(g.mountTrophy(id), ""); assert.ok(/room/.test(g.mountTrophy("mind")), "four at the third level");
+  const H = g.homeGifts(); assert.strictEqual(H.stats.int, 1); assert.strictEqual(H.stats.luck, 1); assert.strictEqual(H.morale, 8);
+  const before = fixedParty(CM)[0].stats.int; g.newGame("home-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(g.party[0].stats.int, before + 1, "the bookcase goes with them"); assert.ok(g.morale > CM.MORALE.start, "in good heart");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
