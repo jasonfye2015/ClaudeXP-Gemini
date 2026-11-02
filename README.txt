@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Painted headers (v42.2, UPGRADE_PLAN_37.md phase 2)
+  (src/js/76zzzzzzzn-headers.js)
+  - Each of the town's windows opens under a painted strip of the place: the Tavern's hearth and mugs, the Smith's
+    anvil throwing sparks, the Temple's altar under its rose window, the Alchemist's bottles and a flask bubbling,
+    the Vault's coin-stacks and strongbox, the Library's shelves, the Guild's banners and notice board, the
+    Chronicler's desk and quill, and the party's own hearth.
+
 An animated title (v42.1, UPGRADE_PLAN_37.md phase 1)
   (src/js/76zzzzzzzm-titletown.js)
   - Behind the title the view is no longer a corridor turning on the spot: it drifts slowly up and down Caer Duin's
