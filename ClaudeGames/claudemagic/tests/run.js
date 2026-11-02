@@ -5758,6 +5758,15 @@ test("the rival party: a named band of four goes down ahead each run - their cha
   const k = Object.keys(g.floor.things).find((x) => g.floor.things[x].type === "rivaldead"); if (k) { g.floor.pos = k.split(",").map(Number); g.mode = "explore"; const n = g.bag.length; g.use(); assert.ok(g.bag.length > n); }
 });
 
+test("lost and found: an expedition lost on a floor leaves the best of what its heroes wore there for any later one - another seed's - to find and carry home, once", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("lost-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.enterFloor(4, "down"); const worn = CM.equipped(g.party[0]).length; for (const h of g.party) h.hp = 0; g.endRun(false);
+  const L = g.lostGear(); assert.ok(L.length >= 1 && L[L.length - 1].floor === 4 && L[L.length - 1].items.length >= Math.min(1, worn));
+  const h = new CM.Game(); h.newGame("other-seed", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); h.enterFloor(4, "down");
+  const k = Object.keys(h.floor.things).find((x) => h.floor.things[x].type === "lostpack"); assert.ok(k, "found on another seed's floor 4");
+  h.floor.pos = k.split(",").map(Number); h.mode = "explore"; const n = h.bag.length; h.use(); assert.ok(h.bag.length > n); assert.ok(h.lostGear().find((r) => r.id === L[L.length - 1].id).taken, "taken home"); const k2 = new CM.Game(); k2.newGame("third-seed", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); k2.enterFloor(4, "down"); assert.ok(!Object.values(k2.floor.things).some((x) => x.type === "lostpack"), "gone for anyone else"); assert.ok(h.achievements.lostfound);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

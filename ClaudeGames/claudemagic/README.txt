@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Lost and found (v37.3, UPGRADE_PLAN_32.md phase 3)
+  (src/js/69zz-lostfound.js; 76zzzzzzr-lostfound.js (the lost party's pack))
+  - When an expedition ends in the dark, the best of what its heroes wore - four things at most, never cursed or a
+    relic - stays where they fell, kept between runs (twelve at most). The first later expedition, on another seed, to
+    come onto that floor finds it: a dusty pack with their names scratched on the buckle, and takes it home. Bringing
+    lost gear home is a feat. (The same seed's remains and their ghost are as they were.)
+
 The rival party (v37.2, UPGRADE_PLAN_32.md phase 2)
   (src/js/69zy-rivalband.js; 76zzzzzzq-rivalband.js (their chalk, a dropped bundle, one of theirs fallen))
   - Every run has its rivals, a named band of four going down ahead: their chalk on the walls one floor in three (Space

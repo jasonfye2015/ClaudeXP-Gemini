@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v37.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v37.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "37.2", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "37.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29550,6 +29550,32 @@ Object.assign(CM.Game.prototype, {
   const mr0 = G.meetRivals; if (mr0) G.meetRivals = function (thing, k) { const B = this.rivalBand(), left = B.members.filter((m) => !B.fallen.includes(m)); if (!thing.met && left.length) this.say(`It's ${B.name} - ${left.join(", ")}${B.fallen.length ? `; no ${B.fallen.join(" or ")} with them now` : ""}.`); return mr0.call(this, thing, k); };
 }
 
+// ---- 69zz-lostfound.js ----
+"use strict";
+// Lost and found (v37.3, UPGRADE_PLAN_32.md): when an expedition ends in the dark, the best of what its heroes wore -
+// four things at most - stays on the floor where they fell, kept in the store ("lostGear", twelve at most) for any later
+// expedition, whatever its seed: the first to come onto that floor finds it, a pack with their names scratched on the
+// buckle, and takes it home. (The same seed's remains and their ghost, 61-explore.js, are as they were.)
+//   game.lostGear(); a floor's "lostpack" thing
+{ const G = CM.Game.prototype, key = (x, y) => `${x},${y}`;
+  G.lostGear = function () { return CM.store.get("lostGear", []) || []; };
+  const end0 = G.endRun; G.endRun = function (won) { const lost = !(won || this.crowned) && !this.replaying && !this.film, fl = this.floor;
+    if (lost && fl && fl.number >= 1 && fl.number < 1000 && fl.number % 1 === 0) { const worn = []; for (const h of this.party || []) for (const it of CM.equipped(h)) if (!(it.props || {}).cursed && !(it.props || {}).relic && !(it.props || {}).againHeirloom) worn.push(JSON.parse(JSON.stringify(it)));
+      worn.sort((a, b) => (b.value || 0) - (a.value || 0)); if (worn.length) { const L = this.lostGear().filter((r) => !r.taken); L.push({ id: `${this.seed}:${fl.number}:${Date.now()}`, run: `${this.seed}:${this.startedAt || ""}`, floor: fl.number, names: (this.party || []).map((h) => h.name), items: worn.slice(0, 4), date: CM.today ? CM.today() : "" }); CM.store.set("lostGear", L.slice(-12)); } }
+    return end0.call(this, won); };
+  const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally) {   /* (a replay lays it as the run did: the store is read, not changed) */ const fl = this.floor, n = fl.number, E = this.ext("lostfound");
+      if (n >= 1 && n < 1000 && !E[n] && !(this.deltas && this.deltas[n])) { E[n] = true; const L = this.lostGear(), here = L.find((r) => r.floor === n && !r.run.startsWith(`${this.seed}:`) && (!r.taken || r.taken === this.seed));
+        if (here) { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y));
+          if (cells.length) fl.things[cells[CM.hashSeed(`${this.seed}:lostat:${here.id}`) % cells.length]] = { type: "lostpack", id: here.id, names: here.names, items: here.items, date: here.date }; } } }
+    return em0.call(this, ev, ...a); };
+  const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl) { const k = key(fl.pos[0], fl.pos[1]), t = fl.things[k];
+      if (t && t.type === "lostpack") { this.logAct && this.logAct("use"); delete fl.things[k]; if (!this.replaying && !this.film) { const L = this.lostGear(), R = L.find((r) => r.id === t.id); if (R) { R.taken = this.seed; CM.store.set("lostGear", L); } }   /* (marked, not struck off: a replay of this run finds it the same) */ this.gain(t.items, "remains");
+        this.say(`A pack, half under the dust, and scratched into its buckle: ${t.names.join(", ")}${t.date ? `, ${t.date}` : ""}. An expedition that didn't come back. You carry what they wore up to the light: ${t.items.map((i) => i.name).join(", ")}.`);
+        this.tally.lostFound = (this.tally.lostFound || 0) + 1; if (this.achieve) this.achieve("lostfound"); this.saveRun(); this.emit("change"); return; } }
+    return use0.apply(this, a); };
+  CM.ACHIEVEMENTS.lostfound = { name: "Lost and Found", what: "Bring home the gear an earlier expedition lost", title: "the Finder" };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -41863,6 +41889,18 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   };
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [n, f] of Object.entries(PAINT)) { const c = cv(); f(c.getContext("2d")); set.index[n] = set.layers.length; set.layers.push(c); } return set; }; }
   CM.thingSprites = Object.assign(CM.thingSprites || {}, { chalk: (t, x, y) => [{ x, y, face: t.face, layer: "rb:chalk", w: 0.8, h: 0.8, lift: 0.1 }], dropped: (t, x, y) => [{ x, y, layer: "rb:bundle", w: 0.45, h: 0.35 }], rivaldead: (t, x, y) => [{ x, y, layer: "rb:dead", w: 0.9, flat: true }] });
+}
+
+// ---- 76zzzzzzr-lostfound.js ----
+"use strict";
+// Lost and found - the window's side (v37.3): the lost party's pack drawn where it lies - a dusty pack, a sword-hilt and
+// a helm beside it. Rules: 69zz-lostfound.js.
+{ const S = 256;
+  const paint = (p) => { p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, 240, 100, 12, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A5A40"; p.beginPath(); p.ellipse(110, 190, 70, 52, -0.2, 0, Math.PI * 2); p.fill(); p.fillStyle = "#4A3A26"; p.fillRect(80, 160, 60, 10); p.fillStyle = "#C8A040"; p.fillRect(102, 156, 14, 18);
+    p.fillStyle = "#9AA0A8"; p.beginPath(); p.arc(196, 200, 30, Math.PI, 0); p.fill(); p.fillRect(166, 198, 60, 8); p.strokeStyle = "#7A7A80"; p.lineWidth = 8; p.beginPath(); p.moveTo(40, 230); p.lineTo(200, 120); p.stroke(); p.fillStyle = "#5A3A1E"; p.fillRect(196, 104, 20, 20);
+    p.fillStyle = "rgba(200,190,170,0.35)"; for (let i = 0; i < 40; i++) p.fillRect((i * 53) % 220 + 18, (i * 37) % 110 + 130, 3, 3); };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), cv = document.createElement("canvas"); cv.width = cv.height = S; paint(cv.getContext("2d")); set.index["lost:pack"] = set.layers.length; set.layers.push(cv); return set; }; }
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { lostpack: (t, x, y) => [{ x, y, layer: "lost:pack", w: 0.75, h: 0.5 }] });
 }
 
 // ---- 77-splash.js ----
