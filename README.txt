@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Deaths of their own (v29.2, UPGRADE_PLAN_24.md phase 2)
+  (src/js/76zzzzw-deaths.js; 80-main.js)
+  - A monster dies as what it is: the bones crumble where they stand, their pieces falling; the demons, the burning
+    things and the undead flesh go to ash, darkening and blowing away in embers; the crystal ones shatter in a flash of
+    shards and light; the drowned - and anything that falls in water - sink with a splash and its rings; the ghosts
+    rise away and the rest topple and fade, as they did. Reduced motion: they only fade.
+
 Which way it faces (v29.1, UPGRADE_PLAN_24.md phase 1)
   (src/js/76zzzzv-facing.js; 40-render.js, 80-main.js)
   - A monster on the floor faces the way it last moved (one that hasn't moved, a way of its own). From the party's
