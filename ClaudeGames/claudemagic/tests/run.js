@@ -5446,6 +5446,17 @@ test("interiors: a standing house is walked into - a furnished room, the same fo
   g.intEnter("smith"); const ap = new CM.Autopilot(g); ap.step(); assert.strictEqual(g.floor.number, 0, "Automatic steps out of a room first");
 });
 
+test("gear compared: trying a thing on shows only the numbers that move, up and down, and leaves the hero exactly as they were; a thing one can't wear says why; the best of the party for it", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("cmp-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const h = g.party[0], snap = JSON.stringify(h), better = Object.assign({}, h.weapon, { name: "Test blade", power: (h.weapon.power || 0) + 3, props: Object.assign({}, h.weapon.props || {}), unknown: false });
+  h.hp = Math.max(1, h.max - 3); const snap2 = JSON.stringify(h), c = CM.gearCompare(g, h, better);
+  assert.strictEqual(JSON.stringify(h), snap2, "the hero is just as they were - health included"); void snap;
+  const blow = c.rows.find((r) => r[3] === "blow"); assert.ok(blow && blow[2] - blow[1] === 3, "the weapon's blow up three"); assert.ok(c.rows.every((r) => r[1] !== r[2]), "only what moves"); assert.ok(c.gain > 0);
+  const worse = Object.assign({}, better, { power: Math.max(0, (h.weapon.power || 0) - 1) }), cw = CM.gearCompare(g, h, worse); assert.ok(cw.rows.find((r) => r[3] === "blow")[2] < cw.rows.find((r) => r[3] === "blow")[1], "and down");
+  const B = CM.gearBest(g, better); assert.ok(B.best && B.each.length === g.party.length);
+  assert.strictEqual(CM.gearCompare(g, h, { kind: "heal", name: "x" }), null, "not gear: nothing to compare");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
