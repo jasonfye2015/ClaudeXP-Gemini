@@ -5796,6 +5796,15 @@ test("combos, more: a blow then the Rogue's on the same foe is the feint, a shot
   const before = m.hp; g.combat.round = 8; g.strike(K, m, "", { sure: true }); g.combat.round = 9; g.strike(R, m, "", { sure: true }); assert.ok(g.tally.combos2 >= 3);
 });
 
+test("monster habits: every kind has a habit; read after five of a kind slain in the run (and kept in the bestiary), it is told when a fight begins and every blow on that kind is a tenth harder", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("habit-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  for (const K of CM.MONSTERS) assert.ok(CM.habitOf(K.name).length > 10, K.name);
+  assert.ok(!g.habitKnown("Orc")); for (let i = 0; i < 5; i++) g.noteFoe({ name: "Orc", kind: "Orc", hp: 0 }, "slain"); assert.ok(g.habitKnown("Orc")); assert.ok(g.habitRead("Orc"), "written in the bestiary");
+  g.enterFloor(3, "down"); const K = g.party[0], a = g.tune({ name: "Orc", kind: "Orc", hp: 500, max: 500, atk: 10, df: 0 }), b = g.tune({ name: "Kobold", kind: "Kobold", hp: 500, max: 500, atk: 10, df: 0 });
+  g.foes = [a, b]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat(); g.strike(K, a, "", { sure: true }); assert.ok((g.tally.habitEdge || 0) > 0, "the edge on a known kind");
+  const e0 = g.tally.habitEdge; g.strike(K, b, "", { sure: true }); assert.strictEqual(g.tally.habitEdge, e0, "none on an unknown one");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
