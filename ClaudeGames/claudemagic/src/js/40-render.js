@@ -305,7 +305,7 @@ CM.Renderer = class {
     const pic = (name) => pics[name] || art.layers[art.index[name]], packed = new Set([...packSurf, ...packRest]);
     return (art._split = { own, surf, rest, packed, sub, pic, sizes, sharedKey: `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}:${sizes.shared}` });
   }
-  _indexOf(S) { const index = {}; S.own.forEach((n, i) => { index[n] = i; }); S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 2000 + i; });
+  _indexOf(S) { this.texGen = (this.texGen || 0) + 1; const index = {}; S.own.forEach((n, i) => { index[n] = i; }); S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 2000 + i; });
     for (const n of S.packed) index[n] = index[S.sub[n][0]];                     // (a packed one answers by its layer: the sprites read the corner from sub)
     return index; }
   setTextures(art, gentle) {
@@ -336,18 +336,29 @@ CM.Renderer = class {
   }
 
   // ---- the floor's mesh (worked out in 26-surface.js: the walls by their kinds, the ground, trees, canopy; no ceiling under a sky) ----
+  // (v26.1) the floor's mesh in three parts, each made again only when what it is made of changes: the floor itself
+  // (its walls, ground, roofs, trees and props - the long one), the traces the party has left, and the lit windows with
+  // the far lights; a mode changing, a fight, a mark, a window lighting no longer makes the whole floor again
+  _floorKey(floor, theme) { const sig = (o) => { let h = 0; if (o) for (const k in o) { const v = String(o[k]); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; } return h; };
+    let g = 0; for (const row of floor.grid) for (let i = 0; i < row.length; i++) g = (g * 3 + row[i] + i) | 0;
+    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
+  _buffer(name, data) { const gl = this.gl; if (!this[name + "Buf"]) this[name + "Buf"] = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this[name + "Buf"]); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); this[name + "Count"] = data.length / STRIDE; }
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
     if (CM.seasonTurn && CM.game) { this.turnK = CM.seasonTurn(CM.game); this.leafK = CM.leafFall(CM.game); }   // (v24.2: how far the season has come in)
-    const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 }).concat(CM.traceProps(floor));   // (and what the party left)
-    this.standing = props.filter((p) => p.how === "stand");
-    const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: this.night || 0, turn: this.turnK === undefined ? 1 : this.turnK });   // (at night the town's windows are lit)
-    this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
-    this.windowLights = mesh.windows || [];                              // (v22.0: the town's lit windows, each a little light on the street)
-    const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(mesh.data), gl.STATIC_DRAW);
-    this.staticCount = mesh.count;
+    const key = this._floorKey(floor, theme), night = this.night || 0, traces = CM.traceProps(floor), trKey = `${floor.number}|${floor.tracesMade || 0}|${traces.length}|${key}`, nKey = `${night}|${key}`;
+    this.rebuilt = this.rebuilt || { floor: 0, traces: 0, windows: 0 };
+    if (key !== this.floorKey) {
+      const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
+      this.standing = props.filter((p) => p.how === "stand");
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK });
+      this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
+      this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
+    }
+    if (trKey !== this.traceKey) { this.standing = (this.standing || []).filter((p) => !p.trace).concat(traces.filter((p) => p.how === "stand"));   // (the party's marks: their own small mesh, made in a moment)
+      const tm = CM.floorMesh(floor, theme, this.index, { props: traces, sub: this.sub, only: "props" }); this._buffer("trace", tm.data); this.traceKey = trKey; this.rebuilt.traces++; }
+    if (nKey !== this.windowKey) { const wm = theme.sky && night ? CM.floorMesh(floor, theme, this.index, { sub: this.sub, night, only: "windows" }) : { data: [], windows: [] };   // (the lit windows, and the far town's lights)
+      this._buffer("window", wm.data); this.windowLights = wm.windows || []; this.windowKey = nKey; this.rebuilt.windows++; }
   }
   // ---- the camera ----
   yawFor(facing) { return facing * Math.PI / 2; }
@@ -596,6 +607,7 @@ CM.Renderer = class {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
+    for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
