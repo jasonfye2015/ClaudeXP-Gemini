@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v26.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v27.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "26.4", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "27.0", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9676,7 +9676,7 @@ CM.Renderer = class {
     // under a sky: daylight is flat and reaches to the horizon; at night the torch and the moon do what they can
     gl.uniform3fv(this.loc.uTorch, sky ? [t.torch[0] + (1 - t.torch[0]) * sky.light, t.torch[1] + (1 - t.torch[1]) * sky.light, t.torch[2] + (1 - t.torch[2]) * sky.light] : t.torch);
     gl.uniform3fv(this.loc.uFog, fogc);
-    gl.uniform1f(this.loc.uReach, sky ? (6 + 54 * sky.light) * (sky.night ? Math.max(0.5, this.lightNow) : 1) : t.reach * this.lightNow);
+    gl.uniform1f(this.loc.uReach, sky ? (6 + 54 * sky.light) * (sky.night ? Math.max(0.5, this.lightNow) : 1) * (this.mist ? 0.35 : 1) : t.reach * this.lightNow);   // (v27.0: mist shortens the sight)
     gl.uniform1f(this.loc.uFlicker, sky ? this.flicker * (1 - sky.light) : this.flicker);
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
@@ -28207,6 +28207,52 @@ Object.assign(CM.Game.prototype, {
   };
 }
 
+// ---- 69v-weather.js ----
+"use strict";
+// Weather that matters (v27.0, UPGRADE_PLAN_22.md): the day's weather is felt, not only seen. Rain, outdoors after dark,
+// burns a torch twice as fast, and now and then a gust and the rain put it out for a few steps (a lantern, shut in its
+// glass, cares for neither). Mist on the surface shortens the party's sight: two squares ahead, not four, on the map
+// and in the view. Snow lying in the Wood slows the party: every step is two minutes, and the walk is heavier.
+{ const WX = CM.WEATHERPLAY = { gustEvery: 70, gutterSteps: 3, mistSight: 2, snowFrom: 0.3 };
+  const day = (game) => (CM.dayOf ? Math.max(0, CM.dayOf(game)) : 0);
+  // how deep the snow lies, 0 to 1: it builds over the days it falls and melts on the days it doesn't (v24.2)
+  CM.snowDepth = (game) => {
+    if (CM.season(game) !== "winter" || !game || game.seed === undefined) return 0;
+    if (CM.seasonOff) return CM.snowLying(game) ? 1 : 0;
+    const d = day(game), of = (n) => CM.weatherOf(game.seed, n, "winter") === "snow", frac = ((CM.minuteOf ? CM.minuteOf(game) : 720) % 1440) / 1440;
+    let depth = 0; for (let n = Math.max(0, d - 5); n < d; n++) depth = Math.min(1, Math.max(0, depth + (of(n) ? 0.45 : -0.22)));
+    depth = Math.min(1, Math.max(0, depth + (CM.weather(game) === "snow" ? 0.45 : -0.22) * frac));
+    return Math.round(depth * 20) / 20;
+  };
+  const outside = (g) => g.floor && (g.floor.number === 0 || g.floor.number === -1);
+  const P = CM.Game.prototype;
+  // rain on a torch
+  const burn0 = P.burn;
+  P.burn = function (...a) {
+    const g = this, fl = g.floor;
+    if (fl && fl.number === -1 && CM.snowDepth && CM.snowDepth(g) >= WX.snowFrom) g.clock = (g.clock || 0) + 1;   // (snow underfoot: the step takes two minutes)
+    if (g.gutter > 0) { g.gutter -= 1; if (g.gutter === 0) g.say("The torch is lit again, a hand cupped round it."); return; }   // (out: it doesn't burn while out)
+    const out = burn0.apply(this, a);
+    if (outside(g) && fl.number === -1 && CM.isNight(g) && CM.weather(g) === "rain" && g.light && g.light.kind === "torch" && !g.lightOut) {
+      g.light.left -= 1;                                                   // (the rain on it: twice the burn)
+      if (CM.hashSeed(`${g.seed}:gust:${g.clock}`) % WX.gustEvery === 0) { g.gutter = WX.gutterSteps; g.say("A gust and the rain put the torch out. It takes a few steps to light it again."); g.emit && g.emit("change"); }
+    }
+    return out;
+  };
+  const lf0 = P.lightFactor; P.lightFactor = function (...a) { if (this.gutter > 0) return this.floor && this.floor.number === -1 ? 0.3 : 0.22; return lf0.apply(this, a); };
+  const hl0 = P.hasLight; P.hasLight = function (...a) { if (this.gutter > 0 && !(this.spellLight > 0)) return false; return hl0.apply(this, a); };
+  // mist: the party sees less far
+  const look0 = P.look;
+  P.look = function (...a) {
+    const fl = this.floor; if (!fl || !outside(this) || CM.weather(this) !== "mist") return look0.apply(this, a);
+    const had = new Set(fl.seen.map(([x, y]) => `${x},${y}`)), out = look0.apply(this, a), [px, py] = fl.pos;
+    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= WX.mistSight);   // (what the mist hid stays unseen)
+    return out;
+  };
+  // snow: the walk is heavier in the Wood
+  const wp0 = P.walkPace; P.walkPace = function (...a) { const p = wp0.apply(this, a); return this.floor && this.floor.number === -1 && CM.snowDepth && CM.snowDepth(this) >= WX.snowFrom ? p * 1.5 : p; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -38560,14 +38606,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
 { const day = (game) => (CM.dayOf ? Math.max(0, CM.dayOf(game)) : 0);
   CM.seasonTurn = (game) => (CM.seasonOff ? 1 : Math.min(1, 0.35 + 0.2 * day(game)));   // (by the day: a third turned at the start, all by the fourth)
   CM.leafFall = (game) => (CM.seasonOff || CM.season(game) !== "autumn" ? 0 : Math.min(1, Math.round((day(game) + 1) * 10 / 6) / 10));
-  CM.snowDepth = (game) => {
-    if (CM.season(game) !== "winter" || !game || game.seed === undefined) return 0;
-    if (CM.seasonOff) return CM.snowLying(game) ? 1 : 0;
-    const d = day(game), of = (n) => CM.weatherOf(game.seed, n, "winter") === "snow", frac = ((CM.minuteOf ? CM.minuteOf(game) : 720) % 1440) / 1440;
-    let depth = 0; for (let n = Math.max(0, d - 5); n < d; n++) depth = Math.min(1, Math.max(0, depth + (of(n) ? 0.45 : -0.22)));
-    depth = Math.min(1, Math.max(0, depth + (CM.weather(game) === "snow" ? 0.45 : -0.22) * frac));
-    return Math.round(depth * 20) / 20;
-  };
+  // (CM.snowDepth: in the rules since v27.0 - 69v-weather.js - for the snow slows the Wood)
   // the leaves down: more of them each day of autumn, on the open ground of the town and the land
   const sc0 = CM.scatter;
   CM.scatter = function (fl, seed, density, ctx = {}) {
