@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Soft corners (v30.3, UPGRADE_PLAN_25.md phase 3)
+  (40-render.js (the floor's map as a texture; the shading's soft corners))
+  - Ambient occlusion: the floor's walls go to the shader as a small map, and the floor (and the ceiling, below) darken
+    softly near them - most in the corners - while the walls darken at their foot and, under a ceiling, at their head.
+  - Rooms read as solid stone rather than flat paint; in the town the cobbles shade along the house fronts.
+
 The sky (v30.2, UPGRADE_PLAN_25.md phase 2)
   (src/js/76zzzzzc-sky.js; 40-render.js (the sky dome's clouds, stars and aurora; cloud shadows; the flash))
   - Clouds drift with the wind, as many as the weather brings (a few on a clear day, a deck in the rain), and their
