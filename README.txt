@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Market days (v36.0, UPGRADE_PLAN_31.md phase 0)
+  (src/js/69zr-market.js; 76zzzzzzj-market.js (the stalls in the Square, the side panel's line))
+  - Traders from away come to the Square, each on a fixed day of the run's week: Hrodna of the Deep Halls (fine arms
+    and armour), Saffi from the East (rare herbs, rare seeds and spice), old Mott the tinker (wands, lamps, rings and
+    amulets) - and on the seventh day, market day, all three and a bookseller with tomes, under striped awnings.
+  - Their stock is the week's, dearer than the town's own, and bought through the shop as the peddler's is; the side
+    panel says who is in the Square today.
+
 The kennel and the stable (v35.4, UPGRADE_PLAN_30.md phase 4)
   (src/js/69zq-kennel.js; 76zzzzzzi-kennel.js (the kennel drawn, the animals in it, its window))
   - In town, in the corner south-east of the Keep-yard: a kennel and a stable, and the party's hound and pony in it
