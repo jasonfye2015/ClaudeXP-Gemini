@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Band landmarks (v40.0, UPGRADE_PLAN_35.md phase 0)
+  (src/js/69zzg-landmarks.js, src/js/76zzzzzzzb-landmarks.js)
+  - On the third floor of each band, the largest plain room is the band's landmark, told once when the party first
+    steps in: the Candle Crypt, the Flooded Nave, the Forge-Hall, the Empty Throne, the Bell Square, the Fairy Ring,
+    the Crystal Hall, the Great Crucible, the Skull Wall and the Heart-Root.
+  - Each is drawn with a centrepiece and its own light: an altar banked with candles, a drowned saint in black water,
+    a hammer working an anvil by itself, a throne between banners, a bell swinging in its frame, a great glowing cap
+    in a ring, crystals lit from inside, a crucible pouring iron, a heap of skulls, a red root that beats.
+
 Elite looks (v39.4, UPGRADE_PLAN_34.md phase 4)
   (src/js/76zzzzzzza-elites.js)
   - Champions, guardians and the Lich King stand in a ring of light on the floor, in the colour of what they are (a

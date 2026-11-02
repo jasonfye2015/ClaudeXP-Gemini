@@ -5822,6 +5822,17 @@ test("boss phases: every guardian without a second form, and the Lich King, chan
   const q = { name: "The Drowned Queen", kind: "Drowned", guardian: "queen", hp: 100, max: 300, atk: 20, df: 3 }; g.foes = [q]; g.combat.foes = g.foes; g.afterBlows(); assert.ok(g.foes.length === 3 && g.foes.slice(1).every((m) => m.summoned), "her court");
 });
 
+test("band landmarks: the third floor of each band names its largest plain room as the band's set-piece, said once on stepping in; other floors have none", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("landmark-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.ok(CM.isLandmarkFloor(3) && CM.isLandmarkFloor(48) && !CM.isLandmarkFloor(4) && !CM.isLandmarkFloor(53));
+  let found = 0; for (const n of [3, 8, 13, 18, 23, 28, 33, 38, 43, 48]) { const fl = CM.makeFloor(n, "landmark-1"); if (!fl.landmark) continue; found++; const M = fl.landmark;
+    assert.strictEqual(M.band, CM.themeIndex(n)); assert.ok(CM.inLandmark(fl, M.at[0], M.at[1]) && fl.grid[M.at[1]][M.at[0]] === 0 && !fl.things[`${M.at[0]},${M.at[1]}`]);
+    assert.deepStrictEqual(JSON.stringify(CM.makeFloor(n, "landmark-1").landmark), JSON.stringify(M), "the same each time"); }
+  assert.ok(found >= 9, `landmarks on ${found} of ten`); assert.ok(!CM.makeFloor(4, "landmark-1").landmark);
+  g.enterFloor(3, "down"); const fl = g.floor; if (!fl.landmark) return; const said = []; const s0 = g.say; g.say = function (t, ...a) { said.push(t); return s0.call(this, t, ...a); };
+  delete g.ext("landmarks")[3]; fl.pos = fl.landmark.at.slice(); g.look(); g.look(); assert.strictEqual(said.filter((t) => t === CM.LANDMARKS[0].enter).length, 1, "said once");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
