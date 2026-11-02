@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Camera feel (v31.1, UPGRADE_PLAN_26.md phase 1)
+  (src/js/76zzzzzj-camera.js (and CM.addSetting, a Settings row for the window files); 40-render.js (renderer.camOff))
+  - Settings > Camera motion: Gentle (the default), Full or Off. The walk bobs and sways from foot to foot, the view
+    leans into a turn, a blow of a quarter of a hero's health or more makes it stumble, and a guardian's, a boss's or a
+    giant's arrival shakes it. Off is a steady camera (no bob at all); Reduce motion is always Off.
+
 A hand and a torch (v31.0, UPGRADE_PLAN_26.md phase 0)
   (src/js/76zzzzzi-hand.js (its own canvas over the view, under the HUD))
   - The front hero's hand at the foot of the view holds the torch or the lantern up: it sways with the walk and lags
