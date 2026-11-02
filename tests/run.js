@@ -5606,10 +5606,11 @@ test("scars and stories: a hero brought to a tenth of their health in a fight th
   const CM = load(), g = new CM.Game(); g.newGame("scar-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
   const h = g.party[0], m = { name: "Orc", kind: "Orc", hp: 0, max: 30, atk: 9, df: 0 }, before = JSON.stringify(h.stats);
   g.foes = [m]; g.mode = "combat"; g.combat = { foes: g.foes, round: 1, order: [], index: 0 }; h.hp = h.max; g.hurt(h, h.max - 1, m, {}); assert.ok(h.nearDeath);
-  g.wonFight(); assert.strictEqual((h.scars || []).length, 1); assert.strictEqual(h.scars[0].by, "Orc"); assert.strictEqual(h.scars[0].floor, 3); assert.notStrictEqual(JSON.stringify(h.stats), before, "a trait");
+  g.wonFight(); assert.strictEqual((h.marks || []).length, 1); assert.strictEqual(h.marks[0].by, "Orc"); assert.strictEqual(h.marks[0].floor, 3); assert.notStrictEqual(JSON.stringify(h.stats), before, "a trait");
   for (let i = 0; i < 4; i++) { h.hp = h.max; g.foes = [Object.assign({}, m)]; g.mode = "combat"; g.hurt(h, h.max - 1, m, {}); g.wonFight(); }
-  assert.strictEqual(h.scars.length, 3, "three at most"); assert.ok(g.achievements.scarred);
-  const k = g.party[1]; k.hp = k.max; g.mode = "combat"; g.hurt(k, k.max - 1, m, {}); g.setMode("explore"); assert.ok(!k.nearDeath && !(k.scars || []).length, "fled: no scar");
+  assert.strictEqual(h.marks.length, 3, "three at most"); assert.ok(g.achievements.scarred);
+  const k = g.party[1]; k.hp = k.max; g.mode = "combat"; g.hurt(k, k.max - 1, m, {}); g.setMode("explore"); assert.ok(!k.nearDeath && !(k.marks || []).length, "fled: no scar");
+  const old = { name: "Old", cls: "Knight", scars: ["limp", { where: "across the brow", by: "Orc", floor: 3, trait: "grim" }] }; CM.splitMarks(old); assert.strictEqual(JSON.stringify(old.scars), '["limp"]', "the camp's scars as they were"); assert.strictEqual(old.marks.length, 1, "a near-death's scar in its own list");
 });
 
 test("letters home: a trip down is kept, and coming up into the town every hero standing writes a letter - where they went, a guardian, a find, a scar, a friend - kept in the village", () => {

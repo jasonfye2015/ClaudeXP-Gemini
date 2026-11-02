@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Scars kept apart (v37.5, UPGRADE_PLAN_29.md (a fix to phase 2))
+  (src/js/69zj-scars.js, 76zzzzzzd-scars.js)
+  - The game already had scars - the trait left by a third healed wound at the camp, kept as a list of names the temple's
+    vigil reads. v34.2's near-death scars had been put in the same list, which could break the vigil and the sheet; they
+    keep their own list now (a hero from those versions is sorted out when the run is loaded), and the sheet's Scars
+    shows both kinds.
+
 Secret floors (v37.4, UPGRADE_PLAN_32.md phase 4)
   (src/js/69zza-vaults.js; 76zzzzzzs-vaults.js (the stair, the keeper ghost, the vault named))
   - About one floor in nine from the fourth hides a stair under a flagstone in a quiet corner, found by searching the
