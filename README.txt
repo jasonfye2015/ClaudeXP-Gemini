@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Puzzle rooms (v37.1, UPGRADE_PLAN_32.md phase 1)
+  (src/js/69zx-puzzles.js; 76zzzzzzp-puzzles.js (the altar, statues, shaft, mirrors, plate and the beam drawn))
+  - About one floor in five from the second holds a puzzle made fresh for it (always solvable). The statues: an altar
+    and three stone figures about it, each turned a quarter at a time with Space (a worn arrow on the floor shows where
+    each looks); when all three face the altar a chest rises beside it. The sunbeam: daylight down a crack in the roof,
+    two mirrors on pins (Space tilts one the other way) and a sun-plate; the beam is drawn along the floor as it goes,
+    and when it falls on the plate a chest rises there - better than the floor's own.
+
 Floor moods (v37.0, UPGRADE_PLAN_32.md phase 0)
   (src/js/69zw-moods.js; 76zzzzzzo-moods.js (each mood's look); tests/run.js (the nodes test knows an overgrown floor grows two more))
   - About one floor in seven from the third down (by the run's seed; never a guardian's, a camp's or a special floor)
