@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Smoke and chimneys (v30.5, UPGRADE_PLAN_25.md phase 5)
+  (src/js/76zzzzze-smoke.js (the air's motes: torch and fire smoke))
+  - The wall torches' smoke rises and, under a ceiling, gathers and runs along it; braziers, the camp's fire and fire
+    on the floor send up a thicker plume that the wind takes outdoors.
+  - The town's chimneys smoke more at supper-time, on top of the night and the cold months.
+
 Heat and cold (v30.4, UPGRADE_PLAN_25.md phase 4)
   (src/js/76zzzzzd-heatcold.js; 40-render.js (the screen pass made general: heat and breath; glints))
   - The air shimmers above braziers, the forge, fire on the floor and (a little) the wall lamps, and all through the
