@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v31.9 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v32.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "31.9", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "32.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28540,6 +28540,71 @@ Object.assign(CM.Game.prototype, {
     if (this.petName("pony") && from === 0 && CM.isDeep(number)) this.say(`${this.petName("pony")} is left tethered at the shaft's head, with a nosebag.`); return out; };
 }
 
+// ---- 69y-ext.js ----
+"use strict";
+// The run's own extra keeping (v32.0): the later updates' run-long state - what a run has done that the rules want to
+// remember until it ends - kept in the tally, which is saved with the run and made new with each one. game.ext()
+// returns it (an object), game.ext(name) the named part of it (made empty the first time).
+Object.assign(CM.Game.prototype, {
+  ext(name) { this.tally = this.tally || (this.freshTally ? this.freshTally() : {}); const E = this.tally.ext = this.tally.ext || {}; if (!name) return E; return (E[name] = E[name] || {}); },
+  vext(name) { this.village = this.village || {}; const E = this.village.ext = this.village.ext || {}; return (E[name] = E[name] || {}); },   // (the village's: kept between runs)
+});
+
+// ---- 69z-cooking2.js ----
+"use strict";
+// Cooking, wider (v32.0, UPGRADE_PLAN_27.md): the South Fields' crops and the deep's edible finds into fifteen new
+// dishes; a feast at a camp's fire or the home's table - two or three different dishes eaten together, all their good
+// at once for as long as the shortest of them lasts; and a recipe book kept in the village (every dish made, ever).
+//   game.layFeast(rows)  -> "" or why not;  game.recipesKnown() -> {id: true};  CM.FEAST_MOST
+{ const NEW = {
+    potatohash: { name: "Potato Hash", needs: ["potato", "onion"], floors: 2, effect: { df: 1 }, what: "+1 defence" },
+    leeksoup: { name: "Leek and Potato Soup", needs: ["potato", "leek"], floors: 2, effect: { regen: 1, resist: "sleep" }, what: "mends 1 a round, and sleep finds no purchase" },
+    carrotcake: { name: "Carrot Cake", needs: ["flour", "carrot", "egg"], floors: 2, effect: { morale: 6, stat: "dex" }, what: "the heart lifts, and +1 Grace" },
+    tomatostew: { name: "Tomato Stew", needs: ["tomato", "beans", "garlic"], floors: 2, effect: { atk: 1, df: 1 }, what: "+1 attack and +1 defence" },
+    pumpkin: { name: "Stuffed Pumpkin", needs: ["pumpkin", "meat", "onion"], floors: 3, effect: { atk: 1, df: 1, regen: 1 }, what: "+1 attack, +1 defence and mending, three floors" },
+    cornbread: { name: "Corn Bread", needs: ["corn", "egg"], floors: 2, effect: { df: 1, torch: true }, what: "+1 defence, and the torch burns slower" },
+    chili: { name: "Chili Pot", needs: ["chili", "beans", "meat"], floors: 2, effect: { atk: 2, morale: 4 }, what: "+2 attack, and the heart lifts" },
+    garlicbroth: { name: "Garlic Broth", needs: ["garlic", "celery"], floors: 2, effect: { resist: "poison", regen: 1 }, what: "poison finds no purchase, and mending" },
+    strawberries: { name: "Strawberries and Cream", needs: ["strawberry", "milk"], floors: 1, effect: { morale: 8, luck: 1 }, what: "the heart high, and +1 Luck" },
+    grapemust: { name: "Grape Must", needs: ["grapes", "honey"], floors: 1, effect: { morale: 4, stat: "wis" }, what: "the heart lifts, and +1 Faith" },
+    saltcrisps: { name: "Salt-weed Crisps", needs: ["saltweed", "potato"], floors: 2, effect: { hit: 0.05, torch: true }, what: "blows land a twentieth more, and the torch burns slower" },
+    sporepie: { name: "Spore-cap Pie", needs: ["sporecap", "flour", "egg"], floors: 2, effect: { resist: "poison", df: 1 }, what: "poison finds no purchase, and +1 defence" },
+    sapham: { name: "Sap-glazed Ham", needs: ["rootsap", "meat"], floors: 3, effect: { regen: 2, atk: 1 }, what: "mends 2 a round, and +1 attack, three floors" },
+    ghostsoup: { name: "Ghost-cap Soup", needs: ["ghostcap", "cabbage"], floors: 2, effect: { stat: "int", resist: "sleep" }, what: "+1 Wit, and sleep finds no purchase" },
+    harvestpie: { name: "Harvest Pie", needs: ["pumpkin", "flour", "egg", "apple"], floors: 3, effect: { morale: 10, luck: 1, df: 1 }, what: "the heart high, +1 Luck and +1 defence, three floors" },
+  };
+  for (const [id, D] of Object.entries(NEW)) { CM.DISHES[id] = D; CM.BASES[D.name] = { id: D.name, kind: "dish", slot: null, tier: D.floors, group: "stuff" }; }
+  CM.FEAST_MOST = 3;
+  // a feast's good: every dish's, together (numbers added, the first stat and the first resistance kept)
+  CM.feastEffect = (ids) => { const out = {}; for (const id of ids) { const e = (CM.DISHES[id] || {}).effect || {}; for (const [k, v] of Object.entries(e)) {
+      if (typeof v === "number") out[k] = (out[k] || 0) + v; else if (typeof v === "boolean") out[k] = out[k] || v; else if (out[k] === undefined) out[k] = v; } } return out; };
+  const meal0 = CM.mealOf; CM.mealOf = (game) => { const m = game && game.meal; if (m && m.feast) return CM.feastEffect(m.feast); return meal0(game); };
+  const G = CM.Game.prototype, cook0 = G.cookDish;
+  Object.assign(G, {
+    recipesKnown() { const v = this.vext("recipes"); return v; },
+    cookDish(id) { const out = cook0.call(this, id); if (!out) { const k = this.recipesKnown(); if (!k[id]) { k[id] = true; this.saveVillage && this.saveVillage(); } } return out; },
+    feastWhy(rows) { if (!(this.mode === "camp" || (this.inTown() && this.homeLevel && this.homeLevel() >= 3))) return "A feast is laid at a camp's fire or the home's table.";
+      if (!Array.isArray(rows) || rows.length < 2 || rows.length > CM.FEAST_MOST) return `A feast is two or three dishes.`;
+      const its = rows.map((r) => this.bag[r]); if (its.some((it) => !it || it.kind !== "dish" || !CM.DISHES[it.dish])) return "Only dishes go on the table.";
+      if (new Set(its.map((it) => it.dish)).size !== its.length) return "A feast is different dishes."; if (new Set(rows).size !== rows.length) return "Each dish once.";
+      return ""; },
+    layFeast(rows) {
+      const why = this.feastWhy(rows); if (why) return why; this.logAct && this.logAct("layFeast", rows);
+      const its = rows.map((r) => this.bag[r]), ids = its.map((it) => it.dish), cookLv = this.cookLevel();
+      const floors = Math.min(...its.map((it) => CM.DISHES[it.dish].floors + (it.by ? (this.party.find((h) => h.name === it.by && h.cook) || { cook: { level: 0 } }).cook.level : cookLv)));
+      for (const r of rows.slice().sort((a, b) => b - a)) this.bag.splice(r, 1);
+      const E = CM.feastEffect(ids), was = this.meal; this.fed = 0; this.cheer(6 + (E.morale || 0));
+      this.meal = { kind: ids[0], dish: true, feast: ids, floor: (this.floor ? this.floor.number : 0) + floors - 1 + (this.inTown() ? 1 : 0) };
+      for (const h of this.party) { h.mealLuck = E.luck || 0; h.mealStat = E.stat || null; CM.recompute(h); }
+      const fans = this.party.filter((h) => h.hp > 0 && ids.includes(CM.favouriteOf(h))); if (fans.length) this.cheer(2 * fans.length);
+      this.tally.feasts = (this.tally.feasts || 0) + 1; this.countUse && this.countUse("dish");
+      this.sound("heal"); this.say(`A feast: ${ids.map((id) => CM.DISHES[id].name.toLowerCase()).join(", ")}. All of it does its good together, for ${CM.plural(floors, "floor")}${was ? " (the last meal is forgotten)" : ""}.${fans.length ? ` ${fans.map((h) => h.name).join(" and ")} find${fans.length === 1 ? "s" : ""} a favourite on the table.` : ""}`);
+      this.saveRun(); this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.feast = { name: "A Groaning Table", what: "Lay a feast of three dishes", title: "the Generous" };
+  const lay0 = G.layFeast; G.layFeast = function (rows) { const out = lay0.call(this, rows); if (!out && rows.length === 3 && this.achieve) this.achieve("feast"); return out; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40276,6 +40341,51 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     const want = on && !roof ? [w === "rain" ? 1 : 0, w === "snow" ? 0.8 : 0, w === "mist" || (!r.sky && DAMP.has(th.name)) ? 1 : 0] : [0, 0, 0];
     for (let i = 0; i < 3; i++) cur[i] += (want[i] - cur[i]) * Math.min(1, dt * (want[i] > cur[i] ? 0.25 : 0.6));
     const S = r.screen || (r.screen = {}); S.lens = cur.map((v) => (v < 0.01 ? 0 : v)); };
+}
+
+// ---- 76zzzzzs-pages.js ----
+"use strict";
+// A page of the Journal for the later updates (v32.0): CM.journalPage(id, label, title, render) adds a board button
+// to the Journal's head and, when it is chosen, hands render(ui, box) the page to fill. Each page is its own; the
+// Journal's own pages are as they were.
+{ const pages = [];
+  CM.journalPage = (id, label, title, render) => pages.push({ id, label, title, render });
+  const oj0 = CM.UI.prototype.openJournal;
+  CM.UI.prototype.openJournal = function (...a) {
+    const j = this.$("#dlg-journal"), boards = j && j.querySelector(".boards");
+    if (boards) for (const P of pages) if (!boards.querySelector(`[data-page="${P.id}"]`)) { const b = document.createElement("button"); b.dataset.page = P.id; b.textContent = P.label; b.title = P.title || "";
+      boards.appendChild(b); b.addEventListener("click", () => { this.journalPage = P.id; this.openJournal(); }); }
+    const P = pages.find((p) => p.id === this.journalPage);
+    if (!P) { const out = oj0.apply(this, a); if (boards) for (const p of pages) { const b = boards.querySelector(`[data-page="${p.id}"]`); if (b) b.classList.remove("on"); } return out; }
+    if (!j.classList.contains("on")) this.openDialog("#dlg-journal");
+    for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.classList.toggle("on", b.dataset.page === P.id);
+    const box = this.$("#journal-list"); box.innerHTML = ""; try { P.render(this, box); } catch (er) { box.textContent = String(er); }
+  };
+}
+
+// ---- 76zzzzzt-cooking2.js ----
+"use strict";
+// Cooking, wider - the window's side (v32.0): the feast's table where the dishes are made (a camp's fire, the home's
+// kitchen) whenever the pack holds two different dishes; and the Journal's Recipes page - every dish, those made
+// named with what they need and do, the rest a blank with their first need for a hint. The rules: 69z-cooking2.js.
+{ const db0 = CM.UI.prototype.dishButtons;
+  CM.UI.prototype.dishButtons = function (into, run) {
+    const out = db0.call(this, into, run), g = this.game, rows = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "dish" && CM.DISHES[it.dish]);
+    const kinds = new Set(rows.map(([it]) => it.dish)), atTable = g.mode === "camp" || (g.inTown() && g.homeLevel && g.homeLevel() >= 3); if (kinds.size < 2 || !atTable) return out;
+    const box = document.createElement("div"); box.className = "feast"; box.innerHTML = `<div class="list-title">A feast</div><div class="small">Two or three different dishes eaten together: all their good at once, for as long as the shortest lasts.</div>`;
+    const seen = new Set(), picks = [];
+    for (const [it, i] of rows) { if (seen.has(it.dish)) continue; seen.add(it.dish); const l = document.createElement("label"); l.className = "small"; l.style.display = "block";
+      l.innerHTML = `<input type="checkbox" data-row="${i}"> ${this.esc(it.name)} - ${this.esc(CM.DISHES[it.dish].what)}`; box.appendChild(l); picks.push(l.querySelector("input")); }
+    const b = document.createElement("button"); b.textContent = "Lay the feast"; b.disabled = true; box.appendChild(b);
+    const sync = () => { const on = picks.filter((p) => p.checked); b.disabled = on.length < 2 || on.length > CM.FEAST_MOST; for (const p of picks) p.disabled = !p.checked && on.length >= CM.FEAST_MOST; };
+    for (const p of picks) p.addEventListener("change", sync);
+    b.addEventListener("click", () => run(() => g.layFeast(picks.filter((p) => p.checked).map((p) => Number(p.dataset.row)))));
+    into.appendChild(box); return out; };
+  CM.journalPage("recipes", "Recipes", "Every dish there is: those made, with what they need and do", (ui, box) => {
+    const g = ui.game, known = g.recipesKnown(), all = Object.keys(CM.DISHES), ids = all.filter((id) => known[id]).concat(all.filter((id) => !known[id])), n = ids.filter((id) => known[id]).length;
+    box.innerHTML = `<div class="list-title">The recipe book: ${n} of ${ids.length} made</div><p class="small">A dish is written in the first time it is made. Dishes are made at a camp's fire, the home's kitchen, or on the floor by a cook of the third level; two or three different ones eaten together at a camp or at home make a feast.</p>` +
+      ids.map((id) => { const D = CM.DISHES[id], can = CM.canCook(g.bag, id); return known[id] ? `<div class="entry"><b>${ui.esc(D.name)}</b>${can ? " <small>(the pack has it all)</small>" : ""}<br><small>${ui.esc(D.needs.map(CM.needName).join(", "))} - ${ui.esc(D.what)}, ${CM.plural(D.floors, "floor")}</small></div>`
+        : `<div class="entry"><b>?</b><br><small>${D.needs.length === 1 ? `one thing: ${ui.esc(CM.needName(D.needs[0]))}` : `${ui.esc(CM.needName(D.needs[0]))}, and ${["", "one", "two", "three"][D.needs.length - 1]} thing${D.needs.length > 2 ? "s" : ""} more`}${can ? " - the pack has what it needs" : ""}</small></div>`; }).join(""); });
 }
 
 // ---- 77-splash.js ----
