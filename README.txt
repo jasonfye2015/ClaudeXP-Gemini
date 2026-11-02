@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The daily challenge, scored (v33.3, UPGRADE_PLAN_28.md phase 3)
+  (src/js/69zg-daily.js; 76zzzzzza-daily.js (the day's party on the new party's screen; the days on the title screen))
+  - Today's dungeon keeps its seed and two mutators, and now sets the rest for everyone: the day's party (the classic
+    four, named and rolled by the date), the pauper's kit, Fair, no ascension and no again.
+  - Its end is scored (floors, the fallen, guardians, gold and chests, a crown or the bottom, less a little for steps),
+    and each day played is kept with its best score, deepest floor and tries, listed on the title screen. A score of
+    3,000 is a feat. This finishes plan 28 (set 8).
+
 New Game+ (v33.2, UPGRADE_PLAN_28.md phase 2)
   (src/js/69zf-again.js; 76zzzzzz-again.js (Again and Carry on the new party's screen))
   - When the Lich King falls, the way opens to set out again: the new party's screen has "Again" (up to the highest

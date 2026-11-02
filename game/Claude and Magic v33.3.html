@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v33.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v33.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "33.2", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "33.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28888,6 +28888,35 @@ Object.assign(CM.Game.prototype, {
   const em1 = G.emit; G.emit = function (ev, ...a) { if (ev === "crowned" && this.againLevel() > 0 && this.achieve) this.achieve("again"); return em1.call(this, ev, ...a); };
 }
 
+// ---- 69zg-daily.js ----
+"use strict";
+// The daily challenge, scored (v33.3, UPGRADE_PLAN_28.md): Today's dungeon keeps its seed and its two mutators, and now
+// sets the rest too, the same for everyone: the day's party (the classic four, named and rolled by the date, as the
+// week's challenge does), the pauper's kit, Fair, no ascension and no again. Its end is scored - floors, the fallen,
+// guardians, gold, a crown - and every day played is kept with its best score and how many tries, in the store
+// ("dailyBoard"), for the title screen's page of days.
+//   CM.dailyScore(entry) -> number;  game.dailyBoard() -> {date: {best, tries, floor, won}}
+{ CM.DAILY_RULES = "the day's party (the classic four, rolled by the date), the pauper's kit, Fair, no ascension and no again";
+  CM.dailyScore = (e) => { const t = e.tally || {}; return Math.max(0, Math.round((e.floor || 0) * 100 + (t.kills || 0) * 3 + (t.guardians || []).length * 250 + (e.gold || 0) / 10 + (t.chests || 0) * 5 + (e.won ? 2500 : 0) + (e.bottom ? 1500 : 0) - (t.steps || 0) / 40)); };
+  const G = CM.Game.prototype, isDaily = (seed) => String(seed || "").startsWith("daily-");
+  G.dailyBoard = function () { return CM.store.get("dailyBoard", {}) || {}; };
+  const ng0 = G.newGame; G.newGame = function (seed, chosen, kit, difficulty, mutators, mode, opts) {
+    if (isDaily(seed) && Array.isArray(chosen) && !(opts && opts.free)) { chosen = CM.weeklyParty(seed); kit = "pauper"; difficulty = "fair"; opts = Object.assign({}, opts || {}, { ascension: 0, again: 0 }); }
+    const out = ng0.call(this, seed, chosen, kit, difficulty, mutators, mode, opts);
+    if (isDaily(seed) && Array.isArray(chosen) && !(opts && opts.free)) this.say(`Today's rules, the same for everyone: ${CM.DAILY_RULES}. The run is scored when it ends.`);
+    return out; };
+  const end0 = G.endRun; G.endRun = function (won) {
+    const daily = isDaily(this.seed) && !this.film && !this.replaying, before = daily ? { floor: this.floor ? this.floor.number : 0, gold: this.gold, tally: this.tally, won: Boolean(won || this.crowned), bottom: Boolean(this.bottom) } : null;
+    const out = end0.call(this, won);
+    if (daily) { const score = CM.dailyScore(before), day = String(this.seed).slice(6), B = this.dailyBoard(), was = B[day] || { best: 0, tries: 0 };
+      B[day] = { best: Math.max(was.best, score), tries: was.tries + 1, floor: Math.max(was.floor || 0, before.floor), won: was.won || before.won, last: score };
+      const keys = Object.keys(B).sort(); while (keys.length > 120) delete B[keys.shift()]; CM.store.set("dailyBoard", B);
+      this.say(`Today's dungeon, scored: ${score.toLocaleString("en")}${score > was.best ? (was.tries ? " - the day's best yet" : "") : ` (the day's best: ${was.best.toLocaleString("en")})`}.`);
+      if (score >= 3000 && this.achieve) this.achieve("dailyscore"); }
+    return out; };
+  CM.ACHIEVEMENTS.dailyscore = { name: "Score of the Day", what: "Score 3,000 in Today's dungeon", title: "the Daily" };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40803,6 +40832,26 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     if (!L) return so0.apply(this, a);
     const g = this.game, ng = g.newGame; g.newGame = function (seed, chosen, kit, difficulty, mutators, mode, opts) { g.newGame = ng; return ng.call(this, seed, chosen, kit, difficulty, mutators, mode, Object.assign({}, opts || {}, { again: L, heirloom: heir ? Number(heir.value) || 0 : 0 })); };
     try { return so0.apply(this, a); } finally { g.newGame = ng; } };
+}
+
+// ---- 76zzzzzza-daily.js ----
+"use strict";
+// The daily challenge, scored - the window's side (v33.3): Today's dungeon on the new party's screen shows the day's
+// party, as the week's does, and says the day's rules; the title screen gains a page of the days played - each day's
+// best score, its deepest floor and how many tries. Rules: 69zg-daily.js.
+{ const oc0 = CM.UI.prototype.openCreate;
+  CM.UI.prototype.openCreate = function (...a) { const seed = this.$("#seed").value, daily = String(seed).startsWith("daily-");
+    if (daily) this.slots = CM.weeklyParty(seed); const out = oc0.apply(this, a);
+    if (daily) { this.slots = CM.weeklyParty(seed); this.renderCreate && this.renderCreate(); const n = this.$("#create-note"); if (n) n.textContent += ` Today's rules: ${CM.DAILY_RULES}.`;
+      for (const id of ["#kit", "#difficulty", "#ascension", "#again"]) { const el = this.$(id); if (el) el.disabled = true; } }
+    else for (const id of ["#kit", "#difficulty", "#ascension"]) { const el = this.$(id); if (el) el.disabled = false; }
+    return out; };
+  const rt0 = CM.UI.prototype.refreshTitle;
+  CM.UI.prototype.refreshTitle = function (...a) { const out = rt0.apply(this, a), g = this.game, ach = this.$("#achievements"); if (!ach || !g.dailyBoard) return out;
+    let box = this.$("#daily-board"); if (!box) { box = document.createElement("div"); box.id = "daily-board"; ach.before(box); }
+    const B = g.dailyBoard(), days = Object.keys(B).sort().reverse().slice(0, 10), today = CM.dailySeed().slice(6);
+    box.innerHTML = days.length ? `<div class="list-title">Today's dungeon, day by day</div><table class="small" style="width:100%">${days.map((d) => `<tr${d === today ? ' style="color:#F0D080"' : ""}><td>${d}${d === today ? " (today)" : ""}</td><td>best <b>${B[d].best.toLocaleString("en")}</b></td><td>floor ${B[d].floor}${B[d].won ? ", crowned" : ""}</td><td>${B[d].tries} ${B[d].tries === 1 ? "try" : "tries"}</td></tr>`).join("")}</table>` : "";
+    return out; };
 }
 
 // ---- 77-splash.js ----
