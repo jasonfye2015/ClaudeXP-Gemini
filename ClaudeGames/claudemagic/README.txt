@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Spell shapes (v39.2, UPGRADE_PLAN_34.md phase 2)
+  (src/js/76zzzzzzy-spellshapes.js)
+  - Where a spell lands it leaves its school's mark, over its flight and flash: fire swirls up in a coil and leaves
+    embers drifting; frost grows crystals in the air that hang and shatter; lightning branches from one foe to the
+    next; holy light falls in rays from above; force rings out; the dark arts curl in smoke; growing things sprout.
+
 Hit reactions (v39.1, UPGRADE_PLAN_34.md phase 1)
   (src/js/76zzzzzzx-hitreact.js)
   - A struck monster flinches away from the blow; a weak spot staggers it further back and tips it.
