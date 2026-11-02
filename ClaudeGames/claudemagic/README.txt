@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The deeper, the older (v30.7, UPGRADE_PLAN_25.md phase 7)
+  (src/js/76zzzzzg-age.js; 40-render.js (cracks, roots, fungus and veins on the walls))
+  - The first floors are clean dressed stone; cracks come in from the sixth floor; roots hang from the ceiling from
+    the eighth, thickest about the twentieth; fungus that glows grows low on the walls from the eighteenth.
+  - From the thirtieth the stone is strange, veined in colours that shift as the eye moves. Endless goes on ageing.
+
 Grass that moves aside (v30.6, UPGRADE_PLAN_25.md phase 6)
   (40-render.js (the vertex shader: what grows bends away from the party))
   - What grows tall - grass, reeds, crops, ferns, flowers - bends away from where the party stands, more the closer
