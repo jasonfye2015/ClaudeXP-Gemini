@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Music that follows (v28.1, UPGRADE_PLAN_23.md phase 1)
+  (src/js/76zzzzr-musicmood.js)
+  - Below ground, as monsters awake come within seven squares, a layer of tension rises in the depth's tune - a low
+    pulse on the chord's root, brighter the nearer they are, a heartbeat under it, and close by a sharp note a half
+    step off - and it falls away as they are left behind. In a fight the tune's own danger takes over, as before.
+  - In safe places - the town by day, a house's room, a camp - the tune drops to its quiet self: softer, and three
+    notes in four of its melody left out, the pad carrying it.
+
 Sound in its place (the ninety-fourth big update - v28.0, UPGRADE_PLAN_23.md phase 0)
   (src/js/76zzzzq-sound3d.js)
   - Monsters are heard from where they are: now and then the nearest one awake within nine squares calls - from the
