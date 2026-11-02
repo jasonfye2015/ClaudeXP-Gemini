@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Tooltips that compare (v25.2, UPGRADE_PLAN_20.md phase 2)
+  (src/js/69u-compare.js, 76zzzzl-tips.js; style.css)
+  - Hovering a thing anywhere it is listed - the pack, a shop, a chest, the belt, the stash - brings up a tooltip of
+    its own: the name in its rarity's colour, what it is and where it was found.
+  - For gear, the hero it suits best and every number that would move if they wore it in place of what they wear -
+    attack, the weapon's blow, armour, health, magic, the six stats, to hit, crits, blocking and the gear score - green
+    for up, red for down; and a line for the rest of the party. What one can't wear says why; the unknown, that it is.
+  - It is worked out by trying the thing on and taking it off again: nothing about the hero changes.
+
 A living minimap (v25.1, UPGRADE_PLAN_20.md phase 1)
   (src/js/76zzzzk-livemap.js; 70-ui.js, style.css)
   - The side map moves with the place: monsters within seven squares pulse red; the portals glow in their own

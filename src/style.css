@@ -1483,3 +1483,12 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 #side .mapzoom { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 2; }
 #side .mapzoom button { width: 22px; height: 22px; padding: 0; font: bold 14px var(--serif); line-height: 20px; opacity: 0.75; }
 #side .mapzoom button:hover { opacity: 1; }
+
+/* (v25.2) tooltips that compare */
+.itemtip { position: fixed; z-index: 50; max-width: 340px; padding: 8px 10px; background: rgba(20,14,8,0.97); border: 1px solid var(--gold); border-radius: 5px; box-shadow: 0 6px 24px rgba(0,0,0,0.6); font: 12px var(--serif); color: var(--ink); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; }
+.itemtip.on { opacity: 1; transform: none; }
+.itemtip .tt-name { font-weight: bold; font-size: 14px; } .itemtip .tt-what { color: #CFC3A0; margin: 2px 0 4px; } .itemtip .tt-found { color: #8F8670; font-style: italic; font-size: 11px; }
+.itemtip .tt-head { margin-top: 6px; color: var(--gold); font-weight: bold; } .itemtip .tt-why { margin-top: 6px; color: #E08070; } .itemtip .tt-same { color: #A09880; font-style: italic; }
+.itemtip table.tt-rows { border-collapse: collapse; margin-top: 2px; } .itemtip .tt-rows td { padding: 1px 6px 1px 0; } .itemtip .tt-rows td:first-child { color: #CFC3A0; }
+.itemtip .up { color: #7CDA6A; } .itemtip .down { color: #F07060; } .itemtip i { font-style: normal; opacity: 0.8; }
+.itemtip .tt-others { margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(232,200,112,0.25); color: #CFC3A0; font-size: 11px; }

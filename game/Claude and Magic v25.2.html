@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v25.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v25.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1496,6 +1496,15 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 #side .mapzoom { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 2; }
 #side .mapzoom button { width: 22px; height: 22px; padding: 0; font: bold 14px var(--serif); line-height: 20px; opacity: 0.75; }
 #side .mapzoom button:hover { opacity: 1; }
+
+/* (v25.2) tooltips that compare */
+.itemtip { position: fixed; z-index: 50; max-width: 340px; padding: 8px 10px; background: rgba(20,14,8,0.97); border: 1px solid var(--gold); border-radius: 5px; box-shadow: 0 6px 24px rgba(0,0,0,0.6); font: 12px var(--serif); color: var(--ink); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity 0.12s, transform 0.12s; }
+.itemtip.on { opacity: 1; transform: none; }
+.itemtip .tt-name { font-weight: bold; font-size: 14px; } .itemtip .tt-what { color: #CFC3A0; margin: 2px 0 4px; } .itemtip .tt-found { color: #8F8670; font-style: italic; font-size: 11px; }
+.itemtip .tt-head { margin-top: 6px; color: var(--gold); font-weight: bold; } .itemtip .tt-why { margin-top: 6px; color: #E08070; } .itemtip .tt-same { color: #A09880; font-style: italic; }
+.itemtip table.tt-rows { border-collapse: collapse; margin-top: 2px; } .itemtip .tt-rows td { padding: 1px 6px 1px 0; } .itemtip .tt-rows td:first-child { color: #CFC3A0; }
+.itemtip .up { color: #7CDA6A; } .itemtip .down { color: #F07060; } .itemtip i { font-style: normal; opacity: 0.8; }
+.itemtip .tt-others { margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(232,200,112,0.25); color: #CFC3A0; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -1505,7 +1514,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "25.1", built: "2026-11-01" };
+const CM = window.CM = { version: "25.2", built: "2026-11-01" };
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28066,6 +28075,38 @@ Object.assign(CM.Game.prototype, {
   { const st0 = CM.Autopilot.prototype.step; CM.Autopilot.prototype.step = function (...a) { const g = this.game; if (g && g.floor && g.floor.special === "interior" && g.mode === "explore") { g.intLeave(); return "out of the room"; } return st0.apply(this, a); }; }
 }
 
+// ---- 69u-compare.js ----
+"use strict";
+// Gear compared (v25.2, UPGRADE_PLAN_20.md): what a hero's numbers would be wearing a thing in place of what they wear
+// now - worked out by trying it on (and taking it off again: nothing about the hero changes, health and magic
+// included). CM.gearCompare(game, h, item) -> { rows: [[label, before, after, kind]], gain, why } with only the numbers
+// that move; CM.gearBest(game, item) -> the hero it suits best and how each of the party would take it. The window's
+// tooltip shows them (76zzzzl-tips.js).
+{ const GEAR = ["weapon", "armor", "shield", "helm", "ring", "amulet", "trinket", "boots", "cloak"], ARMOUR = ["armor", "offhand", "helm", "boots", "cloak"];
+  const slotOf = (it) => it.slot || (it.kind === "shield" ? "offhand" : it.kind);
+  const sheet = (g, h) => { const w = h.weapon || {}, s = {}; for (const st of CM.STATS) s[st] = CM.heroStat(h, st);
+    return { atk: h.atk, blow: (w.power || 0) + CM.gearProp(h, "power1"), armour: ARMOUR.reduce((a, k) => a + ((h[k] && !h[k].unknown && h[k].power) || 0), 0), hp: h.max, mp: h.maxmp || 0,
+      hit: Math.round(g.hitChance(h) * 100), crit: Math.round(g.critChance(h) * 100), block: Math.round(CM.blockChance(h.offhand) * 100), score: CM.itemScore ? CM.gearScore(h) : 0, ...s }; };
+  const LABELS = [["atk", "Attack"], ["blow", "Weapon"], ["armour", "Armour"], ["hp", "Health"], ["mp", "Magic"], ["str", "Str"], ["dex", "Dex"], ["con", "Con"], ["int", "Int"], ["wis", "Wis"], ["luck", "Luck"],
+    ["hit", "To hit %"], ["crit", "Crit %"], ["block", "Block %"], ["score", "Gear score"]];
+  CM.gearCompare = (g, h, item) => {
+    if (!item || !GEAR.includes(item.kind) || !h) return null;
+    const why = CM.cantWear(h, item); if (why) return { rows: [], gain: null, why };
+    if (item.unknown) return { rows: [], gain: null, why: "Unknown: what it does is only known once it is worn or read" };
+    const slot = slotOf(item), old = h[slot], off = h.offhand, two = slot === "weapon" && item.props && item.props.twohanded && off, hp = h.hp, mp = h.mp, before = sheet(g, h);
+    try { h[slot] = item; if (two) h.offhand = null; CM.recompute(h); var after = sheet(g, h); }
+    finally { h[slot] = old; h.offhand = off; CM.recompute(h); h.hp = hp; h.mp = mp; }
+    const rows = LABELS.filter(([k]) => before[k] !== after[k]).map(([k, label]) => [label, before[k], after[k], k]);
+    return { rows, gain: after.score - before.score, was: old || null, two: Boolean(two), why: "" };
+  };
+  CM.gearBest = (g, item) => {
+    if (!item || !GEAR.includes(item.kind)) return null;
+    const each = g.party.map((h) => ({ h, c: CM.gearCompare(g, h, item) }));
+    const fit = each.filter((e) => e.c && e.c.gain !== null && e.h.hp > 0).sort((a, b) => b.c.gain - a.c.gain);
+    return { best: fit[0] || each.find((e) => e.c && !e.c.why) || each[0], each };
+  };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -38822,6 +38863,41 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       const tick = () => { if (this.screen === "play" && g.floor && !document.hidden && !g.towerRun) this.drawAutomap(c); setTimeout(tick, 120); }; setTimeout(tick, 120); }
     return rf0.apply(this, a);
   };
+}
+
+// ---- 76zzzzl-tips.js ----
+"use strict";
+// Tooltips that compare (v25.2, UPGRADE_PLAN_20.md): hovering a thing anywhere it is shown with its card - the pack, a
+// shop, a chest, the belt, the stash - brings up a tooltip of its own instead of the plain line: its name in its
+// rarity's colour, what it is, and for gear, the hero it suits best with every number that would move (green up,
+// red down; 69u-compare.js tries it on), and a line for each of the others. Things are known by their card's words
+// (CM.itemCard is noted as it is written), so every list that uses the card gets it without being changed.
+{ const seen = new Map(), MAX = 600;
+  const card0 = CM.itemCard;
+  CM.itemCard = function (item) { const s = card0.call(this, item); if (item && typeof item === "object") { seen.delete(s); seen.set(s, item); if (seen.size > MAX) seen.delete(seen.keys().next().value); } return s; };
+  const lookup = (text) => { if (!text) return null; if (seen.has(text)) return seen.get(text); for (const [k, it] of seen) if (text.startsWith(k)) return it; return null; };
+  let tip = null, host = null;
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const body = (item) => {
+    const g = CM.game, name = item.unknown ? CM.baseName(item) : item.name, r = item.unknown ? "unknown" : CM.rarityOf(item);
+    let h = `<div class="tt-name rarity-${r}">${esc(name)}</div><div class="tt-what">${esc(CM.itemLabel(item))}</div>`;
+    if (item.found && item.found.how && item.found.how !== "unknown") h += `<div class="tt-found">Found ${item.found.floor ? `on floor ${item.found.floor}, ` : ""}${esc(CM.HOW_FOUND[item.found.how] || item.found.how)}</div>`;
+    const B = g && g.party && CM.gearBest ? CM.gearBest(g, item) : null;
+    if (B && B.best) { const { h: hero, c } = B.best;
+      if (c && c.why) h += `<div class="tt-why">${esc(c.why)}</div>`;
+      else if (c) { h += `<div class="tt-head">On ${esc(hero.name)}${c.was ? ` (for ${esc(c.was.unknown ? CM.baseName(c.was) : c.was.name)})` : ""}${c.two ? ", and the shield off" : ""}</div>`;
+        h += c.rows.length ? `<table class="tt-rows">${c.rows.map(([label, a, b, k]) => { return `<tr><td>${esc(label)}</td><td>${a}</td><td>→</td><td class="${b > a ? "up" : "down"}">${b} <i>(${b > a ? "+" : ""}${b - a})</i></td></tr>`; }).join("")}</table>` : `<div class="tt-same">Nothing on the sheet moves.</div>`; }
+      const others = B.each.filter((e) => e !== B.best).map((e) => `${esc(e.h.name)} ${!e.c ? "-" : e.c.why ? "<span class='down'>can't</span>" : e.c.gain === null ? "?" : e.c.gain > 0 ? `<span class='up'>+${e.c.gain}</span>` : e.c.gain < 0 ? `<span class='down'>${e.c.gain}</span>` : "same"}`);
+      if (others.length) h += `<div class="tt-others">${others.join(" · ")}</div>`; }
+    return h;
+  };
+  const show = (el, item, e) => { if (!tip) { tip = document.createElement("div"); tip.className = "itemtip"; document.body.appendChild(tip); } tip.innerHTML = body(item); tip.classList.add("on"); place(e); host = el; if (el.title) { el.dataset.tipTitle = el.title; el.removeAttribute("title"); } };
+  const hide = () => { if (tip) tip.classList.remove("on"); if (host && host.dataset.tipTitle !== undefined) { host.title = host.dataset.tipTitle; delete host.dataset.tipTitle; } host = null; };
+  const place = (e) => { if (!tip) return; const w = tip.offsetWidth, hgt = tip.offsetHeight, x = Math.min(window.innerWidth - w - 8, e.clientX + 16), y = Math.min(window.innerHeight - hgt - 8, e.clientY + 14); tip.style.left = `${Math.max(8, x)}px`; tip.style.top = `${Math.max(8, y)}px`; };
+  document.addEventListener("mouseover", (e) => { const el = e.target.closest && e.target.closest("[title], [data-tip-title]"); if (!el) { if (host) hide(); return; } if (el === host) return; const item = lookup(el.title || el.dataset.tipTitle); if (item) show(el, item, e); else if (host) hide(); });
+  document.addEventListener("mousemove", (e) => { if (host) place(e); });
+  document.addEventListener("mouseout", (e) => { if (host && (!e.relatedTarget || !host.contains(e.relatedTarget))) hide(); });
+  document.addEventListener("mousedown", () => { if (host) hide(); });
 }
 
 // ---- 77-splash.js ----
