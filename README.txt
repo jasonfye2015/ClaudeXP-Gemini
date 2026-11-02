@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The sky (v30.2, UPGRADE_PLAN_25.md phase 2)
+  (src/js/76zzzzzc-sky.js; 40-render.js (the sky dome's clouds, stars and aurora; cloud shadows; the flash))
+  - Clouds drift with the wind, as many as the weather brings (a few on a clear day, a deck in the rain), and their
+    shadows cross the sunlit ground. Stars come out on clear nights and twinkle.
+  - On some clear winter nights an aurora hangs in the north; on some rainy evenings lightning whitens the land and
+    the thunder follows a moment later (no flash with Reduce motion). The moon's face already waxed and waned.
+
 Marks that stay (v30.1, UPGRADE_PLAN_25.md phase 1)
   (src/js/76zzzzzb-marks.js; 40-render.js (a flat mark turned by its spin, not snowed over))
   - Fire that lands leaves a scorch; a foe that falls leaves blood (or ash, bone dust, or glittering shards, by how
