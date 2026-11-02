@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Monsters that move (the ninety-fifth big update - v29.0, UPGRADE_PLAN_24.md phase 0)
+  (src/js/76zzzzu-animate.js; 40-render.js, 80-main.js)
+  - A monster's picture is drawn in strips that bend, so it moves as a body: at rest it sways a little from the hips;
+    on the move it bobs and its feet step; in a fight it draws itself down for the blow, stretches into the strike and
+    is crushed back by a hard one taken. (The packs have no frames to play: the motion is the game's own.)
+
 Footsteps by the ground (v28.3, UPGRADE_PLAN_23.md phase 3 - the sound plan done)
   (src/js/76zzzzt-footsteps.js; 80-main.js)
   - A step sounds like what is underfoot: a sharp click on the town's cobbles and flagstones, a soft brush through

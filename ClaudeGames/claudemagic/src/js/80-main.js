@@ -568,9 +568,10 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         const ghost = (CM.monsterKind(m.kind || m.name) || {}).body === "ghost", G = m.guardian ? CM.GUARDIANS[m.guardian] : null;
         const M = CM.motion({ now, phase: x * 2.1 + y * 1.3, sleeping: Boolean(thing.asleep), sway: Boolean(m.boss), reduced: CM.reducedMotion });   // (alive: it breathes; asleep, it lies)
+        const bend = thing.asleep || !CM.monsterBend ? null : CM.monsterBend(thing.anim ? "walk" : "idle", now, x * 2.1 + y * 1.3, M);   // (v29.0: 76zzzzu-animate.js)
         const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
         out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
-          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(side), flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(side), bend, flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
           lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }
@@ -633,7 +634,8 @@ window.addEventListener("DOMContentLoaded", () => {
         if (flash > 0) flashes.set(m, Math.max(0, flash - 0.08));
         const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
         const off = place.dx * right[0] + place.dz * right[1], away = M.back - M.forward;
-        out.push(Object.assign({}, place, { layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
+        const bend = m.hp > 0 && !m.fled && CM.monsterBend ? CM.monsterBend("fight", now, place.dx * 7 + i * 1.9, M) : null;   // (v29.0: the wind-up, the strike, the recoil)
+        out.push(Object.assign({}, place, { bend, layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
           dx: place.dx + fwdv[0] * away, dz: place.dz + fwdv[1] * away, tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(off) }));
       });
     }
