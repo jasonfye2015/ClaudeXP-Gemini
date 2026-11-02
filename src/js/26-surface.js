@@ -153,8 +153,9 @@ CM.MESH_STRIDE = 10;
 CM.SWAY = { tree: 0.07, plant: 0.06, tallgrass: 0.11, reeds: 0.12, tuft: 0.06, tuft_dry: 0.07, flowers: 0.05, shrub: 0.04, fern: 0.05 };
 CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts: { props (CM.scatter's), sub (where each prop sits in its layer) }
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
+  const only = opts.only || null, W = only === "windows";                  // (v26.1: a part alone - "props" (the traces), "windows" (the lit ones and the far lights))
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
-  const quad = (a, b, c, d, layer, shade, sway = 0) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };   // (sway, v24.0: how far its top gives to the wind)
+  const quad = W ? () => {} : (a, b, c, d, layer, shade, sway = 0) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };   // (sway, v24.0: how far its top gives to the wind)
   // a floor or ceiling square, turned a quarter-turn and mirrored by hash (no two neighbours alike), with a shade at
   // each corner: darker where the corner meets walls (ambient occlusion, baked)
   const UVS = [[[0, 1], [1, 1], [1, 0], [0, 0]], [[1, 1], [1, 0], [0, 0], [0, 1]], [[1, 0], [0, 0], [0, 1], [1, 1]], [[0, 0], [0, 1], [1, 1], [1, 0]]];
@@ -178,7 +179,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const tops = new Set(), trees = new Set(), covered = new Set();
   let ceilings = 0, walls = 0, roofs = 0, skirt = 0, ring = 0;
   const SIDES = [[0, -1, 1.0], [0, 1, 1.0], [1, 0, 0.84], [-1, 0, 0.84]];                  // north, south, east, west: the far wall lit a little more
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+  if (!only) for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
     if (grid[y][x] !== 0) {
       if (!sky) continue;                                                       // (below: rock is rock)
       const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind] || CM.SOLID.wall, key = `${x},${y}`;
@@ -226,8 +227,8 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     });
   }
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
-  if (sky) {                                                                             // the buildings: walled all round, and roofed
-    const poly = (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
+  if (sky && only !== "props") {                                                        // the buildings: walled all round, and roofed
+    const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
     const FACES = [[0, -1, 1.0], [0, 1, 0.96], [1, 0, 0.84], [-1, 0, 0.8]];        // a cell's north, south, east and west faces
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -289,6 +290,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       }
     }
     for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
+      if (tkind === "magetower" && W) continue;
       if (tkind === "magetower") { const [mx, my] = tk.split(",").map(Number); if (mx === CM.MAGE_TOWER.at[0] && my === CM.MAGE_TOWER.at[1]) { mageTower(mx, my); towers++; } continue; }
       if (tkind !== "tower") continue;
       const [tx, ty] = tk.split(",").map(Number), cx = tx + 0.5, cz = ty + 0.5, T = CM.TOWER, H = T.h, R = T.r, top = L("solid:townwall:top");
@@ -340,7 +342,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       chimneys++;
     }
   }
-  if (sky) {                                                                            // past the edge: a skirt of grass, and the far ring standing on it
+  if (sky && only !== "props") {                                                       // past the edge: a skirt of grass, and the far ring standing on it
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
     band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
@@ -353,9 +355,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
       ring += 4;
     }
-    if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
+    if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { if (W !== (glow === 2)) return; const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
   }
-  for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
+  if (!only) for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
     const was = opts.turn !== undefined && opts.turn < 1 && (CM.hashSeed(`${fl.number}:turn:${key}`) % 100) / 100 >= opts.turn && index[`tree:${v}:was`] !== undefined;   // (v24.2: not turned yet)
     const layer = L(was ? `tree:${v}:was` : `tree:${v}`);
@@ -363,7 +365,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }
   let decals = 0, overhead = 0;
-  if (!sky && opts.decals !== false) {                                                   // below: what is on the walls, and what hangs overhead, by band
+  if (!sky && opts.decals !== false && !only) {                                                   // below: what is on the walls, and what hangs overhead, by band
     const band = CM.themeIndex(fl.number >= 1 ? fl.number : 1), D = CM.WALL_DECALS[band] || [], O = CM.OVERHEAD[band];
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       if (grid[y][x] !== 0) continue;
@@ -401,7 +403,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   let props = 0;                                                                        // the props that lie or grow: flat, and crossed pairs
   const sub = opts.sub || {};
   const quadUV = (a, b, c, d, layer, shade, r, sway = 0) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };
-  for (const p of opts.props || []) {
+  for (const p of W ? [] : opts.props || []) {
     if (p.how === "stand") continue;
     if (p.how === "model") { if (CM.propModel && CM.propModel(p, (a, b, c, d, layer, shade, uvr) => quadUV(a, b, c, d, layer, shade, uvr || [0, 0, 1, 1]), index)) props++; continue; }   // (v24.5: built solid - 76zzzzh-models.js)
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
