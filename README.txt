@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Festivals, kept (v36.1, UPGRADE_PLAN_31.md phase 1)
+  (src/js/69zs-festgames.js; 76zzzzzzk-festival.js (the Square dressed, the jig, the games' window))
+  - In a festival's week the Square is dressed: strings of bunting across it and paper lanterns, lit and glowing from
+    dusk; a jig plays coming into town.
+  - "Festival games" among the town's actions: the tug and the stone (Strength), the butts (Dexterity) and the
+    riddle-tent (Intelligence), once each a festival - the best hero's stat and a throw against the mark. Each won pays
+    gold and a little renown; all three take the festival's favour (a charm of every stat), once a year.
+
 Market days (v36.0, UPGRADE_PLAN_31.md phase 0)
   (src/js/69zr-market.js; 76zzzzzzj-market.js (the stalls in the Square, the side panel's line))
   - Traders from away come to the Square, each on a fixed day of the run's week: Hrodna of the Deep Halls (fine arms
