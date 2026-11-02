@@ -29,7 +29,7 @@
       const p = it.props || {}, words = wordsOf(it), deep = this.deepestReached() > CM.LAST_FLOOR, add = [];
       for (const where of ["prefix", "suffix"]) { if (words.some((w) => whereOf(w) === where)) continue;
         const pool = Object.entries(tableFor(it, where)).filter(([, a]) => (!a.deep || deep) && (!a.weapon || it.kind === "weapon") && !(a.element && p.element));
-        const h = CM.hashSeed(`${this.seed}:tower:${it.name}:${where}:${p.towerTries || 0}`); for (let k = 0; k < 3 && pool.length; k++) { const [w] = pool.splice((h >> (k * 3)) % pool.length, 1)[0]; add.push([where, w]); } }
+        const h = CM.hashSeed(`${this.seed}:tower:${it.name}:${where}:${p.towerTries || 0}`); for (let k = 0; k < 3 && pool.length; k++) { const [w] = pool.splice((h >>> (k * 3)) % pool.length, 1)[0]; add.push([where, w]); } }
       return { add, raise: words.filter((w) => tierOf(it, w) < 3 && !p.cursed) }; },
     towerChance(row, how) { const it = this.bag[row]; if (!it) return 0; const p = it.props || {}, n = wordsOf(it).length;
       return Math.max(0.3, (how === "raise" ? 0.7 : 0.85) - 0.1 * n - 0.1 * (p.towerDone || 0)); },
