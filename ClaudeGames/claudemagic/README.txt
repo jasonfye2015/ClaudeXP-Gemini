@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Townsfolk with routines (v29.4, UPGRADE_PLAN_24.md phase 4)
+  (src/js/76zzzzy-townsfolk.js)
+  - The town's six residents keep hours: by day the smith at the forge's door, the merchant at the market, the priest
+    at the temple, the librarian at the library, the landlady and the farmer about the market, the well and the West
+    Gate; in the evening most of them make for the tavern; at night they are home, out of sight.
+  - When the hour moves them they walk there along the streets, bobbing as they go; in the rain they keep under the
+    eaves near where they'd be. They step out of the party's way. They are the picture's: the rules don't know them.
+
 The heroes' gear seen (v29.3, UPGRADE_PLAN_24.md phase 3)
   (src/js/76zzzzx-herogear.js; 70-ui.js, 73-play.js)
   - A hero's portrait - on the party's cards (and so the level-up card's), the sheet, the camp's and the end's lists -
