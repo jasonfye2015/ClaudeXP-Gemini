@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Status seen (v39.3, UPGRADE_PLAN_34.md phase 3)
+  (src/js/76zzzzzzz-statuses.js)
+  - In a fight, what ails a monster shows on it: bleeding or poisoned, green drips falling; asleep, Zs drifting up;
+    held, vines round its legs; blinded, a dark band and a groping sway; chilled, frost spikes about its feet; burning,
+    flames licking up; marked, a red sigil over it.
+
 Spell shapes (v39.2, UPGRADE_PLAN_34.md phase 2)
   (src/js/76zzzzzzy-spellshapes.js)
   - Where a spell lands it leaves its school's mark, over its flight and flash: fire swirls up in a coil and leaves
