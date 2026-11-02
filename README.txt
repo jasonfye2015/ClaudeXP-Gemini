@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Real 3-D props (v24.5, UPGRADE_PLAN_19.md phase 5)
+  (src/js/76zzzzh-models.js; 26-surface.js)
+  - Barrels, crates, carts, the market's stalls, fallen logs and stumps are built as small solid models in the floor's
+    mesh - boxes and many-sided cylinders - instead of pictures that turn to face the party: a barrel with its iron
+    hoops and its bulge, a cart on its wheels with its shafts, a stall with posts, a counter of goods and a striped
+    awning.
+  - They stand in the light like the walls - the torch, the lamps, the sun and the relief all fall on them - and look
+    right from every side. Their wood, end grain, iron, bark and awning are painted once a set.
+
 Distant views (v24.4, UPGRADE_PLAN_19.md phase 4)
   (src/js/76zzzzg-farviews.js; 26-surface.js)
   - From the land, the town stands on its hill to the east, where it really is - past the cliffs and the West Gate:
