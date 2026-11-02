@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The pony's gear (v35.2, UPGRADE_PLAN_30.md phase 2)
+  (src/js/69zo-ponygear.js; 76zzzzzzh-ponygear.js (the farm's window fits it))
+  - Fitted at the farm: Saddlebags (twenty more carried on the land, besides the pony's thirty), a blanket (the snow no
+    longer slows the party in the Wood - neither the extra minute a step nor the slower walk), and a cart (the fields'
+    produce sells a tenth higher at the stall, and the silo can be sold from the fields themselves).
+
 The hound's tricks (v35.1, UPGRADE_PLAN_30.md phase 1)
   (src/js/69zn-tricks.js; 76zzzzzzg-tricks.js (the farm's tricks, the den's mouth and way out))
   - Three tricks taught at the farm for gold: Fetch (after a fight some fled from, the hound brings back their coins and
