@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Bonds and rivals (v34.1, UPGRADE_PLAN_29.md phase 1)
+  (src/js/69zi-rivals.js; 76zzzzzzc-sheetx.js (the sheet's rival, and CM.sheetExtra))
+  - Old friends (forty fights side by side) now cover each other: a blow meant for a friend under a third of their
+    health is, two times in five, taken by the other instead, if they're on their feet.
+  - Rivals: killing blows are counted for every hero; two who have fought twenty-five fights together with fifteen
+    kills or more each, and their counts close, become rivals - each finds a weak spot a twentieth more often while the
+    other stands, the sheet keeps the score, and they argue it out at the fire.
+
 Camp scenes (v34.0, UPGRADE_PLAN_29.md phase 0)
   (src/js/69zh-fireside.js; 76zzzzzzb-fireside.js (the fire, and CM.addAction for the actions row))
   - Coming into a camp, the four sit round the fire - painted, the fire alive, each in its light, the fallen's place
