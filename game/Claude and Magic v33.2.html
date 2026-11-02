@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v33.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v33.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "33.1", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "33.2", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28848,6 +28848,46 @@ Object.assign(CM.Game.prototype, {
 
 }
 
+// ---- 69zf-again.js ----
+"use strict";
+// New Game+, "again" (v33.2, UPGRADE_PLAN_28.md): the Lich King slain opens the way to set out again - a run of the
+// next "again" up to the highest won plus one (to ten). An again-run carries one thing from the gear the winning
+// party wore, chosen when it sets out, as an heirloom; its monsters are a quarter tougher and an eighth harder-hitting
+// a time again; its fights pay more and now and then leave a better thing (a quarter's chance a time again, deeper by
+// two floors a time). Kept between runs in the store: "againWon" (the highest again won) and "againHeirlooms".
+//   game.againMax(); game.againHeirlooms(); game.newGame(..., opts.again, opts.heirloom); game.againLevel()
+{ CM.AGAIN = { hp: 0.25, atk: 0.125, gold: 0.25, find: 0.25, most: 10, keep: 8 };
+  const A = CM.AGAIN, G = CM.Game.prototype;
+  Object.assign(G, {
+    againLevel() { return (this.tally && this.tally.ext && this.tally.ext.again && this.tally.ext.again.level) || 0; },
+    againMax() { return Math.min(A.most, (CM.store.get("againWon", -1) | 0) + 1); },
+    againHeirlooms() { return CM.store.get("againHeirlooms", []) || []; },
+  });
+  // the crown falls: the next again opens, and what the party wore is kept to choose from
+  const em0 = G.emit; G.emit = function (ev, ...a) {
+    if (ev === "crowned" && !this.replaying && !this.film) { const L = this.againLevel(); if (L >= (CM.store.get("againWon", -1) | 0)) CM.store.set("againWon", L);
+      const worn = []; for (const h of this.party || []) for (const it of CM.equipped(h)) if (!(it.props || {}).cursed && it.kind !== "key") worn.push(JSON.parse(JSON.stringify(it)));
+      worn.sort((x, y) => (y.value || 0) - (x.value || 0)); CM.store.set("againHeirlooms", worn.slice(0, A.keep));
+      this.say(`The way is open to set out again - "again ${Math.min(A.most, L + 1)}": the dungeon deeper and meaner, and one thing of this party's carried down.`); }
+    return em0.call(this, ev, ...a); };
+  const ng0 = G.newGame; G.newGame = function (seed, chosen, kit, difficulty, mutators, mode, opts) {
+    const out = ng0.call(this, seed, chosen, kit, difficulty, mutators, mode, opts); const L = Math.max(0, Math.min((opts && opts.again) | 0, this.againMax()));
+    if (L > 0) { this.ext("again").level = L; const H = this.againHeirlooms(), pick = opts && Number.isInteger(opts.heirloom) ? H[opts.heirloom] : H[0];
+      if (pick) { const it = JSON.parse(JSON.stringify(pick)); it.props = it.props || {}; it.props.againHeirloom = true; this.bag.push(it); this.ext("again").heirloom = it.name; }
+      this.say(`Again ${L}: the dungeon is deeper and meaner than it was - monsters ${Math.round(A.hp * L * 100)}% tougher and ${Math.round(A.atk * L * 100)}% harder-hitting, and better found.${pick ? ` Carried down from the last crowning: ${pick.name}.` : ""}`); }
+    return out; };
+  const tune0 = G.tune; G.tune = function (m) { if (!m || m.tuned) return tune0.call(this, m); const out = tune0.call(this, m), L = this.againLevel();
+    if (L > 0 && out) { out.max = Math.max(1, Math.round(out.max * (1 + A.hp * L))); out.hp = Math.max(1, Math.round(out.hp * (1 + A.hp * L))); out.atk = Math.max(1, Math.round(out.atk * (1 + A.atk * L))); }
+    return out; };
+  const wf0 = G.wonFight; G.wonFight = function (...a) { const L = this.againLevel(), gold = this.gold, out = wf0.apply(this, a);
+    if (L > 0 && this.floor) { const got = this.gold - gold; if (got > 0) { const more = Math.round(got * A.gold * L); this.gold += more; }
+      if ((CM.hashSeed(`${this.seed}:againfind:${this.tally.fights || 0}`) % 1000) / 1000 < Math.min(0.75, A.find * L)) { const r = new CM.Random(CM.hashSeed(`${this.seed}:againitem:${this.tally.fights || 0}`)), fl = this.floor.number + 2 * L;
+        const it = CM.affix(CM.makeItem(fl, r), fl, r); this.gain([it], "foe"); this.say(`Among the fallen, something finer than this depth usually holds: ${it.unknown ? CM.baseName(it) : it.name}.`); } }
+    return out; };
+  CM.ACHIEVEMENTS.again = { name: "And Again", what: "Slay the Lich King on a run set out again", title: "the Returning" };
+  const em1 = G.emit; G.emit = function (ev, ...a) { if (ev === "crowned" && this.againLevel() > 0 && this.achieve) this.achieve("again"); return em1.call(this, ev, ...a); };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40743,6 +40783,26 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     d.innerHTML = `<div class="list-title">This ${s}'s trial: ${this.esc(T.name)}</div><p class="small">To ${this.esc(T.what)}. ${done ? `<b>Done</b> (${this.esc(done.date || "")}): ${this.esc(done.item)}.` : `Once a season; it gives <b>${this.esc(it.name)}</b> (${this.esc(CM.itemLabel ? CM.itemLabel(it) : "")}). This run: ${this.esc(g.trialProgress())}.`}</p>`
       + `<p class="small">The year's four: ${Object.entries(CM.SEASON_TRIALS).map(([k, t]) => `${k} - ${this.esc(t.name)}`).join("; ")}.${past.length ? ` Done before: ${this.esc(past.join("; "))}.` : ""}</p>`;
     body.prepend(d); return out; };
+}
+
+// ---- 76zzzzzz-again.js ----
+"use strict";
+// New Game+ - the window's side (v33.2): once the Lich King has fallen, the new party's screen has "Again" (how many
+// times again, to the highest won plus one) and the heirloom to carry down (one of the last crowning party's things);
+// the side panel names the again-run. Rules: 69zf-again.js.
+{ const oc0 = CM.UI.prototype.openCreate;
+  CM.UI.prototype.openCreate = function (...a) { const out = oc0.apply(this, a), g = this.game, asc = this.$("#ascension"); if (!asc || !g.againMax) return out;
+    const max = g.againMax(); let row = this.$("#again-row"); if (max < 1) { if (row) row.remove(); return out; }
+    if (!row) { row = document.createElement("span"); row.id = "again-row"; asc.after(row); }
+    const H = g.againHeirlooms();
+    row.innerHTML = ` <label for="again" title="Set out again: the dungeon deeper and meaner each time, and one thing of the last crowning party's carried down">Again</label><select id="again"><option value="0">No</option>${Array.from({ length: max }, (_, i) => `<option value="${i + 1}">${i + 1}</option>`).join("")}</select>`
+      + (H.length ? ` <label for="again-heir">Carry</label><select id="again-heir">${H.map((it, i) => `<option value="${i}">${this.esc(it.name)}</option>`).join("")}</select>` : "");
+    return out; };
+  const so0 = CM.UI.prototype.setOut;
+  CM.UI.prototype.setOut = function (...a) { const sel = this.$("#again"), heir = this.$("#again-heir"), L = sel ? Number(sel.value) || 0 : 0;
+    if (!L) return so0.apply(this, a);
+    const g = this.game, ng = g.newGame; g.newGame = function (seed, chosen, kit, difficulty, mutators, mode, opts) { g.newGame = ng; return ng.call(this, seed, chosen, kit, difficulty, mutators, mode, Object.assign({}, opts || {}, { again: L, heirloom: heir ? Number(heir.value) || 0 : 0 })); };
+    try { return so0.apply(this, a); } finally { g.newGame = ng; } };
 }
 
 // ---- 77-splash.js ----

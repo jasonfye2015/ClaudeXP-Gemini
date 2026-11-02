@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+New Game+ (v33.2, UPGRADE_PLAN_28.md phase 2)
+  (src/js/69zf-again.js; 76zzzzzz-again.js (Again and Carry on the new party's screen))
+  - When the Lich King falls, the way opens to set out again: the new party's screen has "Again" (up to the highest
+    won plus one, to ten) and "Carry" - one of the things the crowning party wore, carried down as an heirloom.
+  - Each time again its monsters are a quarter tougher and an eighth harder-hitting; its fights pay a quarter more
+    gold a time, and now and then leave a thing from two floors deeper a time. Winning again is a feat.
+
 Seasons of the year (v33.1, UPGRADE_PLAN_28.md phase 1)
   (src/js/69ze-seasons.js; 76zzzzzy-seasons.js (the Calendar's trial))
   - Each season (the real date's, or the one pinned in the Settings) has its trial, done once a season: spring's Thaw
