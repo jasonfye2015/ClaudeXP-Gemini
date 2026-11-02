@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Instanced drawing (v26.2, UPGRADE_PLAN_21.md phase 2)
+  (src/js/40-render.js)
+  - Every plain billboard - the standing props, the townsfolk and the monsters standing, the crops, the motes and the
+    sparks - is drawn as an instance of one quad: sixteen numbers each sent to the graphics card, stood up to face the
+    camera (and bent by the wind) in the vertex shader, instead of sixty worked out in the page every frame. What lies
+    flat, hangs on a wall, swings on a hinge, topples or ripples is drawn as before.
+  - Measured: the frame's sprite work halved as things are (0.76 to 0.36 ms); with three thousand billboards in view, 21.6
+    ms a frame (39 frames a second) became 4.7 ms (60) - room for far more grass, props and crops at the same speed.
+
 Partial rebuilds (v26.1, UPGRADE_PLAN_21.md phase 1)
   (src/js/40-render.js, 26-surface.js)
   - The floor's mesh is kept in three parts, each made again only when what it is made of changes: the floor itself

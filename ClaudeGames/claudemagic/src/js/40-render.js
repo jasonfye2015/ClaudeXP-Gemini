@@ -5,12 +5,18 @@
 const VERT = `#version 300 es
 precision highp float;
 in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
-uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind;   // (v24.0) the wind: its way (x, z) and strength
+in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
+uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uRight;   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
-void main() { vec3 p = aPos; vec3 fx = aFx;
+void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
+  if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
+    p = vec3(iA.x, iA.y + aPos.y * iB.x, iA.z) + uRight * (aPos.x * iA.w);
+    if (iB.w > 0.0) { float along = iA.x * uWind.x + iA.z * uWind.y, g = 0.5 + 0.5 * sin(uTime * 0.9 - along * 0.35);
+      p.xz += uWind.xy * iB.w * aPos.y * uWind.z * (0.3 + 0.7 * g * g + 0.22 * sin(uTime * 3.1 + iA.x * 1.7 + iA.z * 2.3)); }
+    uvl = vec3(mix(iC.x, iC.z, u), mix(iC.y, iC.w, aUV.y), iB.y); sh = iB.z; fx = iD.xyz; }
   if (aFx.x < 0.0) { float along = p.x * uWind.x + p.z * uWind.y, g = 0.5 + 0.5 * sin(uTime * 0.9 - along * 0.35);   // (a top that gives: the gust and its own flutter)
     float w = uWind.z * (0.3 + 0.7 * g * g + 0.22 * sin(uTime * 3.1 + p.x * 1.7 + p.z * 2.3)); p.xz += uWind.xy * (-aFx.x) * w; p.y -= abs(-aFx.x * w) * 0.25; fx.x = 0.0; }
-  vWorld = p; vUV = aUV; vShade = aShade; vFx = fx; gl_Position = uViewProj * vec4(p, 1.0); }`;
+  vWorld = p; vUV = uvl; vShade = sh; vFx = fx; gl_Position = uViewProj * vec4(p, 1.0); }`;
 
 // aFx: a hit's red flash, the alpha (a foe fading), and glow - how much of the texture's own colour shows unlit;
 // a glow of 2 is the sky's own things (the sun, the moon: the picture as it is, no light, no fog), 3 the sky dome
@@ -181,7 +187,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -222,7 +228,7 @@ CM.Renderer = class {
     if (!v || !f) return null;
     const p = gl.createProgram();
     gl.attachShader(p, v); gl.attachShader(p, f);
-    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx");
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + gl.getProgramInfoLog(p); return null; }
     return p;
@@ -430,11 +436,14 @@ CM.Renderer = class {
   // on that wall of the cell) - plus dx/dz (an offset in the cell), lift, flash, alpha, glow, shade; and a billboard's
   // pose: tilt (radians, toppled about its foot), skew (its top swayed), scale, mirror (28-motion.js)
   _spriteMesh() {
-    const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)];
+    const out = [], right = [Math.cos(this.yaw), 0, Math.sin(this.yaw)], inst = this.inst = [];
     for (const s of this.sprites) {
       const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
+      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && !s.tilt && !s.skew && !s.scale && !s.water) {   // (v26.2: a plain billboard - an instance)
+        inst.push(cx, s.lift || 0, cz, w, h, layer, s.shade || 1, (s.sway && this.wind && !CM.reducedMotion ? s.sway : 0), sb ? sb[1] : 0, sb ? sb[2] : 0, sb ? sb[3] : 1, sb ? sb[4] : 1, s.flash || 0, s.alpha === undefined ? 1 : s.alpha, s.glow || 0, s.mirror ? 1 : 0);
+        continue; }
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
       const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
@@ -495,6 +504,20 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
     gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
+    for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }   // (v26.2: not an instance)
+  }
+  // (v26.2) the billboards drawn as instances of one quad: sixteen numbers each, not sixty, and no corners worked out here
+  _drawInstances(inst) {
+    const gl = this.gl, n = inst.length / 16; if (!n) return;
+    if (!this.quadBuf) { this.quadBuf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf);
+      const v = (x, y, u, w) => [x, y, 0, u, w, 0, 1, 0, 1, 0]; gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([...v(-0.5, 0, 0, 1), ...v(0.5, 0, 1, 1), ...v(0.5, 1, 1, 0), ...v(-0.5, 0, 0, 1), ...v(0.5, 1, 1, 0), ...v(-0.5, 1, 0, 0)]), gl.STATIC_DRAW); }
+    if (!this.instBuf) this.instBuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf); this._attributes();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf); gl.bufferData(gl.ARRAY_BUFFER, inst instanceof Float32Array ? inst : new Float32Array(inst), gl.DYNAMIC_DRAW);
+    for (let i = 0; i < 4; i++) { gl.enableVertexAttribArray(4 + i); gl.vertexAttribPointer(4 + i, 4, gl.FLOAT, false, 64, i * 16); gl.vertexAttribDivisor(4 + i, 1); }
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, n);
+    for (let i = 4; i < 8; i++) { gl.vertexAttribDivisor(i, 0); gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }
+    this.instanced = n;
   }
 
   // (v22.5) the glow's targets, made again when the canvas changes size: a multisampled frame, its resolved picture, and
@@ -616,6 +639,7 @@ CM.Renderer = class {
       this._attributes();
       gl.drawArrays(gl.TRIANGLES, 0, dyn.length / STRIDE);
     }
+    gl.uniform3fv(this.loc.uRight, right); if (this.inst && this.inst.length) this._drawInstances(this.inst); else this.instanced = 0;   // (v26.2: the billboards)
     if (post) this._postEnd(post);
   }
 
