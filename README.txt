@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A living minimap (v25.1, UPGRADE_PLAN_20.md phase 1)
+  (src/js/76zzzzk-livemap.js; 70-ui.js, style.css)
+  - The side map moves with the place: monsters within seven squares pulse red; the portals glow in their own
+    colours, and the Wayfarer's Stones and the Glyph Deep's cabinet with them; the party's last forty steps on a floor
+    fade out behind it.
+  - It zooms in on the party - the + and - in its corner, or the mouse wheel - four steps, kept between visits;
+    clicking a square to walk there and right-clicking for a note still work zoomed. The big map is as it was.
+
 Windows that move (the ninety-first big update - v25.0, UPGRADE_PLAN_20.md phase 0)
   (src/js/76zzzzj-feel.js; style.css)
   - A window rises and fades in when it opens and fades away when it closes; buttons press in when clicked.

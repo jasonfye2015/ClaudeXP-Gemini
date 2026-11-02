@@ -277,7 +277,7 @@ CM.UI = class {
     });
     for (const b of this.root.querySelectorAll("#slots-row button[data-slot]")) b.addEventListener("click", () => { game.setSlot(Number(b.dataset.slot)); this.refreshTitle(); });
     for (const c of [this.$("#automap"), this.$("#bigmap-canvas")]) {
-      const cellAt = (e) => { const fl = game.floor; if (!fl) return null; const r = c.getBoundingClientRect(), size = fl.grid.length; return [Math.floor((e.clientX - r.left) / r.width * size), Math.floor((e.clientY - r.top) / r.height * size)]; };
+      const cellAt = (e) => { const fl = game.floor; if (!fl) return null; const r = c.getBoundingClientRect(), size = fl.grid.length; if (c.id === "automap" && this.mapView && this.mapView.z !== 1) { const v = this.mapView, px = (e.clientX - r.left) / r.width * c.width, py = (e.clientY - r.top) / r.height * c.height; return [Math.floor((px - v.ox) / (v.cell * v.z)), Math.floor((py - v.oy) / (v.cell * v.z))]; } return [Math.floor((e.clientX - r.left) / r.width * size), Math.floor((e.clientY - r.top) / r.height * size)]; };
       c.addEventListener("click", (e) => { const at = cellAt(e); if (!at) return; if (game.travel) { game.stopTravel(); return; } if (game.travelTo(at[0], at[1]) && c.id === "bigmap-canvas") this.closeDialogs(); });
       c.addEventListener("contextmenu", (e) => {
         e.preventDefault();

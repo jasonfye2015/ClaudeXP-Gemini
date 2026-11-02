@@ -1477,3 +1477,9 @@ button:active:not(:disabled) { transform: translateY(1px) scale(0.97); box-shado
 button.bump { animation: bagbump 0.3s ease-out; } @keyframes bagbump { 40% { transform: scale(1.12); box-shadow: 0 0 10px rgba(232,200,112,0.7); } }
 body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 @media (prefers-reduced-motion: reduce) { .dialog.on, .dialog.on > .box, .dlg-ghost, #side .purse.up, #side .purse.down { animation: none; } }
+
+/* (v25.1) the living minimap's zoom */
+#side { position: relative; }
+#side .mapzoom { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; gap: 2px; z-index: 2; }
+#side .mapzoom button { width: 22px; height: 22px; padding: 0; font: bold 14px var(--serif); line-height: 20px; opacity: 0.75; }
+#side .mapzoom button:hover { opacity: 1; }
