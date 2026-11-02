@@ -5612,6 +5612,15 @@ test("scars and stories: a hero brought to a tenth of their health in a fight th
   const k = g.party[1]; k.hp = k.max; g.mode = "combat"; g.hurt(k, k.max - 1, m, {}); g.setMode("explore"); assert.ok(!k.nearDeath && !(k.scars || []).length, "fled: no scar");
 });
 
+test("letters home: a trip down is kept, and coming up into the town every hero standing writes a letter - where they went, a guardian, a find, a scar, a friend - kept in the village", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("letter-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.enterFloor(1, "down"); g.enterFloor(4, "down"); const T = g.trip(); T.guardians.push("The Rat King"); T.finds.push("Keen Mace"); g.party[3].hp = 0; g.emit("change");
+  const before = g.letters().length; g.enterFloor(0, "rope"); const L = g.letters().slice(before);
+  assert.strictEqual(L.length, 3, "the three standing write"); assert.ok(L.every((l) => /floor/.test(l.text) && l.text.includes(l.hero)));
+  assert.ok(L.some((l) => /Rat King/.test(l.text)) && L.some((l) => /Keen Mace/.test(l.text))); assert.ok(L.some((l) => l.text.includes(g.party[3].name)), "the one lost");
+  assert.strictEqual(g.trip().deepest, 0, "a new trip"); g.enterFloor(0, "rope"); assert.strictEqual(g.letters().length, before + 3, "no trip, no letters");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

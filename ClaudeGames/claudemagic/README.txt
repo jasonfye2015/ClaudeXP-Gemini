@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Letters home (v34.3, UPGRADE_PLAN_29.md phase 3)
+  (src/js/69zk-letters.js; 76zzzzzze-letters.js (the Journal's Letters page))
+  - A trip down is kept - the deepest floor, the slain, the guardians, the finds, who fell, the scars taken - and when
+    the party comes up into the town, every hero standing writes a short letter home: to whom by where they come from,
+    what they saw in their own calling's way, the new scar, the one lost, the friend still beside them.
+  - The Journal's Letters page keeps them, the last eighty, each on its own sheet.
+
 Scars and stories (v34.2, UPGRADE_PLAN_29.md phase 2)
   (src/js/69zj-scars.js; 76zzzzzzd-scars.js (scars on the portraits and in the sheet); 69za-enchant.js and 76zzzzzb-marks.js (a hash read signed, read whole))
   - A hero brought to a tenth of their health or less in a fight that is won keeps a scar - three at most: drawn on
