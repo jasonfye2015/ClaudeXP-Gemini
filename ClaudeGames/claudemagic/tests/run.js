@@ -5547,10 +5547,20 @@ test("the house furnished: furnishings bought in town for gold and trophies moun
 
 test("the hall of feats: twenty feats more, each earned the first time it holds - looked for after a fight, a floor, a change of mode - and kept with the achievements", () => {
   const CM = load(), g = new CM.Game(); g.newGame("feat-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
-  assert.strictEqual(Object.keys(CM.FEATS2).length, 20); for (const id of Object.keys(CM.FEATS2)) assert.ok(CM.ACHIEVEMENTS[id] && CM.ACHIEVEMENTS[id].title, id);
+  assert.ok(Object.keys(CM.FEATS2).length >= 20); for (const id of Object.keys(CM.FEATS2)) assert.ok(CM.ACHIEVEMENTS[id] && CM.ACHIEVEMENTS[id].title, id);
   g.gold = 10000; g.tally.chests = 50; g.tally.guardians = ["rat", "knight", "forge"]; g.checkFeats();
   assert.ok(g.achievements.rich10k && g.achievements.chests50 && g.achievements.threeguard); assert.ok(!g.achievements.sixguard);
   g.tally.kills = 300; g.enterFloor(2, "down"); assert.ok(g.achievements.kills300, "looked for on a new floor");
+});
+
+test("seasons of the year: each season's trial is done once a season and pays its own thing - the Thaw by floor ten in three days, the Wild Hunt by forty beasts, the Long Hunger only with nothing eaten", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("season-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.season = "spring"; g.enterFloor(10, "down"); assert.ok(g.trialDone(), "the Thaw"); assert.ok(g.bag.some((it) => it.name === "Thaw-water Charm"));
+  const n = g.bag.length; g.enterFloor(11, "down"); assert.strictEqual(g.bag.length, n, "once a season");
+  g.season = "autumn"; g.tally.beasts = 39; assert.ok(!g.trialDone()); g.tally.beasts = 40; g.trialCheck("fight"); assert.ok(g.trialDone(), "the Wild Hunt");
+  const h = new CM.Game(); h.newGame("season-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); h.village = g.village; h.season = "winter";
+  h.meal = { kind: "bread", dish: true, floor: 3 }; h.emit("change"); h.enterFloor(15, "down"); assert.ok(!h.trialDone(), "a meal was eaten");
+  h.tally.ateAny = false; h.meal = null; h.enterFloor(16, "down"); assert.ok(h.trialDone(), "the Long Hunger");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

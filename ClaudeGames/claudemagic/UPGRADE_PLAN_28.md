@@ -7,7 +7,7 @@ stand already; these add what the items asked for on top.
 - A room at the Mage Tower's foot with a plaque for every feat: the achievements as they are, and twenty new ones.
 
 ## v33.1 - seasons of the year (36)
-- Each season its trial, once a season: spring's flood, summer's long day, autumn's wild hunt, winter's frost king - a
+- Each season its trial, once a season: spring's flood, summer's long day, autumn's wild hunt, winter's long hunger (the fifteenth floor with nothing eaten) - a
   hard thing to do, and a reward only that season gives.
 
 ## v33.2 - New Game+ (37)
