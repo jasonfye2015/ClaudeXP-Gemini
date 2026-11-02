@@ -114,7 +114,7 @@ void main() {
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
-  if (uSnow > 0.0 && up > 0.55) { float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
+  if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
     col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
   if (uWet > 0.0 && n.y > 0.7) {                                            // the rain on the ground: darker, and the sky in it at a low angle
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
@@ -485,6 +485,9 @@ CM.Renderer = class {
         const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = (w * (s.len || 1)) / 2, hw = w / 2, ox = c * hl * 0.85, oz = sn * hl * 0.85, y0 = 0.0035;
         const P = (a2, b2) => [cx + ox + c * a2 - sn * b2, y0, cz + oz + sn * a2 + c * b2];
         corners = [P(-hl, hw), P(hl, hw), P(hl, -hw), P(-hl, -hw)];
+      } else if (s.flat && s.spin !== undefined) {                       // (v30.1) a mark turned on the floor: its picture's top toward the spin
+        const c = Math.cos(s.spin), sn = Math.sin(s.spin), hw = w / 2, P = (a2, b2) => [cx + a2 * c - b2 * sn, 0.004, cz + a2 * sn + b2 * c];
+        corners = [P(-hw, hw), P(hw, hw), P(hw, -hw), P(-hw, -hw)];
       } else if (s.flat) {
         corners = [[cx - w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz + w / 2], [cx + w / 2, 0.003, cz - w / 2], [cx - w / 2, 0.003, cz - w / 2]];
       } else if (s.axis && s.swing) {                                    // a door swung on its hinge (28-motion.js): toward the side away from the party
