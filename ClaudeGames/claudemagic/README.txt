@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+An animated title (v42.1, UPGRADE_PLAN_37.md phase 1)
+  (src/js/76zzzzzzzm-titletown.js)
+  - Behind the title the view is no longer a corridor turning on the spot: it drifts slowly up and down Caer Duin's
+    longest street at the real hour, in the real season and under the day's own weather - the sky, the light, rain on
+    the ground, snow - with the street's props standing about.
+  - Leaving the title gives the renderer back the corridor's pictures, so whatever comes next finds things as it was.
+    Reduced motion: the view stands still.
+
 An illustrated bestiary (v42.0, UPGRADE_PLAN_37.md phase 0)
   (src/js/76zzzzzzzl-bestiary.js, src/js/76zzzzzzw-mondetail.js)
   - A new page of the Journal, Plates: every kind the party has met painted large on its own parchment plate, named
