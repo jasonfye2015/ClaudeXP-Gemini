@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Marks that stay (v30.1, UPGRADE_PLAN_25.md phase 1)
+  (src/js/76zzzzzb-marks.js; 40-render.js (a flat mark turned by its spin, not snowed over))
+  - Fire that lands leaves a scorch; a foe that falls leaves blood (or ash, bone dust, or glittering shards, by how
+    it died; nothing for those that sink or fade); the party leaves footprints in lying snow and on wet ground.
+  - They lie flat and fade with the game's clock - footprints in an hour, ash and bone dust in half a day, the rest in a
+    day - and are kept for each floor while the game is open (not saved).
+
 Wet surfaces (v30.0, UPGRADE_PLAN_25.md phase 0)
   (src/js/76zzzzza-wet.js; 40-render.js, 80-main.js (CM.beforeFrame))
   - In the rain the stone and cobbles darken and shine, the walls darken at their foot, and puddles lie in the low
