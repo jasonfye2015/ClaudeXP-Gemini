@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Followers seen (v29.5, UPGRADE_PLAN_24.md phase 5)
+  (src/js/76zzzzz-followers.js)
+  - Who comes along walks behind the party, where a look back finds them: the porter under a great pack, the
+    torchbearer with the torch held high (and its light about him), the hedge-wizard, the one you cut loose, Grip,
+    and the party's own hound at heel to one side and the pony on the lead to the other (the pony only in the Wood).
+  - They keep to the party's trail a step or two behind and close up as it walks; on a new floor they come in at its
+    back. They are the picture's: the rules don't know where they stand.
+
 Townsfolk with routines (v29.4, UPGRADE_PLAN_24.md phase 4)
   (src/js/76zzzzy-townsfolk.js)
   - The town's six residents keep hours: by day the smith at the forge's door, the merchant at the market, the priest
