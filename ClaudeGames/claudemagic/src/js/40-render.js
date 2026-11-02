@@ -232,11 +232,13 @@ void main() { vec3 c = texture(uSrc, vT).rgb * 0.227;
 const COMPOSE_FRAG = `#version 300 es
 precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform sampler2D uGlow; uniform float uK; out vec4 o;
 uniform float uTime; uniform float uAspect; uniform int uHeatN; uniform vec4 uHeat[8]; uniform float uHeatAll; uniform float uBreath;
-uniform sampler2D uSoft; uniform vec4 uFocus;   // (v31.3: the frame softened, and where the eye is held - centre, radius (0: none held), how soft)
+uniform sampler2D uSoft; uniform vec4 uFocus; uniform int uStyle;   // (v31.5: the screen's style - 0 clean, 1 an old monitor, 2 watercolour, 3 ink and parchment, 4 crisp)
+float lumAt(vec2 q) { return dot(texture(uSrc, q).rgb, vec3(0.3, 0.59, 0.11)); }   // (v31.3: the frame softened, and where the eye is held - centre, radius (0: none held), how soft)
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
 void main() { vec2 uv = vT;
+  if (uStyle == 1) { vec2 cc = vT - 0.5; uv = vT + cc * dot(cc, cc) * 0.12; if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { o = vec4(0.0, 0.0, 0.0, 1.0); return; } }   // (the glass's curve)
   for (int i = 0; i < 8; i++) { if (i >= uHeatN) break; vec4 H = uHeat[i]; vec2 d = vT - H.xy; d.x *= uAspect; float r = H.z;
     float m = exp(-d.x * d.x / (r * r * 0.5)) * smoothstep(-0.2 * r, 0.3 * r, d.y) * (1.0 - smoothstep(0.6 * r, 3.2 * r, d.y));
     uv += vec2(sin(vT.y * 95.0 - uTime * 7.0 + vT.x * 23.0), 0.5 * cos(vT.y * 71.0 - uTime * 5.3)) * 0.0028 * H.w * m; }
@@ -247,7 +249,20 @@ void main() { vec2 uv = vT;
   if (uBreath > 0.0) { float ph = fract(uTime / 4.4), puff = smoothstep(0.0, 0.1, ph) * (1.0 - smoothstep(0.1, 0.62, ph));
     vec2 p = vec2((vT.x - 0.5 - ph * 0.04) * uAspect, vT.y - (0.0 + ph * 0.3)); float n = vnoise(vT * 9.0 + vec2(0.0, -uTime * 0.8));
     float m = exp(-dot(p, p) / (0.02 + ph * 0.08)) * (0.55 + 0.45 * n); c = mix(c, vec3(0.9, 0.93, 0.97) * (0.4 + 0.6 * max(c.r, 0.4)), clamp(m * puff * uBreath * 0.9, 0.0, 0.75)); }
-  o = vec4(c, 1.0); }`;
+  if (uStyle > 0) { vec2 px = 1.0 / vec2(textureSize(uSrc, 0)); float l = dot(c, vec3(0.3, 0.59, 0.11));
+    float gx = lumAt(uv + vec2(px.x, 0.0)) - lumAt(uv - vec2(px.x, 0.0)), gy = lumAt(uv + vec2(0.0, px.y)) - lumAt(uv - vec2(0.0, px.y)), edge = clamp(length(vec2(gx, gy)) * 4.0, 0.0, 1.0);
+    float grain = vnoise(vT * vec2(textureSize(uSrc, 0)) * 0.35) * 0.6 + vnoise(vT * 90.0) * 0.4;
+    if (uStyle == 1) { float fr = 1.4 * px.x; c.r = texture(uSrc, uv + vec2(fr, 0.0)).r; c.b = texture(uSrc, uv - vec2(fr, 0.0)).b; c = c + g * uK * 0.5;   // (colour fringes, scanlines, a glow of phosphor, the tube's dark corners)
+      c *= 0.78 + 0.22 * sin(uv.y * float(textureSize(uSrc, 0).y) * 1.5708); c *= 0.94 + 0.06 * sin(uv.x * float(textureSize(uSrc, 0).x) * 2.0944);
+      vec2 cc = uv - 0.5; c *= 1.0 - dot(cc, cc) * 1.1; c = pow(max(c, 0.0), vec3(0.92)) * 1.1; }
+    else if (uStyle == 2) { vec3 soft = texture(uSoft, uv).rgb; c = mix(c, soft, 0.45); c = floor(c * 7.0 + grain * 0.6) / 7.0 * 0.5 + c * 0.5;   // (washes that bleed, pooled pigment at the edges, the paper)
+      c *= 1.0 - edge * 0.45 * vec3(0.7, 0.85, 1.0); c = mix(c, vec3(0.96, 0.93, 0.86), 0.12) * (0.9 + 0.12 * grain); }
+    else if (uStyle == 3) { vec3 paper = vec3(0.94, 0.87, 0.7) * (0.86 + 0.16 * grain) * (1.0 - 0.25 * length(vT - 0.5));   // (sepia shades on old paper, the lines in ink)
+      float tone = smoothstep(0.02, 0.75, l), hatch = step(0.5, fract((vT.x + vT.y) * vec2(textureSize(uSrc, 0)).y * 0.18)) * (1.0 - smoothstep(0.15, 0.45, l)) * 0.35;
+      c = mix(vec3(0.22, 0.14, 0.08), paper, tone) * (1.0 - hatch) * (1.0 - smoothstep(0.12, 0.5, edge) * 0.75); }
+    else if (uStyle == 4) { vec3 nb = (texture(uSrc, uv + vec2(px.x, 0.0)).rgb + texture(uSrc, uv - vec2(px.x, 0.0)).rgb + texture(uSrc, uv + vec2(0.0, px.y)).rgb + texture(uSrc, uv - vec2(0.0, px.y)).rgb) * 0.25;
+      c = c + (c - nb) * 0.9; c = mix(vec3(l), c, 1.12); } }
+  o = vec4(clamp(c, 0.0, 1.0), 1.0); }`;
 
 const STRIDE = 10;                     // floats a vertex: pos 3, uv 3, shade 1, fx 3
 const EYE_HEIGHT = 0.5;
@@ -691,7 +706,7 @@ CM.Renderer = class {
     P.w = w; P.h = h; return P;
   }
 
-  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01)); }   // (v30.4: what else asks for the screen pass)
+  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01 || F.style > 0)); }   // (v30.4: what else asks for the screen pass)
   _postEnd(P) {
     const gl = this.gl, w = P.w, h = P.h, pr = P.progs, sky = this.sky, F = this.screen || {};
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, P.msFb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, P.sceneFb);
@@ -704,7 +719,7 @@ CM.Renderer = class {
         pass(pr.blur, P.bFb, P.qw, P.qh, P.a, (p) => gl.uniform2f(p.u("uDir"), (1 + i) / P.qw, 0));
         pass(pr.blur, P.aFb, P.qw, P.qh, P.b, (p) => gl.uniform2f(p.u("uDir"), 0, (1 + i) / P.qh)); } }
     const focus = F.focus > 0.01 ? F.focus : 0;
-    if (focus) { pass(pr.blur, P.cFb, P.qw, P.qh, P.scene, (p) => gl.uniform2f(p.u("uDir"), 2 / w, 0)); pass(pr.blur, P.dFb, P.qw, P.qh, P.c, (p) => gl.uniform2f(p.u("uDir"), 0, 1 / P.qh));
+    if (focus || F.style === 2) { pass(pr.blur, P.cFb, P.qw, P.qh, P.scene, (p) => gl.uniform2f(p.u("uDir"), 2 / w, 0)); pass(pr.blur, P.dFb, P.qw, P.qh, P.c, (p) => gl.uniform2f(p.u("uDir"), 0, 1 / P.qh));
       pass(pr.blur, P.cFb, P.qw, P.qh, P.d, (p) => gl.uniform2f(p.u("uDir"), 2 / P.qw, 0)); pass(pr.blur, P.dFb, P.qw, P.qh, P.c, (p) => gl.uniform2f(p.u("uDir"), 0, 2 / P.qh)); }
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, w, h); gl.useProgram(pr.compose.p);
     gl.bindTexture(gl.TEXTURE_2D, P.scene); gl.uniform1i(pr.compose.u("uSrc"), 0);
@@ -716,7 +731,7 @@ CM.Renderer = class {
       gl.uniform1f(u("uTime"), CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(u("uAspect"), w / h); gl.uniform1i(u("uHeatN"), CM.reducedMotion ? 0 : n); gl.uniform4fv(u("uHeat"), heat);
       gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uBreath"), F.breath || 0);
       gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, P.d); gl.uniform1i(u("uSoft"), 2); gl.activeTexture(gl.TEXTURE0);
-      const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
+      gl.uniform1i(u("uStyle"), F.style || 0); const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindVertexArray(null); gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
