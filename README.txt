@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A map that remembers (v42.3, UPGRADE_PLAN_37.md phase 3)
+  (src/js/76zzzzzzzo-mapmemory.js)
+  - The parchment keeps the expedition's story in little ink sketches in the corner of each square it happened on:
+    crossed swords where a fight was fought, an open box where a chest was emptied, a grave-cross where a hero fell,
+    a tent and its fire where the party made camp.
+  - Kept with the run, floor by floor (the newest sixty a floor), on the minimap and the big map alike.
+
 Painted headers (v42.2, UPGRADE_PLAN_37.md phase 2)
   (src/js/76zzzzzzzn-headers.js)
   - Each of the town's windows opens under a painted strip of the place: the Tavern's hearth and mugs, the Smith's
