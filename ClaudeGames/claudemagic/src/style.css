@@ -1492,3 +1492,13 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 .itemtip table.tt-rows { border-collapse: collapse; margin-top: 2px; } .itemtip .tt-rows td { padding: 1px 6px 1px 0; } .itemtip .tt-rows td:first-child { color: #CFC3A0; }
 .itemtip .up { color: #7CDA6A; } .itemtip .down { color: #F07060; } .itemtip i { font-style: normal; opacity: 0.8; }
 .itemtip .tt-others { margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(232,200,112,0.25); color: #CFC3A0; font-size: 11px; }
+
+/* (v25.3) the tray */
+#view .tray { position: absolute; left: 10px; bottom: 44px; display: flex; flex-direction: column; gap: 5px; z-index: 6; max-width: 46%; pointer-events: none; }
+#view .toast { pointer-events: auto; display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 6px; background: rgba(18,12,6,0.88); border: 1px solid var(--tc); border-left: 4px solid var(--tc); border-radius: 4px; font: 12px var(--serif); color: var(--ink); box-shadow: 0 3px 12px rgba(0,0,0,0.5); animation: toastin 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+#view .toast b { color: var(--tc); font-size: 15px; width: 16px; text-align: center; text-shadow: 0 0 6px var(--tc); }
+#view .toast.link { cursor: pointer; } #view .toast.link:hover { background: rgba(40,28,14,0.95); }
+#view .toast.out { opacity: 0; transform: translateX(-12px); transition: opacity 0.3s, transform 0.3s; }
+#view.staging .tray { opacity: 0; }
+@keyframes toastin { from { opacity: 0; transform: translateX(-24px); } }
+@media (prefers-reduced-motion: reduce) { #view .toast { animation: none; } }
