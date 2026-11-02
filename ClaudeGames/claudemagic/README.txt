@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Doors and gates that work (v40.1, UPGRADE_PLAN_35.md phase 1)
+  (src/js/76zzzzzzzc-doors.js)
+  - A found secret wall no longer just vanishes: the block grinds down into the floor over a second, dust bursting
+    out at its foot.
+  - A portcullis judders up its chains a notch at a time, grit sifting from the lintel while it moves; a door swings
+    past and settles back on its hinge, with a puff of dust from under it as it gives. Reduced motion keeps them still.
+
 Band landmarks (v40.0, UPGRADE_PLAN_35.md phase 0)
   (src/js/69zzg-landmarks.js, src/js/76zzzzzzzb-landmarks.js)
   - On the third floor of each band, the largest plain room is the band's landmark, told once when the party first
