@@ -83,7 +83,7 @@ Object.assign(CM.UI.prototype, {
         const div = document.createElement("div");
         div.className = "member";
         div.title = `${m.name}'s sheet (${i + 1})`;
-        div.appendChild(this.portrait(m.cls, 44));
+        div.appendChild(this.portrait(m, 44));
         const text = document.createElement("div");
         text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
         div.appendChild(text);

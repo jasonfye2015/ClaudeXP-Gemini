@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v29.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v29.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "29.2", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "29.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28742,7 +28742,7 @@ CM.UI = class {
     const eff = g.effective(h);
     const left = this.$("#sheet-left");
     left.innerHTML = "";
-    left.appendChild(this.portrait(h.cls, 96));
+    left.appendChild(this.portrait(h, 96));
     const facts = document.createElement("div");
     facts.className = "facts";
     facts.innerHTML = `<div>${c.role}${c.cast ? `, casts <b>${CM.CASTS[c.cast]}</b>` : ""}</div>
@@ -29177,7 +29177,7 @@ CM.UI = class {
     for (const h of g.party) {
       const div = document.createElement("div");
       div.className = h.hp > 0 ? "standing" : "fallen";
-      div.appendChild(this.portrait(h.cls, 56));
+      div.appendChild(this.portrait(h, 56));
       const who = document.createElement("div");
       who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? (won ? "comes home" : "stood to the last") : "fell"}</small>`;
       div.appendChild(who);
@@ -29410,7 +29410,7 @@ CM.UI = class {
     for (const h of g.party) {
       const div = document.createElement("div");
       div.className = h.hp > 0 ? "standing" : "fallen";
-      div.appendChild(this.portrait(h.cls, 56));
+      div.appendChild(this.portrait(h, 56));
       const who = document.createElement("div");
       who.innerHTML = `<b>${this.esc(h.name)}</b><small>${h.cls}, level ${h.level}</small><small class="fate">${h.hp > 0 ? "stands" : "fell"}</small>`;
       div.appendChild(who);
@@ -29946,7 +29946,7 @@ Object.assign(CM.UI.prototype, {
         const div = document.createElement("div");
         div.className = "member";
         div.title = `${m.name}'s sheet (${i + 1})`;
-        div.appendChild(this.portrait(m.cls, 44));
+        div.appendChild(this.portrait(m, 44));
         const text = document.createElement("div");
         text.innerHTML = `<div class="name"></div><div class="gear"></div><div class="bar hp"><i></i><span></span></div><div class="bar mp"><i></i><span></span></div><div class="ail"></div>`;
         div.appendChild(text);
@@ -39511,6 +39511,27 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
             if (style === "sink") { K.fxs.ring({ at: [at[0], 0, at[2]], to: 1.4, ms: 900, glow: 0.4 }); setTimeout(() => K.fxs.ring({ at: [at[0], 0, at[2]], to: 1.0, ms: 800, glow: 0.3 }), 250); K.fxs.burst({ at: [at[0], 0.05, at[2]], layer: "fx:frost", n: 12, size: 0.05, speed: 0.8, up: 1.8, gravity: 4, ms: 700 }); }
           }, 60); }); }
       return bind.apply(this, a); }; }
+}
+
+// ---- 76zzzzx-herogear.js ----
+"use strict";
+// The heroes' gear seen (v29.3, UPGRADE_PLAN_24.md): a hero's portrait - on the party's cards (and so the level-up
+// card's), the sheet, the camp's and the end's lists - shows what they carry: the weapon in hand at its lower right,
+// the helm at its upper left, the armour at its lower left, each drawn in the look of the day, with a dark rim to lift
+// it off the face. A portrait given a class's name (the title, the new party's choices) is the class's, as before.
+{ const P = CM.UI.prototype, base = P.portrait, cache = new Map();
+  const sig = (h) => ["weapon", "helm", "armor"].map((k) => (h[k] ? `${h[k].name}|${h[k].unknown ? 1 : 0}` : "-")).join("/");
+  P.portrait = function (who, size) {
+    if (typeof who === "string" || !who || !who.cls) return base.call(this, who, size);
+    const look = this.game.settings.look, key = `${look}:${who.cls}:${size}:${sig(who)}`;
+    let src = cache.get(key);
+    if (!src) { const b = base.call(this, who.cls, size), c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"); p.drawImage(b, 0, 0);
+      const put = (it, s, x, y, rot) => { if (!it || (it.props && it.props.fists)) return; let ic; try { ic = CM.art.itemIcon(it, Math.round(s), look); } catch (e) { return; }
+        p.save(); p.translate(x, y); p.rotate(rot); p.shadowColor = "rgba(0,0,0,0.85)"; p.shadowBlur = Math.max(2, size / 20); p.drawImage(ic, -s / 2, -s / 2, s, s); p.restore(); };
+      put(who.armor, size * 0.36, size * 0.2, size * 0.8, 0); put(who.helm, size * 0.34, size * 0.19, size * 0.19, -0.15); put(who.weapon, size * 0.5, size * 0.76, size * 0.72, -0.35);
+      src = c; cache.set(key, c); if (cache.size > 200) cache.delete(cache.keys().next().value); }
+    const out = document.createElement("canvas"); out.width = out.height = size; out.getContext("2d").drawImage(src, 0, 0); return out;
+  };
 }
 
 // ---- 77-splash.js ----
