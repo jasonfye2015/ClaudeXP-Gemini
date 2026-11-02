@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v31.8 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v31.9 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "31.8", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "31.9", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9287,17 +9287,27 @@ void main() { vec3 c = texture(uSrc, vT).rgb * 0.227;
 const COMPOSE_FRAG = `#version 300 es
 precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform sampler2D uGlow; uniform float uK; out vec4 o;
 uniform float uTime; uniform float uAspect; uniform int uHeatN; uniform vec4 uHeat[8]; uniform float uHeatAll; uniform float uBreath;
-uniform sampler2D uSoft; uniform vec4 uFocus; uniform int uStyle; uniform float uSwirl;   // (v31.6: a portal's swirl)   // (v31.5: the screen's style - 0 clean, 1 an old monitor, 2 watercolour, 3 ink and parchment, 4 crisp)
+uniform sampler2D uSoft; uniform vec4 uFocus; uniform int uStyle; uniform float uSwirl; uniform vec3 uLens;   // (v31.9: weather on the lens - rain, snow, mist)   // (v31.6: a portal's swirl)   // (v31.5: the screen's style - 0 clean, 1 an old monitor, 2 watercolour, 3 ink and parchment, 4 crisp)
 float lumAt(vec2 q) { return dot(texture(uSrc, q).rgb, vec3(0.3, 0.59, 0.11)); }   // (v31.3: the frame softened, and where the eye is held - centre, radius (0: none held), how soft)
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+// (v31.9) the drops on the glass: beads that sit, and runners that slide down leaving a trail; xy the bend, z how much
+vec3 drops(vec2 q, float t, float amt) { vec3 o = vec3(0.0); if (amt <= 0.0) return o;
+  vec2 g = q * vec2(uAspect, 1.0) * 26.0, id = floor(g), f = fract(g) - 0.5 - (vec2(hash(id + 1.1), hash(id + 2.3)) - 0.5) * 0.6; float h = hash(id), sz = 0.12 + 0.16 * hash(id + 4.4), d = length(f);
+  if (h > 1.0 - 0.3 * amt) { float m = smoothstep(sz, sz * 0.55, d); o += vec3(-f / max(d, 0.001) * m, m); }
+  vec2 c = q * vec2(uAspect * 7.0, 1.0); float col = floor(c.x), hc = hash(vec2(col, 9.1));
+  if (hc > 1.0 - 0.45 * amt) { float head = 1.0 - fract(t * (0.08 + 0.18 * hc) + hc * 13.0) * 1.3, x = fract(c.x) - 0.5 - 0.08 * sin(q.y * 17.0 + hc * 9.0), dy = (q.y - head) * 7.0 * uAspect;
+    float hd = length(vec2(x, dy * 0.6)), mh = smoothstep(0.24, 0.13, hd), tr = smoothstep(0.06, 0.02, abs(x)) * step(0.0, dy) * (1.0 - smoothstep(0.0, 4.0, dy)) * 0.6;
+    o += vec3(-vec2(x, dy * 0.3) / max(hd, 0.001) * mh, mh) + vec3(-x * 1.5 * tr, 0.0, tr); }
+  return o; }
 void main() { vec2 uv = vT;
   if (uStyle == 1) { vec2 cc = vT - 0.5; uv = vT + cc * dot(cc, cc) * 0.12; if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { o = vec4(0.0, 0.0, 0.0, 1.0); return; } }   // (the glass's curve)
   if (uSwirl > 0.0) { vec2 sd = (uv - 0.5) * vec2(uAspect, 1.0); float sr = length(sd), sa = uSwirl * 5.0 * (1.0 - smoothstep(0.0, 0.9, sr)); sd = mat2(cos(sa), sin(sa), -sin(sa), cos(sa)) * sd; uv = 0.5 + sd / vec2(uAspect, 1.0); }
   for (int i = 0; i < 8; i++) { if (i >= uHeatN) break; vec4 H = uHeat[i]; vec2 d = vT - H.xy; d.x *= uAspect; float r = H.z;
     float m = exp(-d.x * d.x / (r * r * 0.5)) * smoothstep(-0.2 * r, 0.3 * r, d.y) * (1.0 - smoothstep(0.6 * r, 3.2 * r, d.y));
     uv += vec2(sin(vT.y * 95.0 - uTime * 7.0 + vT.x * 23.0), 0.5 * cos(vT.y * 71.0 - uTime * 5.3)) * 0.0028 * H.w * m; }
+  vec3 lensD = vec3(0.0); if (uLens.x + uLens.z > 0.0) { lensD = drops(vT, uTime, uLens.x) + drops(vT * 1.7 + 3.1, 0.0, uLens.z * 0.6) * vec3(0.5, 0.5, 0.7); uv += lensD.xy * 0.012; }
   if (uHeatAll > 0.0) uv += vec2(sin(vT.y * 60.0 - uTime * 4.0 + vT.x * 11.0), 0.0) * 0.0016 * uHeatAll * (1.0 - smoothstep(0.0, 0.6, vT.y));
   vec3 s = texture(uSrc, uv).rgb, g = texture(uGlow, vT).rgb;
   if (uFocus.w > 0.0) { vec2 fd = (vT - uFocus.xy) * vec2(uAspect, 1.0); float fm = uFocus.z > 0.0 ? smoothstep(uFocus.z * 0.6, uFocus.z * 1.7, length(fd)) : 1.0; s = mix(s, texture(uSoft, uv).rgb, fm * uFocus.w); }
@@ -9305,6 +9315,10 @@ void main() { vec2 uv = vT;
   if (uBreath > 0.0) { float ph = fract(uTime / 4.4), puff = smoothstep(0.0, 0.1, ph) * (1.0 - smoothstep(0.1, 0.62, ph));
     vec2 p = vec2((vT.x - 0.5 - ph * 0.04) * uAspect, vT.y - (0.0 + ph * 0.3)); float n = vnoise(vT * 9.0 + vec2(0.0, -uTime * 0.8));
     float m = exp(-dot(p, p) / (0.02 + ph * 0.08)) * (0.55 + 0.45 * n); c = mix(c, vec3(0.9, 0.93, 0.97) * (0.4 + 0.6 * max(c.r, 0.4)), clamp(m * puff * uBreath * 0.9, 0.0, 0.75)); }
+  if (lensD.z > 0.0) c += vec3(0.09) * clamp(lensD.z, 0.0, 1.0) * (0.4 + 0.6 * clamp(-lensD.y * 2.0, 0.0, 1.0));   // (the drop's lit rim)
+  if (uLens.z > 0.0) c = mix(c, vec3(0.78, 0.8, 0.82) * max(dot(c, vec3(0.33)), 0.3), 0.07 * uLens.z);
+  if (uLens.y > 0.0) { vec2 e2 = abs(vT - 0.5) * 2.0; float ed = max(e2.x, e2.y), n = vnoise(vT * vec2(uAspect, 1.0) * 14.0) * 0.6 + vnoise(vT * 60.0) * 0.4;   // (snow gathering in the corners and along the edges)
+    float m = smoothstep(0.84, 1.02, ed + (n - 0.5) * 0.3 + (length(e2) - ed) * 0.35) * uLens.y; c = mix(c, vec3(0.93, 0.96, 1.0), clamp(m, 0.0, 0.85)); }
   if (uStyle > 0) { vec2 px = 1.0 / vec2(textureSize(uSrc, 0)); float l = dot(c, vec3(0.3, 0.59, 0.11));
     float gx = lumAt(uv + vec2(px.x, 0.0)) - lumAt(uv - vec2(px.x, 0.0)), gy = lumAt(uv + vec2(0.0, px.y)) - lumAt(uv - vec2(0.0, px.y)), edge = clamp(length(vec2(gx, gy)) * 4.0, 0.0, 1.0);
     float grain = vnoise(vT * vec2(textureSize(uSrc, 0)) * 0.35) * 0.6 + vnoise(vT * 90.0) * 0.4;
@@ -9762,7 +9776,7 @@ CM.Renderer = class {
     P.w = w; P.h = h; return P;
   }
 
-  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01 || F.style > 0 || F.swirl > 0)); }   // (v30.4: what else asks for the screen pass)
+  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01 || F.style > 0 || F.swirl > 0 || (F.lens && F.lens.some((v) => v > 0)))); }   // (v30.4: what else asks for the screen pass)
   _postEnd(P) {
     const gl = this.gl, w = P.w, h = P.h, pr = P.progs, sky = this.sky, F = this.screen || {};
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, P.msFb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, P.sceneFb);
@@ -9787,7 +9801,7 @@ CM.Renderer = class {
       gl.uniform1f(u("uTime"), CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(u("uAspect"), w / h); gl.uniform1i(u("uHeatN"), CM.reducedMotion ? 0 : n); gl.uniform4fv(u("uHeat"), heat);
       gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uBreath"), F.breath || 0);
       gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, P.d); gl.uniform1i(u("uSoft"), 2); gl.activeTexture(gl.TEXTURE0);
-      gl.uniform1i(u("uStyle"), F.style || 0); gl.uniform1f(u("uSwirl"), F.swirl || 0); const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
+      gl.uniform1i(u("uStyle"), F.style || 0); gl.uniform1f(u("uSwirl"), F.swirl || 0); gl.uniform3fv(u("uLens"), F.lens || [0, 0, 0]); const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, null);
     gl.bindVertexArray(null); gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND);
@@ -40245,6 +40259,23 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
       R.forEach(([x, y], i) => { const px = (x + 0.5 + wob(x, y, 5) * 0.25) * cell, py = (y + 0.5 + wob(y, x, 6) * 0.25) * cell; if (i) p.lineTo(px, py); else p.moveTo(px, py); }); p.stroke(); p.setLineDash([]); }
     if (blotting && !anim) anim = requestAnimationFrame(() => { anim = 0; if (document.querySelector("#bigmap.on")) this.drawAutomap(canvas); });
   };
+}
+
+// ---- 76zzzzzr-lens.js ----
+"use strict";
+// Weather on the lens (v31.9, UPGRADE_PLAN_26.md): out in the rain, drops gather on the view - beads that sit and
+// runners that slide down, bending what is behind them; in falling snow it gathers in the corners and along the
+// edges; in mist, and in the damp bands below (the Flooded Vaults, the Drowned Town), fine beads of it cloud the
+// view a little. Each comes and goes slowly with the weather; not under a roof or in a fight. Settings > Weather on
+// the view: On or Off. renderer.screen.lens = [rain, snow, mist] (40-render.js's screen pass).
+{ const DAMP = new Set(["The Flooded Vaults", "The Drowned Town"]), cur = [0, 0, 0];
+  CM.settingLater((ui) => CM.addSetting("set-lens", "Weather on the view - raindrops running down it, snow at its edges, beads of mist", [["on", "On"], ["off", "Off"]], "lens", "on", ui));
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now);
+    const on = !(game.settings && game.settings.lens === "off") && game.mode === "explore", fl = game.floor, th = fl ? CM.themeFor(fl.number) || {} : {}, w = r.sky ? CM.weather(game) : "";
+    const roof = fl && fl.number <= -21 && fl.number >= -28;
+    const want = on && !roof ? [w === "rain" ? 1 : 0, w === "snow" ? 0.8 : 0, w === "mist" || (!r.sky && DAMP.has(th.name)) ? 1 : 0] : [0, 0, 0];
+    for (let i = 0; i < 3; i++) cur[i] += (want[i] - cur[i]) * Math.min(1, dt * (want[i] > cur[i] ? 0.25 : 0.6));
+    const S = r.screen || (r.screen = {}); S.lens = cur.map((v) => (v < 0.01 ? 0 : v)); };
 }
 
 // ---- 77-splash.js ----
