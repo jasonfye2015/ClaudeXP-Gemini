@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The rival party (v37.2, UPGRADE_PLAN_32.md phase 2)
+  (src/js/69zy-rivalband.js; 76zzzzzzq-rivalband.js (their chalk, a dropped bundle, one of theirs fallen))
+  - Every run has its rivals, a named band of four going down ahead: their chalk on the walls one floor in three (Space
+    reads it - their name and floor, their arguments, their tallies), something dropped in a hurry one floor in six,
+    and from the fifth floor now and then one of their own, fallen, with what they carried (never the leader).
+  - The rival parties met on a floor are this band now, named, with whoever of them still stands.
+
 Puzzle rooms (v37.1, UPGRADE_PLAN_32.md phase 1)
   (src/js/69zx-puzzles.js; 76zzzzzzp-puzzles.js (the altar, statues, shaft, mirrors, plate and the beam drawn))
   - About one floor in five from the second holds a puzzle made fresh for it (always solvable). The statues: an altar
