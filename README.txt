@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The kennel and the stable (v35.4, UPGRADE_PLAN_30.md phase 4)
+  (src/js/69zq-kennel.js; 76zzzzzzi-kennel.js (the kennel drawn, the animals in it, its window))
+  - In town, in the corner south-east of the Keep-yard: a kennel and a stable, and the party's hound and pony in it
+    while the party is in town (they don't follow it about the streets; the side panel says so).
+  - Space at its gate: feed them (five gold, once a day: the party's heart lifts), give them new names, and teach the
+    hound's tricks and fit the pony's gear, as at the farm. This finishes plan 30 (set 2).
+
 A follower's fear (v35.3, UPGRADE_PLAN_30.md phase 3)
   (src/js/69zp-fear.js)
   - Coming to a new floor that is dark - the Lich King's palace and below, or with the light shaded - a hired follower

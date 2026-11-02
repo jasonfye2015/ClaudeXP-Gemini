@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v35.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v35.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "35.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "35.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29240,6 +29240,27 @@ Object.assign(CM.Game.prototype, {
     else if (f && this.follower === f && chance > 0.12 && fresh) this.say(`${f.name} is very quiet on this floor, and keeps close to the light.`); };
 }
 
+// ---- 69zq-kennel.js ----
+"use strict";
+// The kennel and the stable (v35.4, UPGRADE_PLAN_30.md): in town, in the corner south-east of the Keep-yard, a kennel
+// and a stable where the party's animals live while it is in town - seen there through the gate. Standing at its gate:
+// feed them (a few coins, once a day: the party's heart lifts), name them again, and teach and fit them as at the farm.
+//   CM.KENNEL_AT; game.atKennel(); game.feedPets(); game.renamePet(kind, name)
+{ CM.KENNEL_AT = [40, 26]; CM.KENNEL_FEED = 5;
+  const G = CM.Game.prototype, key = (x, y) => `${x},${y}`;
+  const mt0 = CM.makeTown; CM.makeTown = function (...a) { const fl = mt0.apply(this, a), [x, y] = CM.KENNEL_AT; if (fl.grid[y] && fl.grid[y][x] === 0 && !fl.things[key(x, y)]) fl.things[key(x, y)] = { type: "kennel" }; return fl; };
+  Object.assign(G, {
+    atKennel() { const fl = this.floor; return Boolean(fl && fl.number === 0 && Math.abs(fl.pos[0] - CM.KENNEL_AT[0]) + Math.abs(fl.pos[1] - CM.KENNEL_AT[1]) <= 1); },
+    feedWhy() { if (!this.atKennel()) return "The animals are at the kennel, by the Keep-yard."; if (!this.petName("dog") && !this.petName("pony")) return "The kennel is empty."; const day = CM.dayOf ? CM.dayOf(this) : 0;
+      if (this.vext("kennel").fed === `${this.seed}:${day}`) return "They've been fed today."; if (this.gold < CM.KENNEL_FEED) return `${CM.KENNEL_FEED} gold.`; return ""; },
+    feedPets() { const why = this.feedWhy(); if (why) return why; this.logAct && this.logAct("feedPets"); this.gold -= CM.KENNEL_FEED; this.vext("kennel").fed = `${this.seed}:${CM.dayOf ? CM.dayOf(this) : 0}`; this.cheer && this.cheer(5);
+      const names = [this.petName("dog"), this.petName("pony")].filter(Boolean); this.say(`${names.join(" and ")} ${names.length === 1 ? "eats" : "eat"} out of your hands, and the party feels the better for it.`); this.saveVillage && this.saveVillage(); this.emit("change"); return ""; },
+    renamePet(kind, name) { const p = this.pets()[kind]; if (!p) return "No such animal."; if (!this.atKennel()) return "Names are given at the kennel."; const n = String(name || "").replace(/[<>&"]/g, "").trim().slice(0, 16); if (!n) return "A name, please.";
+      this.logAct && this.logAct("renamePet", kind, n); const was = p.name; p.name = n; this.saveVillage && this.saveVillage(); this.say(`${was} is ${n} now, and doesn't seem to mind.`); this.emit("change"); return ""; },
+  });
+  const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === 0) { const t = fl.things[key(fl.pos[0], fl.pos[1])]; if (t && t.type === "kennel") { this.logAct && this.logAct("use"); this.emit("kennel"); return; } } return use0.apply(this, a); };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -41318,6 +41339,44 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
       row.innerHTML = `<div><b>${this.esc(T.name)}</b> <small>${this.esc(T.what)}</small></div>`; const b = document.createElement("button"); b.textContent = has ? "Fitted" : `${T.gold} gold`; b.disabled = Boolean(why); if (why && !has) b.title = why;
       b.addEventListener("click", () => { this.$("#farm-note").textContent = g.buyPonyGear(id) || "Fitted."; this.openFarm(); this.refresh(); }); row.appendChild(b); box.appendChild(row); }
     more.appendChild(box); return out; };
+}
+
+// ---- 76zzzzzzi-kennel.js ----
+"use strict";
+// The kennel and the stable - the window's side (v35.4): the kennel drawn by the Keep-yard (a hut, a rail fence), and the
+// party's animals in it while the party is in town (they don't follow it about the streets); Space at the gate opens
+// it: feed them, name them again, teach the hound and fit the pony. Rules: 69zq-kennel.js.
+{ const S = 256, cv = () => { const c = document.createElement("canvas"); c.width = c.height = S; return c; };
+  const paint = (p) => { p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, 246, 110, 10, 0, 0, Math.PI * 2); p.fill();
+    p.fillStyle = "#7A5230"; p.fillRect(40, 120, 176, 120); p.fillStyle = "#5A3A1E"; p.beginPath(); p.moveTo(24, 128); p.lineTo(128, 48); p.lineTo(232, 128); p.closePath(); p.fill();
+    p.fillStyle = "#1A0E06"; p.beginPath(); p.moveTo(98, 240); p.lineTo(98, 180); p.quadraticCurveTo(128, 150, 158, 180); p.lineTo(158, 240); p.fill();
+    p.strokeStyle = "#4A2E16"; p.lineWidth = 3; for (let y = 140; y < 240; y += 16) { p.beginPath(); p.moveTo(40, y); p.lineTo(216, y); p.stroke(); }
+    p.fillStyle = "#E8D8B0"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.fillText("KENNEL", 128, 116); };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), c = cv(); paint(c.getContext("2d")); set.index["kennel:hut"] = set.layers.length; set.layers.push(c); return set; }; }
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { kennel: (t, x, y, now) => { const g = CM.game, out = [{ x, y, layer: "kennel:hut", w: 0.95, h: 0.9, dz: -0.2 }];
+    if (g && g.petName("dog")) out.push({ x, y, layer: "pet:dog", w: 0.42, h: 0.36, dx: -0.3, dz: 0.25, lift: Math.abs(Math.sin((now || 0) / 300)) * 0.01 });
+    if (g && g.petName("pony")) out.push({ x: x - 1, y, layer: "pet:pony", w: 0.85, h: 0.78, dz: 0.1 }); return out; } });
+  const fs0 = CM.followersSeen; if (fs0) CM.followersSeen = (game, fl) => { const out = fs0(game, fl); return fl && fl.number === 0 ? out.filter(([id]) => id !== "hound" && id !== "pony") : out; };   // (in town they're at the kennel)
+  const make = (ui) => { if (ui.$("#dlg-kennel")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-kennel";
+    d.innerHTML = `<div class="box journalbox"><h2>The kennel and the stable</h2><p class="lore">A low hut with straw in it, a rail fence, a trough. Whoever is home comes to the gate to see if you've brought anything.</p><div class="kbody"></div><div class="note" id="kennel-note"></div><div class="end"><button class="close">Close</button></div></div>`;
+    ui.$("#dlg-magetower").parentNode.appendChild(d); d.querySelector(".close").addEventListener("click", () => ui.closeDialogs()); };
+  CM.UI.prototype.openKennel = function (note) { make(this); const g = this.game, box = this.$("#dlg-kennel .kbody"); let h = "";
+    const pets = [["dog", "the hound"], ["pony", "the pony"]].filter(([k]) => g.petName(k));
+    if (!pets.length) h = `<p class="small">Nobody home: a hound and a pony are bought at the farm, in the Wood.</p>`;
+    else { const why = g.feedWhy(); h += `<p><button data-feed ${why ? `disabled title="${this.esc(why)}"` : ""}>Feed them (${CM.KENNEL_FEED} gold: the party's heart lifts)</button></p>`;
+      for (const [k, what] of pets) h += `<div class="recruit" style="grid-template-columns:1fr auto auto"><div><b>${this.esc(g.petName(k))}</b> <small>${what}</small></div><input data-name="${k}" maxlength="16" placeholder="a new name" style="width:9em"><button data-rename="${k}">Name</button></div>`;
+      if (g.tricks && g.petName("dog")) h += `<div class="list-title">Tricks</div>` + Object.entries(CM.TRICKS).map(([id, T]) => { const w = g.teachTrickWhy(id), knows = g.tricks()[id]; return `<button data-trick="${id}" ${w ? `disabled title="${this.esc(w)}"` : ""}>${knows ? `${this.esc(T.name)}: known` : `Teach ${this.esc(T.name)} (${T.gold} gold)`}</button>`; }).join(" ");
+      if (g.ponyGear && g.petName("pony")) h += `<div class="list-title">The pony's gear</div>` + Object.entries(CM.PONY_GEAR).map(([id, T]) => { const w = g.buyPonyGearWhy(id), has = g.ponyGear()[id]; return `<button data-gear="${id}" ${w ? `disabled title="${this.esc(w)}"` : ""}>${has ? `${this.esc(T.name)}: fitted` : `${this.esc(T.name)} (${T.gold} gold)`}</button>`; }).join(" "); }
+    box.innerHTML = h; this.$("#kennel-note").textContent = note || "";
+    const again = (e) => { this.openKennel(e || ""); this.refresh(); };
+    const fb = box.querySelector("[data-feed]"); if (fb) fb.addEventListener("click", () => again(g.feedPets()));
+    for (const b of box.querySelectorAll("[data-rename]")) b.addEventListener("click", () => { const inp = box.querySelector(`[data-name="${b.dataset.rename}"]`); again(g.renamePet(b.dataset.rename, inp.value)); });
+    for (const b of box.querySelectorAll("[data-trick]")) b.addEventListener("click", () => again(g.teachTrick(b.dataset.trick)));
+    for (const b of box.querySelectorAll("[data-gear]")) b.addEventListener("click", () => again(g.buyPonyGear(b.dataset.gear)));
+    this.openDialog("#dlg-kennel"); };
+  const rf0 = CM.UI.prototype.refresh; let bound = false;
+  CM.UI.prototype.refresh = function (...a) { if (!bound && this.game && this.game.on) { bound = true; this.game.on("kennel", () => this.openKennel()); } const out = rf0.apply(this, a), g = this.game, el = this.$ && this.$("#side .pets");
+    if (el && g && g.floor && g.floor.number === 0 && g.mode !== "title") { const n = [g.petName("dog"), g.petName("pony")].filter(Boolean); if (n.length) el.textContent = `${n.join(" and ")} at the kennel`; } return out; };   /* (in town: the side panel says where they are) */
 }
 
 // ---- 77-splash.js ----
