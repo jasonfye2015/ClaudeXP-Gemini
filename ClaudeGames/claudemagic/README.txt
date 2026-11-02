@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Wet surfaces (v30.0, UPGRADE_PLAN_25.md phase 0)
+  (src/js/76zzzzza-wet.js; 40-render.js, 80-main.js (CM.beforeFrame))
+  - In the rain the stone and cobbles darken and shine, the walls darken at their foot, and puddles lie in the low
+    places: they mirror the sky and the lamps and ring with the falling rain.
+  - The morning after a day of rain the sheen dries in the first hour of sun and the puddles shrink till noon (not on
+    lying snow). 80-main.js gained CM.beforeFrame, the picture's last word before a frame, for the window files.
+
 Followers seen (v29.5, UPGRADE_PLAN_24.md phase 5)
   (src/js/76zzzzz-followers.js)
   - Who comes along walks behind the party, where a look back finds them: the porter under a great pack, the

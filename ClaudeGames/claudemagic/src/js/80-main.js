@@ -1128,6 +1128,7 @@ window.addEventListener("DOMContentLoaded", () => {
         stepAir(dt);
         const { out, hud } = sprites();
         renderer.setSprites(out);
+        if (CM.beforeFrame) CM.beforeFrame(game, renderer, dt, now);   // (v30.0: the picture's last word before the frame - the window files' share, 76zzzzza- on)
         renderer.frame(dt);
         ui.drawHud(hud, (x, y, z) => renderer.project(x, y, z));
         if (dying.size && !game.foes.some((m) => dying.has(m))) dying.clear();

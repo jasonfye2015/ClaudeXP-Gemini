@@ -31,6 +31,7 @@ uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
 uniform vec3 uTorchPos; uniform float uBump;   // (v22.0) where the party's torch is held, a little to the side and up; (v22.1) the relief's strength - 0 for all but walls, floors and the ground
 uniform vec3 uSun; uniform float uSunK; uniform vec3 uGrade;                    // the sun's (or the moon's) direction and strength on the surface; the band's grade
+uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
 uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -55,10 +56,10 @@ void main() {
   if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
     vec2 p = vWorld.xz; float tm = uTime, flow = vFx.x;                  // (v24.1: vFx.x on water is its current - the river's; 0 still)
     if (flow > 0.0) p.y -= tm * 0.6 * flow;                                 // (the ripples carried downstream)
-    float amp = flow > 0.0 ? 1.0 + 0.4 * flow : 0.3 + 0.7 * uWet;           // (still water lies calm and mirrors the sky; rain or a current stirs it)
+    float amp = flow > 0.0 ? 1.0 + 0.4 * flow : 0.3 + 0.7 * uRain;           // (still water lies calm and mirrors the sky; rain or a current stirs it)
     vec3 wn = normalize(vec3(amp * (0.14 * sin(p.x * 6.3 + tm * 1.7) + 0.08 * sin((p.x + p.y) * 11.0 - tm * 2.3)), 1.0, amp * (0.14 * cos(p.y * 5.7 - tm * 1.3) + 0.08 * cos((p.x - p.y) * 9.0 + tm * 1.9))));
-    if (uWet > 0.0) { vec2 g = vWorld.xz * 2.5, id = floor(g), f = fract(g) - 0.5, c = (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.6, q = f - c;   // (v24.1: the rain's rings, one a cell, each in its own time)
-      float ph = fract(tm * 0.8 + hash(id)), rd = length(q), ring = exp(-pow((rd - ph * 0.45) * 28.0, 2.0)) * (1.0 - ph) * uWet;
+    if (uRain > 0.0) { vec2 g = vWorld.xz * 2.5, id = floor(g), f = fract(g) - 0.5, c = (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.6, q = f - c;   // (v24.1: the rain's rings, one a cell, each in its own time)
+      float ph = fract(tm * 0.8 + hash(id)), rd = length(q), ring = exp(-pow((rd - ph * 0.45) * 28.0, 2.0)) * (1.0 - ph) * uRain;
       wn = normalize(wn + vec3(q.x, 0.0, q.y) / max(rd, 0.001) * ring * 0.7); }
     vec3 v = normalize(uEye - vWorld), r = reflect(-v, wn);
     float fr = 0.12 + 0.5 * pow(1.0 - max(dot(v, wn), 0.0), 3.0);
@@ -91,13 +92,23 @@ void main() {
   tface *= mix(1.0, relief, min(1.0, uBump));   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
   float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n0.y), 0.7));   // walls facing the sun lit, the others in shade
-  vec3 extra = vec3(0.0), vdir = (vWorld - uEye) / max(d, 0.001), airGlow = vec3(0.0);
+  vec3 extra = vec3(0.0), vdir = (vWorld - uEye) / max(d, 0.001), airGlow = vec3(0.0), pudLamp = vec3(0.0);
+  float pud = 0.0; vec3 rP = vec3(0.0, 1.0, 0.0);
+  if (uPuddle > 0.0 && uBump > 0.0 && n0.y > 0.7) {                         // (v30.0) puddles in the low places: a still mirror, ringing while it rains
+    float pm = 0.7 * vnoise(vWorld.xz * 0.55 + 7.3) + 0.3 * vnoise(vWorld.xz * 1.9 + 1.7);
+    pud = smoothstep(0.0, 0.05, pm - (0.8 - 0.25 * uPuddle));
+    vec3 pn = vec3(0.0, 1.0, 0.0);
+    if (uRain > 0.0 && pud > 0.0) { vec2 g = vWorld.xz * 3.0, id = floor(g), f = fract(g) - 0.5, c = (vec2(hash(id + 3.1), hash(id + 7.7)) - 0.5) * 0.6, q = f - c;
+      float ph = fract(uTime * 0.9 + hash(id)), rd = length(q), ring = exp(-pow((rd - ph * 0.4) * 30.0, 2.0)) * (1.0 - ph);
+      pn = normalize(pn + vec3(q.x, 0.0, q.y) / max(rd, 0.001) * ring * 0.5); }
+    rP = reflect(vdir, pn); }
   for (int i = 0; i < 24; i++) {
     if (i >= uLights) break;
     vec3 L = uLightPos[i].xyz - vWorld; float ld = length(L), reach = uLightPos[i].w;
     float fall = max(0.0, 1.0 - ld / reach); fall *= fall;
     vec3 Ld = L / max(ld, 0.001); float face = (0.35 + 0.65 * max(dot(n0, Ld), 0.0)) * mix(1.0, clamp(max(dot(n, Ld), 0.0) / max(dot(n0, Ld), 0.25), 0.35, 1.6), min(1.0, uBump));
     extra += uLightCol[i] * fall * face;
+    if (pud > 0.0) pudLamp += uLightCol[i] * pow(max(dot(rP, Ld), 0.0), 50.0) * 2.2 * max(0.0, 1.0 - ld / (reach * 3.0));   // (a lamp seen in the puddle)
     if (uHaze > 0.0) { vec3 EL = uLightPos[i].xyz - uEye; float tt = clamp(dot(EL, vdir), 0.0, d), md = length(EL - vdir * tt); airGlow += uLightCol[i] * exp(-md * md * 3.0) * smoothstep(0.0, 1.0, tt); }   // (v22.3: the lamp's glow in the air between)
   }
   vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
@@ -109,6 +120,9 @@ void main() {
     vec3 v = normalize(uEye - vWorld); float fw = pow(1.0 - max(v.y, 0.0), 4.0);
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
   }
+  if (uWet > 0.0 && abs(n0.y) < 0.7 && uBump > 0.0) col *= 1.0 - 0.18 * uWet * (1.0 - smoothstep(0.0, 1.6, vWorld.y));   // (v30.0: rain-darkened walls, most at the foot)
+  if (pud > 0.0) { float fp = 0.3 + 0.6 * pow(1.0 - max(-vdir.y, 0.0), 3.0); vec3 seenP = mix(uHorizon, uZenith, clamp(rP.y * 1.3, 0.0, 1.0)) * (0.35 + 0.6 * max(uSunK, 0.15)) + pudLamp;
+    col = mix(col, col * 0.45 + seenP * fp, pud * 0.85); }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);
   fog = max(fog, uMist * (1.0 - smoothstep(0.0, 1.4, vWorld.y)) * smoothstep(0.8, 7.0, d) * 0.85);   // (mist: lying low on the land)
   if (uHaze > 0.0) {                                                        // (v22.3) the air has a body: it drifts, lies thicker low, and the lights glow in it
@@ -188,7 +202,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -646,7 +660,7 @@ CM.Renderer = class {
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     { const G = this.grading, g0 = t.grade || [1, 1, 1];                    // (v22.4: the band's grade and, above, the hour's: 76zzzx-grade.js)
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0); gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);
