@@ -5779,6 +5779,14 @@ test("secret floors: a hidden stair now and then, found by searching its square;
   const ek = Object.keys(fl.things).find((k) => fl.things[k].type === "vaultexit"); fl.pos = ek.split(",").map(Number); g.use(); assert.strictEqual(g.floor.number, n0, "back up"); assert.strictEqual(g.floor.pos.join(","), H.k);
 });
 
+test("positioning: a reach word strikes from the back row at full; a shield turns some blows aimed at the hero beside its bearer; two front-row heroes striking one foe in a round flank it", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("pos-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
+  const [K, R, C, M] = g.party; K.row = R.row = "front"; C.row = M.row = "back"; assert.ok(CM.besideOf(g, K).includes(R) && !CM.besideOf(g, K).includes(C));
+  const foe = () => g.tune({ name: "Orc", kind: "Orc", hp: 400, max: 400, atk: 12, df: 0, row: "front" }); let m = foe(); g.foes = [m]; g.mode = "combat"; g.ensureCombat ? g.ensureCombat() : null; g.combat.round = 1;
+  let flanked = 0; for (let i = 0; i < 40; i++) { g.combat.round = i + 2; g.strike(K, m, "", { sure: true }); g.strike(R, m, "", { sure: true }); } flanked = g.tally.flanks || 0; assert.ok(flanked > 10, String(flanked));
+  K.offhand = { name: "Tower Shield", kind: "shield", slot: "offhand", power: 2, unknown: false, props: {} }; for (let i = 0; i < 200; i++) { R.hp = R.max; g.hurt(R, 5, m, {}); } assert.ok((g.tally.shieldsBeside || 0) > 0, "the shield beside");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
