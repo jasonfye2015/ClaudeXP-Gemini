@@ -730,10 +730,11 @@ CM.Renderer = class {
     this.nudgeT = Math.max(0, (this.nudgeT || 0) - dt / 0.32); const nz = Math.sin((this.nudgeT || 0) * Math.PI) * (this.nudgeK || 0) * 0.07, ns = this.nudgeSide || 0;
     const jx = Math.sin(this.time * 61) * this.shakeT * 0.06, jy = Math.sin(this.time * 47 + 1) * this.shakeT * 0.045, pk = Math.sin(this.punchT * Math.PI) * 0.1;
     const E = this.perch ? [this.perch.x + 0.5, this.perch.h + EYE_HEIGHT, this.perch.y + 0.5] : this.eye;   // (on a gate tower's top: 61c-tower.js)
-    const eye = [E[0] + right[0] * (jx + nz * ns) + fwd[0] * (pk + nz), E[1] + this.bob + jy - nz * 0.15, E[2] + right[2] * (jx + nz * ns) + fwd[2] * (pk + nz)];
+    const co = this.camOff || { x: 0, y: 0, roll: 0 };                     // (v31.1: the camera's feel - 76zzzzzj-camera.js)
+    const eye = [E[0] + right[0] * (jx + nz * ns + co.x) + fwd[0] * (pk + nz), E[1] + this.bob + jy - nz * 0.15 + co.y, E[2] + right[2] * (jx + nz * ns + co.x) + fwd[2] * (pk + nz)];
     if (this.zoomAnim) { const z = this.zoomAnim; z.t += dt * 1000 / z.ms; const k = CM.ease(Math.min(1, z.t)); this.zoomNow = z.back ? CM.lerp(z.from, z.to, Math.sin(k * Math.PI)) : CM.lerp(z.from, z.to, k); if (z.t >= 1) { this.zoomNow = z.back ? z.from : z.to; this.zoomAnim = null; } }
     if (this.rollAnim) { const r = this.rollAnim; r.t += dt * 1000 / r.ms; this.rollNow = CM.lerp(r.from, r.to, CM.ease(Math.min(1, r.t))); if (r.t >= 1) this.rollAnim = null; }
-    const roll = this.rollNow || 0, up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
+    const roll = (this.rollNow || 0) + (co.roll || 0), up = [Math.sin(roll) * right[0], Math.cos(roll), Math.sin(roll) * right[2]];
     const view = this.inspect ? mat4LookAt(this.inspect.eye, this.inspect.at, [0, 1, 0]) : mat4LookAt(eye, [eye[0] + fwd[0], eye[1], eye[2] + fwd[2]], up);   // (inspect: a free camera for screenshots and the tests, never set in play)
     const proj = mat4Perspective(Math.PI / 3 * (this.zoomNow || 1), aspect, 0.05, 260);
     this.viewProj = mat4Mul(proj, view);
