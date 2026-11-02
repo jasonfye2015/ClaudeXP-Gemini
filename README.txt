@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Enchanting at the Mage Tower (v32.1, UPGRADE_PLAN_27.md phase 1)
+  (src/js/69za-enchant.js; 76zzzzzu-enchant.js (the enchanter's corner of the Tower's doors))
+  - Relic shards: three from every guardian, five where the Lich King's crown falls, one now and then from a champion,
+    and five from a guardian's relic broken at the Tower.
+  - The enchanter at the Mage Tower's doors gives worn gear a word it lacks (three offered for each empty place, the
+    player's pick) or raises one of its words a tier, for shards and gold. The more a thing has had done, the less
+    likely it takes; a failure spends the shards, and one time in six cracks the thing and takes a word from it.
+
 Cooking, wider (v32.0, UPGRADE_PLAN_27.md phase 0)
   (src/js/69y-ext.js, 69z-cooking2.js; 76zzzzzs-pages.js (a Journal page for the later updates), 76zzzzzt-cooking2.js)
   - Fifteen new dishes from the South Fields' crops (potato, leek, carrot, tomato, pumpkin, corn, chili, garlic,

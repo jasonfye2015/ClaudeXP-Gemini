@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v32.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v32.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "32.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "32.1", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28605,6 +28605,127 @@ Object.assign(CM.Game.prototype, {
   const lay0 = G.layFeast; G.layFeast = function (rows) { const out = lay0.call(this, rows); if (!out && rows.length === 3 && this.achieve) this.achieve("feast"); return out; };
 }
 
+// ---- 69za-enchant.js ----
+"use strict";
+// Enchanting at the Mage Tower (v32.1, UPGRADE_PLAN_27.md): relic shards - three from a guardian, five from the Lich
+// King, one now and then from a champion (one in four), five from a relic broken at the Tower - and the Tower's
+// enchanter at its doors. For shards and gold she gives a thing a word it lacks (a prefix or a suffix: one of three
+// offered, the player's pick) or raises one of its words a tier (to the third). It may not take: the more a thing has
+// had, the less likely; when it fails the shards are spent and the gold kept, and once in a while (one in six) the
+// thing cracks - one of its words lost. The smith's own enchanting is as it was.
+//   game.shards() -> count in the pack;  game.towerOffers(row) -> {add: [[where, word]...], raise: [word...]}
+//   game.towerChance(row, how) -> 0..1;  game.towerEnchant(row, how, word) -> "" or why not;  game.breakRelic(row)
+{ const TC = CM.TOWERCRAFT = { add: { shards: 3, gold: 120 }, raise: { shards: 4, gold: 180 }, crack: 1 / 6, guardian: 3, lich: 5, champion: 0.25, relic: 5 };
+  CM.shard = () => ({ name: "Relic Shard", kind: "shard", power: 0, value: 40 });
+  CM.BASES["Relic Shard"] = { id: "Relic Shard", kind: "shard", slot: null, tier: 0, group: "stuff" };
+  const G = CM.Game.prototype, gearOk = (it) => it && it.slot && !["ring", "amulet"].includes(it.kind) && (it.kind === "weapon" || it.kind === "armor" || it.kind === "shield" || it.kind === "helm" || it.kind === "boots" || it.kind === "cloak");
+  const tableFor = (it, where) => (where === "prefix" ? CM.AFFIXES.prefix[it.kind === "weapon" ? "weapon" : "armor"] : CM.AFFIXES.suffix);
+  const wordsOf = (it) => ((it.props || {}).affixes || []).slice(), whereOf = (w) => (w.startsWith("of ") ? "suffix" : "prefix");
+  const tierOf = (it, w) => (((it.props || {}).wordTiers || {})[w] || (it.props || {}).tier || 1);
+  const negate = (a) => { const o = {}; for (const [k, v] of Object.entries(a)) { if (k === "stats") { o.stats = {}; for (const [s, d] of Object.entries(v)) o.stats[s] = -d; } else if (typeof v === "number" && !["vsUndead", "vsHide"].includes(k)) o[k] = -v; } return o; };
+  const strip = (props) => { for (const [k, v] of Object.entries(props)) { if (k === "stats") { for (const s of Object.keys(v)) if (!props.stats[s]) delete props.stats[s]; } else if (v === 0) delete props[k]; } };
+  const rename = (it) => { const p = it.props || {}, w = p.affixes || [], pre = w.find((x) => !x.startsWith("of ")), suf = w.find((x) => x.startsWith("of "));
+    it.name = `${pre ? pre + " " : ""}${p.element && CM.ELEMENTS[p.element] ? CM.ELEMENTS[p.element].prefix + " " : ""}${it.base || CM.baseName(it)}${suf ? " " + suf : ""}${p.bonus ? ` +${p.bonus}` : ""}`;
+    p.rarity = p.cursed ? "cursed" : p.unique ? p.rarity : w.length >= 2 ? "rare" : w.length ? "fine" : p.rarity; };
+  Object.assign(G, {
+    deepestReached() { const ns = Object.keys(this.deltas || {}).concat(Object.keys(this.floors || {})).map(Number).filter((n) => n > 0 && n < 1000); if (this.floor && this.floor.number > 0 && this.floor.number < 1000) ns.push(this.floor.number); return ns.length ? Math.max(...ns) : 0; },
+    shards() { return this.bag.filter((i) => i.kind === "shard").length; },
+    takeShards(n) { for (let i = this.bag.length - 1; i >= 0 && n > 0; i--) if (this.bag[i].kind === "shard") { this.bag.splice(i, 1); n--; } },
+    giveShards(n, why) { if (n <= 0) return; const its = []; for (let i = 0; i < n; i++) its.push(CM.shard()); this.gain(its, "relic"); if (why) this.say(`${why}: ${CM.plural(n, "relic shard")}.`); },
+    atTowerDoor() { const fl = this.floor; return Boolean(fl && fl.number === -1 && CM.MAGE_DOOR && Math.abs(fl.pos[0] - CM.MAGE_DOOR[0]) + Math.abs(fl.pos[1] - CM.MAGE_DOOR[1]) <= 1); },
+    towerOffers(row) { const it = this.bag[row]; if (!gearOk(it) || (it.props || {}).unique || (it.props || {}).relic) return { add: [], raise: [] };
+      const p = it.props || {}, words = wordsOf(it), deep = this.deepestReached() > CM.LAST_FLOOR, add = [];
+      for (const where of ["prefix", "suffix"]) { if (words.some((w) => whereOf(w) === where)) continue;
+        const pool = Object.entries(tableFor(it, where)).filter(([, a]) => (!a.deep || deep) && (!a.weapon || it.kind === "weapon") && !(a.element && p.element));
+        const h = CM.hashSeed(`${this.seed}:tower:${it.name}:${where}:${p.towerTries || 0}`); for (let k = 0; k < 3 && pool.length; k++) { const [w] = pool.splice((h >> (k * 3)) % pool.length, 1)[0]; add.push([where, w]); } }
+      return { add, raise: words.filter((w) => tierOf(it, w) < 3 && !p.cursed) }; },
+    towerChance(row, how) { const it = this.bag[row]; if (!it) return 0; const p = it.props || {}, n = wordsOf(it).length;
+      return Math.max(0.3, (how === "raise" ? 0.7 : 0.85) - 0.1 * n - 0.1 * (p.towerDone || 0)); },
+    towerWhy(row, how, word) { if (!this.atTowerDoor()) return "The enchanter keeps the Mage Tower's doors, in the Wood."; const it = this.bag[row]; if (!gearOk(it)) return "She works on gear that is worn: weapons, armour, shields, helms, boots, cloaks.";
+      const O = this.towerOffers(row), C = TC[how]; if (!C) return "Add a word, or raise one.";
+      if (how === "add" && !O.add.some(([, w]) => w === word)) return "That word isn't one she offers for it."; if (how === "raise" && !O.raise.includes(word)) return "That word can't be raised.";
+      if (this.shards() < C.shards) return `She wants ${CM.plural(C.shards, "relic shard")}; the pack has ${this.shards()}.`; const gold = C.gold * (how === "raise" ? tierOf(it, word) : 1); if (this.gold < gold) return `And ${gold} gold.`; return ""; },
+    towerEnchant(row, how, word) { const why = this.towerWhy(row, how, word); if (why) return why; this.logAct && this.logAct("towerEnchant", row, how, word);
+      const it = this.bag[row], p = it.props = it.props || {}, C = TC[how], gold = C.gold * (how === "raise" ? tierOf(it, word) : 1), chance = this.towerChance(row, how);
+      this.takeShards(C.shards); this.gold -= gold; this.spend && this.spend("tower", gold); p.towerTries = (p.towerTries || 0) + 1;
+      const roll = (CM.hashSeed(`${this.seed}:towerroll:${it.name}:${p.towerTries}:${this.clock || 0}`) % 1000) / 1000;
+      if (roll < chance) {
+        const where = how === "add" ? whereOf(word) : null, base = tableFor(it, whereOf(word))[word];
+        if (how === "add") { const tier = CM.affixTier(Math.max(1, this.deepestReached())); CM.applyProps(it, CM.scaledAffix(base, tier)); p.affixes = wordsOf(it).concat(word); (p.wordTiers = p.wordTiers || {})[word] = tier; it.value += (where === "prefix" ? 60 : 90) * tier; }
+        else { const t0 = tierOf(it, word), t1 = t0 + 1; CM.applyProps(it, negate(CM.scaledAffix(base, t0))); CM.applyProps(it, CM.scaledAffix(base, t1)); strip(p); (p.wordTiers = p.wordTiers || {})[word] = t1; it.value += 60; }
+        p.towerDone = (p.towerDone || 0) + 1; rename(it); this.sound("spell"); this.tally.enchanted = (this.tally.enchanted || 0) + 1;
+        this.say(`The enchanter's hands go still over it, and the light in the shards goes into the ${CM.baseName(it).toLowerCase()}: ${it.name}.`);
+        if (this.achieve) this.achieve("towercraft");
+      } else {
+        let cracked = ""; if ((CM.hashSeed(`${this.seed}:towercrack:${p.towerTries}:${it.name}`) % 1000) / 1000 < TC.crack && wordsOf(it).length) { const w = wordsOf(it)[0], base = tableFor(it, whereOf(w))[w];
+          if (base) { CM.applyProps(it, negate(CM.scaledAffix(base, tierOf(it, w)))); strip(p); } p.affixes = wordsOf(it).filter((x) => x !== w); if (p.wordTiers) delete p.wordTiers[w]; rename(it); cracked = ` A hairline runs through it: "${w}" is gone from it.`; }
+        this.sound("miss"); this.say(`The shards flare and go grey. It didn't take.${cracked}`);
+      }
+      this.saveRun(); this.emit("change"); return ""; },
+    breakRelic(row) { if (!this.atTowerDoor()) return "Relics are broken at the Mage Tower, where it is safe to."; const it = this.bag[row]; if (!it || !(it.props || {}).relic) return "Only a guardian's relic breaks into shards.";
+      this.logAct && this.logAct("breakRelic", row); this.bag.splice(row, 1); this.sound("slam"); this.giveShards(TC.relic, `${it.name} breaks along its old seams`); this.saveRun(); this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.towercraft = { name: "Words of Power", what: "Have the Mage Tower's enchanter put a word on a thing", title: "the Inscribed" };
+  const sg0 = G.slayGuardian; G.slayGuardian = function (m) { const out = sg0.call(this, m); if (m && !m.echo) this.giveShards(TC.guardian, "In what it left"); return out; };
+  const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "crowned") this.giveShards(TC.lich, "Where the crown fell"); return em0.call(this, ev, ...a); };
+  const wf0 = G.wonFight; G.wonFight = function (...a) { const before = (this.tally && this.tally.champions) || 0, out = wf0.apply(this, a), after = (this.tally && this.tally.champions) || 0;
+    for (let k = before + 1; k <= after; k++) if ((CM.hashSeed(`${this.seed}:champshard:${k}`) % 100) / 100 < TC.champion) this.giveShards(1, "On the champion"); return out; };
+}
+
+// ---- 69zb-stillbook.js ----
+"use strict";
+// Brewing at the still (v32.2, UPGRADE_PLAN_27.md): recipe pages lie in the dungeon - one chest in eight from the
+// second floor down, and a fallen party's remains one time in three - each a still recipe of a crop of the South Fields
+// and a band's ingredient, copied into the village's book the moment it is found. At the still in the fields' shed a
+// known recipe makes its potion, oil, flask or elixir from the two, and asks no gold. The pages run deeper with the
+// bands (a page is of a band the party has reached).
+//   CM.STILLBOOK[id] -> {name, crop, ing, makes, what};  game.stillKnown(); game.stillBrewWhy(id); game.stillBrew(id)
+{ const SB = CM.STILLBOOK = {
+    tomatotonic: { name: "Tomato Tonic", crop: "tomato", ing: "gravemoss", makes: "heal2", what: "two healing potions" },
+    garlicdraught: { name: "Garlic Draught", crop: "garlic", ing: "drownedweed", makes: "antidote2", what: "two antidotes" },
+    pumpkinspirit: { name: "Pumpkin Spirit", crop: "pumpkin", ing: "forgesoot", makes: "oil:fire", what: "an oil of fire" },
+    roseholy: { name: "Rosewater, blessed", crop: "rose", ing: "bonedust", makes: "flask:holy", what: "a flask of holy water" },
+    melonquick: { name: "Melon Quickwine", crop: "melon", ing: "saltweed", makes: "elixir:haste", what: "an elixir of haste" },
+    blueberryeyes: { name: "Blueberry Clear-eye", crop: "blueberry", ing: "sporecap", makes: "elixir:owleyes", what: "an elixir of owl's eyes" },
+    potatostone: { name: "Potato Stone-wine", crop: "potato", ing: "crystaldust", makes: "elixir:stoneskin", what: "an elixir of stoneskin" },
+    chilifire: { name: "Chili Fire-pot", crop: "chili", ing: "slag", makes: "bomb", what: "a firepot" },
+    lettucesleep: { name: "Lettuce Night-milk", crop: "lettuce", ing: "gravesalt", makes: "elixir:night", what: "the night's draught" },
+    cauligreater: { name: "Cauliflower Cordial", crop: "cauliflower", ing: "rootsap", makes: "greaterheal", what: "a greater healing potion" },
+    grapemana: { name: "Grape Spirit", crop: "grapes", ing: "crystaldust", makes: "mana2", what: "two mana potions" },
+    cucumberrime: { name: "Cucumber Rime", crop: "cucumber", ing: "drownedweed", makes: "oil:frost", what: "an oil of rime" },
+  };
+  CM.STILL_PAGE = { chest: 8, remains: 3, from: 2 };
+  const bandOf = (id) => (CM.INGREDIENTS[SB[id].ing] || { band: 0 }).band;
+  const make = (makes, fl) => { if (makes === "heal2") return [{ name: "Healing Potion", kind: "heal", power: 45, value: 35 }, { name: "Healing Potion", kind: "heal", power: 45, value: 35 }];
+    if (makes === "mana2") return [{ name: "Mana Potion", kind: "mana", power: 30, value: 40 }, { name: "Mana Potion", kind: "mana", power: 30, value: 40 }];
+    if (makes === "antidote2") return [CM.antidote(), CM.antidote()]; if (makes === "bomb") return [CM.bomb()];
+    if (makes === "greaterheal") return [{ name: "Greater Healing Potion", kind: "greaterheal", power: 2 * (20 + Math.max(1, fl) * 3), value: 60 }];
+    if (makes.startsWith("oil:")) return [CM.oil(makes.slice(4))]; if (makes.startsWith("flask:")) return [CM.flask(makes.slice(6))]; if (makes.startsWith("elixir:")) return [CM.elixir(makes.slice(7))]; return []; };
+  const G = CM.Game.prototype;
+  Object.assign(G, {
+    stillKnown() { return this.vext("stillbook"); },
+    stillPageFor(salt) { const fl = this.floor; if (!fl || fl.number < CM.STILL_PAGE.from || fl.number >= 1000) return null; const band = CM.themeIndex ? CM.themeIndex(fl.number) : 0, K = this.stillKnown();
+      const open = Object.keys(SB).filter((id) => !K[id] && bandOf(id) <= Math.max(band, 1)); if (!open.length) return null; return open[CM.hashSeed(`${this.seed}:page:${salt}`) % open.length]; },
+    learnStill(id, how) { const K = this.stillKnown(); if (K[id]) return; K[id] = true; this.saveVillage && this.saveVillage(); this.tally.pages = (this.tally.pages || 0) + 1;
+      this.say(`${how || "Among it all"}, a stained page in a careful hand: a still recipe - ${SB[id].name}: a ${CM.CROPS[SB[id].crop].name.toLowerCase()} and ${CM.INGREDIENTS[SB[id].ing].name.toLowerCase()} make ${SB[id].what}. Copied into the book.`);
+      if (Object.keys(SB).every((k) => K[k]) && this.achieve) this.achieve("stillbook"); },
+    stillBrewWhy(id) { const R = SB[id]; if (!R) return "No such recipe."; if (!this.stillKnown()[id]) return "That page hasn't been found."; if (!this.atFields || !this.atFields()) return "The still is in the fields' shed.";
+      const has = (k) => this.bag.some((it) => it.kind === "ingredient" && it.ingredient === k); if (!has(R.crop)) return `It wants a ${CM.CROPS[R.crop].name.toLowerCase()}.`; if (!has(R.ing)) return `It wants ${CM.INGREDIENTS[R.ing].name.toLowerCase()}.`;
+      if (R.makes === "greaterheal" && this.asc && this.asc("nogreater")) return "No greater potions, this high on the ladder."; return ""; },
+    stillBrew(id) { const why = this.stillBrewWhy(id); if (why) return why; this.logAct && this.logAct("stillBrew", id); const R = SB[id];
+      for (const k of [R.crop, R.ing]) this.bag.splice(this.bag.findIndex((it) => it.kind === "ingredient" && it.ingredient === k), 1);
+      const made = make(R.makes, this.deepestReached ? this.deepestReached() : 1); this.gain(made, "fields"); this.countUse && this.countUse("brew"); this.tally.stilled = (this.tally.stilled || 0) + 1;
+      this.sound && this.sound("spell"); this.say(`The still ticks and runs: ${R.name} - ${R.what}.`); if (R.makes.startsWith("elixir:") && this.achieve) this.achieve("distilled");
+      this.saveRun && this.saveRun(); this.emit && this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.stillbook = { name: "The Whole Book", what: "Find every page of the still's recipe book", title: "the Distiller" };
+  // pages in chests and among the fallen's remains
+  const gain0 = G.gain; G.gain = function (items, how) {
+    if ((how === "chest" || how === "remains") && this.floor && Array.isArray(items)) { const fl = this.floor, salt = `${how}:${fl.number}:${fl.pos.join(",")}:${(this.tally && this.tally.chests) || 0}`;
+      if (CM.hashSeed(`${this.seed}:pagechance:${salt}`) % CM.STILL_PAGE[how] === 0) { const id = this.stillPageFor(salt); if (id) this.learnStill(id, how === "chest" ? "Under the lid" : "In a dead alchemist's satchel"); } }
+    return gain0.call(this, items, how); };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40386,6 +40507,55 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     box.innerHTML = `<div class="list-title">The recipe book: ${n} of ${ids.length} made</div><p class="small">A dish is written in the first time it is made. Dishes are made at a camp's fire, the home's kitchen, or on the floor by a cook of the third level; two or three different ones eaten together at a camp or at home make a feast.</p>` +
       ids.map((id) => { const D = CM.DISHES[id], can = CM.canCook(g.bag, id); return known[id] ? `<div class="entry"><b>${ui.esc(D.name)}</b>${can ? " <small>(the pack has it all)</small>" : ""}<br><small>${ui.esc(D.needs.map(CM.needName).join(", "))} - ${ui.esc(D.what)}, ${CM.plural(D.floors, "floor")}</small></div>`
         : `<div class="entry"><b>?</b><br><small>${D.needs.length === 1 ? `one thing: ${ui.esc(CM.needName(D.needs[0]))}` : `${ui.esc(CM.needName(D.needs[0]))}, and ${["", "one", "two", "three"][D.needs.length - 1]} thing${D.needs.length > 2 ? "s" : ""} more`}${can ? " - the pack has what it needs" : ""}</small></div>`; }).join(""); });
+}
+
+// ---- 76zzzzzu-enchant.js ----
+"use strict";
+// Enchanting at the Mage Tower - the window's side (v32.1): the enchanter's corner of the Tower's doors: the pack's
+// gear, each with the words she offers to add and those she can raise, the shards and gold each costs and the chance it
+// takes; and a guardian's relic broken into shards. The rules: 69za-enchant.js.
+{ const om0 = CM.UI.prototype.openMageTower;
+  CM.UI.prototype.openMageTower = function (...a) {
+    const out = om0.apply(this, a), g = this.game, dlg = this.$("#dlg-magetower .box"); if (!dlg || !g.towerOffers) return out;
+    let box = dlg.querySelector(".enchanter"); if (box) box.remove(); box = document.createElement("div"); box.className = "enchanter";
+    const TC = CM.TOWERCRAFT, pct = (k) => `${Math.round(k * 100)}%`;
+    let h = `<div class="list-title">The enchanter</div><p class="lore">A woman in grey sits on the step with a lap-desk of silver wire. "Shards," she says. "I make words out of what's left of old power. It doesn't always take."</p>`
+      + `<p class="small">Relic shards in the pack: <b>${g.shards()}</b>. A word added: ${TC.add.shards} shards and ${TC.add.gold} gold; a word raised a tier: ${TC.raise.shards} shards and ${TC.raise.gold} gold a tier. If it fails the shards are spent; now and then the thing cracks and loses a word.</p>`;
+    const rows = g.bag.map((it, i) => [it, i]).filter(([, i]) => { const O = g.towerOffers(i); return O.add.length || O.raise.length; });
+    if (!rows.length) h += `<p class="small">Nothing in the pack she can work on: worn gear without a unique's or a relic's nature.</p>`;
+    for (const [it, i] of rows) { const O = g.towerOffers(i), ca = g.towerChance(i, "add"), cr = g.towerChance(i, "raise");
+      h += `<div class="entry"><b class="rarity-${CM.rarityOf(it)}">${this.esc(it.name)}</b><br>`;
+      for (const [where, w] of O.add) { const why = g.towerWhy(i, "add", w); h += `<button data-tadd="${i}" data-w="${this.esc(w)}" ${why ? `disabled title="${this.esc(why)}"` : ""}>Add "${this.esc(w)}" (${pct(ca)})</button> `; }
+      for (const w of O.raise) { const why = g.towerWhy(i, "raise", w); h += `<button data-traise="${i}" data-w="${this.esc(w)}" ${why ? `disabled title="${this.esc(why)}"` : ""}>Raise "${this.esc(w)}" (${pct(cr)})</button> `; }
+      h += `</div>`; }
+    const relics = g.bag.map((it, i) => [it, i]).filter(([it]) => (it.props || {}).relic);
+    for (const [it, i] of relics) h += `<div class="entry"><button data-tbreak="${i}">Break ${this.esc(it.name)} into ${TC.relic} shards</button></div>`;
+    h += `<div class="note" id="enchant-note">${this.esc(this.enchantNote || "")}</div>`; this.enchantNote = "";
+    box.innerHTML = h; dlg.insertBefore(box, dlg.querySelector(".end") || null);
+    const again = (msg) => { this.enchantNote = msg; this.openMageTower(); this.refresh(); };
+    for (const b of box.querySelectorAll("[data-tadd]")) b.addEventListener("click", () => { const e = g.towerEnchant(Number(b.dataset.tadd), "add", b.dataset.w); again(e || ""); });
+    for (const b of box.querySelectorAll("[data-traise]")) b.addEventListener("click", () => { const e = g.towerEnchant(Number(b.dataset.traise), "raise", b.dataset.w); again(e || ""); });
+    for (const b of box.querySelectorAll("[data-tbreak]")) b.addEventListener("click", () => { const e = g.breakRelic(Number(b.dataset.tbreak)); again(e || ""); });
+    return out; };
+}
+
+// ---- 76zzzzzv-stillbook.js ----
+"use strict";
+// Brewing at the still - the window's side (v32.2): the fields' still shows the book's recipes found so far, each
+// a button when the pack holds its two; and the Journal's Recipes page gets the still's half. Rules: 69zb-stillbook.js.
+{ const rf0 = CM.UI.prototype.renderFields;
+  CM.UI.prototype.renderFields = function (...a) { const out = rf0.apply(this, a), g = this.game, box = this.$("#fd-body"); if (!box || !g.stillKnown || g.fieldsLevel() < 1) return out;
+    const K = g.stillKnown(), ids = Object.keys(CM.STILLBOOK).filter((id) => K[id]); const old = box.querySelector(".stillbook"); if (old) old.remove();
+    const el = document.createElement("div"); el.className = "stillbook"; const SB = CM.STILLBOOK;
+    el.innerHTML = `<div class="list-title">The still's book (${ids.length} of ${Object.keys(SB).length} pages)</div>` + (ids.length ? ids.map((id) => { const why = g.stillBrewWhy(id);
+      return `<button data-sb="${id}" ${why ? `disabled title="${this.esc(why)}"` : ""}>${this.esc(SB[id].name)} <small>(${this.esc(CM.CROPS[SB[id].crop].name.toLowerCase())} and ${this.esc(CM.INGREDIENTS[SB[id].ing].name.toLowerCase())}: ${this.esc(SB[id].what)})</small></button>`; }).join(" ")
+      : `<p class="small">No pages yet. They turn up in chests below the first floor, and on fallen alchemists.</p>`);
+    const at = box.querySelector(".fduse"); if (at) at.after(el); else box.appendChild(el);
+    el.querySelectorAll("[data-sb]").forEach((b) => b.addEventListener("click", () => { this.fdNote = g.stillBrew(b.dataset.sb) || ""; this.renderFields(); this.refresh && this.refresh(); }));
+    return out; };
+  CM.journalPage("stillbook", "Still book", "The still's recipes: pages found in the dungeon", (ui, box) => { const g = ui.game, K = g.stillKnown(), SB = CM.STILLBOOK, ids = Object.keys(SB);
+    box.innerHTML = `<div class="list-title">The still's book: ${ids.filter((id) => K[id]).length} of ${ids.length} pages</div><p class="small">Pages lie in chests below the first floor and among fallen parties' remains; a page is written in the moment it is found. At the still in the fields' shed, a crop and a band's ingredient make what the page says - no gold.</p>`
+      + ids.map((id) => K[id] ? `<div class="entry"><b>${ui.esc(SB[id].name)}</b><br><small>${ui.esc(CM.CROPS[SB[id].crop].name)} and ${ui.esc(CM.INGREDIENTS[SB[id].ing].name)}: ${ui.esc(SB[id].what)}</small></div>` : `<div class="entry"><b>?</b><br><small>a page not yet found (from ${ui.esc(CM.THEMES[CM.INGREDIENTS[SB[id].ing].band] ? CM.THEMES[CM.INGREDIENTS[SB[id].ing].band].name : "the deep")} or above)</small></div>`).join(""); });
 }
 
 // ---- 77-splash.js ----
