@@ -1987,7 +1987,7 @@ test("the belt and things to drink, read and throw: a free belt use once a round
 test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors, rarer things one in five, brewing on the floor at a fifth over, transmutation, poison, meat cooked into a meal, the alchemist's request", () => {
   const CM = load();
   assert.ok(Object.keys(CM.INGREDIENTS).length >= 18 && Object.keys(CM.RECIPES).length >= 20, `${Object.keys(CM.INGREDIENTS).length} ingredients, ${Object.keys(CM.RECIPES).length} recipes`);
-  let nodes = 0; for (let n = 1; n <= 20; n++) { const fl = CM.makeFloor(n, "node-1", 2); const c = Object.values(fl.things).filter((t) => t.type === "node").length; if (!CM.guardianFor(n) && n !== 20 && fl.special !== "maze") assert.ok(c >= 2 && c <= 3, `floor ${n}: ${c} nodes`); nodes += c; }
+  let nodes = 0; for (let n = 1; n <= 20; n++) { const fl = CM.makeFloor(n, "node-1", 2); const c = Object.values(fl.things).filter((t) => t.type === "node").length; if (!CM.guardianFor(n) && n !== 20 && fl.special !== "maze" && fl.mood !== "overgrown") assert.ok(c >= 2 && c <= 3, `floor ${n}: ${c} nodes`);   /* (v37.0: an overgrown floor grows two more) */ nodes += c; }
   assert.ok(nodes >= 30); assert.strictEqual(JSON.stringify(Object.values(CM.makeFloor(3, "node-1", 2).things).filter((t) => t.type === "node")), JSON.stringify(Object.values(CM.makeFloor(3, "node-1", 2).things).filter((t) => t.type === "node")), "nodes never move");
   // gathered: the band's ingredient; the rare one in five; the Druid takes two
   const game = new CM.Game(); game.newGame("node-1", fixedParty(CM));
@@ -5723,6 +5723,16 @@ test("the news board: the Crier's sheet for a week is written from that week's r
   const today = CM.today(); g.fame = [{ floor: 14, won: false, date: today, party: ["Ash the Knight 9"] }, { floor: 6, won: false, date: "1/2/2020" }]; g.memorial = [{ name: "Wren", cls: "Rogue", floor: 12, date: today }];
   const C = g.crier(); assert.ok(C.items.length >= 3); const text = JSON.stringify(C); assert.ok(/floor 14/.test(text) && /Wren/.test(text) && /record/i.test(text), text);
   assert.strictEqual(g.crierWeeks().length, 8); const old = g.crier("2001-01-01"); assert.strictEqual(old.items[0][0], "A quiet week");
+});
+
+test("floor moods: about one floor in seven from the third has a mood by the seed - flooded floors stand in water and burn the torch faster, overgrown ones grow more to gather, frozen ones numb the monsters, haunted ones harden the dead", () => {
+  const CM = load(); let n = 0, seen = new Set(); for (let f = 3; f <= 200; f++) { const m = CM.moodOf("mood-1", f); if (m) { n++; seen.add(m); } } assert.ok(n >= 15 && n <= 45, String(n)); assert.strictEqual(seen.size, 4);
+  assert.strictEqual(CM.moodOf("mood-1", 2), null);
+  const find = (id) => { for (let f = 3; f < 400; f++) if (CM.moodOf("mood-1", f) === id && !CM.guardianFor(f) && f !== 20) return f; };
+  const g = new CM.Game(); g.newGame("mood-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const fF = find("flooded"); g.enterFloor(fF, "down"); if (g.floor.mood === "flooded") { assert.ok((g.floor.decor || []).filter((d) => d.kind === "water").length > 5); g.light = { kind: "torch", left: 300 }; for (let i = 0; i < 20; i++) { g.steps = i; g.burn(); } assert.ok(g.light.left < 290, "burns faster"); }
+  const fZ = find("frozen"); g.enterFloor(fZ, "down"); if (g.floor.mood === "frozen") { const m = g.tune({ name: "Orc", kind: "Orc", hp: 40, max: 40, atk: 20, df: 2 }); assert.ok(m.atk < 20); }
+  assert.ok(g.tally.moods >= 1, "named coming onto it");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
