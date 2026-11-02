@@ -626,7 +626,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (m.hp <= 0 && !dying.has(m)) dying.set(m, now);
         const lunge = lunges.get(m); if (lunge !== undefined && now - lunge > 520) lunges.delete(m);
         const M = CM.motion({ now, phase: place.dx * 7 + i * 1.9, lungeAt: lunges.get(m), hitAt: hits.get(m), hitK: weight.get(m), windup: true, reach: m.boss || m.guardian ? 1.5 : CM.unmoved(m) ? 1.3 : 1, fellAt: m.hp <= 0 ? dying.get(m) : undefined, fledAt: m.fled ? fledAt.get(m) : undefined,
-          roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion });
+          roseAt: rising.get(m), ghost: place.ghost, sway: Boolean(m.boss), reduced: CM.reducedMotion, deathStyle: m.hp <= 0 && CM.deathStyleOf ? CM.deathStyleOf(m, game) : null });   // (v29.2: deaths of their own - 76zzzzw-deaths.js)
         if (M.done) { dying.delete(m); return; }
         const solid = place.echo ? 0.78 : 1;                             // (an echo of a guardian is drawn a little through)
         const lift = Math.sin(now / (place.ghost ? 900 : 600) + place.dx * 9) * (place.ghost ? 0.03 : 0.008) + (place.ghost ? 0.04 : 0) + M.lift;
@@ -636,7 +636,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const pose = m.hp > 0 && lunges.has(m) ? "attack" : m.hp > 0 && Math.floor(now / 640 + place.dx * 5) % 2 ? "idle2" : "";
         const off = place.dx * right[0] + place.dz * right[1], away = M.back - M.forward;
         const bend = m.hp > 0 && !m.fled && CM.monsterBend ? CM.monsterBend("fight", now, place.dx * 7 + i * 1.9, M) : null;   // (v29.0: the wind-up, the strike, the recoil)
-        out.push(Object.assign({}, place, { bend, layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
+        out.push(Object.assign({}, place, { bend, shade: (place.shade || 1) * (1 - (M.dark || 0)), layer: frameOf(place.layer, pose), flash: Math.max(flash * 0.8, M.flash), alpha: solid * M.alpha, lift, w: place.w, h: place.h * M.scaleY,
           dx: place.dx + fwdv[0] * away, dz: place.dz + fwdv[1] * away, tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(off) }));
       });
     }
