@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Distant views (v24.4, UPGRADE_PLAN_19.md phase 4)
+  (src/js/76zzzzg-farviews.js; 26-surface.js)
+  - From the land, the town stands on its hill to the east, where it really is - past the cliffs and the West Gate:
+    its ring wall, the roofs and chimneys within, the keep and the temple's spire. After dark its windows shine out
+    over the Wood (they glow through the night air and catch the Glow setting).
+  - From the town, the Mage Tower rises on the skyline to the north-west, over the Wood's treeline, at its own place
+    in the land; its high window is lit at night.
+  - The land's eastern horizon no longer repeats a small picture of a walled hill all along it.
+
 Day and night life (v24.3, UPGRADE_PLAN_19.md phase 3)
   (src/js/76zzzzf-nightlife.js; 26-surface.js, 40-render.js, 80-main.js)
   - The town keeps hours: its windows light from half past six in the evening, most are lit by eight, and they go dark
