@@ -518,6 +518,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
       else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
       else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
+      else if (CM.thingSprites && CM.thingSprites[thing.type]) { for (const sp of CM.thingSprites[thing.type](thing, x, y, now)) out.push(sp); }   // (v27.1: the breakables and braziers - 76zzzzo-breakables.js)
       else if (thing.type === "intexit") out.push({ x, y, layer: "door_open", face: 2, w: 0.7, h: 0.92, lift: 0.04, glow: 0.2 });   // (v24.6: the door back out, in the south wall)
       else if (thing.type === "intkeeper") { const L = CM.interiorLayer(thing); if (L && renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.7, h: 0.85, lift: Math.sin(now / 1100 + x) * 0.006 }); }
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)
