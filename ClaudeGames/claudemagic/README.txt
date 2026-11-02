@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A hand and a torch (v31.0, UPGRADE_PLAN_26.md phase 0)
+  (src/js/76zzzzzi-hand.js (its own canvas over the view, under the HUD))
+  - The front hero's hand at the foot of the view holds the torch or the lantern up: it sways with the walk and lags
+    a turn; the flame leans and gutters in the wind and burns smaller as the torch burns down.
+  - Shaded (T), the light is held low and covered. Not by daylight, not in a fight, not with no light; no sway with
+    Reduce motion.
+
 Better far distance (v30.9, UPGRADE_PLAN_25.md phase 9)
   (40-render.js (billboards fade in; the air's colour on the far land))
   - What stands on the ground far off (props, beasts, people) comes into view softly over the last two or three
