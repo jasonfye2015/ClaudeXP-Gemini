@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Elite looks (v39.4, UPGRADE_PLAN_34.md phase 4)
+  (src/js/76zzzzzzza-elites.js)
+  - Champions, guardians and the Lich King stand in a ring of light on the floor, in the colour of what they are (a
+    vampiric champion red, a warded one violet, a guardian its own, the king a cold blue), with motes rising from it.
+  - In a fight the great ones' tread ripples the floor every few seconds, with a small shake; the auras show on the
+    floor too, on bands within sight. Reduced motion keeps the ring and drops the motes and the ripple.
+
 Status seen (v39.3, UPGRADE_PLAN_34.md phase 3)
   (src/js/76zzzzzzz-statuses.js)
   - In a fight, what ails a monster shows on it: bleeding or poisoned, green drips falling; asleep, Zs drifting up;
