@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Hit reactions (v39.1, UPGRADE_PLAN_34.md phase 1)
+  (src/js/76zzzzzzx-hitreact.js)
+  - A struck monster flinches away from the blow; a weak spot staggers it further back and tips it.
+  - What the blow knocks off flies by what the monster is: sparks from plate, chips from shell and crystal, splinters of
+    bone, tufts of hide, a spray of blood from flesh, cold motes from the bodiless. Not with Reduce motion.
+
 Monsters, closer up (v39.0, UPGRADE_PLAN_34.md phase 0)
   (src/js/76zzzzzzw-mondetail.js (a detail pass over every monster picture, and its recoil frame))
   - Every monster picture gets a detail pass: fur strokes on beasts, scales on the scaled, rivets and plate seams on the
