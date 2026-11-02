@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The place's own sound (v28.2, UPGRADE_PLAN_23.md phase 2)
+  (src/js/76zzzzs-placeamb.js)
+  - Over the depth's ambience, loops of the place itself, made by the game when first wanted, each as loud as the
+    party is near it and heard from its side: birds by day (fewer in rain and winter) and crickets on summer nights in
+    the Wood, and the river beside it; in the town the market's murmur about the Square and hammering at the forge by
+    day, birds overhead; in the houses' rooms, the tavern's talk and the forge's anvil.
+  - Below, each band its own: water lapping in the Flooded Vaults, the Undercroft and the Drowned Town, bubbling in the
+    Fungal Deep, chimes in the Crystal Caverns, the Foundry's hammers and hiss, a slow beat at the Root of the World.
+
 Music that follows (v28.1, UPGRADE_PLAN_23.md phase 1)
   (src/js/76zzzzr-musicmood.js)
   - Below ground, as monsters awake come within seven squares, a layer of tension rises in the depth's tune - a low
