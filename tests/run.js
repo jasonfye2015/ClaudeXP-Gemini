@@ -5805,6 +5805,14 @@ test("monster habits: every kind has a habit; read after five of a kind slain in
   const e0 = g.tally.habitEdge; g.strike(K, b, "", { sure: true }); assert.strictEqual(g.tally.habitEdge, e0, "none on an unknown one");
 });
 
+test("surrender and parley: speaking foes badly beaten may throw down their weapons once a fight; spared, they go and leave their purse, and the sparing is remembered; refused, they fight on harder", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("yield-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
+  let offered = null; g.on("choice", (c) => { if (c.surrender) offered = c; });
+  for (let f = 0; f < 12 && !offered; f++) { g.tally.fights = f; const m = g.tune({ name: "Orc", kind: "Orc", hp: 5, max: 60, atk: 8, df: 0 }); g.foes = [m]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat(); g.combat.round = 3; g.afterBlows(); }
+  assert.ok(offered, "an offer, some fight"); const gold = g.gold; assert.ok(g.answerSurrender(0)); assert.ok(g.gold > gold && g.mode !== "combat", "spared: they go, the purse stays"); assert.ok((CM.store.get("spared", {}).Orc || 0) >= 1);
+  const rat = g.tune({ name: "Giant Rat", kind: "Giant Rat", hp: 2, max: 30, atk: 4, df: 0 }); g.foes = [rat]; g.mode = "combat"; if (g.ensureCombat) g.ensureCombat(); g.combat.round = 3; offered = null; g.afterBlows(); assert.ok(!offered, "a rat doesn't parley");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
