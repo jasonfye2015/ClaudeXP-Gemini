@@ -18,7 +18,8 @@ void main() { vec3 p = aPos; vec3 fx = aFx;
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf;   // (v26.0: the outdoors' drawn pictures, 2000 and up)
+ uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
@@ -38,8 +39,9 @@ vec3 shafts(vec3 vdir, float d) {                                          // (v
 }
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
-  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0)));
-  vec4 t = shared ? ts : tt;
+  bool surf = vUV.z > 1999.5;
+  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
+  vec4 t = surf ? tf : shared ? ts : tt;
   if (vFx.z > 2.5 && vFx.z < 3.5) { fragColor = vec4(mix(uHorizon, uZenith, t.r) + shafts(normalize(vWorld - uEye), 40.0) * 0.45, 1.0); return; }
   if (t.a < 0.5) discard;
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -67,9 +69,9 @@ void main() {
   if (dot(n, uEye - vWorld) < 0.0) n = -n;
   float spec = 0.0; vec3 n0 = n;
   if (uBump > 0.0 && vFx.z < 0.5) {                                        // (v22.1) relief: walls, floors and the ground take it from their own pictures
-    vec2 px = 1.0 / vec2(shared ? textureSize(uShared, 0).xy : textureSize(uTex, 0).xy), uv = vUV.xy;
-    float lz = shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
-    #define HT(o) dot((shared ? texture(uShared, vec3(uv + (o), lz)) : texture(uTex, vec3(uv + (o), lz))).rgb, vec3(0.3, 0.59, 0.11))
+    vec2 px = 1.0 / vec2(surf ? textureSize(uSurf, 0).xy : shared ? textureSize(uShared, 0).xy : textureSize(uTex, 0).xy), uv = vUV.xy;
+    float lz = surf ? max(vUV.z - 2000.0, 0.0) : shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
+    #define HT(o) dot((surf ? texture(uSurf, vec3(uv + (o), lz)) : shared ? texture(uShared, vec3(uv + (o), lz)) : texture(uTex, vec3(uv + (o), lz))).rgb, vec3(0.3, 0.59, 0.11))
     float hu = HT(vec2(px.x, 0.0)) - HT(vec2(-px.x, 0.0)), hv = HT(vec2(0.0, px.y)) - HT(vec2(0.0, -px.y));
     vec3 dpx = dFdx(vWorld), dpy = dFdy(vWorld); vec2 dux = dFdx(uv), duy = dFdy(uv);
     vec3 r1 = cross(dpy, n), r2 = cross(n, dpx); float det = dot(dpx, r1);
@@ -179,7 +181,7 @@ CM.Renderer = class {
     this.program = this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    for (const n of ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind"]) this.loc[n] = gl.getUniformLocation(this.program, n);
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -275,39 +277,60 @@ CM.Renderer = class {
   // at once when the set is asked for (the town's, while the title is up)
   prepare(art) {
     const gl = this.gl; if (!gl) return; if (this.prepared) { if (this.prepared.art === art) return; this._dropPrepared(); }
-    const { own, rest, sharedKey } = this._split(art), P = { art, own, rest, sharedKey, texture: gl.createTexture(), shared: null };
-    this._upload(P.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp), true);
-    if (this.sharedKey !== sharedKey) { P.shared = gl.createTexture(); this._upload(P.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp), true); }
+    const S = this._split(art), P = Object.assign({ art, texture: gl.createTexture(), shared: null, surfTex: null }, S);
+    this._upload(P.texture, S.own.map(S.pic), S.sizes.own, Boolean(art.crisp), true);
+    if (S.surf.length) { P.surfTex = gl.createTexture(); this._upload(P.surfTex, S.surf.map(S.pic), S.sizes.surf, Boolean(art.crisp), true); }
+    if (this.sharedKey !== S.sharedKey) { P.shared = gl.createTexture(); this._upload(P.shared, S.rest.map(S.pic), S.sizes.shared, Boolean(art.crisp), true); }
     this.prepared = P;
   }
-  _dropPrepared() { const P = this.prepared, gl = this.gl; if (!P) return; if (P.texture) gl.deleteTexture(P.texture); if (P.shared) gl.deleteTexture(P.shared); this.prepared = null; }
-  _split(art) { const own = [], rest = []; for (const name of Object.keys(art.index)) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }
-    return { own, rest, sharedKey: `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}` }; }
+  _dropPrepared() { const P = this.prepared, gl = this.gl; if (!P) return; if (P.texture) gl.deleteTexture(P.texture); if (P.shared) gl.deleteTexture(P.shared); if (P.surfTex) gl.deleteTexture(P.surfTex); this.prepared = null; }
+  // (v26.0) the split, right-sized: the band's own and the outdoors' photographs at the look's size (a Pixel set's at
+  // 128 - its pictures are pixel art); the outdoors' drawn pictures into an array of their own at 256 (128 in Pixel);
+  // the rest shared at 256 (128); and the small sprites - motes, sparks, signs, moons, keys - four to a layer
+  _split(art) {
+    if (art._split) return art._split;
+    const look = String(art.sharedKey || "drawn:drawn").split(":")[1] || "drawn", Z = CM.art.LAYER_SIZES[look] || CM.art.LAYER_SIZES.drawn;
+    const sizes = { own: Math.min(art.size || 256, Z.own), surf: Z.surf, shared: Z.shared }, own = [], surf = [], rest = [], packOwn = [], packSurf = [], packRest = [];
+    for (const name of Object.keys(art.index)) {
+      const theme = CM.art.isThemeLayer(name, art.theme), sfc = CM.art.isSurfaceLayer(name), small = CM.art.isPackable(name);
+      if (theme && sfc && !CM.art.isPhotoLayer(name)) (small ? packSurf : surf).push(name);
+      else if (theme) own.push(name);
+      else if (!sfc) (small ? packRest : rest).push(name);
+    }
+    const sub = Object.assign({}, art.sub || {}), pics = {};
+    const pack = (names, size, into, tag) => { for (let i = 0; i < names.length; i += 4) { const nm = `pack:${tag}${i / 4}`, c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), h = size / 2, pad = art.crisp ? 0 : 2;
+        p.imageSmoothingEnabled = !art.crisp; names.slice(i, i + 4).forEach((n, j) => { const x = (j % 2) * h, y = Math.floor(j / 2) * h; p.drawImage(art.layers[art.index[n]], x + pad, y + pad, h - 2 * pad, h - 2 * pad); sub[n] = [nm, (x + pad) / size, (y + pad) / size, (x + h - pad) / size, (y + h - pad) / size]; });
+        pics[nm] = c; into.push(nm); } };
+    pack(packSurf, sizes.surf, surf, "s"); pack(packRest, sizes.shared, rest, "r");
+    const pic = (name) => pics[name] || art.layers[art.index[name]], packed = new Set([...packSurf, ...packRest]);
+    return (art._split = { own, surf, rest, packed, sub, pic, sizes, sharedKey: `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}:${sizes.shared}` });
+  }
+  _indexOf(S) { const index = {}; S.own.forEach((n, i) => { index[n] = i; }); S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 2000 + i; });
+    for (const n of S.packed) index[n] = index[S.sub[n][0]];                     // (a packed one answers by its layer: the sprites read the corner from sub)
+    return index; }
   setTextures(art, gentle) {
     if (this.prepared && this.prepared.art === art) { const P = this.prepared, gl = this.gl; this.prepared = null;   // (ready ahead: swapped in)
       if (P.shared) { if (this.shared) gl.deleteTexture(this.shared); this.shared = P.shared; this.sharedKey = P.sharedKey; }
-      if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; const index = {}; P.own.forEach((n, i) => { index[n] = i; }); P.rest.forEach((n, i) => { index[n] = 1000 + i; });
-        this.index = index; this.sub = art.sub || {}; this.crisp = Boolean(art.crisp); this.bumpK = /^stone/.test(art.sharedKey || "") ? 1.0 : art.crisp ? 0.45 : 0.7; return; }
-      gl.deleteTexture(P.texture); }                                     // (the shared set moved on meanwhile: made the ordinary way)
+      if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; if (this.surfTex) gl.deleteTexture(this.surfTex); this.surfTex = P.surfTex;
+        this.index = this._indexOf(P); this.sub = P.sub; this.crisp = Boolean(art.crisp); this.bumpK = /^stone/.test(art.sharedKey || "") ? 1.0 : art.crisp ? 0.45 : 0.7; return; }
+      gl.deleteTexture(P.texture); if (P.surfTex) gl.deleteTexture(P.surfTex); }   // (the shared set moved on meanwhile: made the ordinary way)
     else if (this.prepared) this._dropPrepared();
-    const gl = this.gl, names = Object.keys(art.index), own = [], rest = [];
-    for (const name of names) { if (CM.art.isThemeLayer(name, art.theme)) own.push(name); else if (!CM.art.isSurfaceLayer(name)) rest.push(name); }   // (the outdoors below ground: not needed, not uploaded - so the shared set is the same for every band)
-    const index = {};
-    own.forEach((name, i) => { index[name] = i; });
-    rest.forEach((name, i) => { index[name] = 1000 + i; });
-    const sharedKey = `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}`;
+    const gl = this.gl, S = this._split(art), { own, rest, surf, sharedKey } = S;   // (the outdoors below ground: not needed, not uploaded - so the shared set is the same for every band)
     if (!this.shared || this.sharedKey !== sharedKey) {
       if (this.shared) gl.deleteTexture(this.shared);
       this.shared = gl.createTexture(); this.sharedKey = sharedKey;
-      this._upload(this.shared, rest.map((name) => art.layers[art.index[name]]), CM.SHARED_SIZE, Boolean(art.crisp), gentle);
+      this._upload(this.shared, rest.map(S.pic), S.sizes.shared, Boolean(art.crisp), gentle);
       this.uploads = (this.uploads || 0) + rest.length;
     }
     if (this.texture) gl.deleteTexture(this.texture);
     this.texture = gl.createTexture();
-    this._upload(this.texture, own.map((name) => art.layers[art.index[name]]), art.size, Boolean(art.crisp), gentle);
-    this.uploads = (this.uploads || 0) + own.length;
-    this.index = index;
-    this.sub = art.sub || {};
+    this._upload(this.texture, own.map(S.pic), S.sizes.own, Boolean(art.crisp), gentle);
+    if (this.surfTex) gl.deleteTexture(this.surfTex); this.surfTex = null;
+    if (surf.length) { this.surfTex = gl.createTexture(); this._upload(this.surfTex, surf.map(S.pic), S.sizes.surf, Boolean(art.crisp), gentle); }
+    this.uploads = (this.uploads || 0) + own.length + surf.length;
+    this.index = this._indexOf(S);
+    this.sub = S.sub;
+    this.texBytes = Math.round((own.length * S.sizes.own ** 2 + surf.length * S.sizes.surf ** 2 + rest.length * S.sizes.shared ** 2) * 4 * 1.33);   // (v26.0: for the measure)
     this.crisp = Boolean(art.crisp);                                     // pixel tiles stay pixels when they come close
     this.bumpK = /^stone/.test(art.sharedKey || "") ? 1.0 : art.crisp ? 0.45 : 0.7;   // (v22.1: how deep the relief, by the look)
   }
@@ -567,7 +590,8 @@ CM.Renderer = class {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.texture);
     gl.uniform1i(this.loc.uTex, 0);
-    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1); gl.activeTexture(gl.TEXTURE0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.surfTex || this.texture); gl.uniform1i(this.loc.uSurf, 2); gl.activeTexture(gl.TEXTURE0);
     gl.uniform1f(this.loc.uBump, CM.reliefOff ? 0 : (this.bumpK || 0.7) * (CM.reliefScale || 1));   // (v22.1: the relief on the floor's own mesh only)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();

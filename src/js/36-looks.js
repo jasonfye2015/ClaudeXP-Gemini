@@ -183,6 +183,11 @@ CM.art.build = function (theme, look = "drawn") {
 };
 // which of a set's pictures are the band's own (uploaded with each band) and which are shared (uploaded once a look)
 CM.SHARED_SIZE = 256;
+// (v26.0) the sizes the pictures go up at, by look: a Pixel set's are pixel art (128 shows every pixel); Stone's own
+// are photographs (512); the outdoors' drawn pictures and the shared ones are painted at 256
+CM.art.LAYER_SIZES = { pixel: { own: 128, surf: 128, shared: 128 }, drawn: { own: 256, surf: 256, shared: 256 }, stone: { own: 512, surf: 256, shared: 256 } };
+CM.art.isPhotoLayer = (name) => /^(ground:|tree:|solid:|canopy$)/.test(name);   // (the outdoors' pictures that may be photographs: kept at the look's size)
+CM.art.isPackable = (name) => /^(air:|fx:|sign:|moon:)/.test(name) || ["key", "rope", "bones", "plate", "plate_pressed", "lever", "lever_pulled", "ember", "fungus", "crystal", "root", "phylactery", "shadow", "carving", "sun"].includes(name);   // (drawn small: four to a layer)
 CM.art.THEME_LAYERS = new Set(["wall", "wall2", "wallbones", "wallsecret", "floor", "ceiling", "hatch", "pit", "trapdoor", "stairs_up"]);
 CM.art.isSurfaceLayer = (name) => /^(ground:|solid:|tree:|far:|canopy$|skygrad$|sun$|moon:|window:|ice$|crops:|court:|portal:|sprinkler:|npc:fieldhand|npc:warden$|glyphcab$|wayfarer$|scarecrow$|cloche$|silo$|courtboard$)/.test(name);   // (v21.4: the fields', the court's and the cabinet's pictures are the surface's too: never uploaded below ground)   // (the outdoors: only the town and the land use these)
 CM.art.isThemeLayer = (name, theme) => CM.art.THEME_LAYERS.has(name) || Boolean(theme && theme.sky && CM.art.isSurfaceLayer(name));

@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Smaller textures (the ninety-second big update - v26.0, UPGRADE_PLAN_21.md phase 0)
+  (src/js/40-render.js, 36-looks.js)
+  - The pictures go up to the graphics card at the size they need: the Pixel look's (pixel art) at 128 rather than
+    256; the Stone look's photographs at 512 and nothing else; the outdoors' drawn pictures (the crops, the court's
+    stones and portals, the far views, the moons, the townsfolk) in a third texture of their own at 256, not blown up
+    to 512 beside the photographs; and the small sprites - motes, sparks, signs, moons, keys - four to a layer.
+  - The town's textures, measured: Pixel 165 MB to 38 MB, Stone 348 MB to 221 MB, Drawn 178 MB to 163 MB; a band's
+    below ground about a tenth less again. Nothing on screen changes.
+
 The tray (v25.3, UPGRADE_PLAN_20.md phase 3 - the interface and feel plan done)
   (src/js/76zzzzm-tray.js; style.css)
   - What matters and passes comes up as a small toast in the lower corner of the view, as well as in the log: a hero
