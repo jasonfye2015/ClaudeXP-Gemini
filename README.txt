@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Ceilings (v40.3, UPGRADE_PLAN_35.md phase 3)
+  (src/js/76zzzzzzze-ceilings.js)
+  - Stone ribs spring across the bays of halls and of any room of twenty squares or more; timber beams cross the
+    cellar rooms and corridors of the Catacombs and the Dwarven Halls.
+  - Chains hang from the dark in the Lich King's Palace, the Foundry and the Ossuary, swaying a little.
+  - In the first two bands, by day, light falls through a broken place in the roof: a shaft of it, dust turning in
+    it, and a pale patch on the floor.
+
 Furniture by purpose (v40.2, UPGRADE_PLAN_35.md phase 2)
   (src/js/76zzzzzzzd-furniture.js)
   - A plain room below ground is now and then something: a library (shelves of books along its walls and a reading
