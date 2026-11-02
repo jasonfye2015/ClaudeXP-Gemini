@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Living portraits (v31.2, UPGRADE_PLAN_26.md phase 2)
+  (src/js/76zzzzzk-portraits.js (the party's cards, redrawn from their own pictures))
+  - The heroes on the party's cards blink now and then and glance aside (a helmed face that shows no eyes doesn't).
+  - Hurt, a hero bruises; badly hurt, goes pale with a cut. Weary with hunger or in the heat of the deep, they sweat;
+    in the snow and the cold bands their faces frost at the edges. The fallen are left as they are.
+
 Camera feel (v31.1, UPGRADE_PLAN_26.md phase 1)
   (src/js/76zzzzzj-camera.js (and CM.addSetting, a Settings row for the window files); 40-render.js (renderer.camOff))
   - Settings > Camera motion: Gentle (the default), Full or Off. The walk bobs and sways from foot to foot, the view
