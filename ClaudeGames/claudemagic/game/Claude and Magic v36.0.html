@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v35.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v36.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "35.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "36.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29261,6 +29261,41 @@ Object.assign(CM.Game.prototype, {
   const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === 0) { const t = fl.things[key(fl.pos[0], fl.pos[1])]; if (t && t.type === "kennel") { this.logAct && this.logAct("use"); this.emit("kennel"); return; } } return use0.apply(this, a); };
 }
 
+// ---- 69zr-market.js ----
+"use strict";
+// Market days (v36.0, UPGRADE_PLAN_31.md): traders from away come to the Square, each on a fixed day of the run's week
+// (the run's day, counted in sevens) - Hrodna of the Deep Halls with fine arms and armour on the second day, Saffi from
+// the east with rare herbs, seeds and spice on the fourth, old Mott the tinker with wands, lamps and oddments on the
+// sixth - and on the seventh, market day, all three and a bookseller with tomes, their stalls round the Square. Their
+// stock is the week's, and dearer than the town's own; bought through the pack's shop as the peddler's is.
+//   CM.TRADERS; CM.tradersOn(game) -> [id]; game.trade(id)
+{ const TR = CM.TRADERS = {
+    hrodna: { name: "Hrodna of the Deep Halls", day: 1, at: [20, 17], what: "fine arms and armour, dwarf-made", line: "Hrodna slaps the anvil-wood of her stall. \"Dwarf work. Your town smith couldn't make the hinges.\"" },
+    saffi: { name: "Saffi from the East", day: 3, at: [24, 17], what: "rare herbs, rare seeds and spice", line: "Saffi lifts a lid and the whole Square smells of cardamom. \"From the river-country. You won't find it here twice.\"" },
+    mott: { name: "Old Mott the tinker", day: 5, at: [24, 21], what: "wands, lamps and oddments", line: "Mott polishes a wand on his sleeve. \"Charged. Mostly. Try it on someone you don't like.\"" },
+    books: { name: "The bookseller", day: 6, at: [20, 21], what: "tomes from far libraries", line: "The bookseller doesn't look up from her reading. \"Everything's for sale except this one.\"" },
+  };
+  CM.MARKET_DAY = 6;
+  CM.tradersOn = (game) => { const d = ((CM.dayOf ? CM.dayOf(game) : 0) % 7 + 7) % 7; return Object.keys(TR).filter((id) => d === CM.MARKET_DAY ? true : TR[id].day === d); };
+  const G = CM.Game.prototype, key = (x, y) => `${x},${y}`, week = (g) => Math.floor((CM.dayOf ? CM.dayOf(g) : 0) / 7);
+  const stockFor = (g, id) => { const rnd = new CM.Random(CM.hashSeed(`${g.seed}:trader:${id}:${week(g)}`)), L = Math.max(3, (g.deepestReached ? g.deepestReached() : 3)), out = [], dear = (it, k) => { it.value = Math.round((it.value || 20) * k); return it; };
+    if (id === "hrodna") for (let i = 0; i < 4; i++) { const it = CM.affix(CM.makeItem(L + 5, rnd, rnd.pick(["weapon", "armor", "helm", "shield"])), L + 10, rnd); it.unknown = false; out.push(dear(it, 1.6)); }
+    if (id === "saffi") { const rare = Object.keys(CM.INGREDIENTS).filter((k) => CM.INGREDIENTS[k].rare); for (let i = 0; i < 3; i++) out.push(dear(CM.ingredient(rnd.pick(rare)), 2));
+      const fs = (CM.FIELDSEEDS && CM.FIELDSEEDS.RARE) || []; for (let i = 0; i < 2 && fs.length; i++) { const c = rnd.pick(fs); if (CM.CROPS[c]) out.push(dear(CM.seed(c), 4)); }
+      out.push(dear(CM.ingredient("honey" in CM.INGREDIENTS ? "honey" : rare[0]), 3)); }
+    if (id === "mott") { const wands = Object.keys(CM.WANDS || {}); for (let i = 0; i < 2 && wands.length; i++) out.push(dear(CM.wand(rnd.pick(wands), 4 + rnd.int(0, 3)), 1.5)); out.push(dear(CM.lantern(), 1.2)); for (let i = 0; i < 2; i++) { const it = CM.affix(CM.makeItem(L + 3, rnd, rnd.pick(["ring", "amulet"])), L + 6, rnd); it.unknown = false; out.push(dear(it, 1.5)); } }
+    if (id === "books") { const tomes = Object.keys(CM.TOMES || {}); for (let i = 0; i < 3 && tomes.length; i++) out.push(dear(CM.tome(rnd.pick(tomes)), 1.4)); out.push(CM.scroll ? dear(CM.scroll("mapping"), 1.2) : null); }
+    return out.filter(Boolean); };
+  // the stalls: on the floor while their day lasts
+  const lay = (g) => { const fl = g.floor; if (!fl || fl.number !== 0) return; const on = new Set(CM.tradersOn(g));
+    for (const [id, T] of Object.entries(TR)) { const k = key(...T.at), t = fl.things[k]; if (on.has(id)) { if (!t && fl.grid[T.at[1]][T.at[0]] === 0) fl.things[k] = { type: "trader", id, week: week(g) }; else if (t && t.type === "trader" && t.week !== week(g)) { t.week = week(g); t.stock = null; } }
+      else if (t && t.type === "trader") delete fl.things[k]; } };
+  G.trade = function (id) { const fl = this.floor, T = TR[id]; if (!T || !fl || fl.number !== 0) return "The traders are in the Square, on their days."; const k = key(...T.at), t = fl.things[k]; if (!t || t.type !== "trader") return `${T.name} isn't here today.`;
+    if (!t.stock) t.stock = stockFor(this, id); this.stock = t.stock; this.peddling = k; this.say(T.line); this.openBag(true); return ""; };
+  const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "floor" || ev === "change") lay(this); return em0.call(this, ev, ...a); };
+  const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === 0) { const t = fl.things[key(fl.pos[0], fl.pos[1])]; if (t && t.type === "trader") { this.logAct && this.logAct("use"); this.trade(t.id); return; } } return use0.apply(this, a); };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -41377,6 +41412,23 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   const rf0 = CM.UI.prototype.refresh; let bound = false;
   CM.UI.prototype.refresh = function (...a) { if (!bound && this.game && this.game.on) { bound = true; this.game.on("kennel", () => this.openKennel()); } const out = rf0.apply(this, a), g = this.game, el = this.$ && this.$("#side .pets");
     if (el && g && g.floor && g.floor.number === 0 && g.mode !== "title") { const n = [g.petName("dog"), g.petName("pony")].filter(Boolean); if (n.length) el.textContent = `${n.join(" and ")} at the kennel`; } return out; };   /* (in town: the side panel says where they are) */
+}
+
+// ---- 76zzzzzzj-market.js ----
+"use strict";
+// Market days - the window's side (v36.0): each trader drawn at their stall in the Square (a striped awning over them),
+// and the side panel says who is in the Square today. Rules: 69zr-market.js.
+{ const S = 256, cv = () => { const c = document.createElement("canvas"); c.width = c.height = S; return c; };
+  const COLS = { hrodna: ["#8A2A20", "#E8D8B0"], saffi: ["#C08020", "#5A2A6A"], mott: ["#2A5A3A", "#E8D8B0"], books: ["#2A3A6A", "#D8C8A0"] };
+  const awning = (p, a, b) => { p.fillStyle = "#5A3A1E"; p.fillRect(30, 70, 10, 180); p.fillRect(216, 70, 10, 180); for (let i = 0; i < 8; i++) { p.fillStyle = i % 2 ? a : b; p.beginPath(); p.moveTo(18 + i * 28, 40); p.lineTo(46 + i * 28, 40); p.lineTo(46 + i * 28, 92); p.quadraticCurveTo(32 + i * 28, 104, 18 + i * 28, 92); p.closePath(); p.fill(); }
+    p.fillStyle = "#6A4A2A"; p.fillRect(20, 196, 216, 18); p.fillStyle = "#8A6A40"; p.fillRect(20, 190, 216, 8); };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [id, [a, b]] of Object.entries(COLS)) { const c = cv(); awning(c.getContext("2d"), a, b); set.index[`stall:${id}`] = set.layers.length; set.layers.push(c); } return set; }; }
+  const WHO = { hrodna: "npc:res_smith", saffi: "npc:res_farm", mott: "npc:hermit", books: "npc:res_library" };
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { trader: (t, x, y) => { const out = [{ x, y, layer: `stall:${t.id}`, w: 1.0, h: 1.05, dz: -0.15 }]; const L = WHO[t.id]; if (L && CM.renderer && CM.renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.55, h: 0.75, dz: -0.05 }); return out; } });
+  const rf0 = CM.UI.prototype.refresh;
+  CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a), g = this.game, where = this.$ && this.$("#side .where"); if (where && g && g.floor && g.floor.number === 0 && g.mode !== "title" && CM.tradersOn) { const on = CM.tradersOn(g);
+      let el = this.$("#side .market"); if (!el) { el = document.createElement("div"); el.className = "market small"; where.after(el); } el.textContent = on.length ? `${on.length > 1 ? "Market day" : "In the Square today"}: ${on.map((id) => CM.TRADERS[id].name).join(", ")}` : ""; }
+    else { const el = this.$ && this.$("#side .market"); if (el) el.textContent = ""; } return out; };
 }
 
 // ---- 77-splash.js ----
