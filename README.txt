@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Weather on the lens (v31.9, UPGRADE_PLAN_26.md phase 9)
+  (src/js/76zzzzzr-lens.js; 40-render.js (the screen pass's drops, snow and mist))
+  - Out in the rain drops gather on the view - beads that sit and runners that slide down - bending what is behind
+    them; in falling snow it gathers at the edges; in mist and the damp bands below (the Flooded Vaults, the Drowned
+    Town) fine beads cloud it a little. Each comes and goes slowly; not indoors or in a fight.
+  - Settings > Weather on the view: On or Off. This finishes plan 26 (set 10 of the list).
+
 The map as an object (v31.8, UPGRADE_PLAN_26.md phase 8)
   (src/js/76zzzzzq-parchment.js (the big map's drawing, wrapped))
   - The big map (Tab) is on parchment: old paper, blotched and darker at its edges; the walls inked with a hand's
