@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+3-D items (v31.7, UPGRADE_PLAN_26.md phase 7)
+  (src/js/76zzzzzp-solids.js (CM.solidOf: an icon given depth, layer on layer))
+  - Hover a thing's icon in the pack, a shop, a chest or the stash and it turns where it lies, a small solid thing:
+    its picture laid layer on layer, the outer ones lit and the inner ones darker.
+  - Its tooltip card carries a larger one turning slowly. With Reduce motion it stands still, turned so its depth shows.
+
 Scene transitions (v31.6, UPGRADE_PLAN_26.md phase 6)
   (src/js/76zzzzzo-transitions.js; 40-render.js (the screen pass's swirl))
   - Down or up the shaft the view goes to black and comes back; through a portal or a waystone it swirls in violet;
