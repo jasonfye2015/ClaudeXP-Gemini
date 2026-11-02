@@ -14,8 +14,8 @@ bestiary, the guardians' parley and three guardians' second forms stand already;
   hammer and anvil (a Knight's guard or bash, then a blow from beside: the foe's guard broken).
 
 ## v38.2 - monster habits (23)
-- Every kind has a habit, learnt after ten of them slain and kept in the Bestiary: who it goes for, when it runs, what
-  it does first. A known habit gives an edge: told at the fight's start, and a tenth more against that kind.
+- Every kind has a habit, read once five are slain in a run, and written in the Bestiary for good: who it goes for, when it runs, what
+  it does first. Read after five of a kind slain in one expedition: told at the fight's start, and a tenth more against that kind; kept in the Bestiary.
 
 ## v38.3 - surrender and parley (24)
 - Foes that can speak, badly beaten, now and then throw down their weapons: spare them (they go, leaving their purse,

@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Monster habits (v38.2, UPGRADE_PLAN_33.md phase 2)
+  (src/js/69zzd-habits.js; 76zzzzzzt-habits.js (the bestiary writes each kind's way))
+  - Every kind has a habit, read from what it is - who it goes for, when it runs, what it does first ("it stands off and
+    shoots at whoever is easiest to see - rush it", "it keeps the others standing - kill it first").
+  - Once a party has slain five of a kind in an expedition it has their measure: the habit is told then and when a
+    fight with them begins, and every blow and spell on that kind is a tenth harder. The Bestiary writes the habit for
+    good once read.
+
 Combos, more (v38.1, UPGRADE_PLAN_33.md phase 1)
   (src/js/69zzc-combos.js)
   - Four more combos, each from two blows one after the other on the same foe in a round, named the first time and kept
