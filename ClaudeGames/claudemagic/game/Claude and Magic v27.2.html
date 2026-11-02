@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v27.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v27.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "27.1", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "27.2", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -28324,6 +28324,52 @@ Object.assign(CM.Game.prototype, {
   CM.breakDescribe = (t) => (t.type === "breakable" ? `${cap(BR.KINDS[t.kind])}, old and dry: it will break if you walk through it.` : t.type === "brazier" ? (t.lit ? "A brazier, burning. (Space to knock it over - the floor about it will burn)" : "A brazier on its side, its coals spread.") : "");
 }
 
+// ---- 69x-pets.js ----
+"use strict";
+// A dog and a pony (v27.2, UPGRADE_PLAN_22.md): animals of the party's own, kept in the village between runs and
+// bought at the farm in the Wood - not hired help, so they take no follower's place.
+// - The hound goes everywhere the party goes. It growls at a trap two squares off (marked on the map) and scratches at
+//   the wall where a hidden door is; on the land by day it digs now and then and brings up something small - a few
+//   coins, a herb, a seed.
+// - The pony carries thirty more on the surface, walks the land quicker (every other step on the Wood's roads and
+//   tracks costs no time), and waits at the shaft's head: it does not go below.
+{ const PT = CM.PETS = { dog: { price: 60, names: ["Bramble", "Soot", "Nell", "Tolly", "Wisp", "Corrie"] }, pony: { price: 220, names: ["Dapple", "Turnip", "Old Moss", "Clover"] }, digEvery: 45, ponyCarry: 30 };
+  const P = CM.Game.prototype;
+  Object.assign(P, {
+    pets() { this.village = this.village || {}; return (this.village.pets = this.village.pets || { dog: null, pony: null }); },
+    petName(kind) { const p = this.pets()[kind]; return p ? p.name : null; },
+    buyPet(kind) { const K = PT[kind]; if (!K) return "No such animal."; if (!this.atFarm || !this.atFarm()) return "The animals are at the farm, in the Wood."; if (this.pets()[kind]) return `${this.petName(kind)} is yours already.`;
+      if (this.gold < K.price) return `${K.price} gold, and you have ${this.gold}.`; this.logAct && this.logAct("buyPet", kind); this.gold -= K.price;
+      const name = K.names[CM.hashSeed(`${this.seed}:${kind}:${this.clock || 0}`) % K.names.length]; this.pets()[kind] = { name, since: CM.dayOf ? CM.dayOf(this) : 0 };
+      this.say(kind === "dog" ? `A pup from the farm's litter, nearly grown: ${name}. It has decided you are its people.` : `${name}, the farm's pony: sure-footed, patient, and fond of apples.`);
+      this.saveVillage && this.saveVillage(); this.emit("change"); return ""; },
+  });
+  // the hound's nose: traps two squares off, a hidden door beside the party
+  const look0 = P.look;
+  P.look = function (...a) { const out = look0.apply(this, a), dog = this.petName("dog"), fl = this.floor; if (!dog || !fl || !CM.isDeep(fl.number)) return out;
+    const [x, y] = fl.pos;
+    for (const [k, f] of Object.entries(fl.features)) { const [tx, ty] = k.split(",").map(Number), d = Math.abs(tx - x) + Math.abs(ty - y); if (d > 2) continue;
+      if ((f.type === "trapdoor" && !f.known) || (f.type === "plate" && f.trap && !f.known && !f.spent)) { f.known = true; this.say(`${dog} growls low at the floor ahead: a trap, there.`); }
+      if (d === 1 && f.type === "secret" && !f.found && !f.sniffed) { f.sniffed = true; const way = tx > x ? "east" : tx < x ? "west" : ty > y ? "south" : "north"; this.say(`${dog} scratches at the ${way} wall and whines. There is something behind it.`); } }
+    return out; };
+  // the hound digs on the land; the pony's quick feet
+  const burn0 = P.burn;
+  P.burn = function (...a) { const out = burn0.apply(this, a), fl = this.floor; if (!fl || fl.number !== -1) return out;
+    const dog = this.petName("dog");
+    if (dog && !CM.isNight(this) && CM.hashSeed(`${this.seed}:dig:${this.clock || 0}`) % PT.digEvery === 0) { const r = CM.hashSeed(`${this.seed}:digwhat:${this.clock || 0}`) % 10;
+      if (r < 5) { const g = 3 + (r * 2); this.gold += g; this.say(`${dog} digs at the roots and brings up an old purse: ${g} gold.`); }
+      else if (r < 8 && CM.INGREDIENTS) { const ids = Object.keys(CM.INGREDIENTS), id = ids[r % ids.length]; this.gain([CM.ingredient(id)], "dug"); this.say(`${dog} noses out ${CM.INGREDIENTS[id].name.toLowerCase()} under the leaves.`); }
+      else if (CM.CROPS && CM.seed) { const crops = Object.keys(CM.CROPS).filter((c) => !CM.CROPS[c].rare), c = crops[r % crops.length]; this.gain([CM.seed(c)], "dug"); this.say(`${dog} digs up a buried seed: ${CM.CROPS[c].name}.`); } }
+    if (this.petName("pony") && (this.steps || 0) % 2 === 0) this.clock = Math.max(0, (this.clock || 0) - 1);   // (on the pony: every other step costs no time)
+    return out; };
+  const ow0 = P.overweight; P.overweight = function (...a) { const o = ow0.apply(this, a); if (!this.petName("pony") || !this.floor || !(this.floor.number === 0 || this.floor.number === -1)) return o;
+    const cap = CM.carryCap(this.party) + (this.followerCarry ? this.followerCarry() : 0); return CM.bagWeight(this.bag) / (cap + PT.ponyCarry); };
+  const wp0 = P.walkPace; P.walkPace = function (...a) { const p = wp0.apply(this, a); return this.petName("pony") && this.floor && this.floor.number === -1 ? p * 0.75 : p; };
+  // the pony stays above
+  const ef0 = P.enterFloor; P.enterFloor = function (number, how, at) { const from = this.floor ? this.floor.number : null, out = ef0.call(this, number, how, at);
+    if (this.petName("pony") && from === 0 && CM.isDeep(number)) this.say(`${this.petName("pony")} is left tethered at the shaft's head, with a nosebag.`); return out; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -39203,6 +39249,33 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
         if (e.kind === "smash") { K.fxs.burst({ at, layer: "fx:shard", n: 14, size: 0.06, speed: 1.4, up: 1.6, ms: 600 }); K.renderer.shake(0.15); }
         if (e.kind === "brazier") { K.fxs.burst({ at, layer: "fx:fire", n: 22, size: 0.08, speed: 1.8, up: 1.4, ms: 800 }); K.fxs.ring({ at: [at[0], 0, at[2]], to: 2.6, ms: 600 }); K.ui.tint("rgba(255,120,30,0.35)", 400); if (CM.lightFlare) CM.lightFlare(K.renderer, "fireball", e.at); } }); }
       return bind.apply(this, a); }; }
+}
+
+// ---- 76zzzzp-pets.js ----
+"use strict";
+// A dog and a pony, the window's side (v27.2): at the farm, a pup from the litter and the farm's pony, for gold; the
+// side panel names them. The rules are 69x-pets.js.
+{ const PT = CM.PETS;
+  const of0 = CM.UI.prototype.openFarm;
+  CM.UI.prototype.openFarm = function (...a) {
+    const out = of0.apply(this, a), g = this.game, more = this.$("#farm-more"); if (!more || !g.pets) return out;
+    let box = more.querySelector(".pets"); if (box) box.remove(); box = document.createElement("div"); box.className = "pets";
+    box.innerHTML = `<div class="list-title">Your own animals</div>`;
+    for (const [kind, what] of [["dog", "A pup from the litter: it comes everywhere, growls at traps, scratches at hidden doors, and digs on the land by day."], ["pony", "The farm's pony: thirty more carried and quicker feet on the land; it waits at the shaft's head."]]) {
+      const row = document.createElement("div"); row.className = "recruit"; row.style.gridTemplateColumns = "1fr auto"; const have = g.petName(kind);
+      row.innerHTML = `<div><b>${have ? this.esc(have) : kind === "dog" ? "A hound" : "A pony"}</b> <small>${this.esc(what)}</small></div>`;
+      const b = document.createElement("button"); b.textContent = have ? "Yours" : `${PT[kind].price} gold`; b.disabled = Boolean(have) || g.gold < PT[kind].price;
+      b.addEventListener("click", () => { const why = g.buyPet(kind); this.$("#farm-note").textContent = why || `${g.petName(kind)} is yours.`; this.openFarm(); this.refresh(); });
+      row.appendChild(b); box.appendChild(row); }
+    more.appendChild(box); return out;
+  };
+  // the side panel: who comes along
+  const rf0 = CM.UI.prototype.refresh;
+  CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a), g = this.game, fo = this.$ && this.$("#side .follower"); if (fo && g && g.pets && g.mode !== "title") {
+      const dog = g.petName("dog"), pony = g.petName("pony"), deep = g.floor && CM.isDeep(g.floor.number), bits = [];
+      if (dog) bits.push(`${dog} at heel`); if (pony) bits.push(deep ? `${pony} waiting above` : `${pony} on the lead`);
+      let el = this.$("#side .pets"); if (!el) { el = document.createElement("div"); el.className = "pets small"; fo.insertAdjacentElement("afterend", el); } el.textContent = bits.join(" - "); }
+    return out; };
 }
 
 // ---- 77-splash.js ----
