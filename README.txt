@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A follower's fear (v35.3, UPGRADE_PLAN_30.md phase 3)
+  (src/js/69zp-fear.js)
+  - Coming to a new floor that is dark - the Lich King's palace and below, or with the light shaded - a hired follower
+    (porter, torchbearer, hedge-wizard) may lose their nerve and bolt up the stair for good, if the party's heart is
+    below Steady: likelier the lower it is, half as likely seasoned, a quarter as likely a veteran. When they are close
+    to it they go quiet and keep near the light. The farm's dog never runs, nor the one you cut loose.
+
 The pony's gear (v35.2, UPGRADE_PLAN_30.md phase 2)
   (src/js/69zo-ponygear.js; 76zzzzzzh-ponygear.js (the farm's window fits it))
   - Fitted at the farm: Saddlebags (twenty more carried on the land, besides the pony's thirty), a blanket (the snow no

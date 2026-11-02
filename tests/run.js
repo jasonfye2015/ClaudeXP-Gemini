@@ -5661,6 +5661,15 @@ test("the pony's gear: fitted at the farm; saddlebags carry more on the land, th
   g.enterFloor(0, "rope"); g.bag.push(CM.FIELDS ? CM.food("tomato") : CM.food("tomato")); const r = g.marketSell("pack"); if (!r.error) assert.ok(r.gold > 0);
 });
 
+test("a follower's fear: on the dark floors with the party's heart low a hired follower may bolt for good, never with the heart steady, and a veteran is steadier", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("fear-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.follower = { id: "torchbearer", name: "Wren", hp: 14, max: 14, floors: 0 }; g.morale = 70; assert.strictEqual(g.fearChance(17), 0, "steady: no fear");
+  g.morale = 10; assert.ok(g.fearChance(17) > 0); assert.strictEqual(g.fearChance(3), 0, "not on the bright floors"); const c0 = g.fearChance(17);
+  g.follower.deep = 10; assert.ok(g.fearChance(17) < c0, "a veteran is steadier");
+  g.follower.deep = 0; let fled = false; for (let n = 16; n <= 40 && !fled; n++) { g.morale = 0; g.enterFloor(n, "down"); if (!g.follower) fled = true; } assert.ok(fled, "bolted at last");
+  g.follower = { id: "dog", name: "Grip", hp: 18, max: 18, floors: 0 }; g.morale = 0; assert.strictEqual(g.fearChance(17), 0, "the dog never runs");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
