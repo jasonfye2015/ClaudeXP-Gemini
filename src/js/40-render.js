@@ -498,11 +498,12 @@ CM.Renderer = class {
         corners = [[cx - right[0] * w / 2, lift, cz - right[2] * w / 2], [cx + right[0] * w / 2, lift, cz + right[2] * w / 2],
           [cx + right[0] * w / 2, lift + h, cz + right[2] * w / 2], [cx - right[0] * w / 2, lift + h, cz - right[2] * w / 2]];
         if (s.bend && !CM.reducedMotion) {                                // (v29.0) a monster's body in four strips: leaning, squashed or stretched, its feet shuffling
-          const B = s.bend, n = 4, sq = B.squash || 1, H = h * sq, W = w * (1 + (1 - sq) * 0.6), u0 = uv[3][0], u1 = uv[2][0], vTop = uv[3][1], vBot = uv[0][1];
+          const B = s.bend, n = 4, sq = B.squash || 1, H = h * sq, W = w * (1 + (1 - sq) * 0.6) * (s.view === "side" ? 0.64 : 1), u0 = uv[3][0], u1 = uv[2][0], vTop = uv[3][1], vBot = uv[0][1];
+          const sh = (side) => (s.view === "back" ? shade * 0.42 : s.view === "side" ? shade * (side > 0 === Boolean(s.mirror) ? 1 : 0.5) : shade);   // (v29.1: its back in shadow; its far side darker)
           const at = (f, side) => { const off = (B.lean || 0) * f * f + (f === 0 ? (B.legs || 0) * side : 0); return [cx + right[0] * (side * W / 2 + off), lift + f * H, cz + right[2] * (side * W / 2 + off)]; };
           const us = s.mirror ? [u1, u0] : [u0, u1];
           for (let k = 0; k < n; k++) { const f0 = k / n, f1 = (k + 1) / n, v0 = vBot + (vTop - vBot) * f0, v1 = vBot + (vTop - vBot) * f1, C = [at(f0, -1), at(f0, 1), at(f1, 1), at(f1, -1)], U = [[us[0], v0], [us[1], v0], [us[1], v1], [us[0], v1]];
-            for (const i of [0, 1, 2, 0, 2, 3]) out.push(...C[i], U[i][0], U[i][1], layer, shade, flash, alpha, glow); }
+            for (const i of [0, 1, 2, 0, 2, 3]) out.push(...C[i], U[i][0], U[i][1], layer, sh(i === 0 || i === 3 ? -1 : 1), flash, alpha, glow); }
           continue;
         }
         if (s.sway && this.wind && CM.windAt && !CM.reducedMotion) { const k = s.sway * CM.windAt(cx, cz, this.time, this.wind); for (const j of [2, 3]) { corners[j][0] += this.wind.dir[0] * k; corners[j][2] += this.wind.dir[1] * k; } }   // (v24.0)
