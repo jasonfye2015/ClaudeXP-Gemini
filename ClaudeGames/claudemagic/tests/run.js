@@ -5492,6 +5492,20 @@ test("a dog and a pony: bought at the farm and kept in the village; the hound ma
   g.enterFloor(3, "down"); const fl = g.floor, [x, y] = fl.pos; fl.features[`${x + 1},${y}`] = { type: "trapdoor", known: false }; g.look(); assert.ok(fl.features[`${x + 1},${y}`].known, "the hound growls at a trap");
 });
 
+test("cooking, wider: the fields' and the deep's dishes are made and written in the recipe book; a feast of three different dishes does all their good together for the shortest one's floors, only at a camp or at home", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("feast-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.ok(Object.keys(CM.DISHES).length >= 47, "fifteen more dishes");
+  g.enterFloor(1, "down"); g.mode = "camp";
+  for (const id of ["potato", "onion", "chili", "beans"]) g.bag.push(CM.food(id)); g.bag.push(CM.meat("Boar"));
+  assert.strictEqual(g.cookDish("potatohash"), ""); assert.ok(g.recipesKnown().potatohash, "written in the book");
+  assert.strictEqual(g.cookDish("chili"), ""); g.bag.push(CM.dish("bread"));
+  const rows = g.bag.map((it, i) => [it, i]).filter(([it]) => it.kind === "dish").map(([, i]) => i); assert.strictEqual(rows.length, 3);
+  g.mode = "explore"; assert.ok(g.layFeast(rows), "not on the floor"); g.mode = "camp";
+  assert.ok(g.layFeast([rows[0], rows[0]]), "each dish once");
+  assert.strictEqual(g.layFeast(rows), ""); const E = CM.mealOf(g); assert.strictEqual(E.df, 2, "hash and bread"); assert.strictEqual(E.atk, 2, "the chili"); assert.ok(g.meal.feast.length === 3);
+  assert.strictEqual(g.meal.floor, g.floor.number + 1 - 1, "the shortest: bread, one floor"); assert.ok(g.achievements.feast);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

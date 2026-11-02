@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Cooking, wider (v32.0, UPGRADE_PLAN_27.md phase 0)
+  (src/js/69y-ext.js, 69z-cooking2.js; 76zzzzzs-pages.js (a Journal page for the later updates), 76zzzzzt-cooking2.js)
+  - Fifteen new dishes from the South Fields' crops (potato, leek, carrot, tomato, pumpkin, corn, chili, garlic,
+    strawberries, grapes...) and the deep's edible finds (salt weed, spore caps, root sap, ghost caps).
+  - A feast: at a camp's fire or the home's table, two or three different dishes eaten together - all their good at
+    once, for as long as the shortest lasts (a new feat for three).
+  - The Journal's Recipes page: every dish, those made written in with what they need and do, the rest a blank with a
+    hint. The book is kept in the village, from run to run.
+
 Weather on the lens (v31.9, UPGRADE_PLAN_26.md phase 9)
   (src/js/76zzzzzr-lens.js; 40-render.js (the screen pass's drops, snow and mist))
   - Out in the rain drops gather on the view - beads that sit and runners that slide down - bending what is behind
