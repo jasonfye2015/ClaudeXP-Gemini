@@ -5506,6 +5506,33 @@ test("cooking, wider: the fields' and the deep's dishes are made and written in 
   assert.strictEqual(g.meal.floor, g.floor.number + 1 - 1, "the shortest: bread, one floor"); assert.ok(g.achievements.feast);
 });
 
+test("enchanting at the Mage Tower: shards from a guardian and a relic broken; the enchanter adds an offered word or raises one a tier for shards and gold, only at the Tower's doors; a failure spends the shards; the word's numbers come and go with it", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("ench-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 5000;
+  g.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); let sword = null; for (let s = 1; !sword && s < 400; s++) { const it = CM.makeItem(5, new CM.Random(s)); if (it.kind === "weapon" && !(it.props || {}).unique && !((it.props || {}).affixes || []).length) sword = it; } g.bag.push(sword); const row = g.bag.indexOf(sword);
+  const O = g.towerOffers(row); assert.ok(O.add.length >= 1 && O.add.length <= 6);
+  assert.ok(g.towerEnchant(row, "add", O.add[0][1]), "not away from the doors");
+  g.floor.pos = CM.MAGE_DOOR.slice(); assert.ok(/shard/.test(g.towerEnchant(row, "add", O.add[0][1])), "no shards yet");
+  for (let i = 0; i < 40; i++) g.bag.push(CM.shard()); assert.strictEqual(g.shards(), 40);
+  const relic = CM.relic(Object.keys(CM.GUARDIANS)[0]); g.bag.push(relic); assert.strictEqual(g.breakRelic(g.bag.length - 1), ""); assert.strictEqual(g.shards(), 40 + CM.TOWERCRAFT.relic);
+  const it = g.bag[row], before = (it.props.affixes || []).length; let tries = 0;
+  while ((it.props.affixes || []).length === before && tries++ < 12) { const off = g.towerOffers(row).add; if (!off.length) break; assert.strictEqual(g.towerEnchant(row, "add", off[0][1]), ""); }
+  assert.ok((it.props.affixes || []).length > before, "a word took in the end"); const w = it.props.affixes[it.props.affixes.length - 1]; assert.ok(it.name.includes(w), "named for it");
+  assert.ok(g.shards() < 45, "shards were spent"); assert.ok(g.achievements.towercraft);
+  if (g.towerOffers(row).raise.includes(w)) { const t0 = it.props.wordTiers[w]; let n = 0; while (it.props.wordTiers[w] === t0 && n++ < 12 && g.towerOffers(row).raise.includes(w)) g.towerEnchant(row, "raise", w); assert.ok(it.props.wordTiers[w] >= t0); }
+});
+
+test("brewing at the still: recipe pages turn up in chests below the first floor and are written into the village's book; a known recipe makes its potion at the fields' still from a crop and a band's ingredient, for no gold", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("still-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  g.enterFloor(3, "down"); let found = 0; for (let i = 0; i < 80 && !found; i++) { g.tally.chests = i; g.gain([], "chest"); found = Object.keys(g.stillKnown()).length; }
+  assert.ok(found >= 1, "a page in some chest"); const id = Object.keys(g.stillKnown())[0], R = CM.STILLBOOK[id];
+  assert.ok(CM.INGREDIENTS[R.ing].band <= 1, "a page of a band reached");
+  assert.ok(/shed/.test(g.stillBrewWhy(id)), "only at the still");
+  g.atFields = () => true; assert.ok(/wants/.test(g.stillBrewWhy(id)));
+  g.bag.push(CM.food(R.crop), CM.ingredient(R.ing)); const n = g.bag.length, gold = g.gold;
+  assert.strictEqual(g.stillBrew(id), ""); assert.strictEqual(g.gold, gold, "no gold"); assert.ok(g.bag.length >= n - 1, "the two in, something out");
+  assert.ok(!g.bag.some((it) => it.kind === "ingredient" && it.ingredient === R.ing), "used up");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
