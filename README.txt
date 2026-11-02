@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The map as an object (v31.8, UPGRADE_PLAN_26.md phase 8)
+  (src/js/76zzzzzq-parchment.js (the big map's drawing, wrapped))
+  - The big map (Tab) is on parchment: old paper, blotched and darker at its edges; the walls inked with a hand's
+    wobble; each newly seen square inked in with a spreading blot; the party's route on the floor in pencil. Its marks,
+    icons and notes are all kept. Settings > The big map: Parchment or Graph paper; the side map is as it was.
+
 3-D items (v31.7, UPGRADE_PLAN_26.md phase 7)
   (src/js/76zzzzzp-solids.js (CM.solidOf: an icon given depth, layer on layer))
   - Hover a thing's icon in the pack, a shop, a chest or the stash and it turns where it lies, a small solid thing:
