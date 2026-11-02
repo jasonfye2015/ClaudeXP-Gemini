@@ -1392,6 +1392,29 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Ending scenes (v42.4, UPGRADE_PLAN_37.md phase 4)
+  (src/js/76zzzzzzzp-endcard.js, src/js/76zzzzzzzm-titletown.js)
+  - A run's end opens on a painted card of how it ended: the place, in its band's own stone, seen down a corridor;
+    the party along the front, those who stand standing and the fallen laid down and greyed; and what ended it at
+    the back - the foe still standing, or for a won run the crown in a gold light - with a line saying where and by
+    what.
+  - The town behind the title (v42.1) now waits until the title has stood clear of its card for a moment before it
+    builds, so the first key and a slow machine's start are not held up by it.
+
+A map that remembers (v42.3, UPGRADE_PLAN_37.md phase 3)
+  (src/js/76zzzzzzzo-mapmemory.js)
+  - The parchment keeps the expedition's story in little ink sketches in the corner of each square it happened on:
+    crossed swords where a fight was fought, an open box where a chest was emptied, a grave-cross where a hero fell,
+    a tent and its fire where the party made camp.
+  - Kept with the run, floor by floor (the newest sixty a floor), on the minimap and the big map alike.
+
+Painted headers (v42.2, UPGRADE_PLAN_37.md phase 2)
+  (src/js/76zzzzzzzn-headers.js)
+  - Each of the town's windows opens under a painted strip of the place: the Tavern's hearth and mugs, the Smith's
+    anvil throwing sparks, the Temple's altar under its rose window, the Alchemist's bottles and a flask bubbling,
+    the Vault's coin-stacks and strongbox, the Library's shelves, the Guild's banners and notice board, the
+    Chronicler's desk and quill, and the party's own hearth.
+
 An animated title (v42.1, UPGRADE_PLAN_37.md phase 1)
   (src/js/76zzzzzzzm-titletown.js)
   - Behind the title the view is no longer a corridor turning on the spot: it drifts slowly up and down Caer Duin's
