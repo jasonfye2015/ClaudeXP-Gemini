@@ -5688,6 +5688,15 @@ test("market days: traders from away come to the Square each on their own day of
   g.clock = 7 * 1440 + 600; g.emit("change"); assert.strictEqual(CM.tradersOn(g).length, 0, "the first day of a week: none"); assert.ok(!at("hrodna"), "packed up");
 });
 
+test("festivals, kept: three games once each a festival, played in town, won by the best hero's stat and a throw; all three won take the festival's favour, once", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("fest-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.festival = null; assert.ok(g.festPlay("arm").error, "no festival"); g.festival = "harvest";
+  CM.FEST_MARK = 99; const lost = g.festPlay("arm"); assert.ok(!lost.error && !lost.won, "a high mark is missed"); assert.ok(g.festPlay("arm").error, "once a festival");
+  const gold = g.gold; CM.FEST_MARK = 2; assert.ok(g.festPlay("eye").won && g.festPlay("wit").won); assert.strictEqual(g.gold, gold + 2 * CM.FEST_GOLD);
+  assert.ok(!g.bag.some((it) => (it.props || {}).festival), "not all three yet"); g.festRecord().played.arm = false; g.festPlay("arm");
+  assert.ok(g.bag.some((it) => (it.props || {}).festival === "harvest"), "the favour"); assert.ok(g.achievements.festive);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

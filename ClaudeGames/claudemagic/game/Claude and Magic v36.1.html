@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v36.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v36.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "36.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "36.1", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29296,6 +29296,35 @@ Object.assign(CM.Game.prototype, {
   const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === 0) { const t = fl.things[key(fl.pos[0], fl.pos[1])]; if (t && t.type === "trader") { this.logAct && this.logAct("use"); this.trade(t.id); return; } } return use0.apply(this, a); };
 }
 
+// ---- 69zs-festgames.js ----
+"use strict";
+// Festivals, kept (v36.1, UPGRADE_PLAN_31.md): in a festival's week the town holds three games for the party, once
+// each a festival - a test of arm (the strongest hero's Strength), of eye (the best Dexterity) and of wit (the best
+// Intelligence), each the hero's stat and a throw of a twenty against the festival's mark. Each won pays gold and a
+// little renown; all three won take the festival's favour, a charm only it gives, once a year. The town's dressing and
+// its tune are the window's (76zzzzzzk-festival.js).
+//   CM.FEST_GAMES; game.festKey(); game.festPlay(id) -> {won, roll, total} or {error}; game.festFavour(fest)
+{ const FG = CM.FEST_GAMES = { arm: { name: "the tug and the stone", stat: "str", what: "a test of arm" }, eye: { name: "the butts", stat: "dex", what: "a test of eye" }, wit: { name: "the riddle-tent", stat: "int", what: "a test of wit" } };
+  CM.FEST_MARK = 28; CM.FEST_GOLD = 60; CM.FEST_RENOWN = 3;
+  const G = CM.Game.prototype;
+  CM.festFavour = (fest) => { const F = CM.FESTIVALS[fest] || { name: "the fair" }; return { name: `Favour of ${F.name.replace(/^the /, "the ")}`.replace("Favour of Midwinter", "Midwinter's Favour"), base: "Festival Favour", kind: "amulet", slot: "amulet", power: 0, value: 400, unknown: false,
+      props: { rarity: "unique", df: 1, stats: { str: 1, dex: 1, con: 1, int: 1, wis: 1, luck: 1 }, festival: fest } }; };
+  CM.BASES["Festival Favour"] = { id: "Festival Favour", kind: "amulet", slot: "amulet", tier: 2, group: "amulet" };
+  Object.assign(G, {
+    festKey() { const f = CM.festival(this); return f ? `${new Date().getFullYear()}:${f}` : null; },
+    festRecord() { const k = this.festKey(); if (!k) return null; const V = this.vext("festgames"); return (V[k] = V[k] || { played: {}, won: {}, favour: false }); },
+    festWhy(id) { if (!CM.festival(this)) return "There's no festival this week."; if (!this.inTown || !this.inTown()) return "The games are in town."; if (!FG[id]) return "No such game."; if (this.festRecord().played[id]) return "Played already, this festival."; return ""; },
+    festPlay(id) { const why = this.festWhy(id); if (why) return { error: why }; this.logAct && this.logAct("festPlay", id);
+      const R = this.festRecord(), stat = FG[id].stat, hero = this.party.filter((h) => h.hp > 0).sort((a, b) => this.stat(b, stat) - this.stat(a, stat))[0];
+      const roll = 1 + (CM.hashSeed(`${this.seed}:fest:${this.festKey()}:${id}:${hero ? hero.name : ""}`) % 20), total = (hero ? this.stat(hero, stat) : 10) + roll, won = total >= CM.FEST_MARK;
+      R.played[id] = true; if (won) { R.won[id] = true; this.gold += CM.FEST_GOLD; this.village.renown = (this.village.renown || 0) + CM.FEST_RENOWN; }
+      this.say(`${hero ? hero.name : "Someone"} tries ${FG[id].name}: ${total} against the mark of ${CM.FEST_MARK} - ${won ? `won! ${CM.FEST_GOLD} gold and the crowd's cheer.` : "not this year, to friendly jeers."}`);
+      if (Object.keys(FG).every((k) => R.won[k]) && !R.favour) { R.favour = true; const it = CM.festFavour(CM.festival(this)); this.gain([it], "festival"); this.sound && this.sound("toll"); this.say(`All three games won: the festival's own favour - ${it.name}.`); if (this.achieve) this.achieve("festive"); }
+      this.saveVillage && this.saveVillage(); this.saveRun && this.saveRun(); this.emit("change"); return { won, roll, total, hero: hero ? hero.name : "" }; },
+  });
+  CM.ACHIEVEMENTS.festive = { name: "Champion of the Fair", what: "Win all three of a festival's games", title: "the Festive" };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -41429,6 +41458,43 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   CM.UI.prototype.refresh = function (...a) { const out = rf0.apply(this, a), g = this.game, where = this.$ && this.$("#side .where"); if (where && g && g.floor && g.floor.number === 0 && g.mode !== "title" && CM.tradersOn) { const on = CM.tradersOn(g);
       let el = this.$("#side .market"); if (!el) { el = document.createElement("div"); el.className = "market small"; where.after(el); } el.textContent = on.length ? `${on.length > 1 ? "Market day" : "In the Square today"}: ${on.map((id) => CM.TRADERS[id].name).join(", ")}` : ""; }
     else { const el = this.$ && this.$("#side .market"); if (el) el.textContent = ""; } return out; };
+}
+
+// ---- 76zzzzzzk-festival.js ----
+"use strict";
+// Festivals, kept - the window's side (v36.1): in a festival's week the Square is dressed - strings of bunting across
+// it and paper lanterns, lit at dusk - a jig plays coming into town, and "Festival games" among the town's actions opens
+// the three games and the favour. Rules: 69zs-festgames.js.
+{ const S = 256, cv = () => { const c = document.createElement("canvas"); c.width = c.height = S; return c; };
+  const PAINT = {
+    "fest:bunting": (p) => { p.strokeStyle = "#5A3A1E"; p.lineWidth = 3; p.beginPath(); p.moveTo(0, 40); p.quadraticCurveTo(128, 90, 256, 40); p.stroke(); const C = ["#C83A2A", "#E8C040", "#2A6AC8", "#3A9A4A", "#E8E0D0"];
+      for (let i = 0; i < 9; i++) { const x = 14 + i * 28, y = 40 + Math.sin((i + 0.5) / 9 * Math.PI) * 30; p.fillStyle = C[i % C.length]; p.beginPath(); p.moveTo(x - 10, y); p.lineTo(x + 10, y); p.lineTo(x, y + 30); p.closePath(); p.fill(); } },
+    "fest:lantern": (p) => { p.strokeStyle = "#3A2A1A"; p.lineWidth = 3; p.beginPath(); p.moveTo(128, 0); p.lineTo(128, 60); p.stroke(); const g = p.createRadialGradient(128, 140, 10, 128, 140, 80); g.addColorStop(0, "#FFE8A0"); g.addColorStop(1, "#E05A20");
+      p.fillStyle = g; p.beginPath(); p.ellipse(128, 140, 60, 80, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(120,40,10,0.5)"; p.lineWidth = 2; for (let i = -2; i <= 2; i++) { p.beginPath(); p.ellipse(128, 140, Math.abs(i) * 14, 80, 0, 0, Math.PI * 2); p.stroke(); } },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [n, f] of Object.entries(PAINT)) { const c = cv(); f(c.getContext("2d")); set.index[n] = set.layers.length; set.layers.push(c); } return set; }; }
+  const SPOTS = [[17, 17], [21, 17], [25, 17], [17, 21], [21, 21], [25, 21], [19, 19], [23, 19]];
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== 0 || !CM.festival || !CM.festival(game) || !CM.renderer || CM.renderer.index["fest:bunting"] === undefined) return out;
+      const night = CM.isNight(game) || (CM.hourOf(game) >= 18);
+      SPOTS.forEach(([x, y], i) => { out.push({ x, y, layer: i % 2 ? "fest:lantern" : "fest:bunting", w: i % 2 ? 0.35 : 1.4, h: i % 2 ? 0.45 : 0.5, lift: i % 2 ? 1.25 : 1.35, glow: i % 2 && night ? 0.9 : 0.15 }); });
+      return out; }; }
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, r) => { if (xl0) xl0(game, fl, out, r); if (!fl || fl.number !== 0 || !CM.festival || !CM.festival(game) || !(CM.isNight(game) || CM.hourOf(game) >= 18)) return;
+      SPOTS.filter((_, i) => i % 2).forEach(([x, y]) => { const d = Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]); if (d < 10) out.push({ x: x + 0.5, y: 1.3, z: y + 0.5, reach: 2.4, colour: [1.0, 0.6, 0.25], flicker: true, d }); }); }; }
+  // the jig, coming into town in a festival's week
+  { const mo0 = CM.music && CM.music.motif; if (mo0) CM.music.motif = function (name) { if (name !== "festival") return mo0.call(this, name); if (!this.enabled || !this._ensure()) return false; const ctx = CM.audio.ctx, at = ctx.currentTime + 0.05;
+      [523, 659, 784, 659, 698, 880, 784, 659, 587, 698, 659, 523].forEach((hz, i) => this._osc("triangle", hz, at + i * 0.16, at + i * 0.16 + 0.15, 0.12, 4000, this.master)); return true; }; }
+  { const em0 = CM.Game.prototype.emit; CM.Game.prototype.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.floor.number === 0 && CM.festival && CM.festival(this) && !this.replaying && !this.film) { try { CM.music && CM.music.motif && CM.music.motif("festival"); } catch (e) { /* quiet */ } } return em0.call(this, ev, ...a); }; }
+  const make = (ui) => { if (ui.$("#dlg-festgames")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-festgames";
+    d.innerHTML = `<div class="box journalbox"><h2>Festival games</h2><p class="lore" id="fest-lore"></p><div class="fgames"></div><div class="note" id="fest-note"></div><div class="end"><button class="close">Close</button></div></div>`;
+    ui.$("#dlg-magetower").parentNode.appendChild(d); d.querySelector(".close").addEventListener("click", () => ui.closeDialogs()); };
+  CM.UI.prototype.openFestGames = function (note) { make(this); const g = this.game, f = CM.festival(g), F = CM.FESTIVALS[f], R = g.festRecord(), box = this.$("#dlg-festgames .fgames");
+    this.$("#fest-lore").textContent = `${F.name[0].toUpperCase() + F.name.slice(1)}: ${F.line || ""}`.trim();
+    box.innerHTML = Object.entries(CM.FEST_GAMES).map(([id, G2]) => { const why = g.festWhy(id); return `<div class="recruit" style="grid-template-columns:1fr auto"><div><b>${this.esc(G2.name[0].toUpperCase() + G2.name.slice(1))}</b> <small>${this.esc(G2.what)} (${this.esc(CM.STAT_NAMES[G2.stat])}; the mark is ${CM.FEST_MARK})${R.played[id] ? (R.won[id] ? " - won" : " - lost") : ""}</small></div><button data-fg="${id}" ${why ? `disabled title="${this.esc(why)}"` : ""}>Try it</button></div>`; }).join("")
+      + `<p class="small">Each won: ${CM.FEST_GOLD} gold and a little renown. All three: ${this.esc(CM.festFavour(f).name)}, once a year${R.favour ? " - taken" : ""}.</p>`;
+    this.$("#fest-note").textContent = note || "";
+    for (const b of box.querySelectorAll("[data-fg]")) b.addEventListener("click", () => { const r = g.festPlay(b.dataset.fg); this.openFestGames(r.error || `${r.hero}: ${r.total} - ${r.won ? "won" : "lost"}.`); this.refresh(); });
+    this.openDialog("#dlg-festgames"); };
+  CM.addAction(["explore"], "Festival games", (ui) => ui.openFestGames(), (ui) => Boolean(ui.game.inTown && ui.game.inTown() && CM.festival(ui.game)));
 }
 
 // ---- 77-splash.js ----
