@@ -5593,6 +5593,15 @@ test("camp scenes: what has happened since the last camp is kept, and round the 
   g.mode = "explore"; g.setMode("camp"); g.setMode("explore"); assert.strictEqual(g.sinceCamp().kills, 0, "a new count after the camp");
 });
 
+test("bonds and rivals: an old friend steps in front of a badly hurt friend's blow some of the time; two who fight long together with close kill counts become rivals and strike truer while the other stands", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("rival-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const [A, B, C, D] = g.party; g.bonds = [[A.name, B.name]]; A.hp = 1; g.enterFloor(2, "down");
+  const m = { name: "Orc", kind: "Orc", hp: 10, max: 10, atk: 5 }; g.foes = [m]; for (let i = 0; i < 300; i++) g.pickTarget(m); assert.ok((g.tally.covers || 0) > 0, "covered sometimes");
+  const k = [C.name, D.name].sort().join("|"); g.pairFights = { [k]: 30 }; g.heroKills[C.name] = 20; g.heroKills[D.name] = 18; const before = g.critChance(C);
+  g.foughtTogether(); assert.ok(g.rivals.some((r) => r.includes(C.name) && r.includes(D.name)), "rivals"); assert.ok(g.critChance(C) > before, "truer with the rival watching"); assert.ok(g.achievements.rivalry);
+  assert.strictEqual(g.rivalOf(C), D);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
