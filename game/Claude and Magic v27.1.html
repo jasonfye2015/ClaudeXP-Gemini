@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v27.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v27.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "27.0", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "27.1", built: "2026-11-01", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -11085,6 +11085,7 @@ Object.assign(CM.Game.prototype, {
           wingstair: `A second stair goes down here, narrower, into ${(CM.WINGS[thing.wing] || CM.WINGS[0]).name}: ${(CM.WINGS[thing.wing] || CM.WINGS[0]).smell}. (Space to take it; the main stair is still the way on)`,
           node: `${(CM.NODES[thing.band] || CM.NODES[0])[0].charAt(0).toUpperCase() + (CM.NODES[thing.band] || CM.NODES[0])[0].slice(1)}: something the alchemist would want. (Space to gather it)`,
           cgtable: thing.type === "cgtable" ? CM.jokerDescribe(thing) : "", cgservice: thing.type === "cgservice" ? CM.jokerDescribe(thing) : "", cgresident: thing.type === "cgresident" ? CM.jokerDescribe(thing) : "", jokerexit: thing.type === "jokerexit" ? CM.jokerDescribe(thing) : "",   // (the Joker's floor)
+          breakable: thing.type === "breakable" ? CM.breakDescribe(thing) : "", brazier: thing.type === "brazier" ? CM.breakDescribe(thing) : "",   // (v27.1)
           intexit: thing.type === "intexit" ? CM.interiorDescribe(thing) : "", intkeeper: thing.type === "intkeeper" ? CM.interiorDescribe(thing) : "", inthearth: thing.type === "inthearth" ? CM.interiorDescribe(thing) : "",   // (v24.6: the rooms)
           wingexit: "A stair down, back to the main way. (Space to take it)", wingstair_up: "The wing stair, back up. (Space to climb it)",
           building: thing.type === "building" ? `${(CM.TOWN_PLOTS[thing.id] || {}).name}${CM.plotLevel(this, thing.id) ? ` (level ${CM.plotLevel(this, thing.id)})` : " - " + CM.t("town.foundation")}. ${CM.t("town.door")}` : "",
@@ -28253,6 +28254,76 @@ Object.assign(CM.Game.prototype, {
   const wp0 = P.walkPace; P.walkPace = function (...a) { const p = wp0.apply(this, a); return this.floor && this.floor.number === -1 && CM.snowDepth && CM.snowDepth(this) >= WX.snowFrom ? p * 1.5 : p; };
 }
 
+// ---- 69w-breakables.js ----
+"use strict";
+// Things that break (v27.1, UPGRADE_PLAN_22.md - below ground only): crates, barrels and urns stand about the dungeon's
+// rooms, and the party kicks one apart as it walks through it - a few coins, a torch, a potion, a reagent, often only
+// splinters, now and then a nest of rats that bites. Some halls have a brazier: Space, standing at it, knocks it over,
+// and the squares about it burn for half an hour - a fight in the fire burns the foes every round (and singes the front
+// row); walking through the flames burns the party. Placed by dice of their own (`${seed}:break:${number}`), so the
+// floors already laid out stay as they were.
+{ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const BR = CM.BREAKABLES = { burnMinutes: 30, KINDS: { crate: "a crate", barrel: "a barrel", urn: "an urn" } };
+  const isDungeon = (fl) => fl && fl.number % 1 === 0 && (fl.number >= 1 || (CM.isUndercroft && CM.isUndercroft(fl.number))) && !fl.special && !(CM.isTowerFloor && CM.isTowerFloor(fl.number));
+  CM.BREAK_DUNGEON = isDungeon;
+  // where they stand: in the rooms, off the stairs and away from the way in
+  const place = (fl, seed) => {
+    if (!isDungeon(fl) || fl.breakPlaced) return fl; fl.breakPlaced = true;
+    const h = (s) => CM.hashSeed(`${seed}:break:${fl.number}:${s}`), size = fl.grid.length, start = fl.start || fl.pos || [0, 0], cells = [];
+    for (const r of fl.rooms || []) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
+      const k = `${x},${y}`; if (y < 0 || x < 0 || y >= size || x >= size || fl.grid[y][x] !== 0 || fl.things[k] || fl.features[k]) continue;
+      if (Math.abs(x - start[0]) + Math.abs(y - start[1]) <= 2) continue; cells.push([x, y]); }
+    if (!cells.length) return fl;
+    cells.sort((a, b) => h(`${a}`) - h(`${b}`));
+    const band = CM.themeIndex(Math.max(1, fl.number)), n = 2 + (h("n") % 4), kinds = band === 0 || band === 8 ? ["urn", "urn", "crate"] : ["crate", "barrel", "crate", "barrel", "urn"];
+    for (let i = 0; i < Math.min(n, cells.length); i++) { const [x, y] = cells[i]; fl.things[`${x},${y}`] = { type: "breakable", kind: kinds[h(`k${i}`) % kinds.length] }; }
+    if (h("brazier") % 100 < 35 && cells.length > n) { const [x, y] = cells[n]; fl.things[`${x},${y}`] = { type: "brazier", lit: true }; }
+    return fl;
+  };
+  { const mf0 = CM.makeFloor; CM.makeFloor = (number, seed, gen) => place(mf0(number, seed, gen), seed); }
+  // what's in one: by its own dice
+  BR.loot = (g, k) => { const fl = g.floor, r = CM.hashSeed(`${g.seed}:breakloot:${fl.number}:${k}`) % 100, depth = Math.max(1, fl.number);
+    if (r < 40) return { say: "splinters, and nothing else" };
+    if (r < 70) { const gold = 2 + (CM.hashSeed(`${g.seed}:breakgold:${fl.number}:${k}`) % (4 + depth)); return { gold, say: `${gold} gold` }; }
+    if (r < 80) return { item: CM.torch(), say: "a torch, still dry" };
+    if (r < 88) return { item: { name: "Healing Potion", kind: "heal", power: 20 + depth * 3, value: 20 }, say: "a healing potion, unbroken" };
+    if (r < 96) { const ids = Object.keys(CM.INGREDIENTS || {}); if (ids.length) { const id = ids[CM.hashSeed(`${g.seed}:breakherb:${k}`) % ids.length]; return { item: CM.ingredient(id), say: `some ${CM.INGREDIENTS[id].name.toLowerCase()}` }; } return { say: "dust" }; }
+    return { rats: true, say: "a nest of rats, that bites" }; };
+  const P = CM.Game.prototype;
+  Object.assign(P, {
+    smash(k) { const fl = this.floor, t = fl.things[k]; if (!t || t.type !== "breakable") return null; delete fl.things[k]; const L = BR.loot(this, k);
+      if (L.gold) this.gold += L.gold; if (L.item) this.gain([L.item], "break");
+      if (L.rats) { const h = this.alive()[0]; if (h) { const bite = 2 + Math.floor(Math.max(1, fl.number) / 6); h.hp = Math.max(1, h.hp - bite); } }
+      this.sound("slam"); this.say(`${cap(BR.KINDS[t.kind])} breaks apart underfoot: ${L.say}.`); this.emit("fx", { kind: "smash", at: k.split(",").map(Number), what: t.kind }); this.dirty = true; return L; },
+    // the brazier, knocked over: the squares about it alight
+    knockBrazier(k) { const fl = this.floor, t = fl.things[k]; if (!t || t.type !== "brazier" || !t.lit) return false; t.lit = false; t.down = true;
+      const [x, y] = k.split(",").map(Number), cells = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (fl.grid[y + dy] && fl.grid[y + dy][x + dx] === 0) cells.push(`${x + dx},${y + dy}`);
+      fl.burning = { cells, until: (this.clock || 0) + BR.burnMinutes }; this.sound("slam"); this.say("Over goes the brazier: burning coals across the floor, and the squares about it alight. Nothing will cross them happily for a while.");
+      this.emit("fx", { kind: "brazier", at: [x, y] }); this.emit("change"); return true; },
+    burningAt(x, y) { const B = this.floor && this.floor.burning; if (!B) return false; if ((this.clock || 0) >= B.until) { this.floor.burning = null; return false; } return B.cells.includes(`${x},${y}`); },
+  });
+  // a step into a crate breaks it (the step goes on); a step into the flames burns
+  const move0 = P.move;
+  P.move = function (...a) { const fl = this.floor, before = fl ? fl.pos.join(",") : ""; const out = move0.apply(this, a);
+    if (fl && this.floor === fl && fl.pos.join(",") !== before) { const k = fl.pos.join(","); if (fl.things[k] && fl.things[k].type === "breakable") this.smash(k);
+      if (this.burningAt(...fl.pos)) { const d = 1 + Math.floor(Math.max(1, fl.number) / 8); for (const h of this.alive()) h.hp = Math.max(1, h.hp - d); this.say(`Through the burning coals: -${d} each.`); this.emit("fx", { kind: "sear" }); } }
+    return out; };
+  // Space at a brazier knocks it over
+  const use0 = P.use;
+  P.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl) { const k = fl.pos.join(","), t = fl.things[k]; if (t && t.type === "brazier" && t.lit) { this.logAct && this.logAct("use"); this.knockBrazier(k); return; } } return use0.apply(this, a); };
+  // a fight in the fire
+  CM.TERRAIN.fire = { name: "In the fire", what: "the flames burn every foe each round, and singe the front row" };
+  const ter0 = P.terrain;
+  P.terrain = function (...a) { const out = ter0.apply(this, a), fl = this.floor; if (fl && this.mode === "combat") { const fk = this.foeKey ? this.foeKey.split(",").map(Number) : null; if (this.burningAt(...fl.pos) || (fk && this.burningAt(...fk))) out.push("fire"); } return out; };
+  const er0 = P.endRound;
+  P.endRound = function (...a) { if (this.terrain().includes("fire")) { const depth = Math.max(1, this.floor.number), d = 3 + Math.floor(depth / 3);
+      for (const m of this.living()) { const r = CM.resistance ? CM.resistance(m, "fire") : 1, hurt = Math.max(1, Math.round(d * r)); m.hp -= hurt; this.emit("fx", { kind: "hit", foe: m, amount: hurt, spell: true }); }
+      for (const h of this.alive().filter((h) => h.row !== "back")) h.hp = Math.max(1, h.hp - 1);
+      this.say(`The fire burns about the fight: -${d} to every foe.`); }
+    return er0.apply(this, a); };
+  CM.breakDescribe = (t) => (t.type === "breakable" ? `${cap(BR.KINDS[t.kind])}, old and dry: it will break if you walk through it.` : t.type === "brazier" ? (t.lit ? "A brazier, burning. (Space to knock it over - the floor about it will burn)" : "A brazier on its side, its coals spread.") : "");
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -39091,6 +39162,49 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   if (CM.Game.prototype.rqDone) { const rd0 = CM.Game.prototype.rqDone; CM.Game.prototype.rqDone = function (i) { const out = rd0.call(this, i), U = ui(); if (U && U.game === this && out && !out.error) U.toast("request", `Request done: ${out.gold ? out.gold + " gold, " : ""}${out.renown || 0} renown`); return out; }; }
 }
 
+// ---- 76zzzzo-breakables.js ----
+"use strict";
+// Things that break, the window's side (v27.1): the crates, barrels and urns as they stand, a brazier burning on its
+// tripod (or on its side), the burning floor - coals and flames, and their light - and a burst of splinters when one
+// breaks. The rules are 69w-breakables.js.
+{ const S = 256, cv = () => { const c = document.createElement("canvas"); c.width = c.height = S; return c; };
+  const PAINT = {
+    urn: (p) => { p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, 246, 60, 10, 0, 0, Math.PI * 2); p.fill(); const g = p.createLinearGradient(70, 0, 186, 0); g.addColorStop(0, "#6A4A30"); g.addColorStop(0.45, "#B07A4A"); g.addColorStop(1, "#5A3A24"); p.fillStyle = g;
+      p.beginPath(); p.moveTo(104, 70); p.quadraticCurveTo(60, 120, 80, 200); p.quadraticCurveTo(96, 244, 128, 244); p.quadraticCurveTo(160, 244, 176, 200); p.quadraticCurveTo(196, 120, 152, 70); p.closePath(); p.fill();
+      p.fillStyle = "#4A3020"; p.fillRect(100, 56, 56, 16); p.strokeStyle = "rgba(40,24,12,0.6)"; p.lineWidth = 4; for (const y of [120, 170]) { p.beginPath(); p.moveTo(76, y); p.quadraticCurveTo(128, y + 12, 180, y); p.stroke(); } },
+    brazier: (p, lit) => { p.fillStyle = "rgba(0,0,0,0.3)"; p.beginPath(); p.ellipse(128, 246, 70, 10, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#2E2A28"; p.lineWidth = 9;
+      if (lit) { for (const [x0, x1] of [[90, 108], [166, 148], [128, 128]]) { p.beginPath(); p.moveTo(x0, 244); p.lineTo(x1, 150); p.stroke(); } p.fillStyle = "#3A3430"; p.beginPath(); p.moveTo(64, 130); p.lineTo(192, 130); p.lineTo(170, 168); p.lineTo(86, 168); p.closePath(); p.fill();
+        const g = p.createRadialGradient(128, 110, 4, 128, 110, 70); g.addColorStop(0, "#FFF2A0"); g.addColorStop(0.35, "#FFA030"); g.addColorStop(0.75, "rgba(220,70,20,0.85)"); g.addColorStop(1, "rgba(160,30,10,0)"); p.fillStyle = g;
+        p.beginPath(); p.moveTo(70, 132); p.quadraticCurveTo(90, 60, 112, 90); p.quadraticCurveTo(128, 20, 146, 86); p.quadraticCurveTo(170, 56, 186, 132); p.closePath(); p.fill(); }
+      else { p.save(); p.translate(128, 210); p.rotate(1.25); p.fillStyle = "#3A3430"; p.beginPath(); p.moveTo(-64, -40); p.lineTo(64, -40); p.lineTo(42, 0); p.lineTo(-42, 0); p.closePath(); p.fill(); p.restore(); p.lineWidth = 9; p.beginPath(); p.moveTo(40, 240); p.lineTo(150, 210); p.stroke();
+        for (let i = 0; i < 18; i++) { p.fillStyle = i % 3 ? "#C8401A" : "#FFB040"; p.beginPath(); p.arc(150 + Math.cos(i * 2.4) * (20 + i * 3), 236 + Math.sin(i * 1.7) * 6, 4 + (i % 3), 0, Math.PI * 2); p.fill(); } } },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), add = (n, f) => { const c = cv(); f(c.getContext("2d")); set.index[n] = set.layers.length; set.layers.push(c); };
+      add("brk:urn", (p) => PAINT.urn(p)); add("brazier", (p) => PAINT.brazier(p, true)); add("brazier_down", (p) => PAINT.brazier(p, false)); return set; }; }
+  const has = (L) => CM.renderer && CM.renderer.index && CM.renderer.index[L] !== undefined;
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, {
+    breakable: (t, x, y) => { const L = t.kind === "urn" ? "brk:urn" : has(`prop:${t.kind}`) ? `prop:${t.kind}` : "chest", dx = ((x * 37 + y * 11) % 30 - 15) / 100, dz = ((x * 13 + y * 29) % 30 - 15) / 100;
+      return [{ x, y, dx, dz, layer: L, w: t.kind === "barrel" ? 0.42 : t.kind === "urn" ? 0.4 : 0.46, h: t.kind === "barrel" ? 0.55 : t.kind === "urn" ? 0.45 : 0.44 }]; },
+    brazier: (t, x, y, now) => [{ x, y, layer: t.lit ? "brazier" : "brazier_down", w: 0.7, h: 0.75, glow: t.lit ? 0.35 + 0.1 * Math.sin(now / 90 + x) : 0.15 }],
+  });
+  // the burning floor: coals lying flat, flames standing, flickering, and their light
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; const B = fl && fl.burning; if (!B || !game.burningAt) return out;
+      if ((game.clock || 0) >= B.until) return out; const left = Math.min(1, (B.until - (game.clock || 0)) / 10);
+      for (const k of B.cells) { const [x, y] = k.split(",").map(Number), ph = (x * 7 + y * 3) % 10;
+        out.push({ x, y, flat: true, w: 0.95, layer: "fx:fire", alpha: 0.55 * left, glow: 1 });
+        for (let i = 0; i < 2; i++) out.push({ x, y, dx: (i ? 0.2 : -0.18), dz: (i ? -0.15 : 0.12), layer: "fx:fire", w: 0.32 * left, h: (0.4 + 0.12 * Math.sin(now / 120 + ph + i)) * left, glow: 1, alpha: 0.9 }); }
+      return out; }; }
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl) return;
+      for (const [k, t] of Object.entries(fl.things)) if (t.type === "brazier" && t.lit) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 10) out.push({ x: x + 0.5, y: 0.7, z: y + 0.5, reach: 3.4, colour: [1.0, 0.55, 0.2], flicker: true, d: Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) }); }
+      const B = fl.burning; if (B && (game.clock || 0) < B.until) { const [x, y] = B.cells[Math.floor(B.cells.length / 2)].split(",").map(Number); out.push({ x: x + 0.5, y: 0.3, z: y + 0.5, reach: 4.0, colour: [1.0, 0.5, 0.15], flicker: true, d: 0 }); } }; }
+  // a crate's splinters, a brazier's coals scattered
+  { const bind = CM.UI.prototype.refresh; CM.UI.prototype.refresh = function (...a) { if (!this.brkBound && this.game && this.game.on && CM.fxKit) { this.brkBound = true; this.game.on("fx", (e) => { const K = CM.fxKit; if (!e || !K || !K.renderer || !K.renderer.ok || !e.at) return;
+        const at = [e.at[0] + 0.5, 0.25, e.at[1] + 0.5];
+        if (e.kind === "smash") { K.fxs.burst({ at, layer: "fx:shard", n: 14, size: 0.06, speed: 1.4, up: 1.6, ms: 600 }); K.renderer.shake(0.15); }
+        if (e.kind === "brazier") { K.fxs.burst({ at, layer: "fx:fire", n: 22, size: 0.08, speed: 1.8, up: 1.4, ms: 800 }); K.fxs.ring({ at: [at[0], 0, at[2]], to: 2.6, ms: 600 }); K.ui.tint("rgba(255,120,30,0.35)", 400); if (CM.lightFlare) CM.lightFlare(K.renderer, "fireball", e.at); } }); }
+      return bind.apply(this, a); }; }
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -39760,6 +39874,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
       else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
       else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
+      else if (CM.thingSprites && CM.thingSprites[thing.type]) { for (const sp of CM.thingSprites[thing.type](thing, x, y, now)) out.push(sp); }   // (v27.1: the breakables and braziers - 76zzzzo-breakables.js)
       else if (thing.type === "intexit") out.push({ x, y, layer: "door_open", face: 2, w: 0.7, h: 0.92, lift: 0.04, glow: 0.2 });   // (v24.6: the door back out, in the south wall)
       else if (thing.type === "intkeeper") { const L = CM.interiorLayer(thing); if (L && renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.7, h: 0.85, lift: Math.sin(now / 1100 + x) * 0.006 }); }
       else if (thing.type === "ucstair") { if (!thing.hidden) out.push({ x, y, layer: "hatch", w: 0.92, flat: true, shade: 0.8 }); }   // (the Undercroft's ways)

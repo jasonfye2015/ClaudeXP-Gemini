@@ -5468,6 +5468,21 @@ test("weather that matters: rain at night in the Wood burns a torch twice as fas
   CM.snowDepth = () => 1; const c0 = g.clock; g.light = { kind: "torch", left: 300 }; g.burn(); assert.strictEqual(g.clock - c0, 1, "a step in the snow: a minute more"); assert.ok(g.walkPace() >= 1.5);
 });
 
+test("things that break: crates, barrels and urns stand in the dungeon's rooms (the same for a seed, none above ground), a step into one breaks it and the step goes on; a brazier knocked over sets the floor about it alight for half an hour, and a fight in the fire burns the foes", () => {
+  const CM = load(), A = CM.makeFloor(4, "brk-1", 2), B = CM.makeFloor(4, "brk-1", 2), list = (f) => Object.entries(f.things).filter(([, t]) => t.type === "breakable" || t.type === "brazier").map(([k, t]) => k + t.type).sort().join();
+  assert.ok(list(A).length > 0, "some on the floor"); assert.strictEqual(list(A), list(B), "the seed's");
+  let some = 0; for (let n = 1; n <= 12; n++) some += Object.values(CM.makeFloor(n, "brk-2", 2).things).filter((t) => t.type === "breakable").length; assert.ok(some >= 20, `a few a floor (${some})`);
+  assert.strictEqual(Object.values(CM.makeFloor(0, "brk-2", 2).things).filter((t) => t.type === "breakable").length, 0, "none in town");
+  const g = new CM.Game(); g.newGame("brk-3", fixedParty(CM), "pauper", "fair", [], "dungeon"); let fl = g.floor, guard = 0;
+  while (!Object.values(fl.things).some((t) => t.type === "breakable") && guard++ < 10) { g.enterFloor(fl.number + 1, "down"); fl = g.floor; }
+  const free = (q) => { const [qx, qy] = q.split(",").map(Number); return CM.DIRS.findIndex(([dx, dy]) => CM.passable(fl, qx - dx, qy - dy) && !fl.things[`${qx - dx},${qy - dy}`]); };
+  const k = Object.keys(fl.things).find((q) => fl.things[q].type === "breakable" && free(q) >= 0), [x, y] = k.split(",").map(Number), d = free(k);
+  fl.pos = [x - CM.DIRS[d][0], y - CM.DIRS[d][1]]; fl.facing = d; const gold = g.gold, bag = g.bag.length; g.move(0);
+  assert.strictEqual(JSON.stringify(fl.pos), JSON.stringify([x, y]), "the step goes on"); assert.ok(!fl.things[k], "broken"); assert.ok(g.gold >= gold && g.bag.length >= bag);
+  fl.things[k] = { type: "brazier", lit: true }; g.use(); assert.ok(fl.things[k].down && fl.burning && fl.burning.cells.includes(k), "knocked over: the floor burns");
+  assert.ok(g.burningAt(x, y)); g.clock += 31; assert.ok(!g.burningAt(x, y), "and burns out");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
