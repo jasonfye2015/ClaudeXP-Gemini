@@ -5705,6 +5705,19 @@ test("townsfolk who remember: a resident greets the party by its deeds once a da
   g.enterFloor(1, "down"); assert.strictEqual(g.greet("farm"), null, "only in town");
 });
 
+test("building the town: works raised with gold (and the island's timber and stone when they're asked) change the map and give their goods - the bathhouse bathes once a day, the watchtower shows the whole Wood, the bridge quickens it, the wall cheers a new run", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("works-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.gold = 5000;
+  const mats = CM.matsOn; CM.matsOn = false;
+  try {
+    for (const id of Object.keys(CM.WORKS)) assert.strictEqual(g.raiseWork(id), "", id); assert.ok(g.raiseWork("bath"), "once"); assert.ok(g.achievements.builder);
+    const bk = CM.WORKS.bath.at.join(","); assert.ok(g.floor.things[bk] && g.floor.things[bk].type === "work", "on the map");
+    g.party[0].hp = 1; g.floor.pos = CM.WORKS.bath.at.slice(); g.use(); assert.strictEqual(g.party[0].hp, g.party[0].max, "bathed"); assert.ok(g.bathe(), "once a day");
+    g.floor.pos = CM.WORKS.watch.at.slice(); g.use(); const wood = g.floorAt(-1); assert.strictEqual(wood.seen.length, wood.grid.length * wood.grid.length, "the whole Wood seen");
+    g.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); const [bx, by] = g.floor.bridge; assert.strictEqual(g.floor.ground[`${bx},${by}`], "flags", "a stone bridge");
+    const h = new CM.Game(); h.newGame("works-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); h.village = g.village; h.newGame("works-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.ok(h.morale > CM.MORALE.start, "the wall cheers them");
+  } finally { CM.matsOn = mats; }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

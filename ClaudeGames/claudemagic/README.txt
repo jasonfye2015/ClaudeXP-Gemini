@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Building the town (v36.3, UPGRADE_PLAN_31.md phase 3)
+  (src/js/69zu-works.js; 76zzzzzzm-works.js ("Town works", the bathhouse, the watchtower and the banners drawn))
+  - "Town works" among the town's actions: four works raised with gold and the island's timber and stone. The old wall
+    repaired (banners along it, and every run sets out in better heart); a stone bridge for the Wood's plank one
+    (flagstones over the river, the Wood walked a tenth quicker); a bathhouse on the south lane (a hot bath once a day -
+    everyone mended, small ailments washed off, the heart lifted); a watchtower on the south green (from its top the
+    whole Deep Wood goes on the map, its dens and caves with it). All four is a feat.
+
 Townsfolk who remember (v36.2, UPGRADE_PLAN_31.md phase 2)
   (src/js/69zt-remember.js; 76zzzzzzl-remember.js (a greeting when the party steps beside a resident))
   - Stepping beside one of the six residents walking the town, they greet the party by its deeds - this run's depth
