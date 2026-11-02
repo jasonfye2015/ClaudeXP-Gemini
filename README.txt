@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Faster loading (v26.4, UPGRADE_PLAN_21.md phase 4 - the performance plan done)
+  (src/js/50-audio.js, 40-render.js, 79-artworker.js, 76zzzzk-livemap.js, 80-main.js, 00-util.js)
+  - The game's own start - from its code running to the title - went from 647 ms to 426 ms of the page's time: the 56
+    sounds are made when each is first wanted (and the rest in the idle moments after), not all at once at the start,
+    which was 272 ms; the shaders are compiled by the graphics driver beside the start (where the browser can) rather
+    than in its way. The page is ready about 150 ms sooner.
+  - The worker paints in software and only six seconds after the party arrives somewhere, so its paintings coming back
+    no longer stall a frame (in v26.3 they could, by 270 to 400 ms, just after a new game).
+  - The side map is drawn again only when something on it changes; between, only what pulses and glows is drawn over a
+    picture of it - a tenth of the work it was.
+  - Tried and left out: keeping the built sets between visits in the browser's store. Measured here, reading two sets
+    back took 3.1 seconds where painting them takes a quarter of one, so painting stays.
+  - CM.startLog notes the start's moments (the packs in, each look's pictures first up, the worker ready).
+
 Painting off the main thread (v26.3, UPGRADE_PLAN_21.md phase 3)
   (src/js/79-artworker.js; 40-render.js, 80-main.js)
   - The sets of pictures are painted in a worker - the game's own code, run beside the page with a few stand-ins for

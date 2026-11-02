@@ -184,10 +184,11 @@ CM.Renderer = class {
     const gl = canvas.getContext("webgl2", { antialias: true, alpha: false, depth: true, preserveDrawingBuffer: true });
     if (!gl) { this.error = "This needs WebGL 2, and the browser hasn't got it."; return; }
     this.gl = gl;
-    this.program = this._program(VERT, FRAG);
+    this.parallel = gl.getExtension("KHR_parallel_shader_compile");   // (v26.4: the shaders compiled beside the start, not in its way)
+    this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    for (const n of ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]) this.loc[n] = gl.getUniformLocation(this.program, n);
+    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -216,6 +217,21 @@ CM.Renderer = class {
     this.resize();
   }
 
+  _locate() { for (const n of this._locNames) this.loc[n] = this.gl.getUniformLocation(this.program, n); this.linked = true; }
+  // (v26.4) compiled and linked without waiting: the driver does it beside the start; the first frame that finds it
+  // done looks up its uniforms (and finds out, then, if it failed)
+  _programLater(vs, fs) {
+    const gl = this.gl, mk = (kind, src) => { const s = gl.createShader(kind); gl.shaderSource(s, src); gl.compileShader(s); return s; }, v = mk(gl.VERTEX_SHADER, vs), f = mk(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
+    gl.attachShader(p, v); gl.attachShader(p, f);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.linkProgram(p); this._pend = { p, v, f }; return p;
+  }
+  _ready() {
+    if (this.linked) return true; const gl = this.gl, P = this._pend;
+    if (P && !gl.getProgramParameter(P.p, this.parallel.COMPLETION_STATUS_KHR)) return false;
+    if (P && !gl.getProgramParameter(P.p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + (gl.getShaderInfoLog(P.v) || "") + (gl.getShaderInfoLog(P.f) || "") + (gl.getProgramInfoLog(P.p) || ""); this.ok = false; return false; }
+    this._locate(); this._pend = null; return true;
+  }
   _program(vs, fs) {
     const gl = this.gl;
     const make = (kind, src) => {
@@ -317,6 +333,7 @@ CM.Renderer = class {
     for (const n of S.packed) index[n] = index[S.sub[n][0]];                     // (a packed one answers by its layer: the sprites read the corner from sub)
     return index; }
   setTextures(art, gentle) {
+    { const T = CM.texAt = CM.texAt || {}; if (!T[art.sharedKey]) { T[art.sharedKey] = Math.round(performance.now()); CM.startLog.push([T[art.sharedKey], `up ${art.sharedKey}${art.fromStore ? " (kept)" : ""}`]); } }   // (v26.4: when each look's pictures first went up)
     if (this.prepared && this.prepared.art === art) { const P = this.prepared, gl = this.gl; this.prepared = null;   // (ready ahead: swapped in)
       if (P.shared) { if (this.shared) gl.deleteTexture(this.shared); this.shared = P.shared; this.sharedKey = P.sharedKey; }
       if (P.shared || this.sharedKey === P.sharedKey) { if (this.texture) gl.deleteTexture(this.texture); this.texture = P.texture; if (this.surfTex) gl.deleteTexture(this.surfTex); this.surfTex = P.surfTex;
@@ -570,7 +587,7 @@ CM.Renderer = class {
   }
 
   frame(dt) {
-    if (!this.ok || !this.texture) return;
+    if (!this.ok || !this.texture || !this._ready()) return;
     this.time += dt;
     this._advance(dt);
     this.lightNow += (this.light - this.lightNow) * Math.min(1, dt * 4);

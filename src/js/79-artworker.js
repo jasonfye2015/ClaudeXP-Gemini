@@ -29,7 +29,7 @@ CM.themeOfFloor = (number, dream) => { const jk = CM.isJokerFloor && CM.isJokerF
             if (small) { const b = await createImageBitmap(c); transfer.push(b); return b; }
             const size = theme && sfc && !CM.art.isPhotoLayer(n) ? Z.surf : theme ? own : Z.shared, o = new OffscreenCanvas(size, size), p = o.getContext("2d");
             p.imageSmoothingEnabled = !set.crisp; p.drawImage(c, 0, 0, size, size); const d = p.getImageData(0, 0, size, size); transfer.push(d.data.buffer); return { w: size, h: size, px: d.data.buffer }; }));
-          postMessage({ key: m.key, index: set.index, sub: set.sub || {}, size: set.size, crisp: Boolean(set.crisp), sharedKey: set.sharedKey, layers, partial: Boolean(m.skipShared), ms: performance.now() - t }, transfer);
+          postMessage({ key: m.key, number: m.number, index: set.index, sub: set.sub || {}, size: set.size, crisp: Boolean(set.crisp), sharedKey: set.sharedKey, layers, partial: Boolean(m.skipShared), ms: performance.now() - t }, transfer);
         } catch (err) { postMessage({ key: m.key, err: String(err && err.stack || err).slice(0, 400) }); } } };`;
   const SHIM = [
     "self.window = self; const noop = () => {};",
@@ -37,15 +37,18 @@ CM.themeOfFloor = (number, dream) => { const jk = CM.isJokerFloor && CM.isJokerF
     "self.document = { createElement: (t) => t === 'canvas' ? new OffscreenCanvas(1, 1) : el(), body: el(), documentElement: el(), head: el(), addEventListener: noop, removeEventListener: noop, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null, fonts: { ready: Promise.resolve() } };",
     "self.localStorage = { getItem: () => null, setItem: noop, removeItem: noop, key: () => null, length: 0 }; self.matchMedia = () => ({ matches: false, addEventListener: noop }); self.requestAnimationFrame = (f) => setTimeout(() => f(performance.now()), 16); self.cancelAnimationFrame = noop; self.Image = class { set src(v) {} };",
     "self.CM_WORKER = true;",
+    "{ const gc0 = OffscreenCanvas.prototype.getContext; OffscreenCanvas.prototype.getContext = function (kind, o) { return gc0.call(this, kind, kind === '2d' ? Object.assign({ willReadFrequently: true }, o || {}) : o); }; }",   /* (painted in software: the graphics card is the page's) */
   ].join("\n");
   AW.start = () => {
     if (AW.worker || CM.artWorkerOff || typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined" || typeof createImageBitmap === "undefined") return;
     let src = null; try { src = [...document.scripts].map((s) => s.textContent).find((t) => t.includes("// ---- " + "00-util.js ----")); } catch (e) { /* (no script to read) */ }
     if (!src) return; const cut = src.indexOf("// ---- " + "80-main.js ----")   /* (in two pieces: this file holds the words too) */; if (cut < 0) return;
+    CM.startLog.push([Math.round(performance.now()), "worker starting"]);
     let w; try { w = new Worker(URL.createObjectURL(new Blob([SHIM + "\n" + src.slice(0, cut) + "\n;" + WORKER_SIDE], { type: "text/javascript" }))); } catch (e) { return; }
     AW.worker = w;
     w.onerror = () => { AW.on = false; AW.worker = null; };                  // (a worker that fails: the old way, quietly)
-    w.onmessage = (e) => { const m = e.data; if (m.inited) { AW.on = true; return; }
+    w.onmessage = (e) => { const m = e.data; if (m.inited) { AW.on = true; CM.startLog.push([Math.round(performance.now()), "worker ready"]); return; }
+      CM.startLog.push([Math.round(performance.now()), `worker painted ${m.key} (${Math.round(m.ms || 0)} ms there)`]);
       if (m.err || !m.key) { AW.asked.delete(m.key); return; }
       const layers = m.layers.map((l) => (l && l.px ? new ImageData(new Uint8ClampedArray(l.px), l.w, l.h) : l));
       AW.ready[m.key] = { index: m.index, sub: m.sub, size: m.size, crisp: m.crisp, sharedKey: m.sharedKey, layers, partial: m.partial, theme: AW.themes[m.key], fromWorker: true }; AW.made++; AW.ms += m.ms; };
