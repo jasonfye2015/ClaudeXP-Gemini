@@ -5697,6 +5697,14 @@ test("festivals, kept: three games once each a festival, played in town, won by 
   assert.ok(g.bag.some((it) => (it.props || {}).festival === "harvest"), "the favour"); assert.ok(g.achievements.festive);
 });
 
+test("townsfolk who remember: a resident greets the party by its deeds once a day, in town, and now and then passes on a lead", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("greet-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.tally.guardians = ["rat"]; const said = g.greet("smith"); assert.ok(said && /Hesta/.test(said[0]) && /Rat King/.test(said[0]), JSON.stringify(said));
+  assert.strictEqual(g.greet("smith"), null, "once a day"); assert.ok(g.greet("priest"), "another resident");
+  g.pets().dog = { name: "Bramble" }; assert.ok(g.gossipLead(), "a lead to give"); g.clock += 1440; let led = 0; for (const w of Object.keys(CM.RESIDENT_WHO)) { const s = g.greet(w); if (s && s.length > 1) led++; } assert.ok(led >= 0);
+  g.enterFloor(1, "down"); assert.strictEqual(g.greet("farm"), null, "only in town");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

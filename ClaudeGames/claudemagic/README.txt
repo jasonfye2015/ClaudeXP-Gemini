@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Townsfolk who remember (v36.2, UPGRADE_PLAN_31.md phase 2)
+  (src/js/69zt-remember.js; 76zzzzzzl-remember.js (a greeting when the party steps beside a resident))
+  - Stepping beside one of the six residents walking the town, they greet the party by its deeds - this run's depth
+    and guardians, the last expedition's end, the best ever, the trophies on the wall, a legend on Legends' Row, the
+    feats - once a day each.
+  - One time in three a lead comes with it: a den the hound could find (or a hound that could learn to track), the
+    trader due tomorrow, the season's trial still open, the still's pages lying about below, the festival games.
+
 Festivals, kept (v36.1, UPGRADE_PLAN_31.md phase 1)
   (src/js/69zs-festgames.js; 76zzzzzzk-festival.js (the Square dressed, the jig, the games' window))
   - In a festival's week the Square is dressed: strings of bunting across it and paper lanterns, lit and glowing from
