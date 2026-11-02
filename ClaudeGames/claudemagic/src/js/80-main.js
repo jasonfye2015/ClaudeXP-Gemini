@@ -454,6 +454,7 @@ window.addEventListener("DOMContentLoaded", () => {
     return decor;
   }
   CM.waterHere = (x, y) => { const fl = game.floor; if (!fl) return false; return decorations(fl).water.some((w) => w.x === x && w.y === y); };   // (v24.1: is the party standing in water)
+  CM.waterCells = (fl) => (fl && fl.grid ? decorations(fl).water.filter((w) => !w.w || w.w >= 0.95).map((w) => [w.x, w.y]) : []);   // (v30.8: the floor's water, whole squares, for the renderer's map - not the road's puddles)
   {
   }
 

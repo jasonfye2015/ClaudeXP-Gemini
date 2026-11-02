@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Water you can see into (v30.8, UPGRADE_PLAN_25.md phase 8)
+  (src/js/76zzzzzh-water2.js; 40-render.js (shallows, fish, foam); 80-main.js (CM.waterCells))
+  - The shallows near the banks show their bed through the ripples - pebbles and swaying weed; now and then a fish
+    turns in the water; foam gathers right along the banks, more where the river runs.
+  - Rings spread where followers, townsfolk and beasts stand or wade in water, as they did for the party. The floor's
+    water goes to the shader in the floor's map (CM.waterCells).
+
 The deeper, the older (v30.7, UPGRADE_PLAN_25.md phase 7)
   (src/js/76zzzzzg-age.js; 40-render.js (cracks, roots, fungus and veins on the walls))
   - The first floors are clean dressed stone; cracks come in from the sixth floor; roots hang from the ceiling from

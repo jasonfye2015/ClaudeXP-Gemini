@@ -90,6 +90,20 @@ void main() {
     vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
     float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
     vec3 wc = mix(base, seen, fr) + glint * vec3(1.0, 0.95, 0.82);
+    if (uMapN > 0.0) {                                                        // (v30.8) shallows to see into, a fish now and then, foam at the banks
+      vec2 wq = vWorld.xz / uMapN; float o = 0.9 / uMapN, mS = min(texture(uMap, wq).g, min(min(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), min(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g)));
+      float shallow = 1.0 - smoothstep(0.08, 0.85, mS), lk = uSunK > 0.0 ? 0.35 + 0.75 * uSunK * max(uAmbient, 0.2) : lw;
+      vec2 bp = vWorld.xz * 6.0 + wn.xz * 0.35, bid = floor(bp), bf = fract(bp) - 0.5 - (vec2(hash(bid + 1.7), hash(bid + 4.2)) - 0.5) * 0.4;
+      float stone = smoothstep(0.42, 0.22, length(bf)), weed = smoothstep(0.62, 0.8, vnoise(vWorld.xz * 2.2 + vec2(sin(tm * 0.6) * 0.15, 0.0)));
+      vec3 bed = mix(mix(vec3(0.36, 0.31, 0.22), vec3(0.55, 0.52, 0.46) * (0.65 + 0.6 * hash(bid)), stone), vec3(0.18, 0.32, 0.12), weed * 0.7) * lk * uTorch * uGrade;
+      wc = mix(wc, bed * vec3(0.8, 0.95, 0.95), shallow * (1.0 - fr) * 0.5);
+      vec2 cid = floor(vWorld.xz); float fh = hash(cid + 31.7);
+      if (fh > 0.72 && mS > 0.3) { float sp = 0.35 + 0.5 * hash(cid + 2.2), an = tm * sp + fh * 40.0; vec2 c = cid + 0.5 + vec2(cos(an), sin(an * 0.8)) * 0.24, dir = normalize(vec2(-sin(an), cos(an * 0.8) * 0.8) + 1e-4);
+        vec2 q = vWorld.xz - c; float along = dot(q, dir), across = dot(q, vec2(-dir.y, dir.x)) + 0.012 * sin(tm * 9.0 + along * 30.0);
+        float fish = smoothstep(1.0, 0.7, length(vec2(along / 0.085, across / 0.026))) + smoothstep(1.0, 0.6, length(vec2((along + 0.1) / 0.03, across / 0.03))) * 0.8;
+        wc *= 1.0 - clamp(fish, 0.0, 1.0) * 0.5 * (1.0 - fr); }
+      float edge = 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
+      wc = mix(wc, vec3(0.93, 0.95, 0.97) * (uSunK > 0.0 ? 0.55 + 0.4 * uAmbient : lw * 0.8) * uTorch, edge * smoothstep(0.5, 0.75, fn) * (0.35 + 0.35 * flow) * 0.7); }
     wc = mix(wc, uFog, smoothstep(uReach * 0.55, uReach * 1.7, d));
     fragColor = vec4(wc, 0.86 * vFx.y); return;
   }
