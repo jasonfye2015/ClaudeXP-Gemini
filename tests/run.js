@@ -5637,6 +5637,21 @@ test("followers who level: five new floors make a follower seasoned and ten a ve
   g.enterFloor(3, "up"); assert.strictEqual(g.follower.deep, 10, "a floor seen before doesn't count");
 });
 
+test("the hound's tricks: taught at the farm; fetch brings back what fled foes dropped; track follows a fled foe to a den in the Deep Wood - its own floor of that kind with the beast leading - cleared and gone", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("trick-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1000;
+  g.pets().dog = { name: "Bramble" }; assert.ok(g.teachTrick("track"), "only at the farm"); g.atFarm = () => true;
+  assert.strictEqual(g.teachTrick("track"), ""); assert.strictEqual(g.teachTrick("fetch"), ""); assert.ok(g.teachTrick("track"), "once");
+  g.enterFloor(4, "down"); const wolf = CM.makeMonster(CM.monsterKind("Kobold"), 4, new CM.Random(1)); wolf.fled = true; g.foes = [wolf]; g.mode = "combat"; const gold = g.gold;
+  g.wonFight(); assert.ok(g.gold > gold, "fetched"); assert.strictEqual(g.dens().length, 1); const d = g.dens()[0]; assert.strictEqual(d.kind, "Kobold");
+  g.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); assert.ok(d.at && g.floor.things[d.at] && g.floor.things[d.at].type === "den", "a den's mouth in the Wood");
+  g.floor.pos = d.at.split(",").map(Number); g.mode = "explore"; g.use(); assert.ok(CM.isDen(g.floor.number), "down into it");
+  const groups = Object.values(g.floor.things).filter((t) => t.type === "monsters"); assert.ok(groups.length && groups.every((t) => t.group.every((m) => (m.kind || m.name).includes("Kobold") || /Fled/.test(m.name))));
+  assert.ok(groups.some((t) => t.denLord), "the beast leads them");
+  for (const [k, t] of Object.entries(g.floor.things)) if (t.type === "monsters") delete g.floor.things[k];
+  const exit = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "denexit"); g.floor.pos = exit.split(",").map(Number); g.use();
+  assert.strictEqual(g.floor.number, -1); assert.ok(d.cleared && g.achievements.denbreaker); assert.ok(!g.floor.things[d.at] || g.floor.things[d.at].type !== "den", "gone");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
