@@ -7,7 +7,7 @@ precision highp float;
 in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
 in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
 uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uRight;
-uniform vec3 uEye; uniform float uPush;                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
+uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
@@ -16,7 +16,8 @@ void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
       p.xz += uWind.xy * iB.w * aPos.y * uWind.z * (0.3 + 0.7 * g * g + 0.22 * sin(uTime * 3.1 + iA.x * 1.7 + iA.z * 2.3)); }
     if (iB.w > 0.0 && uPush > 0.0) { vec2 aw = iA.xz - uEye.xz; float dd = length(aw), k = (1.0 - smoothstep(0.35, 1.25, dd)) * aPos.y * uPush;   // (v30.6) parted by the party, springing back as it goes on
       p.xz += aw / max(dd, 0.001) * k * iB.x * 0.42; p.y -= k * k * iB.x * 0.12; }
-    uvl = vec3(mix(iC.x, iC.z, u), mix(iC.y, iC.w, aUV.y), iB.y); sh = iB.z; fx = iD.xyz; }
+    uvl = vec3(mix(iC.x, iC.z, u), mix(iC.y, iC.w, aUV.y), iB.y); sh = iB.z; fx = iD.xyz;
+    if (uFadeFar.y > 0.0 && iA.y < 3.0 && iD.z < 1.5) fx.y *= 1.0 - smoothstep(uFadeFar.x, uFadeFar.y, abs(iA.x - uEye.x) + abs(iA.z - uEye.z)); }   // (v30.9: what stands far off comes in softly, not all at once)
   if (aFx.x < 0.0) { float along = p.x * uWind.x + p.z * uWind.y, g = 0.5 + 0.5 * sin(uTime * 0.9 - along * 0.35);   // (a top that gives: the gust and its own flutter)
     float w = uWind.z * (0.3 + 0.7 * g * g + 0.22 * sin(uTime * 3.1 + p.x * 1.7 + p.z * 2.3)); p.xz += uWind.xy * (-aFx.x) * w; p.y -= abs(-aFx.x * w) * 0.25;
     if (uPush > 0.0 && -aFx.x > 0.045 && p.y < 1.2) { vec2 aw = p.xz - uEye.xz; float dd = length(aw), k = (1.0 - smoothstep(0.3, 1.1, dd)) * uPush; p.xz += aw / max(dd, 0.001) * k * 0.28; p.y -= k * 0.08; }   // (v30.6: the tall stuff, not the trees)
@@ -201,6 +202,8 @@ void main() {
   }
   col += t.rgb * vShade * uFlash * 0.9;                                   /* (v30.2: the lightning, whitening all) */
   col += ageGlow * (1.0 - fog);                                           /* (v30.7: the fungus's own light) */
+  if (uCeil < 0.5 && vFx.z < 1.5) { float ap = smoothstep(9.0, 55.0, d) * 0.32 * (1.0 - fog);   // (v30.9) the far land takes the colour of the air: paler, bluer by day
+    col = mix(col, mix(uFog, vec3(0.62, 0.72, 0.9) * max(uAmbient, 0.15), 0.45 * max(uSunK - 0.3, 0.0)), ap); }
   col = mix(col, uFog + vec3(0.6, 0.65, 0.8) * uFlash, fog);
   col += shafts(vdir, d);
   { float lum = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(lum), col, uLook.y); col = max((col - 0.18) * uLook.x + 0.18 + uLift * (1.0 - col), 0.0); }   // (v22.4: the grade - saturation, contrast about the dark's middle, the lift)
@@ -283,7 +286,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -772,7 +775,7 @@ CM.Renderer = class {
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.shared || this.texture); gl.uniform1i(this.loc.uShared, 1);
     gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.surfTex || this.texture); gl.uniform1i(this.loc.uSurf, 2);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, this.mapTex || null); gl.uniform1i(this.loc.uMap, 3); gl.uniform1f(this.loc.uMapN, this.mapTex ? this.mapN : 0); gl.activeTexture(gl.TEXTURE0);
-    gl.uniform1f(this.loc.uAO, CM.aoOff ? 0 : this.ao === undefined ? 1 : this.ao); gl.uniform1f(this.loc.uCeil, sky ? 0 : 1); gl.uniform1f(this.loc.uSparkle, this.sparkle || 0); gl.uniform4fv(this.loc.uAge, !sky && this.age ? this.age : [0, 0, 0, 0]); gl.uniform1f(this.loc.uPush, sky && !CM.reducedMotion && !this.inspect ? 1 : 0);   // (v30.6: grass parted - not in the inspect camera's pictures)   // (v30.3: soft corners; CM.aoOff for an A/B)
+    gl.uniform1f(this.loc.uAO, CM.aoOff ? 0 : this.ao === undefined ? 1 : this.ao); gl.uniform1f(this.loc.uCeil, sky ? 0 : 1); gl.uniform1f(this.loc.uSparkle, this.sparkle || 0); gl.uniform4fv(this.loc.uAge, !sky && this.age ? this.age : [0, 0, 0, 0]); gl.uniform2fv(this.loc.uFadeFar, CM.farFadeOff || this.inspect ? [0, 0] : [9.5, 12.2]);   // (the props are handed over within twelve squares: 80-main.js) gl.uniform1f(this.loc.uPush, sky && !CM.reducedMotion && !this.inspect ? 1 : 0);   // (v30.6: grass parted - not in the inspect camera's pictures)   // (v30.3: soft corners; CM.aoOff for an A/B)
     gl.uniform1f(this.loc.uBump, CM.reliefOff ? 0 : (this.bumpK || 0.7) * (CM.reliefScale || 1));   // (v22.1: the relief on the floor's own mesh only)
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();

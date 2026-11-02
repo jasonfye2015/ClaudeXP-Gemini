@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Better far distance (v30.9, UPGRADE_PLAN_25.md phase 9)
+  (40-render.js (billboards fade in; the air's colour on the far land))
+  - What stands on the ground far off (props, beasts, people) comes into view softly over the last two or three
+    squares instead of appearing all at once.
+  - Outdoors the far land takes the colour of the air - paler and bluer by day - before the fog, so the distance
+    reads as distance. This finishes plan 25 (set 9 of the list).
+
 Water you can see into (v30.8, UPGRADE_PLAN_25.md phase 8)
   (src/js/76zzzzzh-water2.js; 40-render.js (shallows, fish, foam); 80-main.js (CM.waterCells))
   - The shallows near the banks show their bed through the ripples - pebbles and swaying weed; now and then a fish
