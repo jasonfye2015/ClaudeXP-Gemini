@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Secret floors (v37.4, UPGRADE_PLAN_32.md phase 4)
+  (src/js/69zza-vaults.js; 76zzzzzzs-vaults.js (the stair, the keeper ghost, the vault named))
+  - About one floor in nine from the fourth hides a stair under a flagstone in a quiet corner, found by searching the
+    square (Space on it), by the hound within two squares, or by a Rogue passing beside it.
+  - It leads down to a small hand-made vault - the Drowned Chapel, the Counting-House or the Sealed Library - its ghost
+    keeper telling the story in three parts, one each time spoken to; heard out, the prize is given (the Bell-Rope
+    Charm; the Ledger Ring and a hoard; the Reader's Circlet and two tomes). Once a run each. This finishes plan 32 (set 4).
+
 Lost and found (v37.3, UPGRADE_PLAN_32.md phase 3)
   (src/js/69zz-lostfound.js; 76zzzzzzr-lostfound.js (the lost party's pack))
   - When an expedition ends in the dark, the best of what its heroes wore - four things at most, never cursed or a

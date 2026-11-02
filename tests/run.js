@@ -5767,6 +5767,17 @@ test("lost and found: an expedition lost on a floor leaves the best of what its 
   h.floor.pos = k.split(",").map(Number); h.mode = "explore"; const n = h.bag.length; h.use(); assert.ok(h.bag.length > n); assert.ok(h.lostGear().find((r) => r.id === L[L.length - 1].id).taken, "taken home"); const k2 = new CM.Game(); k2.newGame("third-seed", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); k2.enterFloor(4, "down"); assert.ok(!Object.values(k2.floor.things).some((x) => x.type === "lostpack"), "gone for anyone else"); assert.ok(h.achievements.lostfound);
 });
 
+test("secret floors: a hidden stair now and then, found by searching its square; it leads to a hand-made vault whose keeper tells the story in three parts before the prize is given, and back up to where it was found", () => {
+  const CM = load(); let n0 = 0; for (let n = 4; n <= 120 && !n0; n++) { const fl = CM.makeFloor(n, "vault-1", 2); if (fl.vaultHidden) n0 = n; } assert.ok(n0, "a floor with a hidden stair");
+  const g = new CM.Game(); g.newGame("vault-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(n0, "down"); g.mode = "explore";
+  const H = g.floor.vaultHidden; assert.ok(!g.floor.things[H.k], "hidden at first"); g.floor.pos = H.k.split(",").map(Number); g.use(); assert.ok(g.floor.things[H.k] && g.floor.things[H.k].type === "vaultstair", "found by searching");
+  g.use(); assert.ok(CM.isVault(g.floor.number) && g.floor.vault === H.kind, "down into the vault");
+  const fl = g.floor, pk = Object.keys(fl.things).find((k) => fl.things[k].type === "chest"), kk = Object.keys(fl.things).find((k) => fl.things[k].type === "vaultkeeper");
+  fl.pos = pk.split(",").map(Number); const n = g.bag.length; g.use(); assert.strictEqual(g.bag.length, n, "the keeper first");
+  fl.pos = kk.split(",").map(Number); for (let i = 0; i < 3; i++) g.use(); fl.pos = pk.split(",").map(Number); g.use(); assert.ok(g.bag.some((it) => it.name === CM.VAULTS[H.kind].prize().name), "the prize"); assert.ok(g.achievements.vaulter);
+  const ek = Object.keys(fl.things).find((k) => fl.things[k].type === "vaultexit"); fl.pos = ek.split(",").map(Number); g.use(); assert.strictEqual(g.floor.number, n0, "back up"); assert.strictEqual(g.floor.pos.join(","), H.k);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
