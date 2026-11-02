@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Storm light (v41.3, UPGRADE_PLAN_36.md phase 3)
+  (src/js/76zzzzzzzj-stormlight.js)
+  - When a storm is over Caer Duin its lightning reaches down the shaft to the first floors: a cold flash whitening
+    the stone, brightest by the shaft's foot and fainter each floor down - the third sees only a glimmer.
+  - A while after each flash comes the thunder, muffled by the earth. Reduced motion keeps the flashes out.
+
 Eyes in the dark (v41.2, UPGRADE_PLAN_36.md phase 2)
   (src/js/76zzzzzzzi-eyes.js)
   - A waking pack out past the torch's reach is a darkness with eyes in it: a pair for each that stands, at its head's
