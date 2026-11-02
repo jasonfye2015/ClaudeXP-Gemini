@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The hall of feats (v33.0, UPGRADE_PLAN_28.md phase 0)
+  (src/js/69zd-feats.js; 76zzzzzx-feats.js (the hall, from the Mage Tower's doors))
+  - Twenty feats more, kept with the achievements (and so titles too): a run's ten dishes, three feasts, fifty chests,
+    three hundred slain, ten thousand steps, three, six and all nine guardians, ten champions, 10,000 gold, floors 20
+    and 40, twenty shards held, three words from the Tower, five things from the still, four trophies mounted, every
+    hero in rare gear, a hero at level twenty, a party of veterans.
+  - The hall of feats, a room at the Mage Tower's foot (from its doors): a brass plaque for every feat earned, with
+    who and when, and dark stone with the words for the rest; and the title worn.
+
 The house furnished (v32.3, UPGRADE_PLAN_27.md phase 3)
   (src/js/69zc-furnish.js; 76zzzzzw-furnish.js (two more rooms in the house's window))
   - Eight furnishings for the party's house, bought with gold in town - a hearth rug, a pantry shelf, a brass lamp, a

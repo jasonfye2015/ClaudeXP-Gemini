@@ -5545,6 +5545,14 @@ test("the house furnished: furnishings bought in town for gold and trophies moun
   assert.strictEqual(g.party[0].stats.int, before + 1, "the bookcase goes with them"); assert.ok(g.morale > CM.MORALE.start, "in good heart");
 });
 
+test("the hall of feats: twenty feats more, each earned the first time it holds - looked for after a fight, a floor, a change of mode - and kept with the achievements", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("feat-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  assert.strictEqual(Object.keys(CM.FEATS2).length, 20); for (const id of Object.keys(CM.FEATS2)) assert.ok(CM.ACHIEVEMENTS[id] && CM.ACHIEVEMENTS[id].title, id);
+  g.gold = 10000; g.tally.chests = 50; g.tally.guardians = ["rat", "knight", "forge"]; g.checkFeats();
+  assert.ok(g.achievements.rich10k && g.achievements.chests50 && g.achievements.threeguard); assert.ok(!g.achievements.sixguard);
+  g.tally.kills = 300; g.enterFloor(2, "down"); assert.ok(g.achievements.kills300, "looked for on a new floor");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
