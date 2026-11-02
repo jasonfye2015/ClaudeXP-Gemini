@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v34.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v34.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "34.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "34.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -29055,6 +29055,38 @@ Object.assign(CM.Game.prototype, {
     return em0.call(this, ev, ...a); };
 }
 
+// ---- 69zl-legends.js ----
+"use strict";
+// Retirement to Legends' Row (v34.4, UPGRADE_PLAN_29.md): a hero of level fifty or more is offered it - to retire from
+// the party to a house of their own on Legends' Row in town, and live there (six houses; the oldest legend moves on to
+// make room). The party can visit; each legend teaches one hero who asks, once a run: +1 to the legend's calling's own
+// stat for good, and to a hero of their own calling their first boon besides, if the hero hasn't it. The guildhall's
+// trainers and the house's study are as they were.
+//   CM.LEGEND_AT; game.legends(); game.retireLegend(i); game.legendTeach(legendIndex, heroIndex)
+{ CM.LEGEND_AT = 50; CM.LEGEND_HOUSES = 6;
+  const G = CM.Game.prototype, LINES = { Knight: "Keep your shield up and your back to a wall.", Rogue: "Never open the obvious chest first.", Cleric: "Heal the one who won't ask.", Mage: "Count your magic like coins.", Ranger: "Shoot the one giving orders.", Paladin: "An oath is a weight you choose to carry." };
+  Object.assign(G, {
+    legends() { const V = this.vext("legends"); V.list = V.list || []; return V.list; },
+    retireLegendWhy(i) { if (!this.inTown()) return "Legends' Row is in town."; const h = this.party[i]; if (!h || h.hp <= 0) return "Only a hero on their feet retires.";
+      if (h.level < CM.LEGEND_AT) return `A legend is a hero of level ${CM.LEGEND_AT} or more.`; if (this.party.filter((p) => p.hp > 0).length <= 1) return "Someone has to go down."; return ""; },
+    retireLegend(i) { const why = this.retireLegendWhy(i); if (why) return why; this.logAct && this.logAct("retireLegend", i); const h = this.party[i], L = this.legends();
+      const boon = (h.boons || [])[0] || null, scars = (h.scars || []).length; L.push({ name: h.name, cls: h.cls, level: h.level, origin: h.origin || null, boon, scars, date: CM.today ? CM.today() : "", taught: {} });
+      let gone = null; if (L.length > CM.LEGEND_HOUSES) gone = L.shift(); this.saveVillage(); this.party.splice(i, 1);
+      this.sound && this.sound("level"); this.say(`${h.name} the ${h.cls}, level ${h.level}, takes the keys to a house on Legends' Row. The town comes out to see.${gone ? ` (${gone.name} has moved on, and left the house to them.)` : ""}`);
+      if (this.achieve) this.achieve("legend"); this.saveRun(); this.emit("change"); return ""; },
+    legendTeachWhy(li, hi) { if (!this.inTown()) return "Legends' Row is in town."; const Lg = this.legends()[li], h = this.party[hi]; if (!Lg) return "No legend there."; if (!h || h.hp <= 0) return "Bring them on their feet.";
+      if ((Lg.taught || {})[this.seed]) return `${Lg.name} has taught someone this run already.`; return ""; },
+    legendTeach(li, hi) { const why = this.legendTeachWhy(li, hi); if (why) return why; this.logAct && this.logAct("legendTeach", li, hi); const Lg = this.legends()[li], h = this.party[hi], key = (CM.CLASSES[Lg.cls] || {}).key || "str";
+      h.stats[key] = Math.min(25, h.stats[key] + 1); let more = ""; if (h.cls === Lg.cls && Lg.boon && !(h.boons || []).includes(Lg.boon)) { h.boons = (h.boons || []).concat(Lg.boon); more = " - and their own first boon besides"; }
+      CM.recompute(h); (Lg.taught = Lg.taught || {})[this.seed] = h.name; this.saveVillage();
+      this.say(`${Lg.name} spends the afternoon with ${h.name}: "${LINES[Lg.cls] || "Come back alive. That's the whole trick."}" +1 ${CM.STAT_NAMES[key]}${more}.`); this.saveRun(); this.emit("change"); return ""; },
+  });
+  CM.ACHIEVEMENTS.legend = { name: "A House on Legends' Row", what: "Retire a hero of level fifty to Legends' Row", title: "the Legendary" };
+  const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "change" && this.party && this.tally && !this.replaying) for (const h of this.party) if (h.level >= CM.LEGEND_AT && h.hp > 0 && !h.legendOffered) { h.legendOffered = true;
+      this.say(`${h.name} has nothing left to prove. At level ${h.level}, a house on Legends' Row in town is theirs if they want it.`); }
+    return em0.call(this, ev, ...a); };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -40998,10 +41030,10 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
 // canvas, the fire alive, each hero's portrait in the firelight, the fallen's place left empty - and their talk beneath,
 // a line at a time. It comes up once a camp (not under Automatic or a film); the camp's "Round the fire" brings it
 // back. And CM.addAction(modes, label, fn), a button for the window files' own in the actions row. Rules: 69zh-fireside.js.
-{ const extra = []; CM.addAction = (modes, label, fn) => extra.push({ modes, label, fn });
+{ const extra = []; CM.addAction = (modes, label, fn, when) => extra.push({ modes, label, fn, when });   /* (when(ui): only while it holds) */
   const ra0 = CM.UI.prototype.renderActions;
   CM.UI.prototype.renderActions = function (...a) { const out = ra0.apply(this, a), g = this.game, box = this.$("#actions"); if (!box || this.xmenu) return out;
-    for (const X of extra) { if (!X.modes.includes(g.mode)) continue; const id = `xa-${X.label.replace(/\W+/g, "")}`; if (box.querySelector(`[data-xa="${id}"]`)) continue;
+    for (const X of extra) { const id = `xa-${X.label.replace(/\W+/g, "")}`, have = box.querySelector(`[data-xa="${id}"]`); if (!X.modes.includes(g.mode) || (X.when && !X.when(this))) { if (have) have.remove(); continue; } if (have) continue;
       const b = document.createElement("button"); b.dataset.xa = id; b.innerHTML = X.label; b.addEventListener("click", () => X.fn(this)); const menu = [...box.children].find((c) => /Menu/.test(c.textContent)); box.insertBefore(b, menu || null); }
     return out; };
   let anim = 0, lines = [], shown = 0, t0 = 0;
@@ -41074,6 +41106,27 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   box.innerHTML = `<div class="list-title">Letters home (${L.length})</div><p class="small">Every hero standing writes one when the party comes up into the town after a trip down. The last eighty are kept.</p>`
     + (L.length ? L.map((l) => `<div class="entry" style="background:linear-gradient(170deg,#EADBB8,#D8C49A);color:#2A1C10;border-radius:4px;padding:10px 12px;margin:8px 0;font-family:Georgia,serif;font-style:italic;box-shadow:0 2px 4px rgba(0,0,0,0.5)"><div style="font-style:normal;font-size:11px;opacity:0.7">${ui.esc(l.hero)} the ${ui.esc(l.cls)} - ${ui.esc(l.date)}, day ${l.day + 1} of the run</div>${ui.esc(l.text)}</div>`).join("") : `<p class="small">None yet: they come with the first trip home.</p>`);
 });
+
+// ---- 76zzzzzzf-legends.js ----
+"use strict";
+// Legends' Row - the window's side (v34.4): in town, "Legends' Row" among the actions: the houses of the retired - each
+// legend's door with their name, calling, level and day, and a hero of the party to send in for a lesson - and the
+// heroes of level fifty or more who could retire there. Rules: 69zl-legends.js.
+{ const make = (ui) => { if (ui.$("#dlg-legends")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-legends";
+    d.innerHTML = `<div class="box journalbox"><h2>Legends' Row</h2><p class="lore">A short street of good stone houses off the Square, each with a name over its door. The town keeps them for those who went down further than anyone, and came back.</p><div class="legends"></div><div class="note" id="legends-note"></div><div class="end"><button class="close">Close</button></div></div>`;
+    ui.$("#dlg-magetower").parentNode.appendChild(d); d.querySelector(".close").addEventListener("click", () => ui.closeDialogs()); };
+  CM.UI.prototype.openLegends = function (note) { make(this); const g = this.game, box = this.$("#dlg-legends .legends"), L = g.legends(); let h = "";
+    h += L.length ? L.map((Lg, li) => `<div class="recruit" style="grid-template-columns:auto 1fr auto"><div class="pslot" data-li="${li}"></div><div><b>${this.esc(Lg.name)}</b> the ${this.esc(Lg.cls)}, level ${Lg.level}<br><small>retired ${this.esc(Lg.date)}${Lg.scars ? `, ${Lg.scars} scar${Lg.scars === 1 ? "" : "s"}` : ""}; teaches +1 ${this.esc(CM.STAT_NAMES[(CM.CLASSES[Lg.cls] || {}).key || "str"])}${Lg.boon ? `, and a ${this.esc(Lg.cls)} their first boon` : ""}, once a run${(Lg.taught || {})[g.seed] ? ` - taught ${this.esc(Lg.taught[g.seed])} this run` : ""}</small></div><div><select data-teach="${li}"><option value="">Send in...</option>${g.party.map((p, hi) => p.hp > 0 ? `<option value="${hi}">${this.esc(p.name)}</option>` : "").join("")}</select></div></div>`).join("")
+      : `<p class="small">The houses stand empty. A hero of level ${CM.LEGEND_AT} or more may retire here.</p>`;
+    const can = g.party.map((p, i) => [p, i]).filter(([p]) => p.level >= CM.LEGEND_AT);
+    if (can.length) h += `<div class="list-title">Ready to retire</div>` + can.map(([p, i]) => { const why = g.retireLegendWhy(i); return `<button data-retire="${i}" ${why ? `disabled title="${this.esc(why)}"` : ""}>${this.esc(p.name)} the ${this.esc(p.cls)} (level ${p.level}) takes a house</button>`; }).join(" ");
+    box.innerHTML = h; this.$("#legends-note").textContent = note || "";
+    for (const s of box.querySelectorAll("[data-li]")) { const Lg = L[Number(s.dataset.li)]; const c = this.portrait(Lg.cls, 40); s.appendChild(c); }
+    for (const s of box.querySelectorAll("[data-teach]")) s.addEventListener("change", () => { if (s.value === "") return; const e = g.legendTeach(Number(s.dataset.teach), Number(s.value)); this.openLegends(e || "A lesson given."); this.refresh(); });
+    for (const b of box.querySelectorAll("[data-retire]")) b.addEventListener("click", () => { const e = g.retireLegend(Number(b.dataset.retire)); this.openLegends(e || ""); this.refresh(); });
+    this.openDialog("#dlg-legends"); };
+  CM.addAction(["explore"], "Legends' Row", (ui) => ui.openLegends(), (ui) => ui.game.inTown && ui.game.inTown());
+}
 
 // ---- 77-splash.js ----
 "use strict";

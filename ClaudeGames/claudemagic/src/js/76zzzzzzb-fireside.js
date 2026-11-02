@@ -3,10 +3,10 @@
 // canvas, the fire alive, each hero's portrait in the firelight, the fallen's place left empty - and their talk beneath,
 // a line at a time. It comes up once a camp (not under Automatic or a film); the camp's "Round the fire" brings it
 // back. And CM.addAction(modes, label, fn), a button for the window files' own in the actions row. Rules: 69zh-fireside.js.
-{ const extra = []; CM.addAction = (modes, label, fn) => extra.push({ modes, label, fn });
+{ const extra = []; CM.addAction = (modes, label, fn, when) => extra.push({ modes, label, fn, when });   /* (when(ui): only while it holds) */
   const ra0 = CM.UI.prototype.renderActions;
   CM.UI.prototype.renderActions = function (...a) { const out = ra0.apply(this, a), g = this.game, box = this.$("#actions"); if (!box || this.xmenu) return out;
-    for (const X of extra) { if (!X.modes.includes(g.mode)) continue; const id = `xa-${X.label.replace(/\W+/g, "")}`; if (box.querySelector(`[data-xa="${id}"]`)) continue;
+    for (const X of extra) { const id = `xa-${X.label.replace(/\W+/g, "")}`, have = box.querySelector(`[data-xa="${id}"]`); if (!X.modes.includes(g.mode) || (X.when && !X.when(this))) { if (have) have.remove(); continue; } if (have) continue;
       const b = document.createElement("button"); b.dataset.xa = id; b.innerHTML = X.label; b.addEventListener("click", () => X.fn(this)); const menu = [...box.children].find((c) => /Menu/.test(c.textContent)); box.insertBefore(b, menu || null); }
     return out; };
   let anim = 0, lines = [], shown = 0, t0 = 0;
