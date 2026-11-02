@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Stained glass (v41.1, UPGRADE_PLAN_36.md phase 1)
+  (src/js/76zzzzzzzh-stainedglass.js)
+  - The Temple has windows now: three tall lancets down each side and a rose over the altar.
+  - By day the glass glows and pools of coloured light lie on the floor and over the pews from whichever side the
+    sun is on - the east windows in the morning, the west in the afternoon - sliding as it goes over. At night the
+    glass is dark and only the candles light the room.
+
 Moving shadows (v41.0, UPGRADE_PLAN_36.md phase 0)
   (src/js/76zzzzzzzg-torchshadows.js)
   - Below ground a shadow cast by a flame - the party's torch, a brazier, a wall torch - sways and breathes with it,
