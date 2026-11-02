@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Combos, more (v38.1, UPGRADE_PLAN_33.md phase 1)
+  (src/js/69zzc-combos.js)
+  - Four more combos, each from two blows one after the other on the same foe in a round, named the first time and kept
+    with the rest in the Journal: the feint (a blow, then the Rogue's - as much again), the volley (a shot, then
+    another's - half again), smite and sear (holy light, then fire - half again), hammer and anvil (the Knight's shield
+    bash, then another's blow - a third again).
+
 Positioning (v38.0, UPGRADE_PLAN_33.md phase 0)
   (src/js/69zzb-position.js)
   - A weapon with the reach word strikes from the back row at full, as a polearm in practised hands does.
