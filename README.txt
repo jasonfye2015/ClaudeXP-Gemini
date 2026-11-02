@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Retirement to Legends' Row (v34.4, UPGRADE_PLAN_29.md phase 4)
+  (src/js/69zl-legends.js; 76zzzzzzf-legends.js (Legends' Row among the town's actions); 76zzzzzzb-fireside.js (an action button shown only while it applies))
+  - A hero who reaches level fifty is offered it: to retire from the party to a house of their own on Legends' Row in
+    town (six houses; the oldest legend moves on to make room). The guildhall's trainers and the house's study stay.
+  - In town, Legends' Row among the actions: each legend's house, and a hero of the party sent in for a lesson, once a
+    run - +1 to the legend's calling's own stat for good, and a hero of the same calling their first boon besides.
+    This finishes plan 29 (set 1).
+
 Letters home (v34.3, UPGRADE_PLAN_29.md phase 3)
   (src/js/69zk-letters.js; 76zzzzzze-letters.js (the Journal's Letters page))
   - A trip down is kept - the deepest floor, the slain, the guardians, the finds, who fell, the scars taken - and when

@@ -5621,6 +5621,14 @@ test("letters home: a trip down is kept, and coming up into the town every hero 
   assert.strictEqual(g.trip().deepest, 0, "a new trip"); g.enterFloor(0, "rope"); assert.strictEqual(g.letters().length, before + 3, "no trip, no letters");
 });
 
+test("retirement to Legends' Row: a hero of level fifty is offered it, retires from the party to a house in town, and teaches a hero who visits once a run - the calling's stat, and a same-calling hero their first boon", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("legend-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const h = g.party[0]; assert.ok(g.retireLegendWhy(0), "not yet fifty"); h.level = 50; h.boons = [Object.keys(CM.BOONS || { x: 1 })[0]]; g.emit("change"); assert.ok(h.legendOffered, "offered");
+  assert.strictEqual(g.retireLegend(0), ""); assert.strictEqual(g.party.length, 3); assert.strictEqual(g.legends()[0].name, h.name); assert.ok(g.achievements.legend);
+  const p = g.party[0], key = CM.CLASSES[h.cls].key, before = p.stats[key]; assert.strictEqual(g.legendTeach(0, 0), ""); assert.strictEqual(p.stats[key], before + 1);
+  assert.ok(g.legendTeach(0, 1), "once a run");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
