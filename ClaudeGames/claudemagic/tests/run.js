@@ -5718,6 +5718,13 @@ test("building the town: works raised with gold (and the island's timber and sto
   } finally { CM.matsOn = mats; }
 });
 
+test("the news board: the Crier's sheet for a week is written from that week's runs, the fallen, the records, the fields, the casino, the legends, the feats and the works - and a quiet week says so", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("crier-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const today = CM.today(); g.fame = [{ floor: 14, won: false, date: today, party: ["Ash the Knight 9"] }, { floor: 6, won: false, date: "1/2/2020" }]; g.memorial = [{ name: "Wren", cls: "Rogue", floor: 12, date: today }];
+  const C = g.crier(); assert.ok(C.items.length >= 3); const text = JSON.stringify(C); assert.ok(/floor 14/.test(text) && /Wren/.test(text) && /record/i.test(text), text);
+  assert.strictEqual(g.crierWeeks().length, 8); const old = g.crier("2001-01-01"); assert.strictEqual(old.items[0][0], "A quiet week");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
