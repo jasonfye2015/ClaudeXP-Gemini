@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Painting off the main thread (v26.3, UPGRADE_PLAN_21.md phase 3)
+  (src/js/79-artworker.js; 40-render.js, 80-main.js)
+  - The sets of pictures are painted in a worker - the game's own code, run beside the page with a few stand-ins for
+    it, given the looks' packs as bitmaps - so painting a set no longer stops the screen. While the party plays, the
+    sets it will want next are painted there ahead: the next band's from its last floor, the town's and the Wood's
+    from below. They come back as raw pixels at the size each texture takes (the small sprites as bitmaps), the
+    pictures the graphics card already holds left out, and go straight up.
+  - Measured, going down into a band not yet seen: Pixel 662 to 242 ms, Stone 594 to 191 ms (what is left is the
+    floor's own making and the mipmaps). The worker's sets are the page's, layer for layer.
+  - Where the browser has no worker that can paint, or a set wasn't painted ahead, it is painted the old way.
+
 Instanced drawing (v26.2, UPGRADE_PLAN_21.md phase 2)
   (src/js/40-render.js)
   - Every plain billboard - the standing props, the townsfolk and the monsters standing, the crops, the motes and the

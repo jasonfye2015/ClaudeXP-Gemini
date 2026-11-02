@@ -41,13 +41,23 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
   // a set, built once and kept (half a dozen at a time)
   function setFor(key, special, i, look) {
+    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { artCache[key] = pre; cacheOrder.push(key); } }   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
-      while (cacheOrder.length > 6) delete artCache[cacheOrder.shift()];      // (the sets share their drawn canvases: half a dozen bands kept)
-    }
+    } else { const k = cacheOrder.indexOf(key); if (k >= 0) { cacheOrder.splice(k, 1); cacheOrder.push(key); } }   // (the one in use is the last to go)
+    while (cacheOrder.length > 8) delete artCache[cacheOrder.shift()];        // (the sets share their drawn canvases: eight kept)
     return artCache[key];
   }
+  // (v26.3) the sets the party will want next, painted ahead in the worker: the next band's, the town's and the Wood's
+  const keyOfFloor = (number) => { const i = CM.themeIndex(number), look = lookNow(), season = CM.season ? CM.season(game) : "summer", T = CM.themeOfFloor ? CM.themeOfFloor(number, game.dream) : null;
+    const special = number === 0 || number === -1 || CM.isUndercroft(number) || CM.isTowerFloor(number) || (CM.isJokerFloor && CM.isJokerFloor(number)) || (CM.isInterior && CM.isInterior(number));
+    return special && T ? `${look}:${T.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`; };
+  const paintAhead = () => { if (!CM.artAhead || !game.floor || game.mode === "title") return; const n = game.floor.number, want = [];
+    if (n >= 1 && n % 1 === 0) want.push(n + 1, 0, -1); else if (n === 0) want.push(1, -1); else if (n === -1) want.push(0, 1);
+    const look = lookNow(), season = CM.season ? CM.season(game) : "summer";
+    for (const f of want) { const key = keyOfFloor(f); if (!artCache[key]) CM.artAhead(key, f, look, season, game.dream); } };
+  let aheadTimer = 0;
   // (v21.4) while the title is up: the town's set built and sent to the graphics card a slice a frame, so a new
   // expedition (which starts in town) doesn't stop to do it
   let townReady = null;
@@ -100,6 +110,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderer.setCamera(demoCell[0], demoCell[1], demoCell[2]);
     renderer.setSprites([]);
   }
+  game.on("floor", () => { clearTimeout(aheadTimer); aheadTimer = setTimeout(paintAhead, 2500); });   // (v26.3: a while after arriving, when the floor is settled)
   game.on("floor", (floor) => {
     scaleGrace = performance.now() + 3000;
     if (!renderer.ok) return;
