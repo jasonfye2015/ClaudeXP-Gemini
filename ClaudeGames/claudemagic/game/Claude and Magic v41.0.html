@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v40.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v41.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "40.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "41.0", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -42553,6 +42553,26 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
         else if ((season === "spring" || season === "summer") && w.kind === "house" && w.h % 3 !== 0) out.push({ x: w.x, y: w.y, layer: season === "spring" ? "tw:boxspring" : "tw:boxsummer", face: w.d, w: 0.5, h: 0.16, lift: 0.12 });
         else if (season === "autumn" && w.h % 4 === 0) out.push({ x: w.x, y: w.y, layer: w.h % 8 === 0 ? "tw:pumpkin" : "tw:sheaf", w: w.h % 8 === 0 ? 0.32 : 0.28, h: w.h % 8 === 0 ? 0.2 : 0.5, dx: dx * 0.36 + ((w.h >>> 4) % 2 ? 0.25 : -0.25) * dy, dz: dy * 0.36 + ((w.h >>> 4) % 2 ? 0.25 : -0.25) * dx }); }
       if (season === "spring" && !still) for (const [x, y] of cached.trees) { if (!near(x, y)) continue; for (let i = 0; i < 3; i++) { const ph = (t * 0.12 + i / 3 + (x * 7 + y) * 0.13) % 1; out.push({ x, y, layer: "tw:petal", w: 0.04, h: 0.04, dx: Math.sin(t * 0.7 + i * 2 + x) * 0.6, dz: Math.cos(t * 0.5 + i + y) * 0.6, lift: 2.2 * (1 - ph), alpha: Math.min(1, (1 - ph) * 3) }); } }
+      return out; }; }
+}
+
+// ---- 76zzzzzzzg-torchshadows.js ----
+"use strict";
+// Moving shadows (v41.0, UPGRADE_PLAN_36.md): below ground a shadow cast by a flame (the party's torch, a brazier, a wall
+// torch: 76zzzv-shadows.js) sways and breathes with it - turning a little this way and that and lengthening as the flame
+// dips - and the free-standing pillars of a room now cast their own long shadows away from the party's torch, swaying
+// the same. (The sun's shadows above stay still.) Reduced motion keeps them steady.
+{ const flick = (t, seed) => Math.sin(t * 7.3 + seed) * 0.5 + Math.sin(t * 11.9 + seed * 1.7) * 0.3 + Math.sin(t * 3.1 + seed * 0.3) * 0.2;   // (-1..1: three flickers at odd rates)
+  const sc0 = CM.shadowCaster; if (sc0) CM.shadowCaster = (game, renderer, fl) => { const c = sc0(game, renderer, fl); if (!fl || fl.number === 0 || fl.number === -1 || CM.reducedMotion) return c; const t = performance.now() / 1000;
+    return (x, y, w, dx = 0, dz = 0) => { const out = c(x, y, w, dx, dz); for (const s of out) if (s.rot !== undefined) { const f = flick(t, x * 3.7 + y * 1.3); s.rot += f * 0.07; s.len = (s.len || 1) * (1 + f * 0.08); s.alpha = (s.alpha || 0.5) * (1 - f * 0.08); } return out; }; };
+  // a room's pillars: wall squares with open floor on three sides or all four
+  const pillars = new WeakMap(), pillarsOf = (fl) => { let p = pillars.get(fl); if (p) return p; p = []; const N = fl.grid.length, open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0;
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 1 && CM.DIRS.filter(([dx, dy]) => open(x + dx, y + dy)).length >= 3) p.push([x, y]); pillars.set(fl, p); return p; };
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.renderer || CM.renderer.index.shadow === undefined || game.mode !== "explore") return out;
+      const eye = CM.renderer.eye || [fl.pos[0] + 0.5, 0.5, fl.pos[1] + 0.5], t = now / 1000;
+      for (const [x, y] of pillarsOf(fl)) { const cx = x + 0.5, cz = y + 0.5, d = Math.hypot(cx - eye[0], cz - eye[2]); if (d > 6 || d < 0.6) continue;
+        const f = CM.reducedMotion ? 0 : flick(t, x * 2.1 + y * 5.3), lx = (cx - eye[0]) / d, lz = (cz - eye[2]) / d, len = Math.min(4, 1.2 + d * 0.6) * (1 + f * 0.08);
+        out.push({ x, y, layer: "shadow", flat: true, w: 1.0, len, rot: Math.atan2(lz, lx) + f * 0.05, alpha: Math.max(0, 0.6 - d * 0.07) * (1 - f * 0.08) }); }
       return out; }; }
 }
 
