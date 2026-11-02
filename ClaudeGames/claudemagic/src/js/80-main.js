@@ -561,6 +561,7 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (thing.type === "wingstair_up") out.push({ x, y, layer: "stairs_up", w: 0.6, h: 1.0 });
       else if ((thing.type === "monsters" || thing.type === "boss" || thing.type === "guardian") && !(game.mode === "combat" && key === game.foeKey)) {
         const m = thing.group.find((f) => f.hp > 0 && !f.fled) || thing.group[0];
+        const view = CM.monsterView ? CM.monsterView(thing, x, y, renderer.eye) : null;   // (v29.1: which way it faces, and so what is seen of it)
         if (thing.anim) {                                               // on the move: it slides from where it was
           const k = Math.min(1, (now - thing.anim.at) / 320);
           if (k >= 1) delete thing.anim;
@@ -571,7 +572,7 @@ window.addEventListener("DOMContentLoaded", () => {
         const bend = thing.asleep || !CM.monsterBend ? null : CM.monsterBend(thing.anim ? "walk" : "idle", now, x * 2.1 + y * 1.3, M);   // (v29.0: 76zzzzu-animate.js)
         const side = (x + 0.5 - renderer.eye[0]) * right[0] + (y + 0.5 - renderer.eye[2]) * right[1];
         out.push({ x, y, layer: frameOf(`monster:${m.kind || m.name}`, !thing.asleep && Math.floor(now / 700 + x + y) % 2 ? "idle2" : ""), w: m.boss ? 0.95 : G ? 0.9 * G.size : 0.85, h: (m.boss ? 0.98 : G ? 0.92 * G.size : 0.85) * M.scaleY, shade: (m.elite || thing.champion ? 1.2 : 1) * (thing.asleep ? 0.85 : 1), alpha: m.echo ? 0.78 : 1,
-          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: CM.facesMirror(side), bend, flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
+          tilt: M.tilt, skew: M.skew, scale: M.scale !== 1 ? M.scale : undefined, mirror: view && view.view !== "front" ? view.mirror : CM.facesMirror(side), bend, view: view && view.view, flash: thing.champion && !CM.reducedMotion ? 0.12 + 0.08 * Math.sin(now / 300) : 0,
           lift: thing.asleep ? 0 : Math.sin(now / (ghost ? 900 : 650) + x * 1.7 + y * 2.3) * (ghost ? 0.035 : 0.01) + (ghost ? 0.04 : 0) });   // (awake: it sways; a ghost floats; a champion glints)
       }
     }

@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Which way it faces (v29.1, UPGRADE_PLAN_24.md phase 1)
+  (src/js/76zzzzv-facing.js; 40-render.js, 80-main.js)
+  - A monster on the floor faces the way it last moved (one that hasn't moved, a way of its own). From the party's
+    side of it, it is seen from the front, from the side - narrowed, its far side in shadow, turned the way it faces -
+    or from behind, its picture in shadow and turned away. One coming for the party comes face first. In a fight they
+    all face you. The facing is the picture's only; the rules don't know it.
+
 Monsters that move (the ninety-fifth big update - v29.0, UPGRADE_PLAN_24.md phase 0)
   (src/js/76zzzzu-animate.js; 40-render.js, 80-main.js)
   - A monster's picture is drawn in strips that bend, so it moves as a body: at rest it sways a little from the hips;
