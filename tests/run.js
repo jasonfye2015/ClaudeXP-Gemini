@@ -5749,6 +5749,15 @@ test("puzzle rooms: about one floor in five holds a puzzle made for it and alway
   assert.ok(solved && f2.puzzle.solved, "some tilt of the two mirrors brings the beam to the plate");
 });
 
+test("the rival party: a named band of four goes down ahead each run - their chalk, a thing dropped, and from the fifth floor one of theirs fallen with what they carried - and the rivals met on a floor are them", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("rb-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
+  const B = g.rivalBand(); assert.ok(B.name && B.members.length === 4 && B.leader === B.members[0]);
+  const h = new CM.Game(); h.newGame("rb-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); assert.strictEqual(h.rivalBand().name, B.name, "the seed's band");
+  let chalk = 0, dropped = 0, dead = 0; for (let n = 1; n <= 40; n++) { g.enterFloor(n, "down"); for (const t of Object.values(g.floor.things)) { if (t.type === "chalk") chalk++; if (t.type === "dropped") dropped++; if (t.type === "rivaldead") dead++; } }
+  assert.ok(chalk >= 5 && dropped >= 2, `${chalk} ${dropped}`); assert.ok(dead >= 1 && dead <= 3 && B.fallen.length === dead, "one of theirs, now and then; never the leader");
+  const k = Object.keys(g.floor.things).find((x) => g.floor.things[x].type === "rivaldead"); if (k) { g.floor.pos = k.split(",").map(Number); g.mode = "explore"; const n = g.bag.length; g.use(); assert.ok(g.bag.length > n); }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
