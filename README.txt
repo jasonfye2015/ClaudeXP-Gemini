@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Furniture by purpose (v40.2, UPGRADE_PLAN_35.md phase 2)
+  (src/js/76zzzzzzzd-furniture.js)
+  - A plain room below ground is now and then something: a library (shelves of books along its walls and a reading
+    table), a guardroom (weapon racks, a table and a bench), a tomb (sarcophagi laid in a row) or a hall (banners on
+    the walls and a long table down the middle). About four rooms in seven; the rest stay bare.
+  - The furniture keeps off things, features and doorways and out of a band's landmark room, and never moves: it is
+    chosen by the floor and the room.
+
 Doors and gates that work (v40.1, UPGRADE_PLAN_35.md phase 1)
   (src/js/76zzzzzzzc-doors.js)
   - A found secret wall no longer just vanishes: the block grinds down into the floor over a second, dust bursting
