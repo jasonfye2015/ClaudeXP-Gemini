@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+An illustrated bestiary (v42.0, UPGRADE_PLAN_37.md phase 0)
+  (src/js/76zzzzzzzl-bestiary.js, src/js/76zzzzzzw-mondetail.js)
+  - A new page of the Journal, Plates: every kind the party has met painted large on its own parchment plate, named
+    in a fair hand, with the margins written up from what has been learned of it - where it lives, how many met and
+    slain, what it fears and shrugs off, what it does, and its way once known.
+  - A kind met but never slain is only sketched, in faded outline.
+  - Fixed: the ink line round the Lich King's and the guardians' pictures (v39.0) turned the soft parts of them into
+    black blots; it is drawn from the solid shape only now.
+
 The dark that moves (v41.4, UPGRADE_PLAN_36.md phase 4)
   (src/js/76zzzzzzzk-creepingdark.js)
   - Where a floor's dark is magical it is not still: wisps of it stand at the edge of the party's light and lean in,

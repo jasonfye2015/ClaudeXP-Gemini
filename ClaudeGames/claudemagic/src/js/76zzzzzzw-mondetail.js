@@ -17,8 +17,10 @@
     const rim = p.createLinearGradient(x0, 0, x1, 0); rim.addColorStop(0, "rgba(0,0,0,0.22)"); rim.addColorStop(0.55, "rgba(0,0,0,0)"); rim.addColorStop(0.85, "rgba(255,210,150,0)"); rim.addColorStop(1, "rgba(255,210,150,0.35)"); p.fillStyle = rim; p.fillRect(x0, y0, w + 1, h + 1);
     const ao = p.createLinearGradient(0, y0, 0, y1); ao.addColorStop(0, "rgba(255,255,255,0.06)"); ao.addColorStop(0.7, "rgba(0,0,0,0)"); ao.addColorStop(1, "rgba(0,0,0,0.25)"); p.fillStyle = ao; p.fillRect(x0, y0, w + 1, h + 1);
     p.restore();
-    p.save(); p.globalCompositeOperation = "destination-over"; p.filter = "blur(0px)"; p.shadowColor = "rgba(10,6,4,0.9)"; p.shadowBlur = 0;
-    for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5]]) { p.shadowOffsetX = dx; p.shadowOffsetY = dy; p.drawImage(c, 0, 0); }   /* (the ink line: the shape, stamped dark a pixel and a half each way behind itself) */
+    const mk = document.createElement("canvas"); mk.width = mk.height = S; const mp = mk.getContext("2d"), md = mp.createImageData(S, S);   /* (v42.0: the ink line from the solid shape only - a soft aura or shadow in the picture stamped dark came out a black blot) */
+    for (let i = 0; i < A.length; i += 4) { md.data[i] = 10; md.data[i + 1] = 6; md.data[i + 2] = 4; md.data[i + 3] = A[i + 3] > 128 ? 230 : 0; } mp.putImageData(md, 0, 0);
+    p.save(); p.globalCompositeOperation = "destination-over";
+    for (const [dx, dy] of [[-1.5, 0], [1.5, 0], [0, -1.5], [0, 1.5]]) p.drawImage(mk, dx, dy);   /* (the ink line: the shape, stamped dark a pixel and a half each way behind itself) */
     p.restore(); return c; };
   const m0 = CM.art.monster; CM.art.monster = function (m, big, pose) {
     if (pose === "hurt") { const c = m0.call(this, m, big, "idle"), S = c.width, o = document.createElement("canvas"); o.width = o.height = S; const p = o.getContext("2d"); p.translate(S / 2, S - 14); p.transform(0.96, 0, -0.16, 0.98, 0, -2); p.rotate(-0.06); p.translate(-S / 2, -(S - 14)); p.drawImage(c, 0, 0);
