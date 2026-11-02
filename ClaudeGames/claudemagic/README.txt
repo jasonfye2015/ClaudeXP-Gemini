@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Windows that move (the ninety-first big update - v25.0, UPGRADE_PLAN_20.md phase 0)
+  (src/js/76zzzzj-feel.js; style.css)
+  - A window rises and fades in when it opens and fades away when it closes; buttons press in when clicked.
+  - The purse counts up (or down) to the new gold, with a flash of gold (or red) as it goes.
+  - What the party picks up flies from the view to the Inventory button, which bumps as it lands.
+  - Reduced motion keeps all of it still.
+
 Interiors (v24.6, UPGRADE_PLAN_19.md phase 6 - the world plan done)
   (src/js/69t-interiors.js, 76zzzzi-interiors.js; 61-explore.js, 63-camp.js, 69f-worldmap.js, 73-play.js, 76zzzzh-models.js, 80-main.js)
   - The town's houses can be walked into. Through the door of the Hanged Lantern, the Merchant's House, the Smith's
