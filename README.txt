@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Screen styles (v31.5, UPGRADE_PLAN_26.md phase 5)
+  (src/js/76zzzzzn-styles.js; 40-render.js (the screen pass's styles))
+  - Settings > Screen style: Clean (as it was), Old monitor (a curved tube, scanlines, colour fringes), Watercolour
+    (soft washes that bleed, pigment pooled at the edges, the paper's grain), Ink and parchment (sepia shades and
+    inked lines on old paper), Crisp (sharpened). The game underneath is the same.
+
 Spell colours in the room (v31.4, UPGRADE_PLAN_26.md phase 4)
   (src/js/76zzzzzm-spelllight.js; 40-render.js (a room's flash below ground))
   - A bolt in flight carries its light along the walls: a fireball orange, frost blue, force violet, holy gold, poison
