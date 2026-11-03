@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Distant sounds (v45.3, UPGRADE_PLAN_40.md phase 3)
+  (src/js/76zzzzzzzzd-distant.js)
+  - Below ground the dungeon is heard from beyond the walls every ten seconds or so, from a side of its own, muffled
+    and echoing: water dripping into pools, a roar far off, stone grinding somewhere.
+  - And each band's own: the Flooded Vaults dripping more, hammers far away in the Dwarven Halls and the Foundry,
+    the Crystal Caverns chiming, the Ossuary's bones clattering, the Root groaning deep down.
+
 Water and weather (v45.2, UPGRADE_PLAN_40.md phase 2)
   (src/js/76zzzzzzzzc-weathersound.js)
   - Above ground the weather is heard: rain as a hiss, pattering on the roofs near the houses and dripping fat from
