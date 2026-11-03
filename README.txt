@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Glints (v49.3, UPGRADE_PLAN_44.md phase 3)
+  (src/js/76zzzzzzzzt-glints.js)
+  - Metal, gold and gems catch the light as the party passes: a small star flashing on a chest's bands, a strongbox,
+    a key, and in a fight on a foe in plate or crystal - each glint at its own angle, so it comes and goes as the eye
+    moves or turns, the way a real one does. Not with reduced motion asked for.
+
 Low fog (v49.2, UPGRADE_PLAN_44.md phase 2)
   (src/js/40-render.js, src/js/76zzzzzzzzs-lowfog.js)
   - Mist lies low below ground: a thin skin over every floor, deeper where the floor goes down, so the pits and the
