@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Doors, locks and traps (v45.1, UPGRADE_PLAN_40.md phase 1)
+  (src/js/76zzzzzzzzb-foley.js)
+  - Each has its own made sound now, laid over the old one: a door's creak and its latch, a key turning and a bolt
+    drawn, a chest's lid on its hinge, a lever's ratchet and clunk, a portcullis's chain running up, a slam, stone
+    grinding, a trap's spring and snap.
+  - The big ones echo - longer in the great halls (the Dwarven Halls, the Palace, the Foundry, the Joker's) and
+    shorter in caves and the houses.
+
 Materials (v45.0, UPGRADE_PLAN_40.md phase 0)
   (src/js/76zzzzzzzza-materials.js)
   - A blow sounds like what it lands on, under the hit's own sound: a blade rings on plate, cracks on shell and
