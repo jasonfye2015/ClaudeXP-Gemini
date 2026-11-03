@@ -80,7 +80,14 @@ Object.assign(CM.Game.prototype, {
   // the right button on a chest, a workbench or a kiln: use it, rather than build against it
   craftUse() { const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return null; const b = cr.world.get(...hit), B = CM.CC.B; return b === B.TREASURE ? { kind: "treasure", key: hit.join(",") } : b === B.CHEST ? { kind: "chest", key: hit.join(",") } : b === B.WORKBENCH ? { kind: "bench" } : b === B.KILN ? { kind: "kiln" } : null; },
   // why an ore will not break: no pick, a blunt one, or one that will not bite it
-  craftOreWhy(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
+  craftOreWhy(ore) { const name = CM.ORES[ore].name, Name = name.charAt(0).toUpperCase() + name.slice(1), S = this.craft && this.craft.satchel;   // (v53.3: the island's own picks count too, and the pick that would do is named)
+    const made = S ? S.slots.filter((s) => s && CM.CC.TOOLS[s.b] && CM.CC.TOOLS[s.b].kind === "pick").map((s) => CM.CC.TOOLS[s.b]) : [];
+    const want = Object.values(CM.CC.TOOLS).filter((T) => T.kind === "pick" && (T.mines || []).includes(ore)).map((T) => T.tier)[0], wantHome = Object.entries(CM.PICKS).find(([, P]) => P.mines.includes(ore));
+    const better = want ? `${/^[aeiou]/.test(want) ? "an" : "a"} ${want} pick, made at a workbench` : wantHome ? `the ${wantHome[1].name} from home` : "a better pick";
+    if (made.length && !made.some((T) => (T.mines || []).includes(ore))) return `${Name} ore: your ${made.map((T) => T.tier).sort((a, b) => a.length - b.length)[0]} pick will not bite it - it wants ${better}.`;
+    if (!made.length && !(this.bag || []).some((i) => i.kind === "pick")) return `${Name} ore: bare hands will not break it - it wants ${better}.`;
+    return this.craftOreWhy0(ore); },
+  craftOreWhy0(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
   // the light the hero carries into the dark: the party's lantern, glow stone or torch (a little of their own without)
   craftLight() { const l = this.light; if (!l) return 4; if (l.kind === "lantern" && (l.left || 0) > 0) return 11; if (l.kind === "glow") return 9; if (l.kind === "torch" && (l.left || 0) > 0) return 7; return 4; },
   // the satchel's load (ore and charcoal: what is heavy at home is heavy here) against what one hero carries

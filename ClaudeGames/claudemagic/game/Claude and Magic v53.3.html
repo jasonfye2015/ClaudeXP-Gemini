@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v53.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v53.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "53.2", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "53.3", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -13229,7 +13229,14 @@ Object.assign(CM.Game.prototype, {
   // the right button on a chest, a workbench or a kiln: use it, rather than build against it
   craftUse() { const cr = this.craft, hit = cr && cr.target[0]; if (!hit) return null; const b = cr.world.get(...hit), B = CM.CC.B; return b === B.TREASURE ? { kind: "treasure", key: hit.join(",") } : b === B.CHEST ? { kind: "chest", key: hit.join(",") } : b === B.WORKBENCH ? { kind: "bench" } : b === B.KILN ? { kind: "kiln" } : null; },
   // why an ore will not break: no pick, a blunt one, or one that will not bite it
-  craftOreWhy(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
+  craftOreWhy(ore) { const name = CM.ORES[ore].name, Name = name.charAt(0).toUpperCase() + name.slice(1), S = this.craft && this.craft.satchel;   // (v53.3: the island's own picks count too, and the pick that would do is named)
+    const made = S ? S.slots.filter((s) => s && CM.CC.TOOLS[s.b] && CM.CC.TOOLS[s.b].kind === "pick").map((s) => CM.CC.TOOLS[s.b]) : [];
+    const want = Object.values(CM.CC.TOOLS).filter((T) => T.kind === "pick" && (T.mines || []).includes(ore)).map((T) => T.tier)[0], wantHome = Object.entries(CM.PICKS).find(([, P]) => P.mines.includes(ore));
+    const better = want ? `${/^[aeiou]/.test(want) ? "an" : "a"} ${want} pick, made at a workbench` : wantHome ? `the ${wantHome[1].name} from home` : "a better pick";
+    if (made.length && !made.some((T) => (T.mines || []).includes(ore))) return `${Name} ore: your ${made.map((T) => T.tier).sort((a, b) => a.length - b.length)[0]} pick will not bite it - it wants ${better}.`;
+    if (!made.length && !(this.bag || []).some((i) => i.kind === "pick")) return `${Name} ore: bare hands will not break it - it wants ${better}.`;
+    return this.craftOreWhy0(ore); },
+  craftOreWhy0(ore) { const name = CM.ORES[ore].name, picks = (this.bag || []).filter((i) => i.kind === "pick" && CM.PICKS[i.pick]); if (!picks.length) return `${name.charAt(0).toUpperCase() + name.slice(1)} ore: bare hands will not break it - bring a pick from home.`; if (picks.every((i) => (i.points || 0) <= 0)) return `The ${picks[0].name} is blunt: the forge in town puts a point back on it.`; return `The ${picks[0].name} will not bite ${name}: it wants a better pick.`; },
   // the light the hero carries into the dark: the party's lantern, glow stone or torch (a little of their own without)
   craftLight() { const l = this.light; if (!l) return 4; if (l.kind === "lantern" && (l.left || 0) > 0) return 11; if (l.kind === "glow") return 9; if (l.kind === "torch" && (l.left || 0) > 0) return 7; return 4; },
   // the satchel's load (ore and charcoal: what is heavy at home is heavy here) against what one hero carries
@@ -20338,9 +20345,9 @@ CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: 
   111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 141: "item_ruby", 142: "item_sapphire", 143: "item_sunstone", 144: "item_diamond", 150: "item_rune", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
 // (v12.2) the island's own tools, made at a workbench: they stay on the island. A pick quickens stone and mines ore of its
 // grade, an axe quickens wood, a sword adds to the hero's blows there; each has its uses, a block broken (or a blow) one.
-CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"], uses: 60 }, 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
-  124: { kind: "pick", tier: "copper", factor: 0.45, mines: ["copper", "iron"], uses: 150 }, 125: { kind: "axe", tier: "copper", factor: 0.4, uses: 150 }, 126: { kind: "sword", tier: "copper", power: 4, uses: 150 },
-  127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
+CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper", "iron"], uses: 60 }, /* (v53.3: picks a tier up each, as in Minecraft - stone takes iron) */ 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
+  124: { kind: "pick", tier: "copper", factor: 0.45, mines: ["copper", "iron", "silver"], uses: 150 }, 125: { kind: "axe", tier: "copper", factor: 0.4, uses: 150 }, 126: { kind: "sword", tier: "copper", power: 4, uses: 150 },
+  127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver", "gold"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
 CC.isItem = (b) => b > 100;
 CC.itemWeight = (b) => { const I = CC.ITEM[b]; return !I ? 0 : I.ore ? CM.WEIGHTS.ore : I.bar ? CM.WEIGHTS.bar : I.charcoal ? CM.WEIGHTS.charcoal : 0; };
 CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal || I.gem || I.rune)); };
