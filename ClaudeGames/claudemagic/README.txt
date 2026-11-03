@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A theme for every band (v44.0, UPGRADE_PLAN_39.md phase 0)
+  (src/js/76zzzzzzzv-bandmusic.js)
+  - Each band's tune is played on its own consort now: the Catacombs by a low choir with a bell at each change of
+    chord; the Flooded Vaults on a glass harmonica, water dripping; the Dwarven Halls on a hammered dulcimer over a
+    horn, an anvil keeping time; the Palace on a harpsichord over an organ; the Drowned Town on a music box out of
+    tune, a bell far off; the Fungal Deep on a marimba with a hand drum; the Crystal Caverns on glass bells; the
+    Foundry in brass with the anvils; the Ossuary on a bone xylophone over the choir; the Root in a throat's drone
+    and a heartbeat.
+
 Hireling chatter (v43.4, UPGRADE_PLAN_38.md phase 4)
   (src/js/76zzzzzzzu-chatter.js)
   - Those who come along make themselves heard now and then on the walk: the porter grunts under the pack, the
