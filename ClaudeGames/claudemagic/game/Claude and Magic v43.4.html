@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v43.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v43.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "43.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "43.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -42970,6 +42970,30 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
       this.say = function (t, ...b) { said.push(String(t)); return prev.call(this, t, ...b); };
       try { return tg0.call(this, thing, k, ...a); } finally { if (had) this.say = prev; else delete this.say; if (said.length) CM.whisper(said.join(" "), `${k}:${said[0].slice(0, 30)}`); } }; }
   const say0 = G.say; G.say = function (text, ...a) { const out = say0.call(this, text, ...a); if (typeof text === "string" && CM.VAULTS && this.floor && this.floor.vault) { const K = CM.VAULTS[this.floor.vault]; if (K && text.startsWith(`${K.keeper}:`)) CM.whisper(text, text.slice(0, 40)); } return out; };
+}
+
+// ---- 76zzzzzzzu-chatter.js ----
+"use strict";
+// Hireling chatter (v43.4, UPGRADE_PLAN_38.md): those who come along make themselves heard now and then on the walk -
+// the porter grunts under the pack, the torchbearer coughs in the smoke, a dog (the hired one or the party's own hound)
+// barks or whuffs, the wizard mutters to himself, the cut-loose adventurer hums, and the pony on the lead snorts.
+// One sound every half a minute or so, from behind the party; quiet in a fight. On CM.voice, the "followers" level.
+{ const V = (o) => CM.voice && CM.voice(Object.assign({ group: "followers" }, o));
+  const SOUND = {
+    porter: () => { V({ pitch: 95, to: 80, ms: 260, vowel: "uh", vol: 0.12, breath: 0.6, pan: -0.15 }); V({ pitch: 90, to: 70, ms: 380, vowel: "o", vol: 0.06, breath: 0.9, hiss: true, at: 0.3, pan: -0.15 }); },
+    torchbearer: () => { for (let i = 0; i < 3; i++) V({ pitch: 140, to: 120, ms: 110, vowel: "a", vol: 0.1 - i * 0.02, breath: 1.4, hiss: i > 0, at: i * 0.2, pan: 0.15 }); },
+    dog: () => { const two = Math.random() < 0.6; V({ pitch: 330, to: 260, ms: 120, vowel: "o", to2: "uh", vol: 0.14, growl: 0.06, growlRate: 40, breath: 0.4 }); if (two) V({ pitch: 340, to: 250, ms: 130, vowel: "a", to2: "uh", vol: 0.13, growl: 0.06, growlRate: 40, breath: 0.4, at: 0.22 }); },
+    whuff: () => V({ pitch: 200, ms: 260, vowel: "u", vol: 0.08, breath: 1.2, hiss: true }),
+    wizard: () => { let at = 0; for (let i = 0; i < 6; i++) { V({ pitch: 125 + Math.random() * 20, to: 115, ms: 120 + Math.random() * 80, vowel: ["uh", "er", "o", "e"][i % 4], vol: 0.06, at, pan: 0.2 }); at += 0.18; } },
+    adventurer: () => { const notes = [196, 220, 247, 220, 196]; notes.forEach((f, i) => V({ pitch: f, to: f, ms: 260, vowel: "u", vol: 0.05, wave: "triangle", at: i * 0.28, pan: -0.2 })); },
+    pony: () => { V({ pitch: 160, to: 120, ms: 420, vowel: "o", vol: 0.09, breath: 1.6, hiss: true }); V({ pitch: 420, to: 300, ms: 300, vowel: "e", vol: 0.05, growl: 0.08, growlRate: 14, at: 0.1 }); } };
+  CM.FOLLOWER_SOUNDS = SOUND;
+  let next = 0;
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || game.mode !== "explore" || !game.floor || !CM.voice || CM.VOICE_LEVELS.followers <= 0) return;
+    if (!next) { next = now + 15000 + Math.random() * 20000; return; } if (now < next) return; next = now + 22000 + Math.random() * 30000;
+    const who = [], f = game.follower; if (f && !f.away && SOUND[f.id]) who.push(f.id);
+    if (game.petName && game.petName("dog")) who.push(Math.random() < 0.7 ? "dog" : "whuff"); if (game.petName && game.petName("pony") && !(CM.isDeep && CM.isDeep(game.floor.number))) who.push("pony");
+    if (who.length) SOUND[who[Math.floor(Math.random() * who.length)]](); };
 }
 
 // ---- 77-splash.js ----
