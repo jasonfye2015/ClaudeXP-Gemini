@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Townsfolk murmur (v43.2, UPGRADE_PLAN_38.md phase 2)
+  (src/js/76zzzzzzzs-murmur.js)
+  - By day the Square talks: a low murmur of voices, a syllable here and a laugh there, from the side each comes
+    from, louder the more townsfolk are about and the nearer the party is to the middle of it. At night it falls quiet.
+  - Whoever the party speaks to in town says hello first: a two-note greeting in the speaker's own voice.
+
 Monster voices (v43.1, UPGRADE_PLAN_38.md phase 1)
   (src/js/76zzzzzzzr-monvoices.js, src/js/76zzzzzzzq-voices.js)
   - Every kind has its own made voice in place of the few shared roars: the beasts growl, the small things shriek,
