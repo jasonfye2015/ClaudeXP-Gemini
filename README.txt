@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Floor detail (v48.4, UPGRADE_PLAN_43.md phase 4)
+  (src/js/40-render.js, src/js/76zzzzzzzzp-worn.js)
+  - Below ground the floor shows how it has been walked on: a path worn paler and smoother down the middle of every
+    corridor and room, away from the walls where feet don't go.
+  - And the joints of its flags, two to a square and staggered, faint in the stone. Not in the town or the Wood.
+
 Trim (v48.3, UPGRADE_PLAN_43.md phase 3)
   (src/js/26-surface.js, src/js/76zzzzzzzzo-trim.js)
   - The dungeon's walls stand on a course of dressed skirting stones, a hand's height, set a little proud of the wall
