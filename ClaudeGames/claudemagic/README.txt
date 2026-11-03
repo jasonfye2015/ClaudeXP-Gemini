@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Interface sounds (v46.3, UPGRADE_PLAN_41.md phase 3)
+  (src/js/76zzzzzzzzi-uisounds.js)
+  - A soft click under every button; a page turned when a book-like window opens or one of its pages is chosen (the
+    Journal, the codex, the plates, the lore, the library); a soft thump for the other windows; the map unrolling and
+    rolled up again; and coins clinking when gold changes hands in a window.
+  - At the Interface slider's level in Settings.
+
 Sound cues (v46.2, UPGRADE_PLAN_41.md phase 2)
   (src/js/76zzzzzzzzh-cues.js)
   - Two new settings for those who play by ear. Sound cues gives three tones of their own: a falling warning when a
