@@ -226,11 +226,18 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const wv = CM.hashSeed(`${fl.number}:wv:${x},${y},${d}`) >>> 0, flip = (wv >>> 3) & 1, kk = 0.92 + ((wv >>> 5) % 17) / 100;   // (v48.2: no two wall squares quite alike - mirrored by hash, a little lighter or darker)
         const uv = flip ? [[1, 1], [0, 1], [0, 0], [1, 0]] : [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], F0 + h * (C0 - F0), b[1]], [a[0], F0 + h * (C0 - F0), a[1]]], sh = [fa * kk, fb * kk, tb * kk, ta * kk];
         for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], layer, sh[i], 0, 1, 0);
+        if (index["trim:stone"] !== undefined) { const ins = 0.035, sk = 0.09, A2 = [a[0] - dx * ins, a[1] - dy * ins], B2 = [b[0] - dx * ins, b[1] - dy * ins], T = index["trim:stone"];   // (v48.3) a course of skirting stones at the wall's foot, standing proud
+          quad([A2[0], F0, A2[1]], [B2[0], F0, B2[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 0.9); quad([a[0], F0 + sk, a[1]], [b[0], F0 + sk, b[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 1.05); }
       }
       walls++;
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
+  if (!sky && !only && index["trim:stone"] !== undefined) for (const [k, f] of Object.entries(features)) {   // (v48.3) a stone lintel over every doorway and gate
+    if (f.type !== "door" && f.type !== "gate") continue; const [x, y] = k.split(",").map(Number); if (!openAt(x, y)) continue;
+    const ns = openAt(x, y - 1) && openAt(x, y + 1), C = CM.ceilAt ? CM.ceilAt(fl, x, y) : 1, lo = C - 0.13, T = index["trim:stone"], dd = 0.07, cx = x + 0.5, cz = y + 0.5;
+    if (ns) { for (const z of [cz - dd, cz + dd]) quad([x, lo, z], [x + 1, lo, z], [x + 1, C, z], [x, C, z], T, 0.9); quad([x, lo, cz - dd], [x + 1, lo, cz - dd], [x + 1, lo, cz + dd], [x, lo, cz + dd], T, 0.7); }
+    else { for (const X of [cx - dd, cx + dd]) quad([X, lo, y], [X, lo, y + 1], [X, C, y + 1], [X, C, y], T, 0.84); quad([cx - dd, lo, y], [cx - dd, lo, y + 1], [cx + dd, lo, y + 1], [cx + dd, lo, y], T, 0.7); } }
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky && only !== "props") {                                                        // the buildings: walled all round, and roofed
     const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
