@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Hero barks (v43.0, UPGRADE_PLAN_38.md phase 0)
+  (src/js/76zzzzzzzq-voices.js)
+  - The heroes have voices now - no words, a throat: a grunt when a blow lands on them, a shout on a weak spot struck,
+    a long cry as one falls, a whoop at a new level.
+  - Each hero's voice is pitched by calling (a Knight's low, a Mage's light) and a little by name, so the four sound
+    like four, and each comes from its own side of the party.
+
 Ending scenes (v42.4, UPGRADE_PLAN_37.md phase 4)
   (src/js/76zzzzzzzp-endcard.js, src/js/76zzzzzzzm-titletown.js)
   - A run's end opens on a painted card of how it ended: the place, in its band's own stone, seen down a corridor;
