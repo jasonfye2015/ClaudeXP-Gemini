@@ -302,6 +302,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           poly([P(u, va, h), P(u, vb, h), P(u, vb, roofY(vb)), P(u, va, roofY(va))], [[ua, 1], [ub, 1], [ub, 1 - (roofY(vb) - h)], [ua, 1 - (roofY(va) - h)]], gableL, shade);
         }
       }
+      if (CM.roofDetail && opts.detail !== 0 && !RK.side) CM.roofDetail({ poly, index, fl, B, P, U0, U1, V0, V1, mid, half, h, top, eaveY, o, g, roofL });   // (v53.6: eaves, dormers, gutters - 26b-buildings.js)
     }
     for (const [tk, tkind] of Object.entries(fl.kinds || {})) {                        // the gate towers: eight faces of stone, a top, and a merlon on each face
       if (tkind === "magetower" && W) continue;

@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Rooflines (v53.6, UPGRADE_PLAN_48.md phase 4)
+  (src/js/26b-buildings.js, src/js/26-surface.js)
+  - The town's roofs: under the eaves a shadowed underside with the rafters' ends showing; on a roof three squares
+    long or more a dormer on each side, with its window and its own little roof; and on about half the buildings a
+    gutter along the eaves and a downpipe down a corner.
+
 Timbers that stand out (v53.5, UPGRADE_PLAN_48.md phase 3)
   (src/js/26b-buildings.js)
   - The half-timbering of the town's houses stands out from the plaster now: the posts at each wall's ends, the

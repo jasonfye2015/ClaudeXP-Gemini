@@ -43,4 +43,22 @@
     strip(0, 12 / 256, foot, h); strip(1 - 12 / 256, 1, foot, h); strip(12 / 256, 1 - 12 / 256, top, h);
     if (!o.front || o.kind === "house") strip(0.5 - 6 / 256, 0.5 + 6 / 256, foot, top);
     return 1; };
+  // (v53.6) the rooflines: the eaves' underside and the rafters' ends under it; a dormer with its window on each side of a long roof; on about half the
+  // buildings a gutter along the eaves and a downpipe at a corner
+  CM.roofDetail = (o) => { const { poly, index, B, P, U0, U1, mid, half, h, top, eaveY, roofL } = o, wood = index["solid:timber"], metal = index["solid:sill"]; if (wood === undefined) return 0;
+    const UV = [[0, 1], [1, 1], [1, 0], [0, 0]], ov = o.o, hsh = CM.hashSeed(`roof:${o.fl ? o.fl.number : 0}:${B.x0},${B.y0}`) >>> 0, slopeY = (v) => h + B.rise * (1 - Math.abs(v - mid) / half);
+    const box = (u0, u1, v0, v1, y0, y1, L, k) => { poly([P(u0, v0, y0), P(u1, v0, y0), P(u1, v0, y1), P(u0, v0, y1)], UV, L, k); poly([P(u0, v1, y0), P(u1, v1, y0), P(u1, v1, y1), P(u0, v1, y1)], UV, L, k * 0.85);
+      poly([P(u0, v0, y0), P(u0, v1, y0), P(u0, v1, y1), P(u0, v0, y1)], UV, L, k * 0.8); poly([P(u1, v0, y0), P(u1, v1, y0), P(u1, v1, y1), P(u1, v0, y1)], UV, L, k * 0.8);
+      poly([P(u0, v0, y1), P(u1, v0, y1), P(u1, v1, y1), P(u0, v1, y1)], UV, L, k * 1.1); poly([P(u0, v0, y0), P(u1, v0, y0), P(u1, v1, y0), P(u0, v1, y0)], UV, L, k * 0.55); };
+    for (const side of [-1, 1]) { const vw = mid + side * half, ve = mid + side * (half + ov);
+      poly([P(U0, vw, h), P(U1, vw, h), P(U1, ve, eaveY - 0.01), P(U0, ve, eaveY - 0.01)], UV, wood, 0.42);                       // the underside of the eaves, in shadow
+      for (let u = U0 + 0.25; u < U1; u += 0.5) box(u - 0.025, u + 0.025, vw, ve, eaveY - 0.07, eaveY - 0.01, wood, 0.6);         // the rafters' ends
+      if (U1 - U0 >= 3) { const um = (U0 + U1) / 2, dw = 0.42, vd = mid + side * half * 0.62, yb = slopeY(vd), yt = Math.min(top - 0.02, yb + 0.38), dl = index["solid:house"] !== undefined ? index["solid:house"] : wood;   // a dormer
+        poly([P(um - dw, vd, yb - 0.1), P(um + dw, vd, yb - 0.1), P(um + dw, vd, yt), P(um - dw, vd, yt)], [[0.5, 1], [0.95, 1], [0.95, 0.15], [0.5, 0.15]], dl, 1.0);   // (its face: the window side of the house picture)
+        for (const uu of [um - dw, um + dw]) poly([P(uu, vd, yb - 0.1), P(uu, vd, yt), P(uu, mid, yt), P(uu, mid, yt)], UV, dl, 0.78);
+        poly([P(um - dw - 0.05, vd - side * 0.06, yt), P(um + dw + 0.05, vd - side * 0.06, yt), P(um + dw + 0.05, mid, yt + 0.12), P(um - dw - 0.05, mid, yt + 0.12)], UV, roofL, 0.9);
+        poly([P(um - dw - 0.05, vd - side * 0.06, yt), P(um - dw - 0.05, vd, yt - 0.02), P(um + dw + 0.05, vd, yt - 0.02), P(um + dw + 0.05, vd - side * 0.06, yt)], UV, roofL, 0.6); }
+      if (metal !== undefined && hsh % 2 === 0) { box(U0 - o.g * 0.5, U1 + o.g * 0.5, ve - side * 0.02, ve + side * 0.07, eaveY - 0.13, eaveY - 0.05, metal, 0.7);   // the gutter
+        const ud = side > 0 ? U1 - 0.06 : U0 + 0.06; box(ud - 0.035, ud + 0.035, ve + side * 0.0, ve + side * 0.07, 0, eaveY - 0.08, metal, 0.65); } }   // the downpipe
+    return 1; };
 }
