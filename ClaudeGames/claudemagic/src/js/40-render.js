@@ -42,7 +42,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -124,7 +124,8 @@ void main() {
     vec3 grad = sign(det) * (hu * 0.5 / max(px.x, 1e-6) * (r1 * dux.x + r2 * duy.x) + hv * 0.5 / max(px.y, 1e-6) * (r1 * dux.y + r2 * duy.y));
     n = normalize(abs(det) * n - uBump * 0.02 * grad);
     vec3 v = normalize(uEye - vWorld), lt = normalize(uTorchPos - vWorld);
-    spec = pow(max(dot(reflect(-lt, n), v), 0.0), 24.0) * (0.06 + 0.5 * uWet * step(0.7, n.y));   // (a little sheen on stone, more on wet ground)
+    spec = pow(max(dot(reflect(-lt, n), v), 0.0), 24.0) * (0.06 + 0.5 * uWet * step(0.7, n.y)) * (1.0 - 0.8 * uDust);
+    if (uDamp > 0.0) spec += pow(max(dot(reflect(-lt, normalize(mix(n0, n, 0.2))), v), 0.0), 9.0) * 0.32 * uDamp;   // (v48.1) a broad wet shine, from the wall's own facing more than its grain   // (a little sheen on stone, more on wet ground)
   }
   vec3 tl = uTorchPos - vWorld, tdir = tl / max(length(tl), 0.001); float tface = 0.5 + 0.5 * max(dot(n0, tdir), 0.0);
   float relief = clamp(max(dot(n, tdir), 0.0) / max(dot(n0, tdir), 0.25), 0.35, 1.6);   // (v22.1: how much more or less a raised or sunk bit faces the torch than the flat wall does)
@@ -175,6 +176,8 @@ void main() {
       vec3 hue = 0.5 + 0.5 * cos(6.2832 * (dot(vdir, vec3(0.6, 0.3, 0.5)) * 1.5 + vec3(0.0, 0.33, 0.67)));
       col = mix(col, hue * (uTorch * light + extra) * 1.1, vein * uAge.w * 0.45); ageGlow += hue * vein * uAge.w * 0.04; }
   }
+  if (uDamp > 0.0) { float a = abs(n0.x) > abs(n0.z) ? vWorld.z : vWorld.x; float st = abs(n0.y) < 0.7 ? smoothstep(0.55, 0.85, vnoise(vec2(a * 7.0, vWorld.y * 0.7 + 3.1))) : 0.5; col *= 1.0 - uDamp * (0.1 + 0.18 * st); }   // (v48.1) damp stone: darker, streaked down the walls
+  if (uDust > 0.0 && n0.y > 0.5) { float l = dot(col, vec3(0.3, 0.59, 0.11)), dn = 0.5 + 0.5 * vnoise(vWorld.xz * 2.3); col = mix(col, vec3(l) * vec3(1.18, 1.12, 1.02), uDust * 0.45 * dn); }   // (v48.1) dry dust on what faces up
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
   if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
@@ -321,7 +324,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -806,7 +809,7 @@ CM.Renderer = class {
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     { const G = this.grading, g0 = t.grade || [1, 1, 1];                    // (v22.4: the band's grade and, above, the hour's: 76zzzx-grade.js)
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
