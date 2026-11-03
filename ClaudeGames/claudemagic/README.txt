@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Galleries (v47.3, UPGRADE_PLAN_42.md phase 3)
+  (src/js/69zzi-levels.js, src/js/76zzzzzzzzk-levels.js)
+  - About half the tall halls five squares or more a side are galleries now: the edge a walk at the corridors' level
+    behind a stone balustrade, open at the middle of each side, and the hall below it stepping down in tiers to a
+    floor well under the party's feet - to be looked down into from the walk.
+
 Tall halls and crawlways (v47.2, UPGRADE_PLAN_42.md phase 2)
   (src/js/69zzi-levels.js, src/js/26-surface.js, src/js/76zzzzzzze-ceilings.js)
   - The great rooms - twenty squares or more - stand tall now, under a ceiling half as high again, their ribs, beams,
