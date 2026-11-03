@@ -5884,7 +5884,7 @@ test("high ground: a step or more above the foes, the party hits more often and 
 
 test("buildings with depth: every window on a house, a door or a shop's wall gets a sill, a lintel and its reveals in the town's mesh; a shop's front, which has none, gets none", () => {
   const CM = load(), fl = CM.makeTown("bd-1"), index = new Proxy({}, { get: () => 0 });
-  let calls = 0, made = 0; const b0 = CM.buildingDetail; CM.buildingDetail = (o) => { calls++; const r = b0(o); made += r; if (o.kind === "shop" && o.front) assert.strictEqual(r, 0, "a shop's front has no window"); return r; };
+  let calls = 0, made = 0; const b0 = CM.buildingDetail; CM.buildingDetail = (o) => { calls++; const r = b0(o); made += r; if (o.kind === "shop" && o.front) assert.strictEqual(CM.WINDOW_AT("shop", true), null, "a shop's front has no window (its door frame, v53.4)"); return r; };
   const withD = CM.floorMesh(fl, CM.themeFor(0), index).count; CM.buildingDetail = null; const without = CM.floorMesh(fl, CM.themeFor(0), index).count; CM.buildingDetail = b0;
   assert.ok(calls > 50 && made > 40, `${made} of ${calls} faces`); assert.ok(withD - without >= made * 5 * 6 * 4 - 1, `${withD - without} more vertices`);
   assert.strictEqual(JSON.stringify(CM.WINDOW_AT("house", false)), "[0.62,0.3,0.84,0.56]"); assert.strictEqual(CM.WINDOW_AT("shop", true), null);
