@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v44.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v44.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "44.2", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "44.3", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -43114,6 +43114,41 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     else if (k.inst === "lute") { for (let i = 0; i < 8; i++) { jingle(at + i * len / 8 + (i % 2 ? len / 48 : 0), i % 2 ? 0.035 : 0.06); if (i % 2 === 0) tone("triangle", root / 2, at + i * len / 8, 0.25, 0.09, { filter: 900 }); } }
     else if (k.inst === "flute") { tone("triangle", root, at, len, 0.04, { attack: 0.4, hold: len * 0.5, filter: 900 }); tone("triangle", root * 1.5, at, len, 0.025, { attack: 0.5, hold: len * 0.5, filter: 900 }); }
     else tone("sine", root / 2, at, len, 0.05, { attack: 0.8, hold: len * 0.4, filter: 400 }); };
+} }
+
+// ---- 76zzzzzzzy-leitmotifs.js ----
+"use strict";
+// Leitmotifs (v44.3, UPGRADE_PLAN_39.md): three themes that come back when they matter, over whatever is playing - the
+// party's (four notes rising, a horn's call: on going down into a new band, and when a guardian falls), the Lich
+// King's (a falling minor line with a tritone in it: on first coming into his Palace, woven quietly into the Palace's
+// own tune every so often, and turned to the major when he falls), and the Joker's (a chromatic little waltz, on
+// coming onto his floor). Through the music's own volume (55-music.js motif).
+{ const M = CM.music; if (M) {
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const play = (notes, voice, vol0 = 1) => { const vol = vol0 * 1.6; if (!M.enabled || !M._ensure()) return false; const at0 = CM.audio.ctx.currentTime + 0.05, dest = M.master;
+    for (const [m, t, d] of notes) { const at = at0 + t, f = hz(m);
+      if (voice === "horn") { M._osc("sawtooth", f, at, at + d, 0.07 * vol, 1400, dest); M._osc("triangle", f / 2, at, at + d, 0.05 * vol, 600, dest); }
+      else if (voice === "dark") { M._osc("triangle", f, at, at + d, 0.1 * vol, 1500, dest); M._osc("sine", f / 2, at, at + d, 0.08 * vol, 500, dest); }
+      else { M._osc("square", f, at, at + d * 0.6, 0.035 * vol, 2600, dest); M._osc("triangle", f * 2, at, at + d * 0.4, 0.04 * vol, 3500, dest); } }
+    return true; };
+  const MOTIFS = {
+    party: [[67, 0, 0.35], [71, 0.32, 0.35], [74, 0.64, 0.35], [79, 0.96, 1.1]],
+    lich: [[62, 0, 0.6], [61, 0.6, 0.6], [58, 1.2, 0.6], [56, 1.8, 1.4]],
+    lich_end: [[62, 0, 0.6], [64, 0.6, 0.6], [66, 1.2, 0.6], [69, 1.8, 1.6]],
+    joker: [[72, 0, 0.25], [71, 0.3, 0.25], [72, 0.6, 0.25], [76, 0.9, 0.45], [75, 1.5, 0.25], [76, 1.8, 0.25], [79, 2.1, 0.6]] };
+  const VOICE = { party: "horn", lich: "dark", lich_end: "dark", joker: "reed" };
+  CM.LEITMOTIFS = MOTIFS;
+  const m0 = M.motif; M.motif = function (name, vol) { if (MOTIFS[name]) return play(MOTIFS[name], VOICE[name], vol || 1); return m0.call(this, name); };
+  const heard = new Set();
+  const bind = () => { const g = CM.game; if (!g || !g.on) return false; let band = null;
+    g.on("floor", (fl) => { if (!fl || g.mode === "title") return; const n = fl.number;
+      if (CM.isJokerFloor && CM.isJokerFloor(n)) { setTimeout(() => M.motif("joker"), 1500); return; }
+      if (!(n >= 1) || n % 1 !== 0) { band = null; return; } const b = CM.themeIndex(n); if (band !== null && b !== band) setTimeout(() => M.motif(b === 3 && !heard.has(`lich:${g.seed}`) ? "lich" : "party"), 2200); if (b === 3) heard.add(`lich:${g.seed}`); band = b; });
+    g.on("fx", (fx) => { if (!fx || fx.kind !== "die" || !fx.foe) return; if (fx.foe.boss) setTimeout(() => M.motif("lich_end"), 1800); else if (fx.foe.guardian) setTimeout(() => M.motif("party"), 1600); });
+    return true; };
+  const t = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (bind()) clearInterval(t); }, 300);
+  // woven in: in the Palace, now and then, his line under the band's own tune
+  let woven = -1; setInterval(() => { if (M.playing !== "depth3" || !M.bus) return; const bar = Math.floor((M.step || 0) / 64); if (bar === woven || (M.step % 64) < 30 || (M.step % 64) > 34 || bar % 2 !== 1) return; woven = bar; M.motif("lich", 0.45); }, 400);
 } }
 
 // ---- 77-splash.js ----
