@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Daises and pits (v47.0, UPGRADE_PLAN_42.md phase 0)
+  (src/js/69zzi-levels.js, src/js/76zzzzzzzzk-levels.js, src/js/26-surface.js, src/js/40-render.js)
+  - The dungeon has height now. About one plain room in five has a raised dais in its middle and about one in nine a
+    sunken pit, with stone step faces between the levels; a band's landmark stands its centrepiece on a dais.
+  - The room's edge stays at the corridors' level, so every way in meets it; what stands on a dais stands on it and
+    what is in a pit is down in it; the eye climbs the step and goes down into the pit as the party walks.
+  - On the map a dais is lighter and a pit darker. Each square has one floor and one ceiling - no room over another -
+    and the moves and the saves are as they were.
+
 Dynamic quiet (v46.4, UPGRADE_PLAN_41.md phase 4)
   (src/js/76zzzzzzzzj-quiet.js)
   - While the party creeps through the dungeon with its light shaded (Douse), the music falls away to almost nothing

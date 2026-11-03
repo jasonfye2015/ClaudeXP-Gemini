@@ -5833,6 +5833,21 @@ test("band landmarks: the third floor of each band names its largest plain room 
   delete g.ext("landmarks")[3]; fl.pos = fl.landmark.at.slice(); g.look(); g.look(); assert.strictEqual(said.filter((t) => t === CM.LANDMARKS[0].enter).length, 1, "said once");
 });
 
+test("levels: about one plain room in five a dais and one in nine a pit, the room's edge at the corridors' level, the landmark on a dais; never saved; the mesh steps between them", () => {
+  const CM = load();
+  let dais = 0, pit = 0, rooms = 0; for (const seed of ["lv-1", "lv-2", "lv-3"]) for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, seed); for (const r of fl.rooms || []) { if (r.name || r.template || r.x1 - r.x0 < 3 || r.y1 - r.y0 < 3) continue; rooms++;
+      const mid = CM.levelOf(fl, Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2)); if (mid && mid[0] > 0) dais++; if (mid && mid[0] < 0) pit++;
+      for (let x = r.x0; x <= r.x1; x++) { assert.strictEqual(CM.floorAt(fl, x, r.y0), 0, "the edge is level"); assert.strictEqual(CM.floorAt(fl, x, r.y1), 0); } } }
+  assert.ok(dais > rooms / 12 && dais < rooms / 2.5, `dais ${dais} of ${rooms}`); assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
+  assert.ok(CM.FLOOR_FIXED.includes("levels"), "made with the floor, never saved");
+  assert.deepStrictEqual(JSON.stringify(CM.makeFloor(7, "lv-1").levels), JSON.stringify(CM.makeFloor(7, "lv-1").levels), "the same each time");
+  assert.ok(!CM.makeFloor(0, "lv-1").levels && !CM.makeFloor(-1, "lv-1").levels, "none above");
+  // the mesh: a stepped floor has more faces than the same floor made level
+  let fl = null; for (let n = 1; n <= 30 && !fl; n++) { const f = CM.makeFloor(n, "lv-1"); if (f.levels && Object.keys(f.levels).length) fl = f; }
+  const index = new Proxy({}, { get: () => 0 }), stepped = CM.floorMesh(fl, CM.themeFor(fl.number), index).count, flat = CM.floorMesh(Object.assign({}, fl, { levels: null }), CM.themeFor(fl.number), index).count;
+  assert.ok(stepped > flat, `stepped ${stepped} > level ${flat}`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
