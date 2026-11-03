@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v52.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v52.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "52.1", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "52.2", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -43974,6 +43974,16 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
     g.on("floor", (fl) => { if (!fl || g.mode === "title") { last = fl ? fl.number : null; return; } const n = fl.number, was = last; last = n; if (was === null || was === n) return;
       const dir = n >= 1 && was >= 1 ? Math.sign(n - was) : n >= 1 && was < 1 ? 1 : was >= 1 && n < 1 ? -1 : 0; play(dir); }); return true; };
   const t = setInterval(() => { if (bind()) clearInterval(t); }, 300); } }
+
+// ---- 76zzzzzzzzz7-dof.js ----
+"use strict";
+// Depth of field, deeper (v52.2, UPGRADE_PLAN_47.md): the view behind an open window (soft since v31.3, 76zzzzzl-focus.js)
+// goes fully out of focus now and draws back into shadow at its edges, so the window stands clearly in front of the world
+// and the world clearly behind it; it comes back sharp as the window closes.
+{ const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const S = r.screen; if (!S || S.focusAt) return; if (S.focus > 0.05) S.focus = Math.min(1, S.focus / 0.85); };
+  if (typeof document !== "undefined" && !(typeof self !== "undefined" && self.CM_WORKER)) { const install = () => { if (document.getElementById("cm-dof")) return; const s = document.createElement("style"); s.id = "cm-dof";
+      s.textContent = ".dialog.on { background: radial-gradient(ellipse at center, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.82) 100%); }"; document.head.appendChild(s); };
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install); else install(); } }
 
 // ---- 77-splash.js ----
 "use strict";
