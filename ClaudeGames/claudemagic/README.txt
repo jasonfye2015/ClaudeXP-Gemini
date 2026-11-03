@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A Stone interface (v52.0, UPGRADE_PLAN_47.md phase 0)
+  (src/js/76zzzzzzzzz5-stoneui.js)
+  - The windows, the buttons and the panels are dressed to match the look: dark carved stone, framed in iron with a
+    rivet at each corner of a window, and the buttons set into it like stone blocks that take a warm edge of
+    torchlight when the pointer is on them. The colours of the words are as they were.
+
 Weather on the surfaces (v51.4, UPGRADE_PLAN_46.md phase 4)
   (src/js/40-render.js, src/js/76zzzzzzzzz4-wetsurfaces.js)
   - While it rains, the rain is seen running down the town's walls in streaks.
