@@ -200,6 +200,9 @@ void main() {
     col = col * (1.0 - 0.28 * uWet) + uWet * fw * mix(uHorizon, uZenith, 0.4) * 0.45;
   }
   if (uWet > 0.0 && abs(n0.y) < 0.7 && uBump > 0.0) col *= 1.0 - 0.18 * uWet * (1.0 - smoothstep(0.0, 1.6, vWorld.y));   // (v30.0: rain-darkened walls, most at the foot)
+  if (uWet > 0.0 && abs(n0.y) < 0.7 && uBump > 0.0 && uRain > 0.0) { float wa = abs(n0.x) > abs(n0.z) ? vWorld.z : vWorld.x, col1 = floor(wa * 22.0), h1 = hash(vec2(col1, 3.7));   // (v51.4) rain running down the walls in streaks
+    float run = fract(vWorld.y * 0.9 + uTime * (0.35 + 0.4 * h1) + h1 * 7.0), streak = step(0.72, h1) * smoothstep(0.0, 0.08, run) * (1.0 - smoothstep(0.25, 0.6, run)) * (1.0 - smoothstep(0.3, 0.5, abs(fract(wa * 22.0) - 0.5)));
+    col = mix(col, col * 0.7 + mix(uHorizon, uZenith, 0.5) * 0.12, streak * uRain * uWet * 0.8); }
   if (pud > 0.0) { float fp = 0.3 + 0.6 * pow(1.0 - max(-vdir.y, 0.0), 3.0); vec3 seenP = mix(uHorizon, uZenith, clamp(rP.y * 1.3, 0.0, 1.0)) * (0.35 + 0.6 * max(uSunK, 0.15)) + pudLamp;
     col = mix(col, col * 0.45 + seenP * fp, pud * 0.85); }
   float fog = smoothstep(uReach * 0.55, uReach * 1.7, d);

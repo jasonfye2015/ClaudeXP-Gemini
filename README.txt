@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Weather on the surfaces (v51.4, UPGRADE_PLAN_46.md phase 4)
+  (src/js/40-render.js, src/js/76zzzzzzzzz4-wetsurfaces.js)
+  - While it rains, the rain is seen running down the town's walls in streaks.
+  - The morning after a rainy day the cobbles and the walls are still wet - darker, shining a little - drying as the
+    day warms, dry by early afternoon, with the puddles.
+
 Crowds that move (v51.3, UPGRADE_PLAN_46.md phase 3)
   (src/js/76zzzzzzzzz3-crowds.js)
   - By day Caer Duin's streets have people going about them: a handful of townsfolk walking from one door to another
