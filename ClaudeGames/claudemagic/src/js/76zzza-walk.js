@@ -43,6 +43,9 @@
   if (CM.HE) for (const [id, R] of Object.entries(CM.HE.RES)) CM.art.PEOPLE[`res_${id}`] = { name: R.name, colour: R.col, body: "biped", head: "round", eyes: "#F0E8D0", extras: [], calm: true };
   { const bd0 = CM.art.buildDrawn; CM.art.buildDrawn = function (theme) { const out = bd0.call(this, theme); for (const [k, f] of Object.entries(PAINT)) { const c = cv(); f(c.getContext("2d")); out.index[`jf:${k}`] = out.layers.length; out.layers.push(c); }
       for (const [view, name] of CM.JOKER_SERVICES || []) { const c = cv(); PAINT.counter(c.getContext("2d"), name); out.index[`jf:svc:${view}`] = out.layers.length; out.layers.push(c); } return out; }; }
+  { const bj0 = CM.art.build; CM.art.build = function (theme, look) { const set = bj0.call(this, theme, look); if (!set || !set.index || set.index["jf:table"] !== undefined) return set;   /* (v44.6: a look that builds its own set - Pixel - has the tables too; they were drawn only from the Drawn set, so Stone had them and Pixel not) */
+      for (const [k, f] of Object.entries(PAINT)) { const c = cv(); f(c.getContext("2d")); set.index[`jf:${k}`] = set.layers.length; set.layers.push(c); }
+      for (const [view, name] of CM.JOKER_SERVICES || []) { const c = cv(); PAINT.counter(c.getContext("2d"), name); set.index[`jf:svc:${view}`] = set.layers.length; set.layers.push(c); } return set; }; }
   // the hall's own surfaces, whatever the look: red carpet with a gold figure, damask panels with gilt rails, a coffered ceiling
   const SURF = {
     floor: (p) => { p.fillStyle = "#7A1626"; p.fillRect(0, 0, S, S); p.strokeStyle = "rgba(230,180,80,0.55)"; p.lineWidth = 3; for (const [cx, cy] of [[0, 0], [S, 0], [0, S], [S, S], [S / 2, S / 2]]) { p.beginPath(); p.moveTo(cx, cy - 46); p.lineTo(cx + 46, cy); p.lineTo(cx, cy + 46); p.lineTo(cx - 46, cy); p.closePath(); p.stroke(); }

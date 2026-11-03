@@ -7,8 +7,7 @@
 //   stone  photographed stone (ambientCG, CC0) on the walls, floors and ceilings, with the drawn furniture and monsters
 // The packs ride inside the one file (35-packs.js, written by pack.py from src/art/) and are decoded once, by
 // CM.art.load(); until then, and wherever a pack has no tile for something, the drawn art stands in.
-CM.LOOKS = {
-  pixel: { name: "Pixel tiles", what: "Dungeon Crawl Stone Soup's pixel tiles, crisp and chunky" },
+CM.LOOKS = {                                                            // (v44.6: Stone only - it has every picture; Pixel built its own set and fell behind)
   stone: { name: "Stone", what: "photographed stone, grass, plaster and bark on the walls and the ground, with the drawn monsters" },
 };
 CM.art.packs = { ready: false, atlas: null, stone: {}, loading: null };
@@ -20,7 +19,7 @@ CM.art.load = function () {
   const P = CM.packs;
   if (!P) { packs.ready = true; return (packs.loading = Promise.resolve()); }
   const decode = (src) => new Promise((done) => { const im = new Image(); im.onload = () => done(im); im.onerror = () => done(null); im.src = src; });
-  packs.loading = Promise.all([decode(P.pixel.atlas), ...Object.entries(P.stone.textures || {}).map(([k, src]) => decode(src).then((im) => [k, im]))])
+  packs.loading = Promise.all([P.pixel && P.pixel.atlas ? decode(P.pixel.atlas) : Promise.resolve(null), ...Object.entries(P.stone.textures || {}).map(([k, src]) => decode(src).then((im) => [k, im]))])
     .then(([atlas, ...stones]) => {
       packs.atlas = atlas;
       for (const [k, im] of stones) if (im) packs.stone[k] = im;

@@ -2918,9 +2918,9 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   game.enterFloor(0, "rope", CM.TOWN_AT.home.slice()); game.saveRun();
   const d = CM.floorDelta(game.floor, CM.snapshot(CM.makeTown(game.seed)));
   assert.ok(!d.x || !("kinds" in d.x || "canopy" in d.x), "the town's dress isn't in the save");
-  // Pixel is the look to start with
-  assert.deepStrictEqual(Object.keys(CM.LOOKS), ["pixel", "stone"], "two looks, Pixel first"); assert.strictEqual(new CM.Game().settings.look, "pixel");
-  { const g2 = new CM.Game(); g2.settings.look = "drawn"; CM.store.set("settings", g2.settings); const g3 = new CM.Game(); assert.strictEqual(g3.settings.look, "pixel", "a save that says Drawn opens in Pixel"); CM.store.remove("settings"); }
+  // Stone is the one look (v44.6): a save that says Pixel or Drawn opens in Stone
+  assert.deepStrictEqual(Object.keys(CM.LOOKS), ["stone"], "one look, Stone"); assert.strictEqual(new CM.Game().settings.look, "stone");
+  for (const was of ["pixel", "drawn"]) { const g2 = new CM.Game(); g2.settings.look = was; CM.store.set("settings", g2.settings); const g3 = new CM.Game(); assert.strictEqual(g3.settings.look, "stone", `a save that says ${was} opens in Stone`); CM.store.remove("settings"); }
   const town2 = CM.makeTown("sky-1"); assert.strictEqual(town2.things[CM.TOWN_AT.cross.join(",")].type, "cross"); assert.strictEqual(CM.groundAt(town2, ...CM.TOWN_AT.cross), "cobbles");
 });
 

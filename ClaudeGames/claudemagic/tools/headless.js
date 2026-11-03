@@ -44,7 +44,7 @@ function load(opts = {}) {
   vm.createContext(ctx);
   for (const f of RULES) vm.runInContext(source(f), ctx, { filename: f });
   const CM = ctx.CM;
-  CM.LOOKS = CM.LOOKS || { pixel: {}, stone: {} };                       // (the looks live with the art, which isn't loaded here; the two there, Pixel first)
+  CM.LOOKS = CM.LOOKS || { stone: {} };                                  // (the looks live with the art, which isn't loaded here; the one there, Stone - v44.6)
   CM.storage = storage;
   CM.store.set("settings", { skipWalk: true, season: "spring", autoLand: false });
   CM.matsOn = false; if (CM.FIELDSEEDS) CM.FIELDSEEDS.on = false;                                                      // (the buildings' needs from the other places: off for the older tests, which raise buildings for other reasons; the test of the needs turns them on)

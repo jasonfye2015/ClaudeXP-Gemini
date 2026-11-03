@@ -38,7 +38,7 @@ window.addEventListener("DOMContentLoaded", () => {
   let artCache = {}, cacheOrder = [];
   let scaleGrace = 0;                                                   // (v21.4: the Detail isn't judged for three seconds after a new floor or mode, while its pictures and mesh settle)
   let themeOn = -1, lookOn = null, dreamOn = false, seasonOn = null;
-  const lookNow = () => (CM.art.hasLook(game.settings.look) ? game.settings.look : "drawn");   // (a pack still decoding: the drawn art stands in)
+  const lookNow = () => { const want = CM.LOOKS[game.settings.look] ? game.settings.look : "stone"; return CM.art.hasLook(want) ? want : "drawn"; };   // (v44.6: any look not on the list is Stone)   // (a pack still decoding: the drawn art stands in)
   // a set, built once and kept (half a dozen at a time)
   function setFor(key, special, i, look) {
     if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { artCache[key] = pre; cacheOrder.push(key); } }   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
