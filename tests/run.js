@@ -5835,7 +5835,7 @@ test("band landmarks: the third floor of each band names its largest plain room 
 
 test("levels: about one plain room in five a dais and one in nine a pit, the room's edge at the corridors' level, the landmark on a dais; never saved; the mesh steps between them", () => {
   const CM = load();
-  let dais = 0, pit = 0, rooms = 0; for (const seed of ["lv-1", "lv-2", "lv-3"]) for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, seed); for (const r of fl.rooms || []) { if (r.name || r.template || r.x1 - r.x0 < 3 || r.y1 - r.y0 < 3) continue; rooms++;
+  let dais = 0, pit = 0, rooms = 0; for (const seed of ["lv-1", "lv-2", "lv-3"]) for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, seed); for (const r of fl.rooms || []) { if (r.name || r.template || r.x1 - r.x0 < 3 || r.y1 - r.y0 < 3 || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue; rooms++;
       const mid = CM.levelOf(fl, Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2)); if (mid && mid[0] > 0) dais++; if (mid && mid[0] < 0) pit++;
       for (let x = r.x0; x <= r.x1; x++) { assert.strictEqual(CM.floorAt(fl, x, r.y0), 0, "the edge is level"); assert.strictEqual(CM.floorAt(fl, x, r.y1), 0); } } }
   assert.ok(dais > rooms / 12 && dais < rooms / 2.5, `dais ${dais} of ${rooms}`); assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
@@ -5848,6 +5848,14 @@ test("levels: about one plain room in five a dais and one in nine a pit, the roo
   assert.ok(stepped > flat, `stepped ${stepped} > level ${flat}`);
 });
 
+test("stairs: on about half the floors one room is raised, its ceiling with it, and every corridor into it climbs a step a square - no step higher than one", () => {
+  const CM = load(); let raised = 0;
+  for (let n = 1; n <= 40; n++) { const fl = CM.makeFloor(n, "st-1"); if (!fl.raised) continue; raised++; const R = fl.raised, N = fl.grid.length;
+    for (let y = R.y0; y <= R.y1; y++) for (let x = R.x0; x <= R.x1; x++) if (fl.grid[y][x] === 0) { assert.strictEqual(CM.floorAt(fl, x, y), CM.LEVELS.raised); assert.ok(Math.abs(CM.ceilAt(fl, x, y) - 1 - CM.LEVELS.raised) < 1e-9, "its ceiling with it"); }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (fl.grid[y][x] !== 0) continue; for (const [dx, dy] of CM.DIRS) { const nx = x + dx, ny = y + dy; if (!fl.grid[ny] || fl.grid[ny][nx] !== 0) continue; const a = CM.floorAt(fl, x, y), b = CM.floorAt(fl, nx, ny);
+        const inR = (p, q) => p >= R.x0 && p <= R.x1 && q >= R.y0 && q <= R.y1; if (inR(x, y) || inR(nx, ny)) { if (!(inR(x, y) && inR(nx, ny))) assert.ok(Math.abs(a - b) <= CM.LEVELS.step + 1e-9, `a step at ${x},${y}`); } } } }
+  assert.ok(raised >= 10 && raised <= 32, `${raised} raised rooms in 40 floors`);
+});
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

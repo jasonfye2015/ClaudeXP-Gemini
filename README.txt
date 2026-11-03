@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Stairs (v47.1, UPGRADE_PLAN_42.md phase 1)
+  (src/js/69zzi-levels.js)
+  - On about half the floors one room stands raised, its ceiling raised with it, and every corridor into it climbs
+    to it as a flight of stone steps, a step a square - the eye going up them and down them as the party walks.
+
 Daises and pits (v47.0, UPGRADE_PLAN_42.md phase 0)
   (src/js/69zzi-levels.js, src/js/76zzzzzzzzk-levels.js, src/js/26-surface.js, src/js/40-render.js)
   - The dungeon has height now. About one plain room in five has a raised dais in its middle and about one in nine a
