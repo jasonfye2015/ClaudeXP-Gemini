@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The great ones, tall (v50.3, UPGRADE_PLAN_45.md phase 3)
+  (src/js/76zzzzzzzzy-tallguardians.js)
+  - A guardian or the Lich King stands as tall as the room lets it - its head near the ceiling, taller still in a
+    tall hall, and broader with it - so it looms over the party where before it stood little higher than an orc.
+
 Wear (v50.2, UPGRADE_PLAN_45.md phase 2)
   (src/js/76zzzzzzzzx-wear.js)
   - A monster shows what the fight has done to it: below two-thirds of its life it is marked - cracks across plate,
