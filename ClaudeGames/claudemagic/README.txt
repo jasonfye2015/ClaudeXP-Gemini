@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+High ground (v47.4, UPGRADE_PLAN_42.md phase 4)
+  (src/js/69zzj-highground.js)
+  - In a fight where the party stands a step or more above its foes - a dais, a gallery, a stair, the raised room -
+    its blows land a tenth more often and the foes' a tenth less; standing below them, the other way about.
+  - A Ranger shooting down from above has a little more still, and the fight's first line says who holds the high
+    ground.
+
 Galleries (v47.3, UPGRADE_PLAN_42.md phase 3)
   (src/js/69zzi-levels.js, src/js/76zzzzzzzzk-levels.js)
   - About half the tall halls five squares or more a side are galleries now: the edge a walk at the corridors' level

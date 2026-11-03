@@ -5869,6 +5869,19 @@ test("tall halls and crawlways: the rooms of twenty squares or more stand tall, 
       if (d === 0) assert.strictEqual(f, 0, "the gallery level"); assert.ok(Math.abs(f + Math.min(CM.LEVELS.deepest, CM.LEVELS.tier * d)) < 1e-9, "a tier at a time"); } } }
   assert.ok(galleries >= 1, `${galleries} galleries`);
 });
+test("high ground: a step or more above the foes, the party hits more often and is hit less; below, the other way; a Ranger above a little more; said at the start", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("hg-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.enterFloor(3, "down");
+  const fl = g.floor, [x, y] = fl.pos, f = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).find(([a, b]) => CM.isOpen(fl, a, b)), k = f.join(",");
+  const m = g.tune(CM.makeMonster(CM.monsterKind("Goblin"), 3, new CM.Random(1))); fl.things[k] = { type: "monsters", group: [m] };
+  const h = g.party.find((p) => p.cls !== "Ranger"), said = []; const s0 = g.say; g.say = function (t, ...r) { said.push(t); return s0.call(this, t, ...r); };
+  fl.levels = {}; g.startCombat(k, fl.things[k]); assert.strictEqual(g.highGround(), 0); const even = g.hitChance(h), evenD = g.dodgeOf(h);
+  fl.levels[`${x},${y}`] = [0.3, 1]; assert.strictEqual(g.highGround(), 1); assert.ok(g.hitChance(h) > even && g.dodgeOf(h) < evenD, "above: more and less");
+  fl.levels[`${x},${y}`] = [-0.3, 1]; assert.strictEqual(g.highGround(), -1); assert.ok(g.hitChance(h) < even && g.dodgeOf(h) > evenD, "below: the other way");
+  fl.levels[`${x},${y}`] = [0.1, 1]; assert.strictEqual(g.highGround(), 0, "less than a step is level");
+  g.mode = "explore"; fl.things[k] = { type: "monsters", group: [g.tune(CM.makeMonster(CM.monsterKind("Goblin"), 3, new CM.Random(2)))] }; fl.levels[`${x},${y}`] = [0.6, 1.6]; g.startCombat(k, fl.things[k]);
+  assert.ok(said.some((t) => /high ground/.test(t)), "said");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
