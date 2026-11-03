@@ -42,7 +42,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -56,11 +56,22 @@ vec3 shafts(vec3 vdir, float d) {                                          // (v
   float dust = step(0.993, hash(floor(gl_FragCoord.xy * 0.5) + floor(uTime * 3.0))) * 0.5;
   return mix(uHorizon, vec3(1.0, 0.92, 0.72), 0.7) * uShaft * toward * bars * (0.55 + dust) * smoothstep(1.0, 7.0, d);
 }
+bool n0g(vec3 w) { return abs(dFdx(w.y)) + abs(dFdy(w.y)) < 1e-4; }   // (v54.0: a level surface - the ground, not a wall's foot)
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
   bool surf = vUV.z > 1999.5;
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
   vec4 t = surf ? tf : shared ? ts : tt;
+  if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
+    vec2 cw = vWorld.xz, cell = floor(cw), f = cw - cell; float me = floor(texture(uMap, (cell + 0.5) / uMapN).b * 255.0 + 0.5);
+    if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld)) { float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
+      // each of the four sides and four corners: how near, and what lies there; the strongest other ground wins the blend
+      float bestW = 0.0, bestL = -1.0;
+      for (int k = 0; k < 8; k++) { vec2 off = k == 0 ? vec2(-1.0, 0.0) : k == 1 ? vec2(1.0, 0.0) : k == 2 ? vec2(0.0, -1.0) : k == 3 ? vec2(0.0, 1.0) : k == 4 ? vec2(-1.0, -1.0) : k == 5 ? vec2(1.0, -1.0) : k == 6 ? vec2(-1.0, 1.0) : vec2(1.0, 1.0);
+        float other = floor(texture(uMap, (cell + off + 0.5) / uMapN).b * 255.0 + 0.5); if (other < 0.5 || other == me) continue;
+        vec2 dv = max(vec2(0.0), off * (f - 0.5) + 0.5 - 1.0 + 0.5); float dist = off.x != 0.0 && off.y != 0.0 ? length(vec2(off.x > 0.0 ? 1.0 - f.x : f.x, off.y > 0.0 ? 1.0 - f.y : f.y)) : off.x != 0.0 ? (off.x > 0.0 ? 1.0 - f.x : f.x) : (off.y > 0.0 ? 1.0 - f.y : f.y);
+        float w = (1.0 - smoothstep(0.0, 0.14, dist + n * 0.5 - 0.1)) * 0.5;   /* (each side gives half: two grounds meeting go half and half at the line, each fading into its own square) */ int oi = int(other) - 1; float lay = uGLayer[oi]; if (lay >= 0.0 && w > bestW) { bestW = w; bestL = lay; } }
+      if (bestL >= 0.0) { vec4 to = texture(uTex, vec3(fract(cw), bestL)); t = mix(t, to, bestW * 0.95 * uGBlend); } } }
   if (vFx.z > 2.5 && vFx.z < 3.5) { vec3 dir = normalize(vWorld - uEye), sk = mix(uHorizon, uZenith, t.r) + shafts(dir, 40.0) * 0.45;
     if (uStars > 0.0 && dir.y > 0.0) { vec2 sp = vec2(atan(dir.z, dir.x) * 150.0, asin(clamp(dir.y, 0.0, 1.0)) * 150.0), id = floor(sp); float h = hash(id);   // (v30.2) the stars, twinkling
       if (h > 0.982) { vec2 f = fract(sp) - 0.5 - (vec2(hash(id + 1.3), hash(id + 2.7)) - 0.5) * 0.5; float s = exp(-dot(f, f) * 22.0) * (0.65 + 0.35 * sin(uTime * (1.5 + h * 6.0) + h * 40.0));
@@ -340,7 +351,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -543,6 +554,7 @@ CM.Renderer = class {
     const gl = this.gl, g = floor.grid, N = g.length, px = new Uint8Array(N * N * 4), wet = CM.waterCells ? CM.waterCells(floor) : [];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = (y * N + x) * 4; px[i] = g[y][x] === 0 ? 0 : 255; px[i + 3] = 255; }
     for (const [x, y] of wet) if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 1] = 255;
+    if (CM.groundAt && (floor.number === 0 || floor.number === -1)) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (g[y][x] !== 0) continue; const gi = (CM.GROUNDS || []).indexOf(CM.groundAt(floor, x, y)); if (gi >= 0) px[(y * N + x) * 4 + 2] = gi + 1; }   // (v54.0: the ground's kind, for the blend)
     if (!this.mapTex) this.mapTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.mapTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
@@ -825,7 +837,7 @@ CM.Renderer = class {
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     { const G = this.grading, g0 = t.grade || [1, 1, 1];                    // (v22.4: the band's grade and, above, the hour's: 76zzzx-grade.js)
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
