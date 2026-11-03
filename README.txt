@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Materials (v45.0, UPGRADE_PLAN_40.md phase 0)
+  (src/js/76zzzzzzzza-materials.js)
+  - A blow sounds like what it lands on, under the hit's own sound: a blade rings on plate, cracks on shell and
+    crystal, crunches on bone, thuds into hide and slaps into flesh, and only whistles through the bodiless.
+  - An arrow lands with a wooden thunk before it; a weak spot struck is louder and brighter; crates and barrels
+    knock like wood. Each from the side the foe stands on.
+
 Stone, the one look (v44.6, fix (asked 2026-11-02))
   (src/js/36-looks.js, src/js/60-game.js, src/js/70-ui.js, src/js/80-main.js, src/js/76zzza-walk.js, pack.py, src/js/35-packs.js)
   - Stone is the only look now, and the default. Pixel built its own set of pictures and kept missing ones added
