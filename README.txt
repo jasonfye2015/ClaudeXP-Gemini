@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Real distance (v51.1, UPGRADE_PLAN_46.md phase 1)
+  (src/js/76zzzzzzzzz1-farhills.js, src/js/26-surface.js)
+  - Beyond the treeline round the town and the land stand two rings of hills more, a near range and a far one,
+    paler for the air between, so the world goes back in layers to the edge of seeing.
+  - Fixed: the distant views of v24.4 - the town on its hill seen from the land, the Mage Tower seen from the town -
+    were never drawn: a name in the far ring's code hid the picture of them. They stand on the skyline now.
+
 Building variety (v51.0, UPGRADE_PLAN_46.md phase 0)
   (src/js/26-surface.js)
   - Caer Duin's houses are no longer all one wash: each building has its own, a little lighter or darker than its

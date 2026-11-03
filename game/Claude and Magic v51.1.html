@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v51.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v51.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "51.0", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "51.1", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6408,9 +6408,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
     band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
-    const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), W = 8, H = 7;   // (from the land, the town's hill stands in the east)
-    for (let t = -E; t < size + E; t += W) {
-      const t1 = Math.min(t + W, size + E);
+    const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), RW = 8, H = 7;   // (from the land, the town's hill stands in the east; v51.1: RW, not W - W is the windows pass, and shadowing it kept every far view out)
+    for (let t = -E; t < size + E; t += RW) {
+      const t1 = Math.min(t + RW, size + E);
       quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
       quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
       quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
@@ -43860,6 +43860,18 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     g.on("fx", (fx) => { if (fx && (fx.kind === "attack" || fx.kind === "cast" || fx.kind === "potion")) actAt = performance.now(); });
     g.on("change", () => { const n = g.noiseLevel || 0; if (n > last + 0.5) noiseAt = performance.now(); last = n; }); return true; };
   const t = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (bind()) clearInterval(t); }, 300);
+}
+
+// ---- 76zzzzzzzzz1-farhills.js ----
+"use strict";
+// Real distance (v51.1, UPGRADE_PLAN_46.md): beyond the treeline round the town and the land, two rings of hills more -
+// a near range half again as tall as the trees, and a far one twice as far and taller still - each paler and bluer for
+// the air between (the sky's own haze does the rest), so the world goes back in layers to the edge of seeing, and the
+// keep, the spire and the Mage Tower (76zzzzg-farviews.js) stand against them.
+{ const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, quad) => { if (fv0) fv0(fl, size, index, night, quad); const L = index["far:hill"]; if (L === undefined) return;
+    for (const [E, H, W, sh] of [[(CM.SKIRT || 24) + 22, 19, 16, 0.42], [(CM.SKIRT || 24) + 60, 34, 26, 0.34]]) for (let t = -E; t < size + E; t += W) { const t1 = Math.min(t + W, size + E), lo = -0.5;
+      quad([t, lo, -E], [t1, lo, -E], [t1, H, -E], [t, H, -E], L, sh, 0); quad([t1, lo, size + E], [t, lo, size + E], [t, H, size + E], [t1, H, size + E], L, sh, 0);
+      quad([size + E, lo, t], [size + E, lo, t1], [size + E, H, t1], [size + E, H, t], L, sh, 0); quad([-E, lo, t1], [-E, lo, t], [-E, H, t], [-E, H, t1], L, sh, 0); } };
 }
 
 // ---- 77-splash.js ----
