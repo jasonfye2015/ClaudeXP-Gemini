@@ -846,7 +846,8 @@ window.addEventListener("DOMContentLoaded", () => {
   view.addEventListener("mousedown", (e) => {
     if (game.mode !== "craft" || !game.craft || !e.target.closest("#craftcanvas, #crafthud")) return; e.preventDefault(); const c = ui.$("#craftcanvas");
     if (ui.ccSatchelOpen) { ui.ccSatchelClick(e); return; }
-    if (document.pointerLockElement !== c) { try { c.requestPointerLock(); } catch (er) { /* */ } return; }
+    if (document.pointerLockElement !== c && !craftFree) { try { const pr = c.requestPointerLock(); if (pr && pr.catch) pr.catch(() => { craftFree = true; }); } catch (er) { craftFree = true; } setTimeout(() => { if (document.pointerLockElement !== c) craftFree = true; }, 600); return; }   // (v53.1: no lock to be had - the mouse works free)
+    craftDrag = { x: e.clientX, y: e.clientY, moved: false };
     if (e.button === 0) { if (game.craftAttack(false)) { craftDig = false; return; } craftDig = true; }
     else if (e.button === 2) { const use = game.craftUse(); if (use && use.kind === "treasure") { const got = game.craftOpenTreasure(use.key); if (got) { const [tx, , tz] = use.key.split(",").map(Number); ui.ccDirtyAt(tx, tz); try { CM.audio.play("chest", 0.6); CM.audio.play("coin", 0.5); } catch (er) { /* */ } } return; }
       if (use && use.kind === "door") { const r = game.craftToggleDoor(use.key); if (r) { const [dx, , dz] = use.key.split(",").map(Number); ui.ccDirtyAt(dx, dz); try { CM.audio.play("hinge", 0.5); } catch (er) { /* */ } } return; }
@@ -856,8 +857,12 @@ window.addEventListener("DOMContentLoaded", () => {
       if (use) { craftIn = {}; craftDig = false; if (use.kind === "chest") ui.ccOpenChest(use.key); else { ui.ccToggleSatchel(); } try { CM.audio.play("door", 0.35); } catch (er) { /* */ } return; }
       const placed = game.craftPlace(); if (placed) { const pr = game.craft.target[1]; ui.ccDirtyAt(pr[0], pr[2], placed === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play("cardplace", 0.4, 0, 0.7); } catch (er) { /* */ } } }
   });
-  window.addEventListener("mouseup", (e) => { if (e.button === 0) craftDig = false; });
-  window.addEventListener("mousemove", (e) => { if (game.mode === "craft" && game.craft && document.pointerLockElement === ui.$("#craftcanvas")) { const w = game.craft.walker; w.yaw -= e.movementX * 0.15; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.15)); } });
+  window.addEventListener("mouseup", (e) => { if (e.button === 0) craftDig = false; craftDrag = null; });
+  document.addEventListener("pointerlockerror", () => { if (game.mode === "craft") craftFree = true; });
+  window.addEventListener("mousemove", (e) => { if (game.mode === "craft" && game.craft && craftFree && craftDrag && document.pointerLockElement !== ui.$("#craftcanvas")) {   // (v53.1: free mouse - drag to look; a press that drags doesn't dig)
+      if (!craftDrag.moved && Math.hypot(e.clientX - craftDrag.x, e.clientY - craftDrag.y) > 6) { craftDrag.moved = true; craftDig = false; }
+      if (craftDrag.moved) { const w = game.craft.walker; w.yaw -= e.movementX * 0.25; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.25)); } return; }
+    if (game.mode === "craft" && game.craft && document.pointerLockElement === ui.$("#craftcanvas")) { const w = game.craft.walker; w.yaw -= e.movementX * 0.15; w.pitch = Math.max(-89, Math.min(89, w.pitch - e.movementY * 0.15)); } });
   view.addEventListener("contextmenu", (e) => { if (game.mode === "craft") e.preventDefault(); });
   view.addEventListener("wheel", (e) => { if (game.mode !== "craft" || !game.craft) return; e.preventDefault(); if (ui.ccSatchelOpen) { ui.ccScroll = Math.max(0, (ui.ccScroll || 0) + (e.deltaY > 0 ? 2 : -2)); return; } const w = game.craft.walker; w.slot = (w.slot + (e.deltaY > 0 ? 1 : -1) + 9) % 9; }, { passive: false });
   view.addEventListener("mousedown", (e) => { if (game.mode === "bros" && e.target.closest("#broscanvas")) { e.preventDefault(); brosIn.attack = true; } });
@@ -899,7 +904,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const BROS_KEYS = { KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", KeyW: "jump", ArrowUp: "jump", ShiftLeft: "run", ShiftRight: "run", KeyJ: "attack", KeyF: "attack", KeyK: "attack" };
   let brosIn = {}, brosT = 0;
   const CRAFT_KEYS = { KeyW: "fwd", ArrowUp: "fwd", KeyS: "back", ArrowDown: "back", KeyA: "left", ArrowLeft: "left", KeyD: "right", ArrowRight: "right", Space: "jump", ShiftLeft: "sprint", ShiftRight: "sprint", KeyC: "down" };
-  let craftIn = {}, craftT = 0, craftDig = false;
+  let craftIn = {}, craftT = 0, craftDig = false, craftFree = false, craftDrag = null;
   // a frame through the Neather Gate: the walker moves (not while a dialog is up), the block under the eye is found,
   // the island drawn; the gate's light takes the party home; what was changed is kept every half minute
   function craftSounds(now) {                                           // (the island's life: what happened, heard and seen)
@@ -920,7 +925,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function craftFrame(now, dt) {
     const cr = game.craft; if (!cr) return;
     if (!ui.dialogOpen() && !ui.ccSatchelOpen && ui.screen === "play" && !ui.ccPending.length) { cr.walker.update(Math.min(0.05, dt), Object.assign({}, craftIn, { down: craftIn.down || (cr.walker.flying && craftIn.sprint) })); cr.target = cr.world.raycast(cr.walker.eye(), cr.walker.look());
-      const locked = document.pointerLockElement === ui.$("#craftcanvas"), before = cr.dig ? Math.floor(cr.dig.t * 4) : -1, hit = cr.target[0], b = game.craftDig(Math.min(0.05, dt), craftDig && locked);
+      const locked = document.pointerLockElement === ui.$("#craftcanvas"), before = cr.dig ? Math.floor(cr.dig.t * 4) : -1, hit = cr.target[0], b = game.craftDig(Math.min(0.05, dt), craftDig && (locked || craftFree));
       if (b) { ui.ccDirtyAt(hit[0], hit[2], b === CM.CC.B.TORCH ? CM.CC.TORCH_REACH : 1); try { CM.audio.play(b === CM.CC.B.LEAVES ? "step" : b === CM.CC.B.LOG || b === CM.CC.B.PLANKS ? "grind" : "bump", 0.45, 0, 0.9 + Math.random() * 0.3); } catch (er) { /* */ } }
       else if (cr.dig && cr.dig.need < Infinity && Math.floor(cr.dig.t * 4) !== before) { try { CM.audio.play("step", 0.18, 0, 1.3 + Math.random() * 0.3); } catch (er) { /* */ } }
       if (cr.walker.landed) { const d = cr.walker.landed; cr.walker.landed = 0; const hurt = CM.CC.fallHurt(d, cr.hero.max); if (hurt) { try { CM.audio.play("bump", 0.7, 0, 0.6); } catch (er) { /* */ } ui.ccHurtAt = now; if (game.craftHurt(hurt, `A fall of ${Math.round(d)} blocks`)) { craftDig = false; ui.ccDeadAt = now; } } }

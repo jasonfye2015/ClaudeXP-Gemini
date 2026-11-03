@@ -298,7 +298,11 @@ CC.Walker = class {
     const ladder = [0.1, 1.0].some((dy) => this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + dy), Math.floor(this.pos[2])) === CB.LADDER);
     if (ladder && !this.flying) { this.vel[1] = k.jump || k.fwd ? 3.2 : k.down || k.back ? -3.2 : -0.8; this.fallFrom = null; this.onLadder = true; }   // (up a ladder: Space or forward; down: back)
     else if (this.flying) { this.onLadder = false; this.vel[1] = (k.jump ? 1 : 0) * 7 - (k.down ? 1 : 0) * 7; }
-    else { this.onLadder = false; this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP; }
+    else { this.onLadder = false; this.vel[1] -= CC.GRAVITY * dt * (water ? 0.35 : 1); if (water) { this.vel[1] = Math.max(this.vel[1], -3); if (k.jump) this.vel[1] = 3.2; } else if (k.jump && this.onGround) this.vel[1] = CC.JUMP;
+      const feet = this.world.get(Math.floor(this.pos[0]), Math.floor(this.pos[1] + 0.05), Math.floor(this.pos[2])) === CB.WATER;   // (v53.1: the feet still in it - at the surface, or wading)
+      if (k.jump && feet && !this.onGround && this.vel[1] < CC.JUMP * 0.75) { const r = 0.45, ahead = n ? [this.pos[0] + (mx / n) * r, this.pos[2] + (mz / n) * r] : null;
+        const bank = ahead && (this.solidAt(ahead[0], this.pos[1] + 0.1, ahead[1]) || this.solidAt(ahead[0], this.pos[1] + 0.6, ahead[1]));
+        if (bank || !water) this.vel[1] = CC.JUMP; } }
     for (let i = 0; i < 3; i++) {                                           // (an axis at a time: slide along walls)
       const np = this.pos.slice(); np[i] += this.vel[i] * dt;
       if (!this.boxHits(np[0], np[1], np[2])) this.pos = np;
