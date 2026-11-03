@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Shadows from the walls (v49.0, UPGRADE_PLAN_44.md phase 0)
+  (src/js/40-render.js, src/js/76zzzzzzzzq-lightshadow.js)
+  - The lamps, wall torches, braziers and spell-lights no longer shine through stone: where a wall stands between a
+    light and what it would light, its light stops, softly at the edge, so a torch round a corner lights only its own
+    side of it. The eight nearest lights are traced; the party's own torch sees what the party sees. Off at Low detail.
+
 Floor detail (v48.4, UPGRADE_PLAN_43.md phase 4)
   (src/js/40-render.js, src/js/76zzzzzzzzp-worn.js)
   - Below ground the floor shows how it has been walked on: a path worn paler and smoother down the middle of every
