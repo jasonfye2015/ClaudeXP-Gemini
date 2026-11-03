@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v46.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v46.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "46.0", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "46.1", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -40779,7 +40779,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
     const fl = g.floor, [px, py] = fl.pos; let best = null, bd = 99;
     for (const [k, t] of Object.entries(fl.things)) { if (!(t.type === "monsters" || t.type === "boss" || t.type === "guardian") || t.asleep) continue; const [x, y] = k.split(",").map(Number), d = Math.hypot(x - px, y - py); if (d < bd && d <= 9) { bd = d; best = [x, y, t]; } }
     if (!best) return; const [x, y, t] = best, ang = Math.atan2(x - px, -(y - py)) - r.yaw, pan = Math.sin(ang), behind = Math.cos(ang) < -0.3, wall = !clear(fl, px, py, x, y);
-    const m = (t.group && t.group[0]) || {}; A.play3d(CM.roarFor(m.kind || m.name), 0.32 / (1 + bd * 0.35) * (wall ? 0.7 : 1), pan * (behind ? 0.8 : 1), wall || behind);
+    const m = (t.group && t.group[0]) || {}; A.play3d(CM.roarFor(m.kind || m.name), 0.32 / (1 + bd * 0.35) * (wall ? 0.7 : 1), pan * (behind ? 0.8 : 1), wall || behind, { ang, wall, d: bd });   // (v46.1: where it is, for headphones)
   };
   setInterval(tick, 200);
 }
@@ -43320,8 +43320,9 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
 // down. (The near monsters are heard as before, 76zzzzq-sound3d.js.)
 { const live = () => { const A = CM.audio; return A && A.ctx && A.enabled && A.master; };
   let noise = null, bus = null; const N = (c) => { if (!noise) { const n = c.sampleRate, b = c.createBuffer(1, n, n), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; noise = b; } return noise; };
-  const far = (c, pan) => { const A = CM.audio; if (!bus || bus.ctx !== c) { const lp = c.createBiquadFilter(), d = c.createDelay(2), fb = c.createGain(), wet = c.createGain(), dry = c.createGain(); lp.type = "lowpass"; lp.frequency.value = 1600; d.delayTime.value = 0.33; fb.gain.value = 0.45; wet.gain.value = 0.6; dry.gain.value = 0.7;
+  const far = (c, pan, height) => { const A = CM.audio; if (!bus || bus.ctx !== c) { const lp = c.createBiquadFilter(), d = c.createDelay(2), fb = c.createGain(), wet = c.createGain(), dry = c.createGain(); lp.type = "lowpass"; lp.frequency.value = 1600; d.delayTime.value = 0.33; fb.gain.value = 0.45; wet.gain.value = 0.6; dry.gain.value = 0.7;
       const out = CM.ambienceOut ? CM.ambienceOut() : A.master; lp.connect(dry); dry.connect(out); lp.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(out); bus = { ctx: c, input: lp }; }
+    if (CM.spatialOn && CM.spatialOn() && height !== undefined) { const P = CM.hrtf(c, Math.random() * Math.PI * 2, height, 4); P.connect(bus.input); return P; }   /* (v46.1: headphones - all round, above or below) */
     const p = c.createStereoPanner ? c.createStereoPanner() : null; if (!p) return bus.input; p.pan.value = pan; p.connect(bus.input); return p; };
   const sine = (c, d, hz, at, dur, vol, type = "sine", to) => { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(hz, at); if (to) o.frequency.exponentialRampToValueAtTime(to, at + dur); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + Math.min(0.05, dur / 4)); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); o.connect(g); g.connect(d); o.start(at); o.stop(at + dur + 0.05); };
   const hiss = (c, d, at, dur, vol, hz, to, q = 1) => { const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = "bandpass"; f.frequency.setValueAtTime(hz, at); if (to) f.frequency.exponentialRampToValueAtTime(to, at + dur); f.Q.value = q;
@@ -43336,10 +43337,11 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     groan: (c, d, at) => { sine(c, d, 38, at, 3, 0.14, "triangle", 30); sine(c, d, 57, at + 0.4, 2.4, 0.05, "sine", 44); } };
   const MIX = [["drip", "roar", "grind", "bones"], ["drip", "drip", "drip", "roar"], ["hammer", "grind", "drip", "roar"], ["roar", "grind", "bones", "drip"], ["drip", "drip", "roar", "grind"],
     ["drip", "roar", "groan", "drip"], ["chime", "chime", "drip", "grind"], ["hammer", "hammer", "grind", "roar"], ["bones", "bones", "roar", "drip"], ["groan", "groan", "roar", "grind"]];
+  const HEIGHT = { drip: 0.8, chime: 0.6, groan: -0.9, grind: -0.6, roar: 0, hammer: -0.2, bones: 0.1 };
   CM.DISTANT = SOUND;
   let next = 0;
   setInterval(() => { const g = CM.game, fl = g && g.floor, now = performance.now(); if (!fl || !live() || g.mode !== "explore" || !(fl.number >= 1) || fl.number % 1 !== 0 || fl.special === "vault" || now < next) return; next = now + 7000 + Math.random() * 9000;
-    const list = MIX[CM.themeIndex(fl.number)] || MIX[0], kind = list[Math.floor(Math.random() * list.length)], c = CM.audio.ctx; try { SOUND[kind](c, far(c, (Math.random() - 0.5) * 1.6), c.currentTime + 0.05); } catch (e) { /* (quiet) */ } }, 1000);
+    const list = MIX[CM.themeIndex(fl.number)] || MIX[0], kind = list[Math.floor(Math.random() * list.length)], c = CM.audio.ctx; try { SOUND[kind](c, far(c, (Math.random() - 0.5) * 1.6, HEIGHT[kind] || 0), c.currentTime + 0.05); } catch (e) { /* (quiet) */ } }, 1000);
 }
 
 // ---- 76zzzzzzzze-firesound.js ----
@@ -43390,6 +43392,31 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
       inp.addEventListener("input", () => { g.settings[key] = inp.value / 100; CM.applyMix(); if (g.saveSettings) g.saveSettings(); if (key === "uiVolume" && CM.uiSound) CM.uiSound("tick"); }); }
     CM.applyMix(); return true; };
   const t = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (wire()) clearInterval(t); }, 300);
+}
+
+// ---- 76zzzzzzzzg-spatial.js ----
+"use strict";
+// Spatial sound for headphones (v46.1, UPGRADE_PLAN_41.md): with "Headphones" ticked in Settings, the sounds that come
+// from a place are placed around the head instead of only left and right - a monster heard behind is behind, the
+// distant sounds come from all round and from above (drips, chimes) and below (the Root's groan, grinding stone).
+// The Web Audio's own head model (an HRTF panner); off, the sounds pan as before.
+{ CM.spatialOn = () => Boolean(CM.game && CM.game.settings && CM.game.settings.headphones);
+  // a panner at an angle round the head (0 ahead, positive to the right), a height (-1 below .. 1 above) and a distance
+  CM.hrtf = (ctx, az, el = 0, dist = 2) => { const p = ctx.createPanner(); p.panningModel = "HRTF"; p.distanceModel = "inverse"; p.refDistance = 1; p.rolloffFactor = 0.6;
+    const x = Math.sin(az) * Math.cos(el * 1.2) * dist, y = Math.sin(el * 1.2) * dist, z = -Math.cos(az) * Math.cos(el * 1.2) * dist;
+    if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z); return p; };
+  const prep = () => { const A = CM.audio; if (!A || !A.play3d || A.spatialWrapped) return false; const p0 = A.play3d;
+    A.play3d = function (name, volume, pan, muffle, where) { if (!CM.spatialOn() || !where || where.ang === undefined || !this.ctx || !this.enabled || !this.buffers[name]) return p0.call(this, name, volume, pan, muffle);
+      const ctx = this.ctx, src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = this.buffers[name]; g.gain.value = CM.clamp(volume, 0, 1) * 1.3; let node = src;
+      if (where.wall) { const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 520; src.connect(f); node = f; }
+      const P = CM.hrtf(ctx, where.ang, 0, 1 + (where.d || 2) * 0.4); node.connect(g); g.connect(P); P.connect(this.master); const R = this.room && this.room(); if (R) P.connect(R.send); src.start(); };
+    A.spatialWrapped = true; return true; };
+  const t = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (prep()) clearInterval(t); }, 300);
+  // the setting
+  const wire = () => { const ui = CM.ui, g = CM.game; if (!ui || !g || !ui.$) return false; const anchor = ui.$("#set-uiVolume"); if (!anchor) return false; if (ui.$("#set-headphones")) return true;
+    const r = document.createElement("div"); r.className = "row"; r.innerHTML = `<label for="set-headphones">Headphones - sounds from behind, above and below</label><input type="checkbox" id="set-headphones">`; anchor.closest(".row").insertAdjacentElement("afterend", r);
+    const inp = r.querySelector("input"); inp.checked = Boolean(g.settings.headphones); inp.addEventListener("input", () => { g.settings.headphones = inp.checked; if (g.saveSettings) g.saveSettings(); }); return true; };
+  const t2 = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (wire()) clearInterval(t2); }, 300);
 }
 
 // ---- 77-splash.js ----

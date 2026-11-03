@@ -45,7 +45,7 @@
     const fl = g.floor, [px, py] = fl.pos; let best = null, bd = 99;
     for (const [k, t] of Object.entries(fl.things)) { if (!(t.type === "monsters" || t.type === "boss" || t.type === "guardian") || t.asleep) continue; const [x, y] = k.split(",").map(Number), d = Math.hypot(x - px, y - py); if (d < bd && d <= 9) { bd = d; best = [x, y, t]; } }
     if (!best) return; const [x, y, t] = best, ang = Math.atan2(x - px, -(y - py)) - r.yaw, pan = Math.sin(ang), behind = Math.cos(ang) < -0.3, wall = !clear(fl, px, py, x, y);
-    const m = (t.group && t.group[0]) || {}; A.play3d(CM.roarFor(m.kind || m.name), 0.32 / (1 + bd * 0.35) * (wall ? 0.7 : 1), pan * (behind ? 0.8 : 1), wall || behind);
+    const m = (t.group && t.group[0]) || {}; A.play3d(CM.roarFor(m.kind || m.name), 0.32 / (1 + bd * 0.35) * (wall ? 0.7 : 1), pan * (behind ? 0.8 : 1), wall || behind, { ang, wall, d: bd });   // (v46.1: where it is, for headphones)
   };
   setInterval(tick, 200);
 }
