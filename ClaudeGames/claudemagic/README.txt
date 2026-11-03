@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Spatial sound (v46.1, UPGRADE_PLAN_41.md phase 1)
+  (src/js/76zzzzzzzzg-spatial.js, src/js/76zzzzq-sound3d.js, src/js/76zzzzzzzzd-distant.js)
+  - With Headphones ticked in Settings, the sounds that come from a place are placed around the head instead of only
+    left and right: a monster heard behind is behind, and the distant sounds come from all round, from above (drips,
+    chimes) and from below (the Root's groan, grinding stone).
+
 A mixer (v46.0, UPGRADE_PLAN_41.md phase 0)
   (src/js/76zzzzzzzzf-mixer.js, src/js/76zzzzzzzzc-weathersound.js, src/js/76zzzzzzzzd-distant.js, src/js/76zzzzzzzze-firesound.js)
   - Settings has a slider for each kind of sound under the sound's own volume and the music's: Voices (the heroes,
