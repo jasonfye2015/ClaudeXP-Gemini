@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Timbers that stand out (v53.5, UPGRADE_PLAN_48.md phase 3)
+  (src/js/26b-buildings.js)
+  - The half-timbering of the town's houses stands out from the plaster now: the posts at each wall's ends, the
+    middle post of a house wall and the beam under the eaves are timbers proud of the wall, their edges catching
+    the light.
+
 Doors in their frames (v53.4, UPGRADE_PLAN_48.md phase 2)
   (src/js/26b-buildings.js)
   - Every door in the town stands in its frame now: a stone step before it, and the jambs and the lintel of its frame
