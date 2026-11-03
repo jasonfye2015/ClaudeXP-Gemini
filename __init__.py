@@ -124,7 +124,20 @@ class MagicWindow(QWidget):
             s.setAttribute(attr, on)
         self.page.setBackgroundColor(QColor("#18120C"))
         if hasattr(self.page, "permissionRequested"):                   # Qt 6.8+
-            self.page.permissionRequested.connect(lambda permission: permission.deny())
+            def _permission(permission):                                # (v53.1: the mouse lock Claudecraft and the Tower ask for is granted; nothing else)
+                try:
+                    from PySide6.QtWebEngineCore import QWebEnginePermission
+                    if permission.permissionType() == QWebEnginePermission.PermissionType.MouseLock:
+                        permission.grant(); return
+                except Exception:
+                    pass
+                permission.deny()
+            self.page.permissionRequested.connect(_permission)
+        elif hasattr(self.page, "featurePermissionRequested"):          # (older Qt: the same, by feature)
+            def _feature(origin, feature):
+                ok = feature == QWebEnginePage.Feature.MouseLock
+                self.page.setFeaturePermission(origin, feature, QWebEnginePage.PermissionPolicy.PermissionGrantedByUser if ok else QWebEnginePage.PermissionPolicy.PermissionDeniedByUser)
+            self.page.featurePermissionRequested.connect(_feature)
         self.view.setPage(self.page)
         self.view.setContextMenuPolicy(Qt.NoContextMenu)
         lay.addWidget(self.view)
