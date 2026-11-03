@@ -111,12 +111,14 @@ void main() {
   float r2 = uReach * uReach;
   vec3 n = normalize(cross(dFdx(vWorld), dFdy(vWorld)));                      // the surface's facing, from the triangle itself
   if (dot(n, uEye - vWorld) < 0.0) n = -n;
-  float spec = 0.0; vec3 n0 = n;
+  float spec = 0.0, cav = 0.0; vec3 n0 = n;
   if (uBump > 0.0 && vFx.z < 0.5) {                                        // (v22.1) relief: walls, floors and the ground take it from their own pictures
     vec2 px = 1.0 / vec2(surf ? textureSize(uSurf, 0).xy : shared ? textureSize(uShared, 0).xy : textureSize(uTex, 0).xy), uv = vUV.xy;
     float lz = surf ? max(vUV.z - 2000.0, 0.0) : shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
     #define HT(o) dot((surf ? texture(uSurf, vec3(uv + (o), lz)) : shared ? texture(uShared, vec3(uv + (o), lz)) : texture(uTex, vec3(uv + (o), lz))).rgb, vec3(0.3, 0.59, 0.11))
     float hu = HT(vec2(px.x, 0.0)) - HT(vec2(-px.x, 0.0)), hv = HT(vec2(0.0, px.y)) - HT(vec2(0.0, -px.y));
+    { float hc = HT(vec2(0.0)), ha = 0.25 * (HT(vec2(2.5 * px.x, 0.0)) + HT(vec2(-2.5 * px.x, 0.0)) + HT(vec2(0.0, 2.5 * px.y)) + HT(vec2(0.0, -2.5 * px.y)));   // (v48.0) the cavities - mortar, pits - darker than what's round them: the torch doesn't reach in
+      cav = clamp((ha - hc) * 2.2, 0.0, 0.35) * min(1.0, uBump); }
     vec3 dpx = dFdx(vWorld), dpy = dFdy(vWorld); vec2 dux = dFdx(uv), duy = dFdy(uv);
     vec3 r1 = cross(dpy, n), r2 = cross(n, dpx); float det = dot(dpx, r1);
     vec3 grad = sign(det) * (hu * 0.5 / max(px.x, 1e-6) * (r1 * dux.x + r2 * duy.x) + hv * 0.5 / max(px.y, 1e-6) * (r1 * dux.y + r2 * duy.y));
@@ -156,7 +158,7 @@ void main() {
       ao = 1.0 - 0.5 * smoothstep(0.02, 0.62, w); }
     else { ao = 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.32, vWorld.y)) - uCeil * 0.26 * smoothstep(0.7, 1.0, vWorld.y); }
     light *= mix(1.0, ao, uAO); extra *= mix(1.0, ao, uAO); }
-  vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade;
+  vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade * (1.0 - cav);
   vec3 ageGlow = vec3(0.0);
   if (dot(uAge, vec4(1.0)) > 0.0 && uBump > 0.0 && abs(n0.y) < 0.7) {     // (v30.7) the deeper, the older: what the years have done to the walls
     float a = abs(n0.x) > abs(n0.z) ? vWorld.z : vWorld.x, y = vWorld.y;
