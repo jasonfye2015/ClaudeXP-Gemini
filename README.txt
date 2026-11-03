@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Boss themes (v44.1, UPGRADE_PLAN_39.md phase 1)
+  (src/js/76zzzzzzzw-bossmusic.js)
+  - Each guardian and the Lich King has a battle theme of its own in place of the one shared boss tune: the Rat King's
+    scurrying chromatic run, the Drowned Knight's slow march, the Drowned Queen's waltz, the Crystal Tyrant's bright
+    cruel Lydian, the Bone Patriarch's dirge, the Lich King's own, and the rest - its band's instrument doubling the
+    lead once the fight turns hard.
+  - When it turns at half its life the theme turns with it: faster, a step higher, a double kick on the drums.
+
 A theme for every band (v44.0, UPGRADE_PLAN_39.md phase 0)
   (src/js/76zzzzzzzv-bandmusic.js)
   - Each band's tune is played on its own consort now: the Catacombs by a low choir with a bell at each change of
