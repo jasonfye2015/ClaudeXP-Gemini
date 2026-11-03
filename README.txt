@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Photo mode (v52.3, UPGRADE_PLAN_47.md phase 3)
+  (src/js/76zzzzzzzzz8-photo.js)
+  - From the pause menu, or Shift+P on the floor, the interface goes away and the camera is freed a little: the arrow
+    keys turn it and lean it about the party's square, A and D step it aside, Q and E raise and lower it, and Space
+    or Enter saves the picture as a .png named for the place. Escape puts everything back. The game stands still.
+
 Depth of field, deeper (v52.2, UPGRADE_PLAN_47.md phase 2)
   (src/js/76zzzzzzzzz7-dof.js)
   - The view behind an open window, soft since v31.3, now goes fully out of focus and draws back into shadow at its
