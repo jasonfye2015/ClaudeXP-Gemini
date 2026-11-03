@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Feet on the stone (v50.1, UPGRADE_PLAN_45.md phase 1)
+  (src/js/76zzzzzzzzw-feet.js)
+  - A monster stands on the floor rather than floating over it: a small, dark contact shadow right under its feet,
+    under the long one the light casts - tighter and darker for the heavy, wider for the big - in a fight as on the
+    floor. On a dais, a stair or down in a pit it stands on that. Ghosts and wisps float, and keep only a faint one.
+
 Seen from three sides (v50.0, UPGRADE_PLAN_45.md phase 0)
   (src/js/76zzzzzzzzv-threesides.js)
   - A monster seen from behind is its back now - no face, no eyes, no teeth, the head and shoulders in its own body's
