@@ -14,7 +14,7 @@
       const src = ctx.createOscillator(); src.type = o.wave || "sawtooth"; src.frequency.setValueAtTime(o.pitch || 140, t); src.frequency.exponentialRampToValueAtTime(Math.max(30, o.to || o.pitch || 140), t + d);
       if (o.growl) { const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = o.growlRate || 28; lg.gain.value = (o.pitch || 140) * o.growl; lfo.connect(lg); lg.connect(src.frequency); lfo.start(t); lfo.stop(t + d + 0.05); }
       for (const [i, Q, g] of [[0, 7, 1], [1, 9, 0.6]]) { const f = ctx.createBiquadFilter(), fg = ctx.createGain(); f.type = "bandpass"; f.Q.value = Q; f.frequency.setValueAtTime(V1[i] * (o.formant || 1), t); f.frequency.linearRampToValueAtTime(V2[i] * (o.formant || 1), t + d); fg.gain.value = g * 3; src.connect(f); f.connect(fg); fg.connect(out); }
-      src.start(t); src.stop(t + d + 0.05);
+      if (o.hiss) src.disconnect(); src.start(t); src.stop(t + d + 0.05);   /* (a hiss: the breath alone) */
       if (o.breath) { if (!noiseBuf) { const n = ctx.sampleRate, b = ctx.createBuffer(1, n, n), dd = b.getChannelData(0); for (let i = 0; i < n; i++) dd[i] = Math.random() * 2 - 1; noiseBuf = b; }
         const ns = ctx.createBufferSource(), nf = ctx.createBiquadFilter(), ng = ctx.createGain(); ns.buffer = noiseBuf; nf.type = "bandpass"; nf.frequency.value = V1[1] * 1.3; nf.Q.value = 1.2; ng.gain.value = o.breath; ns.connect(nf); nf.connect(ng); ng.connect(out); ns.start(t); ns.stop(t + d + 0.05); } } catch (e) { /* (no voice) */ } };
   const BASE = { Knight: 100, Paladin: 112, Rogue: 150, Ranger: 138, Cleric: 165, Mage: 190, Druid: 158, Bard: 175, Monk: 128, Necromancer: 118, Artificer: 145 };
