@@ -473,7 +473,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const fl = game.floor, out = [], hud = [];
     if (!fl) return { out, hud };
     const now = performance.now(), right = [Math.cos(renderer.yaw), Math.sin(renderer.yaw)];
-    const near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 12;
+    const reach = fl.special === "joker" ? 64 : 12, near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= reach;   // (v44.5: the Joker's hall is one lit room - all of it, from the door)
     const lit = CM.isNight(game);
     if (renderer.index.shadow !== undefined) {                          // a soft shadow under whatever stands on the floor
       const caster = CM.shadowCaster ? CM.shadowCaster(game, renderer, fl) : null;   // (v22.2: where the light comes from - the sun, a lamp, the party's torch: 76zzzv-shadows.js)

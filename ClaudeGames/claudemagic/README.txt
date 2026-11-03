@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Joker's hall, full (v44.5, fix (asked 2026-11-02))
+  (src/js/80-main.js, src/js/76zzzzzzzz0-jokerlight.js)
+  - Fixed: the Gilded Joker's hall looked nearly empty from its door - things on a floor were drawn only within twelve
+    steps of the party, and the hall is one great room, so most of its fifty-five tables and seventeen counters were
+    left out. On the Joker's floor the whole hall is drawn now.
+  - Chandeliers hang over the hall in rows, each a warm light, so the far tables are not lost in the dark.
+
 A music room (v44.4, UPGRADE_PLAN_39.md phase 4)
   (src/js/76zzzzzzzz-musicroom.js)
   - The party's house has a music room from its first level: every tune ever heard, on any run, kept by name and
