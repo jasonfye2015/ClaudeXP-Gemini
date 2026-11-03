@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Dynamic quiet (v46.4, UPGRADE_PLAN_41.md phase 4)
+  (src/js/76zzzzzzzzj-quiet.js)
+  - While the party creeps through the dungeon with its light shaded (Douse), the music falls away to almost nothing
+    over a few seconds and the dungeon's own sounds are left.
+  - When a fight starts out of that quiet - found - a sting strikes, a drum and a brass chord rising, and the music
+    swells back up. Lighting up again brings it back gently.
+
 Interface sounds (v46.3, UPGRADE_PLAN_41.md phase 3)
   (src/js/76zzzzzzzzi-uisounds.js)
   - A soft click under every button; a page turned when a book-like window opens or one of its pages is chosen (the
