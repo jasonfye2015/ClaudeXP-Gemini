@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Brightness and contrast (v52.4, UPGRADE_PLAN_47.md phase 4)
+  (src/js/76zzzzzzzzz9-picture.js)
+  - Settings has two sliders for the picture of the world itself: its brightness (60% to 160% - the dark floors
+    lighter on a dim screen, or darker in a bright room) and its contrast (70% to 140%), beside the text size and the
+    high contrast that were there. Only the view changes; the windows and the words are left as they are.
+
 Photo mode (v52.3, UPGRADE_PLAN_47.md phase 3)
   (src/js/76zzzzzzzzz8-photo.js)
   - From the pause menu, or Shift+P on the floor, the interface goes away and the camera is freed a little: the arrow
