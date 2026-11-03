@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Ghost whispers (v43.3, UPGRADE_PLAN_38.md phase 3)
+  (src/js/76zzzzzzzt-whispers.js)
+  - When the dead speak - a ghost on the floor, a vault's keeper telling its story - their words come with a whisper
+    under them: breath shaped into syllables with no voice behind it, drifting from one side to the other and
+    echoing a little, over a thin cold tone, as long as the words are.
+
 Townsfolk murmur (v43.2, UPGRADE_PLAN_38.md phase 2)
   (src/js/76zzzzzzzs-murmur.js)
   - By day the Square talks: a low murmur of voices, a syllable here and a laugh there, from the side each comes
