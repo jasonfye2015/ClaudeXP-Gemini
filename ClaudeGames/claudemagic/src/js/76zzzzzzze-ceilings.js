@@ -27,7 +27,7 @@
   const day = (game) => !(CM.isNight && CM.isNight(game));
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !fl.rooms || !(fl.number >= 1) || fl.number % 1 !== 0 || fl.special === "vault" || !CM.renderer || CM.renderer.index["ce:beam"] === undefined) return out;
       const c = get(fl), t = now / 1000, still = CM.reducedMotion, near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 9;
-      for (const s of c.out) if (near(s.x, s.y)) { const o = Object.assign({}, s); if (s.chain) { o.lift = 1 - s.h; if (!still) o.dx += Math.sin(t * 0.8 + s.x * 3 + s.y) * 0.015; } out.push(o); }
+      for (const s of c.out) if (near(s.x, s.y)) { const o = Object.assign({}, s), hi = CM.ceilAt ? CM.ceilAt(fl, s.x, s.y) - CM.floorAt(fl, s.x, s.y) - 1 : 0; o.lift = (o.lift || 0) + hi; if (s.chain) { o.lift = 1 - s.h + hi; if (!still) o.dx += Math.sin(t * 0.8 + s.x * 3 + s.y) * 0.015; } out.push(o); }
       if (day(game)) for (const [x, y] of c.shafts) if (near(x, y)) { out.push({ x, y, layer: "ce:shaft", w: 0.55, h: 1.0, glow: 2, alpha: 0.16 }); out.push({ x, y, layer: "ce:patch", flat: true, w: 0.8, glow: 1.6, alpha: 0.32 });
         if (!still) for (let i = 0; i < 4; i++) { const ph = (t * 0.08 + i / 4) % 1; out.push({ x, y, layer: "ce:patch", w: 0.015, h: 0.015, dx: Math.sin(t * 0.5 + i * 2) * 0.15, dz: Math.cos(t * 0.4 + i) * 0.15, lift: 0.95 - ph * 0.9, glow: 2, alpha: 0.8 }); } }
       return out; }; }

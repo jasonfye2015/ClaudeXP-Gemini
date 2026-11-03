@@ -5856,6 +5856,14 @@ test("stairs: on about half the floors one room is raised, its ceiling with it, 
         const inR = (p, q) => p >= R.x0 && p <= R.x1 && q >= R.y0 && q <= R.y1; if (inR(x, y) || inR(nx, ny)) { if (!(inR(x, y) && inR(nx, ny))) assert.ok(Math.abs(a - b) <= CM.LEVELS.step + 1e-9, `a step at ${x},${y}`); } } } }
   assert.ok(raised >= 10 && raised <= 32, `${raised} raised rooms in 40 floors`);
 });
+test("tall halls and crawlways: the rooms of twenty squares or more stand tall, and on some floors a short run of corridor is low", () => {
+  const CM = load(); let halls = 0, crawls = 0;
+  for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, "hall-1");
+    for (const r of fl.rooms || []) { if (r.name || r.template || (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) < CM.LEVELS.hallArea || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue; halls++;
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) assert.ok(CM.ceilAt(fl, x, y) - CM.floorAt(fl, x, y) >= CM.LEVELS.hall - 1e-9, "tall"); }
+    if (fl.crawl) { crawls++; assert.ok(fl.crawl.length >= 3); for (const k of fl.crawl) assert.strictEqual(CM.ceilAt(fl, ...k.split(",").map(Number)), CM.LEVELS.crawl); } }
+  assert.ok(halls > 5, `${halls} tall halls`); assert.ok(crawls >= 3 && crawls <= 20, `${crawls} crawlways`);
+});
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v47.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v47.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "47.1", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "47.2", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6445,7 +6445,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           if (t) { quad([x, yb, y + 0.42], [x + 1, yb, y + 0.42], [x + 1, yt, y + 0.42], [x, yt, y + 0.42], layer, 0.8); quad([x + 1, yb, y + 0.58], [x, yb, y + 0.58], [x, yt, y + 0.58], [x + 1, yt, y + 0.58], layer, 0.8); quad([x, yb, y + 0.58], [x + 1, yb, y + 0.58], [x + 1, yb, y + 0.42], [x, yb, y + 0.42], layer, 0.6); }
           else { quad([x + 0.42, yb, y + 1], [x + 0.42, yb, y], [x + 0.42, yt, y], [x + 0.42, yt, y + 1], layer, 0.8); quad([x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.58, yt, y + 1], [x + 0.58, yt, y], layer, 0.8); quad([x + 0.42, yb, y], [x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.42, yb, y + 1], layer, 0.6); }
         } else {                                                                          // hanging from the ceiling: two crossed pictures
-          const cx = x + 0.5 + ((CM.hashSeed(`${fl.number}:overx:${x},${y}`) % 40) - 20) / 100, cz = y + 0.5 + ((CM.hashSeed(`${fl.number}:overz:${x},${y}`) % 40) - 20) / 100, r = O.w / 2, top = 1, bot = 1 - O.h;
+          const cx = x + 0.5 + ((CM.hashSeed(`${fl.number}:overx:${x},${y}`) % 40) - 20) / 100, cz = y + 0.5 + ((CM.hashSeed(`${fl.number}:overz:${x},${y}`) % 40) - 20) / 100, r = O.w / 2, top = CM.ceilAt ? CM.ceilAt(fl, x, y) : 1, bot = 1 - O.h;
           quad([cx - r, bot, cz], [cx + r, bot, cz], [cx + r, top, cz], [cx - r, top, cz], layer, 0.8);
           quad([cx, bot, cz - r], [cx, bot, cz + r], [cx, top, cz + r], [cx, top, cz - r], layer, 0.8);
         }
@@ -6463,7 +6463,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     if (layer === undefined) continue;
     const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
     if (p.how === "corner") {                                                       // across an upper corner, from one wall to the other, under the ceiling
-      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = 1 - 0.01, bottom = top - p.h * 0.6;
+      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = (!sky && CM.ceilAt ? CM.ceilAt(fl, p.x, p.y) : 1) - 0.01, bottom = top - p.h * 0.6;
       const A = [kx - sx * p.w, kz], B = [kx, kz - sz * p.w];
       quadUV([A[0], bottom, A[1]], [B[0], bottom, B[1]], [B[0], top, B[1]], [A[0], top, A[1]], layer, 0.85, r);
       props++; continue;
@@ -29833,8 +29833,9 @@ Object.assign(CM.Game.prototype, {
 // base, the eye: 76zzzzzzzzk-levels.js).
 //   floor.levels = { "x,y": [floor, ceiling] } for the squares not at [0, 1]; CM.levelOf, CM.floorAt, CM.ceilAt
 //   (v47.1) floor.raised = the raised room on about half the floors, its corridors climbing to it a step a square
+//   (v47.2) the rooms of twenty squares or more tall (1.6); on about a floor in three, floor.crawl - a low run of corridor (0.8)
 { if (!CM.FLOOR_FIXED.includes("levels")) CM.FLOOR_FIXED.push("levels");
-  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2 };
+  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2, hall: 1.6, hallArea: 20, crawl: 0.8, crawlEvery: 3, crawlLength: 5 };
   CM.levelOf = (fl, x, y) => (fl && fl.levels && fl.levels[`${x},${y}`]) || null;
   CM.floorAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[0] : 0; };
   CM.ceilAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[1] : 1; };
@@ -29853,6 +29854,15 @@ Object.assign(CM.Game.prototype, {
         const dist = new Map(), q = []; for (let y = R.y0; y <= R.y1; y++) for (let x = R.x0; x <= R.x1; x++) if (fl.grid[y][x] === 0) { dist.set(`${x},${y}`, 0); q.push([x, y]); }
         while (q.length) { const [x, y] = q.shift(), d0 = dist.get(`${x},${y}`); if (H - S * (d0 + 1) <= 0) continue; for (const [dx, dy] of CM.DIRS) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (dist.has(k) || !fl.grid[ny] || fl.grid[ny][nx] !== 0 || inRoom.has(k)) continue; dist.set(k, d0 + 1); set(nx, ny, H - S * (d0 + 1)); q.push([nx, ny]); } }
         fl.raised = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 }; } }
+    // (v47.2) the great rooms tall - twenty squares or more, under a ceiling half as high again - and now and then a crawlway
+    const inRoom = new Set(); for (const r of fl.rooms) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
+    for (const r of fl.rooms) { if (r.name || r.template || (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) < CM.LEVELS.hallArea || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue;
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) { fl.levels = fl.levels || {}; const L = fl.levels[`${x},${y}`] || [0, 1]; fl.levels[`${x},${y}`] = [L[0], Math.max(L[1], L[0] + CM.LEVELS.hall)]; } }
+    const rnd = new CM.Random(CM.hashSeed(`crawl:${fl.number}`));
+    if (rnd.next() < 1 / CM.LEVELS.crawlEvery) { const N = fl.grid.length, cand = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] !== 0 || inRoom.has(k) || (fl.levels && fl.levels[k])) continue; const ns = fl.grid[y - 1][x] === 0 && fl.grid[y + 1][x] === 0 && fl.grid[y][x - 1] !== 0 && fl.grid[y][x + 1] !== 0; if (ns) cand.push([x, y]); }
+      if (cand.length) { const [sx, sy] = cand[Math.floor(rnd.next() * cand.length)]; let y = sy; while (fl.grid[y - 1][sx] === 0 && !inRoom.has(`${sx},${y - 1}`) && !(fl.levels && fl.levels[`${sx},${y - 1}`]) && sy - y < CM.LEVELS.crawlLength) y--;
+        const crawl = []; for (let yy = y; yy < y + CM.LEVELS.crawlLength && fl.grid[yy][sx] === 0 && !inRoom.has(`${sx},${yy}`) && !(fl.levels && fl.levels[`${sx},${yy}`]); yy++) crawl.push(`${sx},${yy}`);
+        if (crawl.length >= 3) { fl.levels = fl.levels || {}; for (const k of crawl) fl.levels[k] = [0, CM.LEVELS.crawl]; fl.crawl = crawl; } } }
     return fl; };
   const mf0 = CM.makeFloor; CM.makeFloor = function (number, seed, gen) { const fl = mf0.call(this, number, seed, gen); if (fl && fl.number === number) CM.makeLevels(fl); return fl; };
 }
@@ -42551,7 +42561,7 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   const day = (game) => !(CM.isNight && CM.isNight(game));
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !fl.rooms || !(fl.number >= 1) || fl.number % 1 !== 0 || fl.special === "vault" || !CM.renderer || CM.renderer.index["ce:beam"] === undefined) return out;
       const c = get(fl), t = now / 1000, still = CM.reducedMotion, near = (x, y) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 9;
-      for (const s of c.out) if (near(s.x, s.y)) { const o = Object.assign({}, s); if (s.chain) { o.lift = 1 - s.h; if (!still) o.dx += Math.sin(t * 0.8 + s.x * 3 + s.y) * 0.015; } out.push(o); }
+      for (const s of c.out) if (near(s.x, s.y)) { const o = Object.assign({}, s), hi = CM.ceilAt ? CM.ceilAt(fl, s.x, s.y) - CM.floorAt(fl, s.x, s.y) - 1 : 0; o.lift = (o.lift || 0) + hi; if (s.chain) { o.lift = 1 - s.h + hi; if (!still) o.dx += Math.sin(t * 0.8 + s.x * 3 + s.y) * 0.015; } out.push(o); }
       if (day(game)) for (const [x, y] of c.shafts) if (near(x, y)) { out.push({ x, y, layer: "ce:shaft", w: 0.55, h: 1.0, glow: 2, alpha: 0.16 }); out.push({ x, y, layer: "ce:patch", flat: true, w: 0.8, glow: 1.6, alpha: 0.32 });
         if (!still) for (let i = 0; i < 4; i++) { const ph = (t * 0.08 + i / 4) % 1; out.push({ x, y, layer: "ce:patch", w: 0.015, h: 0.015, dx: Math.sin(t * 0.5 + i * 2) * 0.15, dz: Math.cos(t * 0.4 + i) * 0.15, lift: 0.95 - ph * 0.9, glow: 2, alpha: 0.8 }); } }
       return out; }; }

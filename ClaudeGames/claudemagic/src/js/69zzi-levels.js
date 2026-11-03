@@ -7,8 +7,9 @@
 // base, the eye: 76zzzzzzzzk-levels.js).
 //   floor.levels = { "x,y": [floor, ceiling] } for the squares not at [0, 1]; CM.levelOf, CM.floorAt, CM.ceilAt
 //   (v47.1) floor.raised = the raised room on about half the floors, its corridors climbing to it a step a square
+//   (v47.2) the rooms of twenty squares or more tall (1.6); on about a floor in three, floor.crawl - a low run of corridor (0.8)
 { if (!CM.FLOOR_FIXED.includes("levels")) CM.FLOOR_FIXED.push("levels");
-  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2 };
+  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2, hall: 1.6, hallArea: 20, crawl: 0.8, crawlEvery: 3, crawlLength: 5 };
   CM.levelOf = (fl, x, y) => (fl && fl.levels && fl.levels[`${x},${y}`]) || null;
   CM.floorAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[0] : 0; };
   CM.ceilAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[1] : 1; };
@@ -27,6 +28,15 @@
         const dist = new Map(), q = []; for (let y = R.y0; y <= R.y1; y++) for (let x = R.x0; x <= R.x1; x++) if (fl.grid[y][x] === 0) { dist.set(`${x},${y}`, 0); q.push([x, y]); }
         while (q.length) { const [x, y] = q.shift(), d0 = dist.get(`${x},${y}`); if (H - S * (d0 + 1) <= 0) continue; for (const [dx, dy] of CM.DIRS) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (dist.has(k) || !fl.grid[ny] || fl.grid[ny][nx] !== 0 || inRoom.has(k)) continue; dist.set(k, d0 + 1); set(nx, ny, H - S * (d0 + 1)); q.push([nx, ny]); } }
         fl.raised = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 }; } }
+    // (v47.2) the great rooms tall - twenty squares or more, under a ceiling half as high again - and now and then a crawlway
+    const inRoom = new Set(); for (const r of fl.rooms) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
+    for (const r of fl.rooms) { if (r.name || r.template || (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) < CM.LEVELS.hallArea || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue;
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) { fl.levels = fl.levels || {}; const L = fl.levels[`${x},${y}`] || [0, 1]; fl.levels[`${x},${y}`] = [L[0], Math.max(L[1], L[0] + CM.LEVELS.hall)]; } }
+    const rnd = new CM.Random(CM.hashSeed(`crawl:${fl.number}`));
+    if (rnd.next() < 1 / CM.LEVELS.crawlEvery) { const N = fl.grid.length, cand = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] !== 0 || inRoom.has(k) || (fl.levels && fl.levels[k])) continue; const ns = fl.grid[y - 1][x] === 0 && fl.grid[y + 1][x] === 0 && fl.grid[y][x - 1] !== 0 && fl.grid[y][x + 1] !== 0; if (ns) cand.push([x, y]); }
+      if (cand.length) { const [sx, sy] = cand[Math.floor(rnd.next() * cand.length)]; let y = sy; while (fl.grid[y - 1][sx] === 0 && !inRoom.has(`${sx},${y - 1}`) && !(fl.levels && fl.levels[`${sx},${y - 1}`]) && sy - y < CM.LEVELS.crawlLength) y--;
+        const crawl = []; for (let yy = y; yy < y + CM.LEVELS.crawlLength && fl.grid[yy][sx] === 0 && !inRoom.has(`${sx},${yy}`) && !(fl.levels && fl.levels[`${sx},${yy}`]); yy++) crawl.push(`${sx},${yy}`);
+        if (crawl.length >= 3) { fl.levels = fl.levels || {}; for (const k of crawl) fl.levels[k] = [0, CM.LEVELS.crawl]; fl.crawl = crawl; } } }
     return fl; };
   const mf0 = CM.makeFloor; CM.makeFloor = function (number, seed, gen) { const fl = mf0.call(this, number, seed, gen); if (fl && fl.number === number) CM.makeLevels(fl); return fl; };
 }

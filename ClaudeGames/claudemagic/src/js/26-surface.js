@@ -396,7 +396,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           if (t) { quad([x, yb, y + 0.42], [x + 1, yb, y + 0.42], [x + 1, yt, y + 0.42], [x, yt, y + 0.42], layer, 0.8); quad([x + 1, yb, y + 0.58], [x, yb, y + 0.58], [x, yt, y + 0.58], [x + 1, yt, y + 0.58], layer, 0.8); quad([x, yb, y + 0.58], [x + 1, yb, y + 0.58], [x + 1, yb, y + 0.42], [x, yb, y + 0.42], layer, 0.6); }
           else { quad([x + 0.42, yb, y + 1], [x + 0.42, yb, y], [x + 0.42, yt, y], [x + 0.42, yt, y + 1], layer, 0.8); quad([x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.58, yt, y + 1], [x + 0.58, yt, y], layer, 0.8); quad([x + 0.42, yb, y], [x + 0.58, yb, y], [x + 0.58, yb, y + 1], [x + 0.42, yb, y + 1], layer, 0.6); }
         } else {                                                                          // hanging from the ceiling: two crossed pictures
-          const cx = x + 0.5 + ((CM.hashSeed(`${fl.number}:overx:${x},${y}`) % 40) - 20) / 100, cz = y + 0.5 + ((CM.hashSeed(`${fl.number}:overz:${x},${y}`) % 40) - 20) / 100, r = O.w / 2, top = 1, bot = 1 - O.h;
+          const cx = x + 0.5 + ((CM.hashSeed(`${fl.number}:overx:${x},${y}`) % 40) - 20) / 100, cz = y + 0.5 + ((CM.hashSeed(`${fl.number}:overz:${x},${y}`) % 40) - 20) / 100, r = O.w / 2, top = CM.ceilAt ? CM.ceilAt(fl, x, y) : 1, bot = 1 - O.h;
           quad([cx - r, bot, cz], [cx + r, bot, cz], [cx + r, top, cz], [cx - r, top, cz], layer, 0.8);
           quad([cx, bot, cz - r], [cx, bot, cz + r], [cx, top, cz + r], [cx, top, cz - r], layer, 0.8);
         }
@@ -414,7 +414,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     if (layer === undefined) continue;
     const cx = p.x + 0.5 + p.dx, cz = p.y + 0.5 + p.dz, c = Math.cos(p.turn), sn = Math.sin(p.turn), hw = p.w / 2, shade = sky && canopy.has(`${p.x},${p.y}`) ? 0.55 : 0.9;
     if (p.how === "corner") {                                                       // across an upper corner, from one wall to the other, under the ceiling
-      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = 1 - 0.01, bottom = top - p.h * 0.6;
+      const [sx, sz] = p.corner, kx = p.x + 0.5 + sx * 0.5, kz = p.y + 0.5 + sz * 0.5, top = (!sky && CM.ceilAt ? CM.ceilAt(fl, p.x, p.y) : 1) - 0.01, bottom = top - p.h * 0.6;
       const A = [kx - sx * p.w, kz], B = [kx, kz - sz * p.w];
       quadUV([A[0], bottom, A[1]], [B[0], bottom, B[1]], [B[0], top, B[1]], [A[0], top, A[1]], layer, 0.85, r);
       props++; continue;
