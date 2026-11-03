@@ -192,19 +192,23 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       continue;
     }
     covered.add(`${x},${y}`);
+    const LV = !sky && fl.levels ? fl.levels[`${x},${y}`] : null, F0 = LV ? LV[0] : 0, C0 = LV ? LV[1] : 1;   // (v47.0: the square's floor and ceiling - 69zzi-levels.js)
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
     const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
     if (sky) {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
       if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
     } else {
-      quadVaried([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");
-      quadVaried([x, 1, y], [x + 1, 1, y], [x + 1, 1, y + 1], [x, 1, y + 1], index.ceiling, [corner(x, y, 0.75), corner(x + 1, y, 0.75), corner(x + 1, y + 1, 0.75), corner(x, y + 1, 0.75)], x, y, "c");
+      quadVaried([x, F0, y + 1], [x + 1, F0, y + 1], [x + 1, F0, y], [x, F0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");
+      quadVaried([x, C0, y], [x + 1, C0, y], [x + 1, C0, y + 1], [x, C0, y + 1], index.ceiling, [corner(x, y, 0.75), corner(x + 1, y, 0.75), corner(x + 1, y + 1, 0.75), corner(x, y + 1, 0.75)], x, y, "c");
       ceilings++;
     }
     SIDES.forEach(([dx, dy, shade], d) => {
       const nx = x + dx, ny = y + dy;
-      if (!solid(nx, ny)) return;
+      if (!solid(nx, ny)) { if (!sky && fl.levels) { const NL = fl.levels[`${nx},${ny}`], nf = NL ? NL[0] : 0, nc = NL ? NL[1] : 1;   // (v47.0: a step up to the next square, or its lower ceiling, faced from this one)
+          const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
+          if (nf > F0 + 1e-6) quad([a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], nf, b[1]], [a[0], nf, a[1]], pickWall(x, y, d, nx, ny), shade * 0.95);
+          if (nc < C0 - 1e-6) quad([a[0], nc, a[1]], [b[0], nc, b[1]], [b[0], C0, b[1]], [a[0], C0, a[1]], pickWall(x, y, d, nx, ny), shade * 0.7); } return; }
       const K = kindOf(nx, ny), key = `${nx},${ny}`;
       if (K.roof || K.tower) return;                                                  // (a building or a tower: walled and roofed below, every face)
       if (K.tree) {                                                                   // the trees: this one, and the rank behind it
@@ -219,7 +223,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       else {                                                                          // below: the wall's foot in shadow, and darker where it meets a side wall
         const sideA = !openAt(x + (d === 0 ? -1 : d === 1 ? 1 : 0), y + (d === 2 ? -1 : d === 3 ? 1 : 0)), sideB = !openAt(x + (d === 0 ? 1 : d === 1 ? -1 : 0), y + (d === 2 ? 1 : d === 3 ? -1 : 0));
         const fa = shade * (sideA ? 0.62 : 0.78), fb = shade * (sideB ? 0.62 : 0.78), ta = shade * (sideA ? 0.85 : 0.97), tb = shade * (sideB ? 0.85 : 0.97);
-        const uv = [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], sh = [fa, fb, tb, ta];
+        const uv = [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], F0 + h * (C0 - F0), b[1]], [a[0], F0 + h * (C0 - F0), a[1]]], sh = [fa, fb, tb, ta];
         for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], layer, sh[i], 0, 1, 0);
       }
       walls++;
@@ -380,7 +384,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         for (const [id, per] of D) {
           if ((h % 1000) / 1000 >= per) continue;
           const layer = index[`decal:${id}`]; if (layer === undefined) break;
-          const inset = 0.006, px = x + 0.5 + dx * (0.5 - inset), pz = y + 0.5 + dy * (0.5 - inset), ax = -dy, az = dx, w = 0.9, y0 = 0.02, y1 = 0.98;
+          const lvF = CM.floorAt ? CM.floorAt(fl, x, y) : 0, lvC = CM.ceilAt ? CM.ceilAt(fl, x, y) : 1, inset = 0.006, px = x + 0.5 + dx * (0.5 - inset), pz = y + 0.5 + dy * (0.5 - inset), ax = -dy, az = dx, w = 0.9, y0 = lvF + 0.02, y1 = lvF + 0.98 * (lvC - lvF);
           quad([px - ax * w / 2, y0, pz - az * w / 2], [px + ax * w / 2, y0, pz + az * w / 2], [px + ax * w / 2, y1, pz + az * w / 2], [px - ax * w / 2, y1, pz - az * w / 2], layer, d < 2 ? 1 : 0.84);
           decals++; break;
         }
@@ -416,11 +420,11 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       props++; continue;
     }
     if (p.how === "flat") {
-      const at = (u, v) => [cx + u * c - v * sn, 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
+      const pf = !sky && CM.floorAt ? CM.floorAt(fl, p.x, p.y) : 0, at = (u, v) => [cx + u * c - v * sn, pf + 0.006 + (props % 7) * 0.0006, cz + u * sn + v * c];
       quadUV(at(-hw, hw), at(hw, hw), at(hw, -hw), at(-hw, -hw), layer, shade, r);
     } else for (const t of [p.turn, p.turn + Math.PI / 2]) {
       const ux = Math.cos(t) * hw, uz = Math.sin(t) * hw;
-      quadUV([cx - ux, 0, cz - uz], [cx + ux, 0, cz + uz], [cx + ux, p.h, cz + uz], [cx - ux, p.h, cz - uz], layer, shade, r, sky ? CM.SWAY[p.id] || CM.SWAY.plant : 0);
+      const pf = !sky && CM.floorAt ? CM.floorAt(fl, p.x, p.y) : 0; quadUV([cx - ux, pf, cz - uz], [cx + ux, pf, cz + uz], [cx + ux, pf + p.h, cz + uz], [cx - ux, pf + p.h, cz - uz], layer, shade, r, sky ? CM.SWAY[p.id] || CM.SWAY.plant : 0);
     }
     props++;
   }
