@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Shutters (v53.2, UPGRADE_PLAN_48.md phase 1)
+  (src/js/26b-buildings.js, src/js/76zzzzzzzzzz-buildings.js)
+  - The town's windows have shutters: a pair of boarded shutters with a Z brace, folded back against the wall
+    beside each window, in the house's own colour - green, blue or red - and on about one window in six, closed.
+
 Claudecraft's controls (v53.1, fix (asked 2026-11-03))
   (__init__.py, src/js/80-main.js, src/js/64n-claudecraft.js)
   - Fixed: in the desktop window blocks could not be broken and the mouse would not look about - the window refused
