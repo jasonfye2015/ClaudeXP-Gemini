@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Wear (v50.2, UPGRADE_PLAN_45.md phase 2)
+  (src/js/76zzzzzzzzx-wear.js)
+  - A monster shows what the fight has done to it: below two-thirds of its life it is marked - cracks across plate,
+    shell and bone, rents in hide, cuts in flesh, by what it is made of - and below a third badly so, more of them
+    and deeper, darkened as with blood or soot.
+
 Feet on the stone (v50.1, UPGRADE_PLAN_45.md phase 1)
   (src/js/76zzzzzzzzw-feet.js)
   - A monster stands on the floor rather than floating over it: a small, dark contact shadow right under its feet,
