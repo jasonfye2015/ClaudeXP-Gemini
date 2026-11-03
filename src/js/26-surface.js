@@ -243,9 +243,10 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
     const FACES = [[0, -1, 1.0], [0, 1, 0.96], [1, 0, 0.84], [-1, 0, 0.8]];        // a cell's north, south, east and west faces
+    const tone = new Map(); for (const B of CM.buildingsOf(fl)) { const k = 0.76 + ((CM.hashSeed(`${fl.number}:tone:${B.x0},${B.y0}`) >>> 0) % 31) / 100; for (let by = B.y0; by <= B.y1; by++) for (let bx = B.x0; bx <= B.x1; bx++) tone.set(`${bx},${by}`, k); }   // (v51.0: each house its own wash, lighter or darker)
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       if (!CM.isBuilding(fl, x, y)) continue;
-      const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind];
+      const kind = CM.solidAt(fl, x, y), K = CM.SOLID[kind], wash = tone.get(`${x},${y}`) || 1;
       // a door or a shop shows its face once, toward the open square that has the building behind it
       let front = -1;
       const doorish = ["door", "shop", "cabindoor", "casinodoor"].includes(kind);
@@ -256,7 +257,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const a = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
-        poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade);
+        poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade * wash);
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 100 < (opts.night === true ? 0.7 : opts.night) * 100) {   // a window lit for the night (v24.3: opts.night the share lit - fewer as the town goes to bed)
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;

@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Building variety (v51.0, UPGRADE_PLAN_46.md phase 0)
+  (src/js/26-surface.js)
+  - Caer Duin's houses are no longer all one wash: each building has its own, a little lighter or darker than its
+    neighbours, so a street reads as houses and not one long wall. (The trades already hang their signs at their
+    doors.)
+
 Idle life (v50.4, UPGRADE_PLAN_45.md phase 4)
   (src/js/76zzzzzzzzz-idlelife.js)
   - A monster at rest is never quite still: it breathes, a slow rise and settle; shifts its weight from one foot to
