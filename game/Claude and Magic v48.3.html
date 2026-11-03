@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v48.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v48.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "48.2", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "48.3", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6275,11 +6275,18 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const wv = CM.hashSeed(`${fl.number}:wv:${x},${y},${d}`) >>> 0, flip = (wv >>> 3) & 1, kk = 0.92 + ((wv >>> 5) % 17) / 100;   // (v48.2: no two wall squares quite alike - mirrored by hash, a little lighter or darker)
         const uv = flip ? [[1, 1], [0, 1], [0, 0], [1, 0]] : [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], F0 + h * (C0 - F0), b[1]], [a[0], F0 + h * (C0 - F0), a[1]]], sh = [fa * kk, fb * kk, tb * kk, ta * kk];
         for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], layer, sh[i], 0, 1, 0);
+        if (index["trim:stone"] !== undefined) { const ins = 0.035, sk = 0.09, A2 = [a[0] - dx * ins, a[1] - dy * ins], B2 = [b[0] - dx * ins, b[1] - dy * ins], T = index["trim:stone"];   // (v48.3) a course of skirting stones at the wall's foot, standing proud
+          quad([A2[0], F0, A2[1]], [B2[0], F0, B2[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 0.9); quad([a[0], F0 + sk, a[1]], [b[0], F0 + sk, b[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 1.05); }
       }
       walls++;
       if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
+  if (!sky && !only && index["trim:stone"] !== undefined) for (const [k, f] of Object.entries(features)) {   // (v48.3) a stone lintel over every doorway and gate
+    if (f.type !== "door" && f.type !== "gate") continue; const [x, y] = k.split(",").map(Number); if (!openAt(x, y)) continue;
+    const ns = openAt(x, y - 1) && openAt(x, y + 1), C = CM.ceilAt ? CM.ceilAt(fl, x, y) : 1, lo = C - 0.13, T = index["trim:stone"], dd = 0.07, cx = x + 0.5, cz = y + 0.5;
+    if (ns) { for (const z of [cz - dd, cz + dd]) quad([x, lo, z], [x + 1, lo, z], [x + 1, C, z], [x, C, z], T, 0.9); quad([x, lo, cz - dd], [x + 1, lo, cz - dd], [x + 1, lo, cz + dd], [x, lo, cz + dd], T, 0.7); }
+    else { for (const X of [cx - dd, cx + dd]) quad([X, lo, y], [X, lo, y + 1], [X, C, y + 1], [X, C, y], T, 0.84); quad([cx - dd, lo, y], [cx - dd, lo, y + 1], [cx + dd, lo, y + 1], [cx + dd, lo, y], T, 0.7); } }
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky && only !== "props") {                                                        // the buildings: walled all round, and roofed
     const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
@@ -43643,6 +43650,16 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   // laid after each band's own (their thresholds run on: a band's marks first, these in the next tenth)
   for (const [band, list] of Object.entries(CM.WALL_DECALS || {})) { const top = list.length ? list[list.length - 1][1] : 0; if (!list.some(([id]) => id === "patch")) list.push(["patch", top + 0.05], ["stain", top + 0.1]); void band; }
 }
+
+// ---- 76zzzzzzzzo-trim.js ----
+"use strict";
+// Trim (v48.3, UPGRADE_PLAN_43.md): the dungeon's walls stand on a course of dressed skirting stones, a hand's height,
+// set a little proud of the wall so the torch catches their top; and every doorway and gate has a stone lintel across
+// its head under the ceiling (26-surface.js lays them; this paints their stone).
+{ const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["trim:stone"] !== undefined) return set; const c = document.createElement("canvas"); c.width = c.height = 128; const p = c.getContext("2d");
+    p.fillStyle = "#7A6E5E"; p.fillRect(0, 0, 128, 128); p.fillStyle = "#8C806E"; for (let y = 0; y < 128; y += 32) for (let x = (y / 32) % 2 ? -24 : 0; x < 128; x += 48) p.fillRect(x + 2, y + 2, 44, 28);
+    p.fillStyle = "rgba(0,0,0,0.18)"; for (let y = 0; y < 128; y += 32) p.fillRect(0, y + 26, 128, 6); p.fillStyle = "rgba(255,255,255,0.08)"; for (let y = 0; y < 128; y += 32) p.fillRect(0, y + 2, 128, 4);
+    set.index["trim:stone"] = set.layers.length; set.layers.push(c); return set; }; }
 
 // ---- 77-splash.js ----
 "use strict";

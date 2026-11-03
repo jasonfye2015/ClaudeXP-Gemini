@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Trim (v48.3, UPGRADE_PLAN_43.md phase 3)
+  (src/js/26-surface.js, src/js/76zzzzzzzzo-trim.js)
+  - The dungeon's walls stand on a course of dressed skirting stones, a hand's height, set a little proud of the wall
+    so the torch catches their top.
+  - Every doorway and gate has a stone lintel across its head under the ceiling.
+
 Wall variety (v48.2, UPGRADE_PLAN_43.md phase 2)
   (src/js/26-surface.js, src/js/76zzzzzzzzn-wallvariety.js)
   - The photographed walls no longer repeat square after square: each wall square is mirrored or not, and a little
