@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Town music by the hour (v44.2, UPGRADE_PLAN_39.md phase 2)
+  (src/js/76zzzzzzzx-townmusic.js)
+  - Caer Duin has tunes of its own now, by the clock: a flute over the rooftops in the morning, a busy lute and a
+    tambourine through the middle of the day, the tavern's fiddle over a drone from dusk to late, and in the small
+    hours only a few soft notes, far apart. Inside the Hanged Lantern it is always the fiddle.
+  - The tune changes as the hour turns, the old fading under the new. (The town had been playing the Catacombs' tune.)
+
 Boss themes (v44.1, UPGRADE_PLAN_39.md phase 1)
   (src/js/76zzzzzzzw-bossmusic.js)
   - Each guardian and the Lich King has a battle theme of its own in place of the one shared boss tune: the Rat King's
