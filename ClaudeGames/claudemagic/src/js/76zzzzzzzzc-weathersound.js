@@ -8,9 +8,9 @@
   let noise = null; const N = (c) => { if (!noise) { const n = c.sampleRate * 2, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); let p = 0; for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; p = 0.97 * p + 0.03 * w; d[i] = w * 0.6 + p * 2; } noise = b; } return noise; };
   // a bed: looping noise through a filter, its level eased toward a want
   const beds = {}; const bed = (id, type, hz, q) => { const A = CM.audio, c = A.ctx; let B = beds[id]; if (B && B.ctx === c) return B; const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = type; f.frequency.value = hz; f.Q.value = q || 0.7; g.gain.value = 0;
-    s.connect(f); f.connect(g); g.connect(A.master); s.start(); B = beds[id] = { ctx: c, s, f, g, level: 0 }; return B; };
+    s.connect(f); f.connect(g); g.connect(CM.ambienceOut ? CM.ambienceOut() : A.master); s.start(); B = beds[id] = { ctx: c, s, f, g, level: 0 }; return B; };
   const ease = (B, want, t = 0.8) => { const c = CM.audio.ctx; if (Math.abs(B.level - want) < 0.002) return; B.level = want; B.g.gain.setTargetAtTime(want, c.currentTime, t); };
-  const drop = (c, at, hz, vol, len = 0.04) => { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 0.55, at + len); g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + len); o.connect(g); g.connect(CM.audio.master); o.start(at); o.stop(at + len + 0.02); };
+  const drop = (c, at, hz, vol, len = 0.04) => { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 0.55, at + len); g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + len); o.connect(g); g.connect(CM.ambienceOut ? CM.ambienceOut() : CM.audio.master); o.start(at); o.stop(at + len + 0.02); };
   const near = (fl, x, y, test, r = 2) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (test(x + dx, y + dy)) return true; return false; };
   let tick = 0, gust = 0, ambientWas = null;
   const step = () => { if (!live()) return; const g = CM.game, fl = g && g.floor, c = CM.audio.ctx; if (!fl || g.mode === "title") { for (const B of Object.values(beds)) ease(B, 0); return; }
@@ -22,7 +22,7 @@
     const wind = top ? (CM.windOf ? CM.windOf(w)[0] : 0.15) : 0; gust += (Math.random() - 0.5) * 0.3; gust = Math.max(-1, Math.min(1, gust * 0.97)); const W = bed("wind", "bandpass", 420, 1.2);
     W.f.frequency.setTargetAtTime(320 + wind * 260 + gust * 120, c.currentTime, 0.6); ease(W, top ? Math.max(0, wind * 0.06 * (1 + gust * 0.6)) : 0, 1.2);
     // the snow's hush: the ambience let down while it falls
-    if (A.ambientGain) { const want = top && w === "snow" ? 0.18 : 0.5; if (ambientWas !== want) { A.ambientGain.gain.setTargetAtTime(want, c.currentTime, 2); ambientWas = want; } }
+    if (A.ambientGain) { const want = top && w === "snow" ? 0.18 : 0.5; if (ambientWas !== want) { A.ambientBase = want; A.ambientGain.gain.setTargetAtTime(want * (A.ambientScale === undefined ? 1 : A.ambientScale), c.currentTime, 2); ambientWas = want; } }
     // standing in water: it laps
     const wet = fl.special === "wading" || fl.tide || (fl.decor || []).some((d) => d.kind === "water" && d.x === px && d.y === py) || (CM.waterHere && CM.waterHere(px, py));
     const L = bed("lap", "bandpass", 600, 2); L.f.frequency.setTargetAtTime(450 + Math.sin(tick * 0.7) * 150, c.currentTime, 0.4); ease(L, wet && g.mode === "explore" ? 0.03 + 0.02 * Math.max(0, Math.sin(tick * 0.9)) : 0, 0.5); tick++; };

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v45.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v46.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "45.4", built: "2026-11-02", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "46.0", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -43283,9 +43283,9 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   let noise = null; const N = (c) => { if (!noise) { const n = c.sampleRate * 2, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); let p = 0; for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1; p = 0.97 * p + 0.03 * w; d[i] = w * 0.6 + p * 2; } noise = b; } return noise; };
   // a bed: looping noise through a filter, its level eased toward a want
   const beds = {}; const bed = (id, type, hz, q) => { const A = CM.audio, c = A.ctx; let B = beds[id]; if (B && B.ctx === c) return B; const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = type; f.frequency.value = hz; f.Q.value = q || 0.7; g.gain.value = 0;
-    s.connect(f); f.connect(g); g.connect(A.master); s.start(); B = beds[id] = { ctx: c, s, f, g, level: 0 }; return B; };
+    s.connect(f); f.connect(g); g.connect(CM.ambienceOut ? CM.ambienceOut() : A.master); s.start(); B = beds[id] = { ctx: c, s, f, g, level: 0 }; return B; };
   const ease = (B, want, t = 0.8) => { const c = CM.audio.ctx; if (Math.abs(B.level - want) < 0.002) return; B.level = want; B.g.gain.setTargetAtTime(want, c.currentTime, t); };
-  const drop = (c, at, hz, vol, len = 0.04) => { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 0.55, at + len); g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + len); o.connect(g); g.connect(CM.audio.master); o.start(at); o.stop(at + len + 0.02); };
+  const drop = (c, at, hz, vol, len = 0.04) => { const o = c.createOscillator(), g = c.createGain(); o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 0.55, at + len); g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + len); o.connect(g); g.connect(CM.ambienceOut ? CM.ambienceOut() : CM.audio.master); o.start(at); o.stop(at + len + 0.02); };
   const near = (fl, x, y, test, r = 2) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (test(x + dx, y + dy)) return true; return false; };
   let tick = 0, gust = 0, ambientWas = null;
   const step = () => { if (!live()) return; const g = CM.game, fl = g && g.floor, c = CM.audio.ctx; if (!fl || g.mode === "title") { for (const B of Object.values(beds)) ease(B, 0); return; }
@@ -43297,7 +43297,7 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     const wind = top ? (CM.windOf ? CM.windOf(w)[0] : 0.15) : 0; gust += (Math.random() - 0.5) * 0.3; gust = Math.max(-1, Math.min(1, gust * 0.97)); const W = bed("wind", "bandpass", 420, 1.2);
     W.f.frequency.setTargetAtTime(320 + wind * 260 + gust * 120, c.currentTime, 0.6); ease(W, top ? Math.max(0, wind * 0.06 * (1 + gust * 0.6)) : 0, 1.2);
     // the snow's hush: the ambience let down while it falls
-    if (A.ambientGain) { const want = top && w === "snow" ? 0.18 : 0.5; if (ambientWas !== want) { A.ambientGain.gain.setTargetAtTime(want, c.currentTime, 2); ambientWas = want; } }
+    if (A.ambientGain) { const want = top && w === "snow" ? 0.18 : 0.5; if (ambientWas !== want) { A.ambientBase = want; A.ambientGain.gain.setTargetAtTime(want * (A.ambientScale === undefined ? 1 : A.ambientScale), c.currentTime, 2); ambientWas = want; } }
     // standing in water: it laps
     const wet = fl.special === "wading" || fl.tide || (fl.decor || []).some((d) => d.kind === "water" && d.x === px && d.y === py) || (CM.waterHere && CM.waterHere(px, py));
     const L = bed("lap", "bandpass", 600, 2); L.f.frequency.setTargetAtTime(450 + Math.sin(tick * 0.7) * 150, c.currentTime, 0.4); ease(L, wet && g.mode === "explore" ? 0.03 + 0.02 * Math.max(0, Math.sin(tick * 0.9)) : 0, 0.5); tick++; };
@@ -43321,7 +43321,7 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
 { const live = () => { const A = CM.audio; return A && A.ctx && A.enabled && A.master; };
   let noise = null, bus = null; const N = (c) => { if (!noise) { const n = c.sampleRate, b = c.createBuffer(1, n, n), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; noise = b; } return noise; };
   const far = (c, pan) => { const A = CM.audio; if (!bus || bus.ctx !== c) { const lp = c.createBiquadFilter(), d = c.createDelay(2), fb = c.createGain(), wet = c.createGain(), dry = c.createGain(); lp.type = "lowpass"; lp.frequency.value = 1600; d.delayTime.value = 0.33; fb.gain.value = 0.45; wet.gain.value = 0.6; dry.gain.value = 0.7;
-      lp.connect(dry); dry.connect(A.master); lp.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(A.master); bus = { ctx: c, input: lp }; }
+      const out = CM.ambienceOut ? CM.ambienceOut() : A.master; lp.connect(dry); dry.connect(out); lp.connect(d); d.connect(fb); fb.connect(d); d.connect(wet); wet.connect(out); bus = { ctx: c, input: lp }; }
     const p = c.createStereoPanner ? c.createStereoPanner() : null; if (!p) return bus.input; p.pan.value = pan; p.connect(bus.input); return p; };
   const sine = (c, d, hz, at, dur, vol, type = "sine", to) => { const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(hz, at); if (to) o.frequency.exponentialRampToValueAtTime(to, at + dur); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + Math.min(0.05, dur / 4)); g.gain.exponentialRampToValueAtTime(0.0001, at + dur); o.connect(g); g.connect(d); o.start(at); o.stop(at + dur + 0.05); };
   const hiss = (c, d, at, dur, vol, hz, to, q = 1) => { const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = "bandpass"; f.frequency.setValueAtTime(hz, at); if (to) f.frequency.exponentialRampToValueAtTime(to, at + dur); f.Q.value = q;
@@ -43349,9 +43349,9 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
 // brazier roars as the party comes near it; and the Foundry's vents, and anything burning, bubble and pop like lava.
 { const live = () => { const A = CM.audio; return A && A.ctx && A.enabled && A.master; };
   let noise = null; const N = (c) => { if (!noise) { const n = c.sampleRate * 2, b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; noise = b; } return noise; };
-  const pop = (c, at, vol, hz) => { const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); f.type = "bandpass"; f.frequency.value = hz; f.Q.value = 3; g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.02 + Math.random() * 0.02); s.connect(f); f.connect(g); g.connect(CM.audio.master); s.start(at, Math.random() * 1.5); s.stop(at + 0.06); };
-  const bloop = (c, at, vol) => { const o = c.createOscillator(), g = c.createGain(), hz = 60 + Math.random() * 50; o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 2.6, at + 0.12); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16); o.connect(g); g.connect(CM.audio.master); o.start(at); o.stop(at + 0.2); };
-  let roar = null; const roarBed = (c) => { if (roar && roar.ctx === c) return roar; const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = "lowpass"; f.frequency.value = 380; g.gain.value = 0; s.connect(f); f.connect(g); g.connect(CM.audio.master); s.start(); return (roar = { ctx: c, g, f, level: 0 }); };
+  const pop = (c, at, vol, hz) => { const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); f.type = "bandpass"; f.frequency.value = hz; f.Q.value = 3; g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.02 + Math.random() * 0.02); s.connect(f); f.connect(g); g.connect((CM.ambienceOut ? CM.ambienceOut() : CM.audio.master)); s.start(at, Math.random() * 1.5); s.stop(at + 0.06); };
+  const bloop = (c, at, vol) => { const o = c.createOscillator(), g = c.createGain(), hz = 60 + Math.random() * 50; o.type = "sine"; o.frequency.setValueAtTime(hz, at); o.frequency.exponentialRampToValueAtTime(hz * 2.6, at + 0.12); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16); o.connect(g); g.connect((CM.ambienceOut ? CM.ambienceOut() : CM.audio.master)); o.start(at); o.stop(at + 0.2); };
+  let roar = null; const roarBed = (c) => { if (roar && roar.ctx === c) return roar; const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(); s.buffer = N(c); s.loop = true; f.type = "lowpass"; f.frequency.value = 380; g.gain.value = 0; s.connect(f); f.connect(g); g.connect((CM.ambienceOut ? CM.ambienceOut() : CM.audio.master)); s.start(); return (roar = { ctx: c, g, f, level: 0 }); };
   CM.torchCrackle = (g) => { const L = g.light || {}; if (g.lightOut || L.kind !== "torch") return 0; const left = L.left === undefined ? 400 : L.left; return left > 40 ? 0.35 : 0.35 + (1 - left / 40) * 0.65; };
   setInterval(() => { if (!live()) return; const g = CM.game, fl = g && g.floor, c = CM.audio.ctx; if (!fl || g.mode === "title") { if (roar) { roar.g.gain.setTargetAtTime(0, c.currentTime, 0.4); roar.level = 0; } return; } const at = c.currentTime + 0.02, [px, py] = fl.pos;
     // the torch
@@ -43365,6 +43365,31 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
     let vd = 99; for (const [key, f] of Object.entries(fl.features || {})) { if (f.type !== "vents") continue; const [x, y] = key.split(",").map(Number); vd = Math.min(vd, Math.hypot(x - px, y - py)); }
     if (fl.number >= 1 && CM.themeIndex(fl.number) === 7) vd = Math.min(vd, 4); if (burning) vd = Math.min(vd, 3);
     if (vd < 6 && Math.random() < 0.35 * (1 - vd / 6)) bloop(c, at + Math.random() * 0.2, 0.12 * (1 - vd / 6)); }, 220);
+}
+
+// ---- 76zzzzzzzzf-mixer.js ----
+"use strict";
+// A mixer (v46.0, UPGRADE_PLAN_41.md): Settings has a slider for each kind of sound under the sound's own volume and the
+// music's - Voices (the heroes, the monsters, the town, the ghosts, those who come along: CM.VOICE_LEVELS), Ambience
+// (the dungeon's air, the weather, the distant sounds, the fire: one channel, CM.ambienceOut) and Interface (the
+// windows' own sounds, CM.uiLevel). Kept with the other settings.
+{ CM.MIX_DEFAULTS = { voicesVolume: 1, ambienceVolume: 1, uiVolume: 0.7 };
+  let amb = null;
+  CM.ambienceOut = () => { const A = CM.audio; if (!A || !A.ctx || !A.master) return A && A.master; if (!amb || amb.ctx !== A.ctx) { const g = A.ctx.createGain(); g.connect(A.master); amb = { ctx: A.ctx, g }; CM.applyMix(); } return amb.g; };
+  CM.uiLevel = () => { const s = CM.game && CM.game.settings; return s && s.uiVolume !== undefined ? s.uiVolume : CM.MIX_DEFAULTS.uiVolume; };
+  CM.applyMix = () => { const s = (CM.game && CM.game.settings) || {}, v = s.voicesVolume !== undefined ? s.voicesVolume : 1, a = s.ambienceVolume !== undefined ? s.ambienceVolume : 1;
+    if (CM.VOICE_LEVELS) for (const k of Object.keys(CM.VOICE_LEVELS)) CM.VOICE_LEVELS[k] = v;
+    const A = CM.audio; if (A && A.ctx) { if (amb && amb.ctx === A.ctx) amb.g.gain.setTargetAtTime(a, A.ctx.currentTime, 0.1); if (A.ambientGain) { A.ambientScale = a; A.ambientGain.gain.setTargetAtTime((A.ambientBase === undefined ? 0.5 : A.ambientBase) * a, A.ctx.currentTime, 0.2); } } };
+  // the cave's own air: its level times the ambience's
+  { const A = CM.audio; if (A && A._startAmbient) { const sa0 = A._startAmbient; A._startAmbient = function (...a) { const out = sa0.apply(this, a); if (this.ambientGain) { this.ambientBase = this.ambientGain.gain.value; this.ambientGain.gain.value = this.ambientBase * (this.ambientScale === undefined ? 1 : this.ambientScale); } return out; }; } }
+  const ROWS = [["voicesVolume", "Voices (the heroes, the monsters, the town, the ghosts)"], ["ambienceVolume", "Ambience (the air, the weather, distant sounds, fire)"], ["uiVolume", "Interface (pages, coins, clicks)"]];
+  const wire = () => { const ui = CM.ui, g = CM.game; if (!ui || !g || !ui.$) return false; const anchor = ui.$("#set-music-volume"); if (!anchor) return false; const row0 = anchor.closest(".row"); if (!row0 || ui.$("#set-voicesVolume")) return true;
+    const vl = ui.$('label[for="set-volume"]'); if (vl) vl.textContent = "Sound volume (all but the music)";
+    let after = row0; for (const [key, label] of ROWS) { const r = document.createElement("div"); r.className = "row"; r.innerHTML = `<label for="set-${key}">${label}</label><input type="range" id="set-${key}" min="0" max="100">`; after.insertAdjacentElement("afterend", r); after = r;
+      const inp = r.querySelector("input"); inp.value = Math.round((g.settings[key] !== undefined ? g.settings[key] : CM.MIX_DEFAULTS[key]) * 100);
+      inp.addEventListener("input", () => { g.settings[key] = inp.value / 100; CM.applyMix(); if (g.saveSettings) g.saveSettings(); if (key === "uiVolume" && CM.uiSound) CM.uiSound("tick"); }); }
+    CM.applyMix(); return true; };
+  const t = typeof self !== "undefined" && self.CM_WORKER ? null : setInterval(() => { if (wire()) clearInterval(t); }, 300);
 }
 
 // ---- 77-splash.js ----
