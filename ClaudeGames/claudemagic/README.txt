@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Windows set into the wall (v53.0, UPGRADE_PLAN_48.md phase 0)
+  (src/js/26b-buildings.js, src/js/76zzzzzzzzzz-buildings.js, src/js/26-surface.js)
+  - The town's windows are no longer flat on their walls: each is set in - a stone sill standing proud below it, a
+    timber lintel over it, and the reveals of its frame standing out at each side, catching the light - on every
+    house, door and shop.
+
 Brightness and contrast (v52.4, UPGRADE_PLAN_47.md phase 4)
   (src/js/76zzzzzzzzz9-picture.js)
   - Settings has two sliders for the picture of the world itself: its brightness (60% to 160% - the dark floors
