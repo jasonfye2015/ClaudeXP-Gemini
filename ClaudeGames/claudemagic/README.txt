@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Relief on the walls (v48.0, UPGRADE_PLAN_43.md phase 0)
+  (src/js/40-render.js, src/js/76zzzzzzzzl-relief.js)
+  - The Stone look's photographs take their relief a third more strongly - each stone standing a little further out of
+    the wall for the torch to catch - and their cavities, the mortar between the stones and the pits in them, are
+    shaded from what is round them in the picture itself, so the joints read as sunk and the faces as standing proud.
+
 High ground (v47.4, UPGRADE_PLAN_42.md phase 4)
   (src/js/69zzj-highground.js)
   - In a fight where the party stands a step or more above its foes - a dais, a gallery, a stair, the raised room -
