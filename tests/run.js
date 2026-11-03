@@ -5882,6 +5882,13 @@ test("high ground: a step or more above the foes, the party hits more often and 
   assert.ok(said.some((t) => /high ground/.test(t)), "said");
 });
 
+test("buildings with depth: every window on a house, a door or a shop's wall gets a sill, a lintel and its reveals in the town's mesh; a shop's front, which has none, gets none", () => {
+  const CM = load(), fl = CM.makeTown("bd-1"), index = new Proxy({}, { get: () => 0 });
+  let calls = 0, made = 0; const b0 = CM.buildingDetail; CM.buildingDetail = (o) => { calls++; const r = b0(o); made += r; if (o.kind === "shop" && o.front) assert.strictEqual(r, 0, "a shop's front has no window"); return r; };
+  const withD = CM.floorMesh(fl, CM.themeFor(0), index).count; CM.buildingDetail = null; const without = CM.floorMesh(fl, CM.themeFor(0), index).count; CM.buildingDetail = b0;
+  assert.ok(calls > 50 && made > 40, `${made} of ${calls} faces`); assert.ok(withD - without >= made * 5 * 6 * 4 - 1, `${withD - without} more vertices`);
+  assert.strictEqual(JSON.stringify(CM.WINDOW_AT("house", false)), "[0.62,0.3,0.84,0.56]"); assert.strictEqual(CM.WINDOW_AT("shop", true), null);
+});
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
