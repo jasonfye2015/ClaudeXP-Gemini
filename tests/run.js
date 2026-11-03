@@ -4204,10 +4204,10 @@ test("Claudecraft (v12.2): every recipe takes its needs and gives what it makes;
   // stations within reach, found in the world
   S.slots.fill(null); S.add(B.WORKBENCH, 1); const [x, y, z] = [Math.floor(w.pos[0]) + 2, Math.floor(w.pos[1]), Math.floor(w.pos[2])];
   assert.ok(!g.craftStations().bench); cr.world.set(x, y, z, B.WORKBENCH); assert.ok(g.craftStations().bench, "a workbench in reach"); cr.target = [[x, y, z], null]; assert.strictEqual(g.craftUse().kind, "bench");
-  // tools by tier; a stone pick takes copper, never silver; an axe quickens wood
+  // tools by tier; a stone pick takes copper and iron (v53.3), never silver; an axe quickens wood
   S.slots.fill(null); const bare = g.craftBreakTime(B.STONE); S.add(121); const stoneT = g.craftBreakTime(B.STONE); S.add(124); const copT = g.craftBreakTime(B.STONE); S.add(127); const ironT = g.craftBreakTime(B.STONE);
   assert.ok(bare > stoneT && stoneT > copT && copT > ironT, "faster by tier");
-  S.slots.fill(null); S.add(121); assert.ok(g.craftBreakTime(B.COPPER_ORE) < Infinity && g.craftBreakTime(B.SILVER_ORE) === Infinity, "a stone pick takes copper, not silver");
+  S.slots.fill(null); S.add(121); assert.ok(g.craftBreakTime(B.COPPER_ORE) < Infinity && g.craftBreakTime(B.SILVER_ORE) === Infinity, "a stone pick takes copper, not silver"); assert.ok(g.craftBreakTime(B.IRON_ORE) < Infinity, "and iron (v53.3)"); assert.ok(/stone pick will not bite it - it wants a copper pick/.test(g.craftOreWhy("silver")), "the pick wanted named");
   const wood = g.craftBreakTime(B.LOG); S.add(122); assert.ok(g.craftBreakTime(B.LOG) < wood, "an axe quickens wood");
   const at = (v) => { cr.world.set(x, y + 3, z, v); cr.target = [[x, y + 3, z], null]; }; const pick = S.slots.findIndex((s2) => s2 && s2.b === 121), uses = S.slots[pick].d;
   at(B.COPPER_ORE); assert.strictEqual(g.craftBreak(), B.COPPER_ORE); assert.strictEqual(S.slots[pick].d, uses - 1, "worn"); assert.strictEqual(S.count(101), 1);

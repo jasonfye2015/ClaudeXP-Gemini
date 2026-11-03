@@ -37,9 +37,9 @@ CC.ITEM_TILE = { 101: "item_copper", 102: "item_iron", 103: "item_silver", 104: 
   111: "bar_copper", 112: "bar_iron", 113: "bar_silver", 114: "bar_gold", 115: "bar_stariron", 141: "item_ruby", 142: "item_sapphire", 143: "item_sunstone", 144: "item_diamond", 150: "item_rune", 121: "pick_stone", 122: "axe_stone", 123: "sword_stone", 124: "pick_copper", 125: "axe_copper", 126: "sword_copper", 127: "pick_iron", 128: "axe_iron", 129: "sword_iron" };
 // (v12.2) the island's own tools, made at a workbench: they stay on the island. A pick quickens stone and mines ore of its
 // grade, an axe quickens wood, a sword adds to the hero's blows there; each has its uses, a block broken (or a blow) one.
-CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper"], uses: 60 }, 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
-  124: { kind: "pick", tier: "copper", factor: 0.45, mines: ["copper", "iron"], uses: 150 }, 125: { kind: "axe", tier: "copper", factor: 0.4, uses: 150 }, 126: { kind: "sword", tier: "copper", power: 4, uses: 150 },
-  127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
+CC.TOOLS = { 121: { kind: "pick", tier: "stone", factor: 0.6, mines: ["copper", "iron"], uses: 60 }, /* (v53.3: picks a tier up each, as in Minecraft - stone takes iron) */ 122: { kind: "axe", tier: "stone", factor: 0.5, uses: 60 }, 123: { kind: "sword", tier: "stone", power: 2, uses: 60 },
+  124: { kind: "pick", tier: "copper", factor: 0.45, mines: ["copper", "iron", "silver"], uses: 150 }, 125: { kind: "axe", tier: "copper", factor: 0.4, uses: 150 }, 126: { kind: "sword", tier: "copper", power: 4, uses: 150 },
+  127: { kind: "pick", tier: "iron", factor: 0.35, mines: ["copper", "iron", "silver", "gold"], uses: 300 }, 128: { kind: "axe", tier: "iron", factor: 0.3, uses: 300 }, 129: { kind: "sword", tier: "iron", power: 6, uses: 300 } };
 CC.isItem = (b) => b > 100;
 CC.itemWeight = (b) => { const I = CC.ITEM[b]; return !I ? 0 : I.ore ? CM.WEIGHTS.ore : I.bar ? CM.WEIGHTS.bar : I.charcoal ? CM.WEIGHTS.charcoal : 0; };
 CC.goesHome = (b) => { const I = CC.ITEM[b]; return !!(I && (I.ore || I.bar || I.charcoal || I.gem || I.rune)); };
