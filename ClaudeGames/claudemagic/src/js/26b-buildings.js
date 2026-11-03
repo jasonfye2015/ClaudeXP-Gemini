@@ -19,5 +19,9 @@
     box(u0 - 0.045, u1 + 0.045, yb - 0.055, yb, 0, 0.085, stone, 1.05);                 // the sill
     box(u0 - 0.03, u1 + 0.03, yt, yt + 0.045, 0, 0.045, wood, 0.9);                       // the lintel
     box(u0 - fu, u0 + 0.004, yb, yt, 0, 0.035, wood, 0.85); box(u1 - 0.004, u1 + fu, yb, yt, 0, 0.035, wood, 0.85);   // the reveals
+    // (v53.1) shutters: a pair beside it, folded back against the wall - in the house's own colour, one of three - or, on about one window in six, closed over it
+    const col = Math.round((o.wash || 1) * 100) % 3, sl = index[`solid:shutter${col}`] !== undefined ? index[`solid:shutter${col}`] : wood, hsh = CM.hashSeed(`shut:${o.fl ? o.fl.number : 0}:${o.x},${o.y},${o.d}`) >>> 0, sw = Math.min(0.11, (u1 - u0) * 0.5);
+    if (hsh % 6 === 0) { box(u0, (u0 + u1) / 2, yb, yt, 0, 0.03, sl, 0.95); box((u0 + u1) / 2, u1, yb, yt, 0, 0.03, sl, 0.95); }
+    else { if (u0 - fu - sw > 0.01) box(u0 - fu - sw, u0 - fu, yb, yt, 0, 0.018, sl, 0.95); if (u1 + fu + sw < 0.99) box(u1 + fu, u1 + fu + sw, yb, yt, 0, 0.018, sl, 0.95); }
     void fy; return 1; };
 }
