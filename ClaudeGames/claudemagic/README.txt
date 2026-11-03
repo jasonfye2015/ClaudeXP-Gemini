@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Seen from three sides (v50.0, UPGRADE_PLAN_45.md phase 0)
+  (src/js/76zzzzzzzzv-threesides.js)
+  - A monster seen from behind is its back now - no face, no eyes, no teeth, the head and shoulders in its own body's
+    colour, turned away - and from the side it is lit along its leading edge and falls into shadow behind, where
+    before the front picture was only darkened.
+
 Day reaching in (v49.4, UPGRADE_PLAN_44.md phase 4)
   (src/js/76zzzzzzzzu-daylight.js, tests/smoke.js)
   - On the first three floors, by day, the town's grates let the day down: an iron grate here and there in a
