@@ -865,8 +865,9 @@ CM.UI = class {
     const detail = this.$("#set-detail"); detail.value = CM.DETAIL[s.detail] !== undefined ? s.detail : "medium"; const glow = this.$("#set-glow"); glow.value = ["soft", "strong", "off"].includes(s.glow) ? s.glow : "soft";
     speed.value = s.speed || "normal"; text.value = s.text || "normal"; motion.checked = Boolean(s.motion); contrast.checked = Boolean(s.contrast); swapab.checked = Boolean(s.swapAB); render.value = s.render || "auto";
     for (const sel of [look, titleLook]) sel.innerHTML = Object.entries(CM.LOOKS).map(([id, l]) => `<option value="${id}">${l.name}</option>`).join("");
+    { const one = Object.keys(CM.LOOKS).length < 2; for (const el of [look.closest(".row"), this.$("#set-look-note"), titleLook, this.$('label[for="look"]')]) if (el) el.style.display = one ? "none" : "";   /* (v44.6: one look, nothing to choose) */ }
     sound.checked = s.sound; vol.value = Math.round(s.volume * 100); music.checked = s.music !== false; mvol.value = Math.round((s.musicVolume === undefined ? 0.5 : s.musicVolume) * 100);
-    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "pixel"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || ""; this.$("#set-autoland").checked = s.autoLand !== false;
+    smooth.checked = s.smooth; fps.checked = s.fps; look.value = titleLook.value = s.look || "stone"; tap.checked = s.tapMove !== false; skipWalk.checked = Boolean(s.skipWalk); this.$("#set-season").value = s.season || ""; this.$("#set-autoland").checked = s.autoLand !== false;
     const note = () => { this.$("#set-look-note").textContent = CM.LOOKS[s.look] ? CM.LOOKS[s.look].what + "." : ""; };
     note();
     const apply = () => {

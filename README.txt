@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Stone, the one look (v44.6, fix (asked 2026-11-02))
+  (src/js/36-looks.js, src/js/60-game.js, src/js/70-ui.js, src/js/80-main.js, src/js/76zzza-walk.js, pack.py, src/js/35-packs.js)
+  - Stone is the only look now, and the default. Pixel built its own set of pictures and kept missing ones added
+    later - the Gilded Joker's tables and counters were not drawn in it at all - so it is gone, and a save that chose
+    Pixel (or the old Drawn) opens in Stone. With one look there is nothing to choose: the Theme pickers on the title
+    and in Settings are put away.
+  - The Pixel tiles are left out of the built file (it is smaller by about 350 KB); they stay in src/art/pixel.
+  - The Joker's tables are added to any set of pictures, whatever builds it.
+
 The Joker's hall, full (v44.5, fix (asked 2026-11-02))
   (src/js/80-main.js, src/js/76zzzzzzzz0-jokerlight.js)
   - Fixed: the Gilded Joker's hall looked nearly empty from its door - things on a floor were drawn only within twelve

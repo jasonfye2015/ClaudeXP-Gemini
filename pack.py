@@ -233,8 +233,7 @@ def build_text():
              "// the Stone theme's textures (ambientCG, CC0), carried inside the one file. CM.packs.load() decodes them; see 30-art.js.",
              "CM.packs = {",
              f"  credits: {json.dumps(CREDITS, ensure_ascii=False)},",
-             f"  pixel: {{ size: {TILE}, columns: {COLUMNS}, index: {json.dumps(index, ensure_ascii=False)},",
-             f'    atlas: "data:image/png;base64,{png}" }},',
+             f"  pixel: {{ size: {TILE}, columns: {COLUMNS}, index: {{}}, atlas: null }},   // (v44.6: the Pixel look is gone - Stone only; its tiles stay in src/art/pixel)",
              f"  stone: {{ size: {STONE_SIZE}, textures: {json.dumps(stone)} }},",
              "};",
              ""]
@@ -248,6 +247,8 @@ def same_pack(have, want):
     from PIL import Image
     pat = r'atlas: "data:image/png;base64,([A-Za-z0-9+/=]+)"'
     a, b = re.search(pat, have), re.search(pat, want)
+    if not a and not b:
+        return have == want
     if not a or not b or re.sub(pat, "", have) != re.sub(pat, "", want):
         return False
     img_a = Image.open(io.BytesIO(base64.b64decode(a.group(1)))).convert("RGBA")
