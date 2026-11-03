@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Water and weather (v45.2, UPGRADE_PLAN_40.md phase 2)
+  (src/js/76zzzzzzzzc-weathersound.js)
+  - Above ground the weather is heard: rain as a hiss, pattering on the roofs near the houses and dripping fat from
+    the leaves under the trees; the wind in gusts as strong as it is; and snow hushing everything, the ambience let
+    down while it falls.
+  - Below, wading is heard by its depth - a light splash in a puddle, a slosh to the knee on a flooded floor or in
+    the tide - and standing in water, it laps.
+
 Doors, locks and traps (v45.1, UPGRADE_PLAN_40.md phase 1)
   (src/js/76zzzzzzzzb-foley.js)
   - Each has its own made sound now, laid over the old one: a door's creak and its latch, a key turning and a bolt
