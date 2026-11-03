@@ -20,11 +20,13 @@ const url = "file://" + path.join(ROOT, "game", built);
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
   await page.goto(url);
-  await page.waitForFunction(() => window.CM && CM.game && CM.ui);
+  await page.waitForFunction(() => window.CM && CM.game && CM.ui, null, { timeout: 60000 });
   await page.waitForTimeout(800);
   assert.ok(await page.$("#splash"), "the title card is up first");
   assert.match((await page.textContent("#splash h1")) || "", /Claude\s*and\s*Magic/);
-  await page.keyboard.press("Space"); await page.waitForTimeout(800);
+  await page.keyboard.press("Space");
+  await page.waitForFunction(() => !document.querySelector("#splash"), null, { timeout: 15000 }).catch(() => {});   // (v49.4: a slow machine's first frames are busy building the art - wait for the card to go, not a fixed 0.8 s)
+  await page.waitForTimeout(400);
   assert.ok(!(await page.$("#splash")), "a key goes on from the title card");
   const title = await page.textContent("#title h1");
   assert.match(title || "", /Claude and Magic/);
@@ -49,7 +51,7 @@ const url = "file://" + path.join(ROOT, "game", built);
     await page.waitForTimeout(400);
   }
   await page.reload();
-  await page.waitForFunction(() => window.CM && CM.game && CM.ui);
+  await page.waitForFunction(() => window.CM && CM.game && CM.ui, null, { timeout: 60000 });
   await page.waitForTimeout(500);
   const again = await page.evaluate(() => { const g = CM.game; const can = g.canContinue(); const ok = can && g.continueRun(); return { can, ok, floor: g.floor && g.floor.number, mode: g.mode }; });
   assert.ok(again.can && again.ok, "Continue should work after a reload");

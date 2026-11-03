@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Day reaching in (v49.4, UPGRADE_PLAN_44.md phase 4)
+  (src/js/76zzzzzzzzu-daylight.js, tests/smoke.js)
+  - On the first three floors, by day, the town's grates let the day down: an iron grate here and there in a
+    corridor's ceiling, a shaft of daylight under it and the grate's shadow laid in a bright lattice on the floor -
+    and the foot of the shaft on the first floor stands in the light from above.
+  - Brightest on the first floor and fainter each floor down, by the hour, and greyer under cloud or rain.
+  - The browser test waits for the title card to go rather than a fixed moment (a slow machine is busy building the
+    art for its first seconds).
+
 Glints (v49.3, UPGRADE_PLAN_44.md phase 3)
   (src/js/76zzzzzzzzt-glints.js)
   - Metal, gold and gems catch the light as the party passes: a small star flashing on a chest's bands, a strongbox,
