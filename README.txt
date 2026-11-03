@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Monster voices (v43.1, UPGRADE_PLAN_38.md phase 1)
+  (src/js/76zzzzzzzr-monvoices.js, src/js/76zzzzzzzq-voices.js)
+  - Every kind has its own made voice in place of the few shared roars: the beasts growl, the small things shriek,
+    the bones rattle, the serpents and the plants hiss, the walking dead moan, the big ones roar, the golems grind,
+    and the people cry out like people - each kind pitched a little its own way.
+  - Short and sharp when struck, long and falling at its death; the guardians deeper and longer. The Lich King keeps
+    his own.
+
 Hero barks (v43.0, UPGRADE_PLAN_38.md phase 0)
   (src/js/76zzzzzzzq-voices.js)
   - The heroes have voices now - no words, a throat: a grunt when a blow lands on them, a shout on a weak spot struck,
