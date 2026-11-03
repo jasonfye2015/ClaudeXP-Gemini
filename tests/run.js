@@ -5835,7 +5835,7 @@ test("band landmarks: the third floor of each band names its largest plain room 
 
 test("levels: about one plain room in five a dais and one in nine a pit, the room's edge at the corridors' level, the landmark on a dais; never saved; the mesh steps between them", () => {
   const CM = load();
-  let dais = 0, pit = 0, rooms = 0; for (const seed of ["lv-1", "lv-2", "lv-3"]) for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, seed); for (const r of fl.rooms || []) { if (r.name || r.template || r.x1 - r.x0 < 3 || r.y1 - r.y0 < 3 || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue; rooms++;
+  let dais = 0, pit = 0, rooms = 0; for (const seed of ["lv-1", "lv-2", "lv-3"]) for (let n = 1; n <= 30; n++) { const fl = CM.makeFloor(n, seed); for (const r of fl.rooms || []) { if (r.name || r.template || r.x1 - r.x0 < 3 || r.y1 - r.y0 < 3 || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue; rooms++; if ((fl.galleries || []).some((G) => G.x0 === r.x0 && G.y0 === r.y0)) continue;   // (a gallery hall: a room, neither dais nor pit)
       const mid = CM.levelOf(fl, Math.floor((r.x0 + r.x1) / 2), Math.floor((r.y0 + r.y1) / 2)); if (mid && mid[0] > 0) dais++; if (mid && mid[0] < 0) pit++;
       for (let x = r.x0; x <= r.x1; x++) { assert.strictEqual(CM.floorAt(fl, x, r.y0), 0, "the edge is level"); assert.strictEqual(CM.floorAt(fl, x, r.y1), 0); } } }
   assert.ok(dais > rooms / 12 && dais < rooms / 2.5, `dais ${dais} of ${rooms}`); assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
@@ -5863,6 +5863,11 @@ test("tall halls and crawlways: the rooms of twenty squares or more stand tall, 
       for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) assert.ok(CM.ceilAt(fl, x, y) - CM.floorAt(fl, x, y) >= CM.LEVELS.hall - 1e-9, "tall"); }
     if (fl.crawl) { crawls++; assert.ok(fl.crawl.length >= 3); for (const k of fl.crawl) assert.strictEqual(CM.ceilAt(fl, ...k.split(",").map(Number)), CM.LEVELS.crawl); } }
   assert.ok(halls > 5, `${halls} tall halls`); assert.ok(crawls >= 3 && crawls <= 20, `${crawls} crawlways`);
+  // (v47.3) galleries: the edge at the corridors' level, the middle down in tiers no deeper than the deepest, a tier at a time
+  let galleries = 0; for (let n = 1; n <= 40; n++) { const fl = CM.makeFloor(n, "hall-1"); for (const G of fl.galleries || []) { galleries++;
+    for (let y = G.y0; y <= G.y1; y++) for (let x = G.x0; x <= G.x1; x++) { if (fl.grid[y][x] !== 0) continue; const d = Math.min(x - G.x0, G.x1 - x, y - G.y0, G.y1 - y), f = CM.floorAt(fl, x, y);
+      if (d === 0) assert.strictEqual(f, 0, "the gallery level"); assert.ok(Math.abs(f + Math.min(CM.LEVELS.deepest, CM.LEVELS.tier * d)) < 1e-9, "a tier at a time"); } } }
+  assert.ok(galleries >= 1, `${galleries} galleries`);
 });
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };

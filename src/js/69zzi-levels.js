@@ -8,8 +8,9 @@
 //   floor.levels = { "x,y": [floor, ceiling] } for the squares not at [0, 1]; CM.levelOf, CM.floorAt, CM.ceilAt
 //   (v47.1) floor.raised = the raised room on about half the floors, its corridors climbing to it a step a square
 //   (v47.2) the rooms of twenty squares or more tall (1.6); on about a floor in three, floor.crawl - a low run of corridor (0.8)
+//   (v47.3) floor.galleries - about half the tall rooms five squares a side: the edge a gallery, the middle down in tiers
 { if (!CM.FLOOR_FIXED.includes("levels")) CM.FLOOR_FIXED.push("levels");
-  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2, hall: 1.6, hallArea: 20, crawl: 0.8, crawlEvery: 3, crawlLength: 5 };
+  CM.LEVELS = { dais: 0.3, pit: -0.3, daisEvery: 5, pitEvery: 9, raised: 0.6, step: 0.15, raisedEvery: 2, hall: 1.6, hallArea: 20, crawl: 0.8, crawlEvery: 3, crawlLength: 5, tier: 0.2, deepest: 0.6, galleryEvery: 2, gallerySide: 5 };
   CM.levelOf = (fl, x, y) => (fl && fl.levels && fl.levels[`${x},${y}`]) || null;
   CM.floorAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[0] : 0; };
   CM.ceilAt = (fl, x, y) => { const L = CM.levelOf(fl, x, y); return L ? L[1] : 1; };
@@ -31,7 +32,11 @@
     // (v47.2) the great rooms tall - twenty squares or more, under a ceiling half as high again - and now and then a crawlway
     const inRoom = new Set(); for (const r of fl.rooms) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
     for (const r of fl.rooms) { if (r.name || r.template || (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1) < CM.LEVELS.hallArea || (fl.raised && fl.raised.x0 === r.x0 && fl.raised.y0 === r.y0)) continue;
-      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) { fl.levels = fl.levels || {}; const L = fl.levels[`${x},${y}`] || [0, 1]; fl.levels[`${x},${y}`] = [L[0], Math.max(L[1], L[0] + CM.LEVELS.hall)]; } }
+      const W = r.x1 - r.x0 + 1, H = r.y1 - r.y0 + 1, bare = ![...Array(W).keys()].some((i) => fl.levels && fl.levels[`${r.x0 + i},${Math.floor((r.y0 + r.y1) / 2)}`]);
+      const gallery = bare && W >= CM.LEVELS.gallerySide && H >= CM.LEVELS.gallerySide && new CM.Random(CM.hashSeed(`gallery:${fl.number}:${r.x0},${r.y0}`)).next() < 1 / CM.LEVELS.galleryEvery;   // (v47.3: a gallery round it, the middle stepping down in tiers)
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) if (fl.grid[y][x] === 0) { fl.levels = fl.levels || {}; const L = fl.levels[`${x},${y}`] || [0, 1], d = Math.min(x - r.x0, r.x1 - x, y - r.y0, r.y1 - y);
+        const f = gallery ? -Math.min(CM.LEVELS.deepest, CM.LEVELS.tier * d) || 0 : L[0];   /* (never -0: a save would make it 0) */ fl.levels[`${x},${y}`] = [f, Math.max(L[1], L[0] + CM.LEVELS.hall)]; }
+      if (gallery) (fl.galleries = fl.galleries || []).push({ x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1 }); }
     const rnd = new CM.Random(CM.hashSeed(`crawl:${fl.number}`));
     if (rnd.next() < 1 / CM.LEVELS.crawlEvery) { const N = fl.grid.length, cand = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { const k = `${x},${y}`; if (fl.grid[y][x] !== 0 || inRoom.has(k) || (fl.levels && fl.levels[k])) continue; const ns = fl.grid[y - 1][x] === 0 && fl.grid[y + 1][x] === 0 && fl.grid[y][x - 1] !== 0 && fl.grid[y][x + 1] !== 0; if (ns) cand.push([x, y]); }
       if (cand.length) { const [sx, sy] = cand[Math.floor(rnd.next() * cand.length)]; let y = sy; while (fl.grid[y - 1][sx] === 0 && !inRoom.has(`${sx},${y - 1}`) && !(fl.levels && fl.levels[`${sx},${y - 1}`]) && sy - y < CM.LEVELS.crawlLength) y--;
