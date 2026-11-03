@@ -223,7 +223,8 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       else {                                                                          // below: the wall's foot in shadow, and darker where it meets a side wall
         const sideA = !openAt(x + (d === 0 ? -1 : d === 1 ? 1 : 0), y + (d === 2 ? -1 : d === 3 ? 1 : 0)), sideB = !openAt(x + (d === 0 ? 1 : d === 1 ? -1 : 0), y + (d === 2 ? 1 : d === 3 ? -1 : 0));
         const fa = shade * (sideA ? 0.62 : 0.78), fb = shade * (sideB ? 0.62 : 0.78), ta = shade * (sideA ? 0.85 : 0.97), tb = shade * (sideB ? 0.85 : 0.97);
-        const uv = [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], F0 + h * (C0 - F0), b[1]], [a[0], F0 + h * (C0 - F0), a[1]]], sh = [fa, fb, tb, ta];
+        const wv = CM.hashSeed(`${fl.number}:wv:${x},${y},${d}`) >>> 0, flip = (wv >>> 3) & 1, kk = 0.92 + ((wv >>> 5) % 17) / 100;   // (v48.2: no two wall squares quite alike - mirrored by hash, a little lighter or darker)
+        const uv = flip ? [[1, 1], [0, 1], [0, 0], [1, 0]] : [[0, 1], [1, 1], [1, 0], [0, 0]], P = [[a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], F0 + h * (C0 - F0), b[1]], [a[0], F0 + h * (C0 - F0), a[1]]], sh = [fa * kk, fb * kk, tb * kk, ta * kk];
         for (const i of [0, 1, 2, 0, 2, 3]) out.push(...P[i], uv[i][0], uv[i][1], layer, sh[i], 0, 1, 0);
       }
       walls++;
