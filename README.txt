@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+A mixer (v46.0, UPGRADE_PLAN_41.md phase 0)
+  (src/js/76zzzzzzzzf-mixer.js, src/js/76zzzzzzzzc-weathersound.js, src/js/76zzzzzzzzd-distant.js, src/js/76zzzzzzzze-firesound.js)
+  - Settings has a slider for each kind of sound under the sound's own volume and the music's: Voices (the heroes,
+    the monsters, the town, the ghosts, those who come along), Ambience (the dungeon's air, the weather, the distant
+    sounds, the fire) and Interface (the windows' own sounds). Kept with the other settings.
+
 Fire (v45.4, UPGRADE_PLAN_40.md phase 4)
   (src/js/76zzzzzzzze-firesound.js)
   - The party's torch crackles - quietly while it is new, louder and more fitfully in its last forty steps, and not
