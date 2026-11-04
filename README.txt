@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Tracks (v55.1, UPGRADE_PLAN_50.md phase 1)
+  (src/js/40-render.js)
+  - The narrow earth paths of the land are tracks now: two ruts worn into them where the wheels and feet go, a ridge
+    of grass down the middle, and the edges grown over with whatever lies beside them - grass, moss or leaf litter.
+
 The forest floor (v55.0, UPGRADE_PLAN_50.md phase 0)
   (src/js/26d-forestfloor.js, src/js/26-surface.js, src/js/40-render.js)
   - In the Deep Wood the grass gives way under the trees: deep among them the floor is leaf litter, or needles among
