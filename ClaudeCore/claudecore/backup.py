@@ -53,8 +53,8 @@ DEFAULTS = {"folder": "", "parts": [k for k, v in PARTS.items() if v[2]], "auto"
 
 # ---- settings ------------------------------------------------------------------------------------------------
 def default_folder():
-    """Beside the Timeline on the same drive (better somewhere else: another drive survives this one failing)."""
-    return TIMELINE.parent / "Claude Timeline Backups"
+    """In Local Storage on the same drive (better somewhere else: another drive survives this one failing)."""
+    return TIMELINE / "Local Storage" / "Claude Timeline Backups"
 
 
 def settings():

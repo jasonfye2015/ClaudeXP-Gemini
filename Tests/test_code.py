@@ -6,7 +6,7 @@ from pathlib import Path
 
 import support
 
-SKIP = {".venv", "venv", ".venv-build", "Python", "Python-mac", "Local Storage", ".git", "__pycache__",
+SKIP = {".venv", "venv", ".venv-build", "Python", "Python-mac", "Local Storage", ".git", "__pycache__", "Claude and Magic",
         "node_modules", "build", "dist", "seed"}
 
 

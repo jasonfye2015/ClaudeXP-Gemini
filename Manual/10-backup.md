@@ -25,7 +25,7 @@ A backup is one `.zip` named by date and time (`Claude Timeline backup 2026-10-2
 `auto-backup`) with a `manifest.json` inside saying what's in it. Paths inside are relative to the Timeline folder, so
 a backup restores onto any copy of the Timeline on any drive. Model files and media are stored, not compressed.
 
-**Where:** by default a `Claude Timeline Backups` folder beside the Timeline, on the same drive. Better: point it at
+**Where:** by default a `Claude Timeline Backups` folder in the Timeline's `Local Storage`, on the same drive. Better: point it at
 another drive (**Browse...**), because a backup on the drive that fails is no backup. The panel warns when the folder
 is on the same drive.
 
