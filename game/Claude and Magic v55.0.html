@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v54.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v55.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "54.4", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "55.0", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6243,7 +6243,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     covered.add(`${x},${y}`);
     const LV = !sky && fl.levels ? fl.levels[`${x},${y}`] : null, F0 = LV ? LV[0] : 0, C0 = LV ? LV[1] : 1;   // (v47.0: the square's floor and ceiling - 69zzi-levels.js)
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
-    const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
+    const gb = sky && CM.blendGroundAt ? CM.blendGroundAt(fl, x, y) : g, floorLayer = gb && index[`ground:${gb}`] !== undefined ? index[`ground:${gb}`] : index.floor;   // (v55.0: the forest floor under the trees)
     if (sky) {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
       if ((g === "cobbles" || g === "flags") && index["solid:sill"] !== undefined && opts.detail !== 0) SIDES.forEach(([ex, ey], d) => {   // (v54.2) a kerb of dressed stone where the paving meets grass or earth
@@ -6579,6 +6579,20 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     for (const s of spots) { add(`${s[0]},${s[1]}`, 0.9); for (const [dx, dy] of CM.DIRS) if (open(s[0] + dx, s[1] + dy)) add(`${s[0] + dx},${s[1] + dy}`, 0.35); }
     for (let i = 0; i < spots.length; i++) { const p = bfs(fl, spots[i], spots[(i + 1) % spots.length]); for (const k of p) { add(k, 0.3); const [x, y] = k.split(",").map(Number); for (const [dx, dy] of CM.DIRS) if (open(x + dx, y + dy)) add(`${x + dx},${y + dy}`, 0.08); } }
     cache.set(fl, W); return W; };
+}
+
+// ---- 26d-forestfloor.js ----
+"use strict";
+// The forest floor (v55.0, UPGRADE_PLAN_50.md): in the Wood the grass gives way under the trees - an open square with
+// trees close on most sides is leaf litter (or needles among the pines), one at the trees' edge is moss, and the open
+// grass begins only where the trees fall back; the grounds then blend into each other (v54.0). The picture only: the
+// square's own ground (CM.groundAt, the footsteps and the props' rules) is as it was.
+//   CM.blendGroundAt(fl, x, y) -> the ground drawn there
+{ const cache = new WeakMap();
+  CM.blendGroundAt = (fl, x, y) => { const g = CM.groundAt(fl, x, y); if (!fl || fl.number !== -1 || g !== "grass") return g;
+    let M = cache.get(fl); if (!M) { M = new Map(); cache.set(fl, M); } const k = `${x},${y}`; if (M.has(k)) return M.get(k);
+    let trees = 0, pines = 0; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { if (!dx && !dy) continue; const nx = x + dx, ny = y + dy; if (!CM.inBounds(fl, nx, ny) || fl.grid[ny][nx] === 0 || CM.solidAt(fl, nx, ny) !== "tree") continue; const w = Math.abs(dx) + Math.abs(dy) <= 1 ? 2 : 1; trees += w; if (CM.treeVariant && CM.treeVariant(fl, nx, ny) === 1) pines += w; }
+    const out = trees >= 11 ? (pines * 2 > trees ? "needles" : "litter") : trees >= 6 ? "moss" : g; M.set(k, out); return out; };
 }
 
 // ---- 27-props.js ----
@@ -9723,7 +9737,7 @@ CM.Renderer = class {
     const gl = this.gl, g = floor.grid, N = g.length, px = new Uint8Array(N * N * 4), wet = CM.waterCells ? CM.waterCells(floor) : [];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = (y * N + x) * 4; px[i] = g[y][x] === 0 ? 0 : 255; px[i + 3] = 0; }
     for (const [x, y] of wet) if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 1] = 255;
-    if (CM.groundAt && (floor.number === 0 || floor.number === -1)) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (g[y][x] !== 0) continue; const gi = (CM.GROUNDS || []).indexOf(CM.groundAt(floor, x, y)); if (gi >= 0) px[(y * N + x) * 4 + 2] = gi + 1; }   // (v54.0: the ground's kind, for the blend)
+    if (CM.groundAt && (floor.number === 0 || floor.number === -1)) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (g[y][x] !== 0) continue; const gi = (CM.GROUNDS || []).indexOf(CM.blendGroundAt ? CM.blendGroundAt(floor, x, y) : CM.groundAt(floor, x, y)); if (gi >= 0) px[(y * N + x) * 4 + 2] = gi + 1; }   // (v54.0: the ground's kind, for the blend)
     if (CM.wearOf && (floor.number === 0 || floor.number === -1)) { const W = CM.wearOf(floor); for (const [k, v] of W) { const [x, y] = k.split(",").map(Number); if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 3] = Math.round(Math.min(1, v) * 255); } }   // (v54.1: how worn - the map's alpha)
     if (!this.mapTex) this.mapTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.mapTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
