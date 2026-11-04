@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v54.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v54.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "54.1", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "54.2", built: "2026-11-03", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6246,6 +6246,11 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
     if (sky) {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
+      if ((g === "cobbles" || g === "flags") && index["solid:sill"] !== undefined && opts.detail !== 0) SIDES.forEach(([ex, ey], d) => {   // (v54.2) a kerb of dressed stone where the paving meets grass or earth
+        const nx = x + ex, ny = y + ey; if (!openAt(nx, ny)) return; const ng = CM.groundAt(fl, nx, ny); if (ng === "cobbles" || ng === "flags" || ng === "planks") return;
+        const K = index["solid:sill"], kh = 0.045, kw = 0.09, a2 = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b2 = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
+        const ia = [a2[0] - ex * kw, a2[1] - ey * kw], ib = [b2[0] - ex * kw, b2[1] - ey * kw];
+        quad([ia[0], kh, ia[1]], [ib[0], kh, ib[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.95); quad([a2[0], 0, a2[1]], [b2[0], 0, b2[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.72); quad([ib[0], 0, ib[1]], [ia[0], 0, ia[1]], [ia[0], kh, ia[1]], [ib[0], kh, ib[1]], K, 0.8); });
       if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
     } else {
       quadVaried([x, F0, y + 1], [x + 1, F0, y + 1], [x + 1, F0, y], [x, F0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");
@@ -6662,6 +6667,7 @@ CM.PROPS = {
 const GREEN = ["spring", "summer"], ALL = ["spring", "summer", "autumn", "winter"];
 CM.SCATTER = [
   { prop: "tuft", where: { surface: true, grounds: ["grass"], seasons: GREEN, canopy: false }, per: 0.55, most: 3 },
+  { prop: "pebbles", where: { surface: true, grounds: ["grass", "dirt"], near: "paving" }, per: 0.45, most: 2 },   // (v54.2: stones kicked off the paving into the grass at its edge)
   { prop: "tuft_dry", where: { surface: true, grounds: ["grass"], seasons: ["autumn"], canopy: false }, per: 0.5, most: 3 },
   { prop: "tuft_snow", where: { surface: true, grounds: ["grass"], seasons: ["winter"], canopy: false }, per: 0.25, most: 2 },
   { prop: "snow", where: { surface: true, grounds: ["grass"], seasons: ["winter"] }, per: 0.4, most: 1 },
@@ -6814,6 +6820,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
       if (w.canopy !== undefined && w.canopy !== canopy.has(k)) continue;
       if (w.near === "tree" && !trees) continue;
       if (w.near === "water" && !byWater) continue;
+      if (w.near === "paving" && !(surface && CM.DIRS.some(([dx, dy]) => open(x + dx, y + dy) && ["cobbles", "flags"].includes(CM.groundAt(fl, x + dx, y + dy))))) continue;   // (v54.2: the seam where the paving stops)
       if (w.area === "fields" && !(F && x >= F[0] && x <= F[2] && y >= F[1] && y <= F[3])) continue;
       if (w.area === "forest" && F && x >= F[0]) continue;
       if (w.market && !(S && fl.number === 0 && x >= S[0] && x <= S[2] && y >= S[1] && y <= S[3])) continue;
