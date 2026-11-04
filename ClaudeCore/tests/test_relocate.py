@@ -39,6 +39,28 @@ def test_moves():
         assert recent == [str(home / "Local Storage" / "WADs" / "DOOM1.WAD")]
 
 
+def test_shared():
+    """The folders no computer owns (saves, Kithylin's and the Companions' settings) follow a new drive letter too."""
+    with tempfile.TemporaryDirectory() as tmp:
+        new = Path(tmp) / "Claude Timeline"
+        old = r"F:\Claude Timeline"
+        own = "own:" + old + r"\ClaudeApps\kithylinai\Models\kithylin\kithylin.gguf"
+        saves, kith, comp = relocate.shared_folders(new)[0], relocate.shared_folders(new)[1], relocate.shared_folders(new)[3]
+        for folder in (saves / "doom", kith, comp / "companion-1"):
+            folder.mkdir(parents=True)
+        (saves / "doom" / "settings.json").write_text(json.dumps({"recent": [old + r"\Local Storage\WADs\DOOM.WAD"]}), encoding="utf-8")
+        (kith / "settings.json").write_text(json.dumps({"model": own}), encoding="utf-8")
+        (comp / "companion-1" / "companion.json").write_text(json.dumps({"model": own}), encoding="utf-8")
+
+        changed = relocate.fix_shared(new)
+        assert len(changed) == 3
+        assert json.loads((kith / "settings.json").read_text(encoding="utf-8"))["model"] ==             "own:" + str(new / "ClaudeApps" / "kithylinai" / "Models" / "kithylin" / "kithylin.gguf")
+        assert json.loads((comp / "companion-1" / "companion.json").read_text(encoding="utf-8"))["model"].startswith("own:" + str(new))
+        assert json.loads((saves / "doom" / "settings.json").read_text(encoding="utf-8"))["recent"] == [str(new / "Local Storage" / "WADs" / "DOOM.WAD")]
+        assert relocate.fix_shared(new) == []                                         # each folder's marker: done once
+
+
 if __name__ == "__main__":
     test_moves()
+    test_shared()
     print("ok")

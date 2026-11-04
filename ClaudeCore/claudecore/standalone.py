@@ -299,6 +299,12 @@ def main(argv):
         print(f"Which app? One of: {', '.join(k for k, v in APPS.items() if v[2])}", file=sys.stderr)
         return 2
     check = "--check" in argv
+    try:
+        from claudecore import relocate
+        relocate.fix_shared()          # an app started on its own after the drive changed letter: its settings follow
+    except Exception as exc:
+        if sys.stderr is not None:
+            sys.stderr.write(f"Relocation check failed: {exc}\n")
     from PySide6.QtCore import QCoreApplication, Qt, QTimer
     from PySide6.QtWidgets import QApplication
     QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)     # (before the app exists: ClaudeRPG's web view)

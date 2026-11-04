@@ -79,6 +79,7 @@ def main():
         from claudecore import relocate
         from claudexp.paths import DATA
         relocate.fix(DATA)             # the Timeline moved (e.g. onto the external SSD): saved paths follow it
+        relocate.fix_shared()          # and the shared saves, Kithylin's and the Companions' settings, the profile
     except Exception as exc:
         if sys.stderr is not None:
             sys.stderr.write(f"Relocation check failed: {exc}\n")

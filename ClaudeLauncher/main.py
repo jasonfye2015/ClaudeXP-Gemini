@@ -10,6 +10,12 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("SYSTEC Multi-Boot Manager")
     try:
+        from claudecore import relocate
+        relocate.fix_shared()          # the drive changed letter (another PC): the shared saves and settings follow it
+    except Exception as exc:
+        if sys.stderr is not None:
+            sys.stderr.write(f"Relocation check failed: {exc}\n")
+    try:
         from claudecore import macfonts
         macfonts.apply()               # on a Mac: Mac fonts for the Windows ones
     except ImportError:

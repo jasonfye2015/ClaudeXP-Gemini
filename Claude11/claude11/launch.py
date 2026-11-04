@@ -54,6 +54,7 @@ def main():
     try:
         from claudecore import relocate
         relocate.fix(DATA)
+        relocate.fix_shared()
     except Exception as exc:
         _warn(f"Relocation check failed: {exc}")
     try:

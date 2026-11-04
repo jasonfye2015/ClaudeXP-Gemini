@@ -81,6 +81,24 @@ def fix(data_dir, timeline=TIMELINE):
     return changed
 
 
+def shared_folders(timeline=TIMELINE):
+    """The folders no one computer owns that also keep full paths: the game saves (Doom's recent WADs), Kithylin AI's
+    settings and Soul and Song's Companions (each one's own Kithylin model), and your profile."""
+    timeline = Path(timeline)
+    return [timeline / "ClaudeGames" / "Saves", timeline / "ClaudeApps" / "kithylinai" / "Data", timeline / "Profile",
+            timeline / "Local Storage" / "Projects" / "AI LLM Txt Files" / "Companions"]
+
+
+def fix_shared(timeline=TIMELINE):
+    """fix() each shared folder (each keeps its own marker). The launcher, the standalone apps and every computer call
+    this at startup, so whichever runs first after the drive changes letter puts them right. Returns the files changed."""
+    changed = []
+    for folder in shared_folders(timeline):
+        if folder.is_dir():
+            changed += fix(folder, timeline)
+    return changed
+
+
 def fix_venv(runtime, *base_pythons):
     """A Python environment (runtime/pyvenv.cfg) made where the Timeline used to be still names that old Python and
     won't start ('No Python at ...'). Point it at the first of base_pythons that exists, if its own home is gone.
