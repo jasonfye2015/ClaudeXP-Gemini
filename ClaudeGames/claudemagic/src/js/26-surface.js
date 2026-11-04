@@ -197,6 +197,11 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
     if (sky) {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
+      if ((g === "cobbles" || g === "flags") && index["solid:sill"] !== undefined && opts.detail !== 0) SIDES.forEach(([ex, ey], d) => {   // (v54.2) a kerb of dressed stone where the paving meets grass or earth
+        const nx = x + ex, ny = y + ey; if (!openAt(nx, ny)) return; const ng = CM.groundAt(fl, nx, ny); if (ng === "cobbles" || ng === "flags" || ng === "planks") return;
+        const K = index["solid:sill"], kh = 0.045, kw = 0.09, a2 = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b2 = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
+        const ia = [a2[0] - ex * kw, a2[1] - ey * kw], ib = [b2[0] - ex * kw, b2[1] - ey * kw];
+        quad([ia[0], kh, ia[1]], [ib[0], kh, ib[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.95); quad([a2[0], 0, a2[1]], [b2[0], 0, b2[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.72); quad([ib[0], 0, ib[1]], [ia[0], 0, ia[1]], [ia[0], kh, ia[1]], [ib[0], kh, ib[1]], K, 0.8); });
       if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
     } else {
       quadVaried([x, F0, y + 1], [x + 1, F0, y + 1], [x + 1, F0, y], [x, F0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");

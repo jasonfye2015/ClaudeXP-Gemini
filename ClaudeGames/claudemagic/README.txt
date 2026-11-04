@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Edging (v54.2, UPGRADE_PLAN_49.md phase 2)
+  (src/js/26-surface.js, src/js/27-props.js)
+  - Where the town's cobbles and flags meet grass or earth, a low kerb of dressed stone runs along the edge of the
+    paving, and pebbles kicked off it lie in the grass along the seam.
+
 Worn ground (v54.1, UPGRADE_PLAN_49.md phase 1)
   (src/js/26c-wear.js, src/js/40-render.js)
   - The grass of the town and the land is worn to earth where feet go: in patches along the ways people walk between

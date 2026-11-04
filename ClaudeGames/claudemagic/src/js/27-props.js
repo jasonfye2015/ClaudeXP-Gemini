@@ -83,6 +83,7 @@ CM.PROPS = {
 const GREEN = ["spring", "summer"], ALL = ["spring", "summer", "autumn", "winter"];
 CM.SCATTER = [
   { prop: "tuft", where: { surface: true, grounds: ["grass"], seasons: GREEN, canopy: false }, per: 0.55, most: 3 },
+  { prop: "pebbles", where: { surface: true, grounds: ["grass", "dirt"], near: "paving" }, per: 0.45, most: 2 },   // (v54.2: stones kicked off the paving into the grass at its edge)
   { prop: "tuft_dry", where: { surface: true, grounds: ["grass"], seasons: ["autumn"], canopy: false }, per: 0.5, most: 3 },
   { prop: "tuft_snow", where: { surface: true, grounds: ["grass"], seasons: ["winter"], canopy: false }, per: 0.25, most: 2 },
   { prop: "snow", where: { surface: true, grounds: ["grass"], seasons: ["winter"] }, per: 0.4, most: 1 },
@@ -235,6 +236,7 @@ CM.scatter = function (fl, seed, density = CM.DETAIL.medium, ctx = {}) {
       if (w.canopy !== undefined && w.canopy !== canopy.has(k)) continue;
       if (w.near === "tree" && !trees) continue;
       if (w.near === "water" && !byWater) continue;
+      if (w.near === "paving" && !(surface && CM.DIRS.some(([dx, dy]) => open(x + dx, y + dy) && ["cobbles", "flags"].includes(CM.groundAt(fl, x + dx, y + dy))))) continue;   // (v54.2: the seam where the paving stops)
       if (w.area === "fields" && !(F && x >= F[0] && x <= F[2] && y >= F[1] && y <= F[3])) continue;
       if (w.area === "forest" && F && x >= F[0]) continue;
       if (w.market && !(S && fl.number === 0 && x >= S[0] && x <= S[2] && y >= S[1] && y <= S[3])) continue;
