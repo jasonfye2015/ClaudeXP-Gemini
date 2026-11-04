@@ -72,6 +72,8 @@ void main() {
         vec2 dv = max(vec2(0.0), off * (f - 0.5) + 0.5 - 1.0 + 0.5); float dist = off.x != 0.0 && off.y != 0.0 ? length(vec2(off.x > 0.0 ? 1.0 - f.x : f.x, off.y > 0.0 ? 1.0 - f.y : f.y)) : off.x != 0.0 ? (off.x > 0.0 ? 1.0 - f.x : f.x) : (off.y > 0.0 ? 1.0 - f.y : f.y);
         float w = (1.0 - smoothstep(0.0, 0.14, dist + n * 0.5 - 0.1)) * 0.5;   /* (each side gives half: two grounds meeting go half and half at the line, each fading into its own square) */ int oi = int(other) - 1; float lay = uGLayer[oi]; if (lay >= 0.0 && w > bestW) { bestW = w; bestL = lay; } }
       if (bestL >= 0.0) { vec4 to = texture(uTex, vec3(fract(cw), bestL)); t = mix(t, to, bestW * 0.95 * uGBlend); }
+      { float big = vnoise(cw * 0.13) * 0.65 + vnoise(cw * 0.37 + 7.0) * 0.35, hue = vnoise(cw * 0.21 + 3.0);   // (v54.3) large patches over a ground - lighter and darker, greener and yellower on grass - so its tiling doesn't show
+        t.rgb *= 0.84 + 0.32 * big; if (me == 1.0) t.rgb = mix(t.rgb, t.rgb * vec3(1.08, 1.05, 0.82), smoothstep(0.55, 0.85, hue) * 0.6); }
       float wear = texture(uMap, cw / uMapN).a, dl = uGLayer[1];   // (v54.1) worn ground: the grass trodden to earth where the feet go, in patches
       if (wear > 0.02 && me == 1.0 && dl >= 0.0) { float wn = vnoise(cw * 3.7) * 0.6 + vnoise(cw * 11.0) * 0.4; float k = smoothstep(0.5, 0.85, wear * 1.1 - wn * 0.6 + 0.1); t = mix(t, texture(uTex, vec3(fract(cw), dl)), k * 0.85 * uGBlend); } } }
   if (vFx.z > 2.5 && vFx.z < 3.5) { vec3 dir = normalize(vWorld - uEye), sk = mix(uHorizon, uZenith, t.r) + shafts(dir, 40.0) * 0.45;
