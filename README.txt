@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The season on the ground (v54.4, UPGRADE_PLAN_49.md phase 4)
+  (src/js/40-render.js, src/js/76zzzzzzzzzz1-groundseason.js)
+  - In autumn the fallen leaves drift against the walls and the kerbs, more of them as the season turns.
+  - In winter the snow settles along the walls and the edges first, filling the open ground last.
+  - While it rains, and the morning after, the earth of the paths and the worn grass go to mud.
+
 Grounds that vary (v54.3, UPGRADE_PLAN_49.md phase 3)
   (src/js/40-render.js)
   - The town's and the land's grounds no longer show their tiling over distance: large soft patches lie over them,
