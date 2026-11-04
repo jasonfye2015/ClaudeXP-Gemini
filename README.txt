@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Worn ground (v54.1, UPGRADE_PLAN_49.md phase 1)
+  (src/js/26c-wear.js, src/js/40-render.js)
+  - The grass of the town and the land is worn to earth where feet go: in patches along the ways people walk between
+    the doors, at the doors themselves, round the well and the market, and by the Wood's gate, hut, farm and caves.
+
 Grounds that blend (v54.0, UPGRADE_PLAN_49.md phase 0)
   (src/js/40-render.js, src/js/76zzzzzzzzzz0-groundblend.js)
   - In the town and the land the grounds no longer meet in hard straight lines: near the edge of a square its

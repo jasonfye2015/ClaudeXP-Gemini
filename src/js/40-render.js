@@ -71,7 +71,9 @@ void main() {
         float other = floor(texture(uMap, (cell + off + 0.5) / uMapN).b * 255.0 + 0.5); if (other < 0.5 || other == me) continue;
         vec2 dv = max(vec2(0.0), off * (f - 0.5) + 0.5 - 1.0 + 0.5); float dist = off.x != 0.0 && off.y != 0.0 ? length(vec2(off.x > 0.0 ? 1.0 - f.x : f.x, off.y > 0.0 ? 1.0 - f.y : f.y)) : off.x != 0.0 ? (off.x > 0.0 ? 1.0 - f.x : f.x) : (off.y > 0.0 ? 1.0 - f.y : f.y);
         float w = (1.0 - smoothstep(0.0, 0.14, dist + n * 0.5 - 0.1)) * 0.5;   /* (each side gives half: two grounds meeting go half and half at the line, each fading into its own square) */ int oi = int(other) - 1; float lay = uGLayer[oi]; if (lay >= 0.0 && w > bestW) { bestW = w; bestL = lay; } }
-      if (bestL >= 0.0) { vec4 to = texture(uTex, vec3(fract(cw), bestL)); t = mix(t, to, bestW * 0.95 * uGBlend); } } }
+      if (bestL >= 0.0) { vec4 to = texture(uTex, vec3(fract(cw), bestL)); t = mix(t, to, bestW * 0.95 * uGBlend); }
+      float wear = texture(uMap, cw / uMapN).a, dl = uGLayer[1];   // (v54.1) worn ground: the grass trodden to earth where the feet go, in patches
+      if (wear > 0.02 && me == 1.0 && dl >= 0.0) { float wn = vnoise(cw * 3.7) * 0.6 + vnoise(cw * 11.0) * 0.4; float k = smoothstep(0.5, 0.85, wear * 1.1 - wn * 0.6 + 0.1); t = mix(t, texture(uTex, vec3(fract(cw), dl)), k * 0.85 * uGBlend); } } }
   if (vFx.z > 2.5 && vFx.z < 3.5) { vec3 dir = normalize(vWorld - uEye), sk = mix(uHorizon, uZenith, t.r) + shafts(dir, 40.0) * 0.45;
     if (uStars > 0.0 && dir.y > 0.0) { vec2 sp = vec2(atan(dir.z, dir.x) * 150.0, asin(clamp(dir.y, 0.0, 1.0)) * 150.0), id = floor(sp); float h = hash(id);   // (v30.2) the stars, twinkling
       if (h > 0.982) { vec2 f = fract(sp) - 0.5 - (vec2(hash(id + 1.3), hash(id + 2.7)) - 0.5) * 0.5; float s = exp(-dot(f, f) * 22.0) * (0.65 + 0.35 * sin(uTime * (1.5 + h * 6.0) + h * 40.0));
@@ -552,9 +554,10 @@ CM.Renderer = class {
   // (v30.3) the floor's map as a small texture the shader reads: a wall in red, water in green (CM.waterCells, v30.8)
   _mapTexture(floor) {
     const gl = this.gl, g = floor.grid, N = g.length, px = new Uint8Array(N * N * 4), wet = CM.waterCells ? CM.waterCells(floor) : [];
-    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = (y * N + x) * 4; px[i] = g[y][x] === 0 ? 0 : 255; px[i + 3] = 255; }
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = (y * N + x) * 4; px[i] = g[y][x] === 0 ? 0 : 255; px[i + 3] = 0; }
     for (const [x, y] of wet) if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 1] = 255;
     if (CM.groundAt && (floor.number === 0 || floor.number === -1)) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (g[y][x] !== 0) continue; const gi = (CM.GROUNDS || []).indexOf(CM.groundAt(floor, x, y)); if (gi >= 0) px[(y * N + x) * 4 + 2] = gi + 1; }   // (v54.0: the ground's kind, for the blend)
+    if (CM.wearOf && (floor.number === 0 || floor.number === -1)) { const W = CM.wearOf(floor); for (const [k, v] of W) { const [x, y] = k.split(",").map(Number); if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 3] = Math.round(Math.min(1, v) * 255); } }   // (v54.1: how worn - the map's alpha)
     if (!this.mapTex) this.mapTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this.mapTex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, N, N, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
