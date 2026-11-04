@@ -194,7 +194,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     covered.add(`${x},${y}`);
     const LV = !sky && fl.levels ? fl.levels[`${x},${y}`] : null, F0 = LV ? LV[0] : 0, C0 = LV ? LV[1] : 1;   // (v47.0: the square's floor and ceiling - 69zzi-levels.js)
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
-    const floorLayer = g && index[`ground:${g}`] !== undefined ? index[`ground:${g}`] : index.floor;
+    const gb = sky && CM.blendGroundAt ? CM.blendGroundAt(fl, x, y) : g, floorLayer = gb && index[`ground:${gb}`] !== undefined ? index[`ground:${gb}`] : index.floor;   // (v55.0: the forest floor under the trees)
     if (sky) {
       quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
       if ((g === "cobbles" || g === "flags") && index["solid:sill"] !== undefined && opts.detail !== 0) SIDES.forEach(([ex, ey], d) => {   // (v54.2) a kerb of dressed stone where the paving meets grass or earth
