@@ -75,7 +75,29 @@ the models run on the CPU, slowly. Everything that doesn't talk works without an
 **Before unplugging:** shut every computer down from its own Start menu, close Kithylin AI, stop any training, and
 eject the drive from the tray.
 
-## 4. What lives where
+## 4. A fresh PC: what to do first
+
+Almost everything the Timeline needs is on the drive: Python and Qt with Microsoft's C++ runtime, the llama.cpp
+engine, the emulator cores, the Doom engines, 7-Zip, ffmpeg, and the OpenSim world's .NET runtime and viewer. On a
+newly installed Windows:
+
+1. **Install the graphics card's driver first** (NVIDIA's, for the GTX 1080 Ti). A fresh Windows often runs on a basic
+   display driver without Vulkan. Until the real one is installed the models fall back to the CPU, which is very
+   slow, or don't run, and Image Creator won't start.
+2. **Smart App Control** is often on after a clean Windows 11 install, and it can block unsigned programs: the
+   launcher's `.exe`, the llama.cpp engine, the emulator cores, the Doom engines. If the launcher won't open, start
+   `Claude Timeline.bat`, which runs the signed Python instead. Turning Smart App Control off can't be undone
+   without reinstalling Windows.
+3. **The drive letter doesn't matter.** The launcher, the standalone apps and every computer check where the
+   Timeline is at startup, and point any saved paths at the new place (`ClaudeCore\claudecore\relocate.py`).
+4. **Permission prompts** may appear the first time: the microphone (Copilot Voice) and possibly the firewall (the
+   OpenSim world). Defender also scans files on first use, so the first starts are slower.
+5. **What the PC kept, and a format loses:** Claude Code's notes about this project (Appendix E holds a copy from
+   when this file was made), the screen saver's settings (reinstall the `.scr` from
+   `Local Storage\Windows Screen saver`), and the development tools: git, the GitHub CLI, Node.js, Claude Code and
+   Thonny. None of these are needed just to run the Timeline.
+
+## 5. What lives where
 
 | Folder (in `Claude Timeline\`) | What it holds |
 |---|---|
@@ -95,7 +117,173 @@ eject the drive from the tray.
 | `Local Storage\` | The "external drive" every computer sees as E: - the archive, the models, ROMs, WADs, Kiwix and backups |
 | `.git\` | The Timeline's git history |
 
-## 5. Rebuilding the drive from nothing
+## 6. How it works
+
+**Processes.** The launcher (`ClaudeLauncher\main.py`) is one program. Booting a computer starts that computer as a
+separate Python process, with `CLAUDE_TIMELINE=1` in its environment; the launcher minimises itself and waits for it
+to end. Only one computer runs at a time. The standalone apps (APPS) run as their own processes too, through
+`python -m claudecore.standalone <app>`.
+
+**Each computer** is a full desktop drawn with Qt: its own window manager, taskbar, Start menu, Explorer, Control
+Panel, Setup and sounds, and a virtual drive C: in its `data\Drive C`. Local Storage appears as drive E:.
+EPOCH-2001 (`ClaudeXP`) is the original and holds the master **program registry**
+(`ClaudeXP\claudexp\programs\__init__.py`). SYSTEM-2011 and WORKSTATION-2025 build their registries from it,
+dropping, renaming and adding programs per era. They run XP's programs through a compatibility layer
+(`xpcompat.py`) that swaps XP's window and system modules for their own, so an XP program gets an Aero or Mica
+window without knowing.
+
+**Shared programs** (in `ClaudeGames`, `ClaudeArchive`, `ClaudeApps`) never import an OS's modules. They ask the
+**host** (`ClaudeCore\claudecore\host.py`) for a window in the current OS's style, sounds, their saves, their data
+folder and Local Storage. Register a program once in XP's registry and it appears on all three computers.
+
+**The AI.** `ClaudeCore\claudecore\ai\` runs one `llama-server` from llama.cpp on 127.0.0.1 as a "router": a model
+loads onto the graphics card the first time something asks for it, and the least recently used is unloaded when room
+is needed. Every program's requests go through one queue, the **broker**, with priorities: what you're waiting for
+first, the residents' background life last. `ai_models.py` says which model does which job (conversation,
+background, assistant, pictures, coding), changeable in Control Panel > AI Models. An `ollama` stand-in module means
+older code that imports `ollama` is answered by this engine.
+
+**The living world.** Each computer keeps the residents' journals in its `data\journals`. About once an hour one
+resident's life moves on (a new journal note), and sometimes they tell you by IM, IRC or e-mail. After the PC has been
+off, a short catch-up runs at log-on. Every program adds a resident's recent journal entries to the prompt, so what
+you said on IRC is remembered on AIM. `residents_sync.py` builds each computer's contact lists, Fur Directory cards
+and buddy icons from `Residents\` at startup.
+
+**The period web.** The browsers (Netscape and Internet Explorer in 2001, newer ones later) serve the website rips
+from Local Storage read-only at their real addresses, and have the model write everything else as you browse: portal
+pages, the residents' home pages and journals, the social sites. Generated pages are cached in that era's `data`,
+so 2001 never sees a 2025 post.
+
+**Media.** The archive tools read Local Storage and never write to it. Videos and Flash open in each era's own
+players. ClaudeTV builds channels and a schedule from the TV folders (section 13).
+
+The full developer's map, from Manual chapter 13, is Appendix D.
+
+## 7. The residents
+
+About 260 characters live in `Residents\<Name>\`, in three tiers: **main furs** (your IM contacts, with icons, web
+pages, pictures and hand-written lives in every era), **support furs** (the IRC and MUCK regulars) and **background
+furs** (the crowd).
+
+Each resident's folder holds:
+- `resident.json`, the timeless part: fur name, tier, real name, birth date, fursona, personality, mannerisms, how
+  they met you, their friends and their Furry and YIFF Codes.
+- `eras\2001.json`, `eras\2011.json`, `eras\2025.json`: their accounts on that era's services, job, home, situation,
+  schedule and a paragraph about their life then. No era file means they weren't around then.
+- `media\` (main furs): pictures and icons. `sources\`: what the character was drawn from.
+
+Birth dates make everyone an adult in 2001, so a resident who is 26 on the XP machine is 36 in 2011 and 50 in 2025,
+and their lives follow. Dated history keeps the eras consistent: each computer shows only what had happened by its
+year. Memories are per computer: chats on one era's machine never carry to another. **Contact Persona Styles**
+(`Persona Styles\V1.0`, `V1.1`, or "Development") are frozen versions of how residents are built and prompted,
+chosen when EPOCH-2001 is formatted.
+
+**Kithylin** is not a resident: he's you. Kithylin the Angelic Husky is your fursona, and the name of the models
+trained on your own chat logs (Kithylin AI, Kithylin Autopilot).
+
+The main furs:
+
+{main_furs}
+
+## 8. Claude and Magic
+
+Your first-person dungeon crawler ("blobber", after Wizardry and Eye of the Beholder): a party of four goes down
+twenty floors to the Lich King, then the Deep to floor 50, then Endless. Around the dungeon there's a town (Caer
+Duin) with shops, a house, a casino and festivals, the Deep Wood with a farm and caves, and many games inside the
+game: the Mage Tower, Claudecraft, Claudeablo, Super Claude Bros, the Fortress and more. It is one HTML file using
+WebGL and Web Audio; it plays in its own Qt WebEngine window in the Timeline, or in any browser.
+
+- **Source:** `ClaudeGames\Claude and Magic\` (its own git repo, `jasonfye2015/claude-and-magic`). The game logic and
+  art are JavaScript in `src\js\`, concatenated in file-name order by `build.py` into
+  `game\Claude and Magic v<version>.html`.
+- **In the Timeline:** `ClaudeGames\claudemagic\` is a git subtree of that repo (remote `magic`). Its `__init__.py`
+  opens the newest built HTML on a permanent browser profile in `ClaudeGames\Saves\claudemagic`.
+- **Now:** version {cam_version}. `README.txt` describes every system in the game; `LORE.md`, `BALANCE.md` and
+  `FIELDS.md` hold the world, the numbers and the save format; `UPGRADE_PLAN_*.md` are the plans it was built from.
+- **Tests:** `node tests/run.js` (the rules, about 280 tests, through `tools\headless.js`, which must list every rules
+  file) and `python build.py --check`. A visual harness renders scenes offscreen for screenshots.
+- **Releasing a version:**
+  1. Bump the version in `build.py`, `package.json`, `game\manifest.webmanifest` and `game\sw.js`; delete the old
+     HTML and run `python build.py`.
+  2. Add a line about the change to the Timeline's Help Center guide
+     (`ClaudeXP\claudexp\programs\helpctr_guide.py`) and to Manual chapter 15, then run
+     `python -m manual.catalog` from `ClaudeApps`; commit those in the Timeline.
+  3. In the game repo: run the tests, commit, push, and wait for GitHub's CI to pass.
+  4. In the Timeline: `git subtree pull --prefix=ClaudeGames/claudemagic magic main`, run `Tests\run.py claudemagic`,
+     push branch `ClaudXP+Gemini`, then fast-forward `main` to it.
+
+The most recent plans:
+
+{cam_plans}
+
+## 9. Glossary
+
+| Term | Meaning |
+|---|---|
+| EPOCH-2001, SYSTEM-2011, WORKSTATION-2025 | The three computers: Windows XP (October 2001), Windows 7 (October 2011), Windows 11 (October 2025). Their clocks use the real month, day and time, with the era's year |
+| SYSTEC Multi-Boot Manager | The launcher: one card per computer, plus Profile, Backup, Apps, Manual and the self-check |
+| Local Storage, drive E: | `Claude Timeline\Local Storage`, the shared "external drive": the archive, models, ROMs, WADs, Kiwix |
+| Load and Format | Reinstalls one computer's Windows: its `data` moves to `Recovery Backups\<date time>`, so it can be undone by hand |
+| Self-check | The launcher's check for problems that stop a computer starting (bad program names, broken settings, missing Python) |
+| Resident, main / support / background fur | The cast, in three tiers (section 7) |
+| Era file | A resident's `eras\<year>.json`: their life and accounts in that era |
+| Contact Persona Style | A frozen version of how residents are built and prompted (V1.0, V1.1, Development), chosen at Load and Format |
+| Furry Code, YIFF Code | Old fandom codes (Furry Code 2.0, YIFF Code 3.0) describing species, interests and openness. Yours are set in the launcher or FurCoder; residents use them for attraction, roleplay and common ground |
+| FurCoder | The program that encodes and decodes those codes |
+| The Fur Directory | Who's who: every resident's card for the current era |
+| The Furry Web | The website rips served at their real addresses, plus the pages the model writes as you browse |
+| Furry Log | A diary of everything the language model does |
+| Claudecadia | A Furcadia-style graphical chat world where the residents log in as furres |
+| ClaudeAIM | The AIM-style buddy list on EPOCH-2001; the heart of the original project |
+| ClaudeAI | The Timeline's own chat assistant, on Gemma 4 12B |
+| Copilot programs | CopilotAI (assistant), Copilot Voice (speech in and out), Copilot Image Creator (Stable Diffusion) |
+| Gemini programs | The Office-style suite on the computers: Gemini Word, Excel, PowerPoint, Outlook, Access, Publisher, Draw, Photo, Acrobat, Distiller |
+| Kithylin | Your fursona (the Angelic Husky), and the name of the models trained on your chat logs |
+| Kithylin AI | A standalone chat program with a Kithylin model, also on Telegram and Discord |
+| Kithylin Autopilot | Kithylin takes over EPOCH-2001: answers IMs, writes e-mail, browses, watches TV, plays, on a real-clock day |
+| selfmodel | The training pipeline that makes Kithylin models from your 2004-2011 chat logs (`ClaudeApps\selfmodel`) |
+| Soul and Song | A standalone AI Companion with a written-down memory that grows daily (after the Companion Project guide) |
+| Companion | One Soul and Song character, in `Local Storage\Projects\AI LLM Txt Files\Companions\` |
+| Mind Levels | A Companion's memory banks: L1 who it is, L2 short-term, L3 long-term, L4 deep recall, L5 historical, L6 system instructions, L7 reflections. A full bank is distilled into one memory in the bank below |
+| Memory Day | Every seven days, a Companion's weekly review: identity questions, the week's letters, distilling memory |
+| Classic 7:7:7 | Soul and Song's original memory rule: seven memories a bank, distilled nightly, with Memory Day weekly |
+| Host | `claudecore.host`: how a shared program asks the computer it's on for windows, sounds, saves and data |
+| Broker | The one queue every program's model requests go through, by priority |
+| xpcompat | How the 2011 and 2025 computers run XP's programs as their own |
+| Recovery Backups | Where a format moves a computer's old data, inside that computer's folder |
+| Saves | `ClaudeGames\Saves`: every game's progress, shared by all three eras |
+| Caer Duin, the Deep Wood, the Lich King | Claude and Magic's town, its land outside the walls, and the boss on floor 20 |
+
+## 10. Working on the project
+
+The Timeline is built in sessions with **Claude Code**, opened in the `Claude Timeline` folder. What a new session
+should know:
+
+- **Two repositories.** The Timeline (`jasonfye2015/ClaudeXP-Gemini`): work on branch `ClaudXP+Gemini`, then
+  fast-forward `main` to it. Claude and Magic (`jasonfye2015/claude-and-magic`): branch `main`, pulled into the
+  Timeline as a subtree (section 8).
+- **Commit and push each finished phase without asking**, in both repositories, and keep `main` level with
+  `ClaudXP+Gemini`. Never commit `Claude Timeline - Shortcut.lnk`. Bot tokens and other secrets stay local and are
+  never committed; scan staged changes for them.
+- **Test before calling anything done:** `Tests\run.py` for the Timeline (`--slow` boots the computers), and
+  `node tests/run.js` plus `python build.py --check` for Claude and Magic. Tests never touch the real `data` folders,
+  saves or Kithylin AI's data.
+- **Downloads are allowed** when something is needed. Delete the `package-lock.json` npm leaves behind.
+- **Keep content original.** Characters, places and art are made for the project.
+- **Processes:** stop a program only by its confirmed process ID. Real-time games need the shared precise timer with
+  catch-up, or they run in slow motion.
+- **New games** go in Start > Games and the Games folder only, not on the desktop.
+- **Claude Code's own notes** about you and the project live on the PC, in
+  `C:\Users\<you>\.claude\projects\<drive>--Claude-Timeline\memory\`. Appendix E is a copy of them from when this file
+  was written. On a new PC, give them back to Claude, or copy the folder there.
+
+## 11. The Manual
+
+`Claude Timeline\Manual\`, readable in any text editor or from the launcher:
+
+{manual}
+
+## 12. Rebuilding the drive from nothing
 
 Work in this order. Part A comes from GitHub and the web. Part B only exists in your backups.
 
@@ -207,7 +395,7 @@ None of this is on GitHub or the web. Keep copies on another drive.
 Restore a backup from the launcher's **BACKUP** button. Paths inside are relative to the Timeline, so a backup
 restores onto any copy on any drive.
 
-## 6. Where to put things
+## 13. Where to put things
 
 Local Storage folders are found by **how their names begin**. "Furry Media Archive (2001)" works as well as
 "Furry Media Archive", and "Emulation Archive" as well as "Emulation". `WADs` is the exception: it must be named
@@ -248,17 +436,17 @@ under folders named like this:
 **WADs:** `Local Storage\WADs\` holds the Doom, Doom II, Heretic, Hexen, Wolfenstein 3D and Freedoom WADs, by their
 usual names. Doom 64 needs `DOOM64.WAD` and its `DOOMSND.DLS`.
 
-**Models:** see 5.A.4. **Kiwix:** `.zim` files in `Local Storage\Kiwix`. **Lemmings** and **Casualties: Unknown**
+**Models:** see 12.A.4. **Kiwix:** `.zim` files in `Local Storage\Kiwix`. **Lemmings** and **Casualties: Unknown**
 read their media from `Local Storage\Lemmings` and `Local Storage\casualties unknown`.
 
-## 7. Checking it works
+## 14. Checking it works
 
 1. Run `Claude Timeline\Tests\Run All Tests.bat`, or `Python\python.exe Tests\run.py` from the Timeline folder. Add
    `--slow` to boot each computer. Every test should pass.
 2. Start the launcher and click **SELF-CHECK**. It should say OK.
 3. Boot EPOCH-2001 and open ClaudeAIM. A buddy who answers means the engine and models are working.
 
-## 8. Keeping this file current
+## 15. Keeping this file current
 
 Regenerate it after big changes with:
 
@@ -284,6 +472,14 @@ Scanned {date}. Sizes are the files' own. `Local Storage` is in Appendix C.
 # Appendix C - Everything in Local Storage
 
 {inventory}
+
+# Appendix D - The developer's map (Manual chapter 13)
+
+{under_the_hood}
+
+# Appendix E - Claude Code's notes about this project
+
+{notes}
 """
 
 
@@ -322,6 +518,78 @@ def folders_table():
     return "\n".join(rows) + f"\n\n**The residents ({len(residents)}):** " + ", ".join(residents) + "."
 
 
+def _json(path):
+    import json
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+
+
+def main_furs():
+    """A table of the main furs: name, species, era files and their summary."""
+    rows = ["| Resident | Species | Eras | Who they are |", "|---|---|---|---|"]
+    for d in sorted((TIMELINE / "Residents").iterdir(), key=lambda p: p.name.lower()):
+        r = _json(d / "resident.json")
+        if r.get("tier") != "main":
+            continue
+        eras = ", ".join(sorted(p.stem for p in (d / "eras").glob("*.json"))) if (d / "eras").is_dir() else ""
+        species = (r.get("fursona") or {}).get("species", "")
+        summary = (r.get("summary") or "").replace("|", "/").replace("\n", " ")
+        rows.append(f"| **{r.get('fur_name') or d.name}** | {species} | {eras} | {summary} |")
+    tiers = {}
+    for d in (TIMELINE / "Residents").iterdir():
+        t = _json(d / "resident.json").get("tier")
+        if t:
+            tiers[t] = tiers.get(t, 0) + 1
+    count = ", ".join(f"{n} {t}" for t, n in sorted(tiers.items(), key=lambda kv: -kv[1]))
+    return "\n".join(rows) + f"\n\nIn all: {count}."
+
+
+def cam_details():
+    """Claude and Magic's version, and its last few plans with their titles."""
+    repo = TIMELINE / "ClaudeGames" / "Claude and Magic"
+    version = (_json(repo / "package.json").get("version") or "?").removesuffix(".0")
+    plans = []
+    for p in repo.glob("UPGRADE_PLAN_*.md"):
+        m = re.search(r"_(\d+)\.md$", p.name)
+        if m:
+            first = p.read_text(encoding="utf-8").splitlines()[0].lstrip("# ").strip()
+            plans.append((int(m.group(1)), first))
+    lines = [f"- {title}" for _, title in sorted(plans)[-8:]]
+    return version, "\n".join(lines) or "- (the repo isn't here)"
+
+
+def manual_list():
+    """The Manual's contents, from its index."""
+    text = (TIMELINE / "Manual" / "index.md").read_text(encoding="utf-8")
+    m = re.search(r"## Contents\n(.*?)\n## ", text, re.S)
+    body = m.group(1).strip() if m else ""
+    body = re.sub(r"\[([^\]]+)\]\((\d\d[-\w]*\.md)\)", r"**\1** (`Manual\\\2`)", body)
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", body)
+
+
+def notes():
+    """Claude Code's memory for this project on this PC, if there is one."""
+    projects = Path.home() / ".claude" / "projects"
+    slug = re.sub(r"[^A-Za-z0-9]", "-", str(TIMELINE))          # Claude Code names a project's folder after its path
+    folders = [projects / slug / "memory"] if (projects / slug / "memory").is_dir() else sorted(
+        projects.glob("*Claude-Timeline/memory"), key=lambda p: p.stat().st_mtime, reverse=True) if projects.is_dir() else []
+    if not folders:
+        return "Not found on this PC when this file was made."
+    out = [f"Copied from `{folders[0]}`. Each note is something Claude was told or learned while building the Timeline."]
+    for p in sorted(folders[0].glob("*.md")):
+        if p.name == "MEMORY.md":
+            continue
+        text = p.read_text(encoding="utf-8")
+        head, _, body = text.partition("\n---\n") if text.startswith("---") else ("", "", text)
+        name = re.search(r"^name:\s*(.+)$", head, re.M)
+        desc = re.search(r"^description:\s*(.+)$", head, re.M)
+        out.append(f"### {name.group(1).strip() if name else p.stem}\n\n" + (f"*{desc.group(1).strip()}*\n\n" if desc else "")
+                   + re.sub(r"^(#+) ", r"\1### ", body.strip(), flags=re.M))
+    return "\n\n".join(out)
+
+
 def chapter(path, drop_title=True):
     text = path.read_text(encoding="utf-8")
     if drop_title:
@@ -340,8 +608,11 @@ def main(argv=None):
         inv_text = chapter(inv)
     programs = chapter(TIMELINE / "Manual" / "15-programs.md")
     drive = TIMELINE.anchor or str(TIMELINE.parent)
+    cam_version, cam_plans = cam_details()
     text = GUIDE.format(date=time.strftime("%d %B %Y"), drive=drive, folders=folders_table(), programs=programs,
-                        inventory=inv_text)
+                        inventory=inv_text, main_furs=main_furs(), cam_version=cam_version, cam_plans=cam_plans,
+                        manual=manual_list(), under_the_hood=chapter(TIMELINE / "Manual" / "13-under-the-hood.md"),
+                        notes=notes())
     out = Path(args.out)
     out.write_text(text, encoding="utf-8")
     print(f"{len(text.splitlines()):,} lines -> {out}")
