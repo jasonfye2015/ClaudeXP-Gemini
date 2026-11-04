@@ -166,6 +166,9 @@ window.addEventListener("DOMContentLoaded", () => {
   game.on("ablo", () => { ui.abloStart(); ui.refresh(); });                         // (the Fortress: 76d-fortress.js)
   game.on("fortfloor", () => { fortIn = {}; ui.fortBg = null; ui.refresh(); });                      // (Claudeita's cave: 76c-cave.js)
   game.on("cave", () => { caveIn = {}; caveFire = false; caveAcc = 0; ui.caveStart(); ui.refresh(); });                                // (Leshy's table: 76b-cabin.js)
+  // (v55.2) the real-time modes draw without CM.beforeFrame, so the screen's effects would freeze as they were when the mode began - the soft focus
+  // of the doors' window, the Wood's weather on the lens, its fires' shimmer: cleared as one goes in (the screen style stays)
+  game.on("mode", (mode) => { if (!["tower", "cave", "fortress", "ablo", "bros", "craft"].includes(mode) || !renderer.screen) return; Object.assign(renderer.screen, { focus: 0, focusAt: null, focusR: 0, swirl: 0, heat: [], heatAll: 0, breath: 0, lens: [0, 0, 0] }); });
   game.on("mode", (mode) => { if (mode !== "tower") { towerIn = {}; if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); } });   // (out of the tower: the mouse is free)
   game.on("towerfloor", (run) => { if (!renderer.ok) return; useTheme(run.fl.number); renderer.setFloor(run.fl, CM.TOWER_THEME); renderer.setCamera(run.fl.start[0], run.fl.start[1], 0); towerIn = {}; ui.refresh(); });                       // (the tower's doors: who goes in)
   game.on("snore", (d, pan) => { try { CM.audio.play("snore", 0.35 * Math.max(0.1, 1 - d / 7), pan || 0); } catch (e) { /* quiet */ } });   // (a sleeper, somewhere close)

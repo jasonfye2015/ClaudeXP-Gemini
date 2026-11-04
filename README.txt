@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Mage Tower in focus (v55.2, fix (asked 2026-11-03))
+  (src/js/80-main.js)
+  - Fixed: the Mage Tower was out of focus the whole way up. The soft blur behind the Tower's doors window, the
+    Wood's weather on the lens and its fires' shimmer froze on the view as the hero went in, because the Tower's
+    frames don't run the step that fades them. They are cleared now on going into the Tower - and into the caves,
+    the Fortress, Claudeablo, Super Claude Bros and Claudecraft, which had the same fault.
+
 Tracks (v55.1, UPGRADE_PLAN_50.md phase 1)
   (src/js/40-render.js)
   - The narrow earth paths of the land are tracks now: two ruts worn into them where the wheels and feet go, a ridge
