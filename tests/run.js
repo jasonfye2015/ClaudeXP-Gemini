@@ -6113,6 +6113,19 @@ test("the river's life (v62.0): a pair of ducks on each of two slow stretches aw
   for (const u of ["uBankTint", "uLily"]) assert.ok(src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
 });
 
+test("a foe's marks (v63.0): each ailment, the part whole or broken, what it carries and where it hides come out as tags with a mark and a tooltip, in the fight screen's order; nothing for a plain foe; the real-time modes are named for the fade", () => {
+  const CM = load();
+  assert.strictEqual(CM.foeMarks({ name: "a rat", hp: 3, max: 3 }).length, 0, "a plain foe has no marks"); assert.strictEqual(CM.foeMarks(null).length, 0);
+  const m = { asleep: 2, held: 1, marked: true, blind: 3, burning: 2, chilled: 1, warded: 2, part: { name: "shell", hp: 2, max: 5 }, gear: { weapon: CM.weapon ? CM.weapon("sword") : { name: "a sword" }, offhand: true }, under: true };
+  const T = CM.foeMarks(m); assert.strictEqual(T.map((t) => t.id).join(","), "asleep,held,marked,blind,burning,chilled,warded,part,carries,under", "every mark, in the row's order");
+  for (const t of T) { assert.ok(t.mark.length === 1, `a one-character mark (${t.id})`); assert.ok(t.text.length > 2 && t.title.length > 10, `text and a tooltip (${t.id})`); }
+  assert.strictEqual(T[0].text, "asleep 2"); assert.ok(T[0].title.includes("2 more rounds")); assert.ok(T[1].title.includes("1 more round:"), "singular");
+  assert.strictEqual(T[7].text, "shell 2/5"); assert.strictEqual(CM.foeMarks({ part: { name: "shell", broken: true } })[0].text, "shell broken");
+  assert.ok(T[8].text.startsWith("carries ") && T[8].text.endsWith(" and a shield"), T[8].text); assert.strictEqual(T[9].text, "under the floor");
+  assert.strictEqual(CM.REALTIME_MODES.join(","), "tower,cave,fortress,ablo,bros,craft");
+  const fight = fs.readFileSync(path.join(__dirname, "..", "src", "js", "74-fight.js"), "utf-8"); assert.ok(fight.includes("CM.foeMarks") && fight.includes("bar foe"), "the fight screen reads the marks and draws the bar");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

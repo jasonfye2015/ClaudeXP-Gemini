@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Closer to hand (v63.0, UPGRADE_PLAN_58.md)
+  (src/js/64zzzd-foemarks.js, src/js/76zzzzzzzzzzb-gui.js, src/js/74-fight.js, src/style.css)
+  - In a fight each foe's row has a health bar (and its part's, below it) and its marks - asleep, held, marked,
+    blinded, burning, chilled, warded, a broken part, what it carries, under the floor - as small tags with tooltips,
+    in place of the run-on line of words.
+  - In the pack a thing can be dragged onto a hero's card to give it; at the merchant's, onto the wares to sell it,
+    or a ware onto the pack to buy it. The clicks work as they did.
+  - A short fade into and out of the Mage Tower, the cave, the Fortress, Claudeablo, Claudebros and Claudecraft, in
+    place of the cut.
+
 The river's life (v62.0, UPGRADE_PLAN_57.md)
   (src/js/69zzl-waterlife.js, src/js/76zzzzzzzzzza-waterlife.js, src/js/40-render.js)
   - The banks in the water: where the Wood's trees or a wall stand over it, the river mirrors them - darker and

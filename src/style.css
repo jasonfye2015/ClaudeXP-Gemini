@@ -279,6 +279,16 @@ body.intower #towerhud { display: block; } body.intower #view .sky, body.intower
 #actions .menu, #actions .targets { display: flex; gap: 6px; justify-content: center; }
 #actions .targets button { font-weight: normal; }
 #actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions .targets button .bar.foe { display: block; height: 6px; margin: 3px 0 2px; background: #100C08; border-radius: 2px; overflow: hidden; position: relative; }   /* (v63.0) a foe's health bar, and its part's below it */
+#actions .targets button .bar.foe i { position: absolute; left: 0; top: 0; bottom: 0; background: #B03030; transition: width 0.25s; }
+#actions .targets button .bar.foe.mid i { background: #C07828; } #actions .targets button .bar.foe.low i { background: #D8A030; }
+#actions .targets button .bar.foe.part { height: 4px; margin-top: 1px; } #actions .targets button .bar.foe.part i { background: #7A8AB0; }
+#actions .targets button .tags { display: block; margin-top: 2px; line-height: 1.5; }
+#actions .targets button .tag { display: inline-block; font: 9px Tahoma, Verdana, sans-serif; color: #E8D8B0; background: #3A2A18; border: 1px solid #5A4428; border-radius: 3px; padding: 0 4px; margin: 0 2px 1px 0; cursor: help; }
+#actions .targets button .tag b { color: var(--gold); }
+#actions .targets button .tag-asleep { color: #B0C0E8; } #actions .targets button .tag-burning { color: #F0A040; } #actions .targets button .tag-chilled { color: #A0D8F0; } #actions .targets button .tag-blind { color: #C0B0D0; } #actions .targets button .tag-held { color: #D0C090; }
+.item[draggable="true"] { cursor: grab; } .item.dragging { opacity: 0.5; }   /* (v63.0) the pack's things dragged to a hero, the wares, or the pack */
+.member.drop-over { outline: 2px solid var(--gold); outline-offset: -2px; background: #3A2C1C; } #bag-list.drop-over, #shop-list.drop-over { outline: 2px dashed var(--gold); outline-offset: -2px; }
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
