@@ -299,8 +299,22 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    the draft (lights guttering, renderer.wind set below); lightning through the grates as lights by
    CM.stormLightNow; "steam" in the Foundry and the Root of the World when wading or dripping, the haze raised;
    a splash on a step in floodwater. The ambush rule is not touched by the steam (cosmetic).
-9. Combat synergies.
-10. The soundscape and the adaptive music; then the pass over every place in every event.
+9. v79.0 - the combat synergies. **Done**: 69zzr-synergy.js - CM.weatherMods(game, element) (on the surface: a
+   storm carries lightning x1.25 and chains it to a second foe for half, the half without the bonus; rain damps fire
+   x0.75 and puts out the burning it leaves), CM.windMods(game, hero) for a bow (the facing against the wind's way:
+   a headwind hit x0.85 and a point short, a tailwind x1.15 and a point long, said once a fight); spellHit,
+   hitChance, strike and terrain wrapped (floodwater underfoot is water). 76zzzzzzzzzzo-synergy.js: the sky's flash
+   and a thunderclap on the "stormchain" fx. Left out: the fire's smaller burst and the chain's drawn arc (the spell
+   shapes' lightning already branches).
+10. v79.0 (with part 9) - the soundscape. **Done**: 76zzzzzzzzzzp-soundscape.js - CM.Weatherscape: beds on the
+    ambience bus eased every quarter second from CM.weatherNow (the downpour's roar and the roofs' patter by the
+    rain's strength, the gale's howl in a resonant band leaning with the gusts), the four fogs' pads (orange a
+    crackling static over a 55 Hz hum, green a bubbling hiss with slow dips, brown a 40 Hz drone pulsing every two
+    seconds, violet a chord of sine partials with a slow detune), every bed's muffled self below ground (a low-pass at
+    600 Hz, a third the gain, by the floor's depth), a tree's crack on a felling within hearing (CM.fellTree
+    wrapped), and the music ducked under a storm or a fog (its master through a low-pass to 1.2 kHz and a gain of
+    two thirds, eased). Not done: the thunder panned by the bolt's bearing; the pass over every place in every
+    event is left for a later look.
 1. The clock: the idle tick at the spec's pace (24 game minutes a real minute while standing) - yes, or the wall
    clock outright (replays then record the ticks as they happened)?
 2. Does the dungeon's time run while the party stands still below, or only by steps (today's way)?
