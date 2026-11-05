@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Lamp posts (v56.3, UPGRADE_PLAN_51.md phase 3)
+  (src/js/26h-lamps.js, src/js/76zzzzzzzzzz4-lamps.js, src/js/26-surface.js, src/js/80-main.js)
+  - The town's lamps are built now: a stone plinth, a tapering iron post with its collars, and a lantern's cage with
+    corner bars, a little roof and a finial. The glass glows warm, and a soft pool of light spreads on the ground
+    beneath, once the lamplighter has been round to light that lamp - and goes dark again when he snuffs it at dawn.
+
 Fences and hedges (v56.2, UPGRADE_PLAN_51.md phase 2)
   (src/js/26g-fences.js, src/js/26-surface.js, src/js/76zzzzzzzzzz-buildings.js)
   - The town's fences are built now instead of painted round their squares: a post in each, two rails running on to

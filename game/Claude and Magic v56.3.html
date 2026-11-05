@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v56.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v56.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "56.2", built: "2026-11-04", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "56.3", built: "2026-11-04", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6477,7 +6477,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const sub = opts.sub || {};
   const quadUV = (a, b, c, d, layer, shade, r, sway = 0) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };
   for (const p of W ? [] : opts.props || []) {
-    if (p.how === "stand") continue;
+    if (p.how === "stand") { if (p.id === "lamp" && CM.lampModel && CM.lampModel(p, quad, index)) props++; continue; }   // (v56.3: the lamp's post and lantern built - 26h-lamps.js; its glass stays a picture, lit by the lamplighter)
     if (p.how === "model") { if (CM.propModel && CM.propModel(p, (a, b, c, d, layer, shade, uvr) => quadUV(a, b, c, d, layer, shade, uvr || [0, 0, 1, 1]), index)) props++; continue; }   // (v24.5: built solid - 76zzzzh-models.js)
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
     if (layer === undefined) continue;
@@ -6716,6 +6716,33 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = (k) => x + k / N, Z = (k) => y + k / N;
           quad([X(i), T[j + 1][i], Z(j + 1)], [X(i + 1), T[j + 1][i + 1], Z(j + 1)], [X(i + 1), T[j][i + 1], Z(j)], [X(i), T[j][i], Z(j)], leaf, 0.92 + ((i + j) % 2) * 0.1); } } }
     return out; };
+}
+
+// ---- 26h-lamps.js ----
+"use strict";
+// Lamp posts (v56.3, UPGRADE_PLAN_51.md): the town's lamps are built - a stone plinth, an iron post with a collar, an arm,
+// and a lantern's cage with its little roof and finial - in the town's mesh (CM.lampModel). The glass in the cage and a
+// soft pool of light on the ground beneath glow once the lamplighter has lit that lamp (80-main.js: the glass and the
+// pool take the old picture's place; 76zzzzzzzzzz4-lamps.js paints them).
+//   CM.lampModel(p, quad, index) -> true when built     CM.LAMP_GLASS_Y: the glass's foot, CM.LAMP_GLASS_H its height
+{ CM.LAMP_MODEL = true; CM.LAMP_GLASS_Y = 1.03; CM.LAMP_GLASS_H = 0.15;
+  CM.lampModel = (p, quad, index) => { const iron = index["model:iron"] !== undefined ? index["model:iron"] : index["solid:timber"], stone = index["solid:sill"] !== undefined ? index["solid:sill"] : iron; if (iron === undefined) return false;
+    const cx = p.x + 0.5 + (p.dx || 0), cz = p.y + 0.5 + (p.dz || 0);
+    const box = (x0, y0, z0, x1, y1, z1, L, k = 1) => { const V = (a, b, c) => [cx + a, b, cz + c];
+      quad(V(x0, y0, z1), V(x1, y0, z1), V(x1, y1, z1), V(x0, y1, z1), L, 0.95 * k); quad(V(x1, y0, z0), V(x0, y0, z0), V(x0, y1, z0), V(x1, y1, z0), L, 0.78 * k);
+      quad(V(x1, y0, z1), V(x1, y0, z0), V(x1, y1, z0), V(x1, y1, z1), L, 0.88 * k); quad(V(x0, y0, z0), V(x0, y0, z1), V(x0, y1, z1), V(x0, y1, z0), L, 0.72 * k);
+      quad(V(x0, y1, z1), V(x1, y1, z1), V(x1, y1, z0), V(x0, y1, z0), L, 1.05 * k); };
+    box(-0.075, 0, -0.075, 0.075, 0.09, 0.075, stone, 1); box(-0.055, 0.09, -0.055, 0.055, 0.13, 0.055, stone, 0.95);   // the plinth
+    const N = 8, R = 0.026, ring = (r, i, y) => { const a = (i / N) * Math.PI * 2; return [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r]; };
+    for (let i = 0; i < N; i++) quad(ring(R, i, 0.13), ring(R, i + 1, 0.13), ring(R * 0.8, i + 1, 0.98), ring(R * 0.8, i, 0.98), iron, 0.7 + 0.3 * Math.abs(Math.cos((i / N) * 6.28 - 0.8)));   // the post, tapering
+    box(-0.04, 0.5, -0.04, 0.04, 0.54, 0.04, iron, 0.9); box(-0.035, 0.96, -0.035, 0.035, 1.0, 0.035, iron, 0.9);   // its collars
+    const y0 = CM.LAMP_GLASS_Y - 0.02, y1 = CM.LAMP_GLASS_Y + CM.LAMP_GLASS_H + 0.02, a = 0.06, t = 0.011;
+    box(-a, y0 - 0.02, -a, a, y0, a, iron, 0.85);                                                                    // the lantern's floor
+    for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) box(sx * a - t, y0, sz * a - t, sx * a + t, y1, sz * a + t, iron, 0.8);   // its corner bars
+    const top = [cx, y1 + 0.075, cz], C = [[-a - 0.015, -a - 0.015], [a + 0.015, -a - 0.015], [a + 0.015, a + 0.015], [-a - 0.015, a + 0.015]].map(([x, z]) => [cx + x, y1, cz + z]);
+    for (let i = 0; i < 4; i++) quad(C[i], C[(i + 1) % 4], top, top, iron, 0.75 + 0.15 * i);                         // its roof
+    box(-0.012, y1 + 0.07, -0.012, 0.012, y1 + 0.12, 0.012, iron, 0.9);                                             // the finial
+    return true; };
 }
 
 // ---- 27-props.js ----
@@ -44444,6 +44471,19 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   };
 }
 
+// ---- 76zzzzzzzzzz4-lamps.js ----
+"use strict";
+// Lamp posts, painted (v56.3, UPGRADE_PLAN_51.md): the lantern's glass (warm when lit, dark when not - its glow is set
+// per lamp in 80-main.js) and the soft pool of light a lit lamp throws on the ground beneath it.
+{ const P = 64;
+  const PAINT = {
+    lampglass: (p) => { const g = p.createLinearGradient(0, 0, 0, P); g.addColorStop(0, "#FFE7A8"); g.addColorStop(0.6, "#F5B85A"); g.addColorStop(1, "#D88A30"); p.fillStyle = g; p.fillRect(4, 2, P - 8, P - 4);
+      p.fillStyle = "rgba(60,40,20,0.85)"; p.fillRect(P / 2 - 2, 2, 4, P - 4); p.fillRect(4, P / 2 - 2, P - 8, 4); p.fillStyle = "rgba(255,255,240,0.6)"; p.fillRect(10, 8, 6, 14); },
+    lamppool: (p) => { const g = p.createRadialGradient(P / 2, P / 2, 0, P / 2, P / 2, P / 2); g.addColorStop(0, "rgba(255,200,120,0.55)"); g.addColorStop(0.45, "rgba(255,180,100,0.25)"); g.addColorStop(1, "rgba(255,170,90,0)"); p.fillStyle = g; p.fillRect(0, 0, P, P); },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [k, f] of Object.entries(PAINT)) { if (set.index[k] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = P; f(c.getContext("2d")); set.index[k] = set.layers.length; set.layers.push(c); } return set; }; }
+}
+
 // ---- 77-splash.js ----
 "use strict";
 // The title card: what the game opens on, before the first screen of choices. A dark, warm hall: the game's emblem
@@ -45079,7 +45119,10 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
       for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
     }
-    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (CM.PROPS[p.id].night && (CM.lampOn ? CM.lampOn(game, p) : lit) ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
+    for (const p of renderer.standing) if (p.id === "lamp" && CM.LAMP_MODEL && renderer.index.lampglass !== undefined) { if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) > 12) continue; const on = CM.lampOn ? CM.lampOn(game, p) : lit;   // (v56.3: the built lamp's glass, and its pool of light)
+        out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: "lampglass", w: 0.1, h: CM.LAMP_GLASS_H, lift: CM.LAMP_GLASS_Y, glow: on ? 1 : 0, shade: on ? 1 : 0.35 });
+        if (on && renderer.index.lamppool !== undefined) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: "lamppool", flat: true, w: 2.2, glow: 1, alpha: 0.85 }); }
+      else if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (CM.PROPS[p.id].night && (CM.lampOn ? CM.lampOn(game, p) : lit) ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {

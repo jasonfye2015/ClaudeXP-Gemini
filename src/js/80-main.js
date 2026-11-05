@@ -484,7 +484,10 @@ window.addEventListener("DOMContentLoaded", () => {
       for (const [key, thing] of Object.entries(fl.things)) { const [x, y] = key.split(",").map(Number); if (!near(x, y)) continue; if (["monsters", "boss", "guardian", "chest", "hermit", "adventurer", "villager", "peddler", "burner", "rivals", "strongbox"].includes(thing.type) && !(game.mode === "combat" && key === game.foeKey)) under(x, y, 0.75); }
       for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) under(p.x, p.y, p.w, p.dx, p.dz);
     }
-    for (const p of renderer.standing) if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (CM.PROPS[p.id].night && (CM.lampOn ? CM.lampOn(game, p) : lit) ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
+    for (const p of renderer.standing) if (p.id === "lamp" && CM.LAMP_MODEL && renderer.index.lampglass !== undefined) { if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) > 12) continue; const on = CM.lampOn ? CM.lampOn(game, p) : lit;   // (v56.3: the built lamp's glass, and its pool of light)
+        out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: "lampglass", w: 0.1, h: CM.LAMP_GLASS_H, lift: CM.LAMP_GLASS_Y, glow: on ? 1 : 0, shade: on ? 1 : 0.35 });
+        if (on && renderer.index.lamppool !== undefined) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: "lamppool", flat: true, w: 2.2, glow: 1, alpha: 0.85 }); }
+      else if (Math.abs(p.x - fl.pos[0]) + Math.abs(p.y - fl.pos[1]) <= 12) out.push({ x: p.x, y: p.y, dx: p.dx, dz: p.dz, layer: p.layer, w: p.w, h: p.h, glow: CM.PROPS[p.id].glow || (CM.PROPS[p.id].night && (CM.lampOn ? CM.lampOn(game, p) : lit) ? 0.9 : 0) });   // (the standing props, near the party; lamps lit at night)
     if (renderer.sky) {                                                 // the sun and the moon: far off, along their arc from the east over the south to the west
       const S = renderer.sky, eye = renderer.eye;
       for (const [t, layer, size] of [[S.sun, "sun", 6], [S.moon, `moon:${S.phase}`, 4]]) {
