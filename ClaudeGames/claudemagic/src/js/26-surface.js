@@ -389,6 +389,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
+  const washing = sky && !only && !W && CM.washingModel ? CM.washingModel({ quad: near(20), fl, index, season: opts.season }) : 0;   // (v61.0: washing on the line behind the houses - 26k-washing.js)
   const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad: near(28), fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
   const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, detail: opts.detail, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0, gate: 0 };   // (v57.0: battlements - 26i-wall.js)
   const shaftHead = sky && !only && !W && CM.shaftHead ? CM.shaftHead({ quad, fl, index }) : 0;   // (v57.3: the shaft head, built - 26j-shaft.js)
@@ -452,5 +453,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
 };
