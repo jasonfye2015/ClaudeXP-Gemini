@@ -4,3 +4,7 @@ The figures (src/models, UPGRADE_PLAN_60.md): rigged, animated low-poly bodies f
 - Quaternius - Ultimate Animated Animal Pack (Wolf, Husky, Horse, Deer, Bull, Fox, Stag) and Easy Enemy Pack (Rat, Spider, Snake, Frog), quaternius.com (CC0): https://quaternius.com/packs/ultimateanimatedanimals.html, https://quaternius.com/packs/easyenemy.html
 
 CC0 asks nothing; the credit is given anyway, as for the tiles and the textures (src/art/CREDITS.txt). The sources are kept in Local Storage/Claude and Magic models/<pack>/ with each pack's licence file; only the baked file (src/js/35c-figures.js) is in the repo.
+
+The plants and trees (src/models/plants.json, UPGRADE_PLAN_62.md): static vertex-coloured meshes, baked by tools/plants.py.
+
+- Quaternius - Ultimate Nature Pack (the common, birch, pine and willow trees in their green, autumn, dead and snow shapes; bushes, plants, grass, flowers, lilypads, corn and wheat, stumps, logs and rocks), quaternius.com (CC0): https://quaternius.com/packs/ultimatenature.html - fetched as .glb from the showcase mirror https://github.com/trebeljahr/quaternius-showcase (LICENSES.md lists the pack CC0-1.0). Kept in Local Storage/Claude and Magic models/quaternius-nature/; only the baked file (src/js/35d-plants.js) is in the repo.
