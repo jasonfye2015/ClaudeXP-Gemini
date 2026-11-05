@@ -4,8 +4,8 @@
 // ("rain, 1 h 10 left - then clear" / "clear - mist in 40 min") - and the exact date and time with it. The sun and
 // the moon on the dial are drawn larger (70-ui.js's markup), and the stars thicker on a clear night. 73b-clock.js
 // draws the dial; this adds to it on each refresh.
-{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0" };
-  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora" };
+{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0", tornado: "#2A2630" };
+  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora", tornado: "a tornado" };
   const span = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${Math.round(m % 60)}` : ""}` : `${Math.max(1, Math.round(m))} min`);
   const ds0 = CM.UI.prototype.drawSky; CM.UI.prototype.drawSky = function (...a) { const out = ds0.apply(this, a); try { const g = this.game, el = this.$("#view .sky"), bar = el && el.querySelector(".wxbar"); if (!bar || !g.ext || !CM.weatherNow) return out;
       const W = CM.weatherNow(g), N = CM.nextWeather(g), t = CM.clockOf(g), H = 6 * 60, segs = bar.querySelector(".segs"); let html = "", at = t, left = H;

@@ -36,7 +36,7 @@
   P.look = function (...a) {
     const fl = this.floor; if (!fl || !outside(this) || CM.weather(this) !== "mist") return look0.apply(this, a);
     const had = new Set(fl.seen.map(([x, y]) => `${x},${y}`)), out = look0.apply(this, a), [px, py] = fl.pos;
-    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= WX.mistSight);   // (what the mist hid stays unseen)
+    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= ((CM.mistSightNow && CM.mistSightNow(this)) || WX.mistSight));   // (what the mist hid stays unseen; v73.0: one square in a dense mist)
     return out;
   };
   // snow: the walk is heavier in the Wood

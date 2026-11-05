@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v72.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v73.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "72.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "73.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5930,26 +5930,35 @@ CM.moonPath = (phase, r) => {
 //   CM.weatherNow(game)       -> { kind, strength 0..1 (ramped), word, from, until, wind: { speed, dir } }
 //   CM.nextWeather(game)      -> { kind, strength, from, until, inMinutes }
 //   CM.weatherDayWord(game)   the day's leaning, the old word
-{ const WX = CM.WX = { kinds: ["clear", "cloud", "rain", "storm", "mist", "wind", "snow", "heat", "aurora"], clearMin: 60, clearMax: 360, eventMin: 120, eventMax: 360, ramp: 20, nightClear: 0.8,
-    odds: { spring: { cloud: 3, rain: 4, storm: 1, mist: 2, wind: 2, snow: 0, heat: 0 }, summer: { cloud: 2, rain: 2, storm: 2, mist: 1, wind: 2, snow: 0, heat: 3 }, autumn: { cloud: 3, rain: 3, storm: 1, mist: 3, wind: 3, snow: 0, heat: 0 }, winter: { cloud: 3, rain: 1, storm: 0, mist: 2, wind: 3, snow: 4, heat: 0 } },
-    word: { clear: "clear", cloud: "clear", rain: "rain", storm: "rain", mist: "mist", wind: "wind", snow: "snow", heat: "clear", aurora: "clear" },
-    windSpeed: { clear: 0.15, cloud: 0.25, rain: 0.45, storm: 0.85, mist: 0.05, wind: 1.0, snow: 0.35, heat: 0.1, aurora: 0.1 } };
+{ const WX = CM.WX = { kinds: ["clear", "cloud", "rain", "storm", "mist", "wind", "snow", "heat", "aurora", "tornado"], tornadoMin: 60, tornadoMax: 120, tornadoSpeed: 0.5, afterRainMinutes: 90, clearMin: 60, clearMax: 360, eventMin: 120, eventMax: 360, ramp: 20, nightClear: 0.8,
+    odds: { spring: { cloud: 3, rain: 4, storm: 1, mist: 2, wind: 2, snow: 0, heat: 0, tornado: 0.15 }, summer: { cloud: 2, rain: 2, storm: 2, mist: 1, wind: 2, snow: 0, heat: 3, tornado: 0.3 }, autumn: { cloud: 3, rain: 3, storm: 1, mist: 3, wind: 3, snow: 0, heat: 0, tornado: 0.4 }, winter: { cloud: 3, rain: 1, storm: 0, mist: 2, wind: 3, snow: 4, heat: 0, tornado: 0 } },
+    word: { clear: "clear", cloud: "clear", rain: "rain", storm: "rain", mist: "mist", wind: "wind", snow: "snow", heat: "clear", aurora: "clear", tornado: "wind" },
+    windSpeed: { clear: 0.15, cloud: 0.25, rain: 0.45, storm: 0.85, mist: 0.05, wind: 1.0, snow: 0.35, heat: 0.1, aurora: 0.1, tornado: 1.0 } };
   const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), between = (a, b) => a + rnd() * (b - a);
   const hourAt = (clock) => ((CM.CLOCK.start + clock) % CM.CLOCK.day) / 60;
   const nightAt = (game, clock) => { const [dawn, dusk] = CM.daylightOf(game), h = hourAt(clock); return h >= dusk || h < dawn; };
   CM.weatherDayWord = (game) => (game && game.seed !== undefined ? CM.weatherOf(game.seed, CM.dayOf(game), CM.season(game)) : "clear");
   const pickKind = (game, at) => { const season = CM.season(game), odds = Object.assign({}, WX.odds[season] || WX.odds.spring), lean = CM.weatherDayWord(game), h = hourAt(at), night = nightAt(game, at);
     if (lean === "rain") { odds.rain *= 2; odds.storm = (odds.storm || 0.5) * 2; } else if (odds[lean] !== undefined) odds[lean] *= 2;
-    if (!(h >= 12 && h < 17)) odds.heat = 0; if (night) { odds.heat = 0; odds.storm *= 0.5; }
+    if (!(h >= 12 && h < 17)) odds.heat = 0; if (night) { odds.heat = 0; odds.storm *= 0.5; odds.tornado = 0; }   // (a tornado by day, when it can be seen coming)
     if (night && season === "winter" && rnd() < 0.3) return "aurora";
     const total = Object.values(odds).reduce((a, b) => a + b, 0); let r = rnd() * total; for (const [k, w] of Object.entries(odds)) { r -= w; if (r < 0) return k; } return "cloud"; };
   const roll = (game, at, after) => { const night = nightAt(game, at);
     if (after !== "clear" || (night && rnd() < WX.nightClear)) { const len = Math.round(between(WX.clearMin, WX.clearMax) * (night ? 1.6 : 1)); return { kind: "clear", strength: 1, from: at, until: at + len }; }
-    const kind = pickKind(game, at), len = Math.round(between(WX.eventMin, WX.eventMax)), strength = kind === "aurora" ? between(0.5, 1) : Math.min(1, between(0.45, 1.05));
-    return { kind, strength, from: at, until: at + len }; };
+    const kind = pickKind(game, at), len = Math.round(kind === "tornado" ? between(WX.tornadoMin, WX.tornadoMax) : between(WX.eventMin, WX.eventMax)), strength = kind === "aurora" ? between(0.5, 1) : Math.min(1, between(0.45, 1.05));
+    const ev = { kind, strength, from: at, until: at + len }; if (kind === "tornado") { const a = rnd() * Math.PI * 2; ev.twister = { x: 0, y: 0, dx: Math.cos(a), dy: Math.sin(a), placed: false }; } return ev; };
+  // (v73.0) the twister: a tornado has a place that crosses the floor along its way at WX.tornadoSpeed squares a minute, from an edge, placed when it first starts on a floor
+  CM.twisterNow = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx, c = W && W.cur; if (!c || c.kind !== "tornado" || !c.twister || !game.floor || !(game.floor.number === 0 || game.floor.number === -1)) return null;
+    const T = c.twister, fl = game.floor, N = fl.grid.length, t = CM.clockOf(game) - c.from;
+    if (!T.placed || T.floor !== fl.number) { const cx = N / 2, cy = N / 2, R = N * 0.55; T.x0 = cx - T.dx * R; T.y0 = cy - T.dy * R; T.placed = true; T.floor = fl.number; }   // (it comes in from the edge on the wind's side and crosses the middle)
+    const d = Math.min(t * WX.tornadoSpeed, N * 1.1); T.x = T.x0 + T.dx * d; T.y = T.y0 + T.dy * d; return { x: T.x, y: T.y, dx: T.dx, dy: T.dy, minutes: t, strength: c.strength, inside: T.x >= 0 && T.y >= 0 && T.x < N && T.y < N }; };
+  // (v73.0) the sky's glow after rain: 1 in the minutes after a rain or a storm ends, falling to 0 over WX.afterRainMinutes
+  CM.afterRain = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx; if (!W || !W.prev || !(W.prev.kind === "rain" || W.prev.kind === "storm") || !W.cur || W.cur.kind !== "clear") return 0; const m = CM.clockOf(game) - W.prev.until; return m < 0 ? 0 : Math.max(0, 1 - m / WX.afterRainMinutes); };
+  // (v73.0) the mist's sight: one square in a dense mist, two in a light one, the usual four otherwise
+  CM.mistSightNow = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx, c = W && W.cur; if (!c || c.kind !== "mist") return null; const now = CM.weatherNow(game); return now.strength > 0.7 ? 1 : 2; };
   CM.weatherStep = (game) => { if (!game || !game.ext) return null; const W = game.ext("wx"), t = CM.clockOf(game);
     if (!W.cur) { W.cur = { kind: "clear", strength: 1, from: t, until: t + Math.round(between(30, 120)) }; W.next = roll(game, W.cur.until, "clear"); }
-    let guard = 0; while (t >= W.cur.until && guard++ < 200) { W.cur = W.next && W.next.from === W.cur.until ? W.next : roll(game, W.cur.until, W.cur.kind); W.next = roll(game, W.cur.until, W.cur.kind); }
+    let guard = 0; while (t >= W.cur.until && guard++ < 200) { W.prev = W.cur; W.cur = W.next && W.next.from === W.cur.until ? W.next : roll(game, W.cur.until, W.cur.kind); W.next = roll(game, W.cur.until, W.cur.kind); }
     return W; };
   CM.weatherNow = (game) => { const W = CM.weatherStep(game); if (!W) return { kind: "clear", strength: 0, word: "clear", from: 0, until: 0, wind: { speed: 0.15, dir: [1, 0] } };
     const c = W.cur, t = CM.clockOf(game), k = c.kind === "clear" ? 0 : Math.max(0, Math.min(1, (t - c.from) / WX.ramp, (c.until - t) / WX.ramp)) * c.strength;
@@ -29244,7 +29253,7 @@ Object.assign(CM.Game.prototype, {
   P.look = function (...a) {
     const fl = this.floor; if (!fl || !outside(this) || CM.weather(this) !== "mist") return look0.apply(this, a);
     const had = new Set(fl.seen.map(([x, y]) => `${x},${y}`)), out = look0.apply(this, a), [px, py] = fl.pos;
-    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= WX.mistSight);   // (what the mist hid stays unseen)
+    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= ((CM.mistSightNow && CM.mistSightNow(this)) || WX.mistSight));   // (what the mist hid stays unseen; v73.0: one square in a dense mist)
     return out;
   };
   // snow: the walk is heavier in the Wood
@@ -32795,8 +32804,8 @@ Object.assign(CM.UI.prototype, {
 // ("rain, 1 h 10 left - then clear" / "clear - mist in 40 min") - and the exact date and time with it. The sun and
 // the moon on the dial are drawn larger (70-ui.js's markup), and the stars thicker on a clear night. 73b-clock.js
 // draws the dial; this adds to it on each refresh.
-{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0" };
-  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora" };
+{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0", tornado: "#2A2630" };
+  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora", tornado: "a tornado" };
   const span = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${Math.round(m % 60)}` : ""}` : `${Math.max(1, Math.round(m))} min`);
   const ds0 = CM.UI.prototype.drawSky; CM.UI.prototype.drawSky = function (...a) { const out = ds0.apply(this, a); try { const g = this.game, el = this.$("#view .sky"), bar = el && el.querySelector(".wxbar"); if (!bar || !g.ext || !CM.weatherNow) return out;
       const W = CM.weatherNow(g), N = CM.nextWeather(g), t = CM.clockOf(g), H = 6 * 60, segs = bar.querySelector(".segs"); let html = "", at = t, left = H;
@@ -45480,6 +45489,47 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g), k = Math.max(0.15, W.strength);
       for (const o of out) { if (o.id === "rain") o.rate *= (W.kind === "storm" ? 1.4 : 1) * k; else if (o.id === "snow" && W.kind === "snow") o.rate *= k; else if (o.id === "fog") o.rate *= W.kind === "mist" ? 0.5 + k : 1; }
       return out; }; }
+}
+
+// ---- 76zzzzzzzzzzi-wxair.js ----
+"use strict";
+// The stronger sky and air (v73.0, UPGRADE_PLAN_61.md part 3): in a gale the air fills with flying leaves, twigs and
+// dust streaking downwind, and the lamps and torches gutter in the gusts; a tornado is a funnel of dark whirling air
+// that crosses the land along its way (CM.twisterNow), dust and debris flung up round it; a heat event shimmers
+// the air over the ground on a summer afternoon; after rain, with the sun low, the dawn or the dusk is dramatic -
+// the sun's glow doubled and the clouds lit in its colour; a dense mist closes the sight to a square (the rules'),
+// and the air thick with it. All of it air kinds and the renderer's fields; nothing here touches the rules.
+{ const P = 64, cv = () => { const c = document.createElement("canvas"); c.width = c.height = P; return c; };
+  const PICS = { debris: (p) => { p.strokeStyle = "#8A7048"; p.lineWidth = 5; p.lineCap = "round"; p.beginPath(); p.moveTo(10, 40); p.lineTo(54, 24); p.stroke(); p.fillStyle = "#A08048"; p.beginPath(); p.ellipse(40, 26, 10, 6, 0.6, 0, Math.PI * 2); p.fill(); },
+    twister: (p) => { const g = p.createRadialGradient(P / 2, P / 2, 4, P / 2, P / 2, P / 2); g.addColorStop(0, "rgba(128,112,96,0.98)"); g.addColorStop(0.7, "rgba(104,92,80,0.72)"); g.addColorStop(1, "rgba(90,80,70,0)"); p.fillStyle = g; p.fillRect(0, 0, P, P); } };   // (dust-brown, so it reads against a black sky)
+  { CM.art.AIR = CM.art.AIR || []; for (const id of Object.keys(PICS)) if (!CM.art.AIR.includes(id)) CM.art.AIR.push(id);
+    const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { if (!PICS[id]) return ap0.call(this, id); const c = cv(); PICS[id](c.getContext("2d")); return c; }; }
+  // the funnel's picture goes in with the surface's own pictures (a packed air picture doesn't draw large; the hens' kind does)
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["life:twister"] === undefined) { const c = document.createElement("canvas"); c.width = c.height = 128; const p = c.getContext("2d"); p.scale(2, 2); PICS.twister(p); set.index["life:twister"] = set.layers.length; set.layers.push(c); } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name === "life:twister" || s0(name); }
+  // the air's kinds by the event: debris in a gale, the twister's whirl, the mist thicker
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g);
+      if (W.wind.speed > 0.55) out.push({ id: "debris", rate: 14 * (W.wind.speed - 0.4) });
+      const T = CM.twisterNow(g); if (T && T.inside) out.push({ id: "twister", rate: 150 }, { id: "debris", rate: 24 });
+      return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game, r = Math.random;
+      if (k.id === "debris") { const W = CM.weatherNow(g), w = W.wind, T = CM.twisterNow(g); let x, z, y;
+        if (T && T.inside && r() < 0.5) { const a = r() * Math.PI * 2, d = 0.3 + r() * 1.6; x = T.x + Math.cos(a) * d; z = T.y + Math.sin(a) * d; y = r() * 2.5; }
+        else { x = eye[0] + (r() * 2 - 1) * 6 - w.dir[0] * 4; z = eye[2] + (r() * 2 - 1) * 6 - w.dir[1] * 4; y = 0.2 + r() * 1.6; }
+        return { kind: "debris", age: 0, seed: r() * 10, sway: 2 + r() * 4, swayAmp: 0.5, windy: 1.6 + r() * 0.8, vx: 0, vy: (r() - 0.3) * 0.4, vz: 0, life: 2 + r() * 2, size: 0.06 + r() * 0.05, glow: 0, alpha: 0.9, x, z, y, top: 4, layer: "air:debris" }; }
+      if (k.id === "twister") { const T = CM.twisterNow(g); if (!T) return null; const a = r() * Math.PI * 2, y = r() * 3.4, d = 0.1 + y * 0.34 + r() * 0.12;   // (the funnel: narrow at the ground, wide at the top)
+        return { kind: "twister", age: 0, seed: a, sway: 0, swayAmp: 0, windy: 0, vx: 0, vy: 0.9 + r() * 0.6, vz: 0, life: 1.4 + r() * 0.8, size: 0.26 + y * 0.1, glow: 0.6, alpha: 0.9, x: T.x + Math.cos(a) * d, z: T.y + Math.sin(a) * d, y, top: 5, spin: { cx: T.x, cz: T.y, a, d, w: 3.5 }, layer: "life:twister" }; }
+      return sp0.call(this, k, eye, R, env); }; }
+  // the funnel's parts whirl about its centre instead of drifting (a step after the air's own)
+  { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); const g = CM.game, T = g && CM.twisterNow ? CM.twisterNow(g) : null;
+      for (const p of this.parts) if (p.spin) { if (!T) { p.life = 0; continue; } p.spin.a += p.spin.w * dt; p.spin.d += dt * 0.25; p.x = T.x + Math.cos(p.spin.a) * p.spin.d; p.z = T.y + Math.sin(p.spin.a) * p.spin.d; }
+      return out; }; }
+  // the renderer's fields: the lamps guttering, the heat's shimmer, the dramatic dawn and dusk
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || !r.sky || game.mode === "title" || !game.ext) return; const W = CM.weatherNow(game), t = now / 1000;
+    if (W.wind.speed > 0.55 && r.lights) { const gust = W.wind.speed - 0.4; r.lights.forEach((l, i) => { if (!l.flicker) return; const k = 1 - gust * (0.35 + 0.35 * Math.abs(Math.sin(t * (7 + i * 0.9) + i * 2.1)) * Math.abs(Math.sin(t * 1.7 + i))); l.colour = l.colour.map((c) => c * k); }); }   // (guttering in the gusts)
+    if (r.screen) r.screen.heatAll = Math.max(r.screen.heatAll || 0, W.kind === "heat" ? W.strength * 0.7 : 0);
+    const ar = CM.afterRain(game); if (ar > 0 && r.sunCol && r.sunCol[3] > 0) { r.sunCol = r.sunCol.slice(); r.sunCol[3] = Math.min(2, r.sunCol[3] * (1 + 1.5 * ar)); if (r.skyx && r.skyx.cloudCol) { const c = r.skyx.cloudCol, w = ar * r.sunCol[3] * 0.4; r.skyx.cloudCol = [c[0] + (1.0 - c[0]) * w, c[1] + (0.7 - c[1]) * w, c[2] + (0.45 - c[2]) * w]; } }   // (the sky after rain, the sun low: the glow doubled, the clouds lit)
+    const T = CM.twisterNow(game); if (T && T.inside && r.skyx && r.skyx.cloud) { const c = r.skyx.cloud.slice(); c[2] = Math.max(c[2], 0.9); r.skyx.cloud = c; r.skyx.cloudCol = [0.35, 0.33, 0.32]; } };
 }
 
 // ---- 77-splash.js ----

@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The stronger sky and air (v73.0, UPGRADE_PLAN_61.md part 3)
+  (src/js/24f-events.js, src/js/76zzzzzzzzzzi-wxair.js, src/js/69v-weather.js)
+  - The stronger sky and air (plan 61, part 3): a tornado - an hour or two, by day in summer and autumn - is a
+    funnel of dark whirling air that comes in from the wind's side and crosses the land at half a square a minute,
+    dust and debris flung up round it, the sky black over it; in a gale the air fills with flying leaves, twigs and
+    dust streaking downwind, and the lamps and torches gutter in the gusts.
+  - A dense mist closes the party's sight to a single square (a light one to two), the air thick with it; a heat
+    event on a summer afternoon shimmers the air over the ground.
+  - After rain, with the sun low, the dawn or the dusk is dramatic: the sun's glow doubled and the clouds lit in
+    its colour, fading over the hour and a half after.
+
 The weather, live (v72.0, UPGRADE_PLAN_61.md part 2)
   (src/js/24f-events.js, src/js/76zzzzzzzzzzh-wxlive.js, src/js/73c-wxhud.js, src/js/70-ui.js, src/js/73b-clock.js)
   - The weather is live (plan 61, part 2): rain, a storm, mist, wind, snow, cloud, heat or an aurora comes as an

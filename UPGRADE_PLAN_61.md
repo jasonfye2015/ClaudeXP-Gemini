@@ -247,7 +247,14 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    wind and the rain/snow/fog air by the event; a storm's lightning at any hour; the dial's six-hour predictor bar
    with the words, the sun and moon half again as large, thicker stars. Seen: a forced storm (overcast, wet, 147
    raindrops), mist, a gale, an aurora at a winter midnight.
-3. The stronger sky and air: dense fog, gale, tornado, heat, dramatic dawns and dusks.
+3. v73.0 - the stronger sky and air. **Done**: the "tornado" kind (by day, summer and autumn, an hour or two) with
+   CM.twisterNow - a place that comes in from the wind's side and crosses the floor at half a square a minute - drawn
+   as a funnel of dust-brown whirling parts (narrow at the ground, wide at the top; its picture lives with the
+   surface's own pictures, since a packed air picture doesn't draw large), the sky black over it; "debris" flying
+   downwind in a gale (wind over 0.55) and the lamps and torches guttering in the gusts; a dense mist closing the
+   sight to a square (CM.mistSightNow, read by 69v's seen filter); the heat's shimmer (r.screen.heatAll); and the
+   dramatic dawn or dusk after rain (CM.afterRain from W.prev: the sun's glow doubled, the clouds lit in its colour,
+   fading over ninety minutes). Felling in the twister's wake is part 4's.
 4. Trees: felled, burning, charred, the sapling and the regrowth; the tornado's wake; fire's spread; the lamps out.
 5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
    below, the birds' warning.

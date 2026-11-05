@@ -6265,6 +6265,23 @@ test("the weather, live (v72.0): events of two to six hours between clear spells
   for (const f of ["76zzzzzzzzzzh-wxlive.js", "73c-wxhud.js"]) assert.ok(fs.existsSync(path.join(__dirname, "..", "src", "js", f)), f);
 });
 
+test("the stronger sky and air (v73.0): a tornado is an event of an hour or two by day in summer and autumn, never at night or in winter, with a twister that comes in from the wind's side, crosses the floor at half a square a minute and goes out the far side; the glow after rain falls to nothing over ninety minutes; a dense mist closes the sight to a square and a light one to two; the event before is remembered", () => {
+  const CM = load(); let seq = 0.5; CM.wxRandom = () => seq;
+  const mk = (season, clock) => { const g = new CM.Game(); g.newGame("wx-3", fixedParty(CM)); g.season = season; g.clock = clock; return g; };
+  const force = (g, ev) => { const W = g.ext("wx"); W.cur = Object.assign({ from: g.clock - 10, until: g.clock + 100, strength: 1 }, ev); W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; return W; };
+  assert.ok(CM.WX.kinds.includes("tornado") && CM.WX.odds.autumn.tornado > 0 && CM.WX.odds.winter.tornado === 0, "a tornado's odds, none in winter"); assert.strictEqual(CM.WX.word.tornado, "wind");
+  { let seen = 0; for (let i = 0; i < 80; i++) { seq = 0.999 - i * 0.004; const g = mk("autumn", 13 * 60 - CM.CLOCK.start + 1440 * 2); const S = CM.weatherStep(g); if (S.next.kind === "tornado") seen++; } assert.ok(seen > 0, `a tornado turns up on a high roll in an autumn afternoon (${seen})`); }
+  { let seen = 0; for (let i = 0; i < 40; i++) { seq = 0.999 - i * 0.004; const g = mk("autumn", 23 * 60 - CM.CLOCK.start + 1440 * 2); const S = CM.weatherStep(g); if (S.next.kind === "tornado") seen++; } assert.strictEqual(seen, 0, "never at night"); }
+  const g = mk("autumn", 1440 * 2 + 8 * 60); g.enterFloor(-1, "rope", [50, 30]); const N = g.floor.grid.length; force(g, { kind: "tornado", twister: { dx: 1, dy: 0, placed: false } }); g.clock = g.ext("wx").cur.from;
+  const T0 = CM.twisterNow(g); assert.ok(T0 && T0.x < 0 && Math.abs(T0.y - N / 2) < 1, `it starts off the west edge (${T0 && T0.x.toFixed(1)})`); assert.ok(!T0.inside);
+  g.clock += 60; const T1 = CM.twisterNow(g); assert.ok(Math.abs(T1.x - T0.x - 30) < 1e-6, "half a square a minute"); assert.ok(T1.inside, "an hour in, on the floor");
+  g.clock += 200; const T2 = CM.twisterNow(g); assert.ok(T2.x >= N, "and out the far side"); assert.ok(!T2.inside);
+  g.ext("wx").cur.kind = "mist"; assert.strictEqual(CM.twisterNow(g), null, "no twister without a tornado"); g.clock = g.ext("wx").cur.from + 40; g.ext("wx").cur.strength = 1; assert.strictEqual(CM.mistSightNow(g), 1, "a dense mist: a square"); g.ext("wx").cur.strength = 0.5; assert.strictEqual(CM.mistSightNow(g), 2, "a light one: two"); g.ext("wx").cur.kind = "clear"; assert.strictEqual(CM.mistSightNow(g), null);
+  const h = mk("spring", 1440 * 2 + 7 * 60); const W = force(h, { kind: "rain" }), u = W.cur.until; h.clock = u + 1; CM.weatherStep(h); assert.strictEqual(h.ext("wx").prev.kind, "rain", "the rain remembered"); assert.strictEqual(h.ext("wx").cur.kind, "clear");
+  assert.ok(CM.afterRain(h) > 0.95, "the glow right after the rain"); h.clock = u + 45; assert.ok(Math.abs(CM.afterRain(h) - 0.5) < 0.02, "half gone at forty-five minutes"); h.clock = u + 100; assert.strictEqual(CM.afterRain(h), 0, "gone at ninety");
+  delete CM.wxRandom; const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzi-wxair.js"), "utf-8"); for (const w of ["debris", "twister", "heatAll", "CM.afterRain", "guttering"]) assert.ok(win.includes(w), `${w} in the air`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
