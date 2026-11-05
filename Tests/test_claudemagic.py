@@ -173,7 +173,9 @@ def test_the_window_and_the_old_saves():
     win = M.launch(desktop)
     body = win.content
     assert body.view is not None, "the game file wasn't found"
-    assert support.pump(40, until=lambda: body.imported is not None), "the page never said what it took"
+    # (drawn in software here, the whole game loads in about 40 seconds - right at the old limit, so it failed by chance: a
+    # load-time test this isn't; the import is what's checked)
+    assert support.pump(90, until=lambda: body.imported is not None), "the page never said what it took"
     assert body.imported == ["fame", "run"], body.imported
     assert not M.RUN_FILE.exists() and (saves / "run.imported.json").exists() and (saves / "hall_of_fame.imported.json").exists()
     box = []
