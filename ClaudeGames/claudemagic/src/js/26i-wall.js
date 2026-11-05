@@ -4,7 +4,7 @@
 // stone, turning the corners where the wall does. 26-surface.js calls this for the town (CM.wallDetail).
 //   CM.wallDetail(o) -> { merlons, buttresses, slits }   o: { quad, fl, index, size, solidKind(x, y) }
 { CM.WALL_DETAIL = true;
-  CM.wallDetail = (o) => { const { quad, index, size, solidKind } = o, out = { merlons: 0, buttresses: 0, slits: 0 };
+  CM.wallDetail = (o) => { const { quad, index, size, solidKind } = o, out = { merlons: 0, buttresses: 0, slits: 0, gate: 0 };
     const face = index["solid:townwall"], cap = index["solid:townwall:top"] !== undefined ? index["solid:townwall:top"] : face; if (face === undefined) return out;
     const H = (CM.SOLID.townwall && CM.SOLID.townwall.h) || 1.3, walled = (k) => k === "townwall" || k === "tower";
     // a block on the wall top, in the square's own frame: u along the edge (0..1), v in from it (0..1)
@@ -35,5 +35,20 @@
         const S = (t, yy, r) => [cx + nx * r + tx2 * t, yy, cz + nz * r + tz2 * t];
         quad(S(-0.055, ym - 0.2, ap), S(0.055, ym - 0.2, ap), S(0.055, ym + 0.2, ap), S(-0.055, ym + 0.2, ap), cap, 0.95);   // the dressed surround
         quad(S(-0.022, ym - 0.16, ap + 0.003), S(0.022, ym - 0.16, ap + 0.003), S(0.022, ym + 0.16, ap + 0.003), S(-0.022, ym + 0.16, ap + 0.003), cap, 0.07); out.slits++; } }
+    // (v57.2) the West Gate: an arch across the road on the gate's square - two thick jambs, a round arch with its soffit, the stonework
+    // over it to a capped top with three merlons. The road runs through it as before.
+    const G = CM.TOWN_AT && CM.TOWN_AT.woodgate; if (G && o.fl && o.fl.number === 0) { const [gx, gy] = G, ew = solidKind(gx - 1, gy) === null || solidKind(gx + 1, gy) === null;
+      // in the arch's own frame: a across the road (0..1 over the gate's square, the jambs beyond), t along it (the arch's depth)
+      const P = (a2, t, yy) => (ew ? [gx + t, yy, gy + a2] : [gx + a2, yy, gy + t]), t0 = 0.05, t1 = 0.65, spring = 1.0, top = 1.68, N = 10;
+      const slab = (a0, a1, y0, y1, k = 1) => { quad(P(a0, t0, y0), P(a1, t0, y0), P(a1, t0, y1), P(a0, t0, y1), face, 0.9 * k); quad(P(a1, t1, y0), P(a0, t1, y0), P(a0, t1, y1), P(a1, t1, y1), face, 0.8 * k);
+        quad(P(a0, t1, y0), P(a0, t0, y0), P(a0, t0, y1), P(a0, t1, y1), face, 0.7 * k); quad(P(a1, t0, y0), P(a1, t1, y0), P(a1, t1, y1), P(a1, t0, y1), face, 0.7 * k); };
+      slab(-0.45, 0, 0, top); slab(1, 1.45, 0, top);                                                                    // the jambs
+      for (let i = 0; i < N; i++) { const q0 = Math.PI * (i / N), q1 = Math.PI * ((i + 1) / N), A = [0.5 - 0.5 * Math.cos(q0), spring + 0.5 * Math.sin(q0)], B = [0.5 - 0.5 * Math.cos(q1), spring + 0.5 * Math.sin(q1)];
+        quad(P(A[0], t0, A[1]), P(B[0], t0, B[1]), P(B[0], t0, top), P(A[0], t0, top), face, 0.9); quad(P(B[0], t1, B[1]), P(A[0], t1, A[1]), P(A[0], t1, top), P(B[0], t1, top), face, 0.8);   // the spandrels
+        quad(P(A[0], t1, A[1]), P(B[0], t1, B[1]), P(B[0], t0, B[1]), P(A[0], t0, A[1]), cap, 0.55); }                                              // the soffit, shaded
+      for (const [x0, x1] of [[0, 0.04], [0.96, 1]]) slab(x0, x1, 0, spring, 0.85);                                     // (the jambs' inner faces, to the springing)
+      quad(P(-0.45, t0, top), P(1.45, t0, top), P(1.45, t1, top), P(-0.45, t1, top), cap, 1.05);                        // the top
+      for (const [m0, m1] of [[-0.35, 0.05], [0.3, 0.7], [0.95, 1.35]]) { slab(m0, m1, top, top + 0.26); quad(P(m0, t0, top + 0.26), P(m1, t0, top + 0.26), P(m1, t1, top + 0.26), P(m0, t1, top + 0.26), cap, 1.05); }
+      out.gate = 1; }
     return out; };
 }

@@ -5961,7 +5961,7 @@ test("the town wall's battlements (v57.0): along the ring wall's outer edge a pa
   assert.ok(Math.abs(Math.max(...vs.map((v) => v[1])) - (H + 0.3)) < 0.001, "the merlons stand to their height on the wall top");
   let towers = 0; for (const k of Object.values(town.kinds || {})) if (k === "tower") towers++;
   assert.strictEqual(m.walled.slits, towers * 8, "an arrow slit in each face of each gate tower (v57.1)"); assert.ok(m.walled.buttresses > walls / 6, `buttresses on the town side (${m.walled.buttresses})`);
-  assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0, buttresses: 0, slits: 0 }), "none in the Wood");
+  assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0, buttresses: 0, slits: 0, gate: 0 }), "none in the Wood"); assert.strictEqual(m.walled.gate, 1, "the West Gate arched (v57.2)");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

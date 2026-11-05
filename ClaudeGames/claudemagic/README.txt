@@ -1392,6 +1392,11 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The West Gate (v57.2, UPGRADE_PLAN_52.md phase 2)
+  (src/js/26i-wall.js, src/js/26-surface.js)
+  - The West Gate is an archway now, not a gap between the towers: two thick jambs, a round arch over the road with
+    its stone soffit, the stonework above it to a capped top and three merlons - and the portcullis hanging under it.
+
 Buttresses and arrow slits (v57.1, UPGRADE_PLAN_52.md phase 1)
   (src/js/26i-wall.js, src/js/26-surface.js)
   - Buttresses lean against the town wall's inner side, one square in three: stone piers with their tops sloping
