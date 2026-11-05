@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The dungeon coupling (v78.0, UPGRADE_PLAN_61.md part 8)
+  (src/js/69zzq-below.js, src/js/76zzzzzzzzzzn-below.js, src/js/76zzzzzzzzu-daylight.js)
+  - The dungeon coupling (plan 61, part 8): what the sky does reaches down the shaft. Rain above drips from the
+    ceilings of the first three floors and the damp rises; a storm pours a waterfall through each grate, with its
+    splash, and its lightning comes down through the grates as well as the shaft. A heavy storm floods the sunken
+    rooms of those floors knee-deep - the flooded mood's black water on their squares, a splash to every step, a
+    minute more a step and the walk heavier - and the water drains away over the day after. A gale above makes a
+    draft below: the torches gutter and lean, the smoke drifts. In the Foundry and the Root of the World the
+    floodwater and the drips steam, and the haze thickens.
+
 The light, the mud and the breath (v77.0, UPGRADE_PLAN_61.md part 7)
   (src/js/69zzp-mud.js, src/js/76zzzzzzzzzzm-light.js, src/js/40-render.js, src/js/76zzzzzzzzzzi-wxair.js, src/js/76zzzv-shadows.js)
   - The light, the mud and the breath (plan 61, part 7): rain makes mud of the earth above ground - the dirt

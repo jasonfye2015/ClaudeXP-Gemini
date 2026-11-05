@@ -6,7 +6,7 @@
 { const P = 128, pic = (c0) => { const c = document.createElement("canvas"); c.width = c.height = P; const p = c.getContext("2d"), g = p.createRadialGradient(P / 2, P / 2, 2, P / 2, P / 2, P / 2); const [r, gg, b] = c0.map((v) => Math.round(v * 255)); g.addColorStop(0, `rgba(${r},${gg},${b},0.85)`); g.addColorStop(0.55, `rgba(${r},${gg},${b},0.4)`); g.addColorStop(1, `rgba(${r},${gg},${b},0)`); p.fillStyle = g; p.fillRect(0, 0, P, P); return c; };
   const KINDS = CM.FOGS.kinds, layerOf = (k) => `life:${k}`;
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const k of Object.keys(KINDS)) { const L = layerOf(k); if (set.index[L] === undefined) { set.index[L] = set.layers.length; set.layers.push(pic(KINDS[k].colour)); } } return set; }; }
-  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => (name.startsWith("life:fog") && KINDS[name.slice(5)] !== undefined) || s0(name); }
+  // (not surface layers: the billows are wanted below ground too, so the pictures go in the shared set - v78.0)
   // the billows: an air kind of their own, above and below
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, Fg = g && CM.fogNow ? CM.fogNow(g) : null; if (Fg && Fg.strength > 0) out.push({ id: "fogx", rate: 16 * Fg.strength }); return out; }; }
   { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "fogx") return sp0.call(this, k, eye, R, env); const g = CM.game, Fg = CM.fogNow(g); if (!Fg) return null; const r = Math.random, a = r() * Math.PI * 2, d = 0.8 + r() * (R - 0.5);

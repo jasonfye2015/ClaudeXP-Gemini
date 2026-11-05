@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v77.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v78.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "77.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "78.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -30984,6 +30984,33 @@ Object.assign(CM.Game.prototype, {
   const wp0 = P.walkPace; P.walkPace = function (...a) { const p = wp0.apply(this, a), m = CM.mudHere(this); return m > 0.3 ? p * (1 + 0.5 * m) : p; };
 }
 
+// ---- 69zzq-below.js ----
+"use strict";
+// The dungeon coupling (v78.0, UPGRADE_PLAN_61.md part 8): what the sky does reaches down the shaft. CM.aboveNow
+// answers the surface's event from any floor. A heavy storm above floods the lowest halls of the first three
+// floors - the sunken rooms (69zzi-levels.js) stand knee-deep - and the water drains over the day after: a step in
+// it takes a minute more and the walk is heavier. The drips, the waterfalls at the grates, the drafts, the lightning
+// through the grates and the steam are the window's (76zzzzzzzzzzn-below.js).
+//   CM.aboveNow(game)                 the surface's weather, anywhere (CM.weatherNow)
+//   CM.floodNow(game) -> 0..1         the floodwater's level: 1 in a heavy storm, draining to 0 over a day
+//   CM.floodedAt(game, fl, x, y)       a square standing in floodwater (a sunken square of floors 1-3, level > 0)
+//   CM.floodedHere(game)               the party's square
+//   CM.floodTick(game, minutes)        the level, kept in game.ext("flood"); wrapped into CM.tickClock
+{ const F = CM.FLOOD = { from: 0.75, drainMinutes: 24 * 60, floors: [1, 2, 3] };
+  CM.aboveNow = (game) => CM.weatherNow(game);
+  const state = (game) => game.ext("flood");
+  CM.floodTick = (game, minutes = 1) => { if (!game || !game.ext || !(minutes > 0)) return; const E = state(game), W = CM.weatherNow(game), t = CM.clockOf(game);
+    if (W.kind === "storm" && W.strength >= F.from) { if (E.level !== 1 && game.floor && F.floors.includes(game.floor.number)) game.say("Water comes down the shaft and the stairs in a sheet: the storm above is flooding the low halls."); E.level = 1; E.at = t; return; }
+    if (E.at !== undefined) { const was = E.level || 0; E.level = Math.max(0, 1 - (t - E.at) / F.drainMinutes); if (was > 0 && E.level === 0) { delete E.at; if (game.floor && F.floors.includes(game.floor.number)) game.say("The last of the floodwater has drained away down the cracks."); } } };
+  CM.floodNow = (game) => { if (!game || !game.ext) return 0; const E = state(game); return E.at !== undefined ? Math.max(0, Math.min(1, E.level || 0)) : 0; };
+  CM.floodedAt = (game, fl, x, y) => Boolean(fl && F.floors.includes(fl.number) && CM.floodNow(game) > 0 && CM.floorAt(fl, x, y) < 0 && fl.grid[y] && fl.grid[y][x] === 0);
+  CM.floodedHere = (game) => { const fl = game && game.floor; return Boolean(fl && fl.pos && CM.floodedAt(game, fl, fl.pos[0], fl.pos[1])); };
+  CM.floodSquares = (game, fl) => { const out = []; if (!fl || !F.floors.includes(fl.number) || !fl.levels || CM.floodNow(game) <= 0) return out; for (const [k, L] of Object.entries(fl.levels)) if (L[0] < 0) { const [x, y] = k.split(",").map(Number); if (fl.grid[y] && fl.grid[y][x] === 0) out.push([x, y]); } return out; };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.floodTick(game, minutes); }; }
+  const P = CM.Game.prototype, burn0 = P.burn; P.burn = function (...a) { if (CM.floodedHere(this)) this.clock = (this.clock || 0) + 1; return burn0.apply(this, a); };   // (wading: the step takes two minutes)
+  const wp0 = P.walkPace; P.walkPace = function (...a) { const p = wp0.apply(this, a); return CM.floodedHere(this) ? p * 1.5 : p; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -44827,7 +44854,7 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
   const dayK = (game) => { if (CM.isNight && CM.isNight(game)) return 0; const h = CM.hourOf ? CM.hourOf(game) : 12, w = CM.weather ? CM.weather(game) : "clear"; return Math.max(0, Math.sin(Math.PI * (h - 5) / 16)) * (w === "rain" || w === "snow" ? 0.55 : w === "mist" ? 0.7 : 1); };
   const grates = new WeakMap(), gratesOf = (fl) => { let G = grates.get(fl); if (G) return G; G = []; const N = fl.grid.length, inRoom = new Set(); for (const r of fl.rooms || []) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
     const rnd = new CM.Random(CM.hashSeed(`grates:${fl.number}`)); for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { if (fl.grid[y][x] !== 0 || inRoom.has(`${x},${y}`) || fl.things[`${x},${y}`] || CM.ceilAt(fl, x, y) !== 1) continue; if (rnd.next() < 0.035) G.push([x, y]); }
-    const shaft = Object.entries(fl.things).find(([, t]) => t.type === "ladder"); if (fl.number === 1 && shaft) G.push([...shaft[0].split(",").map(Number), true]); grates.set(fl, G); return G; };
+    const shaft = Object.entries(fl.things).find(([, t]) => t.type === "ladder"); if (fl.number === 1 && shaft) G.push([...shaft[0].split(",").map(Number), true]); grates.set(fl, G); return G; }; CM.gratesOf = gratesOf;   // (v78.0: the waterfalls and the lightning use them - 76zzzzzzzzzzn-below.js)
   const live = (game, fl) => fl && DEPTH[fl.number] && game.mode !== "title" ? DEPTH[fl.number] * dayK(game) : 0;
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !DEPTH[fl.number] || !CM.renderer || CM.renderer.index["dl:grate"] === undefined) return out; const k = live(game, fl);
       for (const [x, y, isShaft] of gratesOf(fl)) { if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 10) continue; const c = CM.ceilAt(fl, x, y), f = CM.floorAt(fl, x, y);
@@ -45811,7 +45838,7 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
 { const P = 128, pic = (c0) => { const c = document.createElement("canvas"); c.width = c.height = P; const p = c.getContext("2d"), g = p.createRadialGradient(P / 2, P / 2, 2, P / 2, P / 2, P / 2); const [r, gg, b] = c0.map((v) => Math.round(v * 255)); g.addColorStop(0, `rgba(${r},${gg},${b},0.85)`); g.addColorStop(0.55, `rgba(${r},${gg},${b},0.4)`); g.addColorStop(1, `rgba(${r},${gg},${b},0)`); p.fillStyle = g; p.fillRect(0, 0, P, P); return c; };
   const KINDS = CM.FOGS.kinds, layerOf = (k) => `life:${k}`;
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const k of Object.keys(KINDS)) { const L = layerOf(k); if (set.index[L] === undefined) { set.index[L] = set.layers.length; set.layers.push(pic(KINDS[k].colour)); } } return set; }; }
-  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => (name.startsWith("life:fog") && KINDS[name.slice(5)] !== undefined) || s0(name); }
+  // (not surface layers: the billows are wanted below ground too, so the pictures go in the shared set - v78.0)
   // the billows: an air kind of their own, above and below
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, Fg = g && CM.fogNow ? CM.fogNow(g) : null; if (Fg && Fg.strength > 0) out.push({ id: "fogx", rate: 16 * Fg.strength }); return out; }; }
   { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "fogx") return sp0.call(this, k, eye, R, env); const g = CM.game, Fg = CM.fogNow(g); if (!Fg) return null; const r = Math.random, a = r() * Math.PI * 2, d = 0.8 + r() * (R - 0.5);
@@ -45836,7 +45863,7 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
 { let bolt = null, lastFlash = 0; const puffs = new Map(), r = Math.random;
   // the breath's picture: a pale soft puff, with the surface's own pictures (a packed air picture doesn't draw soft)
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["life:breath"] === undefined) { const c = document.createElement("canvas"); c.width = c.height = 64; const p = c.getContext("2d"), g = p.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, "rgba(255,255,255,0.9)"); g.addColorStop(0.5, "rgba(240,244,250,0.45)"); g.addColorStop(1, "rgba(230,236,246,0)"); p.fillStyle = g; p.fillRect(0, 0, 64, 64); set.index["life:breath"] = set.layers.length; set.layers.push(c); } return set; }; }
-  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name === "life:breath" || s0(name); }
+  // (not a surface layer: the breath and the dungeon's steam and waterfalls want it below ground too - v78.0)
   const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || game.mode === "title" || !game.ext) { ren.sunBoost = 1; return; }
     ren.mud = ren.sky ? CM.mudNow(game) : 0; if (ren.mud > 0 && ren.sky) ren.wet = Math.max(ren.wet || 0, 0.4 * ren.mud);   // (the gloss of wet earth)
     if (ren.sky && ren.air) { const ar = CM.afterRain(game), S = ren.sky; if (ar > 0 && S.sun !== null && S.light > 0.2 && (S.sun < 0.22 || S.sun > 0.78)) ren.air = Object.assign({}, ren.air, { shaft: Math.max(ren.air.shaft || 0, 0.9 * ar) }); }   // (god rays: the sun low through the cloud gaps after rain)
@@ -45845,6 +45872,41 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       for (const e of ren.figList) { const id = e.s.m || e.s.id || e.key + "@" + Math.round(e.x) + "," + Math.round(e.z); let at = puffs.get(id); if (at === undefined) { at = t + r() * 3; puffs.set(id, at); } if (t < at) continue; puffs.set(id, t + 2.4 + r() * 1.6);
         const h = (e.s.h || 0.8) * 0.64, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);   /* (the mouth of a big-headed figure) */ for (let i = 0; i < 3; i++) CM.air.parts.push({ kind: "breath", age: 0.4, seed: r() * 10, sway: 0.5, swayAmp: 0.04, windy: 0.4, vx: fx * (0.12 + r() * 0.1), vy: 0.08 + r() * 0.06, vz: fz * (0.12 + r() * 0.1), life: 1.3 + r() * 0.5, size: 0.11 + r() * 0.05, grow: 0.12, glow: 1.3, alpha: 0.6, x: e.x + fx * 0.14, y: e.y + h, z: e.z + fz * 0.14, top: 4, layer: "life:breath" }); }
       if (puffs.size > 300) puffs.clear(); } };
+}
+
+// ---- 76zzzzzzzzzzn-below.js ----
+"use strict";
+// The dungeon coupling - the window's side (v78.0, UPGRADE_PLAN_61.md part 8): rain above drips from the ceilings
+// of the first floors and the damp rises; a storm pours a waterfall through each grate, with its splash; a heavy
+// storm's floodwater stands in the sunken rooms (69zzq-below.js), drawn as the flooded mood's water; a gale above
+// makes a draft below - the torches gutter and lean, the smoke and the haze drift; lightning comes down through
+// the grates as well as the shaft; and in the fire bands the floodwater and the drips steam, thickening the haze.
+{ const DEPTH = { 1: 1, 2: 0.6, 3: 0.3 }, HOT = new Set(["The Foundry", "The Root of the World"]), r = Math.random;
+  const below = (game) => game && game.floor && game.floor.number >= 1 && game.mode !== "title" && game.ext;
+  const near = (fl, x, y, R) => Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= R;
+  const hot = (fl) => HOT.has((CM.themeFor(fl.number) || {}).name);
+  // the air: drips, the grates' waterfalls, the steam (lives past the air's fade-out: a part's last 0.6 s is faint, and the floor takes these first)
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (env.surface || !below(g)) return out; const fl = g.floor, d = DEPTH[fl.number] || 0, W = CM.aboveNow(g), rain = W.kind === "rain" || W.kind === "storm" ? W.strength : 0;
+      if (d && rain > 0) out.push({ id: "drip", rate: 14 * rain * d });
+      if (d && W.kind === "storm" && CM.gratesOf) { const n = CM.gratesOf(fl).filter(([x, y]) => near(fl, x, y, 9)).length; if (n) out.push({ id: "gratefall", rate: 90 * W.strength * n }, { id: "gratesplash", rate: 24 * W.strength * n }); }
+      if (hot(fl) && (CM.floodedHere(g) || (d && rain > 0.3))) out.push({ id: "steam", rate: 9 });
+      return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game;
+      if (k.id === "gratefall" || k.id === "gratesplash") { const fl = g.floor, G = CM.gratesOf(fl).filter(([x, y]) => near(fl, x, y, 9)); if (!G.length) return null; const [gx, gy] = G[Math.floor(r() * G.length)], x = gx + 0.5 + (r() - 0.5) * 0.36, z = gy + 0.5 + (r() - 0.5) * 0.36;
+        if (k.id === "gratefall") return { kind: "gratefall", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: 0, vy: -2.6, vz: 0, life: 1.4, size: 0.05, h: 0.34, glow: 1.3, alpha: 0.5, x, z, y: 0.98, top: 1.2, layer: "life:breath" };   // (a soft pale streak: the rain picture is too thin to read down here)
+        const a = r() * Math.PI * 2, s = 0.3 + r() * 0.5; return { kind: "gratesplash", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: Math.cos(a) * s, vy: 0.5 + r() * 0.5, vz: Math.sin(a) * s, life: 1.4, size: 0.045, glow: 1.3, alpha: 0.8, x, z, y: 0.03, top: 1.2, layer: "life:breath", grav: 3 }; }
+      if (k.id === "steam") { const a = r() * Math.PI * 2, d = 0.3 + r() * 1.6; return { kind: "steam", age: 0.4, seed: r() * 10, sway: 0.5 + r(), swayAmp: 0.1, windy: 0.3, vx: 0, vy: 0.25 + r() * 0.2, vz: 0, life: 2.5 + r() * 2, size: 0.25 + r() * 0.2, grow: 0.18, glow: 1.3, alpha: 0.4, x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 0.05 + r() * 0.2, top: 2.2, layer: "life:breath" }; }
+      return sp0.call(this, k, eye, R, env); }; }
+  // the floodwater in the mesh (the flooded mood's water on the sunken squares), the damp, the draft, the lightning through the grates, the steam's haze
+  const flooded = new WeakMap();
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!below(game)) return; const fl = game.floor, W = CM.aboveNow(game), d = DEPTH[fl.number] || 0, t = now / 1000;
+    if (game.on && !game._floodHooked) { game._floodHooked = true; game.on("moved", () => { if (CM.floodedHere(game) && CM.audio && CM.audio.play) CM.audio.play("splash", 0.5); }); }   // (the wading's splash)
+    const level = CM.floodNow(game), want = level > 0 ? CM.floodSquares(game, fl).length : 0, have = flooded.get(fl) || 0;   // the water comes and goes with the level
+    if (want !== have) { fl.decor = (fl.decor || []).filter((e) => !e.flood); if (want) for (const [x, y] of CM.floodSquares(game, fl)) fl.decor.push({ kind: "water", x, y, flood: true }); flooded.set(fl, want); }
+    const rain = W.kind === "rain" || W.kind === "storm" ? W.strength : 0; if (d && rain > 0) ren.damp = Math.max(ren.damp || 0, 0.4 + 0.5 * rain * d);
+    if (W.wind.speed > 0.6 && ren.lights) { const gust = W.wind.speed - 0.45; ren.lights.forEach((l, i) => { if (!l.flicker) return; const k = 1 - gust * (0.3 + 0.4 * Math.abs(Math.sin(t * (6 + i * 0.7) + i * 1.9)) * Math.abs(Math.sin(t * 1.3 + i))); l.colour = l.colour.map((c) => c * k); }); ren.wind = { dir: W.wind.dir, k: 0.6 * gust }; }   // (the draft: the torches gutter and lean, the smoke drifts)
+    if (d && CM.gratesOf && CM.stormLightNow && W.kind === "storm") { const f = CM.stormLightNow(); if (f > 0.05 && !CM.reducedMotion) { ren.lights = ren.lights || []; for (const [x, y] of CM.gratesOf(fl)) { if (!near(fl, x, y, 9)) continue; const v = f * f * d * 2.5; ren.lights.push({ x: x + 0.5, y: 0.98, z: y + 0.5, reach: 3.2, colour: [0.7 * v, 0.8 * v, 1.0 * v], flicker: false, d: Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) }); } } }   // (lightning through the grates)
+    if (ren.air && hot(fl) && (CM.floodedHere(game) || (d && rain > 0.3))) ren.air = Object.assign({}, ren.air, { haze: Math.min(1, (ren.air.haze || 0) + 0.3) }); };   // (the steam thickens the haze)
 }
 
 // ---- 77-splash.js ----

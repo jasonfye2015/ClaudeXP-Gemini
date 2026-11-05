@@ -290,7 +290,15 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    sets renderer.mud and the wet gloss, raises the air's shaft after rain while the sun is low on its arc, makes a
    flash's bolt the sun for its frames (the sky's sun swapped, sunBoost up - the caster follows), and puffs each
    figure's breath ("life:breath", a soft pale picture) in the cold. Left out: snow on the canopy's tops.
-8. The dungeon coupling: drips, waterfalls, floods, drafts, steam.
+8. v78.0 - the dungeon coupling. **Done**: 69zzq-below.js (CM.aboveNow; CM.floodTick in tickClock - a storm at
+   0.75 or more floods, level 1, draining to 0 over a day, said; CM.floodNow/floodedAt/floodedHere/floodSquares
+   on the sunken squares (CM.floorAt < 0) of floors 1-3; burn and walkPace wrapped for the wading).
+   76zzzzzzzzzzn-below.js: the "drip" kind by the rain's strength and the floor's depth with the damp raised; a
+   storm's "gratefall" column and "gratesplash" at each grate (CM.gratesOf exported from 76zzzzzzzzu-daylight.js);
+   the floodwater as flood-marked "water" decor (the flooded mood's look, the mesh rebuilt when the count changes);
+   the draft (lights guttering, renderer.wind set below); lightning through the grates as lights by
+   CM.stormLightNow; "steam" in the Foundry and the Root of the World when wading or dripping, the haze raised;
+   a splash on a step in floodwater. The ambush rule is not touched by the steam (cosmetic).
 9. Combat synergies.
 10. The soundscape and the adaptive music; then the pass over every place in every event.
 1. The clock: the idle tick at the spec's pace (24 game minutes a real minute while standing) - yes, or the wall
