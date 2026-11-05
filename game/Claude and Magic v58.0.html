@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v57.4 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v58.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "57.4", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "58.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6620,7 +6620,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const ridge = (x0, z0, x1, z1, h, w, L, k) => { const dx = x1 - x0, dz = z1 - z0, n = Math.hypot(dx, dz) || 1, px = -dz / n, pz = dx / n, w1 = w * 0.25;
       quad([x0 + px * w, 0, z0 + pz * w], [x1 + px * w1, 0, z1 + pz * w1], [x1, 0.008, z1], [x0, h, z0], L, k * 0.95);
       quad([x0, h, z0], [x1, 0.008, z1], [x1 - px * w1, 0, z1 - pz * w1], [x0 - px * w, 0, z0 - pz * w], L, k * 0.7); };
-    for (const key of trees) { const [x, y] = key.split(",").map(Number), r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = 4 + Math.floor(r.next() * 3), a0 = r.next() * Math.PI * 2;
+    for (const key of trees) { const [x, y] = key.split(",").map(Number); if (![[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => openAt(x + dx, y + dy))) continue;   /* (v58.0: only the trees one can walk up to - deep in the wood their feet are never seen) */ const r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = 4 + Math.floor(r.next() * 3), a0 = r.next() * Math.PI * 2;
       const k = CM.treeVariant(fl, x, y) === 2 ? 1.05 : 0.9;   // (a birch's roots paler)
       for (let i = 0; i < n; i++) { const a = a0 + (i / n) * Math.PI * 2 + (r.next() - 0.5) * 0.6, len = 0.16 + r.next() * 0.18, s = 0.05;
         ridge(cx + Math.cos(a) * s, cz + Math.sin(a) * s, cx + Math.cos(a) * (s + len), cz + Math.sin(a) * (s + len), 0.05 + r.next() * 0.04, 0.026 + r.next() * 0.018, wood, k); out.roots++; } }

@@ -11,7 +11,7 @@
     const ridge = (x0, z0, x1, z1, h, w, L, k) => { const dx = x1 - x0, dz = z1 - z0, n = Math.hypot(dx, dz) || 1, px = -dz / n, pz = dx / n, w1 = w * 0.25;
       quad([x0 + px * w, 0, z0 + pz * w], [x1 + px * w1, 0, z1 + pz * w1], [x1, 0.008, z1], [x0, h, z0], L, k * 0.95);
       quad([x0, h, z0], [x1, 0.008, z1], [x1 - px * w1, 0, z1 - pz * w1], [x0 - px * w, 0, z0 - pz * w], L, k * 0.7); };
-    for (const key of trees) { const [x, y] = key.split(",").map(Number), r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = 4 + Math.floor(r.next() * 3), a0 = r.next() * Math.PI * 2;
+    for (const key of trees) { const [x, y] = key.split(",").map(Number); if (![[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => openAt(x + dx, y + dy))) continue;   /* (v58.0: only the trees one can walk up to - deep in the wood their feet are never seen) */ const r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = 4 + Math.floor(r.next() * 3), a0 = r.next() * Math.PI * 2;
       const k = CM.treeVariant(fl, x, y) === 2 ? 1.05 : 0.9;   // (a birch's roots paler)
       for (let i = 0; i < n; i++) { const a = a0 + (i / n) * Math.PI * 2 + (r.next() - 0.5) * 0.6, len = 0.16 + r.next() * 0.18, s = 0.05;
         ridge(cx + Math.cos(a) * s, cz + Math.sin(a) * s, cx + Math.cos(a) * (s + len), cz + Math.sin(a) * (s + len), 0.05 + r.next() * 0.04, 0.026 + r.next() * 0.018, wood, k); out.roots++; } }

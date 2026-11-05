@@ -5894,7 +5894,9 @@ test("the Deep Wood, closer (v55.3): roots at the foot of every tree, stumps bes
   for (const name of ["floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:bark", "solid:stumptop", ...CM.GROUNDS.map((g) => `ground:${g}`),
     ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
   const wood = CM.makeWood("roots-1"), m = CM.floorMesh(wood, CM.WOOD_THEME, index), W = m.wood;
-  assert.ok(W.roots >= m.trees * 4 && W.roots <= m.trees * 6, `four to six roots a tree (${W.roots} for ${m.trees})`);
+  const N = wood.grid.length, op = (x, y) => x >= 0 && y >= 0 && x < N && y < N && wood.grid[y][x] === 0; let walkable = 0;   // (v58.0: only the trees one can walk up to)
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (wood.grid[y][x] !== 0 && CM.solidAt(wood, x, y) === "tree" && [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => op(x + dx, y + dy))) walkable++;
+  assert.ok(walkable < m.trees && W.roots >= walkable * 4 && W.roots <= walkable * 6, `four to six roots for each tree beside an open square (${W.roots} for ${walkable} of ${m.trees})`);
   assert.ok(W.stumps > 3, `stumps (${W.stumps})`); assert.ok(W.rocks > 10, `rocks (${W.rocks})`);
   const again = CM.floorMesh(CM.makeWood("roots-1"), CM.WOOD_THEME, index).wood; assert.strictEqual(JSON.stringify(again), JSON.stringify(W), "the same every time");
   // where they stand: every stump and rock vertex near the ground of an open square that is not a path, a door or a thing
