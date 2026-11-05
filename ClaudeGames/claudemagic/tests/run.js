@@ -6126,6 +6126,20 @@ test("a foe's marks (v63.0): each ailment, the part whole or broken, what it car
   const fight = fs.readFileSync(path.join(__dirname, "..", "src", "js", "74-fight.js"), "utf-8"); assert.ok(fight.includes("CM.foeMarks") && fight.includes("bar foe"), "the fight screen reads the marks and draws the bar");
 });
 
+test("the real-time places' look (v64.0): a torch's flicker stays within its bounds and is the same for the same moment; the hour's tint over Claudebros' sky is nothing by day, warm at dusk and dawn and deep blue at night; the Fortress's motes are many, in unit space, each with its own drift; and the window draws them over the places", () => {
+  const CM = load();
+  let lo = 2, hi = 0; for (let t = 0; t < 60; t += 0.01) { const f = CM.flickerAt(t, 3); lo = Math.min(lo, f); hi = Math.max(hi, f); }
+  assert.ok(lo >= 0.85 && hi <= 1.15 && hi - lo > 0.12, `the flicker's bounds (${lo.toFixed(3)}..${hi.toFixed(3)})`); assert.strictEqual(CM.flickerAt(12.5, 3), CM.flickerAt(12.5, 3), "the same for the same moment");
+  assert.notStrictEqual(CM.flickerAt(12.5, 3), CM.flickerAt(12.5, 4), "its own by seed");
+  const day = CM.hourTint(12, 6, 20), dusk = CM.hourTint(19.4, 6, 20), night = CM.hourTint(1, 6, 20), dawn = CM.hourTint(5.6, 6, 20), late = CM.hourTint(20.9, 6, 20);
+  assert.strictEqual(day[3], 0, "nothing by day"); assert.ok(dusk[3] > 0 && dusk[0] > dusk[2], "warm at dusk"); assert.ok(dawn[3] > 0 && dawn[0] > dawn[2], "warm at dawn");
+  assert.ok(night[3] >= 0.69 && night[2] > night[0], "deep blue at night"); assert.ok(late[3] > dusk[3] && late[2] > late[0], "going blue after dusk");
+  const M = CM.motesOf("fort-1", 28); assert.strictEqual(M.length, 28); assert.ok(M.every((m) => m.x >= 0 && m.x < 1 && m.y >= 0 && m.y < 1 && Math.abs(m.vx) < 0.01 && Math.abs(m.vy) < 0.01), "in unit space, drifting slowly");
+  assert.strictEqual(JSON.stringify(CM.motesOf("fort-1", 28)), JSON.stringify(M), "the same motes for the same seed"); assert.notStrictEqual(JSON.stringify(CM.motesOf("fort-2", 28)), JSON.stringify(M));
+  const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzc-places.js"), "utf-8");
+  for (const m of ["U.fortHud =", "U.caveHud =", "U.brScenery =", "CM.flickerAt", "CM.hourTint", "CM.motesOf"]) assert.ok(win.includes(m), `${m} wired`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
