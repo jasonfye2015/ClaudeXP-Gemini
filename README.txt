@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The figures, drawn (v66.0, UPGRADE_PLAN_60.md phase 1)
+  (src/js/40-render.js, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js)
+  - The figures are drawn (plan 60, phase 1): the townsfolk, the hound and the pony, and the monster kinds with
+    a body in the mapping - rats, skeletons, wolves, spiders and more - stand as modelled bodies in their idle,
+    skinned by the renderer, stood their picture's height (a rat its length), turned to face the party, tinted as
+    the mapping says, and lit by the same light as everything else; within fourteen squares, farther off their
+    pictures stand as before.
+  - Settings > Figures: Modelled (the bodies) or Painted (the pictures as they were); Low detail keeps the pictures.
+  - The shadows, the marks, the statuses and the fight's strip are untouched; the bodies' own motion - walking,
+    striking, falling - is the next phase.
+
 The figures' pipeline (v65.0, UPGRADE_PLAN_60.md phase 0)
   (tools/models.py, src/models/figures.json, src/js/35c-figures.js, src/js/37-figures.js, src/js/76zzzzzzzzzzd-figures.js)
   - The figures' pipeline (the first step of plan 60): twenty-five rigged, animated low-poly bodies from the CC0

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v65.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v66.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1534,7 +1534,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "65.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "66.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9589,6 +9589,21 @@ CM.art.credits = function () {
       for (let k = 0; k < 4; k++) { const w = model.weights[i * 4 + k] / 255; if (!w) continue; const m = model.joints[i * 4 + k] * 16; for (let r = 0; r < 3; r++) out[r] += w * (M[m + r] * v[0] + M[m + 4 + r] * v[1] + M[m + 8 + r] * v[2] + M[m + 12 + r]); }
       return out; },
     figureOf(key) { const F = CM.figuresPack && CM.figuresPack.figures; if (!F || !(key in F)) return null; return F[key]; },
+    // (v66.0) the figure behind a sprite's layer: "monster:Goblin:idle2" -> "monster:Goblin", "npc:res_smith" -> itself; else null
+    keyOf(layer) { if (typeof layer !== "string") return null; const p = layer.split(":"); if (p.length < 2 || !["monster", "npc", "pet"].includes(p[0])) return null; return `${p[0]}:${p[1]}`; },
+    // the model's size at rest, posed (the stored box is the raw mesh's: Quaternius' is tiny before its armature's scale): { lo, hi, height, foot }
+    measure(model) { if (model.measured) return model.measured; const M = CM.Figures.pose(model, null, 0), lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], v = [0, 0, 0], step = model.verts > 3000 ? 2 : 1;
+      for (let i = 0; i < model.verts; i += step) { CM.Figures.skinVertex(model, M, i, v); for (let k = 0; k < 3; k++) { if (v[k] < lo[k]) lo[k] = v[k]; if (v[k] > hi[k]) hi[k] = v[k]; } }
+      return (model.measured = { lo, hi, height: Math.max(1e-3, hi[1] - lo[1]), width: Math.max(1e-3, hi[0] - lo[0], hi[2] - lo[2]), foot: lo[1], centre: [(lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2] }); },
+    // the uniform scale that stands a model within its billboard - its height (in squares) and its width, whichever binds: a rat is long, not tall - times the figure's own scale
+    fit(figure, model, spriteH, spriteW) { const m = CM.Figures.measure(model), k = (figure && figure.scale) || 1; return Math.min((spriteH || 0.8) * k / m.height, (spriteW || spriteH || 0.8) * k / m.width); },
+    // a palette for an untextured model: its colours as cells of a square grid, and the uv of each vertex at its cell's centre
+    palette(model) { const cols = [], at = new Map(), uv = new Float32Array(model.verts * 2); for (let i = 0; i < model.verts; i++) { const k = (model.col[i * 3] << 16) | (model.col[i * 3 + 1] << 8) | model.col[i * 3 + 2]; let c = at.get(k);
+        if (c === undefined) { c = cols.length; cols.push([model.col[i * 3], model.col[i * 3 + 1], model.col[i * 3 + 2]]); at.set(k, c); } uv[i * 2] = c; }
+      const n = Math.max(1, Math.ceil(Math.sqrt(cols.length))); for (let i = 0; i < model.verts; i++) { const c = uv[i * 2]; uv[i * 2] = ((c % n) + 0.5) / n; uv[i * 2 + 1] = (Math.floor(c / n) + 0.5) / n; }
+      return { colours: cols, n, uv }; },
+    // the model matrix: scaled, turned about y by yaw, then stood at (x, y, z); column-major
+    modelMatrix(out, x, y, z, yaw, s) { const c = Math.cos(yaw) * s, sn = Math.sin(yaw) * s; out[0] = c; out[1] = 0; out[2] = -sn; out[3] = 0; out[4] = 0; out[5] = s; out[6] = 0; out[7] = 0; out[8] = sn; out[9] = 0; out[10] = c; out[11] = 0; out[12] = x; out[13] = y; out[14] = z; out[15] = 1; return out; },
   };
 }
 
@@ -9600,11 +9615,16 @@ CM.art.credits = function () {
 const VERT = `#version 300 es
 precision highp float;
 in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
-in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
+in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;
+in vec4 aJoints; in vec4 aWeights; uniform float uSkin; uniform sampler2D uJoints; uniform mat4 uModel; uniform vec3 uFigFx;   // (v66.0) a figure: skinned by its joints' matrices (four texels a joint), then placed by uModel                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
 uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uRight;
 uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar; uniform vec3 uHideAt;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
+  if (uSkin > 0.5) { vec4 q = vec4(aPos, 1.0), sp = vec4(0.0);   // (v66.0) a figure's vertex: blended by up to four joints, then into the world
+    for (int k = 0; k < 4; k++) { float w = aWeights[k]; if (w <= 0.0) continue; int j = int(aJoints[k] + 0.5);
+      mat4 J = mat4(texelFetch(uJoints, ivec2(0, j), 0), texelFetch(uJoints, ivec2(1, j), 0), texelFetch(uJoints, ivec2(2, j), 0), texelFetch(uJoints, ivec2(3, j), 0)); sp += w * (J * q); }
+    p = (uModel * vec4(sp.xyz, 1.0)).xyz; fx = uFigFx; vWorld = p; vUV = uvl; vShade = sh; vFx = fx; gl_Position = uViewProj * vec4(p, 1.0); return; }
   if (aFx.x >= 10.0) { if (length(aPos.xz - uEye.xz) > aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (v58.1: a detail, seen only within its reach - 10 + squares)
   if (uHideAt.z > 0.0 && floor(uEye.x) == floor(uHideAt.x) && floor(uEye.z) == floor(uHideAt.y) && length(aPos.xz - uHideAt.xy) < uHideAt.z && aPos.y > 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; }   // (v56.1: standing on the well, it folds away)
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
@@ -9627,7 +9647,7 @@ void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf;   // (v26.0: the outdoors' drawn pictures, 2000 and up)
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
  uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
@@ -9656,9 +9676,10 @@ vec3 shafts(vec3 vdir, float d) {                                          // (v
 bool n0g(vec3 w) { return abs(dFdx(w.y)) + abs(dFdy(w.y)) < 1e-4; }   // (v54.0: a level surface - the ground, not a wall's foot)
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
-  bool surf = vUV.z > 1999.5;
+  bool surf = vUV.z > 1999.5 && vUV.z < 2999.5, fig = vUV.z > 2999.5;
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
-  vec4 t = surf ? tf : shared ? ts : tt;
+  vec4 t = fig ? texture(uFig, vec3(vUV.xy, max(vUV.z - 3000.0, 0.0))) : surf ? tf : shared ? ts : tt;
+  if (fig) t.rgb *= uTint;
   if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
     vec2 cw = vWorld.xz, cell = floor(cw), f = cw - cell; float me = floor(texture(uMap, (cell + 0.5) / uMapN).b * 255.0 + 0.5);
     if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld) && texture(uMap, (cell + 0.5) / uMapN).g < 0.5) {   /* (v55.4: never on the water itself) */ float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
@@ -9720,7 +9741,7 @@ void main() {
     vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     float wallBy = uMapN > 0.0 ? max(max(texture(uMap, (vWorld.xz + vec2(0.12, 0.0)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.12, 0.0)) / uMapN).r), max(texture(uMap, (vWorld.xz + vec2(0.0, 0.12)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.0, 0.12)) / uMapN).r)) : 0.0;   // (v58.1: only on a wall, or against one)
     vec2 fq = fract(vWorld.xz); float ed = abs(wn.x) > abs(wn.z) ? min(fq.x, 1.0 - fq.x) : min(fq.y, 1.0 - fq.y);   // (v59.0: only on a face at its square's edge, squarely set - a wall's, not a barrel's or the well's)
-    if (abs(wn.y) < 0.3 && wallBy > 0.35 && ed < 0.1 && max(abs(wn.x), abs(wn.z)) > 0.9) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+    if (uSkin < 0.5 && abs(wn.y) < 0.3 && wallBy > 0.35 && ed < 0.1 && max(abs(wn.x), abs(wn.z)) > 0.9) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
       float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
       t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -9853,10 +9874,10 @@ void main() {
     col += t.rgb * uBounce * (uTorch * min(light, 1.4) + extra) * low * uGrade; }
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
-  if (uGroundFrost > 0.0 && uCeil < 0.5 && n0.y > 0.7 && vWorld.y < 0.06) {   // (v60.0) hoar frost on the ground on a clear cold morning: whitened in patches, by the grain
+  if (uSkin < 0.5 && uGroundFrost > 0.0 && uCeil < 0.5 && n0.y > 0.7 && vWorld.y < 0.06) {   // (v60.0) hoar frost on the ground on a clear cold morning: whitened in patches, by the grain
     float fn = vnoise(vWorld.xz * 5.0) * 0.55 + vnoise(vWorld.xz * 19.0) * 0.45, fr = uGroundFrost * smoothstep(0.38, 0.72, fn) * 0.6;
     col = mix(col, vec3(0.86, 0.9, 0.97) * (uTorch * light + extra) * uGrade, fr); }
-  if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float edgeS = uMapN > 0.0 ? texture(uMap, vWorld.xz / uMapN + vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN + vec2(0.0, 0.35) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.0, 0.35) / uMapN).r : 0.0;   // (v54.4: the edges by walls fill first)
+  if (uSkin < 0.5 && uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float edgeS = uMapN > 0.0 ? texture(uMap, vWorld.xz / uMapN + vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN + vec2(0.0, 0.35) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.0, 0.35) / uMapN).r : 0.0;   // (v54.4: the edges by walls fill first)
     float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow + 0.35 * min(edgeS, 1.0) - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
     col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
   { float sn = up > 0.55 ? max(uSnow, uGroundFrost * 0.6 * step(vWorld.y, 0.06) * (1.0 - uCeil)) * max(uSunK - 0.3, 0.0) * 1.6 : 0.0,   /* (v60.0: the frost glints too) */ sp = uBump > 0.0 && abs(n0.y) < 0.7 ? uSparkle : 0.0;   // (v30.4) glints: frost and crystal on the walls, the snow in the sun - they wink as the eye moves
@@ -10012,7 +10033,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -10047,7 +10068,7 @@ CM.Renderer = class {
   _programLater(vs, fs) {
     const gl = this.gl, mk = (kind, src) => { const s = gl.createShader(kind); gl.shaderSource(s, src); gl.compileShader(s); return s; }, v = mk(gl.VERTEX_SHADER, vs), f = mk(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
     gl.attachShader(p, v); gl.attachShader(p, f);
-    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"], [8, "aJoints"], [9, "aWeights"]]) gl.bindAttribLocation(p, i, n);
     gl.linkProgram(p); this._pend = { p, v, f }; return p;
   }
   _ready() {
@@ -10068,7 +10089,7 @@ CM.Renderer = class {
     if (!v || !f) return null;
     const p = gl.createProgram();
     gl.attachShader(p, v); gl.attachShader(p, f);
-    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"], [8, "aJoints"], [9, "aWeights"]]) gl.bindAttribLocation(p, i, n);
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + gl.getProgramInfoLog(p); return null; }
     return p;
@@ -10380,6 +10401,7 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
     gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
     for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }   // (v26.2: not an instance)
+    for (const i of [8, 9]) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }   // (v66.0: not a figure)
   }
   // (v26.2) the billboards drawn as instances of one quad: sixteen numbers each, not sixty, and no corners worked out here
   _drawInstances(inst) {
@@ -10526,6 +10548,7 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uMoss, 0);   // (v58.1: the moss is the walls' own - not on the people, the props drawn as pictures, or the marks)
     for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
+    if (this.drawFigures) this.drawFigures(sky, eye);   // (v66.0: the figures, skinned - 76zzzzzzzzzze-figures2.js)
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);
@@ -45167,6 +45190,61 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       const t0 = performance.now(), ds = new DecompressionStream("deflate-raw"), stream = new Blob([b64(P.data)]).stream().pipeThrough(ds), bytes = new Uint8Array(await new Response(stream).arrayBuffer());
       CM.figures = CM.Figures.parse(bytes, P.manifest); CM.figures.loadedMs = Math.round(performance.now() - t0);
       return true; } catch (e) { console.warn("figures: not loaded -", e && e.message); CM.figures = null; return false; } })();
+}
+
+// ---- 76zzzzzzzzzze-figures2.js ----
+"use strict";
+// The figures, drawn (v66.0, UPGRADE_PLAN_60.md phase 1): a townsperson, a pet or a monster with a body in
+// src/models/figures.json is drawn as that body - skinned by the renderer (40-render.js: uSkin, uJoints, uModel) in
+// its idle clip, stood its billboard's height, turned to face the party, tinted as the mapping says - in place of its
+// painted picture, within fourteen squares; farther off, and at Low detail, and under Settings > Figures: Painted,
+// the picture stands as before. The pictures: a model's own texture, or for an untextured one a palette of its
+// colours, go up as the figures' texture array (layers 3000 and up). The shadows, marks and statuses are untouched.
+{ const REACH = 14, TEX = 256, b64png = (bytes) => { let s = ""; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return "data:image/png;base64," + btoa(s); };
+  const on = (game) => Boolean(CM.figures && game && !(game.settings && (game.settings.figures === "painted" || game.settings.detail === "low")));
+  // the figures' pictures: made once the figures are parsed (the PNGs decoded, the palettes painted), then uploaded
+  const pictures = async (F) => { const list = [], names = Object.keys(F.models); for (const name of names) { const m = F.models[name]; const c = document.createElement("canvas"); c.width = c.height = TEX; const p = c.getContext("2d");
+      if (m.texture) { try { const img = new Image(); img.src = b64png(m.texture); await img.decode(); p.imageSmoothingEnabled = true; p.drawImage(img, 0, 0, TEX, TEX); } catch (e) { p.fillStyle = "#A08870"; p.fillRect(0, 0, TEX, TEX); } m.uvf = new Float32Array(m.verts * 2); for (let i = 0; i < m.verts * 2; i++) m.uvf[i] = m.uv[i] / 65535; }
+      else { const P = CM.Figures.palette(m), cell = TEX / P.n; P.colours.forEach(([r, g, b], i) => { p.fillStyle = `rgb(${r},${g},${b})`; p.fillRect((i % P.n) * cell, Math.floor(i / P.n) * cell, cell + 1, cell + 1); }); m.uvf = P.uv; }
+      m.layer = 3000 + list.length; list.push(c); } return list; };
+  const R = CM.Renderer.prototype;
+  R.figuresUp = async function (F) { const gl = this.gl; if (!gl || this.figTex) return; const pics = await pictures(F); if (!gl.isContextLost || !gl.isContextLost()) { this.figTex = gl.createTexture(); this._upload(this.figTex, pics, TEX, false, false); this.figLayers = pics.length; } };
+  // a model's GL buffers: the renderer's ten floats a vertex (position, uv + layer, shade, fx) and the four joints and weights after them
+  const buffersOf = (r, m) => { if (m.gl) return m.gl; const gl = r.gl, n = m.verts, data = new Float32Array(n * 18), lo = m.box[0], hi = m.box[1];
+    for (let i = 0; i < n; i++) { const o = i * 18; for (let k = 0; k < 3; k++) data[o + k] = lo[k] + (m.pos[i * 3 + k] + 32767) / 65534 * (hi[k] - lo[k]); data[o + 3] = m.uvf[i * 2]; data[o + 4] = m.uvf[i * 2 + 1]; data[o + 5] = m.layer; data[o + 6] = 1; data[o + 7] = 0; data[o + 8] = 1; data[o + 9] = 0;
+      for (let k = 0; k < 4; k++) { data[o + 10 + k] = m.joints[i * 4 + k]; data[o + 14 + k] = m.weights[i * 4 + k] / 255; } }
+    const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, m.index, gl.STATIC_DRAW);
+    const jt = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, jt); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 4, m.skeleton.n, 0, gl.RGBA, gl.FLOAT, null); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    return (m.gl = { vb, ib, jt, count: m.index.length, big: m.index instanceof Uint32Array, pose: new Float32Array(m.skeleton.n * 16) }); };
+  // which sprites become figures: taken out of the sprite list, kept for drawFigures
+  { const ss0 = R.setSprites; R.setSprites = function (list) { const g = CM.game, F = CM.figures; this.figList = [];
+      if (!on(g) || !this.figTex || !F) return ss0.call(this, list);
+      const fl = g.floor, px = fl ? fl.pos[0] : 0, py = fl ? fl.pos[1] : 0, keep = [];
+      for (const s of list) { const key = CM.Figures.keyOf(s.layer), fig = key && CM.Figures.figureOf(key); const m = fig && fig !== "painted" && F.models[fig.model];
+        if (!m || s.flat || s.hang !== undefined || s.axis || Math.abs(s.x - px) + Math.abs(s.y - py) > REACH) { keep.push(s); continue; }
+        const parts = s.layer.split(":"), pose = parts[2] || "", clip = pose === "attack" ? "attack" : (s.walking ? "walk" : "idle");
+        const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m);   // (the feet at the floor and the body centred on its square, whatever the model's own origin)
+        this.figList.push({ s, fig, m, key, clip, x: s.x + 0.5 + (s.dx || 0), z: s.y + 0.5 + (s.dz || 0), y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre, phase: (CM.hashSeed(`${key}:${s.x},${s.y}`) % 1000) / 1000 }); }
+      return ss0.call(this, keep); }; }
+  const M16 = new Float32Array(16);
+  R.drawFigures = function (sky, eye) { const L = this.figList; if (!L || !L.length || !this.figTex) return; const gl = this.gl, t = this.time || 0;
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.figTex); gl.uniform1i(this.loc.uFig, 4); gl.activeTexture(gl.TEXTURE5); gl.uniform1i(this.loc.uJoints, 5);
+    gl.uniform1f(this.loc.uSkin, 1); gl.uniform1f(this.loc.uBump, 0);
+    for (const f of L) { const B = buffersOf(this, f.m), clip = f.m.clips[f.clip] || f.m.clips.idle || null, T = clip ? clip.frames / clip.fps : 1;
+      CM.Figures.pose(f.m, clip, (t + f.phase * T) * (f.s.ghost ? 0.6 : 1), B.pose); gl.bindTexture(gl.TEXTURE_2D, B.jt); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4, f.m.skeleton.n, gl.RGBA, gl.FLOAT, B.pose);
+      const yaw = Math.atan2(eye[0] - f.x, eye[2] - f.z) + (f.fig.yaw || 0);   // (faces the party; phase 2 gives them their own way)
+      const c = Math.cos(yaw) * f.scale, sn = Math.sin(yaw) * f.scale, cx = f.centre[0], cz = f.centre[1];   // (the body's centre on the square: the model's own centre taken out, turned and scaled as it will be)
+      gl.uniformMatrix4fv(this.loc.uModel, false, CM.Figures.modelMatrix(M16, f.x - (c * cx + sn * cz), f.y, f.z - (-sn * cx + c * cz), yaw, f.scale));
+      const tint = f.fig.tint; gl.uniform3fv(this.loc.uTint, tint ? [tint[0] / 255, tint[1] / 255, tint[2] / 255] : [1, 1, 1]);
+      gl.uniform3fv(this.loc.uFigFx, [f.s.flash || 0, f.s.alpha === undefined ? 1 : f.s.alpha, 0]);
+      gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); const bytes = 18 * 4; gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
+      gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
+      for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.enableVertexAttribArray(8); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.enableVertexAttribArray(9); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); }
+    gl.uniform1f(this.loc.uSkin, 0); gl.activeTexture(gl.TEXTURE0); this.figuresDrawn = L.length; };
+  // once the figures are parsed, their pictures go up; the setting
+  CM.figuresReady.then((ok) => { if (ok && CM.renderer && CM.renderer.gl) CM.renderer.figuresUp(CM.figures).catch((e) => console.warn("figures: pictures -", e && e.message)); });
+  if (CM.settingLater) CM.settingLater((ui) => CM.addSetting("set-figures", "Figures - the townsfolk, the pets and the monsters as modelled bodies, or as the painted pictures", [["modelled", "Modelled"], ["painted", "Painted"]], "figures", "modelled", ui));
 }
 
 // ---- 77-splash.js ----
