@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The figures, finished (v70.0, UPGRADE_PLAN_60.md phase 5)
+  (src/js/76zzzzzzzzzzf-figures3.js, src/js/76zzzzzzzzzze-figures2.js)
+  - The figures, finished (plan 60, phase 5): at load each body is drawn once, flat-lit from the front, into an
+    impostor picture; beyond the fourteen squares the bodies are drawn in, a kind wears its impostor in place of the
+    old painting, so it looks the same near and far - and the bestiary's plates and the monsters' pictures are the
+    impostors too where a kind has a body.
+  - No more than forty bodies are drawn a frame, the nearest; the rest wear impostors. A test holds thirty figures'
+    posing to the frame's budget.
+  - Credits: KayKit (Kay Lousberg) and Quaternius, CC0, join the game's credits. Plan 60 is complete.
+
 The monsters in batches (v69.0, UPGRADE_PLAN_60.md phase 4)
   (src/models/figures.json, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js)
   - The monsters in batches (plan 60, phase 4): fifty-four kinds have bodies now - the small folk (kobold, goblin,

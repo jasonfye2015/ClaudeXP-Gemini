@@ -18,7 +18,9 @@
       else { const P = CM.Figures.palette(m), cell = TEX / P.n; P.colours.forEach(([r, g, b], i) => { p.fillStyle = `rgb(${r},${g},${b})`; p.fillRect((i % P.n) * cell, Math.floor(i / P.n) * cell, cell + 1, cell + 1); }); m.uvf = P.uv; }
       m.layer = 3000 + list.length; list.push(c); } return list; };
   const R = CM.Renderer.prototype;
-  R.figuresUp = async function (F) { const gl = this.gl; if (!gl || this.figTex) return; const pics = await pictures(F); if (!gl.isContextLost || !gl.isContextLost()) { this.figTex = gl.createTexture(); this._upload(this.figTex, pics, TEX, false, false); this.figLayers = pics.length; } };
+  R.figuresUp = async function (F) { const gl = this.gl; if (!gl || this.figTex) return; const pics = await pictures(F); if (!gl.isContextLost || !gl.isContextLost()) {
+      const names = Object.keys(F.models), blanks = names.map(() => { const c = document.createElement("canvas"); c.width = c.height = TEX; return c; });   // (v70.0: a layer each for the impostors, drawn at load - 76zzzzzzzzzzf-figures3.js)
+      this.figTex = gl.createTexture(); this._upload(this.figTex, pics.concat(blanks), TEX, false, false); this.figLayers = pics.length; this.figImpostorBase = 3000 + pics.length; this.figImpostorNames = names; this.figTexSize = TEX; } };
   // a model's GL buffers: the renderer's ten floats a vertex (position, uv + layer, shade, fx) and the four joints and weights after them
   const buffersOf = (r, m) => { if (m.gl) return m.gl; const gl = r.gl, n = m.verts, data = new Float32Array(n * 18), lo = m.box[0], hi = m.box[1];
     for (let i = 0; i < n; i++) { const o = i * 18; for (let k = 0; k < 3; k++) data[o + k] = lo[k] + (m.pos[i * 3 + k] + 32767) / 65534 * (hi[k] - lo[k]); data[o + 3] = m.uvf[i * 2]; data[o + 4] = m.uvf[i * 2 + 1]; data[o + 5] = m.layer; data[o + 6] = 1; data[o + 7] = 0; data[o + 8] = 1; data[o + 9] = 0;
@@ -26,6 +28,12 @@
     const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, m.index, gl.STATIC_DRAW);
     const jt = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, jt); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 4, m.skeleton.n, 0, gl.RGBA, gl.FLOAT, null); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     return (m.gl = { vb, ib, jt, count: m.index.length, big: m.index instanceof Uint32Array, pose: new Float32Array(m.skeleton.n * 16), pose2: new Float32Array(m.skeleton.n * 16) }); };
+  R.figureBuffers = function (m) { return buffersOf(this, m); };
+  // one model's draw with the buffers bound: the renderer's attributes and the two skinning ones
+  R.figureDrawModel = function (B) { const gl = this.gl, bytes = 18 * 4; gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
+    gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
+    for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.enableVertexAttribArray(8); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.enableVertexAttribArray(9); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); };
   // the figures' states, by id; forgotten when not seen for a while
   const states = new Map(), turnTo = (a, b, k) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * k; };
   // which sprites become figures: taken out of the sprite list, kept for drawFigures with their cues
@@ -62,15 +70,10 @@
       gl.uniformMatrix4fv(this.loc.uModel, false, CM.Figures.modelMatrix(M16, fx - (c * cx + sn * cz), f.y, fz - (-sn * cx + c * cz), yaw, f.scale));
       const tint = f.fig.tint, wk = 0.7 + 0.3 * f.worn; gl.uniform3fv(this.loc.uTint, tint ? [tint[0] / 255 * wk, tint[1] / 255 * wk, tint[2] / 255 * wk] : [wk, wk, wk]);   // (worn down: darker)
       gl.uniform3fv(this.loc.uFigFx, [f.s.flash || 0, f.s.alpha === undefined ? 1 : f.s.alpha, 0]);
-      gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); const bytes = 18 * 4; gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
-      gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
-      for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.enableVertexAttribArray(8); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.enableVertexAttribArray(9); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
+      this.figureDrawModel(B);
       // (v68.0) what it carries: each piece of gear is a mesh bound to the same rig's hand, drawn with the body's own joints
-      for (const g of f.wear || []) { const gm = CM.figures.models[`gear:${g}`]; if (!gm || gm.skeleton.n !== m.skeleton.n) continue; const G = buffersOf(this, gm);
-        gl.uniform3fv(this.loc.uTint, [wk, wk, wk]); gl.bindBuffer(gl.ARRAY_BUFFER, G.vb); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, G.ib); gl.drawElements(gl.TRIANGLES, G.count, G.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); } }
-    gl.uniform1f(this.loc.uSkin, 0); gl.activeTexture(gl.TEXTURE0); this.figuresDrawn = L.length; };
+      for (const g of f.wear || []) { const gm = CM.figures.models[`gear:${g}`]; if (!gm || gm.skeleton.n !== m.skeleton.n) continue; gl.uniform3fv(this.loc.uTint, [wk, wk, wk]); this.figureDrawModel(buffersOf(this, gm)); } }
+    gl.uniform1f(this.loc.uSkin, 0); gl.uniform3fv(this.loc.uTint, [1, 1, 1]); gl.activeTexture(gl.TEXTURE0); this.figuresDrawn = L.length; };
   // once the figures are parsed, their pictures go up; the setting
   CM.figuresReady.then((ok) => { if (ok && CM.renderer && CM.renderer.gl) CM.renderer.figuresUp(CM.figures).catch((e) => console.warn("figures: pictures -", e && e.message)); });
   if (CM.settingLater) CM.settingLater((ui) => CM.addSetting("set-figures", "Figures - the townsfolk, the pets and the monsters as modelled bodies, or as the painted pictures", [["modelled", "Modelled"], ["painted", "Painted"]], "figures", "modelled", ui));
