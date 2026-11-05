@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The shaft head (v57.3, UPGRADE_PLAN_52.md phase 3)
+  (src/js/26j-shaft.js, src/js/26-surface.js)
+  - The shaft in the Keep-yard is built up now: a low kerb of dressed stone round the hole, and over it a winch -
+    two timber A-frames, the windlass drum on its axle between them with a crank, and the rope wound on it running
+    down into the dark. Step onto the square to climb down as before.
+
 The West Gate (v57.2, UPGRADE_PLAN_52.md phase 2)
   (src/js/26i-wall.js, src/js/26-surface.js)
   - The West Gate is an archway now, not a gap between the towers: two thick jambs, a round arch over the road with
