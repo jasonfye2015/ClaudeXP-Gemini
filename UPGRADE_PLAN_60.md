@@ -117,6 +117,15 @@ acting foe's half-step forward - these fold into Phase 4's batches as the kinds 
   strip already names it).
 
 ### Phase 3 - the town's people and the pets first
+Done 2026-11-05 as v68.0: all six residents have bodies (the merchant, the priest and the tavern-keeper had no
+picture and were never drawn on their rounds before; the townsfolk file now draws a resident with a body but no
+picture), and stand at their work (cues.act: the work loop) at the forge, the stalls, the Library and the Temple;
+the traders at their stalls likewise. Gear in hand: each gear:* model is a mesh bound to the shared rig's hand and
+drawn with the body's own joint texture - the smith's axe, the tavern-keeper's mug, the books, the hermit's staff,
+the lamplighter's pole (the mage's staff stands in; a lantern pole would need a model of its own), the knight's sword
+and shield. The crowds, the followers behind the party and the kennel's pets were already bodies from phases 1-2.
+Not done: sitting at the tavern's benches (the residents stand at its door; no bench positions exist), Legends' Row
+and the rival band (no figures of their own on the floor), the farm's litter (a window, not the floor).
 - KayKit Adventurers for the six residents, the traders, the crowds, the lamplighter (with the pole as gear),
   porters, torchbearers, followers seen behind the party, the rival band, Legends' Row; Quaternius animals for
   the hound and the pony (the kennel, the farm, the followers).

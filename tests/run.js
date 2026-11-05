@@ -6192,6 +6192,18 @@ test("the figures' own motion (v67.0): the clip player idles, walks when moving 
   assert.strictEqual(CM.Figures.figureOf("monster:Hedge Wizard").attack, "cast"); assert.strictEqual(CM.Figures.figureOf("monster:Sellsword").attack, undefined);
 });
 
+test("the town's people (v68.0): a resident at work loops the work clip instead of idling and walks when going; every resident, the traders and the keepers have a body; the mug, the staff and the book are gear bound to the shared rig; the residents' and traders' sprites carry ids and activities, and a resident with a body but no picture is drawn", () => {
+  const CM = load(), zlib = require("zlib"), P = CM.figuresPack, F = CM.Figures.parse(new Uint8Array(zlib.inflateRawSync(Buffer.from(P.data, "base64"))), P.manifest), k = F.models.barbarian;
+  const st = {}; let p = CM.Figures.step(k, st, { act: "work" }, 0); assert.strictEqual(p.clip, "work", "at work"); p = CM.Figures.step(k, st, { act: "work", moving: true }, 1); assert.strictEqual(p.clip, "walk", "going"); p = CM.Figures.step(k, st, { act: "work" }, 2); assert.strictEqual(p.clip, "work", "back at it");
+  p = CM.Figures.step(k, st, { act: "sit" }, 3); assert.strictEqual(p.clip, "sit", "sitting"); p = CM.Figures.step(k, st, { act: "juggle" }, 4); assert.strictEqual(p.clip, "idle", "no such clip: idling"); p = CM.Figures.step(k, st, { act: "work", attack: true }, 5); assert.strictEqual(p.clip, "attack", "a strike still comes first");
+  for (const who of ["smith", "merchant", "library", "priest", "farm", "tavern"]) { const f = CM.Figures.figureOf(`npc:res_${who}`); assert.ok(f && f !== "painted" && F.models[f.model], `the ${who}'s resident has a body`); for (const g of f.wear || []) assert.ok(F.models[`gear:${g}`], `${who} wears ${g}`); }
+  for (const g of ["mug", "staff", "book", "sword", "shield", "axe"]) { const gm = F.models[`gear:${g}`]; assert.ok(gm && gm.skeleton.n === k.skeleton.n, `gear ${g} on the shared rig`); assert.ok(gm.joints.every((j) => j < gm.skeleton.n)); }
+  assert.strictEqual(CM.Figures.figureOf("npc:res_priest").attack, "cast"); assert.ok(CM.Figures.figureOf("npc:lamplighter").wear.includes("staff"), "the lamplighter's pole");
+  const src = (f) => fs.readFileSync(path.join(__dirname, "..", "src", "js", f), "utf-8");
+  const T = src("76zzzzy-townsfolk.js"); for (const w of ["id: `res:${who}`", 'act: walking ? null', 'smith: "work"', "CM.Figures.figureOf(L)"]) assert.ok(T.includes(w), `townsfolk: ${w}`);
+  assert.ok(src("76zzzzzzj-market.js").includes('id: `trader:${t.id}`, act: "work"'), "the traders at work"); assert.ok(src("76zzzzzzzzzze-figures2.js").includes("gear:${g}") && src("76zzzzzzzzzze-figures2.js").includes("act: s.act"), "gear drawn, activities cued");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

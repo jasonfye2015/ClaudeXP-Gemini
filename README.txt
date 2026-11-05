@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The town's people (v68.0, UPGRADE_PLAN_60.md phase 3)
+  (src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/76zzzzy-townsfolk.js, src/js/76zzzzzzj-market.js, src/models/figures.json)
+  - The town's people (plan 60, phase 3): all six residents have bodies now - the merchant, the priest and the
+    tavern-keeper had no picture before and were never seen walking their rounds - and at the forge, the stalls, the
+    Library and the Temple they stand at their work rather than idling; the traders at their stalls likewise.
+  - What they carry is in their hands: the smith's axe, the tavern-keeper's mug, the priest's and the librarian's
+    books, the hermit's staff, the lamplighter's pole, the knight's sword and shield - each a mesh bound to the hand
+    of the same rig, moving with the body.
+
 The figures' own motion (v67.0, UPGRADE_PLAN_60.md phase 2)
   (src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/80-main.js, src/js/76zzzzzzzzz3-crowds.js, src/js/76zzzzf-nightlife.js, src/js/76zzzzzzi-kennel.js, src/models/figures.json)
   - The figures' own motion (plan 60, phase 2): a body walks its walk when it moves and turns the way it goes -
