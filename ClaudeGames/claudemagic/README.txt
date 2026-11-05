@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The magical fogs (v76.0, UPGRADE_PLAN_61.md part 6)
+  (src/js/69zzo-fogs.js, src/js/76zzzzzzzzzzl-fogs.js, src/js/73c-wxhud.js)
+  - The magical fogs (plan 61, part 6): four fogs among the weather's events, rarer than rain, six hours long, and
+    they do not stop at the shaft - the same fog hangs on every floor below. Each is a status on the whole party
+    while it lasts, said when it comes and when it goes, and named with its effect on the sky bar: the orange ember
+    fog (spells cost half again as much and bite a fifth less), the green rot fog (a point of poison to each hero
+    every ten minutes, never below one), the brown dun fog (strength a fifth down), the violet wild fog (one cast in
+    ten twists into another spell of the same kind).
+  - Above ground a fog is a coloured low veil of drifting billows, the sky, the clouds and the far land drawn to its
+    colour; below, the torches and lamps burn in its colour, the haze thickens and the billows drift through the
+    halls.
+
 Meteors and the ore (v75.0, UPGRADE_PLAN_61.md part 5)
   (src/js/69zzn-meteors.js, src/js/76zzzzzzzzzzk-meteors.js, src/js/26-surface.js, src/js/40-render.js)
   - Meteors and the ore (plan 61, part 5): a star falls every day and a half to three and a half (the first within
