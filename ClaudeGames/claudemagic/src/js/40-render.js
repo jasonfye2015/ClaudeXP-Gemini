@@ -49,7 +49,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec4 uBankTint; uniform float uLily; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uMud; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec4 uBankTint; uniform float uLily; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -104,6 +104,7 @@ void main() {
         float spots = smoothstep(0.5, 0.6, sp), k = uDapple * smoothstep(0.1, 0.5, cover);
         t.rgb *= mix(1.0, mix(0.7, 1.38, spots), k); }
       float wear = texture(uMap, cw / uMapN).a, dl = uGLayer[1];   // (v54.1) worn ground: the grass trodden to earth where the feet go, in patches
+      if (uMud > 0.0 && (me == 2.0 || me == 6.0 || me == 8.0)) t.rgb *= 1.0 - 0.52 * uMud * (0.55 + 0.45 * vnoise(cw * 4.6));   // (v77.0) mud: the earth, the tilled rows and the litter darkened after rain, in patches
       if (wear > 0.02 && me == 1.0 && dl >= 0.0) { float wn = vnoise(cw * 3.7) * 0.6 + vnoise(cw * 11.0) * 0.4; float k = smoothstep(0.5, 0.85, wear * 1.1 - wn * 0.6 + 0.1); t = mix(t, texture(uTex, vec3(fract(cw), dl)), k * 0.85 * uGBlend); } } }
   if (vFx.z > 2.5 && vFx.z < 3.5) { vec3 dir = normalize(vWorld - uEye), sk = mix(uHorizon, uZenith, t.r) + shafts(dir, 40.0) * 0.45;
     if (uStars > 0.0 && dir.y > 0.0) { vec2 sp = vec2(atan(dir.z, dir.x) * 150.0, asin(clamp(dir.y, 0.0, 1.0)) * 150.0), id = floor(sp); float h = hash(id);   // (v30.2) the stars, twinkling
@@ -335,7 +336,7 @@ void main() { vec3 c = texture(uSrc, vT).rgb * 0.227;
 // how big, how strong; uHeatAll: the whole view, in a furnace of a band), the party's breath on a cold day
 const COMPOSE_FRAG = `#version 300 es
 precision highp float; in vec2 vT; uniform sampler2D uSrc; uniform sampler2D uGlow; uniform float uK; out vec4 o;
-uniform float uTime; uniform float uAspect; uniform int uHeatN; uniform vec4 uHeat[8]; uniform float uHeatAll; uniform float uBreath;
+uniform float uTime; uniform float uAspect; uniform int uHeatN; uniform vec4 uHeat[8]; uniform float uHeatAll; uniform float uHeatFar; uniform float uBreath;
 uniform sampler2D uSoft; uniform vec4 uFocus; uniform int uStyle; uniform float uSwirl; uniform vec3 uLens;   // (v31.9: weather on the lens - rain, snow, mist)   // (v31.6: a portal's swirl)   // (v31.5: the screen's style - 0 clean, 1 an old monitor, 2 watercolour, 3 ink and parchment, 4 crisp)
 float lumAt(vec2 q) { return dot(texture(uSrc, q).rgb, vec3(0.3, 0.59, 0.11)); }   // (v31.3: the frame softened, and where the eye is held - centre, radius (0: none held), how soft)
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -358,6 +359,7 @@ void main() { vec2 uv = vT;
     uv += vec2(sin(vT.y * 95.0 - uTime * 7.0 + vT.x * 23.0), 0.5 * cos(vT.y * 71.0 - uTime * 5.3)) * 0.0028 * H.w * m; }
   vec3 lensD = vec3(0.0); if (uLens.x + uLens.z > 0.0) { lensD = drops(vT, uTime, uLens.x) + drops(vT * 1.7 + 3.1, 0.0, uLens.z * 0.6) * vec3(0.5, 0.5, 0.7); uv += lensD.xy * 0.012; }
   if (uHeatAll > 0.0) uv += vec2(sin(vT.y * 60.0 - uTime * 4.0 + vT.x * 11.0), 0.0) * 0.0016 * uHeatAll * (1.0 - smoothstep(0.0, 0.6, vT.y));
+  if (uHeatFar > 0.0) { float hb = exp(-pow((vT.y - 0.5) * 6.0, 2.0)); uv += vec2(sin(vT.y * 140.0 - uTime * 5.0 + vT.x * 17.0), 0.4 * cos(vT.y * 110.0 - uTime * 3.7)) * 0.0022 * uHeatFar * hb; }   // (v77.0) the heat's shimmer over the far land: a band about the horizon
   vec3 s = texture(uSrc, uv).rgb, g = texture(uGlow, vT).rgb;
   if (uFocus.w > 0.0) { vec2 fd = (vT - uFocus.xy) * vec2(uAspect, 1.0); float fm = uFocus.z > 0.0 ? smoothstep(uFocus.z * 0.6, uFocus.z * 1.7, length(fd)) : 1.0; s = mix(s, texture(uSoft, uv).rgb, fm * uFocus.w); }
   vec3 c = s + g * uK * (1.0 - s * 0.5);
@@ -423,7 +425,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -835,7 +837,7 @@ CM.Renderer = class {
     P.w = w; P.h = h; return P;
   }
 
-  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.breath || F.focus > 0.01 || F.style > 0 || F.swirl > 0 || (F.lens && F.lens.some((v) => v > 0)))); }   // (v30.4: what else asks for the screen pass)
+  _screenOn() { const F = this.screen; return Boolean(F && ((F.heat && F.heat.length) || F.heatAll || F.heatFar || F.breath || F.focus > 0.01 || F.style > 0 || F.swirl > 0 || (F.lens && F.lens.some((v) => v > 0)))); }   // (v30.4: what else asks for the screen pass)
   _postEnd(P) {
     const gl = this.gl, w = P.w, h = P.h, pr = P.progs, sky = this.sky, F = this.screen || {};
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, P.msFb); gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, P.sceneFb);
@@ -858,7 +860,7 @@ CM.Renderer = class {
       for (const s of F.heat || []) { if (n >= 8 || !m) break; const cx = m[0] * s[0] + m[4] * s[1] + m[8] * s[2] + m[12], cy = m[1] * s[0] + m[5] * s[1] + m[9] * s[2] + m[13], cw = m[3] * s[0] + m[7] * s[1] + m[11] * s[2] + m[15];
         if (cw <= 0.2) continue; const x = cx / cw * 0.5 + 0.5, y = cy / cw * 0.5 + 0.5; if (x < -0.2 || x > 1.2 || y < -0.2 || y > 1.2) continue; heat.set([x, y, Math.min(0.3, 0.3 / cw), s[3]], n * 4); n++; }
       gl.uniform1f(u("uTime"), CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(u("uAspect"), w / h); gl.uniform1i(u("uHeatN"), CM.reducedMotion ? 0 : n); gl.uniform4fv(u("uHeat"), heat);
-      gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uBreath"), F.breath || 0);
+      gl.uniform1f(u("uHeatAll"), CM.reducedMotion ? 0 : F.heatAll || 0); gl.uniform1f(u("uHeatFar"), CM.reducedMotion ? 0 : F.heatFar || 0); gl.uniform1f(u("uBreath"), F.breath || 0);
       gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, P.d); gl.uniform1i(u("uSoft"), 2); gl.activeTexture(gl.TEXTURE0);
       gl.uniform1i(u("uStyle"), F.style || 0); gl.uniform1f(u("uSwirl"), F.swirl || 0); gl.uniform3fv(u("uLens"), F.lens || [0, 0, 0]); const fc = F.focusAt || null; gl.uniform4f(u("uFocus"), fc ? fc[0] : 0.5, fc ? fc[1] : 0.5, fc ? F.focusR || 0.2 : 0, focus); }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
@@ -914,11 +916,11 @@ CM.Renderer = class {
     if (sky && (sky.sun !== null || sky.moon !== null)) {                // the light's direction: where the sun is on its arc (or, at night, the moon)
       const t = sky.sun !== null && sky.light > 0.15 ? sky.sun : sky.moon !== null ? sky.moon : 0.5, a = Math.PI * t, el = Math.sin(a) * 0.5;
       const v = [Math.cos(a) * Math.cos(el), Math.sin(el), Math.sin(a) * Math.cos(el)], m = Math.hypot(...v);
-      gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4);
+      gl.uniform3fv(this.loc.uSun, v.map((c) => c / m)); gl.uniform1f(this.loc.uSunK, (sky.sun !== null && sky.light > 0.15 ? 0.9 : 0.4) * (this.sunBoost || 1));   // (v77.0: a lightning frame boosts it)
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     { const G = this.grading, g0 = t.grade || [1, 1, 1];                    // (v22.4: the band's grade and, above, the hour's: 76zzzx-grade.js)
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uMud, sky ? this.mud || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);
     gl.uniform4fv(this.loc.uBankTint, sky && this.bankTint ? this.bankTint : [0, 0, 0, 0]); gl.uniform1f(this.loc.uLily, sky ? this.lily || 0 : 0);   // (v62.0: 76zzzzzzzzzza-waterlife.js)   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)

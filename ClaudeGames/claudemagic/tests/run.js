@@ -6279,7 +6279,7 @@ test("the stronger sky and air (v73.0): a tornado is an event of an hour or two 
   g.ext("wx").cur.kind = "mist"; assert.strictEqual(CM.twisterNow(g), null, "no twister without a tornado"); g.clock = g.ext("wx").cur.from + 40; g.ext("wx").cur.strength = 1; assert.strictEqual(CM.mistSightNow(g), 1, "a dense mist: a square"); g.ext("wx").cur.strength = 0.5; assert.strictEqual(CM.mistSightNow(g), 2, "a light one: two"); g.ext("wx").cur.kind = "clear"; assert.strictEqual(CM.mistSightNow(g), null);
   const h = mk("spring", 1440 * 2 + 7 * 60); const W = force(h, { kind: "rain" }), u = W.cur.until; h.clock = u + 1; CM.weatherStep(h); assert.strictEqual(h.ext("wx").prev.kind, "rain", "the rain remembered"); assert.strictEqual(h.ext("wx").cur.kind, "clear");
   assert.ok(CM.afterRain(h) > 0.95, "the glow right after the rain"); h.clock = u + 45; assert.ok(Math.abs(CM.afterRain(h) - 0.5) < 0.02, "half gone at forty-five minutes"); h.clock = u + 100; assert.strictEqual(CM.afterRain(h), 0, "gone at ninety");
-  delete CM.wxRandom; const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzi-wxair.js"), "utf-8"); for (const w of ["debris", "twister", "heatAll", "CM.afterRain", "guttering"]) assert.ok(win.includes(w), `${w} in the air`);
+  delete CM.wxRandom; const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzi-wxair.js"), "utf-8"); for (const w of ["debris", "twister", "heatFar", "CM.afterRain", "guttering"]) assert.ok(win.includes(w), `${w} in the air`);
 });
 
 test("trees that fall, burn and grow again (v74.0): a felled tree lies three days then a sapling stands seven more and the tree is back; a burning tree burns forty minutes and falls charred, sooner in a downpour; fire spreads to a neighbouring tree and not through snow; a gale fells one now and then and the twister's wake fells what it crosses; the square stays solid; a lamp blown out in a storm stays dark till the lamplighter's round; the mesh lays a log for a fallen tree and a small tree for a sapling", () => {
@@ -6360,6 +6360,20 @@ test("the magical fogs (v76.0): four fogs among the weather's kinds, six hours l
   // violet
   force("fogpurple"); CM.fogTick(g, 1); seq = 0.0; const w = CM.wildSpell(g, mage, "firebolt"); assert.ok(w && w !== "firebolt" && CM.ABILITIES[w].target === "foe" && Math.abs(CM.ABILITIES[w].mp - CM.ABILITIES.firebolt.mp) <= 2, `another spell of the kind (${w})`);
   assert.strictEqual(CM.wildSpell(g, mage, "blows"), null, "a blow is no spell"); delete CM.wxRandom;
+});
+
+test("mud (v77.0): rain makes mud of the earth above ground, a storm more, fading over three hours after; a step on muddy earth takes two minutes and the walk is heavier; the grass and the cobbles take none", () => {
+  const CM = load(); CM.wxRandom = () => 0.5; const M = CM.MUD;
+  const g = new CM.Game(); g.newGame("mud-1", fixedParty(CM)); g.enterFloor(-1, "rope", [50, 30]); const fl = g.floor;
+  const force = (kind, strength = 1, prev = null) => { const W = g.ext("wx"); W.cur = { kind, strength, from: g.clock - 60, until: g.clock + 300 }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; W.prev = prev; };
+  force("clear"); assert.strictEqual(CM.mudNow(g), 0, "dry"); force("rain", 1); assert.ok(CM.mudNow(g) >= 0.9, `rain: mud (${CM.mudNow(g)})`); force("rain", 0.5); const light = CM.mudNow(g); assert.ok(light > 0.5 && light < 0.9, "a light rain less"); force("storm", 1); assert.strictEqual(CM.mudNow(g), 1, "a storm: full");
+  force("clear", 1, { kind: "rain", strength: 1, from: g.clock - 400, until: g.clock - 90 }); const after = CM.mudNow(g); assert.ok(Math.abs(after - 0.5) < 0.02, `an hour and a half after a rain: half (${after})`);
+  force("clear", 1, { kind: "rain", strength: 1, from: g.clock - 400, until: g.clock - M.hours * 60 - 1 }); assert.strictEqual(CM.mudNow(g), 0, "three hours on, dry");
+  // the step
+  force("rain", 1); const dirt = Object.keys(fl.ground || {}).find((k) => fl.ground[k] === "dirt" && CM.passable(fl, ...k.split(",").map(Number))), grass = Object.keys(fl.ground || {}).find((k) => fl.ground[k] === "grass" && CM.passable(fl, ...k.split(",").map(Number)));
+  assert.ok(dirt && grass, "a dirt square and a grass one"); fl.pos = dirt.split(",").map(Number); assert.ok(CM.mudHere(g) >= M.from, "mud underfoot"); let c0 = g.clock; g.burn(); assert.strictEqual(g.clock, c0 + 1, "the step takes a minute more"); assert.ok(g.walkPace() > 1, "heavier");
+  fl.pos = grass.split(",").map(Number); assert.strictEqual(CM.mudHere(g), 0, "none on grass"); c0 = g.clock; g.burn(); assert.strictEqual(g.clock, c0, "none on grass");
+  g.enterFloor(2, "down"); assert.strictEqual(CM.mudHere(g), 0, "none below"); delete CM.wxRandom;
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

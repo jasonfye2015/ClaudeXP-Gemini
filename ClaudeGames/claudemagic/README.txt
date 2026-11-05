@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The light, the mud and the breath (v77.0, UPGRADE_PLAN_61.md part 7)
+  (src/js/69zzp-mud.js, src/js/76zzzzzzzzzzm-light.js, src/js/40-render.js, src/js/76zzzzzzzzzzi-wxair.js, src/js/76zzzv-shadows.js)
+  - The light, the mud and the breath (plan 61, part 7): rain makes mud of the earth above ground - the dirt
+    roads, the tilled rows and the Wood's litter darken in patches and gloss, a storm most, drying over three
+    hours - and a step on muddy earth takes a minute more, the walk heavier. In the hour after a rain, with the sun
+    low, god rays stand over the land. A lightning flash lights the land from the bolt's side for its frames, so the
+    walls' facing and the cast shadows jump. The sunset's shadows run longer. The heat's shimmer lies along the
+    horizon over the far land rather than over the whole view. In the cold, every figure's breath shows: a pale
+    puff from each mouth now and then.
+
 The magical fogs (v76.0, UPGRADE_PLAN_61.md part 6)
   (src/js/69zzo-fogs.js, src/js/76zzzzzzzzzzl-fogs.js, src/js/73c-wxhud.js)
   - The magical fogs (plan 61, part 6): four fogs among the weather's events, rarer than rain, six hours long, and
