@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The market's furniture (v56.0, UPGRADE_PLAN_51.md phase 0)
+  (src/js/76zzzzzzzzzz3-furniture.js)
+  - The town's furniture is made the way it would be: a crate has corner posts, rims and a brace across each side,
+    and now and then another crate on it; a barrel has four hoops and its lid set in the rim, and some stand open
+    with apples or cabbages in them.
+  - A cart has spoked wheels - a rim, a hub and six spokes, standing the right way at last - and a load of sacks or
+    hay. A market stall has a scalloped edge hanging from its awning, a back shelf, and baskets of apples, cabbages,
+    bread or folded cloth on the counter.
+
 Dappled light (v55.5, UPGRADE_PLAN_50.md phase 4)
   (src/js/40-render.js, src/js/76zzzzzzzzzz2-dapple.js)
   - In the Deep Wood by day the sun comes through the leaves in soft patches of light and shade on the forest floor,
