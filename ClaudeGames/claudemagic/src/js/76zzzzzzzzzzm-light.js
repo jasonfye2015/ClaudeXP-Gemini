@@ -7,7 +7,7 @@
 { let bolt = null, lastFlash = 0; const puffs = new Map(), r = Math.random;
   // the breath's picture: a pale soft puff, with the surface's own pictures (a packed air picture doesn't draw soft)
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["life:breath"] === undefined) { const c = document.createElement("canvas"); c.width = c.height = 64; const p = c.getContext("2d"), g = p.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, "rgba(255,255,255,0.9)"); g.addColorStop(0.5, "rgba(240,244,250,0.45)"); g.addColorStop(1, "rgba(230,236,246,0)"); p.fillStyle = g; p.fillRect(0, 0, 64, 64); set.index["life:breath"] = set.layers.length; set.layers.push(c); } return set; }; }
-  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name === "life:breath" || s0(name); }
+  // (not a surface layer: the breath and the dungeon's steam and waterfalls want it below ground too - v78.0)
   const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || game.mode === "title" || !game.ext) { ren.sunBoost = 1; return; }
     ren.mud = ren.sky ? CM.mudNow(game) : 0; if (ren.mud > 0 && ren.sky) ren.wet = Math.max(ren.wet || 0, 0.4 * ren.mud);   // (the gloss of wet earth)
     if (ren.sky && ren.air) { const ar = CM.afterRain(game), S = ren.sky; if (ar > 0 && S.sun !== null && S.light > 0.2 && (S.sun < 0.22 || S.sun > 0.78)) ren.air = Object.assign({}, ren.air, { shaft: Math.max(ren.air.shaft || 0, 0.9 * ar) }); }   // (god rays: the sun low through the cloud gaps after rain)

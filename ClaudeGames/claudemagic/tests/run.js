@@ -6376,6 +6376,27 @@ test("mud (v77.0): rain makes mud of the earth above ground, a storm more, fadin
   g.enterFloor(2, "down"); assert.strictEqual(CM.mudHere(g), 0, "none below"); delete CM.wxRandom;
 });
 
+test("the dungeon coupling (v78.0): the sky's weather is read from any floor; a heavy storm above floods the sunken rooms of the first three floors, said when it comes, and the water drains over the day after; a step in floodwater takes a minute more and the walk is heavier; nothing floods deeper down or on the surface", () => {
+  const CM = load(); CM.wxRandom = () => 0.5; const DAY = 24 * 60;
+  const g = new CM.Game(); g.newGame("flood-1", fixedParty(CM)); g.enterFloor(1, "down");
+  const force = (kind, strength = 1) => { const W = g.ext("wx"); W.cur = { kind, strength, from: g.clock - 60, until: g.clock + 300 }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; };
+  force("rain"); assert.strictEqual(CM.aboveNow(g).kind, "rain", "the sky's weather, read below"); CM.floodTick(g, 1); assert.strictEqual(CM.floodNow(g), 0, "rain alone does not flood");
+  force("storm", 0.5); CM.floodTick(g, 1); assert.strictEqual(CM.floodNow(g), 0, "a light storm neither");
+  const n0 = g.messages.length; force("storm", 1); CM.floodTick(g, 1); assert.strictEqual(CM.floodNow(g), 1, "a heavy storm floods"); assert.ok(g.messages.length === n0 + 1 && g.messages[n0].includes("flooding"), "said");
+  // a sunken square of this floor (one is made if the seed gave none)
+  const fl = g.floor, isOpen = (k) => { const [x, y] = k.split(",").map(Number); return fl.grid[y][x] === 0; }; let sunk = Object.keys(fl.levels || {}).find((k) => fl.levels[k][0] < 0 && isOpen(k));
+  if (!sunk) { const open = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`]) open.push(`${x},${y}`); fl.levels = fl.levels || {}; fl.levels[open[3]] = [CM.LEVELS.pit, 1]; sunk = open[3]; }
+  const [sx, sy] = sunk.split(",").map(Number); assert.ok(CM.floodedAt(g, fl, sx, sy), "the sunken square stands in water"); assert.ok(CM.floodSquares(g, fl).some(([x, y]) => x === sx && y === sy));
+  let flat = null; for (let y = 1; y < fl.grid.length - 1 && !flat; y++) for (let x = 1; x < fl.grid.length - 1 && !flat; x++) if (fl.grid[y][x] === 0 && CM.floorAt(fl, x, y) === 0) flat = [x, y]; assert.ok(flat && !CM.floodedAt(g, fl, flat[0], flat[1]), "a level square is dry");
+  fl.pos = [sx, sy]; assert.ok(CM.floodedHere(g)); let c0 = g.clock; g.burn(); assert.strictEqual(g.clock, c0 + 1, "wading: a minute more"); assert.ok(g.walkPace() > 1, "heavier"); fl.pos = flat; c0 = g.clock; g.burn(); assert.strictEqual(g.clock, c0, "dry: none");
+  // the drain
+  force("clear"); g.clock += DAY / 2; CM.floodTick(g, 1); assert.ok(Math.abs(CM.floodNow(g) - 0.5) < 0.01, `half drained in half a day (${CM.floodNow(g)})`); assert.ok(CM.floodedAt(g, fl, sx, sy), "still wet");
+  const n1 = g.messages.length; g.clock += DAY / 2 + 1; CM.floodTick(g, 1); assert.strictEqual(CM.floodNow(g), 0, "drained"); assert.ok(!CM.floodedAt(g, fl, sx, sy)); assert.ok(g.messages[n1].includes("drained"), "said");
+  // deeper down and above, no flood
+  force("storm", 1); CM.floodTick(g, 1); g.enterFloor(6, "down"); const f6 = g.floor, low6 = Object.keys(f6.levels || {}).find((k) => f6.levels[k][0] < 0); if (low6) assert.ok(!CM.floodedAt(g, f6, ...low6.split(",").map(Number)), "the sixth floor stays dry");
+  g.enterFloor(0, "up"); assert.strictEqual(CM.floodSquares(g, g.floor).length, 0, "the town has no sunken halls"); delete CM.wxRandom;
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
