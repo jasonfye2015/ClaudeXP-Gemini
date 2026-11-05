@@ -264,8 +264,16 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    packed air one) and smoke rise at the crown's edge with an orange flickering light. Lamps blow out in a storm or
    a gale and stay dark till the lamplighter's round. The twister has more than twice its parts, the air's budget
    raised while it crosses. Meteors (part 5) will use CM.igniteTree for the fires they start.
-5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
-   below, the birds' warning.
+5. v75.0 - meteors and the ore. **Done**: 69zzn-meteors.js schedules a strike every day and a half to three and a
+   half (the first within a day or so), moved into the night more often than not; it lands on an open square the
+   party can walk to, four to fourteen squares off, with no building, fence or wall beside it (CM.meteorSite), on
+   the surface floor they are on - or, if they are below, on the town's or the Wood's floor, and the shock is felt
+   through the stone. It leaves a crater (26-surface.js lays a scorched square and a raised rim, fading over ten
+   days) and a meteorite chunk as a thing on the square, taken by stepping onto it: Meteor Iron, an ingredient worth
+   60 that the smith takes in a diamond's place. Trees in its reach may catch (CM.igniteTree), not in rain or snow.
+   76zzzzzzzzzzk-meteors.js: the birds go up (the night goes quiet) in the three minutes before; the streak down the
+   sky with its whistle, the flash, the crack and rumble, the shake, a burst of dust, stones and embers, the
+   crater's glow fading over twelve minutes; below, a shock, a dust-fall and a flicker of the room's light.
 6. The magical fogs, above and below, with their statuses and the HUD.
 7. Lighting; mud; breath on the figures.
 8. The dungeon coupling: drips, waterfalls, floods, drafts, steam.

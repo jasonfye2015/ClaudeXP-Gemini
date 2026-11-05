@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v74.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v75.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "74.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "75.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6610,6 +6610,12 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs], layer, burnt, CM.SWAY.tree * k);
     quad([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs], layer, burnt, CM.SWAY.tree * k);
   }
+  let craters = 0;   // (v75.0: a meteor's crater - a scorched square and a raised rim of eight wedges, fading over the days - 69zzn-meteors.js)
+  if (sky && !only && opts.craters) for (const [key, days] of Object.entries(opts.craters)) { const [x, y] = key.split(",").map(Number); if (!CM.inBounds(fl, x, y) || fl.grid[y][x] !== 0) continue; const cx = x + 0.5, cz = y + 0.5, f = Math.max(0, 1 - days / 10), dirt = L("ground:dirt");
+    quad([cx - 0.5, 0.005, cz + 0.5], [cx + 0.5, 0.005, cz + 0.5], [cx + 0.5, 0.005, cz - 0.5], [cx - 0.5, 0.005, cz - 0.5], dirt, 0.12 + 0.5 * (1 - f));
+    for (let i = 0; i < 8; i++) { const a0 = i * Math.PI / 4, a1 = a0 + Math.PI / 4, ri = 0.26, ro = 0.46, h = 0.09 * (0.4 + 0.6 * f), P = (a, r, y) => [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r];
+      quad(P(a0, ri, 0.006), P(a0, ro, h), P(a1, ro, h), P(a1, ri, 0.006), dirt, 0.3 + 0.25 * (1 - f)); quad(P(a0, ro, h), P(a0, ro + 0.06, 0.006), P(a1, ro + 0.06, 0.006), P(a1, ro, h), dirt, 0.5 + 0.2 * (1 - f)); }
+    craters++; }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
   const washing = sky && !only && !W && CM.washingModel ? CM.washingModel({ quad: near(20), fl, index, season: opts.season }) : 0;   // (v61.0: washing on the line behind the houses - 26k-washing.js)
@@ -6676,7 +6682,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, craters, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 26b-buildings.js ----
@@ -10337,7 +10343,7 @@ CM.Renderer = class {
   // the far lights; a mode changing, a fight, a mark, a window lighting no longer makes the whole floor again
   _floorKey(floor, theme) { const sig = (o) => { let h = 0; if (o) for (const k in o) { const v = String(o[k]); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; } return h; };
     let g = 0; for (const row of floor.grid) for (let i = 0; i < row.length; i++) g = (g * 3 + row[i] + i) | 0;
-    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
+    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), sig(floor.craters), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
   _buffer(name, data) { const gl = this.gl; if (!this[name + "Buf"]) this[name + "Buf"] = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this[name + "Buf"]); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); this[name + "Count"] = data.length / STRIDE; }
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
@@ -10347,7 +10353,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null, craters: floor.craters || null });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);
@@ -30865,6 +30871,65 @@ Object.assign(CM.Game.prototype, {
   CM.lampBlownOut = (game, p) => Boolean(p && game && game.ext && CM.lampsOut(game)[`${p.x},${p.y}`]);   // (the window wraps CM.lampOn with it: the lamplighter's file loads after this one)
 }
 
+// ---- 69zzn-meteors.js ----
+"use strict";
+// Meteors and the ore (v75.0, UPGRADE_PLAN_61.md part 5): a star falls a couple of times a week at least, by night
+// more often than by day, and lands on an open square the party can walk to on the surface floor they are on (or on
+// the town's or the Wood's floor, if they are below, where the shock comes down through the stone). The strike leaves
+// a crater - a scorched ring that fades over days - and a chunk of meteorite ore lying in it, picked up by stepping
+// onto it: Meteor Iron, an ingredient worth more than the alchemist's, which the smith takes in a diamond's place.
+// Trees within its reach may catch (69zzm-trees.js: CM.igniteTree), not in rain or snow. The strike is a sight and a
+// shock, never a harm: it never lands on the party, a building, a fence or a tree. State lives in the run (game.ext).
+//   CM.meteorStep(game, minutes)              the schedule, the strike (emits "meteor" on the game)
+//   CM.meteorWarning(game) -> 0..1            the minutes before a strike, when the birds go up
+//   CM.cratersOf(game, fl) -> { "x,y": days } the craters still showing, by age in days (26-surface.js draws them)
+//   CM.meteorSite(game, fl, from) -> [x, y]   an open, reachable, lonely square at a walk from `from`
+//   CM.lastMeteor(game) -> strike | null       the latest strike { floor, x, y, at, felt, fires }
+{ const M = CM.METEORS = { gapMinDays: 1.5, gapMaxDays: 3.5, firstMaxDays: 1.2, nightOdds: 0.65, warnMinutes: 3, nearMin: 4, nearMax: 14, fireChance: 0.5, fireReach: 2.5, craterDays: 10, oreValue: 60 };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), between = (a, b) => a + rnd() * (b - a), DAY = 24 * 60;
+  CM.INGREDIENTS.meteoriron = { name: "Meteor Iron", band: -2, rare: true, what: "a chunk of a fallen star, heavy and black, with a bright grain where it broke: the smith takes it in a diamond's place, and anyone buys it" };
+  { const i0 = CM.ingredient; CM.ingredient = (id) => { const it = i0(id); if (id === "meteoriron") it.value = M.oreValue; return it; }; }
+  const store = (game) => { const E = game.ext("meteors"); E.strikes = E.strikes || []; return E; };
+  const hourAt = (clock) => ((CM.CLOCK.start + clock) % CM.CLOCK.day) / 60;
+  const nightAt = (game, clock) => { const [dawn, dusk] = CM.daylightOf(game), h = hourAt(clock); return h >= dusk || h < dawn; };
+  // the next strike: a gap of days, and more often than not moved on into the night that follows
+  const schedule = (game, from, first) => { let at = Math.round(from + between(first ? 60 : M.gapMinDays * DAY, (first ? M.firstMaxDays : M.gapMaxDays) * DAY));
+    if (!nightAt(game, at) && rnd() < M.nightOdds) { const dusk = CM.daylightOf(game)[1], h = hourAt(at); at += Math.round(((dusk - h + 24) % 24) * 60 + between(10, 240)); } return at; };
+  // the square: open, with no thing or feature on it, every neighbour open or a tree (no building, fence or wall beside it), at a walk of nearMin..nearMax from `from`, never under the party
+  CM.meteorSite = (game, fl, from) => { if (!fl || !(fl.number === 0 || fl.number === -1)) return null; const start = from || fl.pos, N = fl.grid.length, D = CM.distances(fl.grid, start, (x, y) => CM.passable(fl, x, y)), out = [];
+    for (const [k, d] of D) { if (d < M.nearMin || d > M.nearMax) continue; const [x, y] = k.split(",").map(Number); if (fl.things[k] || fl.features[k] || (fl.pos && x === fl.pos[0] && y === fl.pos[1])) continue; let ok = true;
+      for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= N || ny >= N) { ok = false; break; } const s = CM.solidAt(fl, nx, ny); if (s !== null && s !== "tree") ok = false; }
+      if (ok) out.push([x, y, d]); }
+    if (!out.length) return null; const pick = out[Math.floor(rnd() * out.length)]; return [pick[0], pick[1]]; };
+  const surfaceFloor = (game) => { const fl = game.floor; if (fl && (fl.number === 0 || fl.number === -1)) return fl; const have = [game.floors && game.floors[-1], game.floors && game.floors[0]].filter(Boolean); return have.length ? have[Math.floor(rnd() * have.length)] : null; };
+  const strike = (game) => { const E = store(game), fl = surfaceFloor(game); if (!fl) return null; const here = game.floor === fl, site = CM.meteorSite(game, fl, fl.pos); if (!site) return null;
+    const [x, y] = site, k = `${x},${y}`, t = CM.clockOf(game), W = CM.weatherNow ? CM.weatherNow(game) : { kind: "clear" }, wet = W.kind === "rain" || W.kind === "storm" || W.kind === "snow"; let fires = 0;
+    fl.things[k] = { type: "meteorite", at: t };
+    if (!wet && CM.igniteTree) { const was = game.floor; game.floor = fl; for (const tk of CM.treeSquares(fl)) { const [tx, ty] = tk.split(",").map(Number); if (Math.hypot(tx - x, ty - y) <= M.fireReach && rnd() < M.fireChance && CM.igniteTree(game, fl, tk)) fires++; } game.floor = was; }
+    const s = { floor: fl.number, x, y, at: t, felt: !here, fires }; E.strikes.push(s); if (E.strikes.length > 40) E.strikes = E.strikes.slice(-40); E.count = (E.count || 0) + 1; game.meteorVersion = (game.meteorVersion || 0) + 1;
+    if (game.count) game.count("meteors", 1); game.emit("meteor", s); return s; };
+  CM.meteorStep = (game, minutes = 1) => { if (!game || !game.ext || !(minutes > 0)) return null; const E = store(game), t = CM.clockOf(game);
+    if (!E.next) { E.next = schedule(game, t, true); return null; } if (t < E.next) return null;
+    const s = strike(game); E.next = s ? schedule(game, t, false) : t + 60; return s; };   // (no floor or no square yet: try again in an hour)
+  CM.meteorWarning = (game) => { if (!game || !game.ext) return 0; const E = store(game); if (!E.next) return 0; const m = E.next - CM.clockOf(game); return m < 0 || m > M.warnMinutes ? 0 : 1 - m / M.warnMinutes; };
+  CM.lastMeteor = (game) => { if (!game || !game.ext) return null; const S = store(game).strikes; return S.length ? S[S.length - 1] : null; };
+  CM.cratersOf = (game, fl) => { const out = {}; if (!game || !game.ext || !fl) return out; const t = CM.clockOf(game); for (const s of store(game).strikes) { if (s.floor !== fl.number) continue; const days = (t - s.at) / DAY; if (days < M.craterDays) out[`${s.x},${s.y}`] = Math.round(days * 10) / 10; } return out; };
+  // the ore: picked up by stepping onto it (the move's own thing branch does not know it, so it is taken first)
+  { const mv0 = CM.Game.prototype.move; CM.Game.prototype.move = function (rel) { const fl = this.floor, before = fl && fl.pos ? fl.pos.slice() : null; let out;
+      const say0 = this.say; this.say = function (t) { if (t !== undefined) return say0.call(this, t); };   // (the move's own look at the square has no words for the ore: it says nothing, and the words come below)
+      try { out = mv0.call(this, rel); } finally { delete this.say; }
+      if (!fl || !fl.pos || !this.floor || this.floor !== fl) return out;
+      const k = `${fl.pos[0]},${fl.pos[1]}`, th = fl.things[k]; if (th && th.type === "meteorite" && (!before || before[0] !== fl.pos[0] || before[1] !== fl.pos[1])) { delete fl.things[k]; this.gain([CM.ingredient("meteoriron")], "event"); if (this.count) { this.count("gathered", 1); this.count("meteoriron", 1); } this.sound("coin"); this.say("In the crater, still warm: a chunk of the fallen star, black and heavy, with a bright grain where it broke. You take it."); }
+      return out; }; }
+  // the smith takes a chunk of meteor iron in a diamond's place (a diamond in the bag goes first)
+  { const sm0 = CM.Game.prototype.smith; CM.Game.prototype.smith = function (service, heroIndex, slot) { if (service !== "enchant") return sm0.call(this, service, heroIndex, slot); const gem = this.bag.findIndex((i) => i.kind === "gem" && i.gem === "diamond"), ore = this.bag.findIndex((i) => i.kind === "ingredient" && i.ingredient === "meteoriron");
+      if (gem >= 0 || ore < 0) return sm0.call(this, service, heroIndex, slot);
+      const stand = { name: "Diamond", kind: "gem", gem: "diamond", power: 0, value: 0, meteor: true }; this.bag.splice(ore, 1, stand); const out = sm0.call(this, service, heroIndex, slot), i = this.bag.indexOf(stand);
+      if (i >= 0) this.bag.splice(i, 1, CM.ingredient("meteoriron"));   // (not taken: the work was refused, and the ore is back)
+      else { const n = this.messages.length - 1, m = this.messages[n]; if (typeof m === "string" && m.includes("sets the diamond in it")) this.messages[n] = m.replace("sets the diamond in it", "works the meteor iron into it, star-bright at the edge"); }
+      return out; }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -45620,6 +45685,67 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       for (const [x, z] of burningNear(game, fl, renderer.eye, 10)) out.push({ x, y: 1.2, z, reach: 3.4, colour: [1.0, 0.5, 0.15], flicker: true, d: Math.abs(x - 0.5 - px) + Math.abs(z - 0.5 - py) }); }; }
   // a blown-out lamp stays dark
   { const on0 = CM.lampOn; if (on0) CM.lampOn = (game, p) => (CM.lampBlownOut && CM.lampBlownOut(game, p) ? false : on0(game, p)); }
+}
+
+// ---- 76zzzzzzzzzzk-meteors.js ----
+"use strict";
+// Meteors and the ore - the window's side (v75.0, UPGRADE_PLAN_61.md part 5): the rules (69zzn-meteors.js) are
+// stepped as the clock goes; in the minutes before a strike the birds go up all at once (the night goes quiet); the
+// strike itself is a streak of fire down the sky to its square, a flash, a crack and a rumble, the ground shaken, a
+// burst of dust, embers and stones, and an orange glow in the crater that fades over the minutes. Below ground it is
+// a shock through the stone and a dust-fall. The crater goes into the floor's mesh (26-surface.js) and the ore
+// chunk lies in it as a thing until the party steps onto it.
+{ const P = 128, pic = (draw) => { const c = document.createElement("canvas"); c.width = c.height = P; draw(c.getContext("2d")); return c; };
+  const PICS = {
+    "life:meteorite": (p) => { p.fillStyle = "rgba(0,0,0,0.35)"; p.beginPath(); p.ellipse(P / 2, P * 0.86, P * 0.42, P * 0.09, 0, 0, Math.PI * 2); p.fill();   // its shadow
+      p.fillStyle = "#1E1C20"; p.beginPath(); p.moveTo(P * 0.14, P * 0.8); p.lineTo(P * 0.22, P * 0.46); p.lineTo(P * 0.42, P * 0.3); p.lineTo(P * 0.66, P * 0.26); p.lineTo(P * 0.86, P * 0.5); p.lineTo(P * 0.88, P * 0.8); p.closePath(); p.fill();
+      p.fillStyle = "#34323A"; p.beginPath(); p.moveTo(P * 0.22, P * 0.46); p.lineTo(P * 0.42, P * 0.3); p.lineTo(P * 0.56, P * 0.5); p.lineTo(P * 0.36, P * 0.62); p.closePath(); p.fill();   // a lit facet
+      p.fillStyle = "#2A282E"; p.beginPath(); p.moveTo(P * 0.56, P * 0.5); p.lineTo(P * 0.66, P * 0.26); p.lineTo(P * 0.86, P * 0.5); p.lineTo(P * 0.72, P * 0.6); p.closePath(); p.fill();
+      p.strokeStyle = "#D8E8FF"; p.lineWidth = 3; p.beginPath(); p.moveTo(P * 0.58, P * 0.52); p.lineTo(P * 0.7, P * 0.62); p.lineTo(P * 0.66, P * 0.74); p.stroke();   // the bright grain where it broke
+      p.fillStyle = "#F0F6FF"; for (const [x, y] of [[0.3, 0.52], [0.48, 0.42], [0.76, 0.56], [0.62, 0.7]]) { p.beginPath(); p.arc(P * x, P * y, 2.2, 0, Math.PI * 2); p.fill(); } },
+    "life:meteor": (p) => { const g = p.createRadialGradient(P / 2, P / 2, 2, P / 2, P / 2, P / 2); g.addColorStop(0, "rgba(255,255,245,1)"); g.addColorStop(0.3, "rgba(255,225,150,0.95)"); g.addColorStop(0.6, "rgba(255,140,50,0.5)"); g.addColorStop(1, "rgba(200,60,20,0)"); p.fillStyle = g; p.fillRect(0, 0, P, P); } };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) if (set.index[name] === undefined) { set.index[name] = set.layers.length; set.layers.push(pic(PICS[name])); } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => PICS[name] !== undefined || s0(name); }
+  // the ore chunk on its square, warm for a while
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { meteorite: (t, x, y) => { const g = CM.game, m = g ? CM.clockOf(g) - (t.at || 0) : 999; return [{ x, y, layer: "life:meteorite", w: 0.5, h: 0.42, glow: Math.max(0, 0.7 * (1 - m / 12)) }]; } });
+  // the sounds: a whistle down the sky, and the crack and rumble
+  const whistle = (secs) => { const A = CM.audio; if (!A || !A.ctx || !A.enabled || !A.master) return; try { const ctx = A.ctx, o = ctx.createOscillator(), g = ctx.createGain(), t0 = ctx.currentTime; o.type = "sine"; o.frequency.setValueAtTime(1700, t0); o.frequency.exponentialRampToValueAtTime(220, t0 + secs);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.09, t0 + secs * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + secs); o.connect(g); g.connect(A.master); o.start(t0); o.stop(t0 + secs + 0.05); } catch (er) { /* quiet */ } };
+  const rumble = (far) => { const A = CM.audio; if (!A || !A.ctx || !A.enabled || !A.master) return; try { const ctx = A.ctx, rate = ctx.sampleRate, secs = far ? 4.5 : 3.8, n = Math.floor(rate * secs), b = ctx.createBuffer(1, n, rate), d = b.getChannelData(0); let lp = 0, lp2 = 0, s = 777;
+      for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; const w = s / 0x7fffffff * 2 - 1, t = i / rate; lp += (w - lp) * (far ? 0.02 : 0.05); lp2 += (lp - lp2) * 0.06;
+        const crack = far ? 0 : Math.exp(-t * 18) * w * 0.5, env = Math.min(1, t / (far ? 0.4 : 0.03)) * Math.exp(-t * (far ? 0.7 : 1.0)) * (1 + 0.5 * Math.sin(t * 5.3) * Math.sin(t * 1.9)); d[i] = (lp2 * 10 + crack) * env; }
+      const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; g.gain.value = far ? 0.45 : 0.75; src.connect(g); g.connect(A.master); src.start(); } catch (er) { /* quiet */ } };
+  // the strike, seen: the streak down the sky, then the burst (the parts start past the air's fade-in, age 0.4, or they are faint)
+  let fall = null, flash = 0, felt = 0, warnedFor = 0, lastClock = null;
+  const dirWord = (fl, x, y) => { const dx = x + 0.5 - fl.pos[0] - 0.5, dy = y + 0.5 - fl.pos[1] - 0.5; return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "east" : "west") : (dy > 0 ? "south" : "north"); };
+  const parts = () => (CM.air && CM.air.parts) || null, r = Math.random;
+  const burst = (x, z) => { const A = parts(); if (!A) return;
+    for (let i = 0; i < 44; i++) { const a = r() * Math.PI * 2, sp = 1.2 + r() * 2.2; A.push({ kind: "smoke", age: 0.4, seed: r() * 10, sway: 0.6 + r(), swayAmp: 0.1, windy: 0.4, vx: Math.cos(a) * sp, vy: 0.5 + r() * 1.2, vz: Math.sin(a) * sp, life: 2.5 + r() * 2, size: 0.3 + r() * 0.25, grow: 0.12, glow: 0, alpha: 0.8, x: x + Math.cos(a) * 0.2, z: z + Math.sin(a) * 0.2, y: 0.2 + r() * 0.4, top: 8, far: true, layer: "air:smoke", drag: 1.6 }); }
+    for (let i = 0; i < 28; i++) { const a = r() * Math.PI * 2, sp = 2 + r() * 4; A.push({ kind: "debris", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: Math.cos(a) * sp, vy: 2.5 + r() * 4, vz: Math.sin(a) * sp, life: 1.6 + r(), size: 0.07 + r() * 0.07, glow: 0, alpha: 1, x, z, y: 0.3, top: 12, far: true, layer: "air:debris", drag: 0.8, grav: 7 }); }
+    for (let i = 0; i < 40; i++) { const a = r() * Math.PI * 2, sp = 0.6 + r() * 2.5; A.push({ kind: "ember", age: 0.4, seed: r() * 10, sway: 1 + r(), swayAmp: 0.2, windy: 0.3, vx: Math.cos(a) * sp, vy: 1.5 + r() * 3, vz: Math.sin(a) * sp, life: 1.2 + r() * 1.8, size: 0.05 + r() * 0.05, glow: 2, alpha: 1, x, z, y: 0.3, top: 10, far: true, layer: "air:ember", drag: 1.2, grav: 2.5 }); } };
+  const birdsUp = (eye, night) => { const A = parts(); if (!A || night) return; for (let i = 0; i < 14; i++) { const a = r() * Math.PI * 2, d = 10 + r() * 22, s = 5 + r() * 3, x = eye[0] + Math.cos(a) * d, z = eye[2] + Math.sin(a) * d; A.push({ kind: "bird", age: 0, seed: r() * 10, sway: 0.6 + r(), swayAmp: 0, windy: 0, vx: Math.cos(a) * s, vy: 1.2 + r() * 1.5, vz: Math.sin(a) * s, life: 14, size: 0.7, far: true, top: 60, flap: true, glow: 0, alpha: 1, x, z, y: 3 + r() * 3, layer: "air:bird" }); } };
+  const onStrike = (game, s) => { const r0 = CM.renderer, fl = game.floor; if (!r0 || !fl) return;
+    if (s.felt || fl.number !== s.floor) { felt = 1; setTimeout(() => { r0.shake(0.7); rumble(true); }, 400); game.say("A shock comes down through the stone, and dust from the roof. Something fell, above - heavy, and from a long way up."); return; }
+    const to = [s.x + 0.5, s.y + 0.5], a = Math.atan2(to[1] - fl.pos[1] - 0.5, to[0] - fl.pos[0] - 0.5) + (r() - 0.5) * 1.2; fall = { t: 0, dur: 1.15, to, from: [to[0] + Math.cos(a) * 16, 24, to[1] + Math.sin(a) * 16], s, head: null }; whistle(fall.dur); };
+  const impact = (game, F) => { const r0 = CM.renderer, fl = game.floor, [x, z] = F.to; fall = null; if (F.head) F.head.life = 0; flash = 1; if (r0) r0.shake(1); rumble(false); burst(x, z);
+    const d = Math.abs(F.s.x - fl.pos[0]) + Math.abs(F.s.y - fl.pos[1]); game.say(`A star falls! It strikes the ground to the ${dirWord(fl, F.s.x, F.s.y)}, ${d} paces off, with a crack that shakes the teeth${F.s.fires ? " - and the trees beside it are alight" : ""}.`); };
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r0, dt, now) => { if (bf0) bf0(game, r0, dt, now); if (!game || !game.floor || !game.ext || game.mode === "title") { lastClock = null; return; } const fl = game.floor, t = CM.clockOf(game);
+    if (!game._meteorHooked) { game._meteorHooked = true; game.on("meteor", (s) => onStrike(game, s)); }
+    if (lastClock !== null && t > lastClock && t - lastClock < 600) CM.meteorStep(game, t - lastClock); lastClock = t;
+    if (fl.meteorVersion !== (game.meteorVersion || 0) || fl.craters === undefined) { fl.craters = CM.cratersOf(game, fl); fl.meteorVersion = game.meteorVersion || 0; }
+    const E = game.ext("meteors"), w = CM.meteorWarning(game);   // the warning: the birds go up (the night goes quiet)
+    if (w > 0 && E.next !== warnedFor && (fl.number === 0 || fl.number === -1)) { warnedFor = E.next; const night = CM.isNight(game); birdsUp(r0.eye || [fl.pos[0] + 0.5, 1, fl.pos[1] + 0.5], night); game.say(night ? "The night goes quiet all at once: not a cricket, not an owl. The dogs in the town begin to howl." : "The birds go up from every tree at once, crying, and wheel away."); }
+    if (fall) { const F = fall, A = parts(); F.t += dt; const k = Math.min(1, F.t / F.dur), e = k * k, x = F.from[0] + (F.to[0] - F.from[0]) * e, y = F.from[1] * (1 - e), z = F.from[2] + (F.to[1] - F.from[2]) * e;
+      if (A) { if (!F.head) { F.head = { kind: "meteor", age: 1, seed: 0, sway: 0, swayAmp: 0, windy: 0, vx: 0, vy: 0, vz: 0, life: 99, size: 2.0, glow: 2, alpha: 1, x, y, z, far: true, top: 80, layer: "life:meteor" }; A.push(F.head); } F.head.x = x; F.head.y = y; F.head.z = z;
+        for (let i = 0; i < 10; i++) A.push({ kind: "meteor", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: (r() - 0.5) * 0.4, vy: 0.1, vz: (r() - 0.5) * 0.4, life: 1.0 + r() * 0.8, size: 0.7 + r() * 0.9 * (1 - k * 0.5), glow: 2, alpha: 0.9, x: x + (r() - 0.5) * 0.3, y: y + (r() - 0.5) * 0.3, z: z + (r() - 0.5) * 0.3, far: true, top: 80, layer: "life:meteor" }); }
+      if (k >= 1) impact(game, F); }
+    if (flash > 0) { if (r0.skyx) r0.skyx.flash = Math.max(r0.skyx.flash || 0, flash * flash); flash = Math.max(0, flash - dt * 2.2); }
+    if (felt > 0) { r0.roomFlash = Math.max(r0.roomFlash || 0, felt * 0.25); felt = Math.max(0, felt - dt * 1.5); } };
+  // the burst's parts fly out and fall (a step after the air's own: a drag and a gravity the air's kinds don't have)
+  { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); for (const p of this.parts) { if (p.drag) { const k = Math.max(0, 1 - p.drag * dt); p.vx *= k; p.vz *= k; } if (p.grav) p.vy -= p.grav * dt; } return out; }; }
+  // the crater's glow in the minutes after
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl || !(fl.number === 0 || fl.number === -1) || !game.ext || !renderer || !renderer.eye) return; const t = CM.clockOf(game), E = game.ext("meteors");
+      for (const s of E.strikes || []) { if (s.floor !== fl.number) continue; const m = t - s.at; if (m < 0 || m > 12) continue; const k = 1 - m / 12; out.push({ x: s.x + 0.5, y: 0.4, z: s.y + 0.5, reach: 1.5 + 1.7 * k, colour: [0.75 * k + 0.25 * (1 - k), 0.32 * k, 0.07 * k], flicker: true, d: Math.abs(s.x - fl.pos[0]) + Math.abs(s.y - fl.pos[1]) }); } }; }
 }
 
 // ---- 77-splash.js ----
