@@ -212,7 +212,46 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
 - Felled trees change passability: the test for every place reachable (the world map's) runs with trees felled.
 - The fogs' statuses touch the rules' balance: the numbers above are starting points, held in BALANCE.md.
 
-## 6. Decisions wanted before the code
+## 6. The decisions, as given (2026-11-05), and what they change above
+- **The films and replays are gone** (v71.0): no replay determinism to keep. The weather, the fellings, the meteors
+  and the fogs roll their own dice at the moment they happen (seeded by nothing but the moment); the rules stay
+  pure functions of the game's state for the tests, but nothing need play back the same. Section 1a's idle tick is
+  replaced by **the clock that runs**: a game minute every 2.5 real seconds on the floor, in a fight or at camp,
+  above and below ground alike, whether the party moves or not (a day an hour); a step still costs its minute.
+  Settings > Clock: Runs / By steps only. Done in v71.0.
+- **Weather as events, free, more and stronger**: not a static script - 3.2's schedule becomes a live engine that
+  rolls the next event when the current one ends (kind and length by season and hour, night leaning clear), with
+  stronger looks and effects than the day's-word systems have; the day's word keeps answering `CM.weather` for the
+  old readers until each is moved to `CM.weatherNow`.
+- **Twelve named months, numbered beside the name** (v71.0): Thawlight, Sowmoon, Greening (spring); Highsun,
+  Hayfall, Emberwane (summer); Harvestmoon, **Claudetober**, Lanternfall (autumn); Frostbell, Deepsnow, Longnight
+  (winter). Thirty days each, from Year 500; a run begins on its season's first month. **The Lich King is Claude,
+  the Lich King** (v71.0).
+- **Any tree may fall** - to a gale or a tornado, or burned - and the square stays solid while it lies and while
+  the sapling grows, so nothing opens a way out of the map: a fallen or charred tree is a different picture on the
+  same solid square, not an open one (this is simpler and safer than 3.4's open-square log; section 3.4 is amended
+  to it). A tornado touches only trees, in its wake.
+- **Meteors a couple of times a week at least**, landing where the party can walk (an open square reachable from
+  the party's floor, never a building), leaving a **meteorite ore chunk** to pick up (an ingredient that sells, and
+  a smith's material: a meteor-iron edge, to be given a recipe), and sometimes starting a fire.
+- **Fire**: a burning tree burns a while, then falls charred; charred trees go after a few days and a sapling
+  takes their place as after a gale. Fire spreads tree to tree (a chance per minute per burning neighbour, less in
+  rain, none in snow, out in a downpour), never to buildings, fences or the party: it is a sight, not a harm - the
+  glow, the smoke, the crackle, the embers in the air, the blackened ground after.
+
+## 6a. The order, revised
+1. v71.0 - the clock that runs, the calendar, the films out, the Lich King named. **Done.**
+2. The event engine, live: `CM.weatherNow`, the next event rolled on the fly, the predictor bar and the big sun
+   and moon and stars on the dial; the existing rain/snow/wind/mist/cloud/lightning driven by the event's strength.
+3. The stronger sky and air: dense fog, gale, tornado, heat, dramatic dawns and dusks.
+4. Trees: felled, burning, charred, the sapling and the regrowth; the tornado's wake; fire's spread; the lamps out.
+5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
+   below, the birds' warning.
+6. The magical fogs, above and below, with their statuses and the HUD.
+7. Lighting; mud; breath on the figures.
+8. The dungeon coupling: drips, waterfalls, floods, drafts, steam.
+9. Combat synergies.
+10. The soundscape and the adaptive music; then the pass over every place in every event.
 1. The clock: the idle tick at the spec's pace (24 game minutes a real minute while standing) - yes, or the wall
    clock outright (replays then record the ticks as they happened)?
 2. Does the dungeon's time run while the party stands still below, or only by steps (today's way)?

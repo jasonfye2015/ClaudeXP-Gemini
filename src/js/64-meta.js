@@ -22,12 +22,7 @@ Object.assign(CM.Game.prototype, {
     entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
     entry.left = Boolean(this.left); entry.dreamed = Boolean(this.dreamed); entry.dream = Boolean(this.dream);
     entry.trail = (this.trail || []).slice();
-    if (!this.film) {                                                    // the film of this run, kept for a while (the last six)
-      const films = CM.store.get("films", []), key = `${this.seed}:${Date.now()}`;
-      films.unshift({ key, seed: this.seed, date: entry.date, floor: entry.floor, won, name: entry.name, spec: Object.assign({}, this.replaySpec(), { log: CM.packLog(this.runLog || []) }) });
-      entry.film = key;
-      if (!CM.store.set("films", films.slice(0, 6))) CM.store.set("films", films.slice(0, 2));
-    }
+    // (v71.0: no film of the run is kept - the films and replays are gone; CM.store's "films" is left to lapse)
     if (won && this.awakened) this.achieve("awakened");
     if (won && !this.endless && ["fair", "hard", "grim"].includes(this.difficulty)) {   // the ladder: a crown on Fair or above opens the next rung
       const next = Math.min(CM.ASCENSION.length, (this.ascension || 0) + 1);
@@ -66,7 +61,7 @@ Object.assign(CM.Game.prototype, {
       : this.dreamed ? CM.ENDINGS.dreamed.note : this.left ? CM.ENDINGS.left.note
       : this.bottom ? CM.ENDINGS.wake.note
       : won && this.floor.number > CM.LAST_FLOOR ? `With the Lich King's crown, the party went down into the Deep, and fell on floor ${this.floor.number}.`
-      : won ? "The Lich King is no more. The party returns as legends!"
+      : won ? "Claude, the Lich King is no more. The party returns as legends!"
       : `The party fell on floor ${this.floor.number}. Their story ends here.`;
     this.emit("over", won, entry);
     this.setMode("title");

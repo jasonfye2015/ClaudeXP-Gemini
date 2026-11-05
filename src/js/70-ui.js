@@ -30,7 +30,7 @@ CM.UI = class {
       <p id="start-with"></p>
     </div>
     <div class="card" id="fame"><h2>Hall of Fame <span class="boards"><button data-board="dungeon" class="on" title="Runs down the dungeon: to the Lich King, and to the bottom">The dungeon</button><button data-board="endless" title="Endless expeditions: how deep they went">Endless</button><button data-board="weekly" title="This week's challenge: the runs on this week's seed">This week</button></span></h2><table></table><h2 class="later">Unlocks</h2><div id="unlocks"></div><h2 class="later">Trophies</h2><div id="trophies"></div><h2 class="later">In memoriam</h2><div id="memorial"></div><h2 class="later">Achievements</h2><div id="achievements"></div></div>
-    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-film">Films</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-stats">Statistics</button><button id="btn-credits">Credits</button><button id="btn-install" hidden title="Install the game as an app of its own: it opens from an icon, and works without the network">Install</button></div>
+    <div class="foot"><label for="look">Theme</label><select id="look" title="The look of the dungeon - change it any time, here or in Settings"></select><button id="btn-village">The Village</button><button id="btn-settings">Settings</button><button id="btn-keys">Keys</button><button id="btn-transfer">Export / Import</button><button id="btn-stats">Statistics</button><button id="btn-credits">Credits</button><button id="btn-install" hidden title="Install the game as an app of its own: it opens from an icon, and works without the network">Install</button></div>
     <div class="version"></div>
   </div>
 </div>
@@ -53,7 +53,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div id="towerhud"><div class="cross"></div><div class="tname"></div><div class="tboss"><b></b><i></i></div><div class="tbars"><div class="thp"><i></i><span></span></div><div class="tmp"><i></i><span></span></div><div class="tarrows"></div></div><div class="thelp">W A S D move - mouse or arrows turn - click or Space shoots - right-click or R the great spell - E at the ladder - Esc the menu</div></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div><div class="filmbar"><button data-film="toggle">Pause</button><button data-film="speed">1x</button><button data-film="fight">Next fight</button><button data-film="floor">Next floor</button><button data-film="stop">Stop (Esc)</button><span class="small"></span></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div id="towerhud"><div class="cross"></div><div class="tname"></div><div class="tboss"><b></b><i></i></div><div class="tbars"><div class="thp"><i></i><span></span></div><div class="tmp"><i></i><span></span></div><div class="tarrows"></div></div><div class="thelp">W A S D move - mouse or arrows turn - click or Space shoots - right-click or R the great spell - E at the ladder - Esc the menu</div></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="follower"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
@@ -138,12 +138,6 @@ CM.UI = class {
   <div class="list-title">In the vault</div><div class="recruit" id="vault-held"></div>
   <div class="list-title">Leave something</div><div id="vault-list"></div><div class="small" id="vault-note"></div>
   <div class="end"><button class="close">Close</button></div></div></div>
-<div class="dialog" id="dlg-film"><div class="box"><h2>Watch a film</h2>
-  <p class="small">A run, watched in the real view - the walk, the fights, the choices - from its seed and its log. The Hall of Fame keeps the last six runs' films; a film code (CM2:...) from a summary card plays anyone's.</p>
-  <div id="film-list"></div>
-  <textarea id="film-text" spellcheck="false" placeholder="Paste a film code here, CM2:..."></textarea>
-  <div class="small" id="film-note"></div>
-  <div class="end"><button id="btn-film-play">Watch</button><button id="btn-film-link" title="The film code in the box, as a link anyone can open">Link</button><button class="close">Close</button></div></div></div>
 <div class="dialog" id="dlg-home"><div class="box journalbox"><h2>Your house</h2>
   <p class="small" id="home-what"></p><div id="home-rooms"></div><div class="small" id="home-note"></div>
   <div class="end"><button id="btn-home-build">Build</button><button class="close">Close</button></div></div></div>
@@ -247,8 +241,7 @@ CM.UI = class {
       f.text().then((t) => { drop.value = t; this.$("#transfer-note").textContent = `${f.name} read in. Import brings it back.`; });
     });
     this.$("#btn-pause-settings").addEventListener("click", () => { this.closeDialogs(); this.openDialog("#dlg-settings"); });
-    this.$("#btn-film").addEventListener("click", () => this.openFilms());
-    this.$("#btn-film-play").addEventListener("click", () => { const spec = CM.parseFilm(this.$("#film-text").value); if (!spec) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.closeDialogs(); this.watch(spec); });
+    if (this.$("#btn-film-play")) this.$("#btn-film-play").addEventListener("click", () => { const spec = CM.parseFilm(this.$("#film-text").value); if (!spec) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.closeDialogs(); this.watch(spec); });
     for (const b of this.root.querySelectorAll("#view .filmbar button")) b.addEventListener("click", () => {
       const f = game.film; if (!f) return;
       const what = b.dataset.film;
@@ -466,6 +459,7 @@ CM.UI = class {
   }
   filmBar() {
     const g = this.game, bar = this.$("#view .filmbar"), f = g.film;
+    if (!bar) return;   // (v71.0: the films are gone)
     bar.classList.toggle("on", Boolean(f));
     if (!f) return;
     bar.querySelector("[data-film=toggle]").textContent = f.playing ? "Pause" : "Play";
@@ -759,7 +753,7 @@ CM.UI = class {
     slot.appendChild(CM.art.emblem(120));
     this.$("#dlg-over").classList.toggle("won", won);
     this.$("#dlg-over").classList.remove("crowning");
-    this.$("#over-title").textContent = CM.endlessFall(entry) ? `Floor ${entry.floor} of the endless dark` : entry.dreamed ? CM.ENDINGS.dreamed.title : entry.left ? CM.ENDINGS.left.title : entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "The Lich King is no more" : `The party fell on floor ${entry.floor}`;
+    this.$("#over-title").textContent = CM.endlessFall(entry) ? `Floor ${entry.floor} of the endless dark` : entry.dreamed ? CM.ENDINGS.dreamed.title : entry.left ? CM.ENDINGS.left.title : entry.bottom ? "To the bottom of the world" : won && entry.floor > CM.LAST_FLOOR ? `With the crown, into the Deep - and down on floor ${entry.floor}` : won ? "Claude, the Lich King is no more" : `The party fell on floor ${entry.floor}`;
     const standing = g.party.filter((h) => h.hp > 0), fallen = g.party.filter((h) => h.hp <= 0);
     const names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
     let text;
@@ -1020,7 +1014,7 @@ CM.UI = class {
     slot.innerHTML = "";
     slot.appendChild(CM.art.emblem(120));
     dlg.classList.add("won"); dlg.classList.add("crowning");
-    this.$("#over-title").textContent = g.reminded ? "The king remembers" : "The Lich King is no more";
+    this.$("#over-title").textContent = g.reminded ? "The king remembers" : "Claude, the Lich King is no more";
     const standing = g.party.filter((h) => h.hp > 0), names = (list) => (list.length ? list.map((h) => h.name).join(", ").replace(/, ([^,]*)$/, " and $1") : "The party");
     this.$("#over-text").textContent = (g.reminded ? `Mordeth sits on his throne with the crown on its arm, and is dust. ${names(standing)} stand in the quiet with the Lich King's crown and ${g.gold.toLocaleString()} gold. ` : `The crown rolls from the throne, and the cold goes out of the stone. ${names(standing)} stand in the throne room with the Lich King's crown and ${g.gold.toLocaleString()} gold. `)
       + "Behind the throne the floor has split: a shaft goes down into a dark that was never his. The carvings never spoke of it. Climb into the daylight as legends - or go down, and see what the king was listening to.";
