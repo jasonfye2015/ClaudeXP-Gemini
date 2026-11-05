@@ -1,0 +1,6 @@
+The figures (src/models, UPGRADE_PLAN_60.md): rigged, animated low-poly bodies from CC0 packs, baked by tools/models.py.
+
+- KayKit : Adventurers Character Pack (1.0) and Skeletons Character Pack (1.0) - Kay Lousberg, www.kaylousberg.com (Creative Commons Zero, CC0): https://kaylousberg.itch.io/kaykit-adventurers, https://kaylousberg.itch.io/kaykit-skeletons
+- Quaternius - Ultimate Animated Animal Pack (Wolf, Husky, Horse, Deer) and Easy Enemy Pack (Rat, Spider), quaternius.com (CC0): https://quaternius.com/packs/ultimateanimatedanimals.html, https://quaternius.com/packs/easyenemy.html
+
+CC0 asks nothing; the credit is given anyway, as for the tiles and the textures (src/art/CREDITS.txt). The sources are kept in Local Storage/Claude and Magic models/<pack>/ with each pack's licence file; only the baked file (src/js/35c-figures.js) is in the repo.

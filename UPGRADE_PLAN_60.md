@@ -58,6 +58,15 @@ fallback is never needed again. Order the work so the town's people land first (
 ## 4. Phases (each a release or two; versions follow the order done)
 
 ### Phase 0 - the pipeline (no change to the game yet)
+Done 2026-11-05 as v65.0 (the first release of it): tools/models.py, src/models/figures.json and CREDITS.txt,
+src/js/35c-figures.js (generated), 37-figures.js (the reader and the pose), 76zzzzzzzzzzd-figures.js (the loader).
+Twenty-five models - the five adventurers, four skeletons, ten pieces of gear, wolf, husky, horse, deer, rat and
+spider - bake to 1.59 MB of base64 (3.48 MB raw; 81 clips shared). The Ultimate Monsters pack (Google Drive/itch
+download, no direct file) is not fetched yet; the beasts came from the Animal and Easy Enemy packs via the
+showcase mirror. Sizes in model units: the KayKit bodies stand 2.4-2.6 tall, the animals 2-5; the renderer will
+scale each figure to its target height. Decided: the impostors will be rendered at load on the GPU by the
+renderer itself (idle from eight sides, into a texture) rather than baked to sheet files, so they cost no file size
+and always match the models - they move to Phase 1/5, and Phase 0 is complete with this release.
 - `src/models/<pack>/` with the glTF sources and licence files; `tools/models.py` converts each chosen model
   to a compact binary: positions as int16 over the bounds, normals oct-encoded, uv as uint16, joints (uint8 x4)
   and weights (uint8 x4), an index buffer; clips sampled at 20 fps as per-joint quaternion + translation tracks in
