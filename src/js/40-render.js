@@ -10,6 +10,7 @@ uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uR
 uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar; uniform vec3 uHideAt;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
+  if (aFx.x >= 10.0) { if (length(aPos.xz - uEye.xz) > aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (v58.1: a detail, seen only within its reach - 10 + squares)
   if (uHideAt.z > 0.0 && floor(uEye.x) == floor(uHideAt.x) && floor(uEye.z) == floor(uHideAt.y) && length(aPos.xz - uHideAt.xy) < uHideAt.z && aPos.y > 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; }   // (v56.1: standing on the well, it folds away)
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
     p = vec3(iA.x, iA.y + aPos.y * iB.x, iA.z) + uRight * (aPos.x * iA.w);
@@ -113,7 +114,8 @@ void main() {
   if (t.a < 0.5) discard;
   if (uMoss > 0.0 && vFx.z < 0.5 && vWorld.y < 0.5) {   // (v57.4) moss creeping up the feet of the town's walls, in patches
     vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
-    if (abs(wn.y) < 0.3) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+    float wallBy = uMapN > 0.0 ? max(max(texture(uMap, (vWorld.xz + vec2(0.12, 0.0)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.12, 0.0)) / uMapN).r), max(texture(uMap, (vWorld.xz + vec2(0.0, 0.12)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.0, 0.12)) / uMapN).r)) : 0.0;   // (v58.1: only on a wall, or against one)
+    if (abs(wn.y) < 0.3 && wallBy > 0.35) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
       float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
       t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -892,6 +894,7 @@ CM.Renderer = class {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
+    gl.uniform1f(this.loc.uMoss, 0);   // (v58.1: the moss is the walls' own - not on the people, the props drawn as pictures, or the marks)
     for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();

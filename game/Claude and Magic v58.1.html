@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v58.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v58.1 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "58.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "58.1", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6204,6 +6204,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const only = opts.only || null, W = only === "windows";                  // (v26.1: a part alone - "props" (the traces), "windows" (the lit ones and the far lights))
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
+  const near = (n) => (W ? () => {} : (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 10 + n, 1, 0); });   // (v58.1: a detail's quad, drawn only within n squares)
   const quad = W ? () => {} : (a, b, c, d, layer, shade, sway = 0) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };   // (sway, v24.0: how far its top gives to the wind)
   // a floor or ceiling square, turned a quarter-turn and mirrored by hash (no two neighbours alike), with a shade at
   // each corner: darker where the corner meets walls (ambient occlusion, baked)
@@ -6295,6 +6296,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     else { for (const X of [cx - dd, cx + dd]) quad([X, lo, y], [X, lo, y + 1], [X, C, y + 1], [X, C, y], T, 0.84); quad([cx - dd, lo, y], [cx - dd, lo, y + 1], [cx + dd, lo, y + 1], [cx + dd, lo, y], T, 0.7); } }
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky && only !== "props") {                                                        // the buildings: walled all round, and roofed
+    const polyNear = (n) => (W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 10 + n, 1, 0); }), poly18 = polyNear(18);   // (v58.1)
     const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
     const FACES = [[0, -1, 1.0], [0, 1, 0.96], [1, 0, 0.84], [-1, 0, 0.8]];        // a cell's north, south, east and west faces
@@ -6313,7 +6315,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade * wash);
-        if (["house", "door", "shop"].includes(kind) && opts.detail !== 0) { if (CM.ivyDetail) CM.ivyDetail({ poly, index, x, y, d, a, b, dx, dy, h, shade }); if (CM.buildingDetail) CM.buildingDetail({ poly, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front }); }   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
+        if (["house", "door", "shop"].includes(kind) && opts.detail !== 0) { if (CM.ivyDetail) CM.ivyDetail({ poly, index, x, y, d, a, b, dx, dy, h, shade }); if (CM.buildingDetail) CM.buildingDetail({ poly: poly18, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front }); }   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 100 < (opts.night === true ? 0.7 : opts.night) * 100) {   // a window lit for the night (v24.3: opts.night the share lit - fewer as the town goes to bed)
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
@@ -6434,9 +6436,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }
-  const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad, fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
+  const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
-  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
+  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad: near(28), fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
   const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0, gate: 0 };   // (v57.0: battlements - 26i-wall.js)
   const shaftHead = sky && !only && !W && CM.shaftHead ? CM.shaftHead({ quad, fl, index }) : 0;   // (v57.3: the shaft head, built - 26j-shaft.js)
   let decals = 0, overhead = 0;
@@ -6479,7 +6481,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const sub = opts.sub || {};
   const quadUV = (a, b, c, d, layer, shade, r, sway = 0) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };
   for (const p of W ? [] : opts.props || []) {
-    if (p.how === "stand") { if (p.id === "lamp" && CM.lampModel && CM.lampModel(p, quad, index)) props++; continue; }   // (v56.3: the lamp's post and lantern built - 26h-lamps.js; its glass stays a picture, lit by the lamplighter)
+    if (p.how === "stand") { if (p.id === "lamp" && CM.lampModel && CM.lampModel(p, near(16), index)) props++; continue; }   // (v56.3: the lamp's post and lantern built - 26h-lamps.js; its glass stays a picture, lit by the lamplighter)
     if (p.how === "model") { if (CM.propModel && CM.propModel(p, (a, b, c, d, layer, shade, uvr) => quadUV(a, b, c, d, layer, shade, uvr || [0, 0, 1, 1]), index)) props++; continue; }   // (v24.5: built solid - 76zzzzh-models.js)
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
     if (layer === undefined) continue;
@@ -9432,6 +9434,7 @@ uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uR
 uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar; uniform vec3 uHideAt;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
+  if (aFx.x >= 10.0) { if (length(aPos.xz - uEye.xz) > aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (v58.1: a detail, seen only within its reach - 10 + squares)
   if (uHideAt.z > 0.0 && floor(uEye.x) == floor(uHideAt.x) && floor(uEye.z) == floor(uHideAt.y) && length(aPos.xz - uHideAt.xy) < uHideAt.z && aPos.y > 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; }   // (v56.1: standing on the well, it folds away)
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
     p = vec3(iA.x, iA.y + aPos.y * iB.x, iA.z) + uRight * (aPos.x * iA.w);
@@ -9535,7 +9538,8 @@ void main() {
   if (t.a < 0.5) discard;
   if (uMoss > 0.0 && vFx.z < 0.5 && vWorld.y < 0.5) {   // (v57.4) moss creeping up the feet of the town's walls, in patches
     vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
-    if (abs(wn.y) < 0.3) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+    float wallBy = uMapN > 0.0 ? max(max(texture(uMap, (vWorld.xz + vec2(0.12, 0.0)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.12, 0.0)) / uMapN).r), max(texture(uMap, (vWorld.xz + vec2(0.0, 0.12)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.0, 0.12)) / uMapN).r)) : 0.0;   // (v58.1: only on a wall, or against one)
+    if (abs(wn.y) < 0.3 && wallBy > 0.35) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
       float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
       t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -10314,6 +10318,7 @@ CM.Renderer = class {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.staticBuf);
     this._attributes();
     gl.drawArrays(gl.TRIANGLES, 0, this.staticCount);
+    gl.uniform1f(this.loc.uMoss, 0);   // (v58.1: the moss is the walls' own - not on the people, the props drawn as pictures, or the marks)
     for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();

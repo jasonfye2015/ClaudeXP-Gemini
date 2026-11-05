@@ -155,6 +155,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const grid = fl.grid, size = grid.length, out = [], features = fl.features || {}, sky = Boolean(theme.sky), canopy = new Set(fl.canopy || []);
   const only = opts.only || null, W = only === "windows";                  // (v26.1: a part alone - "props" (the traces), "windows" (the lit ones and the far lights))
   const L = (name) => (index[name] !== undefined ? index[name] : index.wall);
+  const near = (n) => (W ? () => {} : (a, b, c, d, layer, shade) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 10 + n, 1, 0); });   // (v58.1: a detail's quad, drawn only within n squares)
   const quad = W ? () => {} : (a, b, c, d, layer, shade, sway = 0) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };   // (sway, v24.0: how far its top gives to the wind)
   // a floor or ceiling square, turned a quarter-turn and mirrored by hash (no two neighbours alike), with a shade at
   // each corner: darker where the corner meets walls (ambient occlusion, baked)
@@ -246,6 +247,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     else { for (const X of [cx - dd, cx + dd]) quad([X, lo, y], [X, lo, y + 1], [X, C, y + 1], [X, C, y], T, 0.84); quad([cx - dd, lo, y], [cx - dd, lo, y + 1], [cx + dd, lo, y + 1], [cx + dd, lo, y], T, 0.7); } }
   let buildings = 0, chimneys = 0, litWindows = 0, towers = 0; const windows = [];   // (windows: where each lit one is, for its light: v22.0)
   if (sky && only !== "props") {                                                        // the buildings: walled all round, and roofed
+    const polyNear = (n) => (W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 10 + n, 1, 0); }), poly18 = polyNear(18);   // (v58.1)
     const poly = W ? () => {} : (P, uv, layer, shade) => { for (const i of (P.length === 4 ? [0, 1, 2, 0, 2, 3] : [0, 1, 2])) out.push(...P[i], uv[i][0], uv[i][1], layer, shade, 0, 1, 0); };
     const stone = L("solid:townwall"), gable = index["solid:gable"] !== undefined ? index["solid:gable"] : L("solid:house"), roofDefault = L("solid:roof");
     const FACES = [[0, -1, 1.0], [0, 1, 0.96], [1, 0, 0.84], [-1, 0, 0.8]];        // a cell's north, south, east and west faces
@@ -264,7 +266,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade * wash);
-        if (["house", "door", "shop"].includes(kind) && opts.detail !== 0) { if (CM.ivyDetail) CM.ivyDetail({ poly, index, x, y, d, a, b, dx, dy, h, shade }); if (CM.buildingDetail) CM.buildingDetail({ poly, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front }); }   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
+        if (["house", "door", "shop"].includes(kind) && opts.detail !== 0) { if (CM.ivyDetail) CM.ivyDetail({ poly, index, x, y, d, a, b, dx, dy, h, shade }); if (CM.buildingDetail) CM.buildingDetail({ poly: poly18, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front }); }   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 100 < (opts.night === true ? 0.7 : opts.night) * 100) {   // a window lit for the night (v24.3: opts.night the share lit - fewer as the town goes to bed)
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
@@ -385,9 +387,9 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
     quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
   }
-  const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad, fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
+  const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
-  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
+  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad: near(28), fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
   const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0, gate: 0 };   // (v57.0: battlements - 26i-wall.js)
   const shaftHead = sky && !only && !W && CM.shaftHead ? CM.shaftHead({ quad, fl, index }) : 0;   // (v57.3: the shaft head, built - 26j-shaft.js)
   let decals = 0, overhead = 0;
@@ -430,7 +432,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const sub = opts.sub || {};
   const quadUV = (a, b, c, d, layer, shade, r, sway = 0) => { const uv = [[r[0], r[3]], [r[2], r[3]], [r[2], r[1]], [r[0], r[1]]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, i >= 2 ? -sway : 0, 1, 0); };
   for (const p of W ? [] : opts.props || []) {
-    if (p.how === "stand") { if (p.id === "lamp" && CM.lampModel && CM.lampModel(p, quad, index)) props++; continue; }   // (v56.3: the lamp's post and lantern built - 26h-lamps.js; its glass stays a picture, lit by the lamplighter)
+    if (p.how === "stand") { if (p.id === "lamp" && CM.lampModel && CM.lampModel(p, near(16), index)) props++; continue; }   // (v56.3: the lamp's post and lantern built - 26h-lamps.js; its glass stays a picture, lit by the lamplighter)
     if (p.how === "model") { if (CM.propModel && CM.propModel(p, (a, b, c, d, layer, shade, uvr) => quadUV(a, b, c, d, layer, shade, uvr || [0, 0, 1, 1]), index)) props++; continue; }   // (v24.5: built solid - 76zzzzh-models.js)
     const s = sub[p.layer], layer = s ? index[s[0]] : index[p.layer], r = s ? s.slice(1) : [0, 0, 1, 1];
     if (layer === undefined) continue;
