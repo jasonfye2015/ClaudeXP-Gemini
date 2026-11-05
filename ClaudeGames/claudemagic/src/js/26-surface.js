@@ -388,7 +388,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad, fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
   const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
-  const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0 };   // (v57.0: battlements - 26i-wall.js)
+  const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0 };   // (v57.0: battlements - 26i-wall.js)
   let decals = 0, overhead = 0;
   if (!sky && opts.decals !== false && !only) {                                                   // below: what is on the walls, and what hangs overhead, by band
     const band = CM.themeIndex(fl.number >= 1 ? fl.number : 1), D = CM.WALL_DECALS[band] || [], O = CM.OVERHEAD[band];
