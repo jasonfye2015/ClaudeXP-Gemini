@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v72.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v74.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "72.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "74.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5930,26 +5930,35 @@ CM.moonPath = (phase, r) => {
 //   CM.weatherNow(game)       -> { kind, strength 0..1 (ramped), word, from, until, wind: { speed, dir } }
 //   CM.nextWeather(game)      -> { kind, strength, from, until, inMinutes }
 //   CM.weatherDayWord(game)   the day's leaning, the old word
-{ const WX = CM.WX = { kinds: ["clear", "cloud", "rain", "storm", "mist", "wind", "snow", "heat", "aurora"], clearMin: 60, clearMax: 360, eventMin: 120, eventMax: 360, ramp: 20, nightClear: 0.8,
-    odds: { spring: { cloud: 3, rain: 4, storm: 1, mist: 2, wind: 2, snow: 0, heat: 0 }, summer: { cloud: 2, rain: 2, storm: 2, mist: 1, wind: 2, snow: 0, heat: 3 }, autumn: { cloud: 3, rain: 3, storm: 1, mist: 3, wind: 3, snow: 0, heat: 0 }, winter: { cloud: 3, rain: 1, storm: 0, mist: 2, wind: 3, snow: 4, heat: 0 } },
-    word: { clear: "clear", cloud: "clear", rain: "rain", storm: "rain", mist: "mist", wind: "wind", snow: "snow", heat: "clear", aurora: "clear" },
-    windSpeed: { clear: 0.15, cloud: 0.25, rain: 0.45, storm: 0.85, mist: 0.05, wind: 1.0, snow: 0.35, heat: 0.1, aurora: 0.1 } };
+{ const WX = CM.WX = { kinds: ["clear", "cloud", "rain", "storm", "mist", "wind", "snow", "heat", "aurora", "tornado"], tornadoMin: 60, tornadoMax: 120, tornadoSpeed: 0.5, afterRainMinutes: 90, clearMin: 60, clearMax: 360, eventMin: 120, eventMax: 360, ramp: 20, nightClear: 0.8,
+    odds: { spring: { cloud: 3, rain: 4, storm: 1, mist: 2, wind: 2, snow: 0, heat: 0, tornado: 0.15 }, summer: { cloud: 2, rain: 2, storm: 2, mist: 1, wind: 2, snow: 0, heat: 3, tornado: 0.3 }, autumn: { cloud: 3, rain: 3, storm: 1, mist: 3, wind: 3, snow: 0, heat: 0, tornado: 0.4 }, winter: { cloud: 3, rain: 1, storm: 0, mist: 2, wind: 3, snow: 4, heat: 0, tornado: 0 } },
+    word: { clear: "clear", cloud: "clear", rain: "rain", storm: "rain", mist: "mist", wind: "wind", snow: "snow", heat: "clear", aurora: "clear", tornado: "wind" },
+    windSpeed: { clear: 0.15, cloud: 0.25, rain: 0.45, storm: 0.85, mist: 0.05, wind: 1.0, snow: 0.35, heat: 0.1, aurora: 0.1, tornado: 1.0 } };
   const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), between = (a, b) => a + rnd() * (b - a);
   const hourAt = (clock) => ((CM.CLOCK.start + clock) % CM.CLOCK.day) / 60;
   const nightAt = (game, clock) => { const [dawn, dusk] = CM.daylightOf(game), h = hourAt(clock); return h >= dusk || h < dawn; };
   CM.weatherDayWord = (game) => (game && game.seed !== undefined ? CM.weatherOf(game.seed, CM.dayOf(game), CM.season(game)) : "clear");
   const pickKind = (game, at) => { const season = CM.season(game), odds = Object.assign({}, WX.odds[season] || WX.odds.spring), lean = CM.weatherDayWord(game), h = hourAt(at), night = nightAt(game, at);
     if (lean === "rain") { odds.rain *= 2; odds.storm = (odds.storm || 0.5) * 2; } else if (odds[lean] !== undefined) odds[lean] *= 2;
-    if (!(h >= 12 && h < 17)) odds.heat = 0; if (night) { odds.heat = 0; odds.storm *= 0.5; }
+    if (!(h >= 12 && h < 17)) odds.heat = 0; if (night) { odds.heat = 0; odds.storm *= 0.5; odds.tornado = 0; }   // (a tornado by day, when it can be seen coming)
     if (night && season === "winter" && rnd() < 0.3) return "aurora";
     const total = Object.values(odds).reduce((a, b) => a + b, 0); let r = rnd() * total; for (const [k, w] of Object.entries(odds)) { r -= w; if (r < 0) return k; } return "cloud"; };
   const roll = (game, at, after) => { const night = nightAt(game, at);
     if (after !== "clear" || (night && rnd() < WX.nightClear)) { const len = Math.round(between(WX.clearMin, WX.clearMax) * (night ? 1.6 : 1)); return { kind: "clear", strength: 1, from: at, until: at + len }; }
-    const kind = pickKind(game, at), len = Math.round(between(WX.eventMin, WX.eventMax)), strength = kind === "aurora" ? between(0.5, 1) : Math.min(1, between(0.45, 1.05));
-    return { kind, strength, from: at, until: at + len }; };
+    const kind = pickKind(game, at), len = Math.round(kind === "tornado" ? between(WX.tornadoMin, WX.tornadoMax) : between(WX.eventMin, WX.eventMax)), strength = kind === "aurora" ? between(0.5, 1) : Math.min(1, between(0.45, 1.05));
+    const ev = { kind, strength, from: at, until: at + len }; if (kind === "tornado") { const a = rnd() * Math.PI * 2; ev.twister = { x: 0, y: 0, dx: Math.cos(a), dy: Math.sin(a), placed: false }; } return ev; };
+  // (v73.0) the twister: a tornado has a place that crosses the floor along its way at WX.tornadoSpeed squares a minute, from an edge, placed when it first starts on a floor
+  CM.twisterNow = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx, c = W && W.cur; if (!c || c.kind !== "tornado" || !c.twister || !game.floor || !(game.floor.number === 0 || game.floor.number === -1)) return null;
+    const T = c.twister, fl = game.floor, N = fl.grid.length, t = CM.clockOf(game) - c.from;
+    if (!T.placed || T.floor !== fl.number) { const cx = N / 2, cy = N / 2, R = N * 0.55; T.x0 = cx - T.dx * R; T.y0 = cy - T.dy * R; T.placed = true; T.floor = fl.number; }   // (it comes in from the edge on the wind's side and crosses the middle)
+    const d = Math.min(t * WX.tornadoSpeed, N * 1.1); T.x = T.x0 + T.dx * d; T.y = T.y0 + T.dy * d; return { x: T.x, y: T.y, dx: T.dx, dy: T.dy, minutes: t, strength: c.strength, inside: T.x >= 0 && T.y >= 0 && T.x < N && T.y < N }; };
+  // (v73.0) the sky's glow after rain: 1 in the minutes after a rain or a storm ends, falling to 0 over WX.afterRainMinutes
+  CM.afterRain = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx; if (!W || !W.prev || !(W.prev.kind === "rain" || W.prev.kind === "storm") || !W.cur || W.cur.kind !== "clear") return 0; const m = CM.clockOf(game) - W.prev.until; return m < 0 ? 0 : Math.max(0, 1 - m / WX.afterRainMinutes); };
+  // (v73.0) the mist's sight: one square in a dense mist, two in a light one, the usual four otherwise
+  CM.mistSightNow = (game) => { const W = game && game.tally && game.tally.ext && game.tally.ext.wx, c = W && W.cur; if (!c || c.kind !== "mist") return null; const now = CM.weatherNow(game); return now.strength > 0.7 ? 1 : 2; };
   CM.weatherStep = (game) => { if (!game || !game.ext) return null; const W = game.ext("wx"), t = CM.clockOf(game);
     if (!W.cur) { W.cur = { kind: "clear", strength: 1, from: t, until: t + Math.round(between(30, 120)) }; W.next = roll(game, W.cur.until, "clear"); }
-    let guard = 0; while (t >= W.cur.until && guard++ < 200) { W.cur = W.next && W.next.from === W.cur.until ? W.next : roll(game, W.cur.until, W.cur.kind); W.next = roll(game, W.cur.until, W.cur.kind); }
+    let guard = 0; while (t >= W.cur.until && guard++ < 200) { W.prev = W.cur; W.cur = W.next && W.next.from === W.cur.until ? W.next : roll(game, W.cur.until, W.cur.kind); W.next = roll(game, W.cur.until, W.cur.kind); }
     return W; };
   CM.weatherNow = (game) => { const W = CM.weatherStep(game); if (!W) return { kind: "clear", strength: 0, word: "clear", from: 0, until: 0, wind: { speed: 0.15, dir: [1, 0] } };
     const c = W.cur, t = CM.clockOf(game), k = c.kind === "clear" ? 0 : Math.max(0, Math.min(1, (t - c.from) / WX.ramp, (c.until - t) / WX.ramp)) * c.strength;
@@ -6585,12 +6594,21 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { if (W !== (glow === 2)) return; const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
   }
+  let felled = 0;
   if (!only) for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
     const was = opts.turn !== undefined && opts.turn < 1 && (CM.hashSeed(`${fl.number}:turn:${key}`) % 100) / 100 >= opts.turn && index[`tree:${v}:was`] !== undefined;   // (v24.2: not turned yet)
-    const layer = L(was ? `tree:${v}:was` : `tree:${v}`);
-    quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
-    quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
+    const layer = L(was ? `tree:${v}:was` : `tree:${v}`), st = opts.treeStates && opts.treeStates[key];   // (v74.0: a tree's state - fallen, burning, charred, a sapling - 69zzm-trees.js)
+    if (st === "fallen" || st === "charred") {   // a log lying across the square the way the hash says, and for a charred one black, over ash
+      const bark = index["solid:bark"] !== undefined ? index["solid:bark"] : L("solid:timber"), a = (CM.hashSeed(`${fl.number}:fell:${key}`) % 4) * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a), px = -dz, pz = dx, k = st === "charred" ? 0.22 : 0.9, hh = 0.14, w = 0.13, len = 0.52;
+      const C = (u, s, y) => [cx + dx * u + px * s, y, cz + dz * u + pz * s];
+      quad(C(-len, w, 0), C(len, w, 0), C(len, w, hh * 2), C(-len, w, hh * 2), bark, k * 0.95); quad(C(len, -w, 0), C(-len, -w, 0), C(-len, -w, hh * 2), C(len, -w, hh * 2), bark, k * 0.8);
+      quad(C(-len, -w, hh * 2), C(len, -w, hh * 2), C(len, w, hh * 2), C(-len, w, hh * 2), bark, k * 1.05); quad(C(len, w, 0), C(len, -w, 0), C(len, -w, hh * 2), C(len, w, hh * 2), bark, k * 0.7); quad(C(-len, -w, 0), C(-len, w, 0), C(-len, w, hh * 2), C(-len, -w, hh * 2), bark, k * 0.7);
+      if (st === "charred") quad([cx - 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz - 0.48], [cx - 0.48, 0.004, cz - 0.48], L("ground:dirt"), 0.18);   // (the ash)
+      felled++; continue; }
+    const k = st === "sapling" ? 0.3 : 1, hs = h * k, rs = r * (st === "sapling" ? 0.45 : 1), burnt = st === "burning" ? 0.85 : 1;   // (a sapling: the same picture, small; burning: a little darker under the flames)
+    quad([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs], layer, burnt, CM.SWAY.tree * k);
+    quad([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs], layer, burnt, CM.SWAY.tree * k);
   }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
@@ -6658,7 +6676,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 26b-buildings.js ----
@@ -10319,7 +10337,7 @@ CM.Renderer = class {
   // the far lights; a mode changing, a fight, a mark, a window lighting no longer makes the whole floor again
   _floorKey(floor, theme) { const sig = (o) => { let h = 0; if (o) for (const k in o) { const v = String(o[k]); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; } return h; };
     let g = 0; for (const row of floor.grid) for (let i = 0; i < row.length; i++) g = (g * 3 + row[i] + i) | 0;
-    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
+    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
   _buffer(name, data) { const gl = this.gl; if (!this[name + "Buf"]) this[name + "Buf"] = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this[name + "Buf"]); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); this[name + "Count"] = data.length / STRIDE; }
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
@@ -10329,7 +10347,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined });   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);
@@ -29244,7 +29262,7 @@ Object.assign(CM.Game.prototype, {
   P.look = function (...a) {
     const fl = this.floor; if (!fl || !outside(this) || CM.weather(this) !== "mist") return look0.apply(this, a);
     const had = new Set(fl.seen.map(([x, y]) => `${x},${y}`)), out = look0.apply(this, a), [px, py] = fl.pos;
-    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= WX.mistSight);   // (what the mist hid stays unseen)
+    fl.seen = fl.seen.filter(([x, y]) => had.has(`${x},${y}`) || Math.max(Math.abs(x - px), Math.abs(y - py)) <= ((CM.mistSightNow && CM.mistSightNow(this)) || WX.mistSight));   // (what the mist hid stays unseen; v73.0: one square in a dense mist)
     return out;
   };
   // snow: the walk is heavier in the Wood
@@ -30798,6 +30816,53 @@ Object.assign(CM.Game.prototype, {
     if (w === "rain" || w === "snow" || w === "wind") return 0; const k = s === "summer" ? 1 : s === "spring" ? 0.5 : s === "autumn" ? 0.25 : 0; if (!k) return 0;
     const h = CM.hourOf(game), [dawn, dusk] = CM.daylightOf(game); return k * Math.max(0, Math.min(1, (h - dawn - 1) / 1.5, (dusk - 1 - h) / 1.5)); };
   CM.lilyNow = (game) => { if (!game || !game.floor || game.floor.number !== -1) return 0; const s = CM.season ? CM.season(game) : "spring"; return { summer: 1, spring: 0.55, autumn: 0.45, winter: 0 }[s] ?? 0.5; };
+}
+
+// ---- 69zzm-trees.js ----
+"use strict";
+// Trees that fall, burn and grow again (v74.0, UPGRADE_PLAN_61.md part 4): a gale fells a tree now and then and a
+// tornado fells what stands in its wake; lightning in a storm sets one alight, and fire spreads tree to tree (less in
+// rain, not in snow, out in a downpour) but never to a building, a fence or the party - it is a sight, not a harm.
+// A burning tree burns BURN minutes and falls charred; a fallen or charred tree lies three days and then a sapling
+// stands in its place, which is a tree again seven days on. The square stays solid the whole way (a lying tree is a
+// different picture, not an open square), so nothing opens a way off the map. The lamps: in a storm or a gale a
+// town lamp may blow out, and stays dark till the lamplighter's next round. State lives in the run (game.ext).
+//   CM.treeSquares(fl) -> ["x,y"]                     every tree square of a surface floor
+//   CM.treeStateAt(game, fl, x, y) -> null | "fallen" | "burning" | "charred" | "sapling"
+//   CM.treeStateMap(game, fl) -> { "x,y": state }      for the mesh (26-surface.js reads opts.treeStates)
+//   CM.fellTree / CM.igniteTree(game, fl, key)          by a gale, a tornado, lightning - or a meteor (part 5)
+//   CM.treesStep(game, minutes)                         the timers, the spread, the gale's and the twister's felling
+//   CM.lampsOut(game) -> { "x,y": at }; CM.lampOutStep(game, minutes); CM.lampOn wrapped to keep a blown lamp dark
+{ const T = CM.TREES = { burnMinutes: 40, fallenDays: 3, saplingDays: 7, spread: 0.03, galePerMinute: 1 / 12, tornadoReach: 1.3, lightningPerMinute: 0.004, lampPerHour: 0.1, maxBurning: 12 };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), DAY = 24 * 60;
+  const cache = new WeakMap();
+  CM.treeSquares = (fl) => { if (!fl || !(fl.number === 0 || fl.number === -1)) return []; let c = cache.get(fl); if (c) return c; c = []; const N = fl.grid.length; for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (fl.grid[y][x] !== 0 && CM.solidAt(fl, x, y) === "tree") c.push(`${x},${y}`); cache.set(fl, c); return c; };
+  const store = (game, fl) => { const E = game.ext("trees"); return (E[fl.number] = E[fl.number] || {}); };
+  CM.treeStateAt = (game, fl, x, y) => { if (!game || !game.ext || !fl) return null; const s = store(game, fl)[`${x},${y}`]; return s ? s.s : null; };
+  CM.treeStateMap = (game, fl) => { const out = {}; if (!game || !game.ext || !fl) return out; for (const [k, v] of Object.entries(store(game, fl))) out[k] = v.s; return out; };
+  CM.fellTree = (game, fl, key, how) => { const S = store(game, fl), s = S[key]; if (s && s.s !== "burning") return false; S[key] = { s: s && s.s === "burning" ? "charred" : "fallen", at: CM.clockOf(game), how: how || "gale" }; game.treesVersion = (game.treesVersion || 0) + 1; return true; };
+  CM.igniteTree = (game, fl, key) => { const S = store(game, fl); if (S[key]) return false; if (Object.values(S).filter((v) => v.s === "burning").length >= T.maxBurning) return false; S[key] = { s: "burning", at: CM.clockOf(game) }; game.treesVersion = (game.treesVersion || 0) + 1; return true; };
+  const neighbours = (key) => { const [x, y] = key.split(",").map(Number), out = []; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) out.push(`${x + dx},${y + dy}`); return out; };
+  CM.treesStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || !(minutes > 0)) return; const fl = game.floor, S = store(game, fl), t = CM.clockOf(game), trees = CM.treeSquares(fl), set = new Set(trees); if (!trees.length) return;
+    const W = CM.weatherNow ? CM.weatherNow(game) : { kind: "clear", strength: 0, wind: { speed: 0 } }, rainK = W.kind === "rain" || W.kind === "storm" ? W.strength : 0, snow = W.kind === "snow"; let changed = false;
+    for (const [k, v] of Object.entries(S)) {   // the timers
+      if (v.s === "burning" && (t - v.at >= T.burnMinutes || rainK > 0.7)) { v.s = "charred"; v.at = t; changed = true; }
+      else if ((v.s === "fallen" || v.s === "charred") && t - v.at >= T.fallenDays * DAY) { v.s = "sapling"; v.at = t; changed = true; }
+      else if (v.s === "sapling" && t - v.at >= T.saplingDays * DAY) { delete S[k]; changed = true; } }
+    const burning = Object.keys(S).filter((k) => S[k].s === "burning"); const p = T.spread * (snow ? 0 : 1 - 0.7 * rainK);   // the spread, a chance a minute for each burning neighbour
+    if (p > 0) for (const k of burning) for (const n of neighbours(k)) { if (!set.has(n) || S[n]) continue; if (1 - Math.pow(1 - p, minutes) > rnd()) { if (CM.igniteTree(game, fl, n)) changed = true; } }
+    const tw = CM.twisterNow ? CM.twisterNow(game) : null;
+    if (!(tw && tw.inside) && W.wind.speed > 0.8 && rnd() < T.galePerMinute * minutes * (W.wind.speed - 0.7) / 0.3) { const standing = trees.filter((k) => !S[k]); if (standing.length) { CM.fellTree(game, fl, standing[Math.floor(rnd() * standing.length)], "gale"); changed = true; } }   // the gale
+    if (tw && tw.inside) for (const k of trees) { if (S[k] && S[k].s !== "burning") continue; const [x, y] = k.split(",").map(Number); if (Math.hypot(x + 0.5 - tw.x, y + 0.5 - tw.y) <= T.tornadoReach) { CM.fellTree(game, fl, k, "tornado"); changed = true; } }   // the twister's wake
+    if (W.kind === "storm" && rnd() < T.lightningPerMinute * minutes) { const standing = trees.filter((k) => !S[k]); if (standing.length && CM.igniteTree(game, fl, standing[Math.floor(rnd() * standing.length)])) changed = true; }   // lightning
+    if (changed) game.treesVersion = (game.treesVersion || 0) + 1; };
+  // the lamps: blown out in a storm or a gale, dark till the lamplighter's round
+  CM.lampsOut = (game) => (game && game.ext ? game.ext("lampsOut") : {});
+  CM.lampOutStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || game.floor.number !== 0) return; const O = CM.lampsOut(game), h = CM.hourOf(game), LH = CM.LAMPLIGHT || { from: 19, to: 21 };
+    if (h >= LH.from && h < LH.to) { for (const k of Object.keys(O)) delete O[k]; return; }   // (his round relights them all)
+    const W = CM.weatherNow ? CM.weatherNow(game) : null; if (!W || !(W.kind === "storm" || W.wind.speed > 0.8)) return;
+    const lamps = CM.renderer && CM.renderer.standing ? CM.renderer.standing.filter((p) => p.id === "lamp") : []; for (const p of lamps) { const k = `${p.x},${p.y}`; if (!O[k] && rnd() < T.lampPerHour * minutes / 60) O[k] = CM.clockOf(game); } };
+  CM.lampBlownOut = (game, p) => Boolean(p && game && game.ext && CM.lampsOut(game)[`${p.x},${p.y}`]);   // (the window wraps CM.lampOn with it: the lamplighter's file loads after this one)
 }
 
 // ---- 70-ui.js ----
@@ -32795,8 +32860,8 @@ Object.assign(CM.UI.prototype, {
 // ("rain, 1 h 10 left - then clear" / "clear - mist in 40 min") - and the exact date and time with it. The sun and
 // the moon on the dial are drawn larger (70-ui.js's markup), and the stars thicker on a clear night. 73b-clock.js
 // draws the dial; this adds to it on each refresh.
-{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0" };
-  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora" };
+{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0", tornado: "#2A2630" };
+  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora", tornado: "a tornado" };
   const span = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${Math.round(m % 60)}` : ""}` : `${Math.max(1, Math.round(m))} min`);
   const ds0 = CM.UI.prototype.drawSky; CM.UI.prototype.drawSky = function (...a) { const out = ds0.apply(this, a); try { const g = this.game, el = this.$("#view .sky"), bar = el && el.querySelector(".wxbar"); if (!bar || !g.ext || !CM.weatherNow) return out;
       const W = CM.weatherNow(g), N = CM.nextWeather(g), t = CM.clockOf(g), H = 6 * 60, segs = bar.querySelector(".segs"); let html = "", at = t, left = H;
@@ -45480,6 +45545,81 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g), k = Math.max(0.15, W.strength);
       for (const o of out) { if (o.id === "rain") o.rate *= (W.kind === "storm" ? 1.4 : 1) * k; else if (o.id === "snow" && W.kind === "snow") o.rate *= k; else if (o.id === "fog") o.rate *= W.kind === "mist" ? 0.5 + k : 1; }
       return out; }; }
+}
+
+// ---- 76zzzzzzzzzzi-wxair.js ----
+"use strict";
+// The stronger sky and air (v73.0, UPGRADE_PLAN_61.md part 3): in a gale the air fills with flying leaves, twigs and
+// dust streaking downwind, and the lamps and torches gutter in the gusts; a tornado is a funnel of dark whirling air
+// that crosses the land along its way (CM.twisterNow), dust and debris flung up round it; a heat event shimmers
+// the air over the ground on a summer afternoon; after rain, with the sun low, the dawn or the dusk is dramatic -
+// the sun's glow doubled and the clouds lit in its colour; a dense mist closes the sight to a square (the rules'),
+// and the air thick with it. All of it air kinds and the renderer's fields; nothing here touches the rules.
+{ const P = 64, cv = () => { const c = document.createElement("canvas"); c.width = c.height = P; return c; };
+  const PICS = { debris: (p) => { p.strokeStyle = "#8A7048"; p.lineWidth = 5; p.lineCap = "round"; p.beginPath(); p.moveTo(10, 40); p.lineTo(54, 24); p.stroke(); p.fillStyle = "#A08048"; p.beginPath(); p.ellipse(40, 26, 10, 6, 0.6, 0, Math.PI * 2); p.fill(); },
+    twister: (p) => { const g = p.createRadialGradient(P / 2, P / 2, 4, P / 2, P / 2, P / 2); g.addColorStop(0, "rgba(128,112,96,0.98)"); g.addColorStop(0.7, "rgba(104,92,80,0.72)"); g.addColorStop(1, "rgba(90,80,70,0)"); p.fillStyle = g; p.fillRect(0, 0, P, P); } };   // (dust-brown, so it reads against a black sky)
+  { CM.art.AIR = CM.art.AIR || []; for (const id of Object.keys(PICS)) if (!CM.art.AIR.includes(id)) CM.art.AIR.push(id);
+    const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { if (!PICS[id]) return ap0.call(this, id); const c = cv(); PICS[id](c.getContext("2d")); return c; }; }
+  // the funnel's picture goes in with the surface's own pictures (a packed air picture doesn't draw large; the hens' kind does)
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["life:twister"] === undefined) { const c = document.createElement("canvas"); c.width = c.height = 128; const p = c.getContext("2d"); p.scale(2, 2); PICS.twister(p); set.index["life:twister"] = set.layers.length; set.layers.push(c); } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name === "life:twister" || s0(name); }
+  // the air's kinds by the event: debris in a gale, the twister's whirl, the mist thicker
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g);
+      if (W.wind.speed > 0.55) out.push({ id: "debris", rate: 14 * (W.wind.speed - 0.4) });
+      const T = CM.twisterNow(g); if (T && T.inside) out.push({ id: "twister", rate: 340 }, { id: "debris", rate: 30 });   // (v74.0: fuller - the air's budget is raised while it crosses)
+      return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game, r = Math.random;
+      if (k.id === "debris") { const W = CM.weatherNow(g), w = W.wind, T = CM.twisterNow(g); let x, z, y;
+        if (T && T.inside && r() < 0.5) { const a = r() * Math.PI * 2, d = 0.3 + r() * 1.6; x = T.x + Math.cos(a) * d; z = T.y + Math.sin(a) * d; y = r() * 2.5; }
+        else { x = eye[0] + (r() * 2 - 1) * 6 - w.dir[0] * 4; z = eye[2] + (r() * 2 - 1) * 6 - w.dir[1] * 4; y = 0.2 + r() * 1.6; }
+        return { kind: "debris", age: 0, seed: r() * 10, sway: 2 + r() * 4, swayAmp: 0.5, windy: 1.6 + r() * 0.8, vx: 0, vy: (r() - 0.3) * 0.4, vz: 0, life: 2 + r() * 2, size: 0.06 + r() * 0.05, glow: 0, alpha: 0.9, x, z, y, top: 4, layer: "air:debris" }; }
+      if (k.id === "twister") { const T = CM.twisterNow(g); if (!T) return null; const a = r() * Math.PI * 2, y = r() * 3.4, d = 0.1 + y * 0.34 + r() * 0.12;   // (the funnel: narrow at the ground, wide at the top)
+        return { kind: "twister", age: 0, seed: a, sway: 0, swayAmp: 0, windy: 0, vx: 0, vy: 0.9 + r() * 0.6, vz: 0, life: 1.4 + r() * 0.8, size: 0.26 + y * 0.1, glow: 0.6, alpha: 0.9, x: T.x + Math.cos(a) * d, z: T.y + Math.sin(a) * d, y, top: 5, spin: { cx: T.x, cz: T.y, a, d, w: 3.5 }, layer: "life:twister" }; }
+      return sp0.call(this, k, eye, R, env); }; }
+  // the funnel's parts whirl about its centre instead of drifting (a step after the air's own)
+  { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); const g = CM.game, T = g && CM.twisterNow ? CM.twisterNow(g) : null;
+      for (const p of this.parts) if (p.spin) { if (!T) { p.life = 0; continue; } p.spin.a += p.spin.w * dt; p.spin.d += dt * 0.25; p.x = T.x + Math.cos(p.spin.a) * p.spin.d; p.z = T.y + Math.sin(p.spin.a) * p.spin.d; }
+      return out; }; }
+  // the renderer's fields: the lamps guttering, the heat's shimmer, the dramatic dawn and dusk
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || !r.sky || game.mode === "title" || !game.ext) return; const W = CM.weatherNow(game), t = now / 1000;
+    if (W.wind.speed > 0.55 && r.lights) { const gust = W.wind.speed - 0.4; r.lights.forEach((l, i) => { if (!l.flicker) return; const k = 1 - gust * (0.35 + 0.35 * Math.abs(Math.sin(t * (7 + i * 0.9) + i * 2.1)) * Math.abs(Math.sin(t * 1.7 + i))); l.colour = l.colour.map((c) => c * k); }); }   // (guttering in the gusts)
+    if (r.screen) r.screen.heatAll = Math.max(r.screen.heatAll || 0, W.kind === "heat" ? W.strength * 0.7 : 0);
+    const ar = CM.afterRain(game); if (ar > 0 && r.sunCol && r.sunCol[3] > 0) { r.sunCol = r.sunCol.slice(); r.sunCol[3] = Math.min(2, r.sunCol[3] * (1 + 1.5 * ar)); if (r.skyx && r.skyx.cloudCol) { const c = r.skyx.cloudCol, w = ar * r.sunCol[3] * 0.4; r.skyx.cloudCol = [c[0] + (1.0 - c[0]) * w, c[1] + (0.7 - c[1]) * w, c[2] + (0.45 - c[2]) * w]; } }   // (the sky after rain, the sun low: the glow doubled, the clouds lit)
+    const T = CM.twisterNow(game); if (T && T.inside && r.skyx && r.skyx.cloud) { const c = r.skyx.cloud.slice(); c[2] = Math.max(c[2], 0.9); r.skyx.cloud = c; r.skyx.cloudCol = [0.35, 0.33, 0.32]; } };
+}
+
+// ---- 76zzzzzzzzzzj-trees.js ----
+"use strict";
+// Trees that fall, burn and grow again - the window's side (v74.0, UPGRADE_PLAN_61.md part 4): the rules
+// (69zzm-trees.js) are stepped as the clock goes; the floor's mesh is told each tree's state (a lying log for a fallen
+// one, a black log and ash for a charred one, a small tree for a sapling - 26-surface.js) and rebuilds when a state
+// changes; a burning tree wears flames and smoke in the air and throws an orange, flickering light; a lamp blown out
+// in a storm stays dark till the lamplighter's round. And the twister is fuller: more of its parts, with the air's
+// budget raised while one crosses the land.
+{ const P = 64, cv = () => { const c = document.createElement("canvas"); c.width = c.height = P; return c; };
+  const PICS = { treefire: (p) => { const g = p.createRadialGradient(P / 2, P * 0.55, 2, P / 2, P * 0.55, P * 0.45); g.addColorStop(0, "rgba(255,245,200,1)"); g.addColorStop(0.35, "rgba(255,170,50,0.95)"); g.addColorStop(0.7, "rgba(230,80,20,0.6)"); g.addColorStop(1, "rgba(160,40,10,0)"); p.fillStyle = g; p.beginPath(); p.moveTo(P / 2, 2); p.quadraticCurveTo(P * 0.95, P * 0.6, P / 2, P - 2); p.quadraticCurveTo(P * 0.05, P * 0.6, P / 2, 2); p.fill(); } };
+  { CM.art.AIR = CM.art.AIR || []; if (!CM.art.AIR.includes("treefire")) CM.art.AIR.push("treefire"); const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { if (!PICS[id]) return ap0.call(this, id); const c = cv(); PICS[id](c.getContext("2d")); return c; }; }
+  // the flame's picture goes in with the surface's own pictures (a packed air picture doesn't draw large)
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); if (set.index["life:treefire"] === undefined) { const c = document.createElement("canvas"); c.width = c.height = 128; const p = c.getContext("2d"); p.scale(2, 2); PICS.treefire(p); set.index["life:treefire"] = set.layers.length; set.layers.push(c); } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name === "life:treefire" || s0(name); }
+  const burningNear = (game, fl, eye, reach = 14) => { const out = []; if (!game.ext) return out; const M = CM.treeStateMap(game, fl); for (const [k, s] of Object.entries(M)) { if (s !== "burning") continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x + 0.5 - eye[0]) + Math.abs(y + 0.5 - eye[2]) <= reach) out.push([x + 0.5, y + 0.5]); } return out; };
+  // the step, the mesh's states, and the fuller twister
+  let lastClock = null, budget0 = null;
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || !game.ext || game.mode === "title") { lastClock = null; return; } const fl = game.floor, t = CM.clockOf(game);
+    if (lastClock !== null && t > lastClock && t - lastClock < 600) { CM.treesStep(game, t - lastClock); CM.lampOutStep(game, t - lastClock); } lastClock = t;
+    if (fl.treesVersion !== (game.treesVersion || 0)) { fl.treeStates = CM.treeStateMap(game, fl); fl.treesVersion = game.treesVersion || 0; }   // (the mesh's key reads fl.treeStates)
+    const tw = CM.twisterNow && CM.twisterNow(game); if (CM.AIR_BUDGET) { if (tw && tw.inside) { if (budget0 === null) budget0 = Object.assign({}, CM.AIR_BUDGET); CM.AIR_BUDGET.high = budget0.high * 2.4; CM.AIR_BUDGET.medium = budget0.medium * 2; } else if (budget0) { Object.assign(CM.AIR_BUDGET, budget0); budget0 = null; } } };
+  // the fire in the air and its light
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, r = CM.renderer; if (!env.surface || !g || !g.floor || !r || !r.eye) return out; const n = burningNear(g, g.floor, r.eye).length; if (n) out.push({ id: "treefire", rate: 40 * n }, { id: "smoke", rate: 5 * n }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game, r = Math.random;
+      if (k.id === "treefire" || (k.id === "smoke" && g && g.floor && burningNear(g, g.floor, eye).length && r() < 0.7)) { const B = burningNear(g, g.floor, eye); if (!B.length) return k.id === "smoke" ? sp0.call(this, k, eye, R, env) : null; const [x, z] = B[Math.floor(r() * B.length)], a = r() * Math.PI * 2, d = k.id === "treefire" ? 0.42 + r() * 0.4 : r() * 0.45;   // (the flames at the crown's edge and over it, where the tree's own pictures don't hide them)
+        if (k.id === "treefire") return { kind: "treefire", age: 0, seed: r() * 10, sway: 3 + r() * 3, swayAmp: 0.35, windy: 0.3, vx: 0, vy: 0.9 + r() * 0.7, vz: 0, life: 0.6 + r() * 0.6, size: 0.3 + r() * 0.3, h: 0.55 + r() * 0.4, glow: 2, alpha: 0.95, x: x + Math.cos(a) * d, z: z + Math.sin(a) * d, y: 0.5 + r() * 1.7, top: 3.8, layer: "life:treefire" };
+        return { kind: "smoke", age: 0, seed: r() * 10, sway: 0.6 + r(), swayAmp: 0.15, windy: 0.5, vx: 0, vy: 0.45, vz: 0, life: 5 + r() * 3, size: 0.35, grow: 0.2, glow: 0, alpha: 0.7, x: x + Math.cos(a) * d * 0.5, z: z + Math.sin(a) * d * 0.5, y: 1.7, top: 6, layer: "air:smoke" }; }
+      return sp0.call(this, k, eye, R, env); }; }
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl || !(fl.number === 0 || fl.number === -1) || !renderer || !renderer.eye) return; const [px, py] = fl.pos;
+      for (const [x, z] of burningNear(game, fl, renderer.eye, 10)) out.push({ x, y: 1.2, z, reach: 3.4, colour: [1.0, 0.5, 0.15], flicker: true, d: Math.abs(x - 0.5 - px) + Math.abs(z - 0.5 - py) }); }; }
+  // a blown-out lamp stays dark
+  { const on0 = CM.lampOn; if (on0) CM.lampOn = (game, p) => (CM.lampBlownOut && CM.lampBlownOut(game, p) ? false : on0(game, p)); }
 }
 
 // ---- 77-splash.js ----

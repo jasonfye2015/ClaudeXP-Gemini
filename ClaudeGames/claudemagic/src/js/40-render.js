@@ -601,7 +601,7 @@ CM.Renderer = class {
   // the far lights; a mode changing, a fight, a mark, a window lighting no longer makes the whole floor again
   _floorKey(floor, theme) { const sig = (o) => { let h = 0; if (o) for (const k in o) { const v = String(o[k]); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; } return h; };
     let g = 0; for (const row of floor.grid) for (let i = 0; i < row.length; i++) g = (g * 3 + row[i] + i) | 0;
-    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
+    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
   _buffer(name, data) { const gl = this.gl; if (!this[name + "Buf"]) this[name + "Buf"] = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this[name + "Buf"]); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); this[name + "Count"] = data.length / STRIDE; }
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
@@ -611,7 +611,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined });   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);

@@ -247,8 +247,23 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    wind and the rain/snow/fog air by the event; a storm's lightning at any hour; the dial's six-hour predictor bar
    with the words, the sun and moon half again as large, thicker stars. Seen: a forced storm (overcast, wet, 147
    raindrops), mist, a gale, an aurora at a winter midnight.
-3. The stronger sky and air: dense fog, gale, tornado, heat, dramatic dawns and dusks.
-4. Trees: felled, burning, charred, the sapling and the regrowth; the tornado's wake; fire's spread; the lamps out.
+3. v73.0 - the stronger sky and air. **Done**: the "tornado" kind (by day, summer and autumn, an hour or two) with
+   CM.twisterNow - a place that comes in from the wind's side and crosses the floor at half a square a minute - drawn
+   as a funnel of dust-brown whirling parts (narrow at the ground, wide at the top; its picture lives with the
+   surface's own pictures, since a packed air picture doesn't draw large), the sky black over it; "debris" flying
+   downwind in a gale (wind over 0.55) and the lamps and torches guttering in the gusts; a dense mist closing the
+   sight to a square (CM.mistSightNow, read by 69v's seen filter); the heat's shimmer (r.screen.heatAll); and the
+   dramatic dawn or dusk after rain (CM.afterRain from W.prev: the sun's glow doubled, the clouds lit in its colour,
+   fading over ninety minutes). Felling in the twister's wake is part 4's.
+4. v74.0 - the trees. **Done**: 69zzm-trees.js keeps each tree's state in the run (fallen, burning, charred,
+   sapling) and steps it by the clock - a gale fells one now and then (not while a twister is the one felling), the
+   twister fells what it crosses, lightning in a storm sets one alight, fire spreads tree to tree (less in rain, not
+   through snow, out in a downpour) and never to buildings or the party; forty minutes burning, three days lying,
+   seven more as a sapling. The square stays solid throughout. The mesh lays a bark log (black over ash when
+   charred) and a small tree for a sapling, and rebuilds when a state changes; flames (a surface picture, not a
+   packed air one) and smoke rise at the crown's edge with an orange flickering light. Lamps blow out in a storm or
+   a gale and stay dark till the lamplighter's round. The twister has more than twice its parts, the air's budget
+   raised while it crosses. Meteors (part 5) will use CM.igniteTree for the fires they start.
 5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
    below, the birds' warning.
 6. The magical fogs, above and below, with their statuses and the HUD.
