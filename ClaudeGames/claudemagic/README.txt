@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Dappled light (v55.5, UPGRADE_PLAN_50.md phase 4)
+  (src/js/40-render.js, src/js/76zzzzzzzzzz2-dapple.js)
+  - In the Deep Wood by day the sun comes through the leaves in soft patches of light and shade on the forest floor,
+    drifting slowly as the breeze moves the crowns - most under and beside the trees. Full on a clear day, softer
+    under cloud, faint in the rain, none at night or at Low detail.
+
 River banks (v55.4, UPGRADE_PLAN_50.md phase 3)
   (src/js/40-render.js, src/js/27-props.js)
   - The river in the Deep Wood has banks: dark wet mud from the water's edge, fading into the grass or the forest
