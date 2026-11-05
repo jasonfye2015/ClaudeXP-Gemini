@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v57.3 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v57.4 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "57.3", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "57.4", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6313,7 +6313,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         const b = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
         const layer = d === front ? L(K.face) : L(K.side || "solid:house"), h = K.h;
         poly([[a[0], 0, a[1]], [b[0], 0, b[1]], [b[0], h, b[1]], [a[0], h, a[1]]], [[0, 1], [1, 1], [1, 0], [0, 0]], layer, shade * wash);
-        if (CM.buildingDetail && ["house", "door", "shop"].includes(kind) && opts.detail !== 0) CM.buildingDetail({ poly, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front });   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
+        if (["house", "door", "shop"].includes(kind) && opts.detail !== 0) { if (CM.ivyDetail) CM.ivyDetail({ poly, index, x, y, d, a, b, dx, dy, h, shade }); if (CM.buildingDetail) CM.buildingDetail({ poly, index, fl, x, y, d, a, b, dx, dy, h, shade, wash, kind, front: d === front }); }   // (v53.0: sills, lintels, reveals - 26b-buildings.js)
         if (opts.night && index["window:lit"] !== undefined && (kind === "house" || d !== front || kind === "door") && CM.hashSeed(`${fl.number}:lit:${x},${y}:${d}`) % 100 < (opts.night === true ? 0.7 : opts.night) * 100) {   // a window lit for the night (v24.3: opts.night the share lit - fewer as the town goes to bed)
           const win = d === front ? (kind === "door" ? [0.74, 0.36, 0.9, 0.56] : null) : [0.62, 0.3, 0.84, 0.56];
           if (win) { const ax0 = a[0] + (b[0] - a[0]) * win[0], az0 = a[1] + (b[1] - a[1]) * win[0], ax1 = a[0] + (b[0] - a[0]) * win[2], az1 = a[1] + (b[1] - a[1]) * win[2], y0 = h * (1 - win[3]), y1 = h * (1 - win[1]), q = 0.012;
@@ -6522,6 +6522,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       poly([P(u1, y0, d0), P(u1, y0, d1), P(u1, y1, d1), P(u1, y1, d0)], UV, layer, sh * 0.8 * k); };
     const [u0, v0, u1, v1] = W, yb = h * (1 - v1), yt = h * (1 - v0), fu = 0.02, fy = 0.02 * h;   // (the window's painted frame is about 2% wide)
     box(u0 - 0.045, u1 + 0.045, yb - 0.055, yb, 0, 0.085, stone, 1.05);                 // the sill
+    if (index["solid:stain"] !== undefined) poly([P(u0 + 0.01, yb - 0.32, 0.004), P(u1 - 0.01, yb - 0.32, 0.004), P(u1 - 0.01, yb - 0.055, 0.004), P(u0 + 0.01, yb - 0.055, 0.004)], UV, index["solid:stain"], sh * 0.9);   // (v57.4) the rain's stain run down from it
     box(u0 - 0.03, u1 + 0.03, yt, yt + 0.045, 0, 0.045, wood, 0.9);                       // the lintel
     box(u0 - fu, u0 + 0.004, yb, yt, 0, 0.035, wood, 0.85); box(u1 - 0.004, u1 + fu, yb, yt, 0, 0.035, wood, 0.85);   // the reveals
     // (v53.1) shutters: a pair beside it, folded back against the wall - in the house's own colour, one of three - or, on about one window in six, closed over it
@@ -6566,6 +6567,10 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (metal !== undefined && hsh % 2 === 0) { box(U0 - o.g * 0.5, U1 + o.g * 0.5, ve - side * 0.02, ve + side * 0.07, eaveY - 0.13, eaveY - 0.05, metal, 0.7);   // the gutter
         const ud = side > 0 ? U1 - 0.06 : U0 + 0.06; box(ud - 0.035, ud + 0.035, ve + side * 0.0, ve + side * 0.07, 0, eaveY - 0.08, metal, 0.65); } }   // the downpipe
     return 1; };
+  // (v57.4) ivy: on about one wall face in five, a climbing patch from the ground, its own width and height
+  CM.ivyDetail = (o) => { const L = o.index["solid:ivy"]; if (L === undefined) return 0; const { poly, a, b, dx, dy, h } = o, r = new CM.Random(CM.hashSeed(`ivy:${o.x},${o.y}:${o.d}`)); if (r.next() > 0.2) return 0;
+    const P = (u, y, dep) => [a[0] + (b[0] - a[0]) * u + dx * dep, y, a[1] + (b[1] - a[1]) * u + dy * dep], u0 = r.next() * 0.55, u1 = Math.min(1, u0 + 0.25 + r.next() * 0.3), top = h * (0.45 + r.next() * 0.45);
+    poly([P(u0, 0, 0.006), P(u1, 0, 0.006), P(u1, top, 0.006), P(u0, top, 0.006)], [[0, 1], [1, 1], [1, 0], [0, 0]], L, o.shade * 0.95); return 1; };
 }
 
 // ---- 26c-wear.js ----
@@ -6772,6 +6777,11 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       for (const [, , d] of sides) {
         block(x, y, d, 0, 1, 0, 0.16, H, H + 0.07, 0.95);                                             // the parapet, the length of the square
         for (const [u0, u1] of [[0.06, 0.36], [0.56, 0.86]]) { block(x, y, d, u0, u1, 0, 0.16, H + 0.07, H + 0.3); out.merlons++; } }
+      // (v57.4) ivy up the town's side of the wall, here and there
+      if (index["solid:ivy"] !== undefined) for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 11 + y * 5) % 4 !== 1) continue;
+        const P = (u, v, yy) => d === 0 ? [x + u, yy, y + v] : d === 2 ? [x + 1 - u, yy, y + 1 - v] : d === 1 ? [x + 1 - v, yy, y + u] : [x + v, yy, y + 1 - u];
+        const u0 = ((x * 3 + y) % 5) * 0.08, top = H * (0.5 + ((x + y * 3) % 4) * 0.12);
+        quad(P(u0, -0.006, 0), P(u0 + 0.6, -0.006, 0), P(u0 + 0.6, -0.006, top), P(u0, -0.006, top), index["solid:ivy"], 0.9); out.ivy = (out.ivy || 0) + 1; }
       // (v57.1) a buttress on the town's side, one square in three: a pier leaning against the wall, its top sloping down and away
       for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 7 + y * 13) % 3 !== 0) continue;
         const P = (u, v, yy) => d === 0 ? [x + u, yy, y + v] : d === 2 ? [x + 1 - u, yy, y + 1 - v] : d === 1 ? [x + 1 - v, yy, y + u] : [x + v, yy, y + 1 - u];
@@ -9455,7 +9465,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uDapple; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -9523,6 +9533,11 @@ void main() {
     sk += vec3(0.75, 0.8, 1.0) * uFlash * 0.8;
     fragColor = vec4(sk, 1.0); return; }
   if (t.a < 0.5) discard;
+  if (uMoss > 0.0 && vFx.z < 0.5 && vWorld.y < 0.5) {   // (v57.4) moss creeping up the feet of the town's walls, in patches
+    vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
+    if (abs(wn.y) < 0.3) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+      float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
+      t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
   float d = distance(vWorld, uEye);
   if (vFx.z > 3.5) {                                                          // water (glow 4): it ripples, shows the sky (or the torch) by the angle, and glints
@@ -9790,7 +9805,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uDapple", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -10284,7 +10299,7 @@ CM.Renderer = class {
     } else { gl.uniform3fv(this.loc.uSun, [0, 1, 0]); gl.uniform1f(this.loc.uSunK, 0); }
     { const G = this.grading, g0 = t.grade || [1, 1, 1];                    // (v22.4: the band's grade and, above, the hour's: 76zzzx-grade.js)
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
-    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
+    gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
@@ -44454,6 +44469,11 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       p.strokeStyle = "rgba(60,40,22,0.5)"; p.lineWidth = 2; p.beginPath(); p.moveTo(c, c); p.lineTo(c + 40, c - 30); p.stroke(); },
     "solid:paling": (p) => { p.fillStyle = "#9A8C78"; p.fillRect(0, 0, S, S); const r = new CM.Random(61); for (let i = 0; i < 70; i++) { p.fillStyle = r.next() < 0.5 ? "rgba(60,50,40,0.3)" : "rgba(220,210,190,0.25)"; p.fillRect(r.next() * S, 0, 1 + r.next() * 2, S); }   // (v56.2) a fence's weathered palings
       for (let i = 0; i < 25; i++) { p.fillStyle = "rgba(90,110,60,0.25)"; p.fillRect(r.next() * S, S * (0.7 + r.next() * 0.3), 3, 3); } },
+    "solid:stain": (p) => { const r = new CM.Random(83); for (let i = 0; i < 9; i++) { const x = (i + 0.2 + r.next() * 0.6) * S / 9, w = 3 + r.next() * 7, len = S * (0.25 + r.next() * 0.75); p.fillStyle = `rgba(${60 + r.next() * 25},${54 + r.next() * 20},${44 + r.next() * 15},0.8)`;   // (v57.4) streaks run down under a sill, each its own length, tapering
+        p.beginPath(); p.moveTo(x - w / 2, 0); p.lineTo(x + w / 2, 0); p.lineTo(x + w * 0.15 + (r.next() - 0.5) * 4, len); p.lineTo(x - w * 0.15, len); p.closePath(); p.fill(); } },
+    "solid:ivy": (p) => { const r = new CM.Random(97); for (let i = 0; i < 700; i++) { const t = Math.pow(r.next(), 1.6), y = S - t * S * 0.95, spread = 0.5 * (1 - t * 0.75), x = S / 2 + (r.next() - 0.5) * 2 * spread * S + Math.sin(y * 0.05) * 8, s = 3 + r.next() * 5 * (1 - t * 0.5);   // (v57.4) ivy: thick at the foot, thinning and narrowing to a ragged top
+        p.fillStyle = r.next() < 0.5 ? "#2E5A26" : r.next() < 0.5 ? "#3E7A30" : "#25461E"; p.beginPath(); p.ellipse(x, y, s, s * 0.7, r.next() * 3, 0, Math.PI * 2); p.fill(); }
+      p.strokeStyle = "rgba(70,50,30,0.9)"; p.lineWidth = 1.5; for (let i = 0; i < 5; i++) { p.beginPath(); let x = S * (0.3 + r.next() * 0.4); p.moveTo(x, S); for (let y = S; y > S * (0.2 + r.next() * 0.3); y -= 8) { x += (r.next() - 0.5) * 6; p.lineTo(x, y); } p.stroke(); } },
     "solid:timber": (p) => { p.fillStyle = "#5A4028"; p.fillRect(0, 0, S, S); const r = new CM.Random(77); for (let i = 0; i < 40; i++) { p.fillStyle = r.next() < 0.5 ? "rgba(30,20,10,0.35)" : "rgba(140,105,70,0.25)"; p.fillRect(0, r.next() * S, S, 1 + r.next() * 2); }
       p.fillStyle = "rgba(255,230,190,0.08)"; p.fillRect(0, 0, S, 6); } };
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [n, f] of Object.entries(PAINT)) { if (set.index[n] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; f(c.getContext("2d")); set.index[n] = set.layers.length; set.layers.push(c); } return set; }; }
@@ -44585,6 +44605,14 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
 // arm, its brace, and the board at right angles to the wall, swinging on the arm in the wind (still, with reduced motion
 // asked for). 80-main.js pushes the three pieces; 40-render.js turns each "hang" sprite into its place.
 { CM.HANG_SIGNS = true; }
+
+// ---- 76zzzzzzzzzz6-weather.js ----
+"use strict";
+// Weathering (v57.4, UPGRADE_PLAN_52.md): moss creeping up the feet of the town's walls in patches (40-render.js: uMoss),
+// stains run down from under the window sills, and ivy climbing some walls (26b-buildings.js, 26i-wall.js). Less moss
+// in a dry summer, more in a wet autumn.
+{ const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const fl = game && game.floor;
+    if (!fl || fl.number !== 0 || game.mode === "title") { r.moss = 0; return; } const s = CM.season ? CM.season(game) : "summer"; r.moss = { spring: 1, summer: 0.75, autumn: 1, winter: 0.85 }[s] || 0.9; }; }
 
 // ---- 77-splash.js ----
 "use strict";

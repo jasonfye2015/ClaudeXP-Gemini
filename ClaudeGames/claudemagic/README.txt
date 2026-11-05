@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Weathering (v57.4, UPGRADE_PLAN_52.md phase 4)
+  (src/js/76zzzzzzzzzz6-weather.js, src/js/40-render.js, src/js/26b-buildings.js, src/js/26-surface.js, src/js/26i-wall.js, src/js/76zzzzzzzzzz-buildings.js)
+  - The town has weathered: moss creeps up the feet of its walls in patches (more in a wet spring or autumn, less in
+    a dry summer), stains have run down the plaster from under the window sills, and ivy climbs some house walls and
+    stretches of the town wall, thick at the foot and thinning as it climbs.
+
 The shaft head (v57.3, UPGRADE_PLAN_52.md phase 3)
   (src/js/26j-shaft.js, src/js/26-surface.js)
   - The shaft in the Keep-yard is built up now: a low kerb of dressed stone round the hole, and over it a winch -

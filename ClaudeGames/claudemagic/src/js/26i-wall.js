@@ -22,6 +22,11 @@
       for (const [, , d] of sides) {
         block(x, y, d, 0, 1, 0, 0.16, H, H + 0.07, 0.95);                                             // the parapet, the length of the square
         for (const [u0, u1] of [[0.06, 0.36], [0.56, 0.86]]) { block(x, y, d, u0, u1, 0, 0.16, H + 0.07, H + 0.3); out.merlons++; } }
+      // (v57.4) ivy up the town's side of the wall, here and there
+      if (index["solid:ivy"] !== undefined) for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 11 + y * 5) % 4 !== 1) continue;
+        const P = (u, v, yy) => d === 0 ? [x + u, yy, y + v] : d === 2 ? [x + 1 - u, yy, y + 1 - v] : d === 1 ? [x + 1 - v, yy, y + u] : [x + v, yy, y + 1 - u];
+        const u0 = ((x * 3 + y) % 5) * 0.08, top = H * (0.5 + ((x + y * 3) % 4) * 0.12);
+        quad(P(u0, -0.006, 0), P(u0 + 0.6, -0.006, 0), P(u0 + 0.6, -0.006, top), P(u0, -0.006, top), index["solid:ivy"], 0.9); out.ivy = (out.ivy || 0) + 1; }
       // (v57.1) a buttress on the town's side, one square in three: a pier leaning against the wall, its top sloping down and away
       for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 7 + y * 13) % 3 !== 0) continue;
         const P = (u, v, yy) => d === 0 ? [x + u, yy, y + v] : d === 2 ? [x + 1 - u, yy, y + 1 - v] : d === 1 ? [x + 1 - v, yy, y + u] : [x + v, yy, y + 1 - u];
