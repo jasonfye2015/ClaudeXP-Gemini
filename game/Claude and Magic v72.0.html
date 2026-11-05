@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v71.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v72.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -190,6 +190,10 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .sky .date.spring { color: #A8E0A0; } #view .sky .date.summer { color: #F0D070; } #view .sky .date.autumn { color: #E8A060; } #view .sky .date.winter { color: #C8DCF4; }
 #view .sky .wx { display: flex; align-items: center; gap: 4px; } #view .sky .wx .ahead { margin-left: auto; display: flex; gap: 2px; opacity: 0.8; }
 #view .sky .fest { color: #F6D36A; font-weight: bold; font-size: 11px; }
+#view .sky .wxbar { margin-top: 2px; }   /* (v72.0) the predictor: the next six hours as a bar, and the words under it */
+#view .sky .wxbar .segs { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #1A1410; border: 1px solid rgba(232,200,112,0.35); }
+#view .sky .wxbar .segs i { display: block; height: 100%; }
+#view .sky .wxbar .wxtext { font-size: 10px; color: #E8DCB8; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
 #view .sky.underground { background: rgba(14,10,6,0.78); }
 .moonface { display: block; } .moonface .dark { fill: #262A3C; } .moonface .lit { fill: #EEF0F6; } .moonface .edge { fill: none; stroke: rgba(232,236,244,0.55); stroke-width: 0.8; }
 .moonface.full { filter: drop-shadow(0 0 4px rgba(238,240,246,0.8)); } .moonface.new .edge { stroke: #C8A860; stroke-width: 1.2; }
@@ -1534,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "71.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "72.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5911,6 +5915,50 @@ CM.moonPath = (phase, r) => {
     return { year, month: mi + 1, day, name: M.name, season: M.season, note: M.note, text: `Year ${year}, ${mi + 1} - ${M.name}, Day ${day}`, short: `Y${year} · ${mi + 1} ${M.name} ${day}` }; };
   CM.tickClock = (game, minutes = 1) => { if (!game || !(minutes > 0)) return; const before = CM.dayOf(game); game.clock = (game.clock || 0) + minutes;
     if (game.emit) { game.emit("clock", game.clock); if (CM.dayOf(game) !== before) game.emit("newday", CM.dayOf(game)); } };   // (the day's turning: what listens, listens; the Wood turns on its next step as it did)
+}
+
+// ---- 24f-events.js ----
+"use strict";
+// The weather, live (v72.0, UPGRADE_PLAN_61.md part 2): the weather is events now, not one word a day. An event - rain,
+// a storm, mist, wind, snow, cloud, heat, an aurora - lasts two to six game hours and comes in and goes out over
+// twenty minutes; between events the sky is clear for one to six hours (longer at night, which leans clear). When an
+// event ends the next is rolled on the spot (no script, no seed: the dice are thrown when the sky changes), by the
+// season, the hour and the day's leaning - the day's old word, which doubles its kind's odds. The state lives in the
+// run (game.ext("wx")) and is saved with it. CM.weather(game) answers the event's word (rain, mist, wind, snow or
+// clear) so everything that read the day's word follows the live sky; CM.weatherNow gives the whole of it.
+//   CM.weatherStep(game)      rolls what's due (idempotent; the frame loop and the clock's tick call it)
+//   CM.weatherNow(game)       -> { kind, strength 0..1 (ramped), word, from, until, wind: { speed, dir } }
+//   CM.nextWeather(game)      -> { kind, strength, from, until, inMinutes }
+//   CM.weatherDayWord(game)   the day's leaning, the old word
+{ const WX = CM.WX = { kinds: ["clear", "cloud", "rain", "storm", "mist", "wind", "snow", "heat", "aurora"], clearMin: 60, clearMax: 360, eventMin: 120, eventMax: 360, ramp: 20, nightClear: 0.8,
+    odds: { spring: { cloud: 3, rain: 4, storm: 1, mist: 2, wind: 2, snow: 0, heat: 0 }, summer: { cloud: 2, rain: 2, storm: 2, mist: 1, wind: 2, snow: 0, heat: 3 }, autumn: { cloud: 3, rain: 3, storm: 1, mist: 3, wind: 3, snow: 0, heat: 0 }, winter: { cloud: 3, rain: 1, storm: 0, mist: 2, wind: 3, snow: 4, heat: 0 } },
+    word: { clear: "clear", cloud: "clear", rain: "rain", storm: "rain", mist: "mist", wind: "wind", snow: "snow", heat: "clear", aurora: "clear" },
+    windSpeed: { clear: 0.15, cloud: 0.25, rain: 0.45, storm: 0.85, mist: 0.05, wind: 1.0, snow: 0.35, heat: 0.1, aurora: 0.1 } };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), between = (a, b) => a + rnd() * (b - a);
+  const hourAt = (clock) => ((CM.CLOCK.start + clock) % CM.CLOCK.day) / 60;
+  const nightAt = (game, clock) => { const [dawn, dusk] = CM.daylightOf(game), h = hourAt(clock); return h >= dusk || h < dawn; };
+  CM.weatherDayWord = (game) => (game && game.seed !== undefined ? CM.weatherOf(game.seed, CM.dayOf(game), CM.season(game)) : "clear");
+  const pickKind = (game, at) => { const season = CM.season(game), odds = Object.assign({}, WX.odds[season] || WX.odds.spring), lean = CM.weatherDayWord(game), h = hourAt(at), night = nightAt(game, at);
+    if (lean === "rain") { odds.rain *= 2; odds.storm = (odds.storm || 0.5) * 2; } else if (odds[lean] !== undefined) odds[lean] *= 2;
+    if (!(h >= 12 && h < 17)) odds.heat = 0; if (night) { odds.heat = 0; odds.storm *= 0.5; }
+    if (night && season === "winter" && rnd() < 0.3) return "aurora";
+    const total = Object.values(odds).reduce((a, b) => a + b, 0); let r = rnd() * total; for (const [k, w] of Object.entries(odds)) { r -= w; if (r < 0) return k; } return "cloud"; };
+  const roll = (game, at, after) => { const night = nightAt(game, at);
+    if (after !== "clear" || (night && rnd() < WX.nightClear)) { const len = Math.round(between(WX.clearMin, WX.clearMax) * (night ? 1.6 : 1)); return { kind: "clear", strength: 1, from: at, until: at + len }; }
+    const kind = pickKind(game, at), len = Math.round(between(WX.eventMin, WX.eventMax)), strength = kind === "aurora" ? between(0.5, 1) : Math.min(1, between(0.45, 1.05));
+    return { kind, strength, from: at, until: at + len }; };
+  CM.weatherStep = (game) => { if (!game || !game.ext) return null; const W = game.ext("wx"), t = CM.clockOf(game);
+    if (!W.cur) { W.cur = { kind: "clear", strength: 1, from: t, until: t + Math.round(between(30, 120)) }; W.next = roll(game, W.cur.until, "clear"); }
+    let guard = 0; while (t >= W.cur.until && guard++ < 200) { W.cur = W.next && W.next.from === W.cur.until ? W.next : roll(game, W.cur.until, W.cur.kind); W.next = roll(game, W.cur.until, W.cur.kind); }
+    return W; };
+  CM.weatherNow = (game) => { const W = CM.weatherStep(game); if (!W) return { kind: "clear", strength: 0, word: "clear", from: 0, until: 0, wind: { speed: 0.15, dir: [1, 0] } };
+    const c = W.cur, t = CM.clockOf(game), k = c.kind === "clear" ? 0 : Math.max(0, Math.min(1, (t - c.from) / WX.ramp, (c.until - t) / WX.ramp)) * c.strength;
+    const dir = CM.windDir ? CM.windDir(game) : [1, 0]; return { kind: c.kind, strength: k, word: WX.word[c.kind] || "clear", from: c.from, until: c.until, wind: { speed: 0.12 + (WX.windSpeed[c.kind] - 0.12) * (c.kind === "clear" ? 1 : Math.max(0.2, k)), dir } }; };
+  CM.nextWeather = (game) => { const W = CM.weatherStep(game); if (!W || !W.next) return null; const n = W.next; return Object.assign({ inMinutes: Math.max(0, n.from - CM.clockOf(game)) }, n); };
+  CM.windDir = (game) => { const d = CM.dayOf ? CM.dayOf(game) : 0, a = (CM.hashSeed(`${game && game.seed}:wind:${d}`) % 360) * Math.PI / 180; return [Math.cos(a), Math.sin(a)]; };   // (the wind's way, a day's)
+  // the day's word gives way to the live sky's, once the run has one
+  { const w0 = CM.weather; CM.weather = (game) => { const W = game && game.ext && game.tally && game.tally.ext && game.tally.ext.wx; return W && W.cur ? WX.word[W.cur.kind] || "clear" : w0(game); }; }
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.weatherStep(game); }; }
 }
 
 // ---- 25-saves.js ----
@@ -30808,7 +30856,7 @@ CM.UI = class {
 </div>
 <div id="play" class="screen">
   <div class="top">
-    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="10"/><circle class="disc" r="5.5"/></g><g class="moon"><circle class="dark" r="6"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="fest"></div></div></div><div class="fps"></div><div id="towerhud"><div class="cross"></div><div class="tname"></div><div class="tboss"><b></b><i></i></div><div class="tbars"><div class="thp"><i></i><span></span></div><div class="tmp"><i></i><span></span></div><div class="tarrows"></div></div><div class="thelp">W A S D move - mouse or arrows turn - click or Space shoots - right-click or R the great spell - E at the ladder - Esc the menu</div></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
+    <div id="view"><div class="canvas-slot"></div><canvas id="hud"></canvas><div class="vignette"></div><div class="compass"></div><div class="sky" title="The hour, the day and the moon. Click it, or K, for the calendar."><svg class="dial" viewBox="-40 -40 80 80" aria-hidden="true"><defs><clipPath id="cm-dialclip"><circle r="37"/></clipPath><linearGradient id="cm-dialsky" x1="0" y1="0" x2="0" y2="1"><stop class="skytop" offset="0"/><stop class="skylow" offset="0.55"/></linearGradient></defs><g clip-path="url(#cm-dialclip)"><rect x="-40" y="-40" width="80" height="80" fill="url(#cm-dialsky)"/><g class="stars"><circle cx="-22" cy="-18" r="0.9"/><circle cx="-8" cy="-30" r="0.7"/><circle cx="6" cy="-22" r="1"/><circle cx="18" cy="-28" r="0.7"/><circle cx="27" cy="-12" r="0.9"/><circle cx="-30" cy="-6" r="0.7"/><circle cx="12" cy="-9" r="0.6"/><circle cx="-14" cy="-10" r="0.6"/><circle cx="-33" cy="-20" r="0.6"/><circle cx="-2" cy="-36" r="0.8"/><circle cx="22" cy="-34" r="0.5"/><circle cx="33" cy="-24" r="0.7"/><circle cx="-26" cy="-30" r="0.5"/><circle cx="2" cy="-14" r="0.5"/><circle cx="30" cy="-2" r="0.6"/><circle cx="-36" cy="4" r="0.5"/><circle cx="16" cy="-18" r="0.5"/><circle cx="-6" cy="-24" r="0.5"/></g><path class="arc" d="M-25 2A25 25 0 0 1 25 2"/><g class="sun"><circle class="glow" r="14"/><circle class="disc" r="8"/></g><g class="moon"><circle class="dark" r="8.5"/><path class="lit"/></g><path class="ground" d="M-40 4C-26 -1 -14 6 0 3S24 -1 40 4L40 40L-40 40Z"/></g><circle class="rim" r="37"/></svg><div class="clocktext"><div class="row1"><b class="time"></b><span class="moonslot"></span></div><div class="hourword"></div><div class="date"></div><div class="wx"></div><div class="wxbar" title="The next six hours"><div class="segs"></div><div class="wxtext"></div></div><div class="fest"></div></div></div><div class="fps"></div><div id="towerhud"><div class="cross"></div><div class="tname"></div><div class="tboss"><b></b><i></i></div><div class="tbars"><div class="thp"><i></i><span></span></div><div class="tmp"><i></i><span></span></div><div class="tarrows"></div></div><div class="thelp">W A S D move - mouse or arrows turn - click or Space shoots - right-click or R the great spell - E at the ladder - Esc the menu</div></div><div class="hurt"></div><div class="blink"></div><div class="fall"></div><div class="tint"></div><div id="floats"></div><div class="titlecard"><b></b><small></small></div><div class="hint"></div></div>
     <div id="side"><canvas id="automap" width="290" height="290"></canvas><div class="where"></div><div class="purse"></div><div class="light"></div><div class="temper"></div><div class="follower"></div><div class="belt" id="belt" title="The belt: four things to hand (keys 5 to 8). In a fight the first used in a round costs no turn."></div></div>
   </div>
   <div id="party"></div>
@@ -32687,7 +32735,7 @@ Object.assign(CM.UI.prototype, {
     el.querySelector(".stars").style.opacity = D.sky === "night" ? 1 : D.sky === "day" ? 0 : 0.35;
     const place = (sel, a) => { const node = el.querySelector(sel), r = (a * Math.PI) / 180; node.setAttribute("transform", `translate(${(Math.sin(r) * 25).toFixed(2)} ${(-Math.cos(r) * 25).toFixed(2)})`); node.style.display = Math.abs(a) <= 100 ? "" : "none"; };
     place(".sun", D.sun); place(".moon", D.moon);
-    el.querySelector(".moon .lit").setAttribute("d", CM.moonPath(D.phase, 6));
+    el.querySelector(".moon .lit").setAttribute("d", CM.moonPath(D.phase, 8.5));   // (v72.0: the moon drawn larger, as the sun is)
     el.querySelector(".ground").classList.toggle("stone", below);
     el.querySelector(".time").textContent = CM.timeFigures(g);
     el.querySelector(".hourword").textContent = `${CM.hourWord(D.hour)}${below ? ", above" : ""}`;
@@ -32739,6 +32787,26 @@ Object.assign(CM.UI.prototype, {
     this.openDialog("#dlg-calendar");
   },
 });
+
+// ---- 73c-wxhud.js ----
+"use strict";
+// The dial's predictor (v72.0, UPGRADE_PLAN_61.md part 2): under the clock's text a bar of the next six game hours -
+// the event in force to its end, then the one coming, each in its colour, with what it is and when it changes
+// ("rain, 1 h 10 left - then clear" / "clear - mist in 40 min") - and the exact date and time with it. The sun and
+// the moon on the dial are drawn larger (70-ui.js's markup), and the stars thicker on a clear night. 73b-clock.js
+// draws the dial; this adds to it on each refresh.
+{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0" };
+  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora" };
+  const span = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${Math.round(m % 60)}` : ""}` : `${Math.max(1, Math.round(m))} min`);
+  const ds0 = CM.UI.prototype.drawSky; CM.UI.prototype.drawSky = function (...a) { const out = ds0.apply(this, a); try { const g = this.game, el = this.$("#view .sky"), bar = el && el.querySelector(".wxbar"); if (!bar || !g.ext || !CM.weatherNow) return out;
+      const W = CM.weatherNow(g), N = CM.nextWeather(g), t = CM.clockOf(g), H = 6 * 60, segs = bar.querySelector(".segs"); let html = "", at = t, left = H;
+      const seg = (kind, mins, k) => { const w = Math.max(0, Math.min(left, mins)); if (w <= 0) return; html += `<i style="width:${(w / H * 100).toFixed(1)}%;background:${COL[kind] || "#888"};opacity:${(0.45 + 0.55 * (kind === "clear" ? 1 : k || 1)).toFixed(2)}" title="${NAME[kind]}"></i>`; left -= w; at += w; };
+      seg(W.kind, W.until - t, W.strength || 0.7); if (N) { seg(N.kind, N.until - N.from, N.strength); if (left > 0) seg(N.kind === "clear" ? "cloud" : "clear", left, 0.5); }
+      segs.innerHTML = html;
+      const now = W.kind === "clear" ? "clear" : `${NAME[W.kind]}${W.strength < 0.35 ? " (light)" : W.strength > 0.85 ? " (heavy)" : ""}`, then = N ? ` - ${N.kind === "clear" ? "clearing" : NAME[N.kind]} in ${span(W.until - t)}` : "";
+      bar.querySelector(".wxtext").textContent = `${now}${then}`; const cal = CM.dateOf ? CM.dateOf(g) : null; bar.title = `${cal ? cal.text + ", " : ""}${CM.timeFigures(g)} - the next six hours`;
+      const stars = el.querySelector(".dial .stars"); if (stars && this.game.floor) { const S = CM.sky(g); stars.style.opacity = S.night ? (W.kind === "clear" || W.kind === "aurora" ? 1 : 0.25) : S.light < 0.6 ? 0.35 : 0; } } catch (e) { /* the bar is a nicety */ } return out; };
+}
 
 // ---- 74-fight.js ----
 "use strict";
@@ -45390,6 +45458,28 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
     if (!running(game)) { acc = 0; return; } acc += Math.min(dt || 0, 1); const per = (CM.CLOCK_RUN && CM.CLOCK_RUN.secondsPerMinute) || 2.5; let n = 0; while (acc >= per && n < 60) { acc -= per; n++; }
     if (n) { CM.tickClock(game, n); if (CM.ui && now - lastRefresh > 2000 && !CM.ui.dialogOpen()) { lastRefresh = now; try { CM.ui.refresh(); } catch (e) { /* the HUD will catch up */ } } } };
   if (CM.settingLater) CM.settingLater((ui) => CM.addSetting("set-clock", "Clock - runs on its own (a day an hour, standing or walking), or only by the party's steps", [["runs", "Runs"], ["steps", "By steps only"]], "clock", "runs", ui));
+}
+
+// ---- 76zzzzzzzzzzh-wxlive.js ----
+"use strict";
+// The weather, live - the window's side (v72.0, UPGRADE_PLAN_61.md part 2): what the sky shows follows the event in
+// force and its strength, not the day's word - the rain's fall and the ground's wet by how hard it rains, the cloud's
+// cover by the kind, the mist's depth, the wind's push on everything that sways, the storm's lightning at any hour,
+// the aurora when one is rolled, the heat's shimmer on a summer afternoon. The dial's predictor (73c-wxhud.js) says
+// what's coming. Below ground the surface's event still runs (the grates' light, the drips to come).
+{ const COVER = { clear: 0.12, cloud: 0.75, rain: 0.86, storm: 0.96, mist: 0.6, wind: 0.45, snow: 0.82, heat: 0.05, aurora: 0.08 };
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || game.mode === "title" || !game.ext) { r.wxNow = null; return; }
+    const W = CM.weatherNow(game), k = W.strength; r.wxNow = W;
+    if (r.sky) { const rain = W.kind === "rain" || W.kind === "storm"; r.wet = rain ? Math.max(0.25, k) * (W.kind === "storm" ? 1 : 0.9) : Math.max(0, (r.wet || 0) - dt * 0.02);   // (the wet lingers a little, then the puddles' own file keeps what lingers)
+      r.mist = W.kind === "mist" ? 0.35 + 0.65 * k : 0; r.heat = W.kind === "heat" ? k : 0;
+      if (r.skyx && r.skyx.cloud) { const c = r.skyx.cloud.slice(); const want = COVER[W.kind] === undefined ? 0.3 : COVER[W.kind]; c[2] = W.kind === "clear" ? Math.min(c[2], 0.2) : want * (0.4 + 0.6 * k) + (COVER.clear) * (1 - (0.4 + 0.6 * k)); r.skyx.cloud = c;
+        if (W.kind === "aurora") r.skyx.aurora = Math.max(r.skyx.aurora || 0, k * (r.sky.night ? 1 : 0)); }
+      if (r.wind) r.wind.k = W.wind.speed; } };
+  // the storm's lightning at any hour of a storm; the rain's and the snow's fall by strength
+  { const s0 = CM.stormNow; CM.stormNow = (game) => { const W = game && game.ext && game.tally && game.tally.ext && game.tally.ext.wx && game.tally.ext.wx.cur; if (W && W.kind === "storm") return true; if (W) return false; return s0 ? s0(game) : false; }; }
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g), k = Math.max(0.15, W.strength);
+      for (const o of out) { if (o.id === "rain") o.rate *= (W.kind === "storm" ? 1.4 : 1) * k; else if (o.id === "snow" && W.kind === "snow") o.rate *= k; else if (o.id === "fog") o.rate *= W.kind === "mist" ? 0.5 + k : 1; }
+      return out; }; }
 }
 
 // ---- 77-splash.js ----

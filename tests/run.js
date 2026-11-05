@@ -6244,6 +6244,27 @@ test("the calendar and the clock that runs (v71.0): twelve named months of thirt
   assert.ok(!fs.readFileSync(path.join(__dirname, "..", "src", "js", "64-meta.js"), "utf-8").includes('films.unshift'), "no film is kept at a run's end");
 });
 
+test("the weather, live (v72.0): events of two to six hours between clear spells of one to six, rolled when the sky changes, clear and events by turns; the night leans clear; a kind by the season (snow only in winter, heat on summer afternoons) and the day's leaning; the strength ramps in and out; the old word follows the live sky; the next event and its wait; the wind by the kind", () => {
+  const CM = load(); let seq = 0.5; CM.wxRandom = () => seq;   // (the dice held: a middling roll every time)
+  const mk = (season, clock = 0) => { const g = new CM.Game(); g.newGame("wx-1", fixedParty(CM)); g.season = season; g.clock = clock; return g; };
+  const g = mk("spring"); const W = CM.weatherStep(g); assert.ok(W && W.cur && W.next, "a current and a next"); assert.strictEqual(W.cur.kind, "clear", "a run opens on a clear spell"); assert.ok(W.cur.until - W.cur.from <= 120);
+  const first = W.next; assert.notStrictEqual(first.kind, "clear", "then an event"); assert.ok(first.until - first.from >= CM.WX.eventMin && first.until - first.from <= CM.WX.eventMax, `an event of two to six hours (${first.until - first.from})`); assert.strictEqual(first.from, W.cur.until, "joined end to start");
+  g.clock = first.from + 1; const W2 = CM.weatherStep(g); assert.strictEqual(W2.cur, first, "the next became the current when its time came"); assert.strictEqual(W2.next.kind, "clear", "and a clear spell follows an event");
+  const gap = W2.next; assert.ok(gap.until - gap.from >= CM.WX.clearMin && gap.until - gap.from <= CM.WX.clearMax * 1.6, `a clear spell of one to six hours (${gap.until - gap.from})`);
+  g.clock = gap.until + 5000; const W3 = CM.weatherStep(g); assert.ok(W3.cur.from <= g.clock && g.clock < W3.cur.until, "a long jump lands in the event in force then");
+  const now = CM.weatherNow(mk("spring", first.from + 1)); void now;
+  { const h = mk("spring"); h.clock = first.from; const W4 = CM.weatherStep(h); h.clock = W4.cur.from === first.from ? first.from : W4.cur.from; const k0 = CM.weatherNow(h).strength; h.clock += 10; const k1 = CM.weatherNow(h).strength; h.clock = CM.weatherStep(h).cur.from + 60; const k2 = CM.weatherNow(h).strength;
+    if (CM.weatherStep(h).cur.kind !== "clear") { assert.ok(k0 <= k1 && k1 < k2, `ramping in (${k0.toFixed(2)} ${k1.toFixed(2)} ${k2.toFixed(2)})`); assert.ok(Math.abs(k2 - CM.weatherStep(h).cur.strength) < 1e-9, "full strength twenty minutes in"); } }
+  const kinds = (season, n = 60, hour = 14) => { const out = {}; for (let i = 0; i < n; i++) { seq = (i * 0.618) % 1; const x = mk(season, hour * 60 - CM.CLOCK.start + 1440 * 2); const S = CM.weatherStep(x); let k = S.next.kind; if (k === "clear") k = CM.weatherStep(Object.assign(x, { clock: S.next.until + 1 })).cur.kind; out[k] = (out[k] || 0) + 1; } return out; };
+  const winter = kinds("winter"), summer = kinds("summer"); assert.ok(winter.snow > 0 && !summer.snow, `snow in winter, not summer (${JSON.stringify(winter)} ${JSON.stringify(summer)})`); assert.ok(summer.heat > 0 && !winter.heat, "heat on summer afternoons, not winter's");
+  { let clears = 0, n = 40; for (let i = 0; i < n; i++) { seq = (i * 0.618) % 1; const x = mk("summer", 23 * 60 - CM.CLOCK.start + 1440 * 2); const S = CM.weatherStep(x); x.clock = S.cur.until + 1; const T = CM.weatherStep(x); if (T.cur.kind === "clear") clears++; } assert.ok(clears >= n * 0.55, `the night leans clear (${clears} of ${n})`); }
+  seq = 0.5; const r = mk("autumn"); CM.weatherStep(r); r.clock = CM.weatherStep(r).next.from + 30; const live = CM.weatherNow(r); assert.strictEqual(CM.weather(r), live.word, "the old word is the live sky's"); assert.ok(["clear", "rain", "mist", "wind", "snow"].includes(CM.weather(r)));
+  const nx = CM.nextWeather(r); assert.ok(nx && nx.inMinutes >= 0 && nx.from === CM.weatherStep(r).cur.until, "the next, and the wait for it");
+  assert.ok(CM.WX.windSpeed.wind > CM.WX.windSpeed.rain && CM.WX.windSpeed.rain > CM.WX.windSpeed.mist, "the wind by the kind"); assert.ok(live.wind && live.wind.dir.length === 2 && live.wind.speed > 0);
+  const fresh = new CM.Game(); fresh.newGame("wx-2", fixedParty(CM)); assert.strictEqual(CM.weather(fresh), CM.weatherDayWord(fresh), "before the sky has rolled, the day's word stands"); delete CM.wxRandom;
+  for (const f of ["76zzzzzzzzzzh-wxlive.js", "73c-wxhud.js"]) assert.ok(fs.existsSync(path.join(__dirname, "..", "src", "js", f)), f);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

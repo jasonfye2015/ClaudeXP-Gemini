@@ -177,6 +177,10 @@ canvas.icon { width: 22px; height: 22px; vertical-align: middle; margin-right: 6
 #view .sky .date.spring { color: #A8E0A0; } #view .sky .date.summer { color: #F0D070; } #view .sky .date.autumn { color: #E8A060; } #view .sky .date.winter { color: #C8DCF4; }
 #view .sky .wx { display: flex; align-items: center; gap: 4px; } #view .sky .wx .ahead { margin-left: auto; display: flex; gap: 2px; opacity: 0.8; }
 #view .sky .fest { color: #F6D36A; font-weight: bold; font-size: 11px; }
+#view .sky .wxbar { margin-top: 2px; }   /* (v72.0) the predictor: the next six hours as a bar, and the words under it */
+#view .sky .wxbar .segs { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #1A1410; border: 1px solid rgba(232,200,112,0.35); }
+#view .sky .wxbar .segs i { display: block; height: 100%; }
+#view .sky .wxbar .wxtext { font-size: 10px; color: #E8DCB8; opacity: 0.9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
 #view .sky.underground { background: rgba(14,10,6,0.78); }
 .moonface { display: block; } .moonface .dark { fill: #262A3C; } .moonface .lit { fill: #EEF0F6; } .moonface .edge { fill: none; stroke: rgba(232,236,244,0.55); stroke-width: 0.8; }
 .moonface.full { filter: drop-shadow(0 0 4px rgba(238,240,246,0.8)); } .moonface.new .edge { stroke: #C8A860; stroke-width: 1.2; }

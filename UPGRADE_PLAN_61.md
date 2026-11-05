@@ -241,8 +241,12 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
 
 ## 6a. The order, revised
 1. v71.0 - the clock that runs, the calendar, the films out, the Lich King named. **Done.**
-2. The event engine, live: `CM.weatherNow`, the next event rolled on the fly, the predictor bar and the big sun
-   and moon and stars on the dial; the existing rain/snow/wind/mist/cloud/lightning driven by the event's strength.
+2. v72.0 - the event engine, live. **Done**: CM.WX / CM.weatherStep (state in game.ext("wx"), cur and next, rolled
+   on the fly with no seed), CM.weatherNow (strength ramped over twenty minutes, the word, the wind), CM.nextWeather,
+   CM.weather answering the live word once the run has rolled; the window drives wet, mist, cloud cover, aurora,
+   wind and the rain/snow/fog air by the event; a storm's lightning at any hour; the dial's six-hour predictor bar
+   with the words, the sun and moon half again as large, thicker stars. Seen: a forced storm (overcast, wet, 147
+   raindrops), mist, a gale, an aurora at a winter midnight.
 3. The stronger sky and air: dense fog, gale, tornado, heat, dramatic dawns and dusks.
 4. Trees: felled, burning, charred, the sapling and the regrowth; the tornado's wake; fire's spread; the lamps out.
 5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
