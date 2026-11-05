@@ -13,7 +13,7 @@ import sys
 from urllib.parse import quote
 from pathlib import Path
 
-VERSION = "57.2"
+VERSION = "57.3"
 HERE = Path(__file__).resolve().parent
 SRC = HERE / "src"
 GAME = HERE / "game"

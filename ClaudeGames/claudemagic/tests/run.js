@@ -5964,6 +5964,16 @@ test("the town wall's battlements (v57.0): along the ring wall's outer edge a pa
   assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0, buttresses: 0, slits: 0, gate: 0 }), "none in the Wood"); assert.strictEqual(m.walled.gate, 1, "the West Gate arched (v57.2)");
 });
 
+test("the shaft head (v57.3): the Keep-yard's shaft has its kerb, winch frame, drum and rope in the town's mesh - within its square, nothing in its middle at the eye's height - and only in the town", () => {
+  const CM = load(), quads = [], index = { "solid:sill": 1, "solid:timber": 2, "model:sack": 3 }, town = CM.makeTown("shaft-1");
+  assert.strictEqual(CM.shaftHead({ quad: (a, b, c, d, layer) => quads.push([a, b, c, d, layer]), fl: town, index }), 1);
+  const [sx, sy] = CM.TOWN_AT.shaft, cx = sx + 0.5, cz = sy + 0.5;
+  for (const q of quads) for (const v of q.slice(0, 4)) { assert.ok(Math.abs(v[0] - cx) <= 0.58 && Math.abs(v[2] - cz) <= 0.5, "within its square");
+    if (v[1] > 0.3 && v[1] < 0.9) assert.ok(Math.hypot(v[0] - cx, v[2] - cz) > 0.06, "nothing in the middle at the eye's height"); }
+  assert.ok([1, 2, 3].every((L) => quads.some((q) => q[4] === L)), "stone, timber and rope");
+  assert.strictEqual(CM.shaftHead({ quad: () => {}, fl: CM.makeWood("shaft-1"), index }), 0, "only in the town");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
