@@ -64,7 +64,7 @@ void main() {
   vec4 t = surf ? tf : shared ? ts : tt;
   if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
     vec2 cw = vWorld.xz, cell = floor(cw), f = cw - cell; float me = floor(texture(uMap, (cell + 0.5) / uMapN).b * 255.0 + 0.5);
-    if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld)) { float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
+    if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld) && texture(uMap, (cell + 0.5) / uMapN).g < 0.5) {   /* (v55.4: never on the water itself) */ float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
       // each of the four sides and four corners: how near, and what lies there; the strongest other ground wins the blend
       float bestW = 0.0, bestL = -1.0;
       for (int k = 0; k < 8; k++) { vec2 off = k == 0 ? vec2(-1.0, 0.0) : k == 1 ? vec2(1.0, 0.0) : k == 2 ? vec2(0.0, -1.0) : k == 3 ? vec2(0.0, 1.0) : k == 4 ? vec2(-1.0, -1.0) : k == 5 ? vec2(1.0, -1.0) : k == 6 ? vec2(-1.0, 1.0) : vec2(1.0, 1.0);
@@ -83,6 +83,12 @@ void main() {
         bool ns = U == 2.0 || D == 2.0, ew = L == 2.0 || R == 2.0; float across = ns && !ew ? f.x : ew && !ns ? f.y : -1.0, side = ns && !ew ? (f.x < 0.5 ? L : R) : (f.y < 0.5 ? U : D);
         if (across >= 0.0 && side > 0.5 && side != 2.0) { float lay = uGLayer[int(side) - 1], ac = abs(across - 0.5), wob = (vnoise(cw * 3.3) - 0.5) * 0.08;
           if (lay >= 0.0) { float verge = smoothstep(0.26, 0.4, ac + wob), ridge = (1.0 - smoothstep(0.02, 0.07, ac + wob * 0.5)) * 0.55; t = mix(t, texture(uTex, vec3(fract(cw), lay)), max(verge, ridge) * uGBlend); } } }
+      {   // (v55.4) a river bank: dark wet mud from the water's edge, fading into the grass in a ragged line
+        float o = 0.55 / uMapN; vec2 wq = cw / uMapN;
+        float wn = max(max(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), max(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g));
+        wn = max(wn, 0.8 * max(max(texture(uMap, wq + vec2(o, o)).g, texture(uMap, wq - vec2(o, o)).g), max(texture(uMap, wq + vec2(o, -o)).g, texture(uMap, wq + vec2(-o, o)).g)));
+        float bank = smoothstep(0.2, 0.48, wn + (vnoise(cw * 4.5) - 0.5) * 0.2) * uGBlend;
+        if (bank > 0.0) { vec3 mud = mix(vec3(0.2, 0.16, 0.11), vec3(0.33, 0.27, 0.19), vnoise(cw * 11.0)); t.rgb = mix(t.rgb, mud, bank * 0.88); } }
       float wear = texture(uMap, cw / uMapN).a, dl = uGLayer[1];   // (v54.1) worn ground: the grass trodden to earth where the feet go, in patches
       if (wear > 0.02 && me == 1.0 && dl >= 0.0) { float wn = vnoise(cw * 3.7) * 0.6 + vnoise(cw * 11.0) * 0.4; float k = smoothstep(0.5, 0.85, wear * 1.1 - wn * 0.6 + 0.1); t = mix(t, texture(uTex, vec3(fract(cw), dl)), k * 0.85 * uGBlend); } } }
   if (vFx.z > 2.5 && vFx.z < 3.5) { vec3 dir = normalize(vWorld - uEye), sk = mix(uHorizon, uZenith, t.r) + shafts(dir, 40.0) * 0.45;

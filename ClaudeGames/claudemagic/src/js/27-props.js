@@ -100,7 +100,7 @@ CM.SCATTER = [
   { prop: "pebbles", where: { surface: true, grounds: ["dirt"] }, per: 0.1, most: 1 },
   { prop: "rock", where: { surface: true, grounds: ["grass"] }, per: 0.04, most: 1 },
   { prop: "boulder", where: { floors: [-1], grounds: ["grass", "dirt"], near: "water" }, per: 0.12, most: 1 },
-  { prop: "reeds", where: { floors: [-1], near: "water", seasons: ["spring", "summer", "autumn"] }, per: 0.5, most: 2 },
+  { prop: "reeds", where: { floors: [-1], near: "water", seasons: ["spring", "summer", "autumn"] }, per: 0.75, most: 3 },   // (v55.4: a thicker fringe along the banks)
   { prop: "steps", where: { floors: [-1], water: true }, per: 1, most: 1 },
   { prop: "barrel", where: { floors: [0], grounds: ["dirt", "cobbles"], near: "wall" }, per: 0.07, most: 1 },
   { prop: "crate", where: { floors: [0], grounds: ["dirt"], near: "wall" }, per: 0.05, most: 1 },
