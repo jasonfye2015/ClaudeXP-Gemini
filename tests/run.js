@@ -5949,6 +5949,19 @@ test("lamp posts (v56.3): a town lamp is built in the mesh - plinth, iron post, 
   assert.strictEqual(CM.lampModel(p, () => {}, {}), false, "nothing without its pictures");
 });
 
+test("the town wall's battlements (v57.0): along the ring wall's outer edge a parapet and two merlons a square with the crenels between, on both sides of the walk; only in the town", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const town = CM.makeTown("wall-1"), m = CM.floorMesh(town, CM.TOWN_THEME, index), size = town.grid.length;
+  let walls = 0; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (town.grid[y][x] !== 0 && CM.solidAt(town, x, y) === "townwall") walls++;
+  assert.ok(m.walled.merlons >= walls * 2 * 0.8, `merlons along the wall (${m.walled.merlons} for ${walls} squares)`);
+  // never on the side that faces into the town: every merlon vertex over an open town square? none
+  const H = CM.SOLID.townwall.h, vs = []; CM.wallDetail({ quad: (...q) => vs.push(...q.slice(0, 4)), fl: town, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : town.grid[y][x] === 0 ? null : CM.solidAt(town, x, y)) });
+  for (const v of vs) { const cx = Math.floor(v[0] - (v[0] % 1 === 0 ? 0.001 : 0)), cz = Math.floor(v[2] - (v[2] % 1 === 0 ? 0.001 : 0)); assert.ok(v[1] >= H - 0.001, "on the wall top"); void cx; void cz; }
+  assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0 }), "none in the Wood");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

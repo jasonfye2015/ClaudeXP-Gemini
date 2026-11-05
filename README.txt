@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Battlements (v57.0, UPGRADE_PLAN_52.md phase 0)
+  (src/js/26i-wall.js, src/js/26-surface.js)
+  - The town wall is battlemented now: along both edges of its walk a low parapet, and on it two merlons a square
+    with the crenels between to see through, capped in the walk's stone and turning the corners where the wall
+    does - seen from the streets as well as from outside.
+
 Hanging signs (v56.4, UPGRADE_PLAN_51.md phase 4)
   (src/js/76zzzzzzzzzz5-signs.js, src/js/40-render.js, src/js/80-main.js)
   - Each building's sign hangs out from the wall now instead of lying flat on it: two short iron arms, a rod between
