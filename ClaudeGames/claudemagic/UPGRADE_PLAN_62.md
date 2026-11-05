@@ -75,6 +75,16 @@ their own that is smaller and simpler.
   kind - common, pine, birch by the old variant, a willow by water - the autumn shapes as the leaves turn, bare
   broadleaves in winter, the snow shapes when the snow lies, a log for a fallen tree, a dark dead shape for a
   charred one, a small sapling).
+- v81.0 - phases 3 and 4: 69zzs-plants.js places the plants above ground by the ground and what is near (grass
+  tufts on the grass, fewer under the canopy; flowers on the open grass in spring and summer, fewer in autumn,
+  none in winter; plants under the trees, on the litter and the moss and beside the water; bushes beside the trees
+  and along the walls, berries in summer and autumn, snow bushes under snow; stumps, logs and rocks on the Wood's
+  floor, sparse; corn and wheat on the tilled rows; lilypads on the still water - the river keeps them though it
+  is a feature) and below ground by the band (moss in the Catacombs, weeds in the Flooded and the Salt Vaults with
+  lilypads on their water, fungus thick in the Fungal Deep, roots at the Root of the World; nothing in the other
+  bands), tinted a draw a model (CM.plantTintOf -> uTint), toward a wall when there is one, never on a solid
+  square, a thing, a feature, in a cave, a house or the Joker's hall. The small plants' reach is eleven squares;
+  the density scales with Detail. Not done: the daylit squares under the grates (the grates are the window's).
 
 ## 4. Budget
 
