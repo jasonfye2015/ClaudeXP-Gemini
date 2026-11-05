@@ -61,5 +61,20 @@
       for (let k = 0; k < 4; k++) { const w = model.weights[i * 4 + k] / 255; if (!w) continue; const m = model.joints[i * 4 + k] * 16; for (let r = 0; r < 3; r++) out[r] += w * (M[m + r] * v[0] + M[m + 4 + r] * v[1] + M[m + 8 + r] * v[2] + M[m + 12 + r]); }
       return out; },
     figureOf(key) { const F = CM.figuresPack && CM.figuresPack.figures; if (!F || !(key in F)) return null; return F[key]; },
+    // (v66.0) the figure behind a sprite's layer: "monster:Goblin:idle2" -> "monster:Goblin", "npc:res_smith" -> itself; else null
+    keyOf(layer) { if (typeof layer !== "string") return null; const p = layer.split(":"); if (p.length < 2 || !["monster", "npc", "pet"].includes(p[0])) return null; return `${p[0]}:${p[1]}`; },
+    // the model's size at rest, posed (the stored box is the raw mesh's: Quaternius' is tiny before its armature's scale): { lo, hi, height, foot }
+    measure(model) { if (model.measured) return model.measured; const M = CM.Figures.pose(model, null, 0), lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9], v = [0, 0, 0], step = model.verts > 3000 ? 2 : 1;
+      for (let i = 0; i < model.verts; i += step) { CM.Figures.skinVertex(model, M, i, v); for (let k = 0; k < 3; k++) { if (v[k] < lo[k]) lo[k] = v[k]; if (v[k] > hi[k]) hi[k] = v[k]; } }
+      return (model.measured = { lo, hi, height: Math.max(1e-3, hi[1] - lo[1]), width: Math.max(1e-3, hi[0] - lo[0], hi[2] - lo[2]), foot: lo[1], centre: [(lo[0] + hi[0]) / 2, (lo[2] + hi[2]) / 2] }); },
+    // the uniform scale that stands a model within its billboard - its height (in squares) and its width, whichever binds: a rat is long, not tall - times the figure's own scale
+    fit(figure, model, spriteH, spriteW) { const m = CM.Figures.measure(model), k = (figure && figure.scale) || 1; return Math.min((spriteH || 0.8) * k / m.height, (spriteW || spriteH || 0.8) * k / m.width); },
+    // a palette for an untextured model: its colours as cells of a square grid, and the uv of each vertex at its cell's centre
+    palette(model) { const cols = [], at = new Map(), uv = new Float32Array(model.verts * 2); for (let i = 0; i < model.verts; i++) { const k = (model.col[i * 3] << 16) | (model.col[i * 3 + 1] << 8) | model.col[i * 3 + 2]; let c = at.get(k);
+        if (c === undefined) { c = cols.length; cols.push([model.col[i * 3], model.col[i * 3 + 1], model.col[i * 3 + 2]]); at.set(k, c); } uv[i * 2] = c; }
+      const n = Math.max(1, Math.ceil(Math.sqrt(cols.length))); for (let i = 0; i < model.verts; i++) { const c = uv[i * 2]; uv[i * 2] = ((c % n) + 0.5) / n; uv[i * 2 + 1] = (Math.floor(c / n) + 0.5) / n; }
+      return { colours: cols, n, uv }; },
+    // the model matrix: scaled, turned about y by yaw, then stood at (x, y, z); column-major
+    modelMatrix(out, x, y, z, yaw, s) { const c = Math.cos(yaw) * s, sn = Math.sin(yaw) * s; out[0] = c; out[1] = 0; out[2] = -sn; out[3] = 0; out[4] = 0; out[5] = s; out[6] = 0; out[7] = 0; out[8] = sn; out[9] = 0; out[10] = c; out[11] = 0; out[12] = x; out[13] = y; out[14] = z; out[15] = 1; return out; },
   };
 }

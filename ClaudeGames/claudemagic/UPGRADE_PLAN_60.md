@@ -80,6 +80,14 @@ and always match the models - they move to Phase 1/5, and Phase 0 is complete wi
   browser harness), written to src/art like the other sheets. This is route B, and C's LOD.
 
 ### Phase 1 - the renderer (40-render.js)
+Done 2026-11-05 as v66.0: the skinning path (aJoints/aWeights in slots 8 and 9; uJoints an RGBA32F texture, four
+texels a joint; uModel; uFigFx), the figures' texture array (uFig, layers 3000 and up: a model's PNG or a palette
+of its colours at 256), uTint, and drawFigures between the floor's meshes and the sprites. 37-figures.js measures
+each model posed at rest (Quaternius' raw boxes are tiny before the armature's scale) and fits it to its billboard
+by height or width, whichever binds (a rat is long); the body is centred on its square with its feet at the floor.
+76zzzzzzzzzze-figures2.js takes the mapped sprites out of the list within fourteen squares and draws them in their
+idle, facing the party; Settings > Figures: Modelled / Painted. Seen in the Square, the yards (hound, pony) and a
+fight (a rat ahead, torch-lit). Impostors for the far ones still to come (Phase 5).
 - A skinned program: attributes pos/normal/uv/joints/weights; per-instance model matrix (yaw, scale, position),
   tint, flash, alpha, glow; joint matrices through a float texture so a rig can have more than 64 bones; the same
   fragment lighting as the floor but with the vertex normal (sun colour, lamps and their wall shadows, fog, mist,

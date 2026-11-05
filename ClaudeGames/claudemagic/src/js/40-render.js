@@ -5,11 +5,16 @@
 const VERT = `#version 300 es
 precision highp float;
 in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
-in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
+in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;
+in vec4 aJoints; in vec4 aWeights; uniform float uSkin; uniform sampler2D uJoints; uniform mat4 uModel; uniform vec3 uFigFx;   // (v66.0) a figure: skinned by its joints' matrices (four texels a joint), then placed by uModel                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
 uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uRight;
 uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar; uniform vec3 uHideAt;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
 void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
+  if (uSkin > 0.5) { vec4 q = vec4(aPos, 1.0), sp = vec4(0.0);   // (v66.0) a figure's vertex: blended by up to four joints, then into the world
+    for (int k = 0; k < 4; k++) { float w = aWeights[k]; if (w <= 0.0) continue; int j = int(aJoints[k] + 0.5);
+      mat4 J = mat4(texelFetch(uJoints, ivec2(0, j), 0), texelFetch(uJoints, ivec2(1, j), 0), texelFetch(uJoints, ivec2(2, j), 0), texelFetch(uJoints, ivec2(3, j), 0)); sp += w * (J * q); }
+    p = (uModel * vec4(sp.xyz, 1.0)).xyz; fx = uFigFx; vWorld = p; vUV = uvl; vShade = sh; vFx = fx; gl_Position = uViewProj * vec4(p, 1.0); return; }
   if (aFx.x >= 10.0) { if (length(aPos.xz - uEye.xz) > aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (v58.1: a detail, seen only within its reach - 10 + squares)
   if (uHideAt.z > 0.0 && floor(uEye.x) == floor(uHideAt.x) && floor(uEye.z) == floor(uHideAt.y) && length(aPos.xz - uHideAt.xy) < uHideAt.z && aPos.y > 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; }   // (v56.1: standing on the well, it folds away)
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
@@ -32,7 +37,7 @@ void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf;   // (v26.0: the outdoors' drawn pictures, 2000 and up)
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
  uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
@@ -61,9 +66,10 @@ vec3 shafts(vec3 vdir, float d) {                                          // (v
 bool n0g(vec3 w) { return abs(dFdx(w.y)) + abs(dFdy(w.y)) < 1e-4; }   // (v54.0: a level surface - the ground, not a wall's foot)
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
-  bool surf = vUV.z > 1999.5;
+  bool surf = vUV.z > 1999.5 && vUV.z < 2999.5, fig = vUV.z > 2999.5;
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
-  vec4 t = surf ? tf : shared ? ts : tt;
+  vec4 t = fig ? texture(uFig, vec3(vUV.xy, max(vUV.z - 3000.0, 0.0))) : surf ? tf : shared ? ts : tt;
+  if (fig) t.rgb *= uTint;
   if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
     vec2 cw = vWorld.xz, cell = floor(cw), f = cw - cell; float me = floor(texture(uMap, (cell + 0.5) / uMapN).b * 255.0 + 0.5);
     if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld) && texture(uMap, (cell + 0.5) / uMapN).g < 0.5) {   /* (v55.4: never on the water itself) */ float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
@@ -125,7 +131,7 @@ void main() {
     vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     float wallBy = uMapN > 0.0 ? max(max(texture(uMap, (vWorld.xz + vec2(0.12, 0.0)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.12, 0.0)) / uMapN).r), max(texture(uMap, (vWorld.xz + vec2(0.0, 0.12)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.0, 0.12)) / uMapN).r)) : 0.0;   // (v58.1: only on a wall, or against one)
     vec2 fq = fract(vWorld.xz); float ed = abs(wn.x) > abs(wn.z) ? min(fq.x, 1.0 - fq.x) : min(fq.y, 1.0 - fq.y);   // (v59.0: only on a face at its square's edge, squarely set - a wall's, not a barrel's or the well's)
-    if (abs(wn.y) < 0.3 && wallBy > 0.35 && ed < 0.1 && max(abs(wn.x), abs(wn.z)) > 0.9) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+    if (uSkin < 0.5 && abs(wn.y) < 0.3 && wallBy > 0.35 && ed < 0.1 && max(abs(wn.x), abs(wn.z)) > 0.9) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
       float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
       t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -258,10 +264,10 @@ void main() {
     col += t.rgb * uBounce * (uTorch * min(light, 1.4) + extra) * low * uGrade; }
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
-  if (uGroundFrost > 0.0 && uCeil < 0.5 && n0.y > 0.7 && vWorld.y < 0.06) {   // (v60.0) hoar frost on the ground on a clear cold morning: whitened in patches, by the grain
+  if (uSkin < 0.5 && uGroundFrost > 0.0 && uCeil < 0.5 && n0.y > 0.7 && vWorld.y < 0.06) {   // (v60.0) hoar frost on the ground on a clear cold morning: whitened in patches, by the grain
     float fn = vnoise(vWorld.xz * 5.0) * 0.55 + vnoise(vWorld.xz * 19.0) * 0.45, fr = uGroundFrost * smoothstep(0.38, 0.72, fn) * 0.6;
     col = mix(col, vec3(0.86, 0.9, 0.97) * (uTorch * light + extra) * uGrade, fr); }
-  if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float edgeS = uMapN > 0.0 ? texture(uMap, vWorld.xz / uMapN + vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN + vec2(0.0, 0.35) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.0, 0.35) / uMapN).r : 0.0;   // (v54.4: the edges by walls fill first)
+  if (uSkin < 0.5 && uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float edgeS = uMapN > 0.0 ? texture(uMap, vWorld.xz / uMapN + vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN + vec2(0.0, 0.35) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.0, 0.35) / uMapN).r : 0.0;   // (v54.4: the edges by walls fill first)
     float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow + 0.35 * min(edgeS, 1.0) - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
     col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
   { float sn = up > 0.55 ? max(uSnow, uGroundFrost * 0.6 * step(vWorld.y, 0.06) * (1.0 - uCeil)) * max(uSunK - 0.3, 0.0) * 1.6 : 0.0,   /* (v60.0: the frost glints too) */ sp = uBump > 0.0 && abs(n0.y) < 0.7 ? uSparkle : 0.0;   // (v30.4) glints: frost and crystal on the walls, the snow in the sun - they wink as the eye moves
@@ -417,7 +423,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -452,7 +458,7 @@ CM.Renderer = class {
   _programLater(vs, fs) {
     const gl = this.gl, mk = (kind, src) => { const s = gl.createShader(kind); gl.shaderSource(s, src); gl.compileShader(s); return s; }, v = mk(gl.VERTEX_SHADER, vs), f = mk(gl.FRAGMENT_SHADER, fs), p = gl.createProgram();
     gl.attachShader(p, v); gl.attachShader(p, f);
-    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"], [8, "aJoints"], [9, "aWeights"]]) gl.bindAttribLocation(p, i, n);
     gl.linkProgram(p); this._pend = { p, v, f }; return p;
   }
   _ready() {
@@ -473,7 +479,7 @@ CM.Renderer = class {
     if (!v || !f) return null;
     const p = gl.createProgram();
     gl.attachShader(p, v); gl.attachShader(p, f);
-    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"]]) gl.bindAttribLocation(p, i, n);
+    gl.bindAttribLocation(p, 0, "aPos"); gl.bindAttribLocation(p, 1, "aUV"); gl.bindAttribLocation(p, 2, "aShade"); gl.bindAttribLocation(p, 3, "aFx"); for (const [i, n] of [[4, "iA"], [5, "iB"], [6, "iC"], [7, "iD"], [8, "aJoints"], [9, "aWeights"]]) gl.bindAttribLocation(p, i, n);
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { this.error = "The shaders didn't link: " + gl.getProgramInfoLog(p); return null; }
     return p;
@@ -785,6 +791,7 @@ CM.Renderer = class {
     gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24);
     gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
     for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }   // (v26.2: not an instance)
+    for (const i of [8, 9]) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); }   // (v66.0: not a figure)
   }
   // (v26.2) the billboards drawn as instances of one quad: sixteen numbers each, not sixty, and no corners worked out here
   _drawInstances(inst) {
@@ -931,6 +938,7 @@ CM.Renderer = class {
     gl.uniform1f(this.loc.uMoss, 0);   // (v58.1: the moss is the walls' own - not on the people, the props drawn as pictures, or the marks)
     for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
+    if (this.drawFigures) this.drawFigures(sky, eye);   // (v66.0: the figures, skinned - 76zzzzzzzzzze-figures2.js)
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);
