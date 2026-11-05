@@ -1392,6 +1392,12 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Hanging signs (v56.4, UPGRADE_PLAN_51.md phase 4)
+  (src/js/76zzzzzzzzzz5-signs.js, src/js/40-render.js, src/js/80-main.js)
+  - Each building's sign hangs out from the wall now instead of lying flat on it: two short iron arms, a rod between
+    them, and the board facing the street - still easy to read - swinging out and back on the rod in the wind (still,
+    with reduced motion asked for).
+
 Lamp posts (v56.3, UPGRADE_PLAN_51.md phase 3)
   (src/js/26h-lamps.js, src/js/76zzzzzzzzzz4-lamps.js, src/js/26-surface.js, src/js/80-main.js)
   - The town's lamps are built now: a stone plinth, a tapering iron post with its collars, and a lantern's cage with
