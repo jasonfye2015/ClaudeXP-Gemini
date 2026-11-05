@@ -663,7 +663,7 @@ CM.Renderer = class {
       const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
-      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend) {   // (v26.2: a plain billboard - an instance)
+      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && s.hang === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend) {   // (v26.2: a plain billboard - an instance)
         inst.push(cx, (s.lift || 0) + (s.base || 0), cz, w, h, layer, s.shade || 1, (s.sway && this.wind && !CM.reducedMotion ? s.sway : 0), sb ? sb[1] : 0, sb ? sb[2] : 0, sb ? sb[3] : 1, sb ? sb[4] : 1, s.flash || 0, s.alpha === undefined ? 1 : s.alpha, s.glow || 0, s.mirror ? 1 : 0);
         continue; }
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
@@ -687,6 +687,13 @@ CM.Renderer = class {
         corners = s.axis === "ns"                                        // a door across a corridor running north-south (a portcullis lifted by `lift`)
           ? [[cx - 0.5, lift, cz], [cx + 0.5, lift, cz], [cx + 0.5, 1 + lift, cz], [cx - 0.5, 1 + lift, cz]]
           : [[cx, lift, cz + 0.5], [cx, lift, cz - 0.5], [cx, 1 + lift, cz - 0.5], [cx, 1 + lift, cz + 0.5]];
+      } else if (s.hang !== undefined) {                               // (v56.4) a sign hung out from a wall, facing the street: two short iron arms, the rod between them, and the board swinging on the rod
+        const [dx, dz] = CM.DIRS[s.hang], wx = s.x + 0.5 + dx * 0.49, wz = s.y + 0.5 + dz * 0.49, ox = -dx, oz = -dz, lx = -dz, lz = dx, yA = s.yA || 1.3, bw = s.bw || 0.5, out = 0.13;
+        const O = (d, y, l = 0) => [wx + ox * d + lx * l, y, wz + oz * d + lz * l];
+        if (s.part === "arm") { const l = (s.side || 1) * (bw / 2 + 0.015); corners = [O(0, yA - 0.014, l), O(out + 0.02, yA - 0.014, l), O(out + 0.02, yA + 0.014, l), O(0, yA + 0.014, l)]; }
+        else if (s.part === "rod") corners = [O(out, yA - 0.012, -bw / 2 - 0.03), O(out, yA - 0.012, bw / 2 + 0.03), O(out, yA + 0.012, bw / 2 + 0.03), O(out, yA + 0.012, -bw / 2 - 0.03)];
+        else { const a = CM.reducedMotion ? 0 : ((this.wind ? this.wind.k : 0.15) * 0.3 + 0.04) * Math.sin((this.time || 0) * 1.7 + (s.phase || 0)), top = yA - 0.015, dy = h * Math.cos(a), dd = h * Math.sin(a);
+          corners = [O(out + dd, top - dy, -w / 2), O(out + dd, top - dy, w / 2), O(out, top, w / 2), O(out, top, -w / 2)]; }
       } else if (s.face !== undefined) {
         const [dx, dz] = CM.DIRS[s.face], inset = 0.012;                // flush with that wall, a hair into the room
         const px = s.x + 0.5 + dx * (0.5 - inset), pz = s.y + 0.5 + dz * (0.5 - inset);
