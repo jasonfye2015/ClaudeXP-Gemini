@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v59.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v60.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "59.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "60.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5836,6 +5836,37 @@ CM.moonPath = (phase, r) => {
     return dark * ({ mist: 1, rain: 0.9, snow: 0.7, clear: 0.22, wind: 0.12 }[w] ?? 0.3); };
 }
 
+// ---- 24d-weather.js ----
+"use strict";
+// Weather in the small things (v60.0, UPGRADE_PLAN_55.md): a rainbow when the low sun comes through the rain, frost on
+// the ground on a clear cold morning, and the rain dripping from the eaves. The window's side draws them
+// (76zzzzzzzzzz8-weather2.js, 40-render.js); nothing here touches the rules.
+//   CM.rainbowNow(game) -> 0..1     a rainy day's sun-shower: in the second hour after dawn and the late afternoon
+//                                   the cloud thins, the rain eases and a bow stands opposite the sun
+//   CM.groundFrost(game) -> 0..1    hoar frost on the ground: a clear or windy morning in winter or autumn, from an
+//                                   hour before dawn and gone two hours after it (none under lying snow)
+//   CM.eavesOf(fl) -> [{ x0, z0, x1, z1, y }]   the eave lines of a surface floor's buildings, where the rain runs off
+{ const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
+  CM.rainbowNow = (game) => {
+    const fl = game && game.floor; if (!fl || !(fl.number === 0 || fl.number === -1)) return 0;
+    if ((CM.weather ? CM.weather(game) : "clear") !== "rain") return 0;
+    const [dawn, dusk] = CM.daylightOf(game), h = CM.hourOf(game);
+    const bell = (c) => clamp(1 - Math.abs(h - c) / 0.75);                        // an hour and a half, peaking at its middle
+    return Math.max(bell(dawn + 1.5), bell(Math.min(dusk - 1.5, 16.5))); };   // (the evening's while the sun is still on its arc - it sets at six by the sky's reckoning, 24-clock.js)
+  CM.groundFrost = (game) => {
+    const fl = game && game.floor; if (!fl || !(fl.number === 0 || fl.number === -1)) return 0;
+    const s = CM.season ? CM.season(game) : "spring"; if (s !== "winter" && s !== "autumn") return 0;
+    const w = CM.weather ? CM.weather(game) : "clear"; if (w !== "clear" && w !== "wind") return 0;
+    if (CM.snowLying && CM.snowLying(game)) return 0;
+    const [dawn] = CM.daylightOf(game), h = CM.hourOf(game), k = s === "winter" ? 1 : 0.7;
+    return k * (h < dawn - 1 ? 0 : h < dawn ? h - (dawn - 1) : clamp(1 - (h - dawn) / 2)); };
+  CM.eavesOf = (fl) => { const out = []; if (!fl || !CM.buildingsOf || !CM.ROOF) return out; const g = CM.ROOF.gableOverhang || 0;
+    for (const B of CM.buildingsOf(fl)) { const ax = B.along === "x", X0 = B.x0, X1 = B.x1 + 1, Z0 = B.y0, Z1 = B.y1 + 1, o = B.overhang || 0;
+      const U0 = ax ? X0 : Z0, U1 = ax ? X1 : Z1, V0 = ax ? Z0 : X0, V1 = ax ? Z1 : X1, mid = (V0 + V1) / 2, half = (V1 - V0) / 2, y = B.h - (o * B.rise) / half;
+      for (const side of [-1, 1]) { const v = mid + side * (half + o); out.push(ax ? { x0: U0 - g, z0: v, x1: U1 + g, z1: v, y } : { x0: v, z0: U0 - g, x1: v, z1: U1 + g, y }); } }
+    return out; };
+}
+
 // ---- 25-saves.js ----
 "use strict";
 // Saving, the small way: a floor is CM.makeFloor(number, seed) plus what the party did to it. The run keeps only
@@ -9500,7 +9531,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -9565,6 +9596,12 @@ void main() {
       sk += mix(vec3(0.15, 0.95, 0.5), vec3(0.55, 0.3, 0.95), smoothstep(lo + 0.08, lo + 0.35, dir.y)) * curtain * rays * band * north * uAurora * 0.75; }
     if (uCloud.z > 0.0 && dir.y > 0.005) { vec2 cp = (uEye.xz + dir.xz / dir.y * 30.0) / 14.0 + uCloud.xy; float c = clouds(cp), a = smoothstep(1.0 - uCloud.z, 1.0 - uCloud.z + 0.22, c) * smoothstep(0.005, 0.1, dir.y);
       vec3 cc = uCloudCol * (1.05 - 0.45 * smoothstep(1.0 - uCloud.z, 1.0, c)); sk = mix(sk, mix(cc, uHorizon, smoothstep(0.25, 0.0, dir.y) * 0.6), a * 0.92); }
+    if (uRainbow > 0.0 && uSunK > 0.5 && dir.y > 0.0) {   // (v60.0) a rainbow opposite the sun: the primary bow at 41 degrees from the anti-sun, red outside, and a fainter second one at 52, reversed
+      float ang = degrees(acos(clamp(dot(dir, -uSun), -1.0, 1.0))), st = uRainbow * smoothstep(0.0, 0.08, dir.y);
+      float t1 = (ang - 40.3) / 2.2, t2 = (ang - 50.6) / 3.0;
+      if (t1 > 0.0 && t1 < 1.0) { float hh = (1.0 - t1) * 0.78; vec3 rc = clamp(abs(mod(hh * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); sk += rc * smoothstep(0.0, 0.18, t1) * smoothstep(1.0, 0.82, t1) * st * 0.4; }
+      if (t2 > 0.0 && t2 < 1.0) { float hh = t2 * 0.78; vec3 rc = clamp(abs(mod(hh * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0); sk += rc * smoothstep(0.0, 0.2, t2) * smoothstep(1.0, 0.8, t2) * st * 0.14; }
+      sk *= 1.0 - 0.12 * st * smoothstep(40.3, 38.0, ang); }   // (the sky inside the bow a shade brighter than outside: here the outside darkened a little)
     if (uSunCol.w > 0.0 && uSunK > 0.5) {   // (v59.0) the low sun's glow about it in the sky, and the far side of the sky cooler
       float tw = pow(max(dot(dir, uSun), 0.0), 5.0) * smoothstep(-0.08, 0.12, dir.y); sk += uSunCol.rgb * tw * uSunCol.w * 0.85;
       sk *= mix(vec3(1.0), vec3(0.88, 0.92, 1.06), uSunCol.w * 0.5 * smoothstep(0.0, 1.0, -dot(dir, uSun))); }
@@ -9697,10 +9734,13 @@ void main() {
     col += t.rgb * uBounce * (uTorch * min(light, 1.4) + extra) * low * uGrade; }
   col += spec * uTorch * min(light, 1.2) * uGrade;
   float up = abs(n.y) > 0.97 ? 1.0 : n.y;                                 // (a level top takes snow seen from either side: the eye can stand at a hedge's height)
+  if (uGroundFrost > 0.0 && uCeil < 0.5 && n0.y > 0.7 && vWorld.y < 0.06) {   // (v60.0) hoar frost on the ground on a clear cold morning: whitened in patches, by the grain
+    float fn = vnoise(vWorld.xz * 5.0) * 0.55 + vnoise(vWorld.xz * 19.0) * 0.45, fr = uGroundFrost * smoothstep(0.38, 0.72, fn) * 0.6;
+    col = mix(col, vec3(0.86, 0.9, 0.97) * (uTorch * light + extra) * uGrade, fr); }
   if (uSnow > 0.0 && up > 0.55 && !(vFx.z > 0.0005 && vFx.z < 0.002)) {   /* (v30.1: not over a mark - a glow of 0.001) */ float edgeS = uMapN > 0.0 ? texture(uMap, vWorld.xz / uMapN + vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.35, 0.0) / uMapN).r + texture(uMap, vWorld.xz / uMapN + vec2(0.0, 0.35) / uMapN).r + texture(uMap, vWorld.xz / uMapN - vec2(0.0, 0.35) / uMapN).r : 0.0;   // (v54.4: the edges by walls fill first)
     float cover = uSnow >= 0.99 ? 1.0 : smoothstep(-0.06, 0.06, uSnow + 0.35 * min(edgeS, 1.0) - 0.85 * vnoise(vWorld.xz * 1.3) - 0.08);   // (v24.2: snow comes in patches as it builds, and goes the same way)
     col = mix(col, vec3(0.93, 0.95, 0.99) * (uTorch * light + extra) * uGrade, cover * smoothstep(0.55, 0.8, up) * 0.88); }   // snow lying on what faces up
-  { float sn = uSnow > 0.0 && up > 0.55 ? uSnow * max(uSunK - 0.3, 0.0) * 1.6 : 0.0, sp = uBump > 0.0 && abs(n0.y) < 0.7 ? uSparkle : 0.0;   // (v30.4) glints: frost and crystal on the walls, the snow in the sun - they wink as the eye moves
+  { float sn = up > 0.55 ? max(uSnow, uGroundFrost * 0.6 * step(vWorld.y, 0.06) * (1.0 - uCeil)) * max(uSunK - 0.3, 0.0) * 1.6 : 0.0,   /* (v60.0: the frost glints too) */ sp = uBump > 0.0 && abs(n0.y) < 0.7 ? uSparkle : 0.0;   // (v30.4) glints: frost and crystal on the walls, the snow in the sun - they wink as the eye moves
     if (sn + sp > 0.0) { vec3 cell = floor(vWorld * 34.0); float h = hash(cell.xy + cell.z * 17.31), view = hash(cell.zx * 1.7 + floor(dot(normalize(uEye - vWorld), vec3(5.0, 3.0, 4.0)) * 2.5));
       vec3 q = fract(vWorld * 34.0) - 0.5; float d2 = max(dot(q, q) - pow(dot(q, n0), 2.0), 0.0), pt = exp(-d2 * 90.0) + 0.5 * exp(-min(abs(q.x), abs(q.y)) * 60.0) * exp(-d2 * 12.0);
       col += vec3(0.9, 0.95, 1.0) * step(0.982, h) * step(0.55, view) * pt * (sp * (uTorch * min(light, 1.5) + extra) + sn) * 2.2; } }
@@ -9853,7 +9893,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -10349,7 +10389,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
     gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
-    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0);   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
+    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);
@@ -44686,6 +44726,32 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
         const cool = l.colour && l.colour[2] > l.colour[0] * 1.15, s = 0.5 + l.reach * 0.3, x = Math.floor(l.x - 0.5), y = Math.floor(l.z - 0.5);
         out.push({ x, y, dx: l.x - x - 0.5, dz: l.z - y - 0.5, layer: cool ? "halo:cool" : "halo", w: s, h: s, lift: l.y - s / 2, glow: 1.3, alpha: Math.min(0.9, 0.35 + 0.55 * r.haloAir) * r.haloAir, shade: 1 }); }
       return out; }; }
+}
+
+// ---- 76zzzzzzzzzz8-weather2.js ----
+"use strict";
+// Weather in the small things, the window's side (v60.0, UPGRADE_PLAN_55.md): a rainbow stands opposite the low sun
+// in a rainy day's sun-shower hours, the cloud thinned and the rain eased for it (40-render.js: uRainbow); hoar frost
+// whitens the ground on a clear cold morning and glints in the first sun (uGroundFrost); and in the rain drops run off
+// the eaves of the town's houses (the "eavedrip" air kind). By 24d-weather.js.
+{ const EAVE = { rate: 26, near: 7 };
+  { const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const fl = game && game.floor;
+      if (!fl || !r.sky || game.mode === "title") { r.rainbow = 0; r.groundFrost = 0; return; }
+      r.rainbow = CM.rainbowNow(game); r.groundFrost = CM.groundFrost(game);
+      if (r.rainbow > 0 && r.skyx && r.skyx.cloud) { r.skyx.cloud = r.skyx.cloud.slice(); r.skyx.cloud[2] *= 1 - 0.45 * r.rainbow; }   // (the cloud thins for the sun to come through)
+      r.eaves = fl.number === 0 && CM.eavesOf ? (r._eavesFor === fl ? r.eaves : CM.eavesOf(fl)) : null; r._eavesFor = fl; }; }
+  // the rain eases in the sun-shower, and runs off the eaves
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); if (!env.surface) return out; const g = CM.game, rb = g && CM.rainbowNow ? CM.rainbowNow(g) : 0;
+      if (env.weather === "rain") { for (const k of out) if (k.id === "rain") k.rate *= 1 - 0.55 * rb; if (env.town && CM.renderer && CM.renderer.eaves && CM.renderer.eaves.length) out.push({ id: "eavedrip", rate: EAVE.rate * (1 - 0.5 * rb) }); }
+      return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "eavedrip") return sp0.call(this, k, eye, R, env);
+      const E = CM.renderer && CM.renderer.eaves; if (!E || !E.length) return null; const r = Math.random;
+      for (let tries = 0; tries < 6; tries++) { const e = E[Math.floor(r() * E.length)], t = r(), x = e.x0 + (e.x1 - e.x0) * t, z = e.z0 + (e.z1 - e.z0) * t;
+        if (Math.abs(x - eye[0]) > EAVE.near || Math.abs(z - eye[2]) > EAVE.near) continue;
+        return { kind: "eavedrip", age: 0, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0.05, vx: 0, vy: -3.2 - r() * 0.8, vz: 0, life: 0.7, size: 0.035, h: 0.1, glow: 2, alpha: 0.85, x, z, y: e.y - 0.03, top: 4, layer: "air:eavedrip" }; }
+      return null; }; }
+  { CM.art.AIR = CM.art.AIR || []; if (!CM.art.AIR.includes("eavedrip")) CM.art.AIR.push("eavedrip");
+    const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { return id === "eavedrip" ? ap0.call(this, "drip") : ap0.call(this, id); }; }
 }
 
 // ---- 77-splash.js ----

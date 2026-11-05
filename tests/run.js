@@ -6055,6 +6055,24 @@ test("the light of the hour (v59.0): the sun's colour is gold at dawn and dusk a
   for (const u of ["uSunCol", "uWaterMist"]) assert.ok(src.includes(`uniform`) && src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
 });
 
+test("weather in the small things (v60.0): a rainbow in a rainy day's sun-shower hours and not at noon or in clear weather; frost on the ground on a clear cold morning, gone by mid-morning, none in summer or under snow; the town's eaves found for the rain to run off", () => {
+  const CM = load(), W = (w, f) => { const o = CM.weatherOf; CM.weatherOf = () => w; try { return f(); } finally { CM.weatherOf = o; } };
+  const g = (h, season = "autumn", number = 0) => ({ seed: "weather-1", season, clock: 3 * 1440 + ((h - 6 + 24) % 24) * 60, floor: { number } });
+  const [dawn, dusk] = CM.DAYLIGHT.autumn;
+  assert.ok(W("rain", () => CM.rainbowNow(g(dawn + 1.5))) > 0.95, "a bow in the second hour after dawn"); assert.ok(W("rain", () => CM.rainbowNow(g(Math.min(dusk - 1.5, 16.5)))) > 0.95, "and the late afternoon");
+  assert.strictEqual(W("rain", () => CM.rainbowNow(g(12))), 0, "none at noon"); assert.strictEqual(CM.rainbowNow(g(dawn + 1.5)), 0, "none in clear weather");
+  assert.strictEqual(W("rain", () => CM.rainbowNow(g(dawn + 1.5, "autumn", 2))), 0, "none below ground");
+  const [wd] = CM.DAYLIGHT.winter;
+  assert.ok(CM.groundFrost(g(wd + 0.2, "winter")) > 0.85, `frost at a winter dawn (${CM.groundFrost(g(wd + 0.2, "winter"))})`); assert.ok(CM.groundFrost(g(wd - 0.5, "winter")) > 0.3, "coming in before it");
+  assert.strictEqual(CM.groundFrost(g(wd + 2.5, "winter")), 0, "gone by mid-morning"); assert.strictEqual(CM.groundFrost(g(wd + 0.2, "summer")), 0, "none in summer");
+  assert.ok(CM.groundFrost(g(dawn + 0.2)) > 0.5 && CM.groundFrost(g(dawn + 0.2)) < CM.groundFrost(g(wd + 0.2, "winter")), "less in autumn");
+  assert.strictEqual(W("rain", () => CM.groundFrost(g(wd + 0.2, "winter"))), 0, "none in the rain"); assert.strictEqual(W("snow", () => CM.groundFrost(g(wd + 0.2, "winter"))), 0, "none under snow");
+  const town = CM.makeTown("weather-1"), E = CM.eavesOf(town), B = CM.buildingsOf(town);
+  assert.strictEqual(E.length, B.length * 2, "two eave lines a building"); assert.ok(E.every((e) => e.y > 0.8 && e.y < 3 && (e.x0 === e.x1 || e.z0 === e.z1)), "each a level line at the roof's foot");
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "40-render.js"), "utf-8");
+  for (const u of ["uRainbow", "uGroundFrost"]) assert.ok(src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
