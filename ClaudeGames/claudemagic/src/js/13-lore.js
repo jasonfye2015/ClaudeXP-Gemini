@@ -332,7 +332,7 @@ CM.PARLEY = {
     gate: null,
     death: "IT WAKES, the stone says, and then there is no one to say anything.", deathSpoken: "NOT TODAY, it says. THEN TOMORROW.",
     after: "Here the dreamer lay. It is still now, or it is dreaming something quieter." },
-  boss: { open: "The Lich King rises from his throne. \"You took your time,\" he says. He looks at each of you in turn, the way a man counts coins. \"Four. It is always four. I was one of four, once. We came down a stair like yours.\"",
+  boss: { open: "Claude, the Lich King rises from his throne. \"You took your time,\" he says. He looks at each of you in turn, the way a man counts coins. \"Four. It is always four. I was one of four, once. We came down a stair like yours.\"",
     speak: [], gate: { remind: true, label: "Remind him who he was. (The Palace's chapter is read, and his heart is smashed.)" }, good: "", bad: "", death: "", deathSpoken: "", after: "" },
 };
 CM.gateOpen = function (game, G) {                                        // whether the party holds a guardian's gate

@@ -50,7 +50,7 @@ Object.assign(CM.Game.prototype, {
     else if (this.foes.some((m) => m.elite)) this.sound("elite");
     if (this.wallStands() && this.foes.some((m) => m.row === "back")) this.say("They lock shields in a line: nothing behind it can be reached while two of them stand.");
     for (const m of this.foes) if (m.gear && m.gear.weapon) this.say(`${CM.The(m)} carries ${CM.itemName(m.gear.weapon)}${m.gear.offhand ? " and a shield" : ""}.`);          // (a leader among them: a stinger)
-    if (this.foes.some((m) => m.boss)) this.say(`The Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
+    if (this.foes.some((m) => m.boss)) this.say(`Claude, the Lich King rises from his throne. "You took your time," he says.${this.phylactery ? "" : " Somewhere, his heart beats."}`);
     else if (guardian) this.say(CM.GUARDIANS[guardian.guardian].intro + (guardian.echo ? " It is not the thing itself: it is what the dark remembers of it, and the dark remembers it stronger." : "")
       + (guardian.hp < guardian.max ? " The wounds you left are still there." : ""));
     else this.say(theyCame ? `${who} come at you out of the dark!` : `Monsters! ${who} attack!`);
@@ -245,7 +245,7 @@ Object.assign(CM.Game.prototype, {
       lich.dead = false;
       lich.risen = (lich.risen || 0) + 1;
       this.sound("lich");
-      this.say("The Lich King crumbles... and the bones knit again. Somewhere, his heart still beats.");
+      this.say("Claude, the Lich King crumbles... and the bones knit again. Somewhere, his heart still beats.");
       this.summonSkeletons(2);
       this.emit("fx", { kind: "rise", foe: lich });
     }
@@ -611,7 +611,7 @@ Object.assign(CM.Game.prototype, {
       c.cold = (c.cold || 0) + 1;
       if (c.cold % (this.difficulty === "grim" ? 3 : 2) === 0) {              // (on Grim the cold comes every third turn: a wall with a door)
         this.emit("fx", { kind: "cold", foe: m });
-        this.say("The Lich King raises his hand, and a deathly cold fills the hall!");
+        this.say("Claude, the Lich King raises his hand, and a deathly cold fills the hall!");
         for (const h of this.targets()) this.hurt(h, 10 + Math.floor(this.floor.number / 2), m, { noTouch: true, aoe: true });
         return;
       }
@@ -630,7 +630,7 @@ Object.assign(CM.Game.prototype, {
       this.foes.push(this.tune(s));
     }
     this.sound("roar_undead");
-    this.say(`The Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
+    this.say(`Claude, the Lich King calls, and ${CM.plural(n, "skeleton")} claw up out of the floor!`);
     this.emit("fx", { kind: "summon" });
   },
 

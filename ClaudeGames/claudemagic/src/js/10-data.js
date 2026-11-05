@@ -935,7 +935,7 @@ CM.summaryText = function (e) {
 
 // the Lich King: what he does as the fight goes
 CM.LICH = { summonEvery: 3, summonMax: 4, coldFrom: 0.3, summonFrom: 0.6, riseTo: 0.4 };
-CM.BOSS = { name: "The Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
+CM.BOSS = { name: "Claude, the Lich King", colour: "#A0E0FF", body: "tall", head: "skull", eyes: "#40F0FF", extras: ["crown", "staff", "robe"] };
 
 // ---- the guardians ---------------------------------------------------------------------------------------------------
 // On the floor above each camp something has made its lair over the shaft down, and the party must go through it. Each

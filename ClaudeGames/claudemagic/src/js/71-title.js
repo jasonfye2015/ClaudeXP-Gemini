@@ -28,7 +28,7 @@ Object.assign(CM.UI.prototype, {
       done.then((ok) => { this.$("#transfer-note").textContent = ok ? "Copied." : "Select the text and copy it yourself."; });
     });
     this.$("#btn-link").addEventListener("click", () => this.makeLink("save", g.exportText(), this.$("#transfer-text"), this.$("#transfer-note")));
-    this.$("#btn-film-link").addEventListener("click", () => { const t = this.$("#film-text"); if (!CM.parseFilm(t.value)) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.makeLink("film", t.value.trim(), t, this.$("#film-note")); });
+    if (this.$("#btn-film-link")) this.$("#btn-film-link").addEventListener("click", () => { const t = this.$("#film-text"); if (!CM.parseFilm(t.value)) { this.$("#film-note").textContent = "That isn't a film code (CM2:...)."; return; } this.makeLink("film", t.value.trim(), t, this.$("#film-note")); });
     this.$("#btn-stats").addEventListener("click", () => this.openStats());
     for (const b of this.root.querySelectorAll("#dlg-journal .boards button")) b.addEventListener("click", () => { this.journalPage = b.dataset.page; this.openJournal(); });
     this.$("#btn-install").addEventListener("click", () => { const p = this.installPrompt; if (!p) return; this.installPrompt = null; this.showInstall(false); p.prompt(); });
@@ -100,7 +100,7 @@ Object.assign(CM.UI.prototype, {
     this.$("#start-with").textContent = `Four set out with 30 gold, two torches and two potions (${bag.map((i) => i.name).join(" and ")} - the seed decides which). `
       + "New Expedition lets you name them, choose their callings and roll their stats; chests and fallen monsters give better gear; "
       + "a merchant's camp with a temple waits below floors 5, 10 and 15 (and every fifth floor of the Deep) - each shaft guarded by something that has made its lair over it, and leaves a relic when it falls. "
-      + "The Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
+      + "Claude, the Lich King waits on floor 20; below him, thirty floors of the Deep go down to the Root of the World - or, in an Endless expedition, to no bottom at all.";
     const table = this.$("#fame table"), weeklyBoard = this.fameBoard === "weekly", endlessBoard = this.fameBoard === "endless";
     const board = weeklyBoard ? g.fame.concat(g.fameEndless || []).filter((e) => e.seed === CM.weeklySeed()).sort((a, b) => (b.bottom ? 1 : 0) - (a.bottom ? 1 : 0) || (b.won ? 1 : 0) - (a.won ? 1 : 0) || b.floor - a.floor || b.gold - a.gold) : endlessBoard ? (g.fameEndless || []) : g.fame;
     for (const b of this.root.querySelectorAll("#fame .boards button")) b.classList.toggle("on", b.dataset.board === (this.fameBoard || "dungeon"));
@@ -116,7 +116,7 @@ Object.assign(CM.UI.prototype, {
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
           + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
           + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
-          + `<div><button data-card="${i}">Summary card</button>${e.film && (CM.store.get("films", []) || []).some((f) => f.key === e.film) ? ` <button data-film="${this.esc(e.film)}">Watch the film</button>` : ""}${e.trail && e.trail.length > 1 ? ` <small>a ghost to race: Play this seed</small>` : ""}</div>`
+          + `<div><button data-card="${i}">Summary card</button>${e.trail && e.trail.length > 1 ? ` <small>a ghost to race: Play this seed</small>` : ""}</div>`
           + "</td></tr>";
       }
       return rows;
@@ -148,7 +148,7 @@ Object.assign(CM.UI.prototype, {
     const slot = this.$("#card-slot");
     slot.innerHTML = "";
     slot.appendChild(CM.art.summaryCard(e, CM.titleFor(g.achievements)));
-    const film = e.film && (CM.store.get("films", []) || []).find((f) => f.key === e.film);
+    const film = null;   // (v71.0: no films)
     this.$("#card-text").value = CM.summaryText(e) + (e.code ? `\nRun code (paste it in the seed box): ${e.code}` : "") + (film ? `\nFilm code (Films, on the title, plays it): ${CM.filmCode(Object.assign({}, film.spec, { log: CM.unpackLog(film.spec.log) }))}` : "");
     this.$("#card-note").textContent = "";
     this.openDialog("#dlg-card");

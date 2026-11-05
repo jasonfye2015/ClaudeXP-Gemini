@@ -126,11 +126,11 @@ CM.sky = function (game) {
   const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k);
   const blend = (A, B, k) => ({ zenith: mix(A.zenith, B.zenith, k), horizon: mix(A.horizon, B.horizon, k), light: A.light + (B.light - A.light) * k });
   let sky, word;
-  if (h >= dawn - 1 && h < dawn) { sky = blend(S.night, S.dawn, h - (dawn - 1)); word = "dawn"; }
-  else if (h >= dawn && h < dawn + 1.5) { sky = blend(S.dawn, S.day, (h - dawn) / 1.5); word = "dawn"; }
-  else if (h >= dawn + 1.5 && h < dusk - 1.5) { sky = blend(S.day, S.day, 0); word = "day"; }
-  else if (h >= dusk - 1.5 && h < dusk) { sky = blend(S.day, S.dusk, (h - (dusk - 1.5)) / 1.5); word = "dusk"; }
-  else if (h >= dusk && h < dusk + 1) { sky = blend(S.dusk, S.night, h - dusk); word = "dusk"; }
+  if (h >= dawn - 2 && h < dawn) { sky = blend(S.night, S.dawn, (h - (dawn - 2)) / 2); word = "dawn"; }   // (v71.0: the turnings two hours wide, a five-minute dawn at the clock's pace)
+  else if (h >= dawn && h < dawn + 2) { sky = blend(S.dawn, S.day, (h - dawn) / 2); word = "dawn"; }
+  else if (h >= dawn + 2 && h < dusk - 2) { sky = blend(S.day, S.day, 0); word = "day"; }
+  else if (h >= dusk - 2 && h < dusk) { sky = blend(S.day, S.dusk, (h - (dusk - 2)) / 2); word = "dusk"; }
+  else if (h >= dusk && h < dusk + 2) { sky = blend(S.dusk, S.night, (h - dusk) / 2); word = "dusk"; }
   else { sky = blend(S.night, S.night, 0); word = "night"; }
   const phase = CM.moonPhase(game), moonlight = (1 - Math.abs(phase - 4) / 4) * 0.14;   // a full moon lightens the night
   if (sky.light < 0.3) { const k = 1 - sky.light / 0.3; sky.light += moonlight * k; sky.zenith = mix(sky.zenith, [0.10, 0.12, 0.22], moonlight * 3 * k); sky.horizon = mix(sky.horizon, [0.14, 0.16, 0.26], moonlight * 3 * k); }

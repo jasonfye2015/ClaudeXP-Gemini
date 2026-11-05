@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The clock that runs (v71.0, UPGRADE_PLAN_61.md part 1)
+  (src/js/24e-calendar2.js, src/js/76zzzzzzzzzzg-clockrun.js, src/js/73b-clock.js, src/js/26-surface.js, src/js/70-ui.js, src/js/71-title.js, src/js/64-meta.js)
+  - The clock runs (plan 61, part 1): on the floor, in a fight or at camp a game minute passes every two and a half
+    seconds whether the party moves or not - a day in an hour, a night the same - and a step still costs its minute.
+    Settings > Clock: Runs, or By steps only, as it was.
+  - The calendar: the run's days count into years of twelve months of thirty days from Year 500, each month named
+    for what the land does - Thawlight, Sowmoon, Greening, Highsun, Hayfall, Emberwane, Harvestmoon, Claudetober,
+    Lanternfall, Frostbell, Deepsnow, Longnight - with its number beside the name on the dial. A run begins on the
+    first day of its season's first month.
+  - Dawn and dusk take two hours each side now (five minutes at the clock's pace) instead of one.
+  - The Lich King has a name: Claude, the Lich King.
+  - The films and replays are gone - the title's Films, the film bar, the film codes, the film kept at a run's end;
+    nothing need play back the same now, so the weather and the world may roll their own dice from here on.
+
 The figures, finished (v70.0, UPGRADE_PLAN_60.md phase 5)
   (src/js/76zzzzzzzzzzf-figures3.js, src/js/76zzzzzzzzzze-figures2.js)
   - The figures, finished (plan 60, phase 5): at load each body is drawn once, flat-lit from the front, into an

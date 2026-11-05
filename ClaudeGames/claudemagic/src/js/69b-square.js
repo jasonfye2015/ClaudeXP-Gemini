@@ -1,12 +1,12 @@
 "use strict";
 // The alchemist's garden (beds planted between runs, grown a little every run that ends, and the brewing bench at
-// town prices), the chronicler's house (the films, the statistics, the ledger, the Hall of Fame and the memorial's
+// town prices), the chronicler's house (the statistics, the ledger, the Hall of Fame and the memorial's
 // book, under one roof) and the square's life: the well (a drink, the notice board, a coin thrown for the town),
 // market day on the week's seed (a peddler's cloth in the square), three townsfolk on the lanes with a line a day
 // each from the hill's own story, and the lanterns lit when a run begins late.
 CM.VILLAGE.garden = { name: "The Alchemist's Garden", costs: [30, 80, 160], levels: [
   "One bed (three of an ingredient, grown one more every run that ends, up to five) and the brewing bench at town prices", "Two beds", "Three beds, and the alchemist's request may be delivered here"] };
-CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [120], levels: ["Wren's house: the films, the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
+CM.VILLAGE.chronicler = { name: "The Chronicler's House", costs: [120], levels: ["Wren's house: the statistics, the ledger, the Hall of Fame and the memorial's book, under one roof"] };
 CM.TOWN_PLOTS.garden.village = "garden"; CM.TOWN_PLOTS.chronicler.village = "chronicler";
 CM.BED_MAX = 5;
 CM.TOWNSFOLK = [

@@ -173,7 +173,7 @@ which answered; the Iron Marshal's ninth order is NO BELLS; the Brass Warden car
 Leshy holds the town's card and has never played it; the Joker sold the tongue of the bell over his door the year the
 lower town went under, and someone has paid the pawn's interest every year since. The smith casts the tongue from all
 ten. Hung and rung, it is the lower town's first bell in two hundred years, and the answer the cross asked for (WE WILL
-LISTEN FOR IT). The Boy sits down. The Lich King, ever after, hears it in the stone when he rises, and something in
+LISTEN FOR IT). The Boy sits down. Claude, the Lich King, ever after, hears it in the stone when he rises, and something in
 him that was a man stops to listen: he rises a fifth short. Nobody says who paid the Joker's interest. (It was the
 chronicler's family, and the chronicler doesn't know it.)
 

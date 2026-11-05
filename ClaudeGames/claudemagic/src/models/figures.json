@@ -127,6 +127,6 @@
     "monster:The Bone Patriarch": { "model": "skeleton_mage", "scale": 1.4, "tint": [225, 215, 200], "wear": [] , "attack": "cast" },
     "monster:The Root of the World": "painted",
     "monster:The Bell-Founder's Boy": { "model": "rogue", "scale": 1.0, "tint": [90, 80, 70], "wear": [] },
-    "monster:The Lich King":    { "model": "skeleton_mage", "scale": 1.6, "tint": [160, 150, 200], "wear": [] , "attack": "cast" }
+    "monster:Claude, the Lich King":    { "model": "skeleton_mage", "scale": 1.6, "tint": [160, 150, 200], "wear": [] , "attack": "cast" }
   }
 }

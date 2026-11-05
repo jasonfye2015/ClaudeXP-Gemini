@@ -5,7 +5,7 @@
 // three lines of what the game holds drift past, and the version stamp sits in the corner. A click, any key or a pad
 // button goes on to the title.
 CM.SPLASH_LINES = [
-  ["Fifty floors in ten bands", "The Lich King on floor 20", "The Root of the World on floor 50", "Endless: no bottom at all", "A guardian and its relic over every fifth shaft", "Camps, a merchant and a temple between",
+  ["Fifty floors in ten bands", "Claude, the Lich King on floor 20", "The Root of the World on floor 50", "Endless: no bottom at all", "A guardian and its relic over every fifth shaft", "Camps, a merchant and a temple between",
     "Branching wings, riddle doors, pits and plates", "The Deep: six bands below the king"],
   ["Eleven callings, two paths each", "A party of four, turn by turn", "Gear with affixes, sets and curses", "A belt of potions and things to throw", "Cooking, mining, forging and farming",
     "Automatic: the party plays by itself", "Films of every run", "Daily and weekly dungeons", "The Hall of Fame"],

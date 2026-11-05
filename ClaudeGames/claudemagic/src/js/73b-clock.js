@@ -35,7 +35,7 @@ Object.assign(CM.UI.prototype, {
     el.querySelector(".ground").classList.toggle("stone", below);
     el.querySelector(".time").textContent = CM.timeFigures(g);
     el.querySelector(".hourword").textContent = `${CM.hourWord(D.hour)}${below ? ", above" : ""}`;
-    const date = el.querySelector(".date"); date.textContent = `Day ${D.day + 1} - ${season}`; date.className = `date ${season}`;
+    const date = el.querySelector(".date"), cal = CM.dateOf ? CM.dateOf(g) : null; date.textContent = cal ? `${cal.short} - Day ${D.day + 1}, ${season}` : `Day ${D.day + 1} - ${season}`; date.className = `date ${season}`; if (cal) date.title = `${cal.text} (${cal.note})`;   // (v71.0: the calendar's month, named and numbered)
     const ahead = CM.comingWeather(g, 4).slice(1);
     el.querySelector(".wx").innerHTML = `${this.weatherIcon(w, 14)}<span>${w}</span><span class="ahead" title="${this.esc("The days ahead: " + ahead.map((d) => `day ${d.day + 1}, ${d.weather}`).join("; "))}">${ahead.map((d) => this.weatherIcon(d.weather, 11)).join("")}</span>`;
     const fest = el.querySelector(".fest"); fest.textContent = f ? CM.FESTIVALS[f].name.charAt(0).toUpperCase() + CM.FESTIVALS[f].name.slice(1) : ""; fest.title = f ? CM.FESTIVALS[f].what : ""; fest.style.display = f ? "" : "none";

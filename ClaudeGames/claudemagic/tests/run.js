@@ -1224,7 +1224,7 @@ test("boots and cloaks, quirks at creation, a second calling at twenty", () => {
   assert.strictEqual(game.renown(), 300);
 });
 
-test("films: a run's end keeps one; it plays on the live game line by line, skips to a fight or a floor, and nothing of it is saved", () => {
+test("films (the machinery only, v71.0 keeps none): a run's end keeps none; one made by hand plays on the live game line by line, skips to a fight or a floor, and nothing of it is saved", () => {
   const CM = load(), game = new CM.Game();
   game.newGame("film-1", fixedParty(CM));
   playRun(CM, game, { maxFloor: 3 });
@@ -1233,8 +1233,8 @@ test("films: a run's end keeps one; it plays on the live game line by line, skip
   for (const h of game.party) h.hp = 0;
   game.endRun(false);
   const films = CM.store.get("films", []);
-  assert.strictEqual(films.length, 1); assert.strictEqual(game.fame[0].film, films[0].key);
-  const code = CM.filmCode(Object.assign({}, films[0].spec, { log: CM.unpackLog(films[0].spec.log) }));
+  assert.strictEqual(films.length, 0, "no film is kept any more (v71.0)"); assert.strictEqual(game.fame[0].film, undefined);
+  const code = CM.filmCode(Object.assign({}, spec, { log: game.runLog || [] }));
   assert.ok(code.startsWith("CM2:"));
   const back = CM.parseFilm(code);
   assert.strictEqual(back.log.length, spec.log.length); assert.strictEqual(CM.parseFilm("CM1:x"), null);
@@ -2210,7 +2210,7 @@ test("monsters' things, and six elements: the matrix, venom, shadow and storm in
   knight.weapon = mk("Maul", 10); let blows = 0; while (!troll.part.broken && blows < 30) { game.rnd = new CM.Random(blows); game.strike(knight, troll, "", { sure: true }); blows++; }
   assert.ok(troll.part.broken && troll.ability === null && troll.hp > 0, `the arm came away after ${blows} blows, the troll still up`); assert.ok(game.messages.some((l) => l.includes("arm comes away")));
   { troll.hp = 0; game.foeKey = "0,0"; game.rnd = new CM.Random(1); const n = game.bag.length; game.wonFight(); assert.ok(game.bag.slice(n).some((it) => it.kind === "ingredient"), "the part drops as an ingredient"); assert.strictEqual(game.tally.partsBroken, 1); }
-  const lich = { name: "The Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true }; CM.setPart(lich); assert.ok(lich.part && lich.part.loses === "cold" && lich.part.max === 60);
+  const lich = { name: "Claude, the Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true }; CM.setPart(lich); assert.ok(lich.part && lich.part.loses === "cold" && lich.part.max === 60);
   fight("Orc"); game.foes[0] = lich; game.combat.foes = game.foes; game.spellHit(lich, 70, "", null); assert.ok(lich.part.broken && game.messages.slice(-1)[0].includes("cold goes out"), game.messages.slice(-1)[0]);
   // the shield wall: two skeletons in front, and the goblin behind can't be reached until one falls
   const [s1, s2, gob] = fight("Skeleton", "Skeleton", "Goblin"); assert.strictEqual(gob.row, "back"); assert.ok(game.wallStands()); assert.ok(!game.attackable().includes(gob) && game.attackable().length === 2, "the wall holds the back row");
@@ -2526,7 +2526,7 @@ test("the garden, the chronicler and the square: a bed planted grows by one a ru
   const ren = g3.village.renown || 0; g3.gold = 10; g3.floor.pos = CM.TOWN_AT.well.slice(); g3.use(); assert.ok(heard.title === "The square" && heard.text.includes(CM.weeklySeed())); assert.strictEqual(g3.gold, 9); assert.strictEqual(g3.village.renown, ren + 1); g3.use(); assert.strictEqual(g3.gold, 9, "one coin a visit");
   assert.strictEqual(g3.lightFactor(), 1.3); const clockWas = g3.clock; g3.clock = 17 * 60; assert.strictEqual(g3.lightFactor(), 0.8, "the lanterns"); g3.clock = clockWas;
   // the chronicler's house holds what the title's boards hold
-  assert.ok(Array.isArray(CM.store.get("films", [])) && CM.store.get("films", []).length >= 1, "films to watch at the table"); assert.ok((new CM.Game()).ledger.length >= 6 && (new CM.Game()).fame.length >= 6);
+  assert.strictEqual(CM.store.get("films", []).length, 0, "no films at the table any more (v71.0)"); assert.ok((new CM.Game()).ledger.length >= 6 && (new CM.Game()).fame.length >= 6);
 });
 
 test("growth: a building is drawn by its level (a foundation, a frame, a roof, a sign, a lit window); nine buildings' renown re-tuned, and three renown for every door opened before a descent; the well's stones carry the hill's chapter in order; what the runs brought back is on the walls", () => {
@@ -6208,7 +6208,7 @@ test("the monsters in batches (v69.0): every kind but the plant-and-fungus ones 
   const CM = load(), zlib = require("zlib"), P = CM.figuresPack, F = CM.Figures.parse(new Uint8Array(zlib.inflateRawSync(Buffer.from(P.data, "base64"))), P.manifest);
   const painted = [], bodied = []; for (const m of CM.MONSTERS.concat(Object.values(CM.GUARDIANS), [CM.BOSS])) { const f = CM.Figures.figureOf(`monster:${m.name}`); (f === "painted" ? painted : bodied).push(m.name); if (f !== "painted") { const mod = F.models[f.model]; assert.ok(mod, `${m.name}: ${f.model}`); for (const c of ["idle", "walk", "attack"]) assert.ok(mod.clips[c], `${m.name}: ${c}`); if (f.attack) assert.ok(mod.clips[f.attack], `${m.name}: ${f.attack}`); for (const g of f.wear || []) assert.ok(F.models[`gear:${g}`], `${m.name} wears ${g}`); } }
   assert.ok(bodied.length >= 50, `bodied kinds (${bodied.length})`); assert.ok(painted.length <= 9, `painted left (${painted.join(", ")})`); for (const n of ["Fungal Horror", "Spore Mother", "Rootling", "Sporeling", "Thorn Lotus", "Mimic"]) assert.ok(painted.includes(n), `${n} stays painted`);
-  for (const [name, model] of [["Goblin", "rogue"], ["Orc", "barbarian"], ["Boar", "bull"], ["Eel", "snake"], ["Marsh Light", "frog"], ["Wyvern", "stag"], ["The Lich King", "skeleton_mage"]]) assert.strictEqual(CM.Figures.figureOf(`monster:${name}`).model, model, name);
+  for (const [name, model] of [["Goblin", "rogue"], ["Orc", "barbarian"], ["Boar", "bull"], ["Eel", "snake"], ["Marsh Light", "frog"], ["Wyvern", "stag"], ["Claude, the Lich King", "skeleton_mage"]]) assert.strictEqual(CM.Figures.figureOf(`monster:${name}`).model, model, name);
   for (const [n, g] of [["Iron Sword", "sword"], ["a rusty blade", "sword"], ["Great Sword of Dawn", "greatsword"], ["Woodsman's Axe", "axe"], ["Battleaxe", "greataxe"], ["Dagger", "knife"], ["Oak Staff", "staff"], ["Short Bow", "crossbow"], ["Club", null], ["", null], [undefined, null]]) assert.strictEqual(CM.Figures.gearFor(n), g, `${n} -> ${g}`);
   for (const n of ["bull", "fox", "stag", "snake", "frog"]) { const m = F.models[n]; assert.ok(m, n); for (const c of ["idle", "walk", "attack", "hit"]) assert.ok(m.clips[c], `${n}: ${c}`); assert.ok(CM.Figures.measure(m).height > 0.5, `${n} stands`); }
   const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzze-figures2.js"), "utf-8"); for (const w of ["CM.Figures.gearFor", "lunge", "f.wear"]) assert.ok(win.includes(w), `${w} in the drawing`);
@@ -6226,6 +6226,22 @@ test("the figures, finished (v70.0): thirty figures pose within the frame's budg
   for (const w of ["figureImpostorPass", "readPixels", "texSubImage3D", "fig:${name}", "CAP = 40", "FAR = 60", "CM.art.monster = function", "CM.art.credits = function", "CM.figureImpostor"]) assert.ok(f3.includes(w), `${w} in the finishing`);
   for (const w of ["figImpostorBase", "figureBuffers", "figureDrawModel", "uTint, [1, 1, 1]"]) assert.ok(f2.includes(w), `${w} in the drawing`);
   assert.ok(P.credits.includes("Kay Lousberg") && P.credits.includes("Quaternius"), "the credit names its makers");
+});
+
+test("the calendar and the clock that runs (v71.0): twelve named months of thirty days from Year 500, a run beginning on its season's first month, Claudetober the eighth; the date reads two ways; tickClock moves the clock by the wall and says when the day turns; dawn and dusk blend two hours wide; the Lich King is Claude; no film is kept", () => {
+  const CM = load(); assert.strictEqual(CM.MONTHS.length, 12); assert.strictEqual(CM.MONTHS[7].name, "Claudetober"); assert.strictEqual(CM.MONTHS[7].season, "autumn"); assert.ok(CM.MONTHS.every((m, i) => m.season === ["spring", "summer", "autumn", "winter"][Math.floor(i / 3)]), "three months a season, from the spring");
+  const g = (d, season) => ({ seed: "cal-1", season, clock: d * 1440 }); let c = CM.dateOf(g(0, "spring")); assert.deepEqual([c.year, c.month, c.day, c.name], [500, 1, 1, "Thawlight"]); assert.strictEqual(c.text, "Year 500, 1 - Thawlight, Day 1"); assert.ok(c.short.includes("1 Thawlight 1"), c.short);
+  c = CM.dateOf(g(0, "autumn")); assert.deepEqual([c.month, c.day, c.name], [7, 1, "Harvestmoon"], "a run begun in autumn begins in autumn's first month"); c = CM.dateOf(g(35, "autumn")); assert.deepEqual([c.month, c.day, c.name], [8, 6, "Claudetober"], "thirty days on, the next month");
+  c = CM.dateOf(g(200, "autumn")); assert.strictEqual(c.year, 501, "past the twelfth month the year turns"); assert.deepEqual([c.month, c.day, c.name], [1, 21, "Thawlight"], "180 days from autumn's first is the new year's first month");
+  const G = new CM.Game(); G.newGame("cal-2", fixedParty(CM)); const d0 = CM.dayOf(G), h0 = CM.hourOf(G); let turned = null; G.on("newday", (d) => { turned = d; }); CM.tickClock(G, 30); assert.ok(Math.abs(CM.hourOf(G) - h0 - 0.5) < 1e-9, "half an hour on"); assert.strictEqual(turned, null);
+  CM.tickClock(G, 24 * 60); assert.strictEqual(CM.dayOf(G), d0 + 1); assert.strictEqual(turned, d0 + 1, "the day turned, and said so"); CM.tickClock(G, 0); CM.tickClock(G, -5); assert.strictEqual(CM.dayOf(G), d0 + 1, "nothing for nothing");
+  assert.strictEqual(CM.CLOCK_RUN.secondsPerMinute, 2.5, "a day an hour");
+  const sky = (h, season = "autumn") => CM.sky({ seed: "cal-1", season, clock: 3 * 1440 + ((h - 6 + 24) % 24) * 60 }), [dawn, dusk] = CM.DAYLIGHT.autumn;
+  assert.strictEqual(sky(dawn - 1.5).word, "dawn", "the dawn's blend begins two hours before it"); assert.strictEqual(sky(dawn - 2.5).word, "night"); assert.ok(sky(dawn - 1).light > sky(dawn - 1.9).light && sky(dawn + 1).light > sky(dawn + 0.5).light, "lightening through the two hours either side");
+  assert.strictEqual(sky(dusk + 1.5).word, "dusk"); assert.strictEqual(sky(dusk + 2.5).word, "night");
+  assert.strictEqual(CM.BOSS.name, "Claude, the Lich King"); assert.ok(CM.Figures.figureOf("monster:Claude, the Lich King"), "the figures know him by name"); assert.ok(CM.THEMES ? true : true);
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "70-ui.js"), "utf-8"); assert.ok(!src.includes('id="btn-film"') && !src.includes('id="dlg-film"') && !src.includes('class="filmbar"'), "the films' button, dialog and bar are gone");
+  assert.ok(!fs.readFileSync(path.join(__dirname, "..", "src", "js", "64-meta.js"), "utf-8").includes('films.unshift'), "no film is kept at a run's end");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
@@ -6355,7 +6371,7 @@ test("the tongue of the last bell: one story through every place - a making foun
   assert.strictEqual(g.thForge(), ""); assert.strictEqual(g.gold, 50); assert.ok(!g.bag.some((x) => x.kind === "bar")); assert.strictEqual(g.thInfo().chapter, 3);
   assert.ok(/bell-yard/.test(g.thRingWhy()), "only in the bell-yard"); g.enterFloor(TH.yard, "down"); g.mode = "explore"; const r0 = g.village.renown || 0;
   assert.strictEqual(g.thRing(), ""); assert.strictEqual(g.village.renown - r0, TH.renown); assert.ok(g.achievements.lastbell); assert.strictEqual(g.thInfo().chapter, 4);
-  g.enterFloor(1, "stairs"); g.mode = "explore"; const lich = { name: "The Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true, xp: 1, gold: 1, speed: 10 };
+  g.enterFloor(1, "stairs"); g.mode = "explore"; const lich = { name: "Claude, the Lich King", kind: "Lich King", boss: true, hp: 300, max: 300, atk: 20, df: 10, undead: true, xp: 1, gold: 1, speed: 10 };
   g.floor.things["2,2"] = { type: "monsters", group: [lich] }; g.startCombat("2,2", g.floor.things["2,2"]); const b = g.foes.find((m) => m.boss); assert.strictEqual(b.hp, 240, "a fifth short");
   assert.ok(g.wmGoals().some((x) => x.area === "The last bell"));
 });
