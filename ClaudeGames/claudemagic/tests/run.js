@@ -5937,6 +5937,18 @@ test("fences and hedges with depth (v56.2): the town's fences are built - posts,
     for (const v of vs) assert.ok(v[0] >= x - 0.06 && v[0] <= x + 1.06 && v[2] >= y - 0.06 && v[2] <= y + 1.06, "within its square"); assert.notStrictEqual(town.grid[y][x], 0); break; }
 });
 
+test("lamp posts (v56.3): a town lamp is built in the mesh - plinth, iron post, collars, the lantern's floor, corner bars, roof and finial - close about its spot, with the room for its glass between the floor and the roof", () => {
+  const CM = load(), quads = [], index = { "model:iron": 1, "solid:sill": 2 };
+  const p = { id: "lamp", x: 10, y: 12, dx: 0.1, dz: -0.2 };
+  assert.ok(CM.lampModel(p, (a, b, c, d, layer) => quads.push([a, b, c, d, layer]), index));
+  const cx = 10.6, cz = 12.3; let top = 0;
+  for (const q of quads) for (const v of q.slice(0, 4)) { assert.ok(Math.hypot(v[0] - cx, v[2] - cz) < 0.15, "close about its spot"); top = Math.max(top, v[1]); }
+  assert.ok(top > CM.LAMP_GLASS_Y + CM.LAMP_GLASS_H && top < 1.5, `the finial on top (${top.toFixed(2)})`);
+  assert.ok(quads.some((q) => q[4] === 2) && quads.some((q) => q[4] === 1), "stone and iron");
+  assert.ok(quads.length > 40, `${quads.length} faces`);
+  assert.strictEqual(CM.lampModel(p, () => {}, {}), false, "nothing without its pictures");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
