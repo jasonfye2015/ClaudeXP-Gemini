@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Roots, stumps and rocks (v55.3, UPGRADE_PLAN_50.md phase 2)
+  (src/js/26e-wooddetail.js, src/js/26-surface.js, src/js/76zzzzzzzzzz-buildings.js)
+  - The trees of the Deep Wood stand in the ground: four to six roots spread from the foot of every trunk, each its
+    own length and way, paler under the birches.
+  - The forest floor has things in it: here and there beside the trees a low stump, its cut top showing the rings,
+    and rocks half sunk in the moss and the litter - never on a path, a door or anything to use.
+
 The Mage Tower in focus (v55.2, fix (asked 2026-11-03))
   (src/js/80-main.js)
   - Fixed: the Mage Tower was out of focus the whole way up. The soft blur behind the Tower's doors window, the

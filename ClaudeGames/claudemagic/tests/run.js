@@ -5889,6 +5889,24 @@ test("buildings with depth: every window on a house, a door or a shop's wall get
   assert.ok(calls > 50 && made > 40, `${made} of ${calls} faces`); assert.ok(withD - without >= made * 5 * 6 * 4 - 1, `${withD - without} more vertices`);
   assert.strictEqual(JSON.stringify(CM.WINDOW_AT("house", false)), "[0.62,0.3,0.84,0.56]"); assert.strictEqual(CM.WINDOW_AT("shop", true), null);
 });
+test("the Deep Wood, closer (v55.3): roots at the foot of every tree, stumps beside the trees and rocks half sunk in the forest floor - never on a path, a door or a thing to use; the same every time, and none at Low detail", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:bark", "solid:stumptop", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const wood = CM.makeWood("roots-1"), m = CM.floorMesh(wood, CM.WOOD_THEME, index), W = m.wood;
+  assert.ok(W.roots >= m.trees * 4 && W.roots <= m.trees * 6, `four to six roots a tree (${W.roots} for ${m.trees})`);
+  assert.ok(W.stumps > 3, `stumps (${W.stumps})`); assert.ok(W.rocks > 10, `rocks (${W.rocks})`);
+  const again = CM.floorMesh(CM.makeWood("roots-1"), CM.WOOD_THEME, index).wood; assert.strictEqual(JSON.stringify(again), JSON.stringify(W), "the same every time");
+  // where they stand: every stump and rock vertex near the ground of an open square that is not a path, a door or a thing
+  const seen = []; CM.woodDetail({ quad: (a, b, c, d, layer) => { if (layer === index["solid:sill"]) seen.push([a, b, c, d]); }, fl: wood, index, trees: new Set(), openAt: (x, y) => wood.grid[y] && wood.grid[y][x] === 0, features: wood.features || {}, size: wood.grid.length });
+  assert.ok(seen.length > 0);
+  for (const q of seen) for (const [x, , z] of q) { const cx = Math.floor(x), cz = Math.floor(z); const g = CM.groundAt(wood, cx, cz);
+    assert.ok(!["dirt", "planks", "tilled", "cobbles", "flags"].includes(g), `no rock on a path (${cx},${cz} ${g})`); assert.ok(!(wood.features || {})[`${cx},${cz}`] && !(wood.things || {})[`${cx},${cz}`], `no rock on a door or a thing (${cx},${cz})`); }
+  // Low detail: none; the town's trees get roots, but the town has no stumps or rocks
+  assert.strictEqual(JSON.stringify(CM.floorMesh(wood, CM.WOOD_THEME, index, { detail: 0 }).wood), JSON.stringify({ roots: 0, stumps: 0, rocks: 0 }));
+  const town = CM.floorMesh(CM.makeTown("roots-1"), CM.TOWN_THEME, index).wood; assert.strictEqual(town.stumps + town.rocks, 0);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
