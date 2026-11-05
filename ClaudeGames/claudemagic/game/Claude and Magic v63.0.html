@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v62.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v63.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -292,6 +292,16 @@ body.intower #towerhud { display: block; } body.intower #view .sky, body.intower
 #actions .menu, #actions .targets { display: flex; gap: 6px; justify-content: center; }
 #actions .targets button { font-weight: normal; }
 #actions .targets button.chosen { border-color: var(--gold); color: var(--gold); background: #4A321A; }
+#actions .targets button .bar.foe { display: block; height: 6px; margin: 3px 0 2px; background: #100C08; border-radius: 2px; overflow: hidden; position: relative; }   /* (v63.0) a foe's health bar, and its part's below it */
+#actions .targets button .bar.foe i { position: absolute; left: 0; top: 0; bottom: 0; background: #B03030; transition: width 0.25s; }
+#actions .targets button .bar.foe.mid i { background: #C07828; } #actions .targets button .bar.foe.low i { background: #D8A030; }
+#actions .targets button .bar.foe.part { height: 4px; margin-top: 1px; } #actions .targets button .bar.foe.part i { background: #7A8AB0; }
+#actions .targets button .tags { display: block; margin-top: 2px; line-height: 1.5; }
+#actions .targets button .tag { display: inline-block; font: 9px Tahoma, Verdana, sans-serif; color: #E8D8B0; background: #3A2A18; border: 1px solid #5A4428; border-radius: 3px; padding: 0 4px; margin: 0 2px 1px 0; cursor: help; }
+#actions .targets button .tag b { color: var(--gold); }
+#actions .targets button .tag-asleep { color: #B0C0E8; } #actions .targets button .tag-burning { color: #F0A040; } #actions .targets button .tag-chilled { color: #A0D8F0; } #actions .targets button .tag-blind { color: #C0B0D0; } #actions .targets button .tag-held { color: #D0C090; }
+.item[draggable="true"] { cursor: grab; } .item.dragging { opacity: 0.5; }   /* (v63.0) the pack's things dragged to a hero, the wares, or the pack */
+.member.drop-over { outline: 2px solid var(--gold); outline-offset: -2px; background: #3A2C1C; } #bag-list.drop-over, #shop-list.drop-over { outline: 2px dashed var(--gold); outline-offset: -2px; }
 #actions button.pick small { display: block; color: var(--dim); font-weight: normal; font-size: 10.5px; }
 #actions button:disabled small { color: var(--faint); }
 #actions button kbd { margin-right: 4px; }
@@ -1524,7 +1534,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "62.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "63.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -26431,6 +26441,28 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   };
 }
 
+// ---- 64zzzd-foemarks.js ----
+"use strict";
+// A foe's marks (v63.0, UPGRADE_PLAN_58.md): what the fight screen shows on a monster's row besides its name and its
+// health - each ailment, its broken or whole part, what it carries, where it hides - as short tags with a mark and a
+// fuller word for the tooltip, in one place, so the window (74-fight.js) and the tests read the same list.
+//   CM.foeMarks(m) -> [{ id, mark, text, title }]
+//   CM.REALTIME_MODES: the modes that draw in real time on their own canvas (the window fades between them and the floor)
+{ CM.REALTIME_MODES = ["tower", "cave", "fortress", "ablo", "bros", "craft"];
+  CM.foeMarks = (m) => { const out = [], add = (id, mark, text, title) => out.push({ id, mark, text, title }); if (!m) return out;
+    if (m.asleep > 0) add("asleep", "z", `asleep ${m.asleep}`, `Asleep for ${m.asleep} more round${m.asleep === 1 ? "" : "s"}: a blow wakes it, and lands hard`);
+    if (m.held > 0) add("held", "#", `held ${m.held}`, `Held fast for ${m.held} more round${m.held === 1 ? "" : "s"}: it can't act or move`);
+    if (m.marked) add("marked", "x", "marked", "Marked: the next blow on it is surer");
+    if (m.blind > 0) add("blind", "o", `blinded ${m.blind}`, `Blinded for ${m.blind} more round${m.blind === 1 ? "" : "s"}: its blows miss more`);
+    if (m.burning > 0) add("burning", "*", `burning ${m.burning}`, `Burning: it takes fire each round for ${m.burning} more`);
+    if (m.chilled > 0) add("chilled", "~", `chilled ${m.chilled}`, `Chilled for ${m.chilled} more round${m.chilled === 1 ? "" : "s"}: slower, and acts later`);
+    if (m.warded > 0) add("warded", "+", "warded", "Warded: spells do it less harm");
+    if (m.part) add("part", m.part.broken ? "/" : "|", m.part.broken ? `${m.part.name} broken` : `${m.part.name} ${m.part.hp}/${m.part.max}`, m.part.broken ? `Its ${m.part.name} is broken: it has lost what the ${m.part.name} did` : `Its ${m.part.name} can be struck on its own (${m.part.hp}/${m.part.max}); broken, it loses what the ${m.part.name} does`);
+    if (m.gear && m.gear.weapon) add("carries", "!", `carries ${CM.itemName ? CM.itemName(m.gear.weapon) : m.gear.weapon.name || "a weapon"}${m.gear.offhand ? " and a shield" : ""}`, "What it carries falls when it does");
+    if (m.under) add("under", "_", "under the floor", "Under the floor: it can't be struck till it comes up");
+    return out; };
+}
+
 // ---- 65-village.js ----
 "use strict";
 // The surface: a village between runs that grows with what the party brings up. Renown is the currency (a run's
@@ -32615,7 +32647,8 @@ Object.assign(CM.UI.prototype, {
         m.chilled > 0 ? `chilled ${m.chilled}` : "", m.warded > 0 ? "warded" : "", m.part ? (m.part.broken ? `${m.part.name} broken` : `${m.part.name} ${m.part.hp}/${m.part.max}`) : "",
         m.gear && m.gear.weapon ? `carries ${CM.itemName(m.gear.weapon)}${m.gear.offhand ? " and a shield" : ""}` : "", m.under ? "under the floor" : ""].filter(Boolean);
       const behind = m.row === "back" && g.living().some((f) => f !== m && f.row !== "back");
-      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}${marks.length ? " - " + marks.join(", ") : ""}</small>${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
+      const tags = CM.foeMarks ? CM.foeMarks(m) : marks.map((t) => ({ mark: "", text: t, title: t })), hpK = Math.max(0, Math.min(1, m.hp / Math.max(1, m.max)));   // (v63.0: a bar and tags in place of the line of words)
+      b.innerHTML = `${this.esc(m.name)}${behind ? " <small>(behind)</small>" : ""} <small>${Math.max(0, m.hp)}/${m.max}</small><span class="bar foe${hpK < 0.34 ? " low" : hpK < 0.67 ? " mid" : ""}"><i style="width:${Math.round(hpK * 100)}%"></i></span>${m.part && !m.part.broken ? `<span class="bar foe part" title="its ${this.esc(m.part.name)}"><i style="width:${Math.round(100 * Math.max(0, m.part.hp) / Math.max(1, m.part.max))}%"></i></span>` : ""}${tags.length ? `<span class="tags">${tags.map((t) => `<span class="tag tag-${t.id || "x"}" title="${this.esc(t.title)}">${t.mark ? `<b>${this.esc(t.mark)}</b> ` : ""}${this.esc(t.text)}</span>`).join("")}</span>` : ""}${m.intent ? `<i class="odds intent">about to: ${this.esc((m.intent.text || "").split("!")[0].split(",")[0].replace(/^The [A-Za-z- ]+ /, "")) || "something terrible"}</i>` : ""}${est ? `<i class="odds">${Math.round(est.hit * 100)}% to hit, ${est.low}-${est.high}</i>` : ""}`;
       b.addEventListener("click", () => g.setTarget(i));
       targets.appendChild(b);
     });
@@ -44962,6 +44995,33 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       for (const g of of(fl)) { if (Math.abs(g.stretch[0][0] - px) + Math.abs(g.stretch[0][1] - py) > 16) continue;
         for (let i = 0; i < g.n; i++) { const q = CM.duckPose(g, i, t), x = Math.floor(q.x), y = Math.floor(q.y), drake = i % 2 === 0;
           out.push({ x, y, dx: q.x - x - 0.5, dz: q.y - y - 0.5, layer: `life:${drake ? "drake" : "duck"}${q.dip ? ":dip" : ""}`, w: 0.3, h: 0.22, mirror: q.mirror, lift: 0.01 + (CM.reducedMotion ? 0 : Math.sin(t * 1.3 + i * 2) * 0.012) }); } }
+      return out; }; }
+}
+
+// ---- 76zzzzzzzzzzb-gui.js ----
+"use strict";
+// The interface, closer to hand (v63.0, UPGRADE_PLAN_58.md): in a fight each foe's row carries a health bar and its
+// marks as tags with tooltips (74-fight.js reads CM.foeMarks); in the pack a thing can be dragged onto a hero's card
+// to give it (and, at the merchant's, onto the wares to sell it, or a ware onto the pack to buy it); and the way into
+// and out of the real-time places (the Mage Tower, the cave, the Fortress, Claudeablo, Claudebros, Claudecraft) is a
+// short fade rather than a cut.
+{ const rowsShown = (ui, g) => { const F = CM.BAG_FILTERS[ui.bagFilter || "all"]; return g.bag.map((it, i) => i).filter((i) => !F.kinds || F.kinds.includes(g.bag[i].kind)); };
+  const dragData = (e) => { try { return e.dataTransfer.getData("text/plain") || ""; } catch (err) { return ""; } };
+  const wire = (el, over, drop) => { if (!el || el.dataset.dropWired) return; el.dataset.dropWired = "1";
+    el.addEventListener("dragover", (e) => { if (!over()) return; e.preventDefault(); el.classList.add("drop-over"); });
+    el.addEventListener("dragleave", () => el.classList.remove("drop-over"));
+    el.addEventListener("drop", (e) => { el.classList.remove("drop-over"); const d = dragData(e); if (!d) return; e.preventDefault(); drop(d); }); };
+  { const fb0 = CM.UI.prototype.fillBag; CM.UI.prototype.fillBag = function (...a) { const out = fb0.apply(this, a); const ui = this, g = this.game; try {
+        const rows = rowsShown(ui, g), packList = ui.$("#bag-list"), shopList = ui.$("#shop-list");
+        packList.querySelectorAll(".item").forEach((row, i) => { if (rows[i] === undefined) return; row.draggable = true; row.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", `pack:${rows[i]}`); e.dataTransfer.effectAllowed = "move"; row.classList.add("dragging"); }); row.addEventListener("dragend", () => row.classList.remove("dragging")); });
+        if (g.shopping && shopList) shopList.querySelectorAll(".item").forEach((row, i) => { row.draggable = true; row.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", `shop:${i}`); e.dataTransfer.effectAllowed = "copy"; }); });
+        const party = ui.$("#party"); if (party) party.querySelectorAll(".member").forEach((card, i) => wire(card, () => Boolean(g.bag.length), (d) => { const [kind, n] = d.split(":"); if (kind !== "pack") return; ui.note(g.give(Number(n), i)); ui.bagRow = -1; ui.fillBag(); }));
+        wire(packList, () => Boolean(g.shopping && g.stock && g.stock.length), (d) => { const [kind, n] = d.split(":"); if (kind !== "shop") return; ui.shopRow = Number(n); ui.note(g.buy(Number(n))); ui.fillBag(); });
+        if (shopList) wire(shopList, () => Boolean(g.shopping), (d) => { const [kind, n] = d.split(":"); if (kind !== "pack") return; ui.note(g.sell(Number(n))); ui.bagRow = -1; ui.fillBag(); });
+      } catch (e) { /* the drag is a nicety: the clicks still work */ } return out; }; }
+  // the fade between the floor and a real-time place, either way
+  { const sm0 = CM.Game.prototype.setMode; CM.Game.prototype.setMode = function (mode) { const was = this.mode, R = CM.REALTIME_MODES || []; const out = sm0.call(this, mode);
+      try { if (CM.transit && CM.transit.floor && !CM.reducedMotion && was !== mode && (R.includes(mode) || R.includes(was)) && mode !== "title" && was !== "title") CM.transit.floor(); } catch (e) { /* no fade, no matter */ }
       return out; }; }
 }
 
