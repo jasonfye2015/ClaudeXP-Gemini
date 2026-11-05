@@ -573,7 +573,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK });
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density });   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);

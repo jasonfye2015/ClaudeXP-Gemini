@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Detail governs the details (v58.3, UPGRADE_PLAN_53.md phase 2)
+  (src/js/40-render.js, src/js/26e-wooddetail.js, src/js/26i-wall.js, src/js/26-surface.js)
+  - Settings > Detail now governs the built details as well as the scattered ones - it never reached them before.
+    Low leaves out the window sills and lintels, the rooflines, the kerbs, the stains and ivy, and the Wood's roots,
+    stumps and rocks; Medium has fewer roots, stumps and rocks and no ivy on the town wall; High has everything. The
+    fences, the well, the lamps, the battlements, the gate and the shaft head stand at every setting.
+
 Automatic and the badly hurt (v58.2, fix (asked 2026-11-05))
   (src/js/62-combat.js)
   - Fixed: playing on Automatic, a fight could stick for good once anyone fell below half their health - the log

@@ -6012,6 +6012,18 @@ test("Automatic in a fight with someone badly hurt (v58.2): the fight goes on - 
   if (g2.combat && g2.combat.waiting) { assert.strictEqual(g2.autoTurn(), false); assert.strictEqual(g2.combat.auto, false, "Auto by hand stops when someone is badly hurt"); }
 });
 
+test("the Detail setting governs the built details (v58.3): Low leaves out the sills, rooflines, kerbs, stains, ivy, roots, stumps and rocks; Medium has fewer roots, stumps and rocks and no ivy on the town wall; High all of them - and the fences, the well, the lamps and the battlements stand at every setting", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", "solid:bark", "solid:stumptop", "solid:stain", "solid:ivy", "model:iron", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const at = (fl, th, d) => CM.floorMesh(fl, th, index, { detail: d }), town = CM.makeTown("det-1"), wood = CM.makeWood("det-1");
+  const [tl, tm, th] = [CM.DETAIL.low, CM.DETAIL.medium, CM.DETAIL.high].map((d) => at(town, CM.TOWN_THEME, d)), [wl, wm, wh] = [CM.DETAIL.low, CM.DETAIL.medium, CM.DETAIL.high].map((d) => at(wood, CM.WOOD_THEME, d));
+  assert.ok(tl.count < tm.count && tm.count < th.count, `the town: ${tl.count} < ${tm.count} < ${th.count}`); assert.ok(wl.count < wm.count && wm.count < wh.count, `the Wood: ${wl.count} < ${wm.count} < ${wh.count}`);
+  assert.strictEqual(wl.wood.roots + wl.wood.stumps + wl.wood.rocks, 0); assert.ok(wm.wood.roots < wh.wood.roots && wm.wood.rocks <= wh.wood.rocks);
+  assert.ok(!(tm.walled.ivy > 0) && th.walled.ivy > 0, "the wall's ivy at High only");
+  for (const m of [tl, tm, th]) { assert.strictEqual(m.wells, 1); assert.ok(m.fencing.fences > 0 && m.walled.merlons > 0 && m.walled.gate === 1); }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

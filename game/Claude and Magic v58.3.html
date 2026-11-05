@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v58.2 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v58.3 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "58.2", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "58.3", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6439,7 +6439,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
   const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad: near(28), fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
-  const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0, gate: 0 };   // (v57.0: battlements - 26i-wall.js)
+  const walled = sky && !only && !W && CM.wallDetail && fl.number === 0 ? CM.wallDetail({ quad, fl, index, size, detail: opts.detail, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { merlons: 0, buttresses: 0, slits: 0, gate: 0 };   // (v57.0: battlements - 26i-wall.js)
   const shaftHead = sky && !only && !W && CM.shaftHead ? CM.shaftHead({ quad, fl, index }) : 0;   // (v57.3: the shaft head, built - 26j-shaft.js)
   let decals = 0, overhead = 0;
   if (!sky && opts.decals !== false && !only) {                                                   // below: what is on the walls, and what hangs overhead, by band
@@ -6622,7 +6622,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const ridge = (x0, z0, x1, z1, h, w, L, k) => { const dx = x1 - x0, dz = z1 - z0, n = Math.hypot(dx, dz) || 1, px = -dz / n, pz = dx / n, w1 = w * 0.25;
       quad([x0 + px * w, 0, z0 + pz * w], [x1 + px * w1, 0, z1 + pz * w1], [x1, 0.008, z1], [x0, h, z0], L, k * 0.95);
       quad([x0, h, z0], [x1, 0.008, z1], [x1 - px * w1, 0, z1 - pz * w1], [x0 - px * w, 0, z0 - pz * w], L, k * 0.7); };
-    for (const key of trees) { const [x, y] = key.split(",").map(Number); if (![[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => openAt(x + dx, y + dy))) continue;   /* (v58.0: only the trees one can walk up to - deep in the wood their feet are never seen) */ const r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = 4 + Math.floor(r.next() * 3), a0 = r.next() * Math.PI * 2;
+    for (const key of trees) { const [x, y] = key.split(",").map(Number); if (![[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].some(([dx, dy]) => openAt(x + dx, y + dy))) continue;   /* (v58.0: only the trees one can walk up to - deep in the wood their feet are never seen) */ const r = R(fl, `roots:${key}`), cx = x + 0.5, cz = y + 0.5, n = (o.detail !== undefined && o.detail < 1 ? 3 : 4) + Math.floor(r.next() * (o.detail !== undefined && o.detail < 1 ? 2 : 3)), a0 = r.next() * Math.PI * 2;   /* (v58.3: fewer at Medium) */
       const k = CM.treeVariant(fl, x, y) === 2 ? 1.05 : 0.9;   // (a birch's roots paler)
       for (let i = 0; i < n; i++) { const a = a0 + (i / n) * Math.PI * 2 + (r.next() - 0.5) * 0.6, len = 0.16 + r.next() * 0.18, s = 0.05;
         ridge(cx + Math.cos(a) * s, cz + Math.sin(a) * s, cx + Math.cos(a) * (s + len), cz + Math.sin(a) * (s + len), 0.05 + r.next() * 0.04, 0.026 + r.next() * 0.018, wood, k); out.roots++; } }
@@ -6631,12 +6631,13 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     const ring = (cx, cz, rad, n, a0, jit, r) => { const p = []; for (let i = 0; i < n; i++) { const a = a0 + (i / n) * Math.PI * 2; const rr = rad * (1 - jit + r.next() * jit * 2); p.push([cx + Math.cos(a) * rr, cz + Math.sin(a) * rr]); } return p; };
     const nearTree = (x, y) => CM.DIRS.find(([dx, dy]) => trees.has(`${x + dx},${y + dy}`));
     for (let y = 1; y < o.size - 1; y++) for (let x = 1; x < o.size - 1; x++) { if (!openAt(x, y) || busy(x, y)) continue; const r = R(fl, `floor:${x},${y}`), roll = r.next(), t = nearTree(x, y);
-      if (t && roll < 0.06) {   // a stump, toward the tree it stands beside: eight sides of bark, the cut top paler
+      const mid = o.detail !== undefined && o.detail < 1;   // (v58.3: at Medium, half as many stumps and rocks)
+      if (t && roll < (mid ? 0.03 : 0.06)) {   // a stump, toward the tree it stands beside: eight sides of bark, the cut top paler
         const cx = x + 0.5 + t[0] * 0.28 + (r.next() - 0.5) * 0.2, cz = y + 0.5 + t[1] * 0.28 + (r.next() - 0.5) * 0.2, rad = 0.07 + r.next() * 0.05, h = 0.08 + r.next() * 0.12, P = ring(cx, cz, rad, 8, r.next(), 0.12, r), Q = P.map(([px, pz]) => [cx + (px - cx) * 1.25, cz + (pz - cz) * 1.25]);
         for (let i = 0; i < 8; i++) { const j = (i + 1) % 8; quad([Q[i][0], 0, Q[i][1]], [Q[j][0], 0, Q[j][1]], [P[j][0], h, P[j][1]], [P[i][0], h, P[i][1]], wood, 0.62 + 0.25 * Math.abs(Math.cos(i))); }
         for (let i = 0; i < 8; i++) { const j = (i + 1) % 8; quad([cx, h + 0.01, cz], [P[i][0], h, P[i][1]], [P[j][0], h, P[j][1]], [cx, h + 0.01, cz], cut, 1.0); }
         out.stumps++; continue; }
-      if (stone !== undefined && roll > 0.92) {   // a rock half sunk: a low ring, a shoulder and a top, all a little uneven
+      if (stone !== undefined && roll > (mid ? 0.96 : 0.92)) {   // a rock half sunk: a low ring, a shoulder and a top, all a little uneven
         const cx = x + 0.25 + r.next() * 0.5, cz = y + 0.25 + r.next() * 0.5, rad = 0.1 + r.next() * 0.16, h = rad * (0.45 + r.next() * 0.35), n = 7, a0 = r.next() * 6;
         const B = ring(cx, cz, rad, n, a0, 0.18, r), M = ring(cx, cz, rad * 0.78, n, a0 + 0.2, 0.15, r), top = [cx + (r.next() - 0.5) * rad * 0.3, h, cz + (r.next() - 0.5) * rad * 0.3];
         for (let i = 0; i < n; i++) { const j = (i + 1) % n, k = 0.62 + 0.3 * ((Math.cos(a0 + (i / n) * 6.283) + 1) / 2);
@@ -6780,7 +6781,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         block(x, y, d, 0, 1, 0, 0.16, H, H + 0.07, 0.95);                                             // the parapet, the length of the square
         for (const [u0, u1] of [[0.06, 0.36], [0.56, 0.86]]) { block(x, y, d, u0, u1, 0, 0.16, H + 0.07, H + 0.3); out.merlons++; } }
       // (v57.4) ivy up the town's side of the wall, here and there
-      if (index["solid:ivy"] !== undefined) for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 11 + y * 5) % 4 !== 1) continue;
+      if (index["solid:ivy"] !== undefined && !(o.detail !== undefined && o.detail < 1)) for (const [dx, dy, d] of [[0, -1, 0], [1, 0, 1], [0, 1, 2], [-1, 0, 3]]) { if (solidKind(x + dx, y + dy) !== null || (x * 11 + y * 5) % 4 !== 1) continue;
         const P = (u, v, yy) => d === 0 ? [x + u, yy, y + v] : d === 2 ? [x + 1 - u, yy, y + 1 - v] : d === 1 ? [x + 1 - v, yy, y + u] : [x + v, yy, y + 1 - u];
         const u0 = ((x * 3 + y) % 5) * 0.08, top = H * (0.5 + ((x + y * 3) % 4) * 0.12);
         quad(P(u0, -0.006, 0), P(u0 + 0.6, -0.006, 0), P(u0 + 0.6, -0.006, top), P(u0, -0.006, top), index["solid:ivy"], 0.9); out.ivy = (out.ivy || 0) + 1; }
@@ -9997,7 +9998,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK });
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density });   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);
