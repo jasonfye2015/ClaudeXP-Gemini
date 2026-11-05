@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The light of the hour (v59.0, UPGRADE_PLAN_54.md)
+  (src/js/24c-light.js, src/js/76zzzzzzzzzz7-light.js, src/js/40-render.js)
+  - The sun's light has a colour now: gold on the sunward walls and the ground at dawn and dusk, white at noon,
+    silver-blue under the moon; the sky warms about the low sun and cools on the far side of it.
+  - Mist lies on the water and its banks at dawn - thickest in autumn and spring, little in summer - and off the
+    water again on autumn and spring evenings; none in rain or snow.
+  - At night the lamps and the lit windows wear halos in the damp air: wide and soft in mist and rain, a faint one
+    on a clear night.
+  - Fixed: moss grew on a barrel or the well standing against a wall; it keeps to the walls themselves now.
+
 Built in time (v58.4, UPGRADE_PLAN_53.md phase 3)
   (tests/run.js)
   - A test now holds the town and the Deep Wood to their time and size: each built whole at High detail in well under
