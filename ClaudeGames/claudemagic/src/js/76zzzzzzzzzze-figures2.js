@@ -41,7 +41,7 @@
         if (moving) st.moved = true; st.x = x; st.z = z; st.seen = now;
         const flash = s.flash || 0, hit = flash > st.flash + 0.25; st.flash = flash;
         const foe = s.m || null, dead = Boolean(foe && foe.hp <= 0) || Boolean(s.dying), kind = CM.monsterKind ? CM.monsterKind(parts[1]) : null;
-        const cues = { moving: moving && !dead, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
+        const cues = { moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
         const play = CM.Figures.step(m, st, cues, now); if (!play) { keep.push(s); continue; }
         const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
         this.figList.push({ s, fig, m, key, play, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }
@@ -62,7 +62,11 @@
       gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); const bytes = 18 * 4; gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
       gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);
       for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.enableVertexAttribArray(8); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.enableVertexAttribArray(9); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); }
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
+      // (v68.0) what it carries: each piece of gear is a mesh bound to the same rig's hand, drawn with the body's own joints
+      for (const g of f.fig.wear || []) { const gm = CM.figures.models[`gear:${g}`]; if (!gm || gm.skeleton.n !== m.skeleton.n) continue; const G = buffersOf(this, gm);
+        gl.uniform3fv(this.loc.uTint, [wk, wk, wk]); gl.bindBuffer(gl.ARRAY_BUFFER, G.vb); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, G.ib); gl.drawElements(gl.TRIANGLES, G.count, G.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); } }
     gl.uniform1f(this.loc.uSkin, 0); gl.activeTexture(gl.TEXTURE0); this.figuresDrawn = L.length; };
   // once the figures are parsed, their pictures go up; the setting
   CM.figuresReady.then((ok) => { if (ok && CM.renderer && CM.renderer.gl) CM.renderer.figuresUp(CM.figures).catch((e) => console.warn("figures: pictures -", e && e.message)); });

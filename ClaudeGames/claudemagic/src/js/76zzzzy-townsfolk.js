@@ -31,14 +31,14 @@
       out.push([who, target, slot[1]]); });
     return out; };
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== 0 || !CM.renderer || game.mode === "title") return out;
-      for (const [who, target] of CM.townsfolkNow(game, fl)) { let F = folk[who];
+      for (const [who, target, where] of CM.townsfolkNow(game, fl)) { let F = folk[who];
         if (!F) F = folk[who] = { at: target.slice(), to: target.slice(), path: [target], t0: now };
         if (F.to[0] !== target[0] || F.to[1] !== target[1]) { const here = F.cur || F.at; F.path = path(fl, [Math.round(here[0]), Math.round(here[1])], target); F.to = target.slice(); F.t0 = now; }
         const P = F.path, f = Math.min(P.length - 1, ((now - F.t0) / 1000) * SPEED), j = Math.floor(f), u = f - j, a = P[j], b = P[Math.min(P.length - 1, j + 1)];
         const x = a[0] + (b[0] - a[0]) * u, y = a[1] + (b[1] - a[1]) * u; F.cur = [x, y]; const walking = f < P.length - 1, cx = Math.floor(x + 0.5), cy = Math.floor(y + 0.5);
         if (cx === fl.pos[0] && cy === fl.pos[1]) continue;   // (out of the party's way: not drawn on its square)
-        const L = `npc:res_${who === "priest" ? "priest" : who}`; if (CM.renderer.index[L] === undefined) continue;
-        out.push({ x: cx, y: cy, dx: x - cx, dz: y - cy, layer: L, w: 0.62, h: 0.82, lift: walking ? Math.abs(Math.sin(now / 160 + x)) * 0.025 : 0,
+        const L = `npc:res_${who === "priest" ? "priest" : who}`; if (CM.renderer.index[L] === undefined && !(CM.figures && CM.Figures && CM.Figures.figureOf(L))) continue;   // (v68.0: a resident with a body but no picture is drawn as the body)
+        out.push({ id: `res:${who}`, walking, act: walking ? null : ({ smith: "work", market: "work", library: "work", temple: "work" }[where] || null), x: cx, y: cy, dx: x - cx, dz: y - cy, layer: L, w: 0.62, h: 0.82, lift: walking ? Math.abs(Math.sin(now / 160 + x)) * 0.025 : 0,
           bend: CM.monsterBend ? CM.monsterBend(walking ? "walk" : "idle", now, x * 3 + y, null) : null }); }
       return out; }; }
 }
