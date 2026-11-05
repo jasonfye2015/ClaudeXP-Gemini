@@ -6024,6 +6024,16 @@ test("the Detail setting governs the built details (v58.3): Low leaves out the s
   for (const m of [tl, tm, th]) { assert.strictEqual(m.wells, 1); assert.ok(m.fencing.fences > 0 && m.walled.merlons > 0 && m.walled.gate === 1); }
 });
 
+test("the town and the Wood build within their time (v58.4): each floor's whole mesh - ground, walls, buildings and every built detail - at High, in under a second and a half here (about a tenth of that on the machine it was made on), and under 300,000 vertices", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", "solid:bark", "solid:stumptop", "solid:stain", "solid:ivy", "model:iron", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  for (const [name, fl, th] of [["the town", CM.makeTown("time-1"), CM.TOWN_THEME], ["the Wood", CM.makeWood("time-1"), CM.WOOD_THEME]]) {
+    const props = CM.scatter(fl, "time-1", CM.DETAIL.high, { season: "summer" }); CM.floorMesh(fl, th, index, { props, detail: 1 });   // (warmed once)
+    const t0 = Date.now(), m = CM.floorMesh(fl, th, index, { props, detail: 1 }), ms = Date.now() - t0;
+    assert.ok(ms < 1500, `${name} built in ${ms} ms`); assert.ok(m.count < 300000, `${name}: ${m.count} vertices`); }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
