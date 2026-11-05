@@ -1,4 +1,5 @@
-"""The drive's guide: writes Claude.MD at the top of the SSD (beside the Claude Timeline folder) - what the drive is,
+"""The drive's guides: writes "Give this to Claude.MD" and "Read Me.MD" at the top of the SSD (beside the Claude Timeline
+folder). The first, for Claude: what the drive is,
 how to run it, what to download again to rebuild it, where everything goes, and a full inventory: the Timeline's own
 folders, every program on the three computers (Manual chapter 15), and everything in Local Storage (chapter 14's scan).
 
@@ -13,9 +14,10 @@ import time
 from pathlib import Path
 
 TIMELINE = Path(__file__).resolve().parents[2]
-OUT = TIMELINE.parent / "Claude.MD"
+OUT = TIMELINE.parent / "Give this to Claude.MD"
+READ_ME = TIMELINE.parent / "Read Me.MD"
 
-GUIDE = r"""# Claude.MD - the Claude Timeline SSD
+GUIDE = r"""# Give this to Claude - the Claude Timeline SSD
 
 Written for Claude (and for you) on {date}. Hand this file to Claude when the drive needs rebuilding or when you want
 to know what's on it. Paths below are on this drive, `{drive}`. The drive letter can change from PC to PC; the
@@ -50,7 +52,8 @@ chapters, also readable from the launcher's MANUAL button).
 |---|---|
 | `Claude Timeline\` | Everything: the code, the runtimes, and `Local Storage` (the archive and the AI models) |
 | `Claude Timeline - Shortcut.lnk` | A shortcut to the folder (personal; never committed) |
-| `Claude.MD` | This file, written by `python -m manual.drive_guide` |
+| `Give this to Claude.MD` | This file, written by `python -m manual.drive_guide` |
+| `Read Me.MD` | The short version for a person: how to start it, and what's in Local Storage |
 | `$RECYCLE.BIN`, `System Volume Information`, `.Spotlight-V100`, `.fseventsd` | Windows' and macOS's own housekeeping |
 
 ## 3. How to run it
@@ -298,8 +301,8 @@ Work in this order. Part A comes from GitHub and the web. Part B only exists in 
 You'll need git and the GitHub CLI (`gh auth login`). This drive doesn't record file owners, so mark both folders safe:
 
 ```bash
-git config --global --add safe.directory "F:/Claude Timeline"
-git config --global --add safe.directory "F:/Claude Timeline/ClaudeGames/Claude and Magic"
+git config --global --add safe.directory "{drive_fwd}Claude Timeline"
+git config --global --add safe.directory "{drive_fwd}Claude Timeline/ClaudeGames/Claude and Magic"
 ```
 
 The emulator cores (`ClaudeGames\emulators\cores`), the Chocolate Doom engines (`ClaudeGames\doom\engines`) and
@@ -451,7 +454,7 @@ read their media from `Local Storage\Lemmings` and `Local Storage\casualties unk
 Regenerate it after big changes with:
 
 ```bash
-cd "F:/Claude Timeline/ClaudeApps"
+cd "{drive_fwd}Claude Timeline/ClaudeApps"
 ../Python/python.exe -m manual.drive_guide
 ```
 
@@ -481,6 +484,107 @@ Scanned {date}. Sizes are the files' own. `Local Storage` is in Appendix C.
 
 {notes}
 """
+
+
+READ_ME_TEXT = r"""# Read Me - the Claude Timeline SSD
+
+## Start here
+
+1. Plug the SSD into a **USB 3** port (blue, or marked SS).
+2. Open the drive, then the `Claude Timeline` folder, and double-click **Claude Timeline.exe**.
+   On a Mac, double-click **Claude Timeline.command** instead.
+3. In the launcher, click a computer, then **LOAD THIS COMPUTER**. **F11** switches full screen.
+4. To stop, shut the computer down from its own Start menu. The launcher comes back; **POWER OFF** closes it.
+5. Before unplugging, make sure no computer is running and Kithylin AI is closed, then eject the drive.
+
+If it won't start, double-click `Claude Timeline.bat` instead to see the error, or click **SELF-CHECK** in the
+launcher. On a newly installed PC, install the graphics card's driver first.
+
+## The basics
+
+- **Three computers** from three moments in time: **EPOCH-2001** (Windows XP), **SYSTEM-2011** (Windows 7) and
+  **WORKSTATION-2025** (Windows 11). They share one archive, one set of games and one cast of about 260 characters.
+- **Launcher buttons:** **APPS** opens Kithylin AI, Soul and Song and the code studios on their own; **BACKUP** saves
+  your progress; **MANUAL** opens the full manual.
+- **The talking** (the characters, ClaudeAI, Kithylin) runs on AI models stored in `Local Storage\LLM Models`, using
+  the graphics card. Everything else works without them.
+- **Backups** go to `Local Storage\Claude Timeline Backups`. Copy them to another drive now and then.
+- **More help:** the `Manual` folder in `Claude Timeline`. To rebuild the drive, or to ask Claude about it, give
+  Claude the file `Give this to Claude.MD`.
+
+{drive_line}
+
+## What's in Local Storage
+
+`Claude Timeline\Local Storage` is the "external drive" (drive E:) inside every computer. Scanned {date}.
+
+{storage}
+"""
+
+STORAGE_NOTES = {
+    "TV and Movies": "Films, TV series and commercials that ClaudeTV turns into channels",
+    "Camera Rolls": "Phone and camera photo backups, 2013 to 2026",
+    "LLM Models": "The AI models, the llama.cpp engine, image and voice models, and Kithylin's training",
+    "Furry Media Archive": "Comics, portfolios, stories, art CDs, con discs, videos and website rips",
+    "Misc Personal Image Folders": "Personal picture collections",
+    "Emulation": "Game ROMs for the NES, SNES, Game Boy family, Genesis, Master System, Game Gear, N64 and Apple II",
+    "Others Files Archived": "Other people's files you've kept, shown in FurFolio",
+    "SecondLife": "The Second Life viewer and OpenSim world (The Furry Hollow)",
+    "Projects": "Programming projects, including Soul and Song's Companions",
+    "Text Logs": "Your chat logs from 2004 to 2011 (Kithylin's training material)",
+    "Personal Texts and Docs": "Personal writing and documents",
+    "Bsky-Kithy": "Posts from kithy.bsky.social, kept in sync",
+    "Python Studio": "Python 3.12, offline packages, ffmpeg and manuals for Copilot Python Studio",
+    "ambientCG - Textures": "Free surface textures used by Claude and Magic",
+    "Kiwix": "Offline Wikipedia",
+    "Claude Timeline Backups": "Backups made by the launcher's BACKUP button",
+    "Windows 11 media": "Wallpapers and sounds for WORKSTATION-2025",
+    "WADs": "Doom, Doom II, Heretic, Hexen, Wolfenstein 3D and Freedoom",
+    "Lemmings": "Lemmings' music and graphics, for Claudemmings",
+    "Second Life Export": "Your own Second Life creations, exported",
+    "Project Snapshots": "Screenshots of the project as it was built",
+    "Windows Screen saver": "The Claude Entertainment System screen saver",
+    "Sticker Packs": "Telegram sticker packs",
+    "Dungeon Crawl - Sprites": "Dungeon Crawl tiles used by Claude and Magic",
+    "SMB Clock": "Art and sounds for the Super Claude Bros clock",
+    "Zelda2 - Sprites": "Sprites for the Zelda II clock screen saver",
+    "Mertoid - Sprites": "Sprites for the Metroid clock screen saver",
+    "SMB3 - Sprites": "Sprites for the Super Mario Bros. 3 clock screen saver",
+    "LOZ Sprites": "Sprites for The Legend of Claude clock screen saver",
+    "Rover": "Rover the search dog, EPOCH-2001's helper",
+    "casualties unknown": "Casualties: Unknown's graphics, for Claudualties",
+    "Farm - Sprites": "Crop sprites for Claude and Magic's farm",
+    "SecondLife Details": "Two reference pictures from Second Life",
+    "Created Files": "Where programs save what you make (fractals, terrain, Claude Life patterns)",
+}
+
+
+def _gb(size):
+    """'291.5 GB', '401.9 MB', '572 KB' -> GB as text."""
+    m = re.match(r"([\d.,]+)\s*(B|KB|MB|GB|TB)", size)
+    if not m:
+        return size
+    n = float(m.group(1).replace(",", "")) * {"B": 1 / 1024 ** 3, "KB": 1 / 1024 ** 2, "MB": 1 / 1024, "GB": 1, "TB": 1024}[m.group(2)]
+    return f"{n:,.1f} GB" if n >= 0.1 else ("< 0.1 GB" if n > 0 else "0 GB")
+
+
+def read_me(inv_text, date):
+    """The short guide for a person, with Local Storage's folders from the scan."""
+    rows = ["| Folder | Size | What it is |", "|---|---:|---|"]
+    for m in re.finditer(r"^\| \*\*(.+?)\*\* \| ([\d,]+) \| ([\d,]+) \| ([^|]+) \|", inv_text, re.M):
+        name, size = m.group(1), m.group(4).strip()
+        rows.append(f"| {name} | {_gb(size)} | {STORAGE_NOTES.get(name, '')} |")
+    total = re.search(r"\*\*In all: ([\d,]+) files in [\d,]+ folders, ([\d.]+ \w+)\.\*\*", inv_text)
+    if total:
+        rows.append(f"| **In all** | **{_gb(total.group(2))}** | {total.group(1)} files |")
+    import shutil
+    try:
+        du = shutil.disk_usage(TIMELINE)
+        drive_line = (f"**The drive:** {du.total / 1024 ** 3:,.0f} GB, with {du.free / 1024 ** 3:,.0f} GB free "
+                      f"({100 * du.used / du.total:.0f}% full).")
+    except OSError:
+        drive_line = ""
+    return READ_ME_TEXT.format(date=date, storage="\n".join(rows), drive_line=drive_line)
 
 
 def human(n):
@@ -609,13 +713,17 @@ def main(argv=None):
     programs = chapter(TIMELINE / "Manual" / "15-programs.md")
     drive = TIMELINE.anchor or str(TIMELINE.parent)
     cam_version, cam_plans = cam_details()
-    text = GUIDE.format(date=time.strftime("%d %B %Y"), drive=drive, folders=folders_table(), programs=programs,
+    text = GUIDE.format(date=time.strftime("%d %B %Y"), drive=drive, drive_fwd=drive.replace("\\", "/"), folders=folders_table(), programs=programs,
                         inventory=inv_text, main_furs=main_furs(), cam_version=cam_version, cam_plans=cam_plans,
                         manual=manual_list(), under_the_hood=chapter(TIMELINE / "Manual" / "13-under-the-hood.md"),
                         notes=notes())
     out = Path(args.out)
     out.write_text(text, encoding="utf-8")
     print(f"{len(text.splitlines()):,} lines -> {out}")
+    short = read_me(inv_text, time.strftime("%d %B %Y"))
+    readme = out.parent / READ_ME.name
+    readme.write_text(short, encoding="utf-8")
+    print(f"{len(short.splitlines()):,} lines -> {readme}")
 
 
 if __name__ == "__main__":
