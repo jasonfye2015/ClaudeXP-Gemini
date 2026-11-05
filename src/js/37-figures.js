@@ -94,6 +94,10 @@
       const L = len(st.clip); let t = timeIn(); if (st.once && t >= L) t = L - 1e-3;
       const k = st.from && (now - st.since) < BLEND ? (now - st.since) / BLEND : 1; if (k >= 1) st.from = null;
       return { clip: st.clip, t, from: st.from, fromT: st.fromT || 0, k }; },
+    // (v69.0) the gear a foe carries, as the model to put in its hand, from the weapon's name: a sword, an axe, a knife, a staff, a crossbow - or none
+    gearFor(name) { const n = String(name || "").toLowerCase(); if (!n) return null;
+      if (/great ?sword|claymore|two-hand/.test(n)) return "greatsword"; if (/great ?axe|battle ?axe/.test(n)) return "greataxe"; if (/sword|blade|sabre|rapier|scimitar/.test(n)) return "sword";
+      if (/axe|hatchet|cleaver/.test(n)) return "axe"; if (/dagger|knife|dirk|shiv/.test(n)) return "knife"; if (/staff|rod|wand/.test(n)) return "staff"; if (/bow|crossbow/.test(n)) return "crossbow"; return null; },
     // the model matrix: scaled, turned about y by yaw, then stood at (x, y, z); column-major
     modelMatrix(out, x, y, z, yaw, s) { const c = Math.cos(yaw) * s, sn = Math.sin(yaw) * s; out[0] = c; out[1] = 0; out[2] = -sn; out[3] = 0; out[4] = 0; out[5] = s; out[6] = 0; out[7] = 0; out[8] = sn; out[9] = 0; out[10] = c; out[11] = 0; out[12] = x; out[13] = y; out[14] = z; out[15] = 1; return out; },
   };

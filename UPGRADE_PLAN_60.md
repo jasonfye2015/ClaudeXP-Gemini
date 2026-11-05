@@ -134,6 +134,13 @@ and the rival band (no figures of their own on the floor), the farm's litter (a 
 - The heroes stay first-person (portraits and the hand); nothing changes there.
 
 ### Phase 4 - the monsters, in batches by body shape
+Done 2026-11-05 as v69.0, in one batch rather than four, since the packs in hand set the limit: 54 kinds have
+bodies (the KayKit adventurers and skeletons tinted and scaled for the small folk, the big, the dead, the drowned,
+the golems and the guardians; Quaternius' bull, fox, stag, snake and frog fetched for boar, bear, wyvern, eel, root
+wyrm and the marsh's frogs), and nine stay painted - the plants, the fungus, the mimic, the Mycelial Mind and the
+Root of the World - because no body fits them. A foe's weapon names the gear in its hand (CM.Figures.gearFor); a
+striker steps in and back with its blow. The bake is 2.0 MB. When the Ultimate Monsters pack is fetched (it is
+Drive/itch-only), the big kinds and the painted nine can be given their own shapes in a second batch.
 - beast (13): rat, wolf, spider, bear, boar... from Ultimate Monsters' quadrupeds; small (7): goblin, kobold,
   imp - KayKit skeletons at 0.8 scale and Quaternius smalls; thin (4) and biped (3): skeleton, zombie, ghoul -
   KayKit skeletons/zombies with the Special clips; wide (13): orc, troll, ogre - Quaternius brutes; tall (7):

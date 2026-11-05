@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The monsters in batches (v69.0, UPGRADE_PLAN_60.md phase 4)
+  (src/models/figures.json, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js)
+  - The monsters in batches (plan 60, phase 4): fifty-four kinds have bodies now - the small folk (kobold, goblin,
+    the imps), the big (orc, troll, ogre, minotaur, demon), the dead (zombie, ghoul, wraith, the hollow), the
+    drowned and their knight and queen, the golems and the gargoyle, the beasts (boar, bear, stag-wyvern, eel,
+    root wyrm, the frogs of the marsh), the guardians and the Lich King - each in its own colour and size. The
+    plants, the fungus and the mimic keep their painted pictures: no body fits them.
+  - What a foe carries is in its hand - a sword, an axe, a knife, a staff, a crossbow, by the weapon's name - and
+    a striker steps in and back with its blow.
+  - Five more CC0 animals from Quaternius (bull, fox, stag, snake, frog); the bake is 2.0 MB.
+
 The town's people (v68.0, UPGRADE_PLAN_60.md phase 3)
   (src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/76zzzzy-townsfolk.js, src/js/76zzzzzzj-market.js, src/models/figures.json)
   - The town's people (plan 60, phase 3): all six residents have bodies now - the merchant, the priest and the
