@@ -6140,6 +6140,25 @@ test("the real-time places' look (v64.0): a torch's flicker stays within its bou
   for (const m of ["U.fortHud =", "U.caveHud =", "U.brScenery =", "CM.flickerAt", "CM.hourTint", "CM.motesOf"]) assert.ok(win.includes(m), `${m} wired`);
 });
 
+test("the figures' pipeline (v65.0): the baked figures inflate and parse - every model in the manifest with its mesh, skeleton, clips and texture - within the budget; a pose at rest and in a clip skins every vertex to a finite point and the body stands its height; every townsperson, pet and monster kind is mapped to a model or marked painted, and every mapped model, clip and gear exists", () => {
+  const CM = load(), zlib = require("zlib"), P = CM.figuresPack; assert.ok(P && P.data && P.manifest && P.figures, "the pack");
+  assert.ok(P.data.length <= 4500000, `within the budget (${P.data.length} B of base64)`); assert.ok(P.credits.includes("CC0"), "credited");
+  const bytes = new Uint8Array(zlib.inflateRawSync(Buffer.from(P.data, "base64"))), F = CM.Figures.parse(bytes, P.manifest);
+  const names = Object.keys(P.manifest.models); assert.ok(names.length >= 20, `models (${names.length})`); assert.strictEqual(Object.keys(F.models).length, names.length); assert.ok(F.clips.length >= 60, `shared clips (${F.clips.length})`);
+  const height = (m, clip, t) => { const M = CM.Figures.pose(m, clip, t); let lo = 1e9, hi = -1e9; const v = [0, 0, 0]; for (let i = 0; i < m.verts; i += 2) { CM.Figures.skinVertex(m, M, i, v); assert.ok(v.every(Number.isFinite)); lo = Math.min(lo, v[1]); hi = Math.max(hi, v[1]); } return hi - lo; };
+  for (const name of names) { const m = F.models[name], meta = P.manifest.models[name]; assert.strictEqual(m.verts, meta.verts, `${name}: its vertices`); assert.strictEqual(m.skeleton.n, meta.joints); assert.strictEqual(m.textured, meta.textured);
+    assert.ok(m.index.every((i) => i < m.verts), `${name}: indices in range`); for (const c of meta.clips) assert.ok(m.clips[c] && m.clips[c].frames === meta.frames[c] && m.clips[c].joints === m.skeleton.n, `${name}: clip ${c}`);
+    const h0 = height(m, null, 0); assert.ok(h0 > 0.1 && h0 < 8, `${name}: stands ${h0.toFixed(2)} tall at rest`); if (m.clips.idle) { const h1 = height(m, m.clips.idle, 0.5); assert.ok(Math.abs(h1 - h0) / h0 < 0.35, `${name}: idling it keeps its height (${h0.toFixed(2)} -> ${h1.toFixed(2)})`); } }
+  for (const n of ["knight", "barbarian", "mage", "rogue", "rogue_hooded", "skeleton_warrior", "skeleton_minion", "skeleton_rogue", "skeleton_mage"]) { const h = height(F.models[n], null, 0); assert.ok(h > 2 && h < 3, `${n}: a body of the KayKit size (${h.toFixed(2)})`); for (const c of ["idle", "walk", "attack", "hit", "die", "cast"]) assert.ok(F.models[n].clips[c], `${n}: ${c}`); }
+  for (const n of ["wolf", "husky", "horse", "deer", "rat", "spider"]) for (const c of ["idle", "walk", "attack", "die"]) assert.ok(F.models[n].clips[c], `${n}: ${c}`);
+  assert.ok(F.models["gear:sword"] && F.models["gear:sword"].verts > 100 && Object.keys(F.models["gear:sword"].clips).length === 0, "gear: a mesh bound to a hand, no clips of its own");
+  for (const m of CM.MONSTERS.concat(Object.values(CM.GUARDIANS), [CM.BOSS])) assert.ok(`monster:${m.name}` in P.figures, `${m.name} mapped or painted`);
+  for (const k of ["npc:adventurer", "npc:fieldhand", "npc:ghost", "npc:hermit", "npc:lamplighter", "npc:porter", "npc:res_farm", "npc:res_library", "npc:res_smith", "npc:torchbearer", "npc:warden", "pet:dog", "pet:pony"]) assert.ok(k in P.figures, `${k} mapped`);
+  let modelled = 0; for (const [k, f] of Object.entries(P.figures)) { if (k === "_") continue; if (f === "painted") continue; modelled++; assert.ok(F.models[f.model], `${k}: its model ${f.model}`); assert.ok(f.scale > 0.3 && f.scale < 2.5, `${k}: a sane scale`);
+    for (const g of f.wear || []) assert.ok(F.models[`gear:${g}`], `${k}: wears ${g}`); assert.strictEqual(CM.Figures.figureOf(k), f); }
+  assert.ok(modelled >= 25, `modelled figures (${modelled})`); assert.strictEqual(CM.Figures.figureOf("monster:Nobody"), null);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

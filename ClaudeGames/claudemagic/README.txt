@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The figures' pipeline (v65.0, UPGRADE_PLAN_60.md phase 0)
+  (tools/models.py, src/models/figures.json, src/js/35c-figures.js, src/js/37-figures.js, src/js/76zzzzzzzzzzd-figures.js)
+  - The figures' pipeline (the first step of plan 60): twenty-five rigged, animated low-poly bodies from the CC0
+    KayKit (adventurers, skeletons) and Quaternius (animals, rat, spider) packs, baked by tools/models.py into one
+    deflated binary of 1.6 MB inside the file - meshes quantised, the clips sampled at 15 a second and shared
+    between the figures that use the same library, and read back by 37-figures.js in the game and the tests.
+  - src/models/figures.json says which body stands for each townsperson, pet and monster kind, at what size and
+    tint, with what in hand; thirty-odd are mapped so far, the rest marked painted. The sources stay in Local
+    Storage with their licences; credits in src/models/CREDITS.txt.
+  - Nothing is drawn from the figures yet: the game loads and parses them at start, off the main path, ready for
+    the renderer's turn (phase 1). Everything looks as it did.
+
 The places' look (v64.0, UPGRADE_PLAN_59.md)
   (src/js/64zzze-placelook.js, src/js/76zzzzzzzzzzc-places.js)
   - The Fortress: the torch's light breathes and warms what is near it, dust drifts in it, and the view's corners
