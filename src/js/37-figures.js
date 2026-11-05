@@ -74,6 +74,25 @@
         if (c === undefined) { c = cols.length; cols.push([model.col[i * 3], model.col[i * 3 + 1], model.col[i * 3 + 2]]); at.set(k, c); } uv[i * 2] = c; }
       const n = Math.max(1, Math.ceil(Math.sqrt(cols.length))); for (let i = 0; i < model.verts; i++) { const c = uv[i * 2]; uv[i * 2] = ((c % n) + 0.5) / n; uv[i * 2 + 1] = (Math.floor(c / n) + 0.5) / n; }
       return { colours: cols, n, uv }; },
+    // (v67.0) the clip player: what a figure plays now, from its cues. st is the figure's own state (an empty object to
+    // begin with); cues: { moving, attack (true while the strike's pose holds), attackClip ("attack" or "cast"), hit (this
+    // frame), dead, speed }; now in seconds. Returns { clip, t, from, fromT, k }: the clip and the time into it, and while a
+    // change blends (BLEND seconds), the clip it came from, the time it was at, and how far the blend has gone (k 0..1).
+    // A strike, a hit and a death play once; a death holds its last frame; walking and idling loop at the figure's speed.
+    step(model, st, cues, now) { const C = model.clips, has = (n) => Boolean(C[n]), len = (n) => C[n].frames / C[n].fps, BLEND = 0.15, speed = cues.speed || 1;
+      const timeIn = () => (st.clip ? (now - st.since) * (st.once ? 1 : speed) : 0);
+      const start = (n, once) => { if (!has(n) || n === st.clip) return; st.from = st.clip; st.fromT = Math.min(timeIn(), st.clip && st.once ? len(st.clip) - 1e-3 : timeIn()); st.clip = n; st.since = now; st.once = once; st.done = false; };
+      const done = () => st.clip && st.once && (now - st.since) >= len(st.clip);
+      if (cues.dead) { if (st.clip !== "die") { if (has("die")) start("die", true); else if (!st.clip) start("idle", false); } }
+      else if (cues.hit && st.clip !== "hit" && !st.hitHeld && has("hit")) { start("hit", true); st.hitHeld = true; }
+      else { if (!cues.hit) st.hitHeld = false;
+        const atk = cues.attackClip && has(cues.attackClip) ? cues.attackClip : "attack";
+        if (cues.attack && !st.attackHeld && has(atk)) { start(atk, true); st.attackHeld = true; } else if (!cues.attack) st.attackHeld = false;
+        if (!st.clip || (st.once && done()) || (!st.once && st.clip !== (cues.moving ? "walk" : "idle"))) { if (!(st.once && !done())) start(cues.moving && has("walk") ? "walk" : "idle", false); } }
+      if (!st.clip) return null;
+      const L = len(st.clip); let t = timeIn(); if (st.once && t >= L) t = L - 1e-3;
+      const k = st.from && (now - st.since) < BLEND ? (now - st.since) / BLEND : 1; if (k >= 1) st.from = null;
+      return { clip: st.clip, t, from: st.from, fromT: st.fromT || 0, k }; },
     // the model matrix: scaled, turned about y by yaw, then stood at (x, y, z); column-major
     modelMatrix(out, x, y, z, yaw, s) { const c = Math.cos(yaw) * s, sn = Math.sin(yaw) * s; out[0] = c; out[1] = 0; out[2] = -sn; out[3] = 0; out[4] = 0; out[5] = s; out[6] = 0; out[7] = 0; out[8] = sn; out[9] = 0; out[10] = c; out[11] = 0; out[12] = x; out[13] = y; out[14] = z; out[15] = 1; return out; },
   };

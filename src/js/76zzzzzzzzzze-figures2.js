@@ -1,10 +1,15 @@
 "use strict";
-// The figures, drawn (v66.0, UPGRADE_PLAN_60.md phase 1): a townsperson, a pet or a monster with a body in
-// src/models/figures.json is drawn as that body - skinned by the renderer (40-render.js: uSkin, uJoints, uModel) in
-// its idle clip, stood its billboard's height, turned to face the party, tinted as the mapping says - in place of its
-// painted picture, within fourteen squares; farther off, and at Low detail, and under Settings > Figures: Painted,
-// the picture stands as before. The pictures: a model's own texture, or for an untextured one a palette of its
-// colours, go up as the figures' texture array (layers 3000 and up). The shadows, marks and statuses are untouched.
+// The figures, drawn (v66.0, UPGRADE_PLAN_60.md phase 1; v67.0 phase 2, their own motion): a townsperson, a pet or a
+// monster with a body in src/models/figures.json is drawn as that body - skinned by the renderer (40-render.js: uSkin,
+// uJoints, uModel), stood its billboard's height, tinted as the mapping says - in place of its painted picture, within
+// fourteen squares; farther off, and at Low detail, and under Settings > Figures: Painted, the picture stands as
+// before. The pictures: a model's own texture, or for an untextured one a palette of its colours, go up as the
+// figures' texture array (layers 3000 and up). The shadows, marks and statuses are untouched.
+// (v67.0) Each figure keeps a state by its id (the floor's thing key, the fight's foe, a walker's number): it walks
+// its walk clip when it moves and turns the way it goes, idles when it stands, strikes when the fight's lunge pose
+// holds (casters cast), flinches when a blow lands (the picture's flash), falls when it dies and lies there; a change
+// blends over a few frames (CM.Figures.step). A worn-down foe is darker. The fight's foes face the party; the rest
+// face where they last went.
 { const REACH = 14, TEX = 256, b64png = (bytes) => { let s = ""; for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192)); return "data:image/png;base64," + btoa(s); };
   const on = (game) => Boolean(CM.figures && game && !(game.settings && (game.settings.figures === "painted" || game.settings.detail === "low")));
   // the figures' pictures: made once the figures are parsed (the PNGs decoded, the palettes painted), then uploaded
@@ -20,27 +25,39 @@
       for (let k = 0; k < 4; k++) { data[o + 10 + k] = m.joints[i * 4 + k]; data[o + 14 + k] = m.weights[i * 4 + k] / 255; } }
     const vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, m.index, gl.STATIC_DRAW);
     const jt = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, jt); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 4, m.skeleton.n, 0, gl.RGBA, gl.FLOAT, null); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    return (m.gl = { vb, ib, jt, count: m.index.length, big: m.index instanceof Uint32Array, pose: new Float32Array(m.skeleton.n * 16) }); };
-  // which sprites become figures: taken out of the sprite list, kept for drawFigures
+    return (m.gl = { vb, ib, jt, count: m.index.length, big: m.index instanceof Uint32Array, pose: new Float32Array(m.skeleton.n * 16), pose2: new Float32Array(m.skeleton.n * 16) }); };
+  // the figures' states, by id; forgotten when not seen for a while
+  const states = new Map(), turnTo = (a, b, k) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return a + d * k; };
+  // which sprites become figures: taken out of the sprite list, kept for drawFigures with their cues
   { const ss0 = R.setSprites; R.setSprites = function (list) { const g = CM.game, F = CM.figures; this.figList = [];
       if (!on(g) || !this.figTex || !F) return ss0.call(this, list);
-      const fl = g.floor, px = fl ? fl.pos[0] : 0, py = fl ? fl.pos[1] : 0, keep = [];
+      const fl = g.floor, px = fl ? fl.pos[0] : 0, py = fl ? fl.pos[1] : 0, keep = [], now = performance.now() / 1000, eye = this.eye || [px + 0.5, 0.5, py + 0.5];
       for (const s of list) { const key = CM.Figures.keyOf(s.layer), fig = key && CM.Figures.figureOf(key); const m = fig && fig !== "painted" && F.models[fig.model];
         if (!m || s.flat || s.hang !== undefined || s.axis || Math.abs(s.x - px) + Math.abs(s.y - py) > REACH) { keep.push(s); continue; }
-        const parts = s.layer.split(":"), pose = parts[2] || "", clip = pose === "attack" ? "attack" : (s.walking ? "walk" : "idle");
-        const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m);   // (the feet at the floor and the body centred on its square, whatever the model's own origin)
-        this.figList.push({ s, fig, m, key, clip, x: s.x + 0.5 + (s.dx || 0), z: s.y + 0.5 + (s.dz || 0), y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre, phase: (CM.hashSeed(`${key}:${s.x},${s.y}`) % 1000) / 1000 }); }
+        const parts = s.layer.split(":"), pose = parts[2] || "", x = s.x + 0.5 + (s.dx || 0), z = s.y + 0.5 + (s.dz || 0);
+        const id = s.m || s.id || `${key}@${Math.round(x * 2)},${Math.round(z * 2)}`; let st = states.get(id); if (!st) { st = { clip: null, x, z, yaw: Math.atan2(eye[0] - x, eye[2] - z), flash: 0 }; states.set(id, st); }
+        const dx = x - st.x, dz = z - st.z, dist = Math.hypot(dx, dz), moving = Boolean(s.walking) || (!s.m && dist > 0.004 && dist < 1.5 && now - (st.seen || 0) < 0.5);   // (a step within half a second: walking, not a leap to a new square; a fight's foe sways and recoils in place - not a walk)
+        if (!s.m && dist > 0.02 && dist < 1.5) st.yaw = turnTo(st.yaw, Math.atan2(dx, dz), 0.3); else if (s.m || !st.moved) st.yaw = turnTo(st.yaw, Math.atan2(eye[0] - x, eye[2] - z), s.m ? 0.2 : 0.05);   // (a fight's foe squares up to the party; the rest keep the way they went)
+        if (moving) st.moved = true; st.x = x; st.z = z; st.seen = now;
+        const flash = s.flash || 0, hit = flash > st.flash + 0.25; st.flash = flash;
+        const foe = s.m || null, dead = Boolean(foe && foe.hp <= 0) || Boolean(s.dying), kind = CM.monsterKind ? CM.monsterKind(parts[1]) : null;
+        const cues = { moving: moving && !dead, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
+        const play = CM.Figures.step(m, st, cues, now); if (!play) { keep.push(s); continue; }
+        const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
+        this.figList.push({ s, fig, m, key, play, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }
+      if (states.size > 400) for (const [id, st] of states) if (now - (st.seen || 0) > 30) states.delete(id);
       return ss0.call(this, keep); }; }
   const M16 = new Float32Array(16);
-  R.drawFigures = function (sky, eye) { const L = this.figList; if (!L || !L.length || !this.figTex) return; const gl = this.gl, t = this.time || 0;
+  R.drawFigures = function (sky, eye) { const L = this.figList; if (!L || !L.length || !this.figTex) return; const gl = this.gl;
     gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.figTex); gl.uniform1i(this.loc.uFig, 4); gl.activeTexture(gl.TEXTURE5); gl.uniform1i(this.loc.uJoints, 5);
     gl.uniform1f(this.loc.uSkin, 1); gl.uniform1f(this.loc.uBump, 0);
-    for (const f of L) { const B = buffersOf(this, f.m), clip = f.m.clips[f.clip] || f.m.clips.idle || null, T = clip ? clip.frames / clip.fps : 1;
-      CM.Figures.pose(f.m, clip, (t + f.phase * T) * (f.s.ghost ? 0.6 : 1), B.pose); gl.bindTexture(gl.TEXTURE_2D, B.jt); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4, f.m.skeleton.n, gl.RGBA, gl.FLOAT, B.pose);
-      const yaw = Math.atan2(eye[0] - f.x, eye[2] - f.z) + (f.fig.yaw || 0);   // (faces the party; phase 2 gives them their own way)
-      const c = Math.cos(yaw) * f.scale, sn = Math.sin(yaw) * f.scale, cx = f.centre[0], cz = f.centre[1];   // (the body's centre on the square: the model's own centre taken out, turned and scaled as it will be)
+    for (const f of L) { const B = buffersOf(this, f.m), P = f.play, m = f.m;
+      CM.Figures.pose(m, m.clips[P.clip] || null, P.t, B.pose);
+      if (P.from && P.k < 1 && m.clips[P.from]) { CM.Figures.pose(m, m.clips[P.from], P.fromT, B.pose2); const k = P.k; for (let i = 0; i < B.pose.length; i++) B.pose[i] = B.pose2[i] + (B.pose[i] - B.pose2[i]) * k; }   // (the change blended)
+      gl.bindTexture(gl.TEXTURE_2D, B.jt); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4, m.skeleton.n, gl.RGBA, gl.FLOAT, B.pose);
+      const yaw = f.yaw + (f.fig.yaw || 0), c = Math.cos(yaw) * f.scale, sn = Math.sin(yaw) * f.scale, cx = f.centre[0], cz = f.centre[1];   // (the body's centre on the square: the model's own centre taken out, turned and scaled as it will be)
       gl.uniformMatrix4fv(this.loc.uModel, false, CM.Figures.modelMatrix(M16, f.x - (c * cx + sn * cz), f.y, f.z - (-sn * cx + c * cz), yaw, f.scale));
-      const tint = f.fig.tint; gl.uniform3fv(this.loc.uTint, tint ? [tint[0] / 255, tint[1] / 255, tint[2] / 255] : [1, 1, 1]);
+      const tint = f.fig.tint, wk = 0.7 + 0.3 * f.worn; gl.uniform3fv(this.loc.uTint, tint ? [tint[0] / 255 * wk, tint[1] / 255 * wk, tint[2] / 255 * wk] : [wk, wk, wk]);   // (worn down: darker)
       gl.uniform3fv(this.loc.uFigFx, [f.s.flash || 0, f.s.alpha === undefined ? 1 : f.s.alpha, 0]);
       gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); const bytes = 18 * 4; gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
       gl.enableVertexAttribArray(2); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.enableVertexAttribArray(3); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28);

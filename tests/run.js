@@ -6173,6 +6173,25 @@ test("the figures, drawn (v66.0): a sprite's layer names its figure (monster:Gob
   const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzze-figures2.js"), "utf-8"); assert.ok(win.includes("set-figures") && win.includes("REACH = 14"), "the setting and the reach");
 });
 
+test("the figures' own motion (v67.0): the clip player idles, walks when moving and comes back, strikes once on the lunge's cue (a caster casts) and returns, flinches once on a hit, falls once on death and holds the last frame; a change blends over a few frames; the fight's foes, the floor's monsters, the walkers, the lamplighter and the kennel's pets carry ids for their states", () => {
+  const CM = load(), zlib = require("zlib"), P = CM.figuresPack, F = CM.Figures.parse(new Uint8Array(zlib.inflateRawSync(Buffer.from(P.data, "base64"))), P.manifest), k = F.models.knight, len = (c) => k.clips[c].frames / k.clips[c].fps;
+  const st = {}, go = (cues, t) => CM.Figures.step(k, st, cues, t);
+  let p = go({}, 0); assert.strictEqual(p.clip, "idle"); assert.strictEqual(p.from, null); p = go({ moving: true }, 1); assert.strictEqual(p.clip, "walk"); assert.strictEqual(p.from, "idle"); assert.ok(p.k < 1 && p.k >= 0, "blending from the idle");
+  p = go({ moving: true }, 1.2); assert.strictEqual(p.clip, "walk"); assert.strictEqual(p.from, null, "the blend done"); assert.ok(p.t > 0.19 && p.t < 0.21, `time into the walk (${p.t})`);
+  p = go({ moving: true, speed: 2 }, 1.4); assert.ok(p.t > 0.79 && p.t < 0.81, `a quick walker's clip runs quicker (${p.t})`);
+  p = go({}, 2); assert.strictEqual(p.clip, "idle", "stands again");
+  p = go({ attack: true }, 3); assert.strictEqual(p.clip, "attack", "the strike"); p = go({ attack: true }, 3 + len("attack") * 0.5); assert.strictEqual(p.clip, "attack", "still striking while the cue holds and the clip runs");
+  p = go({ attack: true }, 3 + len("attack") + 0.1); assert.strictEqual(p.clip, "idle", "once: back to idling, though the cue still holds"); p = go({ attack: true }, 3 + len("attack") + 0.2); assert.strictEqual(p.clip, "idle", "and not again till the cue drops");
+  go({}, 4); p = go({ attack: true, attackClip: "cast" }, 4.1); assert.strictEqual(p.clip, "cast", "a caster casts");
+  go({}, 6); p = go({ hit: true }, 6.1); assert.strictEqual(p.clip, "hit", "the flinch"); p = go({ hit: true }, 6.2); assert.strictEqual(p.clip, "hit"); p = go({}, 6.1 + len("hit") + 0.05); assert.strictEqual(p.clip, "idle");
+  p = go({ dead: true }, 8); assert.strictEqual(p.clip, "die"); p = go({ dead: true }, 8 + len("die") + 5); assert.strictEqual(p.clip, "die", "lies there"); assert.ok(p.t >= len("die") - 0.01 && p.t < len("die"), "on its last frame");
+  p = go({ dead: true, moving: true, attack: true, hit: true }, 20); assert.strictEqual(p.clip, "die", "nothing moves a dead one");
+  const rat = F.models.rat, s2 = {}; CM.Figures.step(rat, s2, {}, 0); const q = CM.Figures.step(rat, s2, { attack: true, attackClip: "cast" }, 1); assert.strictEqual(q.clip, "attack", "no cast clip: the strike");
+  for (const [f, ids] of [["80-main.js", ["id: key, asleep:"]], ["76zzzzzzzzz3-crowds.js", ["id: `walker:${i}`, walking: moving"]], ["76zzzzf-nightlife.js", ['id: "lamplighter"']], ["76zzzzzzi-kennel.js", ['id: "kennel:dog"', 'id: "kennel:pony"']]]) { const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", f), "utf-8"); for (const id of ids) assert.ok(src.includes(id), `${f}: ${id}`); }
+  const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzze-figures2.js"), "utf-8"); for (const w of ["CM.Figures.step", "pose2", "worn", "turnTo"]) assert.ok(win.includes(w), `${w} in the drawing`);
+  assert.strictEqual(CM.Figures.figureOf("monster:Hedge Wizard").attack, "cast"); assert.strictEqual(CM.Figures.figureOf("monster:Sellsword").attack, undefined);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

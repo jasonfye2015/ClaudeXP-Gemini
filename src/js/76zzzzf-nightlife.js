@@ -55,7 +55,7 @@
     const k = Math.min(1, (now - walk.t0) / LH.walkMs), P = walk.path, f = k * (P.length - 1), j = Math.min(P.length - 2, Math.floor(f)), u = P.length > 1 ? f - j : 0;
     const a = P[Math.max(0, j)], b = P[Math.min(P.length - 1, j + 1)], x = a[0] + (b[0] - a[0]) * u, y = a[1] + (b[1] - a[1]) * u, cx = Math.floor(x), cy = Math.floor(y);
     const there = k >= 1, bob = there ? 0 : Math.abs(Math.sin(now / 160)) * 0.02;
-    return [{ x: cx, y: cy, dx: x - cx + (there ? 0.28 : 0), dz: y - cy + (there ? 0.18 : 0), layer: "npc:lamplighter", w: 0.6, h: 0.95, lift: bob, glow: 0.15 }];
+    return [{ id: "lamplighter", x: cx, y: cy, dx: x - cx + (there ? 0.28 : 0), dz: y - cy + (there ? 0.18 : 0), layer: "npc:lamplighter", w: 0.6, h: 0.95, lift: bob, glow: 0.15 }];
   };
   // his picture: a long coat and a cap, the pole with its small flame
   CM.art.lamplighter = function (size) { const c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"), u = size / 64, R = (x, y, w, h, col) => { p.fillStyle = col; p.fillRect(x * u, y * u, w * u, h * u); };

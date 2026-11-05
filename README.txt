@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The figures' own motion (v67.0, UPGRADE_PLAN_60.md phase 2)
+  (src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/80-main.js, src/js/76zzzzzzzzz3-crowds.js, src/js/76zzzzf-nightlife.js, src/js/76zzzzzzi-kennel.js, src/models/figures.json)
+  - The figures' own motion (plan 60, phase 2): a body walks its walk when it moves and turns the way it goes -
+    the crowds on their rounds, the lamplighter, a monster prowling the floor, the hound at heel - and idles when it
+    stands; in a fight it strikes on its lunge (the wizards and priests cast instead), flinches when a blow lands,
+    falls when it dies and lies where it fell; a foe worn down is darker. Each change blends over a few frames.
+  - The fight's foes square up to the party; the rest face where they last went.
+
 The figures, drawn (v66.0, UPGRADE_PLAN_60.md phase 1)
   (src/js/40-render.js, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js)
   - The figures are drawn (plan 60, phase 1): the townsfolk, the hound and the pony, and the monster kinds with

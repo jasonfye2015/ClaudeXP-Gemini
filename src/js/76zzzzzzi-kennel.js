@@ -10,8 +10,8 @@
     p.fillStyle = "#E8D8B0"; p.font = "bold 22px Georgia"; p.textAlign = "center"; p.fillText("KENNEL", 128, 116); };
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), c = cv(); paint(c.getContext("2d")); set.index["kennel:hut"] = set.layers.length; set.layers.push(c); return set; }; }
   CM.thingSprites = Object.assign(CM.thingSprites || {}, { kennel: (t, x, y, now) => { const g = CM.game, out = [{ x, y, layer: "kennel:hut", w: 0.95, h: 0.9, dz: -0.2 }];
-    if (g && g.petName("dog")) out.push({ x, y, layer: "pet:dog", w: 0.42, h: 0.36, dx: -0.3, dz: 0.25, lift: Math.abs(Math.sin((now || 0) / 300)) * 0.01 });
-    if (g && g.petName("pony")) out.push({ x: x - 1, y, layer: "pet:pony", w: 0.85, h: 0.78, dz: 0.1 }); return out; } });
+    if (g && g.petName("dog")) out.push({ id: "kennel:dog", x, y, layer: "pet:dog", w: 0.42, h: 0.36, dx: -0.3, dz: 0.25, lift: Math.abs(Math.sin((now || 0) / 300)) * 0.01 });
+    if (g && g.petName("pony")) out.push({ id: "kennel:pony", x: x - 1, y, layer: "pet:pony", w: 0.85, h: 0.78, dz: 0.1 }); return out; } });
   const fs0 = CM.followersSeen; if (fs0) CM.followersSeen = (game, fl) => { const out = fs0(game, fl); return fl && fl.number === 0 ? out.filter(([id]) => id !== "hound" && id !== "pony") : out; };   // (in town they're at the kennel)
   const make = (ui) => { if (ui.$("#dlg-kennel")) return; const d = document.createElement("div"); d.className = "dialog"; d.id = "dlg-kennel";
     d.innerHTML = `<div class="box journalbox"><h2>The kennel and the stable</h2><p class="lore">A low hut with straw in it, a rail fence, a trough. Whoever is home comes to the gate to see if you've brought anything.</p><div class="kbody"></div><div class="note" id="kennel-note"></div><div class="end"><button class="close">Close</button></div></div>`;
