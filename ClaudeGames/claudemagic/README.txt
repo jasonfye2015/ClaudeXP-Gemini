@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The well, built (v56.1, UPGRADE_PLAN_51.md phase 1)
+  (src/js/26f-well.js, src/js/26-surface.js, src/js/40-render.js, src/js/80-main.js)
+  - The Square's well is built now instead of painted: a round wall of dressed stone with a capstone rim, dark water
+    down inside that ripples like the river, two posts carrying a little shingled roof, the windlass across them
+    with its crank, and a bucket on its rope. Step onto its square to draw water as before; while you stand there it
+    folds out of the way.
+
 The market's furniture (v56.0, UPGRADE_PLAN_51.md phase 0)
   (src/js/76zzzzzzzzzz3-furniture.js)
   - The town's furniture is made the way it would be: a crate has corner posts, rims and a brace across each side,

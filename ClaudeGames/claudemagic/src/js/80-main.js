@@ -518,7 +518,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (stage <= 1) out.push({ x, y, layer: stage ? "house1" : "foundation", w: 0.9, h: 0.9 });
         else if (face >= 0 && renderer.index[`sign:${thing.id}`] !== undefined) out.push({ x, y, layer: `sign:${thing.id}`, face, w: 0.6, h: 0.45, lift: 0.5, glow: CM.isNight(game) ? 0.5 : 0.15 });
       }
-      else if (thing.type === "well") out.push({ x, y, layer: "well", w: 0.8, h: 0.8 });
+      else if (thing.type === "well") { if (!CM.WELL_MODEL) out.push({ x, y, layer: "well", w: 0.8, h: 0.8 }); }   // (v56.1: built in the mesh - 26f-well.js)
       else if (thing.type === "cgtable" || thing.type === "cgservice") { const L = CM.jfLayer ? CM.jfLayer(thing) : "chest"; if (renderer.index[L] !== undefined) out.push({ x, y, layer: L, w: 0.95, h: 1.05, glow: 0.35 + 0.08 * Math.sin(now / 600 + x) }); }   // (the Joker's floor: 64zzv-jokerfloor.js, 76zzza-walk.js)
       else if (thing.type === "cgresident") out.push({ x, y, layer: `npc:res_${thing.who}`, w: 0.7, h: 0.85, lift: Math.sin(now / 900 + x) * 0.01 });
       else if (thing.type === "jokerexit") out.push({ x, y, layer: "door_open", w: 0.8, h: 1.0, glow: 0.3 });
