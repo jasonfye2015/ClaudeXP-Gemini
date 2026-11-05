@@ -44,7 +44,9 @@
         const cues = { moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
         const play = CM.Figures.step(m, st, cues, now); if (!play) { keep.push(s); continue; }
         const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
-        this.figList.push({ s, fig, m, key, play, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }
+        let wear = fig.wear || []; if (foe && foe.gear && foe.gear.weapon) { const g = CM.Figures.gearFor(CM.itemName ? CM.itemName(foe.gear.weapon) : foe.gear.weapon.name); if (g && F.models[`gear:${g}`] && F.models[`gear:${g}`].skeleton.n === m.skeleton.n) wear = [g].concat(wear.filter((w) => !["sword", "greatsword", "axe", "greataxe", "knife", "staff", "crossbow"].includes(w))); }   // (v69.0: what it carries is in its hand)
+        const lunge = play.clip === (fig.attack || "attack") && m.clips[play.clip] ? Math.sin(Math.PI * Math.min(1, play.t / (m.clips[play.clip].frames / m.clips[play.clip].fps))) * 0.22 : 0;   // (v69.0: the striker steps in and back)
+        this.figList.push({ s, fig, m, key, play, wear, lunge, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }
       if (states.size > 400) for (const [id, st] of states) if (now - (st.seen || 0) > 30) states.delete(id);
       return ss0.call(this, keep); }; }
   const M16 = new Float32Array(16);
@@ -56,7 +58,8 @@
       if (P.from && P.k < 1 && m.clips[P.from]) { CM.Figures.pose(m, m.clips[P.from], P.fromT, B.pose2); const k = P.k; for (let i = 0; i < B.pose.length; i++) B.pose[i] = B.pose2[i] + (B.pose[i] - B.pose2[i]) * k; }   // (the change blended)
       gl.bindTexture(gl.TEXTURE_2D, B.jt); gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 4, m.skeleton.n, gl.RGBA, gl.FLOAT, B.pose);
       const yaw = f.yaw + (f.fig.yaw || 0), c = Math.cos(yaw) * f.scale, sn = Math.sin(yaw) * f.scale, cx = f.centre[0], cz = f.centre[1];   // (the body's centre on the square: the model's own centre taken out, turned and scaled as it will be)
-      gl.uniformMatrix4fv(this.loc.uModel, false, CM.Figures.modelMatrix(M16, f.x - (c * cx + sn * cz), f.y, f.z - (-sn * cx + c * cz), yaw, f.scale));
+      const fx = f.x + Math.sin(yaw) * (f.lunge || 0), fz = f.z + Math.cos(yaw) * (f.lunge || 0);   // (the striker's step in, the way it faces)
+      gl.uniformMatrix4fv(this.loc.uModel, false, CM.Figures.modelMatrix(M16, fx - (c * cx + sn * cz), f.y, fz - (-sn * cx + c * cz), yaw, f.scale));
       const tint = f.fig.tint, wk = 0.7 + 0.3 * f.worn; gl.uniform3fv(this.loc.uTint, tint ? [tint[0] / 255 * wk, tint[1] / 255 * wk, tint[2] / 255 * wk] : [wk, wk, wk]);   // (worn down: darker)
       gl.uniform3fv(this.loc.uFigFx, [f.s.flash || 0, f.s.alpha === undefined ? 1 : f.s.alpha, 0]);
       gl.bindBuffer(gl.ARRAY_BUFFER, B.vb); const bytes = 18 * 4; gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12);
@@ -64,7 +67,7 @@
       for (let i = 4; i < 8; i++) { gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.enableVertexAttribArray(8); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.enableVertexAttribArray(9); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, B.ib); gl.drawElements(gl.TRIANGLES, B.count, B.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0);
       // (v68.0) what it carries: each piece of gear is a mesh bound to the same rig's hand, drawn with the body's own joints
-      for (const g of f.fig.wear || []) { const gm = CM.figures.models[`gear:${g}`]; if (!gm || gm.skeleton.n !== m.skeleton.n) continue; const G = buffersOf(this, gm);
+      for (const g of f.wear || []) { const gm = CM.figures.models[`gear:${g}`]; if (!gm || gm.skeleton.n !== m.skeleton.n) continue; const G = buffersOf(this, gm);
         gl.uniform3fv(this.loc.uTint, [wk, wk, wk]); gl.bindBuffer(gl.ARRAY_BUFFER, G.vb); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, bytes, 0); gl.vertexAttribPointer(1, 3, gl.FLOAT, false, bytes, 12); gl.vertexAttribPointer(2, 1, gl.FLOAT, false, bytes, 24); gl.vertexAttribPointer(3, 3, gl.FLOAT, false, bytes, 28); gl.vertexAttribPointer(8, 4, gl.FLOAT, false, bytes, 40); gl.vertexAttribPointer(9, 4, gl.FLOAT, false, bytes, 56);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, G.ib); gl.drawElements(gl.TRIANGLES, G.count, G.big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, 0); } }
     gl.uniform1f(this.loc.uSkin, 0); gl.activeTexture(gl.TEXTURE0); this.figuresDrawn = L.length; };
