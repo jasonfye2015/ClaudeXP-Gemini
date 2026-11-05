@@ -152,6 +152,14 @@ Drive/itch-only), the big kinds and the painted nine can be given their own shap
   such, so the test knows.
 
 ### Phase 5 - polish and holding it
+Done 2026-11-05 as v70.0: the impostors are rendered at load (the first frame after the figures' pictures go up:
+a framebuffer, flat light, each model's idle from the front, read back into the figures' texture array and a canvas)
+and stand in for the bodies beyond fourteen squares, so a kind looks the same near and far; the bestiary's plates
+and the painted monster pictures are the impostors where a kind has a body; at most forty bodies a frame, the
+nearest; a test holds thirty figures' posing to the frame's budget; the credits name KayKit and Quaternius.
+**Plan 60 is complete** (v65.0-v70.0, six releases). Open for a later day: the Ultimate Monsters pack for the nine
+painted kinds and the big ones' own shapes; the blow's effect timed to the clip's hit frame; the fallen body kept
+after the fight ends; sitting at the tavern; the heroes themselves (first-person, so only their followers show).
 - LOD and budget: a frame-time test of 30 figures skinning under 2 ms on the harness; impostors beyond 14
   squares; a per-floor cap.
 - The bestiary's plates and the fight list's portraits drawn from the models' impostor sheets, so every picture of
