@@ -274,7 +274,14 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    76zzzzzzzzzzk-meteors.js: the birds go up (the night goes quiet) in the three minutes before; the streak down the
    sky with its whistle, the flash, the crack and rumble, the shake, a burst of dust, stones and embers, the
    crater's glow fading over twelve minutes; below, a shock, a dust-fall and a flicker of the room's light.
-6. The magical fogs, above and below, with their statuses and the HUD.
+6. v76.0 - the magical fogs. **Done**: 69zzo-fogs.js adds four kinds to the weather's roll (odds 0.25 each, any
+   season), six hours long by a CM.weatherStep wrapper, the same on any floor (CM.fogNow); CM.fogTick (wrapped into
+   CM.tickClock) says the comings and goings and carries the statuses: orange - spellCost x1.5 and spellMult x0.8;
+   green - a point off each hero every ten minutes, never below one; brown - the hero's mark fogStr, CM.heroStat's
+   str x0.8 with a recompute; violet - doAbility wrapped, one cast in ten becomes CM.wildSpell's (same target, a
+   cost within two). The sky bar names each fog with what it does. 76zzzzzzzzzzl-fogs.js: "life:fog*" billows (an
+   air kind above and below), the sky's horizon and zenith, the clouds and the mist drawn to the colour above; the
+   theme's fog and torch colours, the lights and the haze below, restored when it lifts.
 7. Lighting; mud; breath on the figures.
 8. The dungeon coupling: drips, waterfalls, floods, drafts, steam.
 9. Combat synergies.

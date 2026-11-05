@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v75.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v76.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "75.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "76.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -30930,6 +30930,41 @@ Object.assign(CM.Game.prototype, {
       return out; }; }
 }
 
+// ---- 69zzo-fogs.js ----
+"use strict";
+// The magical fogs (v76.0, UPGRADE_PLAN_61.md part 6): four fogs, scheduled with the weather (24f-events.js) but
+// rarer, each six hours long, and they do not stop at the shaft - CM.fogNow answers the same on any floor. Each is a
+// status on the whole party while it lasts:
+//   orange, the ember fog  - spells cost half again as much and bite a fifth less
+//   green, the rot fog     - a point of poison to each hero every ten minutes (never below one)
+//   brown, the dun fog     - strength a fifth down
+//   violet, the wild fog   - one cast in ten twists into another spell of the same kind
+//   CM.fogNow(game) -> { kind, colour, name, word, strength, from, until, left } | null
+//   CM.fogTick(game, minutes)   the comings and goings (said), the green fog's bite; wrapped into CM.tickClock
+//   CM.wildSpell(game, h, id)   the violet fog's other spell for one cast (same target, a cost near it)
+{ const F = CM.FOGS = { minutes: 360, odds: 0.25, spellCost: 1.5, spellBite: 0.8, strength: 0.8, poisonEvery: 10, wild: 0.1,
+    kinds: { fogorange: { colour: [1.0, 0.58, 0.22], name: "an orange fog", word: "the ember fog", comes: "An orange fog rolls in, and the air crackles: magic comes dear and weak in it.", goes: "The orange fog thins and lifts, and the air is still again.", hud: "spells dear and weak" },
+      foggreen: { colour: [0.45, 0.85, 0.35], name: "a green fog", word: "the rot fog", comes: "A green fog creeps up, sweet and foul: it is a poison, slow, to anyone who breathes it.", goes: "The green fog drains away into the ground.", hud: "a slow poison" },
+      fogbrown: { colour: [0.62, 0.48, 0.3], name: "a brown fog", word: "the dun fog", comes: "A brown fog settles, heavy as dust: arms grow tired in it, and every weight is more.", goes: "The brown fog sinks and is gone, and the weight comes off.", hud: "strength down" },
+      fogpurple: { colour: [0.7, 0.4, 0.95], name: "a violet fog", word: "the wild fog", comes: "A violet fog comes on, and the light in it moves wrong: magic will not do as it is told.", goes: "The violet fog frays into motes and is gone.", hud: "wild magic" } } };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random()), WX = CM.WX, KINDS = Object.keys(F.kinds);
+  for (const k of KINDS) { if (!WX.kinds.includes(k)) WX.kinds.push(k); WX.word[k] = "mist"; WX.windSpeed[k] = 0.05; for (const s of Object.keys(WX.odds)) WX.odds[s][k] = F.odds; }
+  // a fog's length is its own: the step's roll gives an event's, and this makes it six hours (the next's start follows)
+  { const ws0 = CM.weatherStep; CM.weatherStep = (game) => { const W = ws0(game); if (W && W.cur && F.kinds[W.cur.kind] && W.cur.until - W.cur.from !== F.minutes) { const d = W.cur.from + F.minutes - W.cur.until; W.cur.until += d; if (W.next) { W.next.from += d; W.next.until += d; } } return W; }; }
+  CM.fogNow = (game) => { if (!game || !game.ext) return null; const now = CM.weatherNow(game), K = F.kinds[now.kind]; if (!K) return null; return { kind: now.kind, colour: K.colour, name: K.name, word: K.word, hud: K.hud, strength: now.strength, from: now.from, until: now.until, left: Math.max(0, now.until - CM.clockOf(game)) }; };
+  const state = (game) => game.ext("fog");
+  CM.fogTick = (game, minutes = 1) => { if (!game || !game.ext || !(minutes > 0)) return; const E = state(game), now = CM.fogNow(game), kind = now ? now.kind : null;
+    if (kind !== (E.kind || null)) { if (E.kind && F.kinds[E.kind]) game.say(F.kinds[E.kind].goes); if (kind) game.say(F.kinds[kind].comes); E.kind = kind; E.acc = 0; E.said = 0; for (const h of game.party || []) { h.fogStr = kind === "fogbrown"; CM.recompute(h); } }   // (brown: strength changes with it - the hero carries the mark, so the stat reads it anywhere)
+    if (kind === "foggreen") { E.acc = (E.acc || 0) + minutes; let bit = 0; while (E.acc >= F.poisonEvery) { E.acc -= F.poisonEvery; for (const h of game.alive ? game.alive() : []) if (h.hp > 1) { h.hp -= 1; bit++; } } if (bit) { E.said = (E.said || 0) + 1; if (E.said % 6 === 1) game.say("The green fog is in everyone's lungs: a slow sickness, a point at a time."); } } };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.fogTick(game, minutes); }; }
+  // the statuses in the rules
+  { const hs0 = CM.heroStat; CM.heroStat = function (h, s) { const v = hs0.call(this, h, s); return s === "str" && h && h.fogStr ? Math.max(1, Math.floor(v * F.strength)) : v; }; }
+  { const sc0 = CM.Game.prototype.spellCost; CM.Game.prototype.spellCost = function (h, a, power) { const c = sc0.call(this, h, a, power); return c && this.ext && state(this).kind === "fogorange" ? Math.ceil(c * F.spellCost) : c; }; }
+  { const sm0 = CM.Game.prototype.spellMult; CM.Game.prototype.spellMult = function (h, id) { const m = sm0.call(this, h, id); return this.ext && state(this).kind === "fogorange" ? m * F.spellBite : m; }; }
+  CM.wildSpell = (game, h, id) => { const a = CM.ABILITIES[id]; if (!a || !a.mp) return null; const pool = Object.keys(CM.ABILITIES).filter((k) => k !== id && CM.ABILITIES[k].mp && CM.ABILITIES[k].target === a.target && !CM.ABILITIES[k].once && Math.abs(CM.ABILITIES[k].mp - a.mp) <= 2); if (!pool.length) return null; return pool[Math.floor(rnd() * pool.length)]; };
+  { const da0 = CM.Game.prototype.doAbility; CM.Game.prototype.doAbility = function (h, id, a, foe, ally, foes) { if (a && a.mp && this.ext && state(this).kind === "fogpurple" && rnd() < F.wild) { const w = CM.wildSpell(this, h, id); if (w) { this.say(`The violet fog takes the spell and twists it: ${a.name} comes out as ${CM.ABILITIES[w].name}.`); this.lastWild = { from: id, to: w }; return da0.call(this, h, w, CM.ABILITIES[w], foe, ally, foes); } } return da0.call(this, h, id, a, foe, ally, foes); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -32925,8 +32960,8 @@ Object.assign(CM.UI.prototype, {
 // ("rain, 1 h 10 left - then clear" / "clear - mist in 40 min") - and the exact date and time with it. The sun and
 // the moon on the dial are drawn larger (70-ui.js's markup), and the stars thicker on a clear night. 73b-clock.js
 // draws the dial; this adds to it on each refresh.
-{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0", tornado: "#2A2630" };
-  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora", tornado: "a tornado" };
+{ const COL = { clear: "#4F8FD0", cloud: "#8A96A8", rain: "#5A7FB8", storm: "#3A3F6E", mist: "#B8BCC8", wind: "#9AB8A0", snow: "#E8F0FA", heat: "#E8A040", aurora: "#4ED0A0", tornado: "#2A2630", fogorange: "#E08A38", foggreen: "#6CB850", fogbrown: "#9A7A50", fogpurple: "#A868E8" };
+  const NAME = { clear: "clear", cloud: "cloud", rain: "rain", storm: "a storm", mist: "mist", wind: "wind", snow: "snow", heat: "heat", aurora: "an aurora", tornado: "a tornado", fogorange: "an orange fog (spells dear and weak)", foggreen: "a green fog (a slow poison)", fogbrown: "a brown fog (strength down)", fogpurple: "a violet fog (wild magic)" };   // (v76.0: the four fogs - 69zzo-fogs.js)
   const span = (m) => (m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ` ${Math.round(m % 60)}` : ""}` : `${Math.max(1, Math.round(m))} min`);
   const ds0 = CM.UI.prototype.drawSky; CM.UI.prototype.drawSky = function (...a) { const out = ds0.apply(this, a); try { const g = this.game, el = this.$("#view .sky"), bar = el && el.querySelector(".wxbar"); if (!bar || !g.ext || !CM.weatherNow) return out;
       const W = CM.weatherNow(g), N = CM.nextWeather(g), t = CM.clockOf(g), H = 6 * 60, segs = bar.querySelector(".segs"); let html = "", at = t, left = H;
@@ -45746,6 +45781,30 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   // the crater's glow in the minutes after
   { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl || !(fl.number === 0 || fl.number === -1) || !game.ext || !renderer || !renderer.eye) return; const t = CM.clockOf(game), E = game.ext("meteors");
       for (const s of E.strikes || []) { if (s.floor !== fl.number) continue; const m = t - s.at; if (m < 0 || m > 12) continue; const k = 1 - m / 12; out.push({ x: s.x + 0.5, y: 0.4, z: s.y + 0.5, reach: 1.5 + 1.7 * k, colour: [0.75 * k + 0.25 * (1 - k), 0.32 * k, 0.07 * k], flicker: true, d: Math.abs(s.x - fl.pos[0]) + Math.abs(s.y - fl.pos[1]) }); } }; }
+}
+
+// ---- 76zzzzzzzzzzl-fogs.js ----
+"use strict";
+// The magical fogs - the window's side (v76.0, UPGRADE_PLAN_61.md part 6): a fog (69zzo-fogs.js) is a coloured
+// layer of soft drifting billows about the party, above and below ground alike, the sky's and the stone's colours
+// drawn toward its own, the mist's low veil under a sky and the dungeon's haze thickened below. The rules' statuses
+// are told in the message log when it comes and goes, and the sky bar names it with what it does.
+{ const P = 128, pic = (c0) => { const c = document.createElement("canvas"); c.width = c.height = P; const p = c.getContext("2d"), g = p.createRadialGradient(P / 2, P / 2, 2, P / 2, P / 2, P / 2); const [r, gg, b] = c0.map((v) => Math.round(v * 255)); g.addColorStop(0, `rgba(${r},${gg},${b},0.85)`); g.addColorStop(0.55, `rgba(${r},${gg},${b},0.4)`); g.addColorStop(1, `rgba(${r},${gg},${b},0)`); p.fillStyle = g; p.fillRect(0, 0, P, P); return c; };
+  const KINDS = CM.FOGS.kinds, layerOf = (k) => `life:${k}`;
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const k of Object.keys(KINDS)) { const L = layerOf(k); if (set.index[L] === undefined) { set.index[L] = set.layers.length; set.layers.push(pic(KINDS[k].colour)); } } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => (name.startsWith("life:fog") && KINDS[name.slice(5)] !== undefined) || s0(name); }
+  // the billows: an air kind of their own, above and below
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, Fg = g && CM.fogNow ? CM.fogNow(g) : null; if (Fg && Fg.strength > 0) out.push({ id: "fogx", rate: 16 * Fg.strength }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "fogx") return sp0.call(this, k, eye, R, env); const g = CM.game, Fg = CM.fogNow(g); if (!Fg) return null; const r = Math.random, a = r() * Math.PI * 2, d = 0.8 + r() * (R - 0.5);
+      return { kind: "fogx", age: 0, seed: r() * 10, sway: 0.4 + r() * 0.6, swayAmp: 0.12, windy: 0.25, vx: 0, vy: 0.015, vz: 0, life: 7 + r() * 5, size: 1.1 + r() * 1.1, grow: 0.06, glow: env.surface ? 1.3 : 2, alpha: (env.surface ? 0.22 : 0.3) + 0.2 * Fg.strength, x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 0.05 + r() * 0.9, top: 2.6, layer: layerOf(Fg.kind) }; }; }
+  // the colours: the sky and the mist above, the stone's fog and the haze below
+  const kept = new WeakMap(), mix = (c, t, k) => [c[0] + (t[0] - c[0]) * k, c[1] + (t[1] - c[1]) * k, c[2] + (t[2] - c[2]) * k];
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || game.mode === "title" || !game.ext) return; const Fg = CM.fogNow(game), th = r.theme;
+    if (th && kept.has(th) && (!Fg || r.sky)) { Object.assign(th, kept.get(th)); kept.delete(th); }   // (the stone's own colour back when the fog goes, or under a sky)
+    if (!Fg || Fg.strength <= 0) return; const k = Fg.strength, C = Fg.colour;
+    if (r.sky) { r.sky.horizon = mix(r.sky.horizon, C, 0.55 * k); r.sky.zenith = mix(r.sky.zenith, C, 0.3 * k); r.mist = Math.max(r.mist || 0, 0.2 + 0.5 * k); if (r.skyx) { r.skyx.cloudCol = mix(r.skyx.cloudCol || [1, 1, 1], C, 0.6 * k); } }
+    else if (th) { if (!kept.has(th)) kept.set(th, { fog: th.fog, torch: th.torch }); const K = kept.get(th); th.fog = mix(K.fog, C.map((v) => v * 0.35), 0.7 * k); th.torch = mix(K.torch, C, 0.5 * k); if (r.air) r.air = Object.assign({}, r.air, { haze: Math.max(r.air.haze || 0, 0.45 + 0.4 * k) });
+      if (r.lights) r.lights.forEach((l) => { l.colour = mix(l.colour, C, 0.45 * k); }); } };   // (below: the torches and the lamps burn in its colour, and the haze thickens)
 }
 
 // ---- 77-splash.js ----

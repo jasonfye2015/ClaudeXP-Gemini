@@ -6340,6 +6340,28 @@ test("meteors and the ore (v75.0): a first strike within a day or so and then on
   assert.strictEqual(m1.craters, 2, "two craters laid"); assert.ok(m1.count >= m0.count + 2 * 17 * 2, "their quads"); delete CM.wxRandom;
 });
 
+test("the magical fogs (v76.0): four fogs among the weather's kinds, six hours long, the same on any floor; orange - spells cost half again and bite a fifth less; green - a point of poison to each hero every ten minutes, never below one; brown - strength a fifth down, back when it lifts; violet - the wild spell is another of the same kind and cost; the comings and goings are said", () => {
+  const CM = load(); let seq = 0.5; CM.wxRandom = () => seq; const F = CM.FOGS;
+  for (const k of Object.keys(F.kinds)) { assert.ok(CM.WX.kinds.includes(k), k); assert.strictEqual(CM.WX.odds.summer[k], F.odds); assert.strictEqual(CM.WX.word[k], "mist"); }
+  const g = new CM.Game(); g.newGame("fog-1", fixedParty(CM)); g.enterFloor(-1, "rope", [50, 30]);
+  const force = (kind, len = 100) => { const W = g.ext("wx"); W.cur = { kind, strength: 1, from: g.clock - 30, until: g.clock - 30 + len }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; };
+  force("clear"); assert.strictEqual(CM.fogNow(g), null); CM.fogTick(g, 1); const msgs = () => g.messages.length;
+  force("fogorange"); const W = CM.weatherStep(g); assert.strictEqual(W.cur.until - W.cur.from, F.minutes, "six hours"); assert.strictEqual(W.next.from, W.cur.until, "the next follows it");
+  const Fg = CM.fogNow(g); assert.ok(Fg && Fg.kind === "fogorange" && Fg.strength > 0 && Fg.left > 0, "the orange fog, now"); g.enterFloor(3, "down"); assert.strictEqual(CM.fogNow(g).kind, "fogorange", "the same below ground");
+  const n0 = msgs(); CM.fogTick(g, 1); assert.ok(msgs() === n0 + 1 && g.messages[n0].includes("orange fog"), "its coming is said"); assert.strictEqual(g.ext("fog").kind, "fogorange");
+  const mage = g.party.find((h) => h.cls === "Mage"), a = Object.assign({ id: "firebolt" }, CM.ABILITIES.firebolt); g.ext("fog").kind = null; const c0 = g.spellCost(mage, a), m0 = g.spellMult(mage, "firebolt"); g.ext("fog").kind = "fogorange";
+  assert.strictEqual(g.spellCost(mage, a), Math.ceil(c0 * F.spellCost), "spells cost half again"); assert.ok(Math.abs(g.spellMult(mage, "firebolt") - m0 * F.spellBite) < 1e-9, "and bite a fifth less");
+  // green
+  force("foggreen"); CM.fogTick(g, 1); assert.strictEqual(g.ext("fog").kind, "foggreen"); const hp = g.party.map((h) => h.hp); g.party[0].hp = 1; CM.fogTick(g, F.poisonEvery * 2 + 1);
+  assert.strictEqual(g.party[0].hp, 1, "never below one"); for (let i = 1; i < g.party.length; i++) assert.strictEqual(g.party[i].hp, hp[i] - 2, "two points in twenty minutes");
+  // brown
+  const knight = g.party.find((h) => h.cls === "Knight"), str0 = CM.heroStat(knight, "str"), atk0 = knight.atk; force("fogbrown"); CM.fogTick(g, 1); assert.ok(knight.fogStr); assert.strictEqual(CM.heroStat(knight, "str"), Math.max(1, Math.floor(str0 * F.strength)), "strength a fifth down"); assert.ok(knight.atk <= atk0, "and the attack with it");
+  force("clear"); const n1 = msgs(); CM.fogTick(g, 1); assert.ok(!knight.fogStr && CM.heroStat(knight, "str") === str0 && knight.atk === atk0, "back when it lifts"); assert.ok(g.messages[n1].includes("brown fog"), "its going is said");
+  // violet
+  force("fogpurple"); CM.fogTick(g, 1); seq = 0.0; const w = CM.wildSpell(g, mage, "firebolt"); assert.ok(w && w !== "firebolt" && CM.ABILITIES[w].target === "foe" && Math.abs(CM.ABILITIES[w].mp - CM.ABILITIES.firebolt.mp) <= 2, `another spell of the kind (${w})`);
+  assert.strictEqual(CM.wildSpell(g, mage, "blows"), null, "a blow is no spell"); delete CM.wxRandom;
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
