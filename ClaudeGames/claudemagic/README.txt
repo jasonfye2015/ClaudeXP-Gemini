@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Weather in the small things (v60.0, UPGRADE_PLAN_55.md)
+  (src/js/24d-weather.js, src/js/76zzzzzzzzzz8-weather2.js, src/js/40-render.js)
+  - A rainbow: on a rainy day, in the second hour after dawn and in the late afternoon, the cloud thins, the rain
+    eases and a bow stands opposite the low sun, a fainter second bow outside it with its colours reversed.
+  - Hoar frost whitens the ground on a clear or windy morning in winter or autumn, from an hour before dawn and gone
+    two hours after it, glinting in the first sun; none under lying snow.
+  - In the rain, drops run off the eaves of the town's houses.
+
 The light of the hour (v59.0, UPGRADE_PLAN_54.md)
   (src/js/24c-light.js, src/js/76zzzzzzzzzz7-light.js, src/js/40-render.js)
   - The sun's light has a colour now: gold on the sunward walls and the ground at dawn and dusk, white at noon,
