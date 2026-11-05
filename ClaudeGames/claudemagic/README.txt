@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Details within reach (v58.1, UPGRADE_PLAN_53.md phase 1)
+  (src/js/26-surface.js, src/js/40-render.js)
+  - The small built details are drawn only as near as they can be seen: the trees' roots, the stumps and the rocks
+    within 12 squares, lamp posts within 16, the windows' sills and lintels, the doors' frames and the raised
+    timbers within 18, the fences within 28. Farther off the painted walls carry them, and there's less to draw.
+  - Fixed: the moss of v57.4 greened the feet of everyone in town, the well and the barrels - it keeps to the walls now.
+
 Lighter meshes (v58.0, UPGRADE_PLAN_53.md phase 0)
   (src/js/26e-wooddetail.js)
   - The town and the Deep Wood are lighter to draw: the trees' roots are built only on the trees beside an open

@@ -5987,6 +5987,17 @@ test("weathering (v57.4): stains run down under the town's window sills, ivy cli
   const low = CM.floorMesh(town, CM.TOWN_THEME, index, { detail: 0 }); assert.strictEqual(count(low, index["solid:stain"]), 0, "none at Low detail");
 });
 
+test("fewer details at a distance (v58.1): the small built details carry how far off they're drawn - roots, stumps and rocks 12 squares, fences 28, the window and door details 18 - and the walls and the ground none", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", "solid:bark", "solid:stumptop", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const reach = (m) => { const c = {}; for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) { const f = m.data[i + 7]; c[f] = (c[f] || 0) + 1; } return c; };
+  const wood = reach(CM.floorMesh(CM.makeWood("near-1"), CM.WOOD_THEME, index)), town = reach(CM.floorMesh(CM.makeTown("near-1"), CM.TOWN_THEME, index));
+  assert.ok(wood[22] > 1000, "the Wood's roots, stumps and rocks: 12 squares"); assert.ok(town[38] > 100, "fences: 28 squares"); assert.ok(town[28] > 1000, "the window and door details: 18 squares");
+  assert.ok(town[0] > 50000 && wood[0] > 30000, "the walls, the ground and the rest: always");
+  assert.ok(Object.keys(town).every((k) => Number(k) <= 0 || Number(k) >= 10), "nothing in between (a plain flash is 0..1)");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
