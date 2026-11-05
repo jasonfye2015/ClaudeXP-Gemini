@@ -17,6 +17,7 @@
       poly([P(u1, y0, d0), P(u1, y0, d1), P(u1, y1, d1), P(u1, y1, d0)], UV, layer, sh * 0.8 * k); };
     const [u0, v0, u1, v1] = W, yb = h * (1 - v1), yt = h * (1 - v0), fu = 0.02, fy = 0.02 * h;   // (the window's painted frame is about 2% wide)
     box(u0 - 0.045, u1 + 0.045, yb - 0.055, yb, 0, 0.085, stone, 1.05);                 // the sill
+    if (index["solid:stain"] !== undefined) poly([P(u0 + 0.01, yb - 0.32, 0.004), P(u1 - 0.01, yb - 0.32, 0.004), P(u1 - 0.01, yb - 0.055, 0.004), P(u0 + 0.01, yb - 0.055, 0.004)], UV, index["solid:stain"], sh * 0.9);   // (v57.4) the rain's stain run down from it
     box(u0 - 0.03, u1 + 0.03, yt, yt + 0.045, 0, 0.045, wood, 0.9);                       // the lintel
     box(u0 - fu, u0 + 0.004, yb, yt, 0, 0.035, wood, 0.85); box(u1 - 0.004, u1 + fu, yb, yt, 0, 0.035, wood, 0.85);   // the reveals
     // (v53.1) shutters: a pair beside it, folded back against the wall - in the house's own colour, one of three - or, on about one window in six, closed over it
@@ -61,4 +62,8 @@
       if (metal !== undefined && hsh % 2 === 0) { box(U0 - o.g * 0.5, U1 + o.g * 0.5, ve - side * 0.02, ve + side * 0.07, eaveY - 0.13, eaveY - 0.05, metal, 0.7);   // the gutter
         const ud = side > 0 ? U1 - 0.06 : U0 + 0.06; box(ud - 0.035, ud + 0.035, ve + side * 0.0, ve + side * 0.07, 0, eaveY - 0.08, metal, 0.65); } }   // the downpipe
     return 1; };
+  // (v57.4) ivy: on about one wall face in five, a climbing patch from the ground, its own width and height
+  CM.ivyDetail = (o) => { const L = o.index["solid:ivy"]; if (L === undefined) return 0; const { poly, a, b, dx, dy, h } = o, r = new CM.Random(CM.hashSeed(`ivy:${o.x},${o.y}:${o.d}`)); if (r.next() > 0.2) return 0;
+    const P = (u, y, dep) => [a[0] + (b[0] - a[0]) * u + dx * dep, y, a[1] + (b[1] - a[1]) * u + dy * dep], u0 = r.next() * 0.55, u1 = Math.min(1, u0 + 0.25 + r.next() * 0.3), top = h * (0.45 + r.next() * 0.45);
+    poly([P(u0, 0, 0.006), P(u1, 0, 0.006), P(u1, top, 0.006), P(u0, top, 0.006)], [[0, 1], [1, 1], [1, 0], [0, 0]], L, o.shade * 0.95); return 1; };
 }
