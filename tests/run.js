@@ -6073,6 +6073,28 @@ test("weather in the small things (v60.0): a rainbow in a rainy day's sun-shower
   for (const u of ["uRainbow", "uGroundFrost"]) assert.ok(src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
 });
 
+test("the living town (v61.0): hens in the yards behind the houses by day and not at night or in the rain, each keeping to its flock's squares; a cat whose perch changes by the hour and who shelters by the tavern's door at night and in the wet; pigeons roosting on the wall's walk and the roof ridges; washing on a line to a post behind about half the houses, none in winter, built into the town's mesh", () => {
+  const CM = load(), W = (w, f) => { const o = CM.weatherOf; CM.weatherOf = () => w; try { return f(); } finally { CM.weatherOf = o; } }, town = CM.makeTown("life-1");
+  const flocks = CM.chickensOf(town); assert.ok(flocks.length >= 1 && flocks.length <= 3, `flocks (${flocks.length})`);
+  for (const f of flocks) { assert.ok(f.n >= 3 && f.n <= 5); assert.ok(f.squares.length >= 3); for (const [x, y] of f.squares) assert.strictEqual(town.grid[y][x], 0, "a yard square is open");
+    for (let t = 0; t < 60; t += 0.5) { const p = CM.chickenPose(f, 1, t); assert.ok(f.squares.some(([x, y]) => Math.abs(p.x - x - 0.5) <= 0.75 && Math.abs(p.y - y - 0.5) <= 0.75), `a hen keeps to the yard (${p.x.toFixed(2)},${p.y.toFixed(2)})`); } }
+  const g = (h, season = "summer") => ({ seed: "life-1", season, clock: 3 * 1440 + ((h - 6 + 24) % 24) * 60, floor: town });
+  assert.ok(CM.chickensOut(g(10)), "out by day"); assert.ok(!CM.chickensOut(g(23)), "in at night"); assert.ok(!W("rain", () => CM.chickensOut(g(10))), "in from the rain");
+  const perches = new Set(); for (let h = 6; h < 20; h += 2) { const c = CM.catNow(g(h), town); assert.ok(c && ["fence", "hedge", "well"].includes(c.where), `a perch by day (${c && c.where})`); perches.add(`${c.x},${c.y}`); }
+  assert.ok(perches.size > 1, "the perch changes by the hour");
+  const night = CM.catNow(g(23), town), wet = W("rain", () => CM.catNow(g(10), town)); assert.strictEqual(night.where, "the tavern's door"); assert.ok(night.night, "its eyes catch the light"); assert.strictEqual(wet.where, "the tavern's door"); assert.ok(!wet.night);
+  const roosts = CM.roostsOf(town); assert.ok(roosts.filter((r) => r.where === "wall").length >= 5, `pigeons on the wall (${roosts.filter((r) => r.where === "wall").length})`); assert.ok(roosts.some((r) => r.where === "ridge"), "and on the ridges");
+  const lines = CM.washingLines(town, "summer"); assert.ok(lines.length >= 2 && lines.length <= CM.TOWN_HOUSES.length, `lines (${lines.length})`);
+  for (const l of lines) { assert.ok(l.cloths.length >= 3 && l.cloths.length <= 4); assert.strictEqual(town.grid[Math.floor(l.z1)][Math.floor(l.x1)], 0, "the post stands in the open"); assert.ok(l.y > 1 && l.y < 1.6); }
+  assert.strictEqual(CM.washingLines(town, "winter").length, 0, "none in winter");
+  const index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", "model:cloth", "model:sack", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const count = (m, L) => { let c = 0; for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) if (m.data[i + 5] === L) c++; return c / 6; };
+  const m = CM.floorMesh(town, CM.TOWN_THEME, index, { season: "summer" }); assert.strictEqual(m.washing, lines.length, "the lines built"); assert.ok(count(m, index["model:cloth"]) + count(m, index["model:sack"]) >= lines.length * 3 * 2 + 2, `the cloths (dyed and linen by turns) both sides, and the lines (${count(m, index["model:cloth"])}+${count(m, index["model:sack"])})`);
+  const m2 = CM.floorMesh(town, CM.TOWN_THEME, index, { season: "winter" }); assert.strictEqual(m2.washing, 0, "none built in winter"); assert.strictEqual(count(m2, index["model:cloth"]), 0);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Small life (v61.0, UPGRADE_PLAN_56.md)
+  (src/js/69zzk-townlife.js, src/js/26k-washing.js, src/js/76zzzzzzzzzz9-townlife.js, src/js/26-surface.js, src/js/40-render.js)
+  - Hens in the yards behind the townsfolk's houses: a few flocks wandering their yard and pecking by day, in from
+    the rain and at night.
+  - A cat on a fence top, a hedge or the well's kerb, a different perch every couple of hours; by the tavern's door at
+    night, its eyes catching the light, and in the wet.
+  - Pigeons roosting on the ring wall's walk and the roof ridges; they take wing when the party comes near and settle
+    back a while after.
+  - Washing hung out behind about half the houses - a line from the wall to a post in the yard, three or four cloths
+    pegged along it - built into the town; none in winter.
+
 Weather in the small things (v60.0, UPGRADE_PLAN_55.md)
   (src/js/24d-weather.js, src/js/76zzzzzzzzzz8-weather2.js, src/js/40-render.js)
   - A rainbow: on a rainy day, in the second hour after dawn and in the late afternoon, the cloud thins, the rain
