@@ -5922,6 +5922,21 @@ test("the well, built (v56.1): the Square's well is stonework in the town's mesh
   assert.strictEqual(CM.floorMesh(CM.makeWood("well-1"), CM.WOOD_THEME, index).wells, 0, "none in the Wood");
 });
 
+test("fences and hedges with depth (v56.2): the town's fences are built - posts, rails and pickets along each run - instead of pictures round their squares, and its hedges have rounded crowns instead of flat lids; they block the way as before", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", "solid:paling", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const town = CM.makeTown("fence-1"), m = CM.floorMesh(town, CM.TOWN_THEME, index), size = town.grid.length;
+  let fenceCells = 0, hedgeCells = 0; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (town.grid[y][x] !== 0) { const k = CM.solidAt(town, x, y); if (k === "fence") fenceCells++; if (k === "hedge") hedgeCells++; }
+  assert.strictEqual(m.fencing.fences, fenceCells, "every fence square built"); assert.strictEqual(m.fencing.hedges, hedgeCells, "every hedge square crowned"); assert.ok(fenceCells + hedgeCells > 0);
+  const layers = new Set(); for (let i = 0; i < m.data.length; i += CM.MESH_STRIDE) layers.add(m.data[i + 5]);
+  assert.ok(!layers.has(index["solid:fence"]), "no fence pictures left"); if (fenceCells) assert.ok(layers.has(index["solid:paling"]), "the palings");
+  // a fence square's posts and rails stay within it; and the way is still blocked
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (town.grid[y][x] !== 0 && CM.solidAt(town, x, y) === "fence") {
+    const vs = []; CM.fenceModel({ quad: (...q) => vs.push(...q.slice(0, 4)), fl: { number: 0 }, index, size, solidKind: (a, b) => (a === x && b === y ? "fence" : null) });
+    for (const v of vs) assert.ok(v[0] >= x - 0.06 && v[0] <= x + 1.06 && v[2] >= y - 0.06 && v[2] <= y + 1.06, "within its square"); assert.notStrictEqual(town.grid[y][x], 0); break; }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
