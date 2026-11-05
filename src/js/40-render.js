@@ -44,7 +44,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -109,13 +109,17 @@ void main() {
       sk += mix(vec3(0.15, 0.95, 0.5), vec3(0.55, 0.3, 0.95), smoothstep(lo + 0.08, lo + 0.35, dir.y)) * curtain * rays * band * north * uAurora * 0.75; }
     if (uCloud.z > 0.0 && dir.y > 0.005) { vec2 cp = (uEye.xz + dir.xz / dir.y * 30.0) / 14.0 + uCloud.xy; float c = clouds(cp), a = smoothstep(1.0 - uCloud.z, 1.0 - uCloud.z + 0.22, c) * smoothstep(0.005, 0.1, dir.y);
       vec3 cc = uCloudCol * (1.05 - 0.45 * smoothstep(1.0 - uCloud.z, 1.0, c)); sk = mix(sk, mix(cc, uHorizon, smoothstep(0.25, 0.0, dir.y) * 0.6), a * 0.92); }
+    if (uSunCol.w > 0.0 && uSunK > 0.5) {   // (v59.0) the low sun's glow about it in the sky, and the far side of the sky cooler
+      float tw = pow(max(dot(dir, uSun), 0.0), 5.0) * smoothstep(-0.08, 0.12, dir.y); sk += uSunCol.rgb * tw * uSunCol.w * 0.85;
+      sk *= mix(vec3(1.0), vec3(0.88, 0.92, 1.06), uSunCol.w * 0.5 * smoothstep(0.0, 1.0, -dot(dir, uSun))); }
     sk += vec3(0.75, 0.8, 1.0) * uFlash * 0.8;
     fragColor = vec4(sk, 1.0); return; }
-  if (t.a < 0.5) discard;
+  if (t.a < ((vFx.z > 1.2 && vFx.z < 1.4) ? 0.015 : 0.5)) discard;   // (v59.0: a glow of 1.3 is a soft thing - a halo - kept to its own faint edge)
   if (uMoss > 0.0 && vFx.z < 0.5 && vWorld.y < 0.5) {   // (v57.4) moss creeping up the feet of the town's walls, in patches
     vec3 wn = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
     float wallBy = uMapN > 0.0 ? max(max(texture(uMap, (vWorld.xz + vec2(0.12, 0.0)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.12, 0.0)) / uMapN).r), max(texture(uMap, (vWorld.xz + vec2(0.0, 0.12)) / uMapN).r, texture(uMap, (vWorld.xz - vec2(0.0, 0.12)) / uMapN).r)) : 0.0;   // (v58.1: only on a wall, or against one)
-    if (abs(wn.y) < 0.3 && wallBy > 0.35) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
+    vec2 fq = fract(vWorld.xz); float ed = abs(wn.x) > abs(wn.z) ? min(fq.x, 1.0 - fq.x) : min(fq.y, 1.0 - fq.y);   // (v59.0: only on a face at its square's edge, squarely set - a wall's, not a barrel's or the well's)
+    if (abs(wn.y) < 0.3 && wallBy > 0.35 && ed < 0.1 && max(abs(wn.x), abs(wn.z)) > 0.9) { float mn = vnoise(vWorld.xz * 3.0 + vWorld.y * 2.0) * 0.6 + vnoise(vec2(vWorld.x + vWorld.z, vWorld.y) * 9.0) * 0.4;
       float m = smoothstep(0.42, 0.08, vWorld.y + (0.5 - mn) * 0.3) * smoothstep(0.35, 0.6, mn) * uMoss;
       t.rgb = mix(t.rgb, vec3(0.24, 0.32, 0.14) * (0.7 + 0.6 * mn), m * 0.75); } }
   if (vFx.z > 1.5 && vFx.z < 3.5) { fragColor = vec4(t.rgb, t.a * vFx.y); return; }
@@ -134,7 +138,7 @@ void main() {
     vec3 base = t.rgb * vec3(0.3, 0.46, 0.55) * vShade * uTorch * lw * uGrade;   // (deep water: dark, a little green)
     vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
     float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
-    vec3 wc = mix(base, seen, fr) + glint * vec3(1.0, 0.95, 0.82);
+    vec3 wc = mix(base, seen, fr) + glint * mix(vec3(1.0, 0.95, 0.82), uSunCol.rgb, 0.6);   // (v59.0: the glint in the sun's colour)
     if (uMapN > 0.0) {                                                        // (v30.8) shallows to see into, a fish now and then, foam at the banks
       vec2 wq = vWorld.xz / uMapN; float o = 0.9 / uMapN, mS = min(texture(uMap, wq).g, min(min(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), min(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g)));
       float shallow = 1.0 - smoothstep(0.08, 0.85, mS), lk = uSunK > 0.0 ? 0.35 + 0.75 * uSunK * max(uAmbient, 0.2) : lw;
@@ -149,6 +153,8 @@ void main() {
         wc *= 1.0 - clamp(fish, 0.0, 1.0) * 0.5 * (1.0 - fr); }
       float edge = 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
       wc = mix(wc, vec3(0.93, 0.95, 0.97) * (uSunK > 0.0 ? 0.55 + 0.4 * uAmbient : lw * 0.8) * uTorch, edge * smoothstep(0.5, 0.75, fn) * (0.35 + 0.35 * flow) * 0.7); }
+    if (uWaterMist > 0.0) { float dr = 0.55 + 0.45 * vnoise(vWorld.xz * 0.7 + vec2(uTime * 0.04, uTime * 0.02)), wm = uWaterMist * smoothstep(0.4, 3.0, d) * dr;   // (v59.0) the dawn's mist on the water
+      wc = mix(wc, mix(uFog, vec3(0.9, 0.92, 0.95), 0.6) * max(uAmbient, 0.3), clamp(wm, 0.0, 0.85)); }
     wc = mix(wc, uFog, smoothstep(uReach * 0.55, uReach * 1.7, d));
     fragColor = vec4(wc, 0.86 * vFx.y); return;
   }
@@ -205,7 +211,9 @@ void main() {
       ao = 1.0 - 0.5 * smoothstep(0.02, 0.62, w); }
     else { ao = 1.0 - 0.32 * (1.0 - smoothstep(0.0, 0.32, vWorld.y)) - uCeil * 0.26 * smoothstep(0.7, 1.0, vWorld.y); }
     light *= mix(1.0, ao, uAO); extra *= mix(1.0, ao, uAO); }
-  vec3 col = t.rgb * vShade * (uTorch * light + extra) * uGrade * (1.0 - cav);
+  vec3 sunTint = vec3(1.0);   // (v59.0) the sun's colour on what faces it: gold at the horizon, white at noon, silver-blue under the moon
+  if (uSunK > 0.0) { float sf = max(dot(n, uSun), 0.0) * (abs(n0.y) < 0.7 ? 1.0 : 0.7); sunTint = mix(vec3(1.0), uSunCol.rgb, uSunK * sf * 0.85); }
+  vec3 col = t.rgb * vShade * (uTorch * light * sunTint + extra) * uGrade * (1.0 - cav);
   if (uWorn > 0.0 && uBump > 0.0 && uMapN > 0.0 && n0.y > 0.7) {             // (v48.4) the floor walked on: a worn path down the middle, paler and smoother; and the joints of the flags
     vec2 q = vWorld.xz / uMapN; float o = 0.3 / uMapN, w = texture(uMap, q).r + 0.5 * (texture(uMap, q + vec2(o, 0.0)).r + texture(uMap, q - vec2(o, 0.0)).r + texture(uMap, q + vec2(0.0, o)).r + texture(uMap, q - vec2(0.0, o)).r);
     float worn = (1.0 - smoothstep(0.3, 2.4, w)) * (0.65 + 0.35 * vnoise(vWorld.xz * 1.7)); col = mix(col, col * 1.22 + vec3(0.015), worn * 0.6 * uWorn); cav *= 1.0 - 0.6 * worn;
@@ -270,10 +278,14 @@ void main() {
     float below = fy < top ? (ey > top ? d * (top - fy) / max(ey - fy, 0.05) : d) : 0.0; vec2 dr = vWorld.xz * 0.55 + vec2(uTime * 0.05, uTime * 0.03) + uEye.xz * 0.12;
     float den = uLowFog * (0.55 + 0.75 * vnoise(dr) * vnoise(dr * 2.3 + 4.1)); float lf = 1.0 - exp(-below * den * 1.6);
     col = mix(col, vec3(0.62, 0.64, 0.66) * (uTorch * min(light, 1.3) * 0.5 + extra * 0.6 + uAmbient * 2.0) * uGrade, clamp(lf, 0.0, 0.75)); }
+  if (uWaterMist > 0.0 && uMapN > 0.0 && uCeil < 0.5) {   // (v59.0) mist lying on the water and its banks at dawn: a pale skin, drifting
+    vec2 wq = vWorld.xz / uMapN; float o = 1.2 / uMapN, nw = max(max(texture(uMap, wq).g, texture(uMap, wq + vec2(o, 0.0)).g), max(max(texture(uMap, wq - vec2(o, 0.0)).g, texture(uMap, wq + vec2(0.0, o)).g), texture(uMap, wq - vec2(0.0, o)).g));
+    float dr = 0.55 + 0.45 * vnoise(vWorld.xz * 0.7 + vec2(uTime * 0.04, uTime * 0.02)), wm = uWaterMist * smoothstep(0.15, 0.6, nw) * (1.0 - smoothstep(0.0, 1.4, vWorld.y)) * smoothstep(0.4, 3.0, d) * dr;
+    col = mix(col, mix(uFog, vec3(0.9, 0.92, 0.95), 0.6) * max(uAmbient, 0.3), clamp(wm, 0.0, 0.85)); }
   col = mix(col, uFog + vec3(0.6, 0.65, 0.8) * uFlash, fog);
   col += shafts(vdir, d);
   { float lum = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(lum), col, uLook.y); col = max((col - 0.18) * uLook.x + 0.18 + uLift * (1.0 - col), 0.0); }   // (v22.4: the grade - saturation, contrast about the dark's middle, the lift)
-  col = mix(col, t.rgb, vFx.z * (1.0 - fog * 0.7));
+  col = mix(col, t.rgb, min(vFx.z, 1.0) * (1.0 - fog * 0.7));
   col = mix(col, vec3(1.0, 0.3, 0.2), vFx.x);
   fragColor = vec4(col, t.a * vFx.y);
 }`;
@@ -385,7 +397,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -881,6 +893,7 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
     gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
+    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0);   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);

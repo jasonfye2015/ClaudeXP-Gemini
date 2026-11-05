@@ -6034,6 +6034,27 @@ test("the town and the Wood build within their time (v58.4): each floor's whole 
     assert.ok(ms < 1500, `${name} built in ${ms} ms`); assert.ok(m.count < 300000, `${name}: ${m.count} vertices`); }
 });
 
+test("the light of the hour (v59.0): the sun's colour is gold at dawn and dusk and white at noon, silver-blue under the moon; mist lies on the water at dawn in clear weather and not at midday or in the rain; the lamps' halos are for the damp night air", () => {
+  const CM = load(), W = (w, f) => { const o = CM.weatherOf; CM.weatherOf = () => w; try { return f(); } finally { CM.weatherOf = o; } };
+  const g = (h, season = "autumn", number = 0) => ({ seed: "light-1", season, clock: 3 * 1440 + ((h - 6 + 24) % 24) * 60, floor: { number } });
+  const [dawn, dusk] = CM.DAYLIGHT.autumn;
+  const dawnSun = CM.sunColour(g(dawn + 0.25)), noonSun = CM.sunColour(g(12)), duskSun = CM.sunColour(g(dusk - 0.25)), nightSun = CM.sunColour(g(1));
+  assert.ok(dawnSun.col[0] > 0.95 && dawnSun.col[2] < 0.75, `gold at dawn (${dawnSun.col})`); assert.ok(dawnSun.glow > 0.5, "and a glow about the sun");
+  assert.ok(noonSun.col.every((c) => c > 0.97), `white at noon (${noonSun.col})`); assert.strictEqual(noonSun.glow, 0, "no glow at noon");
+  assert.ok(duskSun.col[2] < 0.75 && duskSun.glow > 0.5, "gold at dusk too");
+  assert.ok(nightSun.col[2] > nightSun.col[0] && nightSun.glow === 0, "silver-blue under the moon, no glow");
+  assert.ok(W("rain", () => CM.sunColour(g(dawn + 0.25))).glow < dawnSun.glow * 0.3, "little glow in the rain");
+  assert.ok(CM.waterMist(g(dawn + 0.5)) > 0.8, `mist on the water at dawn (${CM.waterMist(g(dawn + 0.5))})`);
+  assert.strictEqual(CM.waterMist(g(12)), 0, "none at midday"); assert.strictEqual(W("rain", () => CM.waterMist(g(dawn + 0.5))), 0, "none in the rain");
+  assert.ok(CM.waterMist(g(dawn + 0.5, "summer")) < CM.waterMist(g(dawn + 0.5)), "less in summer");
+  assert.ok(CM.waterMist(g(dusk)) > 0.3, "an autumn evening's mist"); assert.strictEqual(CM.waterMist(g(dusk, "summer")), 0, "not a summer evening's");
+  assert.strictEqual(CM.waterMist(g(dawn + 0.5, "autumn", 3)), 0, "none below ground");
+  assert.ok(W("mist", () => CM.haloAir(g(23))) > 0.9, "halos in a misty night"); assert.ok(W("rain", () => CM.haloAir(g(23))) > 0.8, "and a rainy one");
+  assert.ok(CM.haloAir(g(23)) > 0.1 && CM.haloAir(g(23)) < 0.3, "a faint one on a clear night"); assert.strictEqual(CM.haloAir(g(12)), 0, "none by day");
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "40-render.js"), "utf-8");
+  for (const u of ["uSunCol", "uWaterMist"]) assert.ok(src.includes(`uniform`) && src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
