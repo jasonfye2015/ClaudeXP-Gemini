@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The places' look (v64.0, UPGRADE_PLAN_59.md)
+  (src/js/64zzze-placelook.js, src/js/76zzzzzzzzzzc-places.js)
+  - The Fortress: the torch's light breathes and warms what is near it, dust drifts in it, and the view's corners
+    fall into the dark.
+  - Claudeita's cave: water drips from the roof about the hero and splashes where it lands, and the deep has a cold
+    blue glow at its edge the farther down it goes.
+  - Claudebros: the hour lies over the sky by the game's own clock - warm at dusk and dawn, a deep blue with stars at
+    night - and clouds cross every kind of level.
+
 Closer to hand (v63.0, UPGRADE_PLAN_58.md)
   (src/js/64zzzd-foemarks.js, src/js/76zzzzzzzzzzb-gui.js, src/js/74-fight.js, src/style.css)
   - In a fight each foe's row has a health bar (and its part's, below it) and its marks - asleep, held, marked,
