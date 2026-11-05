@@ -380,12 +380,21 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { if (W !== (glow === 2)) return; const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
   }
+  let felled = 0;
   if (!only) for (const key of trees) {                                                            // two crossed pictures a tree, of the seed's three
     const [x, y] = key.split(",").map(Number), v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, h = CM.SOLID.tree.h, cx = x + 0.5, cz = y + 0.5, r = 0.62;
     const was = opts.turn !== undefined && opts.turn < 1 && (CM.hashSeed(`${fl.number}:turn:${key}`) % 100) / 100 >= opts.turn && index[`tree:${v}:was`] !== undefined;   // (v24.2: not turned yet)
-    const layer = L(was ? `tree:${v}:was` : `tree:${v}`);
-    quad([cx - r, 0, cz + r], [cx + r, 0, cz - r], [cx + r, h, cz - r], [cx - r, h, cz + r], layer, 1.0, CM.SWAY.tree);
-    quad([cx - r, 0, cz - r], [cx + r, 0, cz + r], [cx + r, h, cz + r], [cx - r, h, cz - r], layer, 1.0, CM.SWAY.tree);
+    const layer = L(was ? `tree:${v}:was` : `tree:${v}`), st = opts.treeStates && opts.treeStates[key];   // (v74.0: a tree's state - fallen, burning, charred, a sapling - 69zzm-trees.js)
+    if (st === "fallen" || st === "charred") {   // a log lying across the square the way the hash says, and for a charred one black, over ash
+      const bark = index["solid:bark"] !== undefined ? index["solid:bark"] : L("solid:timber"), a = (CM.hashSeed(`${fl.number}:fell:${key}`) % 4) * Math.PI / 4, dx = Math.cos(a), dz = Math.sin(a), px = -dz, pz = dx, k = st === "charred" ? 0.22 : 0.9, hh = 0.14, w = 0.13, len = 0.52;
+      const C = (u, s, y) => [cx + dx * u + px * s, y, cz + dz * u + pz * s];
+      quad(C(-len, w, 0), C(len, w, 0), C(len, w, hh * 2), C(-len, w, hh * 2), bark, k * 0.95); quad(C(len, -w, 0), C(-len, -w, 0), C(-len, -w, hh * 2), C(len, -w, hh * 2), bark, k * 0.8);
+      quad(C(-len, -w, hh * 2), C(len, -w, hh * 2), C(len, w, hh * 2), C(-len, w, hh * 2), bark, k * 1.05); quad(C(len, w, 0), C(len, -w, 0), C(len, -w, hh * 2), C(len, w, hh * 2), bark, k * 0.7); quad(C(-len, -w, 0), C(-len, w, 0), C(-len, w, hh * 2), C(-len, -w, hh * 2), bark, k * 0.7);
+      if (st === "charred") quad([cx - 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz - 0.48], [cx - 0.48, 0.004, cz - 0.48], L("ground:dirt"), 0.18);   // (the ash)
+      felled++; continue; }
+    const k = st === "sapling" ? 0.3 : 1, hs = h * k, rs = r * (st === "sapling" ? 0.45 : 1), burnt = st === "burning" ? 0.85 : 1;   // (a sapling: the same picture, small; burning: a little darker under the flames)
+    quad([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs], layer, burnt, CM.SWAY.tree * k);
+    quad([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs], layer, burnt, CM.SWAY.tree * k);
   }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
@@ -453,5 +462,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
 };

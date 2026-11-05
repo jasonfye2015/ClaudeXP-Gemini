@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Trees that fall, burn and grow again (v74.0, UPGRADE_PLAN_61.md part 4)
+  (src/js/69zzm-trees.js, src/js/76zzzzzzzzzzj-trees.js, src/js/26-surface.js, src/js/40-render.js, src/js/76zzzzzzzzzzi-wxair.js)
+  - Trees that fall, burn and grow again (plan 61, part 4): a gale fells a tree now and then and a tornado fells
+    what stands in its wake; lightning in a storm sets one alight, and fire spreads tree to tree - less in rain,
+    not through snow, out in a downpour - but never to a building, a fence or the party: flames and smoke and an
+    orange light, a sight and not a harm. A burning tree burns forty minutes and falls charred; a fallen or charred
+    tree lies three days as a log (a black one over ash), then a sapling stands in its place, a tree again seven days
+    on. The square stays solid the whole way, so nothing opens a way off the map.
+  - In a storm or a gale a town lamp may blow out, and stays dark till the lamplighter's round.
+  - The twister is fuller: more than twice the whirling parts, the air's budget raised while it crosses.
+
 The stronger sky and air (v73.0, UPGRADE_PLAN_61.md part 3)
   (src/js/24f-events.js, src/js/76zzzzzzzzzzi-wxair.js, src/js/69v-weather.js)
   - The stronger sky and air (plan 61, part 3): a tornado - an hour or two, by day in summer and autumn - is a

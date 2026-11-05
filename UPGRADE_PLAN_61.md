@@ -255,7 +255,15 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    sight to a square (CM.mistSightNow, read by 69v's seen filter); the heat's shimmer (r.screen.heatAll); and the
    dramatic dawn or dusk after rain (CM.afterRain from W.prev: the sun's glow doubled, the clouds lit in its colour,
    fading over ninety minutes). Felling in the twister's wake is part 4's.
-4. Trees: felled, burning, charred, the sapling and the regrowth; the tornado's wake; fire's spread; the lamps out.
+4. v74.0 - the trees. **Done**: 69zzm-trees.js keeps each tree's state in the run (fallen, burning, charred,
+   sapling) and steps it by the clock - a gale fells one now and then (not while a twister is the one felling), the
+   twister fells what it crosses, lightning in a storm sets one alight, fire spreads tree to tree (less in rain, not
+   through snow, out in a downpour) and never to buildings or the party; forty minutes burning, three days lying,
+   seven more as a sapling. The square stays solid throughout. The mesh lays a bark log (black over ash when
+   charred) and a small tree for a sapling, and rebuilds when a state changes; flames (a surface picture, not a
+   packed air one) and smoke rise at the crown's edge with an orange flickering light. Lamps blow out in a storm or
+   a gale and stay dark till the lamplighter's round. The twister has more than twice its parts, the air's budget
+   raised while it crosses. Meteors (part 5) will use CM.igniteTree for the fires they start.
 5. Meteors and the ore: the strike, the crater, the chunk, the fire it starts, the shake and the rumble above and
    below, the birds' warning.
 6. The magical fogs, above and below, with their statuses and the HUD.

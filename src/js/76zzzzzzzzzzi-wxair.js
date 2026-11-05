@@ -16,7 +16,7 @@
   // the air's kinds by the event: debris in a gale, the twister's whirl, the mist thicker
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.ext) return out; const W = CM.weatherNow(g);
       if (W.wind.speed > 0.55) out.push({ id: "debris", rate: 14 * (W.wind.speed - 0.4) });
-      const T = CM.twisterNow(g); if (T && T.inside) out.push({ id: "twister", rate: 150 }, { id: "debris", rate: 24 });
+      const T = CM.twisterNow(g); if (T && T.inside) out.push({ id: "twister", rate: 340 }, { id: "debris", rate: 30 });   // (v74.0: fuller - the air's budget is raised while it crosses)
       return out; }; }
   { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game, r = Math.random;
       if (k.id === "debris") { const W = CM.weatherNow(g), w = W.wind, T = CM.twisterNow(g); let x, z, y;
