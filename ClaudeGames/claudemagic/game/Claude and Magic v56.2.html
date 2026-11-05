@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v56.1 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v56.2 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "56.1", built: "2026-11-04", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "56.2", built: "2026-11-04", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -6270,6 +6270,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         if (solid(nx + dx, ny + dy) && kindOf(nx + dx, ny + dy).tree) trees.add(`${nx + dx},${ny + dy}`);
         return;
       }
+      if (CM.FENCE_MODEL && K === CM.SOLID.fence && (index["solid:paling"] !== undefined || index["solid:timber"] !== undefined)) return;   // (v56.2: built - 26g-fences.js)
       const h = K.h || 1, layer = K.face === "wall" ? pickWall(x, y, d, nx, ny) : L(K.face);
       const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
       const b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
@@ -6284,7 +6285,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           quad([A2[0], F0, A2[1]], [B2[0], F0, B2[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 0.9); quad([a[0], F0 + sk, a[1]], [b[0], F0 + sk, b[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 1.05); }
       }
       walls++;
-      if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
+      if (K.top && !tops.has(key) && index[K.top] !== undefined && !(CM.FENCE_MODEL && K === CM.SOLID.hedge)) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
   if (!sky && !only && index["trim:stone"] !== undefined) for (const [k, f] of Object.entries(features)) {   // (v48.3) a stone lintel over every doorway and gate
@@ -6435,6 +6436,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad, fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
+  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
   let decals = 0, overhead = 0;
   if (!sky && opts.decals !== false && !only) {                                                   // below: what is on the walls, and what hangs overhead, by band
     const band = CM.themeIndex(fl.number >= 1 ? fl.number : 1), D = CM.WALL_DECALS[band] || [], O = CM.OVERHEAD[band];
@@ -6495,7 +6497,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, fencing, covered: covered.size, skirt, ring, props, decals, overhead };
 };
 
 // ---- 26b-buildings.js ----
@@ -6679,6 +6681,41 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   // standing on the well's square, the well folds away (the shader's uHideAt)
   const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const fl = game && game.floor;
     if (!fl || fl.number !== 0 || !CM.TOWN_AT || !CM.TOWN_AT.well) { r.hideAt = null; return; } const [x, y] = CM.TOWN_AT.well; r.hideAt = [x + 0.5, y + 0.5, CM.WELL_HIDE]; };
+}
+
+// ---- 26g-fences.js ----
+"use strict";
+// Fences and hedges with depth (v56.2, UPGRADE_PLAN_51.md): a fence is built now, not four pictures round its square - a
+// post in the middle of each fence square, two rails running on to the next fence square (or across, alone), and pointed
+// pickets with their own thickness, so a run of fence reads as one fence along its line. A hedge's top is a rounded,
+// uneven crown instead of a flat lid. They stand in the way exactly as before. 26-surface.js calls CM.fenceModel for the
+// fence and hedge squares, and leaves their old faces and tops out.
+//   CM.fenceModel(o) -> { fences, hedges }   o: { quad, fl, index, solidKind(x, y), size }
+{ CM.FENCE_MODEL = true;
+  CM.fenceModel = (o) => { const { quad, fl, index, solidKind, size } = o, out = { fences: 0, hedges: 0 };
+    const wood = index["solid:paling"] !== undefined ? index["solid:paling"] : index["solid:timber"], leaf = index["solid:hedge"];
+    const box = (x0, y0, z0, x1, y1, z1, L, k = 1) => {
+      quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], L, 0.95 * k); quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], L, 0.8 * k);
+      quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], L, 0.88 * k); quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], L, 0.74 * k);
+      quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], L, 1.05 * k); };
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) { const kind = solidKind(x, y);
+      if (kind === "fence" && wood !== undefined) { out.fences++; const cx = x + 0.5, cz = y + 0.5, H = 0.5;
+        const runs = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => solidKind(x + dx, y + dy) === "fence");
+        const legs = runs.length ? runs : (solidKind(x, y - 1) === null || solidKind(x, y + 1) === null ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]]);   // (alone: across the way it's seen)
+        box(cx - 0.04, 0, cz - 0.04, cx + 0.04, H + 0.06, cz + 0.04, wood, 0.9); box(cx - 0.05, H + 0.06, cz - 0.05, cx + 0.05, H + 0.08, cz + 0.05, wood, 1);   // the post and its cap
+        for (const [dx, dy] of legs) { const ex = cx + dx * 0.5, ez = cz + dy * 0.5, t = 0.016;
+          for (const ry of [0.14, 0.36]) box(Math.min(cx, ex) - (dy ? t : 0), ry, Math.min(cz, ez) - (dx ? t : 0), Math.max(cx, ex) + (dy ? t : 0), ry + 0.04, Math.max(cz, ez) + (dx ? t : 0), wood, 0.85);   // the rails
+          for (let s = 0.1; s < 0.5; s += 0.12) { const px = cx + dx * s, pz = cz + dy * s, hw = 0.022, th = 0.012, oz = dx ? 0.03 : 0, ox = dy ? 0.03 : 0;   // the pickets, in front of the rails
+            const a = dx ? [px - hw, pz + oz] : [px + ox, pz - hw], b = dx ? [px + hw, pz + oz] : [px + ox, pz + hw];
+            for (const f of [-th, th]) { const fa = dx ? [a[0], a[1] + f] : [a[0] + f, a[1]], fb = dx ? [b[0], b[1] + f] : [b[0] + f, b[1]], mid = [(fa[0] + fb[0]) / 2, (fa[1] + fb[1]) / 2];
+              quad([fa[0], 0.02, fa[1]], [fb[0], 0.02, fb[1]], [fb[0], H - 0.04, fb[1]], [fa[0], H - 0.04, fa[1]], wood, f < 0 ? 0.9 : 0.75);
+              quad([fa[0], H - 0.04, fa[1]], [fb[0], H - 0.04, fb[1]], [mid[0], H + 0.02, mid[1]], [mid[0], H + 0.02, mid[1]], wood, f < 0 ? 0.95 : 0.8); } } } }
+      if (kind === "hedge" && leaf !== undefined) { out.hedges++; const h = (CM.SOLID.hedge && CM.SOLID.hedge.h) || 0.55, r = new CM.Random(CM.hashSeed(`${fl.number}:hedge:${x},${y}`)), N = 4;   // a rounded crown: the top in a grid of bumps
+        const top = (i, j) => { const u = i / N, v = j / N, edge = Math.min(u, 1 - u, v, 1 - v); const inside = (i > 0 && i < N && j > 0 && j < N) ? 1 : 0; return h + inside * (0.05 + Math.min(1, edge * 3) * 0.1 + r.next() * 0.06); };
+        const T = []; for (let j = 0; j <= N; j++) { T.push([]); for (let i = 0; i <= N; i++) T[j].push(top(i, j)); }
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const X = (k) => x + k / N, Z = (k) => y + k / N;
+          quad([X(i), T[j + 1][i], Z(j + 1)], [X(i + 1), T[j + 1][i + 1], Z(j + 1)], [X(i + 1), T[j][i + 1], Z(j)], [X(i), T[j][i], Z(j)], leaf, 0.92 + ((i + j) % 2) * 0.1); } } }
+    return out; };
 }
 
 // ---- 27-props.js ----
@@ -44293,6 +44330,8 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       for (let i = 0; i < 160; i++) { p.fillStyle = `rgba(${70 + r.next() * 30},${95 + r.next() * 40},${40 + r.next() * 20},0.35)`; p.fillRect(r.next() * S, r.next() * S, 2 + r.next() * 3, 2 + r.next() * 3); } },
     "solid:stumptop": (p) => { p.fillStyle = "#B8935F"; p.fillRect(0, 0, S, S); const c = S / 2; for (let i = 3; i < c; i += 4 + (i % 3)) { p.strokeStyle = `rgba(110,75,40,${0.25 + (i % 5) * 0.06})`; p.lineWidth = 1.5; p.beginPath(); p.arc(c, c, i, 0, Math.PI * 2); p.stroke(); }   // (v55.3) a stump's cut top: rings to the bark
       p.strokeStyle = "rgba(60,40,22,0.5)"; p.lineWidth = 2; p.beginPath(); p.moveTo(c, c); p.lineTo(c + 40, c - 30); p.stroke(); },
+    "solid:paling": (p) => { p.fillStyle = "#9A8C78"; p.fillRect(0, 0, S, S); const r = new CM.Random(61); for (let i = 0; i < 70; i++) { p.fillStyle = r.next() < 0.5 ? "rgba(60,50,40,0.3)" : "rgba(220,210,190,0.25)"; p.fillRect(r.next() * S, 0, 1 + r.next() * 2, S); }   // (v56.2) a fence's weathered palings
+      for (let i = 0; i < 25; i++) { p.fillStyle = "rgba(90,110,60,0.25)"; p.fillRect(r.next() * S, S * (0.7 + r.next() * 0.3), 3, 3); } },
     "solid:timber": (p) => { p.fillStyle = "#5A4028"; p.fillRect(0, 0, S, S); const r = new CM.Random(77); for (let i = 0; i < 40; i++) { p.fillStyle = r.next() < 0.5 ? "rgba(30,20,10,0.35)" : "rgba(140,105,70,0.25)"; p.fillRect(0, r.next() * S, S, 1 + r.next() * 2); }
       p.fillStyle = "rgba(255,230,190,0.08)"; p.fillRect(0, 0, S, 6); } };
   { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [n, f] of Object.entries(PAINT)) { if (set.index[n] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; f(c.getContext("2d")); set.index[n] = set.layers.length; set.layers.push(c); } return set; }; }

@@ -221,6 +221,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         if (solid(nx + dx, ny + dy) && kindOf(nx + dx, ny + dy).tree) trees.add(`${nx + dx},${ny + dy}`);
         return;
       }
+      if (CM.FENCE_MODEL && K === CM.SOLID.fence && (index["solid:paling"] !== undefined || index["solid:timber"] !== undefined)) return;   // (v56.2: built - 26g-fences.js)
       const h = K.h || 1, layer = K.face === "wall" ? pickWall(x, y, d, nx, ny) : L(K.face);
       const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1];
       const b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
@@ -235,7 +236,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
           quad([A2[0], F0, A2[1]], [B2[0], F0, B2[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 0.9); quad([a[0], F0 + sk, a[1]], [b[0], F0 + sk, b[1]], [B2[0], F0 + sk, B2[1]], [A2[0], F0 + sk, A2[1]], T, shade * 1.05); }
       }
       walls++;
-      if (K.top && !tops.has(key) && index[K.top] !== undefined) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
+      if (K.top && !tops.has(key) && index[K.top] !== undefined && !(CM.FENCE_MODEL && K === CM.SOLID.hedge)) { tops.add(key); quad([nx, h, ny + 1], [nx + 1, h, ny + 1], [nx + 1, h, ny], [nx, h, ny], index[K.top], 0.95); }
     });
   }
   if (!sky && !only && index["trim:stone"] !== undefined) for (const [k, f] of Object.entries(features)) {   // (v48.3) a stone lintel over every doorway and gate
@@ -386,6 +387,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad, fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
+  const fencing = sky && !only && !W && CM.fenceModel ? CM.fenceModel({ quad, fl, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size || grid[y][x] === 0 ? null : CM.solidAt(fl, x, y)) }) : { fences: 0, hedges: 0 };   // (v56.2 - 26g-fences.js)
   let decals = 0, overhead = 0;
   if (!sky && opts.decals !== false && !only) {                                                   // below: what is on the walls, and what hangs overhead, by band
     const band = CM.themeIndex(fl.number >= 1 ? fl.number : 1), D = CM.WALL_DECALS[band] || [], O = CM.OVERHEAD[band];
@@ -446,5 +448,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, fencing, covered: covered.size, skirt, ring, props, decals, overhead };
 };
