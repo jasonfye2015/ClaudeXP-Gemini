@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The weather, live (v72.0, UPGRADE_PLAN_61.md part 2)
+  (src/js/24f-events.js, src/js/76zzzzzzzzzzh-wxlive.js, src/js/73c-wxhud.js, src/js/70-ui.js, src/js/73b-clock.js)
+  - The weather is live (plan 61, part 2): rain, a storm, mist, wind, snow, cloud, heat or an aurora comes as an
+    event of two to six hours, rolled when the last one ends by the season, the hour and the day's leaning, with
+    clear spells of one to six hours between (longer at night, which leans clear); it comes in and goes out over
+    twenty minutes, and everything that watched the day's word - the rain's fall and the ground's wet, the cloud,
+    the mist's depth, the wind on all that sways, the lightning, the sounds - follows the event and its strength.
+  - The dial: a bar of the next six hours under the clock, each event in its colour, and the words - "rain (heavy)
+    - clearing in 1 h 20" - with the full date and time on hover; the sun and the moon drawn half again as large,
+    and the stars thicker on a clear night.
+
 The clock that runs (v71.0, UPGRADE_PLAN_61.md part 1)
   (src/js/24e-calendar2.js, src/js/76zzzzzzzzzzg-clockrun.js, src/js/73b-clock.js, src/js/26-surface.js, src/js/70-ui.js, src/js/71-title.js, src/js/64-meta.js)
   - The clock runs (plan 61, part 1): on the floor, in a fight or at camp a game minute passes every two and a half

@@ -31,7 +31,7 @@ Object.assign(CM.UI.prototype, {
     el.querySelector(".stars").style.opacity = D.sky === "night" ? 1 : D.sky === "day" ? 0 : 0.35;
     const place = (sel, a) => { const node = el.querySelector(sel), r = (a * Math.PI) / 180; node.setAttribute("transform", `translate(${(Math.sin(r) * 25).toFixed(2)} ${(-Math.cos(r) * 25).toFixed(2)})`); node.style.display = Math.abs(a) <= 100 ? "" : "none"; };
     place(".sun", D.sun); place(".moon", D.moon);
-    el.querySelector(".moon .lit").setAttribute("d", CM.moonPath(D.phase, 6));
+    el.querySelector(".moon .lit").setAttribute("d", CM.moonPath(D.phase, 8.5));   // (v72.0: the moon drawn larger, as the sun is)
     el.querySelector(".ground").classList.toggle("stone", below);
     el.querySelector(".time").textContent = CM.timeFigures(g);
     el.querySelector(".hourword").textContent = `${CM.hourWord(D.hour)}${below ? ", above" : ""}`;
