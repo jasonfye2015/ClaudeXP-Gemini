@@ -5907,6 +5907,21 @@ test("the Deep Wood, closer (v55.3): roots at the foot of every tree, stumps bes
   const town = CM.floorMesh(CM.makeTown("roots-1"), CM.TOWN_THEME, index).wood; assert.strictEqual(town.stumps + town.rocks, 0);
 });
 
+test("the well, built (v56.1): the Square's well is stonework in the town's mesh - its wall, rim, posts, roof, bucket and water - all within the reach that folds away while the party stands on it; and only in the town", () => {
+  const CM = load(), index = {}; let n = 0;
+  for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:sill", "solid:roof", ...CM.GROUNDS.map((g) => `ground:${g}`),
+    ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const town = CM.makeTown("well-1"), m = CM.floorMesh(town, CM.TOWN_THEME, index);
+  assert.strictEqual(m.wells, 1, "one well in the Square");
+  const [wx, wy] = CM.TOWN_AT.well, cx = wx + 0.5, cz = wy + 0.5, quads = [], wet = [];
+  CM.wellModel({ quad: (a, b, c, d, layer) => quads.push([a, b, c, d, layer]), out: { push: (...v) => wet.push(v) }, fl: town, index });
+  assert.ok(quads.length > 80, `the well's faces (${quads.length})`);
+  for (const q of quads) for (const v of q.slice(0, 4)) assert.ok(Math.hypot(v[0] - cx, v[2] - cz) < CM.WELL_HIDE, "within the reach that folds away");
+  assert.ok(quads.some((q) => q[4] === index["solid:roof"]) && quads.some((q) => q[4] === index["solid:sill"]) && quads.some((q) => q[4] === index["solid:timber"]), "stone, timber and a roof");
+  assert.ok(wet.length > 0 && wet.every((v) => v[5] === index.water && v[9] === 4), "its water ripples like the river (glow 4)");
+  assert.strictEqual(CM.floorMesh(CM.makeWood("well-1"), CM.WOOD_THEME, index).wells, 0, "none in the Wood");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
