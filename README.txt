@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Buttresses and arrow slits (v57.1, UPGRADE_PLAN_52.md phase 1)
+  (src/js/26i-wall.js, src/js/26-surface.js)
+  - Buttresses lean against the town wall's inner side, one square in three: stone piers with their tops sloping
+    down and away from the wall.
+  - The gate towers have arrow slits: one in each of their eight faces, high and low by turns, a dark slot in a
+    dressed stone surround.
+
 Battlements (v57.0, UPGRADE_PLAN_52.md phase 0)
   (src/js/26i-wall.js, src/js/26-surface.js)
   - The town wall is battlemented now: along both edges of its walk a low parapet, and on it two merlons a square

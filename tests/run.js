@@ -5957,9 +5957,11 @@ test("the town wall's battlements (v57.0): along the ring wall's outer edge a pa
   let walls = 0; for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (town.grid[y][x] !== 0 && CM.solidAt(town, x, y) === "townwall") walls++;
   assert.ok(m.walled.merlons >= walls * 2 * 0.8, `merlons along the wall (${m.walled.merlons} for ${walls} squares)`);
   // never on the side that faces into the town: every merlon vertex over an open town square? none
-  const H = CM.SOLID.townwall.h, vs = []; CM.wallDetail({ quad: (...q) => vs.push(...q.slice(0, 4)), fl: town, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : town.grid[y][x] === 0 ? null : CM.solidAt(town, x, y)) });
-  for (const v of vs) { const cx = Math.floor(v[0] - (v[0] % 1 === 0 ? 0.001 : 0)), cz = Math.floor(v[2] - (v[2] % 1 === 0 ? 0.001 : 0)); assert.ok(v[1] >= H - 0.001, "on the wall top"); void cx; void cz; }
-  assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0 }), "none in the Wood");
+  const H = CM.SOLID.townwall.h, vs = []; CM.wallDetail({ quad: (...q) => vs.push(...q.slice(0, 4)), fl: {}, index, size, solidKind: (x, y) => (x < 0 || y < 0 || x >= size || y >= size ? "edge" : town.grid[y][x] === 0 ? null : CM.solidAt(town, x, y)) });
+  assert.ok(Math.abs(Math.max(...vs.map((v) => v[1])) - (H + 0.3)) < 0.001, "the merlons stand to their height on the wall top");
+  let towers = 0; for (const k of Object.values(town.kinds || {})) if (k === "tower") towers++;
+  assert.strictEqual(m.walled.slits, towers * 8, "an arrow slit in each face of each gate tower (v57.1)"); assert.ok(m.walled.buttresses > walls / 6, `buttresses on the town side (${m.walled.buttresses})`);
+  assert.strictEqual(JSON.stringify(CM.floorMesh(CM.makeWood("wall-1"), CM.WOOD_THEME, index).walled), JSON.stringify({ merlons: 0, buttresses: 0, slits: 0 }), "none in the Wood");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
