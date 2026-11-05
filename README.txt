@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The plants (v81.0, UPGRADE_PLAN_62.md phases 3-4)
+  (src/js/69zzs-plants.js, src/js/76zzzzzzzzzzq-plants.js)
+  - The plants (plan 62, phases 3-4): the world is painted with them, as meshes from the same CC0 pack as the
+    trees. On the grass, tufts and flowers; under the trees and on the forest floor, plants and ferns; beside the
+    trees and along the walls, bushes - berried in summer and autumn, snowy under snow; here and there on the
+    Wood's floor a stump, a log, a rock; corn and wheat on the farm's tilled rows; lilypads on the river's still
+    water. The flowers go in winter and the grass is short; every plant sways in the wind, parts for the party and
+    whitens under snow. Below ground each band has its own growth: moss in the Catacombs, pale weeds in the Flooded
+    and the Salt Vaults with lilypads on their water, fungus thick in the Fungal Deep, roots at the Root of the
+    World - in the corners and along the walls, never in the way. The Detail setting sets how dense; at low Detail
+    the pictures stand alone.
+
 Mesh trees (v80.0, UPGRADE_PLAN_62.md phases 0-2)
   (tools/plants.py, src/models/plants.json, src/js/35d-plants.js, src/js/37b-plants.js, src/js/69zzs-plants.js, src/js/76zzzzzzzzzzq-plants.js, src/js/40-render.js, src/js/26-surface.js)
   - Mesh trees (plan 62, phases 0-2): the trees have bodies. Within sixteen squares (twelve at medium Detail; at low
