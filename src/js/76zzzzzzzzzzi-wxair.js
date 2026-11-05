@@ -33,7 +33,7 @@
   // the renderer's fields: the lamps guttering, the heat's shimmer, the dramatic dawn and dusk
   const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || !r.sky || game.mode === "title" || !game.ext) return; const W = CM.weatherNow(game), t = now / 1000;
     if (W.wind.speed > 0.55 && r.lights) { const gust = W.wind.speed - 0.4; r.lights.forEach((l, i) => { if (!l.flicker) return; const k = 1 - gust * (0.35 + 0.35 * Math.abs(Math.sin(t * (7 + i * 0.9) + i * 2.1)) * Math.abs(Math.sin(t * 1.7 + i))); l.colour = l.colour.map((c) => c * k); }); }   // (guttering in the gusts)
-    if (r.screen) r.screen.heatAll = Math.max(r.screen.heatAll || 0, W.kind === "heat" ? W.strength * 0.7 : 0);
+    if (r.screen) r.screen.heatFar = Math.max(r.screen.heatFar || 0, W.kind === "heat" ? W.strength : 0);   // (v77.0: over the far land only - a band about the horizon)
     const ar = CM.afterRain(game); if (ar > 0 && r.sunCol && r.sunCol[3] > 0) { r.sunCol = r.sunCol.slice(); r.sunCol[3] = Math.min(2, r.sunCol[3] * (1 + 1.5 * ar)); if (r.skyx && r.skyx.cloudCol) { const c = r.skyx.cloudCol, w = ar * r.sunCol[3] * 0.4; r.skyx.cloudCol = [c[0] + (1.0 - c[0]) * w, c[1] + (0.7 - c[1]) * w, c[2] + (0.45 - c[2]) * w]; } }   // (the sky after rain, the sun low: the glow doubled, the clouds lit)
     const T = CM.twisterNow(game); if (T && T.inside && r.skyx && r.skyx.cloud) { const c = r.skyx.cloud.slice(); c[2] = Math.max(c[2], 0.9); r.skyx.cloud = c; r.skyx.cloudCol = [0.35, 0.33, 0.32]; } };
 }

@@ -282,7 +282,14 @@ were added. The audio side builds on 50-audio.js's AudioContext and the mixer's 
    cost within two). The sky bar names each fog with what it does. 76zzzzzzzzzzl-fogs.js: "life:fog*" billows (an
    air kind above and below), the sky's horizon and zenith, the clouds and the mist drawn to the colour above; the
    theme's fog and torch colours, the lights and the haze below, restored when it lifts.
-7. Lighting; mud; breath on the figures.
+7. v77.0 - the light, the mud and the breath. **Done**: 69zzp-mud.js (CM.mudNow from the rain's strength and the
+   hours since, CM.mudHere on dirt, tilled rows and the Wood's litter; a step a minute more at half mud, the walk
+   heavier); 40-render.js uMud darkens those grounds in patches (me 2, 6, 8), uHeatFar shimmers a band about the
+   horizon (76zzzzzzzzzzi-wxair.js sets it for the heat event; uHeatAll stays the furnace bands'), uSunK takes
+   renderer.sunBoost; 76zzzv-shadows.js's elevation floor lowered (longer sunset shadows); 76zzzzzzzzzzm-light.js
+   sets renderer.mud and the wet gloss, raises the air's shaft after rain while the sun is low on its arc, makes a
+   flash's bolt the sun for its frames (the sky's sun swapped, sunBoost up - the caster follows), and puffs each
+   figure's breath ("life:breath", a soft pale picture) in the cold. Left out: snow on the canopy's tops.
 8. The dungeon coupling: drips, waterfalls, floods, drafts, steam.
 9. Combat synergies.
 10. The soundscape and the adaptive music; then the pass over every place in every event.
