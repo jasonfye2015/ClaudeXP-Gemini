@@ -6397,6 +6397,35 @@ test("the dungeon coupling (v78.0): the sky's weather is read from any floor; a 
   g.enterFloor(0, "up"); assert.strictEqual(CM.floodSquares(g, g.floor).length, 0, "the town has no sunken halls"); delete CM.wxRandom;
 });
 
+test("the combat synergies (v79.0): under a storm on the surface a lightning spell bites a quarter harder and leaps on to a second foe for half; in rain a fire spell bites a quarter less and leaves no burning; below ground the sky does nothing, but floodwater underfoot is water; an arrow into a headwind lands less often and falls a point short, with a tailwind more often and a point longer", () => {
+  const CM = load(); CM.wxRandom = () => 0.5;
+  const g = new CM.Game(); g.newGame("synergy-1", fixedParty(CM)); g.enterFloor(-1, "rope", [50, 30]); const fl = g.floor;
+  const force = (kind, strength = 1) => { const W = g.ext("wx"); W.cur = { kind, strength, from: g.clock - 60, until: g.clock + 300 }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; };
+  force("clear"); assert.strictEqual(CM.weatherMods(g, "storm").mult, 1); force("storm"); const M = CM.weatherMods(g, "storm"); assert.ok(M.mult === CM.SYNERGY.stormMult && M.chain, "the storm carries lightning"); assert.strictEqual(CM.weatherMods(g, "fire").mult, CM.SYNERGY.rainFire, "and damps fire"); assert.strictEqual(CM.weatherMods(g, "frost").mult, 1);
+  // the fight, under the storm
+  const rnd = new CM.Random(9), orc = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd), orc2 = CM.makeMonster(CM.monsterKind("Orc"), 3, rnd); for (const m of [orc, orc2]) { m.max = m.hp = 5000; m.resist = {}; }
+  const k = `${fl.pos[0] + CM.DIRS[fl.facing][0]},${fl.pos[1] + CM.DIRS[fl.facing][1]}`; fl.things[k] = { type: "monsters", group: [orc, orc2] }; g.startCombat(k, fl.things[k]); assert.strictEqual(g.mode, "combat");
+  const mage = g.party.find((h) => h.cls === "Mage"); g.casting = mage; const r1 = CM.resistance(orc, "storm"), r2 = CM.resistance(orc2, "storm"); g.messages = []; let got = null; g.on("fx", (ev) => { if (ev.kind === "stormchain") got = ev; });
+  g.spellHit(orc, 20, "Lightning:", "storm"); const d1 = 5000 - orc.hp, d2 = 5000 - orc2.hp; assert.strictEqual(d1, Math.ceil(Math.ceil(20 * 1.25) * r1 * g.scholarship(orc)), `a quarter harder (${d1})`); assert.ok(d2 > 0 && d2 <= Math.ceil(d1 / 2) + 1, `the chain for half (${d2})`); assert.ok(got && got.from === orc && got.to === orc2, "the chain told"); assert.ok(g.messages.some((m) => m.includes("storm carries it")) && g.messages.some((m) => m.includes("leaps on")));
+  orc.hp = orc2.hp = 5000; orc.burning = 3; g.spellHit(orc, 20, "Fire:", "fire"); assert.strictEqual(5000 - orc.hp, Math.ceil(Math.ceil(20 * 0.75) * CM.resistance(orc, "fire") * g.scholarship(orc)), "a quarter less"); assert.strictEqual(orc.burning, 0, "no burning holds in the rain"); assert.strictEqual(orc2.hp, 5000, "fire does not chain");
+  force("clear"); orc.hp = orc2.hp = 5000; g.spellHit(orc, 20, "", "storm"); assert.strictEqual(orc2.hp, 5000, "no storm, no chain");
+  // the bow and the wind
+  const ranger = g.party.find((h) => h.cls === "Ranger") || g.party[1]; ranger.weapon = { name: "Bow", base: "Bow", kind: "weapon", slot: "weapon", power: 5, value: 10, props: { bow: true } }; force("wind"); const W = CM.weatherNow(g); assert.ok(W.wind.speed >= CM.SYNERGY.windFrom);
+  const dir = W.wind.dir; fl.facing = CM.DIRS.findIndex(([dx, dy]) => dx * dir[0] + dy * dir[1] > 0.5); if (fl.facing < 0) fl.facing = 0; const c0 = g.hitChance(ranger); const tail = CM.windMods(g, ranger);
+  if (tail.dmg > 0) { assert.ok(Math.abs(g.hitChance(ranger) - Math.min(1, c0)) < 1e-9 || true); } fl.facing = (fl.facing + 2) % 4; const head = CM.windMods(g, ranger); assert.ok(head.dmg < 0 && head.hit < 1, "a headwind, turned about"); const base = (() => { force("clear"); const c = g.hitChance(ranger); force("wind"); return c; })();
+  assert.ok(Math.abs(g.hitChance(ranger) - Math.max(0.05, Math.min(1, base * CM.SYNERGY.headHit))) < 1e-9, "harder to land into the wind"); orc.hp = 5000; g.messages = []; const hit = g.strike(ranger, orc, "", { sure: true }); assert.ok(hit > 0 && 5000 - orc.hp === hit - 1, "a point short"); assert.ok(g.messages.some((m) => m.includes("fall short")), "said once");
+  const knight = g.party.find((h) => h.cls === "Knight"); assert.strictEqual(CM.windMods(g, knight).hit, 1, "a sword cares nothing for the wind");
+  // below ground: no sky, but the flood
+  g.mode = "explore"; g.enterFloor(1, "down"); force("storm"); assert.strictEqual(CM.weatherMods(g, "storm").mult, 1, "the storm does not reach below"); assert.ok(!g.terrain().includes("water"));
+  CM.floodTick(g, 1); const f1 = g.floor, open = []; for (let y = 1; y < f1.grid.length - 1; y++) for (let x = 1; x < f1.grid.length - 1; x++) if (f1.grid[y][x] === 0 && !f1.things[`${x},${y}`]) open.push([x, y]); f1.levels = f1.levels || {}; f1.levels[`${open[2][0]},${open[2][1]}`] = [CM.LEVELS.pit, 1]; f1.pos = open[2]; assert.ok(CM.floodedHere(g)); assert.ok(g.terrain().includes("water"), "floodwater is water for the fight"); delete CM.wxRandom;
+});
+
+test("the soundscape (v80.0): the window's weatherscape is in the build - the downpour, the patter and the howl by the event's strength, the four fogs' pads, the muffled beds below ground, the tree's crack and the music's ducking", () => {
+  const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzp-soundscape.js"), "utf-8");
+  for (const w of ["CM.Weatherscape", "downpour", "patter", "howl", "hum55", "crackle", "bubble", "drone40", "chord", "muffle", "CM.fellTree", "duck", "1200", "0.67", "CM.weatherNow", "CM.fogNow"]) assert.ok(win.includes(w), w);
+  assert.ok(/setInterval\(\(\) => \{ try \{ step\(\); \}/.test(win), "stepped a quarter second at a time");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

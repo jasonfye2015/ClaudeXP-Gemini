@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The combat synergies and the soundscape (v79.0, UPGRADE_PLAN_61.md parts 9 and 10)
+  (src/js/69zzr-synergy.js, src/js/76zzzzzzzzzzo-synergy.js, src/js/76zzzzzzzzzzp-soundscape.js)
+  - The combat synergies (plan 61, part 9): the weather is in the fight on the surface. Under a storm a lightning
+    spell bites a quarter harder and the storm's own bolt leaps on to a second foe for half, with a flash and a
+    thunderclap. In rain or a storm a fire spell bites a quarter less and leaves no burning behind. Floodwater
+    underfoot is water for the fight, so lightning chains through it as it does in the drowned halls. An arrow or a
+    bolt shot into a headwind lands less often and falls a point short; on a tailwind it lands more often and flies
+    a point long - the wind against the facing, said once a fight.
+  - The soundscape (plan 61, part 10): the weather's beds follow the live event's strength - the downpour's roar
+    and the roofs' patter rising with a heavy rain, the gale's howl leaning with the gusts - and each magical fog has
+    a pad of its own: the orange fog a crackling static over a low hum, the green a soft bubbling hiss, the brown a
+    slow pulsing drone, the violet a crystalline chord that drifts. Below ground the same beds are heard muffled
+    through the stone, by the floor's depth. A tree felled within hearing cracks and falls. Under a storm or a fog
+    the music draws back - softer and muffled - and comes back when it clears.
+
 The dungeon coupling (v78.0, UPGRADE_PLAN_61.md part 8)
   (src/js/69zzq-below.js, src/js/76zzzzzzzzzzn-below.js, src/js/76zzzzzzzzu-daylight.js)
   - The dungeon coupling (plan 61, part 8): what the sky does reaches down the shaft. Rain above drips from the
