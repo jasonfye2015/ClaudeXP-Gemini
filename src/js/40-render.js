@@ -6,7 +6,7 @@ const VERT = `#version 300 es
 precision highp float;
 in vec3 aPos; in vec3 aUV; in float aShade; in vec3 aFx;
 in vec4 iA; in vec4 iB; in vec4 iC; in vec4 iD;
-in vec4 aJoints; in vec4 aWeights; uniform float uSkin; uniform sampler2D uJoints; uniform mat4 uModel; uniform vec3 uFigFx;   // (v66.0) a figure: skinned by its joints' matrices (four texels a joint), then placed by uModel                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
+in vec4 aJoints; in vec4 aWeights; uniform float uSkin; uniform sampler2D uJoints; uniform mat4 uModel; uniform vec3 uFigFx; uniform float uStatic;   // (v66.0) a figure: skinned by its joints' matrices (four texels a joint), then placed by uModel                         // (v26.2) a billboard instance: centre x, lift, centre z, width; height, layer, shade, sway; uv rect; flash, alpha, glow, mirror
 uniform mat4 uViewProj; uniform float uTime; uniform vec3 uWind; uniform vec3 uRight;
 uniform vec3 uEye; uniform float uPush; uniform vec2 uFadeFar; uniform vec3 uHideAt;               // (v30.9) where a billboard on the ground begins to fade in, and is whole (squares, walked)                                      // (v30.6) where the party stands: what grows bends away from it   // (v24.0) the wind: its way (x, z) and strength; (v26.2) the camera's right
 out vec3 vWorld; out vec3 vUV; out float vShade; out vec3 vFx;
@@ -15,6 +15,14 @@ void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
     for (int k = 0; k < 4; k++) { float w = aWeights[k]; if (w <= 0.0) continue; int j = int(aJoints[k] + 0.5);
       mat4 J = mat4(texelFetch(uJoints, ivec2(0, j), 0), texelFetch(uJoints, ivec2(1, j), 0), texelFetch(uJoints, ivec2(2, j), 0), texelFetch(uJoints, ivec2(3, j), 0)); sp += w * (J * q); }
     p = (uModel * vec4(sp.xyz, 1.0)).xyz; fx = uFigFx; vWorld = p; vUV = uvl; vShade = sh; vFx = fx; gl_Position = uViewProj * vec4(p, 1.0); return; }
+  if (uStatic > 0.5) {   // (UPGRADE_PLAN_62.md) a plant: an instance of a static mesh - iA: x, y, z, yaw; iB: scale, sway, reach, height; iD: shade, alpha, glow
+    float cy = cos(iA.w), sy = sin(iA.w); vec3 q = aPos * iB.x; p = vec3(iA.x + q.x * cy - q.z * sy, iA.y + q.y, iA.z + q.x * sy + q.z * cy);
+    if (iB.z > 0.0 && length(vec2(iA.x, iA.z) - uEye.xz) > iB.z) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = aUV; vShade = 1.0; vFx = vec3(0.0, 1.0, 0.0); return; }
+    float hk = clamp(q.y / max(iB.w, 0.001), 0.0, 1.0);
+    if (iB.y > 0.0) { float along = iA.x * uWind.x + iA.z * uWind.y, g = 0.5 + 0.5 * sin(uTime * 0.9 - along * 0.35), w = uWind.z * (0.3 + 0.7 * g * g + 0.22 * sin(uTime * 3.1 + iA.x * 1.7 + iA.z * 2.3)); p.xz += uWind.xy * iB.y * hk * hk * w; }
+    if (uPush > 0.0 && iB.w < 1.4 && iB.w > 0.0) { vec2 aw = vec2(iA.x, iA.z) - uEye.xz; float dd = length(aw), k = (1.0 - smoothstep(0.3, 1.1, dd)) * uPush * hk; p.xz += aw / max(dd, 0.001) * k * 0.3; p.y -= k * 0.08; }
+    vWorld = p; vUV = aUV; vShade = iD.x; vFx = vec3(0.0, iD.y, iD.z); gl_Position = uViewProj * vec4(p, 1.0); return; }
+  if (aFx.x <= -10.0) { if (length(aPos.xz - uEye.xz) < -aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (plan 62: a picture that stands only beyond a reach - the far trees, where the meshes stop)
   if (aFx.x >= 10.0) { if (length(aPos.xz - uEye.xz) > aFx.x - 10.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; } fx.x = 0.0; }   // (v58.1: a detail, seen only within its reach - 10 + squares)
   if (uHideAt.z > 0.0 && floor(uEye.x) == floor(uHideAt.x) && floor(uEye.z) == floor(uHideAt.y) && length(aPos.xz - uHideAt.xy) < uHideAt.z && aPos.y > 0.001) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); vWorld = p; vUV = uvl; vShade = sh; vFx = fx; return; }   // (v56.1: standing on the well, it folds away)
   if (iA.w > 0.0) { float u = iD.w > 0.5 ? 1.0 - aUV.x : aUV.x;
@@ -37,7 +45,7 @@ void main() { vec3 p = aPos; vec3 fx = aFx; vec3 uvl = aUV; float sh = aShade;
 const FRAG = `#version 300 es
 precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
-uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
+uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint; uniform float uStatic;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
  uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
 uniform float uReach; uniform float uFlicker; uniform float uAmbient;
 uniform vec3 uZenith; uniform vec3 uHorizon;
@@ -69,7 +77,7 @@ void main() {
   bool surf = vUV.z > 1999.5 && vUV.z < 2999.5, fig = vUV.z > 2999.5;
   vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
   vec4 t = fig ? texture(uFig, vec3(vUV.xy, max(vUV.z - 3000.0, 0.0))) : surf ? tf : shared ? ts : tt;
-  if (fig) t.rgb *= uTint;
+  if (fig || uStatic > 0.5) t.rgb *= uTint;
   if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
     vec2 cw = vWorld.xz, cell = floor(cw), f = cw - cell; float me = floor(texture(uMap, (cell + 0.5) / uMapN).b * 255.0 + 0.5);
     if (me > 0.5 && abs(vWorld.y) < 0.02 && n0g(vWorld) && texture(uMap, (cell + 0.5) / uMapN).g < 0.5) {   /* (v55.4: never on the water itself) */ float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
@@ -425,7 +433,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint", "uStatic"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -603,7 +611,7 @@ CM.Renderer = class {
   // the far lights; a mode changing, a fight, a mark, a window lighting no longer makes the whole floor again
   _floorKey(floor, theme) { const sig = (o) => { let h = 0; if (o) for (const k in o) { const v = String(o[k]); for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0; for (let i = 0; i < v.length; i++) h = (h * 31 + v.charCodeAt(i)) | 0; } return h; };
     let g = 0; for (const row of floor.grid) for (let i = 0; i < row.length; i++) g = (g * 3 + row[i] + i) | 0;
-    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), sig(floor.craters), (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
+    return [floor.number, theme.name, this.density, this.seed, this.season, this.turnK, this.leafK, this.texGen || 0, g, sig(floor.kinds), sig(floor.ground), sig(floor.treeStates), sig(floor.craters), this.plantReach || 0, (floor.decor || []).length, Object.keys(floor.things || {}).length, Object.keys(floor.features || {}).filter((k) => floor.features[k].found).length].join("|"); }
   _buffer(name, data) { const gl = this.gl; if (!this[name + "Buf"]) this[name + "Buf"] = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, this[name + "Buf"]); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); this[name + "Count"] = data.length / STRIDE; }
   setFloor(floor, theme) {
     this.theme = theme; this.floorOn = floor; this.meshes = (this.meshes || 0) + 1;
@@ -613,7 +621,7 @@ CM.Renderer = class {
     if (key !== this.floorKey) {
       const props = CM.scatter(floor, this.seed, this.density, { season: this.season, leafK: this.leafK || 0 });
       this.standing = props.filter((p) => p.how === "stand");
-      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null, craters: floor.craters || null });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
+      const mesh = CM.floorMesh(floor, theme, this.index, { props, sub: this.sub, night: 0, turn: this.turnK === undefined ? 1 : this.turnK, detail: this.density === undefined ? 1 : this.density, season: CM.game && CM.season ? CM.season(CM.game) : undefined, treeStates: floor.treeStates || null, craters: floor.craters || null, meshReach: this.plantReach || 0 });   // (v74.0: the trees' states)   // (v61.0: the season, for the washing)   // (v58.3: the Detail setting reaches the built details - it never did)
       this.mesh = { ceilings: mesh.ceilings, walls: mesh.walls, roofs: mesh.roofs, trees: mesh.trees, props: mesh.props, standing: this.standing.length };
       this._buffer("static", mesh.data); this.floorKey = key; this.rebuilt.floor++; this._staticData = mesh.data.length;
       this._mapTexture(floor);
@@ -941,6 +949,7 @@ CM.Renderer = class {
     for (const part of ["trace", "window"]) if (this[part + "Count"]) { gl.bindBuffer(gl.ARRAY_BUFFER, this[part + "Buf"]); this._attributes(); gl.drawArrays(gl.TRIANGLES, 0, this[part + "Count"]); }   // (v26.1: the traces and the lit windows, their own small meshes)
     gl.uniform1f(this.loc.uBump, 0);
     if (this.drawFigures) this.drawFigures(sky, eye);   // (v66.0: the figures, skinned - 76zzzzzzzzzze-figures2.js)
+    if (this.drawStatics) this.drawStatics(sky, eye);   // (plan 62: the plants, instanced - 76zzzzzzzzzzq-plants.js)
     const dyn = sky ? this._skyMesh(eye).concat(this._spriteMesh()) : this._spriteMesh();
     if (dyn.length) {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.dynBuf);

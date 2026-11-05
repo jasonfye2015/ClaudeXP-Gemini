@@ -393,6 +393,8 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       if (st === "charred") quad([cx - 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz + 0.48], [cx + 0.48, 0.004, cz - 0.48], [cx - 0.48, 0.004, cz - 0.48], L("ground:dirt"), 0.18);   // (the ash)
       felled++; continue; }
     const k = st === "sapling" ? 0.3 : 1, hs = h * k, rs = r * (st === "sapling" ? 0.45 : 1), burnt = st === "burning" ? 0.85 : 1;   // (a sapling: the same picture, small; burning: a little darker under the flames)
+    if (opts.meshReach > 0) { const far = (A, B, C, D) => { const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[A, B, C, D][i], uv[i][0], uv[i][1], layer, burnt, -(10 + opts.meshReach), 1, 0); };   // (plan 62: the pictures stand beyond the meshes' reach only)
+      far([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs]); far([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs]); continue; }
     quad([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs], layer, burnt, CM.SWAY.tree * k);
     quad([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs], layer, burnt, CM.SWAY.tree * k);
   }

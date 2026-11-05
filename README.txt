@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Mesh trees (v80.0, UPGRADE_PLAN_62.md phases 0-2)
+  (tools/plants.py, src/models/plants.json, src/js/35d-plants.js, src/js/37b-plants.js, src/js/69zzs-plants.js, src/js/76zzzzzzzzzzq-plants.js, src/js/40-render.js, src/js/26-surface.js)
+  - Mesh trees (plan 62, phases 0-2): the trees have bodies. Within sixteen squares (twelve at medium Detail; at low
+    Detail the pictures stand as before) every tree square carries a low-poly mesh from the CC0 Quaternius Ultimate
+    Nature Pack - common trees, pines and birches by the square's old variant, willows by the water - each turned
+    and sized a little differently, swaying in the wind and whitening under snow as the ground does. In autumn the
+    broadleaves turn shape by shape as the leaves turn; in winter they stand bare and the pines stay green; when the
+    snow lies deep every tree wears its snow shape. A felled tree lies as a log, a burned one stands as a black
+    dead shape, a sapling is the green shape small. Beyond the reach the painted trees stand as they always did.
+  - The pipeline: the pack is baked by tools/plants.py (47 models, 620 KB) into one deflated file, read by
+    37b-plants.js in the game and the tests, coloured by one palette picture, and drawn instanced - one draw a
+    kind - after the figures. The plants, the bushes, the flowers and the crops are the next phases.
+
 The combat synergies and the soundscape (v79.0, UPGRADE_PLAN_61.md parts 9 and 10)
   (src/js/69zzr-synergy.js, src/js/76zzzzzzzzzzo-synergy.js, src/js/76zzzzzzzzzzp-soundscape.js)
   - The combat synergies (plan 61, part 9): the weather is in the fight on the surface. Under a storm a lightning
