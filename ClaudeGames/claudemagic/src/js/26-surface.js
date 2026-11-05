@@ -396,6 +396,12 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     quad([cx - rs, 0, cz + rs], [cx + rs, 0, cz - rs], [cx + rs, hs, cz - rs], [cx - rs, hs, cz + rs], layer, burnt, CM.SWAY.tree * k);
     quad([cx - rs, 0, cz - rs], [cx + rs, 0, cz + rs], [cx + rs, hs, cz + rs], [cx - rs, hs, cz - rs], layer, burnt, CM.SWAY.tree * k);
   }
+  let craters = 0;   // (v75.0: a meteor's crater - a scorched square and a raised rim of eight wedges, fading over the days - 69zzn-meteors.js)
+  if (sky && !only && opts.craters) for (const [key, days] of Object.entries(opts.craters)) { const [x, y] = key.split(",").map(Number); if (!CM.inBounds(fl, x, y) || fl.grid[y][x] !== 0) continue; const cx = x + 0.5, cz = y + 0.5, f = Math.max(0, 1 - days / 10), dirt = L("ground:dirt");
+    quad([cx - 0.5, 0.005, cz + 0.5], [cx + 0.5, 0.005, cz + 0.5], [cx + 0.5, 0.005, cz - 0.5], [cx - 0.5, 0.005, cz - 0.5], dirt, 0.12 + 0.5 * (1 - f));
+    for (let i = 0; i < 8; i++) { const a0 = i * Math.PI / 4, a1 = a0 + Math.PI / 4, ri = 0.26, ro = 0.46, h = 0.09 * (0.4 + 0.6 * f), P = (a, r, y) => [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r];
+      quad(P(a0, ri, 0.006), P(a0, ro, h), P(a1, ro, h), P(a1, ri, 0.006), dirt, 0.3 + 0.25 * (1 - f)); quad(P(a0, ro, h), P(a0, ro + 0.06, 0.006), P(a1, ro + 0.06, 0.006), P(a1, ro, h), dirt, 0.5 + 0.2 * (1 - f)); }
+    craters++; }
   const wood = sky && !only && CM.woodDetail ? CM.woodDetail({ quad: near(12), fl, index, trees, openAt, features, size, detail: opts.detail }) : { roots: 0, stumps: 0, rocks: 0 };   // (v55.3: roots, stumps, rocks - 26e-wooddetail.js)
   const wells = sky && !only && !W && CM.wellModel ? CM.wellModel({ quad, out, fl, index }) : 0;   // (v56.1: the well, built - 26f-well.js)
   const washing = sky && !only && !W && CM.washingModel ? CM.washingModel({ quad: near(20), fl, index, season: opts.season }) : 0;   // (v61.0: washing on the line behind the houses - 26k-washing.js)
@@ -462,5 +468,5 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     props++;
   }
-  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
+  return { data: out, count: out.length / CM.MESH_STRIDE, ceilings, walls, roofs, buildings, chimneys, litWindows, windows, towers, trees: trees.size, wood, wells, washing, felled, craters, fencing, walled, shaftHead, covered: covered.size, skirt, ring, props, decals, overhead };
 };

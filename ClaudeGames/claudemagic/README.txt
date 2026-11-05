@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Meteors and the ore (v75.0, UPGRADE_PLAN_61.md part 5)
+  (src/js/69zzn-meteors.js, src/js/76zzzzzzzzzzk-meteors.js, src/js/26-surface.js, src/js/40-render.js)
+  - Meteors and the ore (plan 61, part 5): a star falls every day and a half to three and a half (the first within
+    a day or so), by night more often than not. In the minutes before, the birds go up from every tree at once
+    (by night the crickets and owls go quiet and the town's dogs howl). It streaks down the sky with a whistle to
+    an open square the party can walk to, never under them, never on a building, a fence or a tree: a flash, a
+    crack, a rumble, the ground shaken, a burst of dust, stones and embers, and an orange glow in the crater that
+    fades over the minutes. Trees in its reach may catch, on a dry night. Below ground it is a shock through the
+    stone and a dust-fall, and the chunk waits on the town's or the Wood's floor.
+  - The crater: a scorched square with a raised rim, healing over ten days. In it a chunk of the fallen star - step
+    onto it to take it: Meteor Iron, an ingredient worth 60, which anyone buys and which the smith takes in a
+    diamond's place when he works a weapon or a piece of armour.
+
 Trees that fall, burn and grow again (v74.0, UPGRADE_PLAN_61.md part 4)
   (src/js/69zzm-trees.js, src/js/76zzzzzzzzzzj-trees.js, src/js/26-surface.js, src/js/40-render.js, src/js/76zzzzzzzzzzi-wxair.js)
   - Trees that fall, burn and grow again (plan 61, part 4): a gale fells a tree now and then and a tornado fells

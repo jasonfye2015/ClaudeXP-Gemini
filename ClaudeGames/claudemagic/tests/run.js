@@ -6308,6 +6308,38 @@ test("trees that fall, burn and grow again (v74.0): a felled tree lies three day
   t.clock = 2 * DAY + (19 - 6) * 60 + 30; CM.lampOutStep(t, 1); assert.ok(!CM.lampBlownOut(t, { x: 5, y: 5 }), "the lamplighter's round relights it"); delete CM.wxRandom;
 });
 
+test("meteors and the ore (v75.0): a first strike within a day or so and then one every day and a half to three and a half (moved into the night more often than not); it lands on an open, reachable, lonely square at a walk from the party and leaves a crater and a chunk of ore; the trees beside it catch on a dry night and not in rain; stepping onto the chunk takes Meteor Iron, worth 60; the smith takes it in a diamond's place; the crater fades after ten days; the mesh lays it; below ground the strike is felt and lands on a surface floor walked", () => {
+  const CM = load(); let seq = 0.5; CM.wxRandom = () => seq; const DAY = 24 * 60, M = CM.METEORS;
+  const g = new CM.Game(); g.newGame("meteor-1", fixedParty(CM)); g.enterFloor(-1, "rope", [50, 30]); const fl = g.floor;
+  const force = (ev) => { const W = g.ext("wx"); W.cur = Object.assign({ from: g.clock - 10, until: g.clock + 60000, strength: 1 }, ev); W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; }; force({ kind: "clear" });
+  assert.strictEqual(CM.meteorStep(g, 1), null, "the first step only schedules"); const E = g.ext("meteors"); assert.ok(E.next > g.clock && E.next <= g.clock + M.firstMaxDays * DAY + 24 * 60 + 240, `the first within a day or so (${(E.next - g.clock) / 60} hours)`);
+  const site = CM.meteorSite(g, fl, fl.pos); assert.ok(site, "a site"); const D = CM.distances(fl.grid, fl.pos, (x, y) => CM.passable(fl, x, y)), d = D.get(`${site[0]},${site[1]}`); assert.ok(d >= M.nearMin && d <= M.nearMax, `at a walk (${d})`); assert.ok(CM.passable(fl, site[0], site[1]));
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const s = CM.solidAt(fl, site[0] + dx, site[1] + dy); assert.ok(s === null || s === "tree", `no building, fence or wall beside it (${s})`); }
+  // the strike, by night, with the dice sure for the fire
+  g.clock = E.next; seq = 0.0; let got = null; g.on("meteor", (s) => { got = s; }); const s = CM.meteorStep(g, 1); assert.ok(s && got === s, "the strike, told"); assert.strictEqual(s.floor, -1); assert.ok(!s.felt, "seen, not felt");
+  const k = `${s.x},${s.y}`; assert.strictEqual(fl.things[k].type, "meteorite", "the ore chunk lies there"); assert.strictEqual(CM.cratersOf(g, fl)[k], 0, "a fresh crater"); assert.ok(E.next >= g.clock + M.gapMinDays * DAY - 1, "the next a day and a half off at least");
+  const near = CM.treeSquares(fl).filter((tk) => { const [tx, ty] = tk.split(",").map(Number); return Math.hypot(tx - s.x, ty - s.y) <= M.fireReach; }); assert.strictEqual(s.fires, near.length, `every tree in reach alight on a sure roll (${near.length})`); for (const tk of near) assert.strictEqual(CM.treeStateAt(g, fl, ...tk.split(",").map(Number)), "burning");
+  assert.strictEqual(CM.lastMeteor(g), s); assert.strictEqual(g.tally.meteors, 1);
+  // in the rain, no fire
+  force({ kind: "rain", strength: 1 }); E.next = g.clock; const s2 = CM.meteorStep(g, 1); assert.ok(s2 && s2 !== s); assert.strictEqual(s2.fires, 0, "no fire in the rain"); force({ kind: "clear" });
+  // the ore, taken by stepping onto it
+  const from = CM.DIRS.map(([dx, dy], i) => [s.x - dx, s.y - dy, i]).find(([x, y]) => CM.passable(fl, x, y) && !fl.things[`${x},${y}`]); assert.ok(from, "a square beside it to step from"); fl.pos = [from[0], from[1]]; fl.facing = from[2]; g.mode = "explore"; const bag0 = g.bag.length, msgs = g.messages.length;
+  assert.ok(g.move(0), "the step"); assert.deepStrictEqual([fl.pos[0], fl.pos[1]], [s.x, s.y]); assert.ok(!fl.things[k], "the chunk is taken"); const ore = g.bag.find((it) => it.kind === "ingredient" && it.ingredient === "meteoriron"); assert.ok(ore && ore.value === M.oreValue && ore.name === "Meteor Iron", "Meteor Iron, worth 60");
+  assert.strictEqual(g.bag.length, bag0 + 1); assert.ok(g.messages.slice(msgs).every((m) => typeof m === "string"), "no empty words"); assert.ok(g.messages[g.messages.length - 1].includes("fallen star"));
+  // the smith takes it in a diamond's place
+  g.enterFloor(5, "down"); g.setMode("camp"); g.reachCamp(5); g.gold = 1000; const knight = g.party.find((h) => h.cls === "Knight"), power = knight.weapon.power;
+  assert.strictEqual(g.smith("enchant", g.party.indexOf(knight), "weapon"), ""); assert.strictEqual(knight.weapon.power, power + 1, "the work done"); assert.ok(!g.bag.some((it) => it.ingredient === "meteoriron"), "the ore spent"); assert.ok(!g.bag.some((it) => it.kind === "gem"), "no stand-in left behind"); assert.ok(g.messages[g.messages.length - 1].includes("meteor iron"));
+  assert.ok(g.smith("enchant", g.party.indexOf(knight), "weapon").includes("diamond"), "without ore or diamond, the smith asks for one");
+  // felt below: the strike lands on a surface floor walked
+  E.next = g.clock; seq = 0.5; const s3 = CM.meteorStep(g, 1); assert.ok(s3 && s3.felt && s3.floor === -1, "below ground: felt, and on the Wood's floor"); assert.strictEqual(fl.things[`${s3.x},${s3.y}`].type, "meteorite");
+  // the craters fade
+  assert.strictEqual(Object.keys(CM.cratersOf(g, fl)).length, 3); g.clock += M.craterDays * DAY; assert.strictEqual(Object.keys(CM.cratersOf(g, fl)).length, 0, "ten days on, the ground has healed");
+  // the mesh lays a crater
+  const index = {}; let n = 0; for (const name of ["floor", "ceiling", "canopy", "skygrad", "water", "tree:0", "tree:1", "tree:2", "far:trees", "far:hill", "solid:timber", "solid:bark", ...CM.GROUNDS.map((x) => `ground:${x}`), ...Object.values(CM.SOLID).flatMap((K) => [K.face, K.top, K.roof]).filter(Boolean)]) if (index[name] === undefined) index[name] = n++;
+  const m0 = CM.floorMesh(fl, CM.themeFor(-1), index, { detail: 0 }), m1 = CM.floorMesh(fl, CM.themeFor(-1), index, { detail: 0, craters: { [k]: 0.5, [`${s2.x},${s2.y}`]: 9 } });
+  assert.strictEqual(m1.craters, 2, "two craters laid"); assert.ok(m1.count >= m0.count + 2 * 17 * 2, "their quads"); delete CM.wxRandom;
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
