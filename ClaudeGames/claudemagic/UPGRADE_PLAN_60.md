@@ -97,6 +97,15 @@ fight (a rat ahead, torch-lit). Impostors for the far ones still to come (Phase 
 - A Settings line: Figures - Painted / Modelled (Modelled the default where WebGL allows it).
 
 ### Phase 2 - animation and the systems that already move things
+Done 2026-11-05 as v67.0: CM.Figures.step is the clip player (idle and walk looping at the kind's speed; attack or
+cast, hit and die once, die holding its last frame; 0.15 s blends between poses). A figure's state is kept by its id
+(the fight's foe object, the floor's thing key, a walker's number, the lamplighter, the kennel's pets); its cues
+come from what already happens - position change for walking (not for a fight's foe, which sways and recoils in
+place), the layer's :attack pose for the lunge, the picture's flash rising for the hit, hp <= 0 for the death - and
+the fight's foes square up to the party while the rest face where they went. A worn-down foe is darker. Casters
+(wizards, priests, the Bone Patriarch, the Lich King) cast instead of striking. Not yet: the blow's effect timed to
+the clip's hit frame, the death held on the floor past the fight's end (the sprite goes when the foe does), and the
+acting foe's half-step forward - these fold into Phase 4's batches as the kinds come.
 - A clip player with blending (idle <-> walk <-> attack/hit/die/cast), speed from the kind's `speed`, a phase
   offset per figure so a pack is never in lockstep, and events (the blow's effect fires at the attack clip's hit
   time, ~0.3 s in, instead of at once).

@@ -21,7 +21,7 @@
         const f = s * (p.length - 1), j = Math.min(p.length - 2, Math.floor(f)), r = f - j; x = p[j][0] + (p[j + 1][0] - p[j][0]) * r; y = p[j][1] + (p[j + 1][1] - p[j][1]) * r;
         if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 14 || (Math.round(x) === fl.pos[0] && Math.round(y) === fl.pos[1])) continue;
         const cx = Math.floor(x + 0.5), cz = Math.floor(y + 0.5), side = ((i % 3) - 1) * 0.22;
-        out.push({ x: cx, y: cz, dx: x + 0.5 - cx - 0.5 + side * 0.5, dz: y + 0.5 - cz - 0.5 + side * 0.5, layer: look, w: 0.62, h: 0.78, lift: moving && !CM.reducedMotion ? Math.abs(Math.sin(t * 7 + i)) * 0.02 : 0, mirror: (p[j + 1][0] - p[j][0]) < 0 });
+        out.push({ id: `walker:${i}`, walking: moving, x: cx, y: cz, dx: x + 0.5 - cx - 0.5 + side * 0.5, dz: y + 0.5 - cz - 0.5 + side * 0.5, layer: look, w: 0.62, h: 0.78, lift: moving && !CM.reducedMotion ? Math.abs(Math.sin(t * 7 + i)) * 0.02 : 0, mirror: (p[j + 1][0] - p[j][0]) < 0 });
         if (CM.renderer.index.shadow !== undefined) out.push({ x: cx, y: cz, dx: x - cx + side * 0.5, dz: y - cz + side * 0.5, layer: "shadow", flat: true, w: 0.42, alpha: 0.7 }); void PAUSE; }
       return out; }; }
 }
