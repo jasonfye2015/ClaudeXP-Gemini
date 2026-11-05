@@ -1535,7 +1535,7 @@ Object.assign(CM.Game.prototype, {
   },
   autoTurn2() {
     const c = this.combat, h = c && c.waiting;
-    if (c.auto && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false; this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
+    if (c.auto && !(this.autoOn && this.autoOn()) && this.alive().some((p) => p.hp < p.max * 0.5)) { c.auto = false;   /* (v58.2: not while Automatic plays - it would only turn Auto on again, and the fight would never move) */ this.say("Someone is badly hurt: Auto stops, and waits for orders."); this.emit("change"); return false; }
     const hurt = this.alive().filter((p) => p.hp < p.max / 3), foes = this.attackable();
     const can = CM.abilitiesFor(h).filter((id) => CM.ABILITIES[id].mp <= h.mp && !(CM.ABILITIES[id].once && h.used && h.used[id]));
     let done = false;

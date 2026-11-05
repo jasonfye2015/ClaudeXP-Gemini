@@ -5998,6 +5998,20 @@ test("fewer details at a distance (v58.1): the small built details carry how far
   assert.ok(Object.keys(town).every((k) => Number(k) <= 0 || Number(k) >= 10), "nothing in between (a plain flash is 0..1)");
 });
 
+test("Automatic in a fight with someone badly hurt (v58.2): the fight goes on - Auto doesn't stop to wait for orders while Automatic plays (it turned Auto on again every tick, and nothing moved); pressed by hand, Auto still stops", () => {
+  const CM = load(), g = new CM.Game(); g.newGame("auto-hurt", fixedParty(CM), "pauper", "fair", [], "dungeon"); g.party.forEach((h) => { h.level = 12; CM.recompute(h); h.hp = h.max; });
+  const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "monsters"); g.startCombat(k, g.floor.things[k]);
+  g.party[1].hp = Math.floor(g.party[1].max * 0.45);                              // (below half, above a third)
+  g.autoPlay(true); assert.ok(g.autoOn() && g.combat.auto);
+  let turns = 0, stops = 0; const say0 = g.say.bind(g); g.say = (t, ...a) => { if (/Auto stops/.test(t)) stops++; return say0(t, ...a); };
+  for (let i = 0; i < 300 && g.mode === "combat"; i++) { g.auto.step(); if (g.mode !== "combat") break; if (g.combat.waiting) { if (g.autoTurn()) turns++; } else g.advance(); }
+  assert.strictEqual(stops, 0, "Auto never stops to wait while Automatic plays"); assert.ok(turns > 0 || g.mode !== "combat", `the fight moved (${turns} turns)`);
+  // by hand: the old rule stands
+  const g2 = new CM.Game(); g2.newGame("auto-hurt-2", fixedParty(CM), "pauper", "fair", [], "dungeon"); const k2 = Object.keys(g2.floor.things).find((kk) => g2.floor.things[kk].type === "monsters"); g2.startCombat(k2, g2.floor.things[k2]);
+  g2.party[1].hp = Math.floor(g2.party[1].max * 0.45); g2.autoFight(true); for (let i = 0; i < 20 && !g2.combat.waiting; i++) g2.advance();
+  if (g2.combat && g2.combat.waiting) { assert.strictEqual(g2.autoTurn(), false); assert.strictEqual(g2.combat.auto, false, "Auto by hand stops when someone is badly hurt"); }
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
