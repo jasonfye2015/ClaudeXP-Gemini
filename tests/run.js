@@ -6095,6 +6095,24 @@ test("the living town (v61.0): hens in the yards behind the houses by day and no
   const m2 = CM.floorMesh(town, CM.TOWN_THEME, index, { season: "winter" }); assert.strictEqual(m2.washing, 0, "none built in winter"); assert.strictEqual(count(m2, index["model:cloth"]), 0);
 });
 
+test("the river's life (v62.0): a pair of ducks on each of two slow stretches away from the ford, drifting down and paddling back within their stretch, out by day and not when the river is frozen; dragonflies over the water on a summer's day and not in rain or at night; lily pads by season, none in winter; the banks' tint and the lilies wired into the shader", () => {
+  const CM = load(), W = (w, f) => { const o = CM.weatherOf; CM.weatherOf = () => w; try { return f(); } finally { CM.weatherOf = o; } };
+  const g = new CM.Game(); g.newGame("river-1", fixedParty(CM), undefined, undefined, undefined, undefined, { town: true }); g.enterFloor(-1, "rope", [50, 30]); const fl = g.floor; assert.strictEqual(fl.number, -1);
+  const R = CM.riverSquares(fl); assert.ok(R.length > 20, `the river's squares (${R.length})`);
+  const G = CM.ducksOf(fl); assert.strictEqual(G.length, 2, "two stretches"); const ford = R.find(([x, y]) => !(fl.features[`${x},${y}`] && fl.features[`${x},${y}`].type === "river")); assert.ok(ford, "the ford found");
+  for (const grp of G) { assert.strictEqual(grp.n, 2); assert.strictEqual(grp.stretch.length, 4); for (const [x, y] of grp.stretch) assert.ok(R.some(([rx, ry]) => rx === x && ry === y), "on the river");
+    assert.ok(grp.stretch.every(([, y]) => Math.abs(y - ford[1]) > 4), "away from the ford");
+    for (let t = 0; t < 60; t += 0.5) { const p = CM.duckPose(grp, 1, t); assert.ok(grp.stretch.some(([x, y]) => Math.abs(p.x - x - 0.5) <= 0.8 && Math.abs(p.y - y - 0.5) <= 0.8), `a duck keeps to its stretch (${p.x.toFixed(2)},${p.y.toFixed(2)})`); } }
+  const at = (h, season = "summer") => ({ seed: "river-1", season, clock: 3 * 1440 + ((h - 6 + 24) % 24) * 60, floor: fl });
+  assert.ok(CM.ducksOut(at(10)), "ducks by day"); assert.ok(!CM.ducksOut(at(1)), "not at night"); assert.ok(!W("snow", () => CM.ducksOut(at(10, "winter"))), "not on the ice");
+  assert.ok(CM.dragonfliesNow(at(13)) > 0.95, `dragonflies on a summer noon (${CM.dragonfliesNow(at(13))})`); assert.ok(CM.dragonfliesNow(at(13, "spring")) > 0.3 && CM.dragonfliesNow(at(13, "spring")) < 0.7, "fewer in spring");
+  assert.strictEqual(CM.dragonfliesNow(at(13, "winter")), 0, "none in winter"); assert.strictEqual(CM.dragonfliesNow(at(1)), 0, "none at night"); assert.strictEqual(W("rain", () => CM.dragonfliesNow(at(13))), 0, "none in the rain");
+  assert.strictEqual(CM.lilyNow(at(12)), 1); assert.ok(CM.lilyNow(at(12, "spring")) > 0.3 && CM.lilyNow(at(12, "spring")) < 1); assert.strictEqual(CM.lilyNow(at(12, "winter")), 0);
+  assert.strictEqual(CM.lilyNow({ seed: "x", season: "summer", clock: 0, floor: { number: 0 } }), 0, "no lilies in town: there is no river");
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "40-render.js"), "utf-8");
+  for (const u of ["uBankTint", "uLily"]) assert.ok(src.includes(u) && src.includes(`"${u}"`), `${u} wired`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

@@ -44,7 +44,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec4 uBankTint; uniform float uLily; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -144,6 +144,11 @@ void main() {
     vec3 base = t.rgb * vec3(0.3, 0.46, 0.55) * vShade * uTorch * lw * uGrade;   // (deep water: dark, a little green)
     vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
     float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
+    if (uBankTint.w > 0.0 && uMapN > 0.0) {   // (v62.0) the banks in the water: what stands over it - the trees, a wall - is mirrored, darker than the sky
+      vec2 bq = vWorld.xz / uMapN; float ob = 1.0 / uMapN, over = 0.0;
+      for (int k = 0; k < 4; k++) { vec2 od = k == 0 ? vec2(ob, 0.0) : k == 1 ? vec2(-ob, 0.0) : k == 2 ? vec2(0.0, ob) : vec2(0.0, -ob); over = max(over, texture(uMap, bq + od).r); }
+      float bank = smoothstep(0.2, 0.75, over) * uBankTint.w * (0.5 + 0.5 * fr) * (uSunK > 0.0 ? 1.0 : 0.4);
+      seen = mix(seen, uBankTint.rgb * max(uAmbient, 0.25) * uTorch, bank); }
     vec3 wc = mix(base, seen, fr) + glint * mix(vec3(1.0, 0.95, 0.82), uSunCol.rgb, 0.6);   // (v59.0: the glint in the sun's colour)
     if (uMapN > 0.0) {                                                        // (v30.8) shallows to see into, a fish now and then, foam at the banks
       vec2 wq = vWorld.xz / uMapN; float o = 0.9 / uMapN, mS = min(texture(uMap, wq).g, min(min(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), min(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g)));
@@ -157,6 +162,12 @@ void main() {
         vec2 q = vWorld.xz - c; float along = dot(q, dir), across = dot(q, vec2(-dir.y, dir.x)) + 0.012 * sin(tm * 9.0 + along * 30.0);
         float fish = smoothstep(1.0, 0.7, length(vec2(along / 0.085, across / 0.026))) + smoothstep(1.0, 0.6, length(vec2((along + 0.1) / 0.03, across / 0.03))) * 0.8;
         wc *= 1.0 - clamp(fish, 0.0, 1.0) * 0.5 * (1.0 - fr); }
+      if (uLily > 0.0 && shallow > 0.3) {   // (v62.0) lily pads and duckweed in the slack water by the banks, by season
+        vec2 lp = vWorld.xz * 4.0, lid = floor(lp), lf = fract(lp) - 0.5 - (vec2(hash(lid + 9.1), hash(lid + 3.3)) - 0.5) * 0.5; float lh = hash(lid + 12.7), ls = 0.22 + 0.1 * hash(lid + 5.5);
+        float pad = step(1.0 - 0.42 * uLily * shallow, lh) * smoothstep(ls, ls - 0.05, length(lf)) * (1.0 - step(0.0, lf.x) * step(abs(lf.y), 0.05));   // (a notch out of each pad)
+        float weed = smoothstep(0.55, 0.8, vnoise(vWorld.xz * 6.0 + vec2(tm * 0.02, 0.0))) * shallow * uLily * 0.5;
+        vec3 padCol = vec3(0.16, 0.36, 0.12) * (0.75 + 0.5 * hash(lid + 1.1)) * lk * uTorch * uGrade, weedCol = vec3(0.3, 0.5, 0.14) * lk * uTorch * uGrade;
+        wc = mix(wc, weedCol, weed * 0.6); wc = mix(wc, padCol, clamp(pad, 0.0, 1.0) * 0.95); }
       float edge = 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
       wc = mix(wc, vec3(0.93, 0.95, 0.97) * (uSunK > 0.0 ? 0.55 + 0.4 * uAmbient : lw * 0.8) * uTorch, edge * smoothstep(0.5, 0.75, fn) * (0.35 + 0.35 * flow) * 0.7); }
     if (uWaterMist > 0.0) { float dr = 0.55 + 0.45 * vnoise(vWorld.xz * 0.7 + vec2(uTime * 0.04, uTime * 0.02)), wm = uWaterMist * smoothstep(0.4, 3.0, d) * dr;   // (v59.0) the dawn's mist on the water
@@ -406,7 +417,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -902,7 +913,8 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
     gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
-    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
+    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);
+    gl.uniform4fv(this.loc.uBankTint, sky && this.bankTint ? this.bankTint : [0, 0, 0, 0]); gl.uniform1f(this.loc.uLily, sky ? this.lily || 0 : 0);   // (v62.0: 76zzzzzzzzzza-waterlife.js)   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);

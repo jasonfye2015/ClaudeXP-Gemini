@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v61.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v62.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1524,7 +1524,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "61.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "62.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9552,7 +9552,7 @@ uniform sampler2D uMap; uniform float uMapN; uniform float uAO; uniform float uC
 uniform float uSparkle;   // (v30.4: how much ice and crystal glints on the walls)
 uniform vec4 uAge;   // (v30.7: how old the walls are - cracks, roots, fungus that glows, strange veined stone)
 uniform float uRain; uniform float uPuddle;   // (v30.0: the rain falling, for the rings; the puddles lying, 0 .. 1)
-uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
+uniform float uTime; uniform float uWet; uniform float uDamp; uniform float uDust; uniform float uWorn; uniform float uLShadow; uniform vec3 uBounce; uniform float uLowFog; uniform float uGLayer[16]; uniform float uGBlend; uniform float uMoss; uniform float uDapple; uniform vec4 uSunCol; uniform float uWaterMist; uniform float uRainbow; uniform float uGroundFrost; uniform vec4 uBankTint; uniform float uLily; uniform vec3 uGSeason; uniform float uSnow; uniform float uMist; uniform float uHaze; uniform float uShaft; uniform vec3 uLift; uniform vec3 uLook;   // (v22.4: the band's lift in the shadows; contrast, saturation, frost)   // (v22.3: the air's body; the sunbeams)                                       // the time, for the water's ripples; the rain on the ground (0 dry .. 1 wet)
 out vec4 fragColor;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -9652,6 +9652,11 @@ void main() {
     vec3 base = t.rgb * vec3(0.3, 0.46, 0.55) * vShade * uTorch * lw * uGrade;   // (deep water: dark, a little green)
     vec3 seen = uSunK > 0.0 ? mix(uHorizon, uZenith, clamp(r.y * 1.4, 0.0, 1.0)) * 0.75 * vec3(0.8, 0.92, 1.0) : uTorch * lw * 0.55;
     float glint = uSunK > 0.0 ? pow(max(dot(r, uSun), 0.0), 90.0) * 1.6 * uSunK : pow(max(dot(wn, v), 0.0), 160.0) * 0.9 * lw;
+    if (uBankTint.w > 0.0 && uMapN > 0.0) {   // (v62.0) the banks in the water: what stands over it - the trees, a wall - is mirrored, darker than the sky
+      vec2 bq = vWorld.xz / uMapN; float ob = 1.0 / uMapN, over = 0.0;
+      for (int k = 0; k < 4; k++) { vec2 od = k == 0 ? vec2(ob, 0.0) : k == 1 ? vec2(-ob, 0.0) : k == 2 ? vec2(0.0, ob) : vec2(0.0, -ob); over = max(over, texture(uMap, bq + od).r); }
+      float bank = smoothstep(0.2, 0.75, over) * uBankTint.w * (0.5 + 0.5 * fr) * (uSunK > 0.0 ? 1.0 : 0.4);
+      seen = mix(seen, uBankTint.rgb * max(uAmbient, 0.25) * uTorch, bank); }
     vec3 wc = mix(base, seen, fr) + glint * mix(vec3(1.0, 0.95, 0.82), uSunCol.rgb, 0.6);   // (v59.0: the glint in the sun's colour)
     if (uMapN > 0.0) {                                                        // (v30.8) shallows to see into, a fish now and then, foam at the banks
       vec2 wq = vWorld.xz / uMapN; float o = 0.9 / uMapN, mS = min(texture(uMap, wq).g, min(min(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), min(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g)));
@@ -9665,6 +9670,12 @@ void main() {
         vec2 q = vWorld.xz - c; float along = dot(q, dir), across = dot(q, vec2(-dir.y, dir.x)) + 0.012 * sin(tm * 9.0 + along * 30.0);
         float fish = smoothstep(1.0, 0.7, length(vec2(along / 0.085, across / 0.026))) + smoothstep(1.0, 0.6, length(vec2((along + 0.1) / 0.03, across / 0.03))) * 0.8;
         wc *= 1.0 - clamp(fish, 0.0, 1.0) * 0.5 * (1.0 - fr); }
+      if (uLily > 0.0 && shallow > 0.3) {   // (v62.0) lily pads and duckweed in the slack water by the banks, by season
+        vec2 lp = vWorld.xz * 4.0, lid = floor(lp), lf = fract(lp) - 0.5 - (vec2(hash(lid + 9.1), hash(lid + 3.3)) - 0.5) * 0.5; float lh = hash(lid + 12.7), ls = 0.22 + 0.1 * hash(lid + 5.5);
+        float pad = step(1.0 - 0.42 * uLily * shallow, lh) * smoothstep(ls, ls - 0.05, length(lf)) * (1.0 - step(0.0, lf.x) * step(abs(lf.y), 0.05));   // (a notch out of each pad)
+        float weed = smoothstep(0.55, 0.8, vnoise(vWorld.xz * 6.0 + vec2(tm * 0.02, 0.0))) * shallow * uLily * 0.5;
+        vec3 padCol = vec3(0.16, 0.36, 0.12) * (0.75 + 0.5 * hash(lid + 1.1)) * lk * uTorch * uGrade, weedCol = vec3(0.3, 0.5, 0.14) * lk * uTorch * uGrade;
+        wc = mix(wc, weedCol, weed * 0.6); wc = mix(wc, padCol, clamp(pad, 0.0, 1.0) * 0.95); }
       float edge = 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
       wc = mix(wc, vec3(0.93, 0.95, 0.97) * (uSunK > 0.0 ? 0.55 + 0.4 * uAmbient : lw * 0.8) * uTorch, edge * smoothstep(0.5, 0.75, fn) * (0.35 + 0.35 * flow) * 0.7); }
     if (uWaterMist > 0.0) { float dr = 0.55 + 0.45 * vnoise(vWorld.xz * 0.7 + vec2(uTime * 0.04, uTime * 0.02)), wm = uWaterMist * smoothstep(0.4, 3.0, d) * dr;   // (v59.0) the dawn's mist on the water
@@ -9914,7 +9925,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -10410,7 +10421,8 @@ CM.Renderer = class {
       gl.uniform3fv(this.loc.uGrade, G ? g0.map((v, i) => v * G.mul[i]) : g0); gl.uniform3fv(this.loc.uLift, G ? G.lift : [0, 0, 0]); gl.uniform3fv(this.loc.uLook, G ? [G.con, G.sat, G.frost] : [1, 1, 0]); }
     gl.uniform1f(this.loc.uTime, CM.reducedMotion ? 0 : this.time || 0); gl.uniform1f(this.loc.uWet, sky ? this.wet || 0 : 0); gl.uniform1f(this.loc.uDamp, sky ? 0 : this.damp || 0); gl.uniform1f(this.loc.uDust, sky ? 0 : this.dust || 0); gl.uniform1f(this.loc.uWorn, sky ? 0 : this.worn || 0); gl.uniform1f(this.loc.uLShadow, CM.lightShadowsOff ? 0 : 1); gl.uniform3fv(this.loc.uBounce, sky || !this.bounce ? [0, 0, 0] : this.bounce); gl.uniform1f(this.loc.uLowFog, sky ? 0 : this.lowFog || 0); gl.uniform1f(this.loc.uGBlend, sky && this.gBlend ? this.gBlend : 0); gl.uniform1f(this.loc.uMoss, sky && this.moss ? this.moss : 0); gl.uniform1f(this.loc.uDapple, sky && this.dapple ? this.dapple : 0); gl.uniform3fv(this.loc.uHideAt, this.hideAt || [0, 0, 0]); gl.uniform3fv(this.loc.uGSeason, sky && this.gSeason ? this.gSeason : [0, 0, 0]); { const Lg = this.loc.uGLayer; if (Lg) { const a = new Float32Array(16).fill(-1); (CM.GROUNDS || []).forEach((g, i) => { const k = this.index[`ground:${g}`]; if (k !== undefined && k < 1000) a[i] = k; }); gl.uniform1fv(Lg, a); } } gl.uniform1f(this.loc.uRain, sky ? (this.rain !== undefined ? this.rain : this.wet || 0) : 0); gl.uniform1f(this.loc.uPuddle, sky ? this.puddle || 0 : 0);
     { const X = sky && this.skyx; gl.uniform1f(this.loc.uStars, X ? X.stars : 0); gl.uniform1f(this.loc.uAurora, X ? X.aurora : 0); gl.uniform4fv(this.loc.uCloud, X ? X.cloud : [0, 0, 0, 0]); gl.uniform3fv(this.loc.uCloudCol, X ? X.cloudCol : [1, 1, 1]); gl.uniform1f(this.loc.uFlash, Math.max(X ? X.flash : 0, this.roomFlash || 0)); }   // (v31.4: a lightning spell's flash, anywhere)   // (v30.2: 76zzzzzc-sky.js) gl.uniform1f(this.loc.uSnow, sky ? this.snow || 0 : 0); gl.uniform1f(this.loc.uMist, sky ? this.mist || 0 : 0);
-    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
+    gl.uniform4fv(this.loc.uSunCol, sky && this.sunCol ? this.sunCol : [1, 1, 1, 0]); gl.uniform1f(this.loc.uWaterMist, sky ? this.waterMist || 0 : 0); gl.uniform1f(this.loc.uRainbow, sky ? this.rainbow || 0 : 0); gl.uniform1f(this.loc.uGroundFrost, sky ? this.groundFrost || 0 : 0);
+    gl.uniform4fv(this.loc.uBankTint, sky && this.bankTint ? this.bankTint : [0, 0, 0, 0]); gl.uniform1f(this.loc.uLily, sky ? this.lily || 0 : 0);   // (v62.0: 76zzzzzzzzzza-waterlife.js)   // (v60.0: 76zzzzzzzzzz8-weather2.js)   // (v59.0: the light of the hour - 76zzzzzzzzzz7-light.js)
     { const W = CM.reducedMotion ? null : this.wind; gl.uniform3fv(this.loc.uWind, W ? [W.dir[0], W.dir[1], W.k] : [1, 0, 0]); }   // (v24.0: 76zzzzc-wind.js)
     gl.uniform1f(this.loc.uHaze, this.air ? this.air.haze : 0); gl.uniform1f(this.loc.uShaft, this.air ? this.air.shaft : 0);   // (v22.3: 76zzzw-air.js)
     gl.activeTexture(gl.TEXTURE0);
@@ -30506,6 +30518,35 @@ Object.assign(CM.Game.prototype, {
     return out; };
 }
 
+// ---- 69zzl-waterlife.js ----
+"use strict";
+// The river's life (v62.0, UPGRADE_PLAN_57.md): what lives on and over the Deep Wood's river, by the rules so the tests
+// can hold it - a pair of ducks drifting a slow stretch and paddling back up it, dragonflies over the water on a summer's
+// day, and the lily pads and duckweed that lie in the slack water by the banks in the warm months. The window's side
+// draws them (76zzzzzzzzzza-waterlife.js, 40-render.js). Nothing here touches the rules of play.
+//   CM.riverSquares(fl) -> [[x, y]]                 the river's water squares (the Wood's decor)
+//   CM.ducksOf(fl) -> [{ stretch: [[x, y]...], n }]   two stretches of river, away from the ford, a pair on each
+//   CM.duckPose(group, i, t) -> { x, y, mirror, dip }   where duck i is at t seconds: drifting down the stretch, then paddling back
+//   CM.ducksOut(game) -> bool                        by day, not when the river is frozen
+//   CM.dragonfliesNow(game) -> 0..1                  summer and late spring, by day, not in rain or wind
+//   CM.lilyNow(game) -> 0..1                         the pads by season: full in summer, some in spring and autumn, none in winter
+{ CM.riverSquares = (fl) => (fl && fl.number === -1 ? (fl.decor || []).filter((d) => d.kind === "water").map((d) => [d.x, d.y]) : []);
+  CM.ducksOf = (fl) => { const R = CM.riverSquares(fl); if (R.length < 12) return []; const isRiver = ([x, y]) => Boolean(fl.features && fl.features[`${x},${y}`] && fl.features[`${x},${y}`].type === "river"), ford = R.find((sq) => !isRiver(sq)) || null;   // (the ford: the one water square that isn't the river's deep)
+    const fy = ford ? ford[1] : -99, rows = R.filter(([, y]) => Math.abs(y - fy) > 4).sort((a, b) => a[1] - b[1]), out = [];
+    for (const from of [0.18, 0.7]) { const i0 = Math.floor(rows.length * from), stretch = rows.slice(i0, i0 + 4); if (stretch.length === 4 && !out.some((g) => g.stretch[0][1] === stretch[0][1])) out.push({ stretch, n: 2 }); }
+    return out; };
+  CM.duckPose = (group, i, t) => { const S = group.stretch, L = S.length - 1, T = 26, u = ((t + i * 9) % T) / T;   // down the stretch slowly (the first two thirds), back up it a little quicker
+    const s = u < 0.66 ? u / 0.66 : 1 - (u - 0.66) / 0.34, f = s * L, j = Math.min(L - 1, Math.floor(f)), r = f - j, a = S[j], b = S[j + 1];
+    const side = i % 2 ? 0.22 : -0.18, dip = u > 0.66 && Math.sin(t * 1.7 + i) > 0.85;   // (paddling back it ducks its head now and then)
+    return { x: a[0] + (b[0] - a[0]) * r + 0.5 + side, y: a[1] + (b[1] - a[1]) * r + 0.5 + (i % 2 ? -0.1 : 0.12), mirror: u >= 0.66, dip }; };
+  CM.ducksOut = (game) => { if (!game || !game.floor || game.floor.number !== -1) return false; const w = CM.weather ? CM.weather(game) : "clear"; if (w === "snow") return false;
+    const h = CM.hourOf(game), [dawn, dusk] = CM.daylightOf(game); return h >= dawn - 0.5 && h < dusk + 0.5; };
+  CM.dragonfliesNow = (game) => { if (!game || !game.floor || game.floor.number !== -1) return 0; const s = CM.season ? CM.season(game) : "spring", w = CM.weather ? CM.weather(game) : "clear";
+    if (w === "rain" || w === "snow" || w === "wind") return 0; const k = s === "summer" ? 1 : s === "spring" ? 0.5 : s === "autumn" ? 0.25 : 0; if (!k) return 0;
+    const h = CM.hourOf(game), [dawn, dusk] = CM.daylightOf(game); return k * Math.max(0, Math.min(1, (h - dawn - 1) / 1.5, (dusk - 1 - h) / 1.5)); };
+  CM.lilyNow = (game) => { if (!game || !game.floor || game.floor.number !== -1) return 0; const s = CM.season ? CM.season(game) : "spring"; return { summer: 1, spring: 0.55, autumn: 0.45, winter: 0 }[s] ?? 0.5; };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -44879,6 +44920,48 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
           if (a < 28 || d < 2.6) { if (d < 2.6) st.flewAt = Math.min(st.flewAt, t - 2.5); return; }   // (gone a while; while the party stands near it keeps away)
           C.state.delete(i); }
         out.push(at(ro.x, ro.z, { layer: "life:pigeon", w: 0.2, h: 0.18, lift: ro.y, mirror: i % 2 === 0, dz: ro.z - Math.floor(ro.z) - 0.5 })); });
+      return out; }; }
+}
+
+// ---- 76zzzzzzzzzza-waterlife.js ----
+"use strict";
+// The river's life, the window's side (v62.0, UPGRADE_PLAN_57.md): the trees and the banks darken the water that
+// mirrors them (40-render.js: uBankTint), lily pads and duckweed lie in the slack water by the banks in the warm months
+// (uLily), dragonflies dart over the river on a summer's day (the "dragonfly" air kind, spawned over the water), and a
+// pair of ducks drifts each slow stretch and paddles back. Where and when is 69zzl-waterlife.js's.
+{ const P = 64, cv = () => { const c = document.createElement("canvas"); c.width = c.height = P; return c; };
+  const E = (p, x, y, rx, ry, col, rot = 0) => { p.fillStyle = col; p.beginPath(); p.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); p.fill(); };
+  const duck = (p, drake, dip) => { const body = drake ? "#8A8A80" : "#8A6A48", hy = dip ? 40 : 24;
+    E(p, 30, 42, 20, 10, body); E(p, 24, 40, 12, 6, drake ? "#6A6A62" : "#6A5038", -0.2); p.fillStyle = drake ? "#2A2A2A" : "#5A4430"; p.beginPath(); p.moveTo(12, 42); p.lineTo(2, 34); p.lineTo(8, 44); p.fill();   // body, wing, tail
+    if (!dip) { p.strokeStyle = drake ? "#1E6A3A" : "#7A5A3A"; p.lineWidth = 7; p.beginPath(); p.moveTo(42, 38); p.lineTo(47, hy + 4); p.stroke(); if (drake) { p.strokeStyle = "#F0F0F0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 34); p.lineTo(50, 32); p.stroke(); } }   // neck (and the drake's white ring)
+    E(p, 48, hy, 7, 6, drake ? "#1E6A3A" : "#7A5A3A"); p.fillStyle = "#E8A020"; p.beginPath(); p.moveTo(54, hy - 1); p.lineTo(63, hy + 1); p.lineTo(54, hy + 3); p.fill(); p.fillStyle = "#141008"; p.fillRect(49, hy - 2, 2, 2); };   // head, bill, eye
+  const dragonfly = (p) => { p.strokeStyle = "rgba(220,235,255,0.75)"; p.lineWidth = 3; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { p.beginPath(); p.ellipse(32 + a * 14, 30 + b * 4, 14, 4, a * b * 0.25, 0, Math.PI * 2); p.stroke(); }   // four wings
+    p.strokeStyle = "#2A7AA0"; p.lineWidth = 3; p.beginPath(); p.moveTo(32, 26); p.lineTo(32, 56); p.stroke(); E(p, 32, 26, 4, 4, "#2A5A80"); };   // body, head
+  const PAINT = { "life:duck": (p) => duck(p, false, false), "life:duck:dip": (p) => duck(p, false, true), "life:drake": (p) => duck(p, true, false), "life:drake:dip": (p) => duck(p, true, true) };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [k, f] of Object.entries(PAINT)) { if (set.index[k] !== undefined) continue; const c = cv(); f(c.getContext("2d")); set.index[k] = set.layers.length; set.layers.push(c); } return set; }; }
+  { const s0 = CM.art.isSurfaceLayer; CM.art.isSurfaceLayer = (name) => name in PAINT || s0(name); }
+  { CM.art.AIR = CM.art.AIR || []; if (!CM.art.AIR.includes("dragonfly")) CM.art.AIR.push("dragonfly");
+    const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { if (id !== "dragonfly") return ap0.call(this, id); const c = cv(); dragonfly(c.getContext("2d")); return c; }; }
+  // the shader's share: the banks' tint on the water, the lilies by season; and the river's squares for the dragonflies
+  { const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const fl = game && game.floor;
+      if (!fl || !r.sky || game.mode === "title") { r.bankTint = null; r.lily = 0; r.waters = null; return; }
+      r.bankTint = fl.number === -1 ? [0.12, 0.2, 0.1, 0.8] : [0.3, 0.28, 0.25, 0.55]; r.lily = CM.lilyNow(game) * (game.settings && game.settings.detail === "low" ? 0 : 1);
+      if (r._watersFor !== fl) { r.waters = CM.riverSquares(fl); r._watersFor = fl; } }; }
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game; if (!env.surface || !g || !g.floor || g.floor.number !== -1) return out;
+      const k = CM.dragonfliesNow(g); if (k > 0 && CM.renderer && CM.renderer.waters && CM.renderer.waters.length) out.push({ id: "dragonfly", rate: 2.2 * k }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "dragonfly") return sp0.call(this, k, eye, R, env);
+      const Wt = CM.renderer && CM.renderer.waters; if (!Wt || !Wt.length) return null; const r = Math.random;
+      for (let tries = 0; tries < 8; tries++) { const [wx, wy] = Wt[Math.floor(r() * Wt.length)]; if (Math.abs(wx + 0.5 - eye[0]) > 7 || Math.abs(wy + 0.5 - eye[2]) > 7) continue; const a = r() * Math.PI * 2;
+        return { kind: "dragonfly", age: 0, seed: r() * 10, sway: 3 + r() * 3, swayAmp: 1.6, windy: 0.1, vx: Math.cos(a) * 0.5, vy: 0, vz: Math.sin(a) * 0.5, life: 5 + r() * 4, size: 0.1, h: 0.08, glow: 1.3, alpha: 0.9, x: wx + r(), z: wy + r(), y: 0.25 + r() * 0.5, top: 2, layer: "air:dragonfly" }; }
+      return null; }; }
+  // the ducks
+  { const groups = new WeakMap(), of = (fl) => { let g = groups.get(fl); if (!g) { g = CM.ducksOf(fl); groups.set(fl, g); } return g; };
+    const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; const r = CM.renderer;
+      if (!fl || fl.number !== -1 || game.mode === "title" || !r || !r.index || r.index["life:duck"] === undefined || !CM.ducksOut(game)) return out;
+      const t = now / 1000, [px, py] = fl.pos;
+      for (const g of of(fl)) { if (Math.abs(g.stretch[0][0] - px) + Math.abs(g.stretch[0][1] - py) > 16) continue;
+        for (let i = 0; i < g.n; i++) { const q = CM.duckPose(g, i, t), x = Math.floor(q.x), y = Math.floor(q.y), drake = i % 2 === 0;
+          out.push({ x, y, dx: q.x - x - 0.5, dz: q.y - y - 0.5, layer: `life:${drake ? "drake" : "duck"}${q.dip ? ":dip" : ""}`, w: 0.3, h: 0.22, mirror: q.mirror, lift: 0.01 + (CM.reducedMotion ? 0 : Math.sin(t * 1.3 + i * 2) * 0.012) }); } }
       return out; }; }
 }
 

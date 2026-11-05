@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The river's life (v62.0, UPGRADE_PLAN_57.md)
+  (src/js/69zzl-waterlife.js, src/js/76zzzzzzzzzza-waterlife.js, src/js/40-render.js)
+  - The banks in the water: where the Wood's trees or a wall stand over it, the river mirrors them - darker and
+    greener under the trees - instead of the open sky.
+  - Lily pads and duckweed lie in the slack water along the banks in the warm months: full in summer, some in spring
+    and autumn, none in winter.
+  - Dragonflies dart over the river on a summer's day; a pair of ducks on each of two slow stretches drifts down and
+    paddles back up, dipping now and then - out by day, gone when the river is frozen.
+
 Small life (v61.0, UPGRADE_PLAN_56.md)
   (src/js/69zzk-townlife.js, src/js/26k-washing.js, src/js/76zzzzzzzzzz9-townlife.js, src/js/26-surface.js, src/js/40-render.js)
   - Hens in the yards behind the townsfolk's houses: a few flocks wandering their yard and pecking by day, in from
