@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The world around Claude (v113.0, UPGRADE_PLAN_72.md)
+  (src/js/69zzzv-claudeworld.js, src/js/76zzzzzzzzzzzzo-claudeworld.js, src/js/76zzzzzzzzzzzzp-claudewalk.js, tools/headless.js, tests/run.js)
+  - The memorial wall (plan 72, releases 2 and 3): at the shaft's head in the Keep-yard, a slab with the names of
+    the fallen cut small. Space reads one, the newest first; once you've met Claude, it is his hand, with a line of
+    his under each name.
+  - His days out: some days, late morning to mid-afternoon, Claude is gone for ink or reeds or a walk, and a note
+    waits on the desk, weighted with the inkwell - sometimes with a small errand (a torch, a ration, a healing
+    draught). Bring it next time and he thanks you with a Scroll of Identify. Never in a village's first two days.
+  - The year in the cabin: the tea changes with the season, he mentions the weather you came in through, and at a
+    festival there's something of it by the door and in what he says.
+  - Seen walking: when Claude comes down with the party for the last of it, he is drawn behind the back row, as the
+    porter and the hound are, and stands back from a fight.
+
 Claude asks, and remembers (v112.0, UPGRADE_PLAN_72.md)
   (src/js/69zzzu-claudeasks.js, src/js/76zzzzzzzzzzzzn-claudeasks.js, src/js/69zzzo-twoclaudes.js, src/js/69zzzs-redink.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_72.md)
   - Claude asks, and remembers (plan 72, release 1): now and then, "Claude has a question for you" - which of them
