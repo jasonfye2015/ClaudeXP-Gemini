@@ -39,8 +39,8 @@
     ink_down(g, k) { const deep = Math.max(1, ...((g.trail || []).map((t) => t[0] || 0)), CM.deepest ? CM.deepest(g.fame || []).floor : 0), list = [...new Set([1, ...CM.THEMES.map((T) => T.floors[0]).filter((n) => n <= CM.BOTTOM), Math.min(CM.BOTTOM, deep)])].sort((a, b) => a - b);
       g.claudeTalk(k, "inkdown", list.map((n) => ["inkfloor", `Floor ${n}${n === deep ? " (the deepest yet)" : ""}`, n]).concat([["redink", "Back"]]), "\"Where to?\""); },
     inkfloor(g, k, say, n) { g.redInkDo("down", n); },
-    ink_open(g, k) { g.claudeTalk(k, "inkopen", [["inkopenyes", "Yes - every calling and kit, for the village"], ["redink", "No, leave it"]], "\"This one stays with the village, not just the run. Every calling and every kit open from now on, written in red. Sure?\""); },
-    inkopenyes(g, k, say) { g.redInkDo("open"); say("\"Done. Every calling and every kit, in red ink, in the village's book.\""); },
+    ink_open(g, k) { g.claudeTalk(k, "inkopen", [["inkopenyes", "Yes - every calling, kit and building, for the village"], ["redink", "No, leave it"]], "\"This one stays with the village, not just the run. Every calling, every kit and every village building open from now on, written in red. Sure?\""); },
+    inkopenyes(g, k, say) { g.redInkDo("open"); say("\"Done. Every calling, every kit and every building, in red ink, in the village's book.\""); },
   });
   P.redInkDo = function (id, arg) { const E = this.redInk(), R = CM.REDINK[id]; if (!R) return false; this.logAct && this.logAct("redInkDo", id, arg); E.used = true;
     if (R.toggle) { E[id] = !E[id]; this.emit("change"); return true; }

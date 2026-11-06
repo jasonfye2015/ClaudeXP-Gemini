@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claude asks, and remembers (v112.0, UPGRADE_PLAN_72.md)
+  (src/js/69zzzu-claudeasks.js, src/js/76zzzzzzzzzzzzn-claudeasks.js, src/js/69zzzo-twoclaudes.js, src/js/69zzzs-redink.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_72.md)
+  - Claude asks, and remembers (plan 72, release 1): now and then, "Claude has a question for you" - which of them
+    you trust most, why you go down, what you're most afraid of, what you'll do if you win. One a visit, and "I'd
+    rather not say" is always an answer. He keeps the answers with the village and uses them: the next run's opening
+    ("They told me they go down to see what's there"), his account of each run (whether the one you trust most came
+    home; what you said winning would mean), and a line in the margin when what you feared comes - a hero lost, or
+    the king's floor reached.
+  - His account of the run now shows on the ending's own screen, under the ending's words, as well as in the Hall of
+    Fame; and it no longer guesses: a run that stops below with heroes still standing says so.
+  - In the second edition, each of the king's five seated courtiers remembers the party that brought the scribe down.
+  - Red ink: "open" opens every village building as well as the callings and kits, and a red-ink win no longer
+    announces an Ascension rung it doesn't give.
+
 The Last Page (v111.0, UPGRADE_PLAN_71.md)
   (src/js/69zzzt-lastpage.js, src/js/76zzzzzzzzzzzzm-lastpage.js, tools/headless.js, tests/run.js)
   - The Last Page (plan 71, release 5): with all ten pages of the Margins home, Claude tells the true account of the

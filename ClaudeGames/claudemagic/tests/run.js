@@ -7233,6 +7233,33 @@ test("the Last Page: the truth about the name once the Margins are home; Claude 
   const u = new CM.Game(); u.newGame("last-3", fixedParty(CM)); u.vext("claude").met = 1; u.crown(); assert.ok(u.achievements.unhinted);
 });
 
+test("Claude asks, and remembers: a question a visit, answered or declined, kept with the village; the answers in the next opening, in his account and in the margin; the court remembers in the second edition; red ink opens the buildings and says nothing of a rung", () => {
+  const CM = load(), pen = (g) => g.messages.filter((m) => m.startsWith(CM.PEN));
+  const g = new CM.Game(); g.newGame("ask-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const talks = []; g.on("talk", (t) => talks.push(t.text));
+  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  const ask = () => { g.claudeTalk(k); return g.claudeMenu.findIndex((o) => o[0] === "question"); };
+  let qi = ask(); assert.ok(qi >= 0, "a question"); g.choose(k, qi); assert.ok(g.claudeMenu.some((o) => o[1] === g.party[1].name), "which of them: the party's names");
+  g.choose(k, g.claudeMenu.findIndex((o) => o[1] === g.party[1].name)); assert.strictEqual(g.claudeAnswers().trust, g.party[1].name); assert.strictEqual(ask(), -1, "one a visit");
+  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "To see what's there")); assert.strictEqual(g.claudeAnswers().why, "To see what's there");
+  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "unasked")); assert.strictEqual(g.claudeAnswers().fear, undefined, "declining is an answer too");
+  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "Losing one of them"));
+  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "I don't know yet")); assert.strictEqual(ask(), -1, "nothing left to ask");
+  g.saveVillage();
+  // the account: who they trusted, what winning would be
+  const entry = { name: "x", floor: 70, won: true, reminded: true, date: "d", tally: {} }; g.payChapters(entry); assert.ok(entry.claudeNote.includes(`${g.party[1].name}, the one you told me you trust most, came home`) && /something you'd find out/.test(entry.claudeNote), entry.claudeNote);
+  // the margin: what you feared
+  g.claudeLeave("town"); g.enterFloor(3, "down"); g.enterFloor(4, "down"); g.mode = "combat"; g.party[2].hp = 0; g.emit("change"); g.mode = "explore"; assert.ok(pen(g).some((m) => /the thing you told me you were afraid of/.test(m)));
+  // the next run's opening
+  const h = new CM.Game(); h.newGame("ask-2", fixedParty(CM)); assert.ok(pen(h).some((m) => /go down to see what's there/.test(m)));
+  // the court remembers, in the second edition only
+  const court = { type: "ghost", courtier: 0 }; const plain = []; h.on("talk", (t) => plain.push(t.text)); h.talkGhost(court, "1,1"); assert.ok(!/You were here at the end/.test(plain.pop()));
+  h.vext("claude").edition = 2; h.talkGhost({ type: "ghost", courtier: 0 }, "1,2"); const said = plain.pop(); assert.ok(/You were here at the end/.test(said) && said.includes(CM.COURT[0].line)); assert.ok(!CM.COURT[0].line.includes("You were here"), "the court's own line left as it was");
+  // red ink: the buildings, and no rung announced
+  h.redInkDo("open"); assert.ok(Object.entries(CM.VILLAGE).every(([id, B]) => !Array.isArray(B.costs) || h.villageLevel(id) === B.costs.length), "every building"); CM.store.set("redinkOpen", false);
+  h.say("Ascension 3 is open: test"); assert.ok(h.messages.some((m) => /^Ascension 3/.test(m)), "an ordinary say is untouched");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
