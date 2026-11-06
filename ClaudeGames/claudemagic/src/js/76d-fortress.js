@@ -87,7 +87,7 @@ Object.assign(CM.UI.prototype, {
     }
     for (const b of run.bolts || []) { p.fillStyle = "#FF7040"; p.beginPath(); p.arc(X(b.x), Y(b.y), T * 0.12, 0, Math.PI * 2); p.fill(); }
     // the fighter: a token with their portrait, and the blade's sweep
-    const hx = X(run.x), hy = Y(run.y), hero = run.hero, por = this.fortArt(`por:${hero.cls}`, () => CM.art.portrait(hero.cls, 64, (CM.game && CM.game.settings && CM.game.settings.look) || "stone")), hurt = t - run.lastHurt < 0.25;
+    const hx = X(run.x), hy = Y(run.y), hero = run.hero, por = this.fortArt(`por:${hero.cls}:${CM.art.hasDolls && CM.art.hasDolls() ? 1 : 0}`, () => CM.art.portrait(hero.cls, 64, (CM.game && CM.game.settings && CM.game.settings.look) || "stone")), hurt = t - run.lastHurt < 0.25;
     p.fillStyle = "rgba(0,0,0,0.45)"; p.beginPath(); p.ellipse(hx, hy + T * 0.32, T * 0.38, T * 0.14, 0, 0, Math.PI * 2); p.fill();
     p.save(); p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.closePath(); p.fillStyle = "#2A2018"; p.fill(); p.clip(); if (por) p.drawImage(por, hx - T * 0.38, hy - T * 0.38, T * 0.76, T * 0.76); p.restore();
     p.strokeStyle = hurt ? "#FF3A2A" : "#E8C050"; p.lineWidth = 3; p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.stroke();

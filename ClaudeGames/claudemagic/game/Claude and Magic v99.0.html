@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v98.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v99.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "98.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "99.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -33093,7 +33093,7 @@ CM.UI = class {
   }
 
   portrait(cls, size) {
-    const look = this.game.settings.look, key = `${look}:${cls}:${size}`;
+    const look = this.game.settings.look, key = `${look}:${CM.art.hasDolls && CM.art.hasDolls() ? "dolls" : "drawn"}:${cls && cls.cls ? cls.cls : cls}:${size}`;
     if (!this.portraits[key]) this.portraits[key] = CM.art.portrait(cls, size, look);
     const c = document.createElement("canvas");
     c.width = c.height = size;
@@ -35211,7 +35211,7 @@ Object.assign(CM.UI.prototype, {
     }
     for (const b of run.bolts || []) { p.fillStyle = "#FF7040"; p.beginPath(); p.arc(X(b.x), Y(b.y), T * 0.12, 0, Math.PI * 2); p.fill(); }
     // the fighter: a token with their portrait, and the blade's sweep
-    const hx = X(run.x), hy = Y(run.y), hero = run.hero, por = this.fortArt(`por:${hero.cls}`, () => CM.art.portrait(hero.cls, 64, (CM.game && CM.game.settings && CM.game.settings.look) || "stone")), hurt = t - run.lastHurt < 0.25;
+    const hx = X(run.x), hy = Y(run.y), hero = run.hero, por = this.fortArt(`por:${hero.cls}:${CM.art.hasDolls && CM.art.hasDolls() ? 1 : 0}`, () => CM.art.portrait(hero.cls, 64, (CM.game && CM.game.settings && CM.game.settings.look) || "stone")), hurt = t - run.lastHurt < 0.25;
     p.fillStyle = "rgba(0,0,0,0.45)"; p.beginPath(); p.ellipse(hx, hy + T * 0.32, T * 0.38, T * 0.14, 0, 0, Math.PI * 2); p.fill();
     p.save(); p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.closePath(); p.fillStyle = "#2A2018"; p.fill(); p.clip(); if (por) p.drawImage(por, hx - T * 0.38, hy - T * 0.38, T * 0.76, T * 0.76); p.restore();
     p.strokeStyle = hurt ? "#FF3A2A" : "#E8C050"; p.lineWidth = 3; p.beginPath(); p.arc(hx, hy, T * 0.36, 0, Math.PI * 2); p.stroke();
@@ -36274,7 +36274,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i < 9; i++) this.ccDrawSlot(p, atlas, S[i], x0 + i * sw, y0, sw, i === w.slot, false);
     p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText(S[w.slot] ? `${CM.CC.NAMES[S[w.slot].b]} (${S[w.slot].n})` : "(empty - break something)", W / 2, y0 - 12);
     // the hero: portrait, health and magic, and the hour
-    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portrait(hero.cls, 56, (g2 && g2.settings && g2.settings.look) || "stone"); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
+    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls || this.ccPor.dolls !== Boolean(CM.art.hasDolls && CM.art.hasDolls())) { let c = null; try { c = CM.art.portrait(hero.cls, 56, (g2 && g2.settings && g2.settings.look) || "stone"); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c, dolls: Boolean(CM.art.hasDolls && CM.art.hasDolls()) }; }
     p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, g2.craftLoad() ? 80 : 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
     const bar = (y, v, m, col, label) => { p.fillStyle = "#202020"; p.fillRect(px + 62, y, 160, 12); p.fillStyle = col; p.fillRect(px + 62, y, 160 * Math.max(0, Math.min(1, m ? v / m : 0)), 12); p.font = "10px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(label, px + 66, y + 10); };
     p.font = "bold 12px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(`${hero.name} the ${hero.cls}`, px + 62, py + 10);
@@ -43425,7 +43425,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const sig = (h) => ["weapon", "helm", "armor"].map((k) => (h[k] ? `${h[k].name}|${h[k].unknown ? 1 : 0}` : "-")).join("/");
   P.portrait = function (who, size) {
     if (typeof who === "string" || !who || !who.cls) return base.call(this, who, size);
-    const look = this.game.settings.look, key = `${look}:${who.cls}:${size}:${sig(who)}`;
+    const look = this.game.settings.look, key = `${look}:${CM.art.hasDolls && CM.art.hasDolls() ? "dolls" : "drawn"}:${who.cls}:${size}:${sig(who)}`;   /* (the sprites' arrival makes a new key: a portrait drawn before the dolls were decoded is not kept) */
     let src = cache.get(key);
     if (!src) { const b = base.call(this, who.cls, size), c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"); p.drawImage(b, 0, 0);
       const put = (it, s, x, y, rot) => { if (!it || (it.props && it.props.fists)) return; let ic; try { ic = CM.art.itemIcon(it, Math.round(s), look); } catch (e) { return; }

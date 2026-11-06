@@ -271,7 +271,7 @@ Object.assign(CM.UI.prototype, {
     for (let i = 0; i < 9; i++) this.ccDrawSlot(p, atlas, S[i], x0 + i * sw, y0, sw, i === w.slot, false);
     p.font = "bold 13px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "center"; p.fillText(S[w.slot] ? `${CM.CC.NAMES[S[w.slot].b]} (${S[w.slot].n})` : "(empty - break something)", W / 2, y0 - 12);
     // the hero: portrait, health and magic, and the hour
-    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls) { let c = null; try { c = CM.art.portrait(hero.cls, 56, (g2 && g2.settings && g2.settings.look) || "stone"); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c }; }
+    const hero = cr.hero, px = 10, py = 10, g2 = this.game; if (!this.ccPor || this.ccPor.cls !== hero.cls || this.ccPor.dolls !== Boolean(CM.art.hasDolls && CM.art.hasDolls())) { let c = null; try { c = CM.art.portrait(hero.cls, 56, (g2 && g2.settings && g2.settings.look) || "stone"); } catch (er) { /* */ } this.ccPor = { cls: hero.cls, c, dolls: Boolean(CM.art.hasDolls && CM.art.hasDolls()) }; }
     p.fillStyle = "rgba(0,0,0,0.5)"; p.fillRect(px - 4, py - 4, 236, g2.craftLoad() ? 80 : 64); if (this.ccPor.c) p.drawImage(this.ccPor.c, px, py, 56, 56);
     const bar = (y, v, m, col, label) => { p.fillStyle = "#202020"; p.fillRect(px + 62, y, 160, 12); p.fillStyle = col; p.fillRect(px + 62, y, 160 * Math.max(0, Math.min(1, m ? v / m : 0)), 12); p.font = "10px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(label, px + 66, y + 10); };
     p.font = "bold 12px Tahoma, sans-serif"; p.fillStyle = "#FFF"; p.textAlign = "left"; p.fillText(`${hero.name} the ${hero.cls}`, px + 62, py + 10);
