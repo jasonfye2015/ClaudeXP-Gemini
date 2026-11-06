@@ -1392,6 +1392,30 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The blooms, the drafts, the steam and the beasts (v85.0, UPGRADE_PLAN_63.md releases 4-6)
+  (src/js/69zzw-blooms.js, src/js/76zzzzzzzzzzu-blooms.js, src/js/69zzx-steam.js, src/js/76zzzzzzzzzzv-steam.js, src/js/69zzy-migrate.js, src/js/69zzs-plants.js)
+  - The blooms (plan 63, release 4): rain above over the last day is a bloom below. The damp bands' moss, weeds and
+    fungus grow thick by it, and at half or more a floor sprouts, once a day, glowcaps - pale green clusters at the
+    walls' feet that throw a green light, light enough to see by - and spore patches, pale on the floor, a point of
+    sickness to each hero who steps through, never below one, named on the look line and never laid on the stairs,
+    a doorway, a narrow corridor or anywhere that would close a way. Both go after a day.
+  - The drafts: a gale or a tornado above sends a draft down the shaft and along the corridors of the first four
+    floors - the haze and the smoke stream along it - and there the torch may be snuffed a few steps as a gust does
+    above, never the spell light; the spore patches are blown a square along the draft every ten minutes, never
+    onto the stairs or into a dead end.
+  - Steam and the dry roots (release 5): in the Foundry and at the Root of the World, water on the hot stone -
+    floodwater underfoot, or rain dripping down - under a cold sky is a screen of steam: the sight a square, a bow
+    at three quarters. In a heat event above, the Root of the World's roots are tinder-dry: a fire spell in a fight
+    there bites a quarter harder and sets the hall's roots alight for a quarter hour, flames and smoke along the
+    walls and an orange light - a sight, never a harm to the party.
+  - The fog pools: a magical fog lies at its full strength in a sunken hall, the sight a square and said as the
+    party steps down into it, and at half in a raised one.
+  - The beasts (release 6): under a storm or a tornado above, the first two floors' wandering groups not yet met
+    are the land's own for the event - wolves, a boar, a bear, the bandits - at the floor's level and the group's
+    own size, never a group beside the party, never a still one or a boss', and the floor's own again when the sky
+    clears. On a flooded floor, or in the Flooded Vaults under rain, the water's kinds come up fast: one fight in
+    three with the Drowned, the Weed Hag or the Rootling opens with their strike sure.
+
 The rockfalls (v84.0, UPGRADE_PLAN_63.md release 3)
   (src/js/69zzv-rockfalls.js, src/js/76zzzzzzzzzzt-rockfalls.js, src/js/69zzs-plants.js)
   - The rockfalls (plan 63, release 3): the first four floors' roofs are not to be trusted when the ground above

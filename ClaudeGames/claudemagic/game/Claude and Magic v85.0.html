@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v84.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v85.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "84.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "85.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -31166,7 +31166,7 @@ Object.assign(CM.Game.prototype, {
         const dx = w ? 0.5 + w[0] * 0.3 + (roll(10 + i) - 0.5) * 0.3 : 0.2 + roll(10 + i) * 0.6, dz = w ? 0.5 + w[1] * 0.3 + (roll(20 + i) - 0.5) * 0.3 : 0.2 + roll(20 + i) * 0.6;
         place(out, name, x, y, dx, dz, name.startsWith("bush") ? 0.35 + roll(30 + i) * 0.2 : name.startsWith("log") ? 0.45 : name.startsWith("stump") ? 0.28 : 0.22 + roll(30 + i) * 0.18, hh + i * 211, { sway: 0, kind: "fungus", small: true, wide: name.startsWith("log") }); } } };
   CM.plantInstancesOf = (game, fl, at, reach, density = 1) => { const out = []; if (!fl || !reach || !models() || !fl.grid) return out; const [ax, ay] = at || fl.pos;
-    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density, out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); if (CM.rockfallsOf) for (const k of CM.rockfallsOf(fl)) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - ax) + Math.abs(y - ay) > reach + 1) continue; for (let i = 0; i < 4; i++) { const hh = CM.hashSeed(`${fl.number}:heap:${k}:${i}`) >>> 0; place(out, i % 2 ? "rock2" : "rock1", x, y, 0.2 + (hh % 60) / 100, 0.2 + ((hh >> 6) % 60) / 100, 0.45 + ((hh >> 12) % 40) / 100, hh, { kind: "stone", small: true, y: CM.floorAt(fl, x, y) + (i >= 2 ? 0.25 : 0) }); } } }   /* (plan 63: a fall of rock is a heap of the pack's rocks) */   /* (plan 63: the stalagmites and the stalactites) */
+    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density * (1 + (CM.bloomNow ? CM.bloomNow(game) : 0)), out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); if (CM.rockfallsOf) for (const k of CM.rockfallsOf(fl)) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - ax) + Math.abs(y - ay) > reach + 1) continue; for (let i = 0; i < 4; i++) { const hh = CM.hashSeed(`${fl.number}:heap:${k}:${i}`) >>> 0; place(out, i % 2 ? "rock2" : "rock1", x, y, 0.2 + (hh % 60) / 100, 0.2 + ((hh >> 6) % 60) / 100, 0.45 + ((hh >> 12) % 40) / 100, hh, { kind: "stone", small: true, y: CM.floorAt(fl, x, y) + (i >= 2 ? 0.25 : 0) }); } } }   /* (plan 63: a fall of rock is a heap of the pack's rocks) */   /* (plan 63: the stalagmites and the stalactites) */
     return out; };
   CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const band = CM.themeIndex(fl.number); if (/^stala[cg]/.test(model)) return CM.CLUTTER ? (band === 6 ? CM.CLUTTER.crystal : CM.CLUTTER.stone) : null; const B = P.bands[band]; return B ? B.tint : null; };   /* (the stone: grey, crystal-blue in the Crystal Caverns) */
 }
@@ -31307,6 +31307,125 @@ Object.assign(CM.Game.prototype, {
   CM.rockfallClear = (game, key) => { const fl = game.floor, t = fl && fl.things[key]; if (!t || t.type !== "debris") return false; game.clock = (game.clock || 0) + R.clearMinutes; for (let i = 0; i < R.clearTorch; i++) if (game.burn) game.burn(); delete fl.things[key]; game.plantsVersion = (game.plantsVersion || 0) + 1; if (game.count) game.count("rockfallsCleared", 1);
     game.say(`Twenty minutes with hands and shoulders${game.bag.some((i) => /pick/i.test(i.name || "")) ? " and the pick" : ""}, and the rock is shifted aside: the way is open.`); if (game.emit) game.emit("change"); return true; };
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const [dx, dy] = CM.DIRS[fl.facing], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; if (t && t.type === "debris") return CM.rockfallClear(this, k); } return u0.apply(this, a); }; }
+}
+
+// ---- 69zzw-blooms.js ----
+"use strict";
+// The blooms and the drafts (UPGRADE_PLAN_63.md sets 2.2 and 3.1, release 4). The blooms: rain above over the last
+// day (CM.bloomNow, 0..1) makes the damp bands' growth thick - the moss, the weeds and the fungus meshes denser by
+// it - and, when it stands at half or more, puts out things of its own on the party's floor, once a bloom: glowcaps
+// (a lit mushroom cluster on a wall-side square: a light the party can see by, pale green, two squares), spore
+// patches (a pale patch on a square: a point of poison to each hero stepping through, never below one, said on the
+// look line - never on the stairs, a doorway, a thing or a feature, never in a corridor one square wide, and only
+// where every square reachable from the stairs stays reachable with the patch counted as a wall), both gone after
+// a day. The drafts: a gale or a tornado above sends a draft down the shaft and along the corridors (CM.draftPath,
+// the squares within twenty-five of the shaft by the walk): on them the torch may be snuffed for three steps (the
+// gust's own guttering, 69v-weather.js - never the spell light), and the spore patches are blown one square along
+// the draft every ten minutes, never onto the stairs, a thing, a feature or a dead end's last square.
+//   CM.bloomNow(game) -> 0..1;  CM.bloomStep(game, minutes)  (wrapped into CM.tickClock)
+//   CM.bloomsOf(fl) -> { glowcaps: ["x,y"], spores: ["x,y"] };  CM.glowcapNear(game) -> boolean
+//   CM.draftNow(game) -> 0..1 on floors 1-4;  CM.draftPath(fl) -> Map "x,y" -> distance from the shaft
+{ const skyOn = (game) => Boolean(game && game.tally && game.tally.ext && game.tally.ext.wx && game.tally.ext.wx.cur);   // (the sky is read only once the clock has made it: a fight's rules must not roll the weather's dice, or a run and its replay part)
+  const B = CM.BLOOM = { bands: [0, 1, 4, 5, 9], from: 0.5, dayMinutes: 24 * 60, glowPer: 0.05, sporePer: 0.04, most: 10, bite: 1, lifeMinutes: 24 * 60, draftFloors: [1, 2, 3, 4], draftFrom: 0.7, draftReach: 25, snuffPerStep: 0.08, blowEvery: 10 };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random());
+  const rain = (e) => e && (e.kind === "rain" || e.kind === "storm");
+  CM.bloomNow = (game) => { if (!game || !game.ext || !skyOn(game)) return 0; const W = CM.weatherStep(game); if (!W || !W.cur) return 0; const t = CM.clockOf(game), now = CM.weatherNow(game); let b = rain(W.cur) ? Math.min(1, 0.5 + 0.5 * now.strength) : 0;
+    if (W.prev && rain(W.prev)) b = Math.max(b, Math.min(1, W.prev.strength) * Math.max(0, 1 - (t - W.prev.until) / B.dayMinutes)); return Math.round(b * 100) / 100; };
+  CM.bloomsOf = (fl) => { const out = { glowcaps: [], spores: [] }; for (const [k, t] of Object.entries((fl && fl.things) || {})) { if (t.type === "glowcap") out.glowcaps.push(k); else if (t.type === "spores") out.spores.push(k); } return out; };
+  const stairsOf = (fl) => { for (const [k, t] of Object.entries(fl.things)) if (t.type === "ladder" || t.type === "stairs_up") return k.split(",").map(Number); return fl.pos; };
+  const inRoom = (fl, x, y) => (fl.rooms || []).some((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
+  const wayHolds = (fl, key) => { const S = stairsOf(fl), before = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y)), after = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y) && `${x},${y}` !== key); for (const k of before.keys()) if (k !== key && !after.has(k)) return false; return true; };
+  const okFloor = (fl) => fl && fl.number >= 1 && fl.grid && !["joker", "interior", "cave"].includes(fl.special) && B.bands.includes(CM.themeIndex(fl.number));
+  const sprout = (game, fl) => { const N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0, S = stairsOf(fl); let glow = 0, spores = 0;
+    for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { if (!open(x, y)) continue; const k = `${x},${y}`; if (fl.things[k] || (fl.features || {})[k] || (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 1) || (Math.abs(x - S[0]) + Math.abs(y - S[1]) <= 1)) continue;
+      const walls = CM.DIRS.filter(([dx, dy]) => !open(x + dx, y + dy)).length, narrow = (!open(x - 1, y) && !open(x + 1, y)) || (!open(x, y - 1) && !open(x, y + 1)), h = CM.hashSeed(`${game.seed}:bloom:${fl.number}:${k}:${CM.dayOf(game)}`) >>> 0;
+      if (walls && glow < B.most && (h % 1000) / 1000 < B.glowPer) { fl.things[k] = { type: "glowcap", at: CM.clockOf(game) }; glow++; continue; }
+      if (!narrow && !inRoom(fl, x, y) === false && spores < B.most && ((h >> 10) % 1000) / 1000 < B.sporePer && wayHolds(fl, k)) { fl.things[k] = { type: "spores", at: CM.clockOf(game) }; spores++; } }
+    return { glow, spores }; };
+  CM.bloomStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || !(minutes > 0)) return; const fl = game.floor, t = CM.clockOf(game), E = game.ext("bloom"), b = CM.bloomNow(game), q = Math.round(b * 4);
+    if (E.q !== q) { E.q = q; game.plantsVersion = (game.plantsVersion || 0) + 1; }   // (the meshes' density follows the bloom)
+    for (const [k, th] of Object.entries(fl.things)) if ((th.type === "glowcap" || th.type === "spores") && t - (th.at || 0) >= B.lifeMinutes) { delete fl.things[k]; game.plantsVersion = (game.plantsVersion || 0) + 1; }
+    if (okFloor(fl) && b >= B.from) { const key = `${fl.number}:${CM.dayOf(game)}`; if (E.last !== key) { E.last = key; const n = sprout(game, fl); if (n.glow || n.spores) game.say(`The damp has brought the walls out in growth: ${n.glow ? "glowcaps, pale green in the dark" : ""}${n.glow && n.spores ? ", and " : ""}${n.spores ? "patches of spore that are best walked round" : ""}.`); } }
+    // the draft: the spore patches blown along it
+    const d = CM.draftNow(game); if (d > 0) { E.blow = (E.blow || 0) + minutes; while (E.blow >= B.blowEvery) { E.blow -= B.blowEvery; const path = CM.draftPath(fl), S = stairsOf(fl), open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0;
+        for (const k of CM.bloomsOf(fl).spores) { const [x, y] = k.split(",").map(Number); if (!path.has(k)) continue; const here = path.get(k); const next = CM.DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([nx, ny]) => open(nx, ny) && path.has(`${nx},${ny}`) && path.get(`${nx},${ny}`) > here && !fl.things[`${nx},${ny}`] && !(fl.features || {})[`${nx},${ny}`] && !(nx === S[0] && ny === S[1]) && CM.DIRS.filter(([ddx, ddy]) => open(nx + ddx, ny + ddy)).length > 1)[0];
+          if (next) { fl.things[`${next[0]},${next[1]}`] = fl.things[k]; delete fl.things[k]; game.plantsVersion = (game.plantsVersion || 0) + 1; } } } } };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.bloomStep(game, minutes); }; }
+  CM.glowcapNear = (game) => { const fl = game && game.floor; if (!fl || !fl.pos) return false; for (const k of CM.bloomsOf(fl).glowcaps) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 1) return true; } return false; };
+  const P = CM.Game.prototype;
+  { const h0 = P.hasLight; P.hasLight = function (...a) { return h0.apply(this, a) || CM.glowcapNear(this); }; }   // (a glowcap beside the party is light to see by)
+  { const ar0 = P.arrive; P.arrive = function (f, k) { return ar0.call(this, f, k); }; }
+  // the spores underfoot: the step's own look (the move's thing branch has no words for them: they come here)
+  { const mv0 = P.move; P.move = function (rel) { const fl = this.floor, before = fl && fl.pos ? fl.pos.slice() : null; let out; const say0 = this.say; this.say = function (t) { if (t !== undefined) return say0.call(this, t); }; try { out = mv0.call(this, rel); } finally { delete this.say; }
+      if (!fl || !fl.pos || this.floor !== fl || !before || (before[0] === fl.pos[0] && before[1] === fl.pos[1])) return out; const k = `${fl.pos[0]},${fl.pos[1]}`, th = fl.things[k];
+      if (th && th.type === "spores") { let bit = 0; for (const h of this.alive()) if (h.hp > 1) { h.hp = Math.max(1, h.hp - B.bite); bit++; } this.sound("trap"); this.say(bit ? `Spores rise about the party's knees in a pale cloud: a point of sickness each (-${B.bite}).` : "Spores rise in a pale cloud, and find nothing left to sicken."); }
+      else if (th && th.type === "glowcap") this.say("A cluster of glowcaps grows from the wall's foot, pale green: light enough to see by.");
+      return out; }; }
+  // the draft
+  CM.draftNow = (game) => { const fl = game && game.floor; if (!fl || !B.draftFloors.includes(fl.number) || !game.ext || !skyOn(game)) return 0; const W = CM.aboveNow(game); return Math.max(0, Math.min(1, (W.wind.speed - B.draftFrom) / (1 - B.draftFrom))) * ({ 1: 1, 2: 0.8, 3: 0.55, 4: 0.3 }[fl.number] || 0); };
+  const paths = new WeakMap();
+  CM.draftPath = (fl) => { let M = paths.get(fl); if (M) return M; const S = stairsOf(fl), D = CM.distances(fl.grid, S, (x, y) => fl.grid[y] && fl.grid[y][x] === 0); M = new Map(); for (const [k, d] of D) { const [x, y] = k.split(",").map(Number); if (d <= B.draftReach && !inRoom(fl, x, y)) M.set(k, d); } paths.set(fl, M); return M; };
+  { const b0 = P.burn; P.burn = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !(this.gutter > 0) && !(this.spellLight > 0) && this.light && this.light.kind === "torch" && !this.lightOut) { const d = CM.draftNow(this); if (d > 0 && CM.draftPath(fl).has(`${fl.pos[0]},${fl.pos[1]}`) && rnd() < B.snuffPerStep * d) { this.gutter = (CM.WEATHERPLAY && CM.WEATHERPLAY.gutterSteps) || 3; this.say("A draft comes howling down the corridor and the torch goes out. A few steps, a hand cupped round it, and it will light again."); } }
+      return b0.apply(this, a); }; }
+}
+
+// ---- 69zzx-steam.js ----
+"use strict";
+// Steam, the dry roots and the fog pools (UPGRADE_PLAN_63.md sets 1.3 and 3.2, release 5). Steam: in the fire bands
+// (the Foundry, the Root of the World) when water meets the heat - floodwater underfoot, or rain above dripping on
+// the first floors - under a cold sky (winter, or snow falling), the square is a steam screen: the fight's terrain
+// carries "steam", a bow lands at three quarters (the foes' archers too, by the party's dodge), and the sight is a
+// square. The dry roots: in a heat event above, the roots of the Root of the World are dry (CM.rootsDry): a fire
+// spell in a fight there bites a quarter harder and sets the hall's roots alight for the fight's length - a sight,
+// never a harm to the party (the standing rule). The fog pools: a magical fog lies thick in a sunken room (its
+// strength 1, the sight a square, said when entered) and thin in a raised one (half).
+//   CM.steamHere(game) -> boolean;  CM.rootsDry(game) -> boolean;  CM.rootsBurning(game, fl) -> minutes left | 0
+{ const skyOn = (game) => Boolean(game && game.tally && game.tally.ext && game.tally.ext.wx && game.tally.ext.wx.cur);   // (the sky is read only once the clock has made it: a fight's rules must not roll the weather's dice, or a run and its replay part)
+  const S = CM.STEAM = { hot: ["The Foundry", "The Root of the World"], bowHit: 0.75, dodgeK: 0.75, rootsBite: 1.25, rootsBurnMinutes: 15, poolDeep: 1, poolHigh: 0.5 };
+  const hot = (fl) => Boolean(fl && S.hot.includes((CM.themeFor(fl.number) || {}).name));
+  const coldSky = (game) => { const season = CM.season ? CM.season(game) : "summer", W = CM.aboveNow ? CM.aboveNow(game) : { kind: "clear" }; return season === "winter" || W.kind === "snow"; };
+  CM.steamHere = (game) => { const fl = game && game.floor; if (!fl || !(fl.number >= 1) || !hot(fl) || !game.ext || !skyOn(game)) return false; const W = CM.aboveNow(game), rainy = (W.kind === "rain" || W.kind === "storm") && fl.number <= 3; const wet = (CM.floodedHere && CM.floodedHere(game)) || rainy; return Boolean(wet && coldSky(game)); };
+  const P = CM.Game.prototype;
+  { const t0 = P.terrain; P.terrain = function () { const out = t0.call(this); if (CM.steamHere(this) && !out.includes("steam")) out.push("steam"); return out; }; }
+  { const hc0 = P.hitChance; P.hitChance = function (h, ...rest) { const c = hc0.call(this, h, ...rest); return h && h.weapon && h.weapon.props && h.weapon.props.bow && CM.steamHere(this) ? Math.max(0.05, c * S.bowHit) : c; }; }
+  { const d0 = P.dodgeOf; if (d0) P.dodgeOf = function (...a) { const d = d0.apply(this, a); return CM.steamHere(this) && this.combat && this.combat.shooter ? d * S.dodgeK : d; }; }   // (the foes' archers: the fight marks who shoots - 62-combat sets combat.shooter for a ranged blow where it can; else the party's own quarter is the rule)
+  { const m0 = CM.mistSightNow; CM.mistSightNow = (game) => { const v = m0 ? m0(game) : null; if (CM.steamHere(game)) return 1; const Fg = CM.fogNow && game && game.floor && game.floor.pos ? CM.fogNow(game) : null; if (Fg && CM.floorAt(game.floor, game.floor.pos[0], game.floor.pos[1]) < 0) return 1; return v; }; }
+  // the dry roots, and the fire that takes them
+  CM.rootsDry = (game) => { const fl = game && game.floor; if (!fl || !game.ext || !skyOn(game) || (CM.themeFor(fl.number) || {}).name !== "The Root of the World") return false; const W = CM.aboveNow(game); return W.kind === "heat" && W.strength > 0.2; };
+  CM.rootsBurning = (game, fl) => { if (!game || !game.ext || !fl) return 0; const E = game.ext("roots"), until = E[fl.number]; return until ? Math.max(0, until - CM.clockOf(game)) : 0; };
+  { const sh0 = P.spellHit; P.spellHit = function (foe, dmg, what, element, chained, ...rest) { if (element === "fire" && !chained && CM.rootsDry(this)) { dmg = Math.max(1, Math.ceil(dmg * S.rootsBite)); if (what) what += " - the dry roots catch"; const E = this.ext("roots"), fl = this.floor; if (!E[fl.number] || E[fl.number] < CM.clockOf(this)) { E[fl.number] = CM.clockOf(this) + S.rootsBurnMinutes; this.say("The roots along the walls are tinder-dry in the heat from above: they take the fire with a roar, and the hall burns about the fight. (The flames keep to the roots.)"); this.emit("rootsfire", { floor: fl.number }); } else E[fl.number] = CM.clockOf(this) + S.rootsBurnMinutes; }
+      return sh0.call(this, foe, dmg, what, element, chained, ...rest); }; }
+  // the fog pools: thick in a sunken room, thin in a raised one
+  { const f0 = CM.fogNow; if (f0) CM.fogNow = (game) => { if (!skyOn(game)) return null; const F = f0(game); if (!F || !game.floor || !game.floor.pos || !(game.floor.number >= 1)) return F; const lv = CM.floorAt(game.floor, game.floor.pos[0], game.floor.pos[1]); if (lv < 0) return Object.assign({}, F, { strength: Math.max(F.strength, S.poolDeep), pool: "deep" }); if (lv > 0) return Object.assign({}, F, { strength: F.strength * S.poolHigh, pool: "high" }); return F; }; }
+  { const mv0 = P.move; P.move = function (rel) { const fl = this.floor, was = fl && fl.pos ? CM.floorAt(fl, fl.pos[0], fl.pos[1]) : 0, out = mv0.call(this, rel); if (!out || !fl || this.floor !== fl) return out; const now = CM.floorAt(fl, fl.pos[0], fl.pos[1]); if (now < 0 && was >= 0 && CM.fogNow) { const F = CM.fogNow(this); if (F) this.say(`${F.name[0].toUpperCase() + F.name.slice(1)} lies thick in this low hall, pooled to the walls.`); } return out; }; }
+}
+
+// ---- 69zzy-migrate.js ----
+"use strict";
+// The migrations and the stirred deep (UPGRADE_PLAN_63.md set 2.1, release 6). When a storm or a tornado strikes
+// above, the land's beasts come in off it: on the first two floors, every wandering group not yet met and not
+// beside the party is reseeded for the event's length with the Wood's own - wolves, a boar, a bear, the bandits
+// (23b-wood.js's kinds) - at the floor's level and the group's own size, never more; when the sky clears the
+// floor's own kinds are back (a group already fought stays fought). The deep stirs: on a flooded floor (plan 63's
+// basins) or in the Flooded Vaults under rain, the water's own kinds - the Drowned, the Weed Hag, the Rootling -
+// come up fast: one fight in three with them opens with their strike sure. Never a kind from a deeper band, never a
+// fight in progress changed, never a group beside the party.
+//   CM.migrationNow(game) -> boolean;  CM.migrateStep(game, minutes)  (wrapped into CM.tickClock)
+//   CM.stirredNow(game, fl) -> boolean
+{ const skyOn = (game) => Boolean(game && game.tally && game.tally.ext && game.tally.ext.wx && game.tally.ext.wx.cur);   // (the sky is read only once the clock has made it: a fight's rules must not roll the weather's dice, or a run and its replay part)
+  const M = CM.MIGRATE = { floors: [1, 2], bands: [["Wolf", "Wolf"], ["Wolf", "Wolf", "Wolf"], ["Boar"], ["Bear"], ["Sellsword", "Sellsword"]], waterKinds: ["Drowned", "Weed Hag", "Rootling"], stirSure: 1 / 3, apart: 2 };
+  CM.migrationNow = (game) => { if (!game || !game.ext || !skyOn(game)) return false; const W = CM.aboveNow(game); return (W.kind === "storm" || W.kind === "tornado") && W.strength > 0.3; };
+  const beasts = (fl, n, seed) => { const rnd = new CM.Random(CM.hashSeed(`${seed}:migrate:${fl.number}:${n}`)), band = M.bands[rnd.int(0, M.bands.length - 1)].filter((k) => CM.monsterKind(k)), out = []; for (let i = 0; i < Math.max(1, Math.min(n, band.length)); i++) out.push(CM.makeMonster(CM.monsterKind(band[i % band.length]), Math.max(1, fl.number), rnd)); return out; };
+  CM.migrateStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || game.mode !== "explore") return; const fl = game.floor; if (!M.floors.includes(fl.number)) return; const E = game.ext("migrate"), on = CM.migrationNow(game), W = CM.aboveNow(game), key = on ? `${fl.number}:${W.from}` : null;
+    if (on && E[fl.number] !== key) { E[fl.number] = key; let n = 0; for (const [k, t] of Object.entries(fl.things)) { if (t.type !== "monsters" || t.still || t.migrated || !t.group || !t.group.length || t.group.some((m) => m.boss || m.guardian)) continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= M.apart) continue;
+        t.was = t.group; t.group = beasts(fl, t.group.length, game.seed + ":" + k); t.migrated = true; n++; }
+      if (n && game.say) game.say("Wet fur and wild eyes in the dark: the storm has driven the land's beasts in off it, and the halls near the shaft are theirs for now."); }
+    else if (!on && E[fl.number]) { delete E[fl.number]; let n = 0; for (const t of Object.values(fl.things)) if (t.type === "monsters" && t.migrated) { if (t.was && t.was.length) t.group = t.was; delete t.was; delete t.migrated; n++; } if (n && game.say) game.say("The sky has cleared above: the beasts slink back out to the land, and the halls are the floor's own again."); } };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.migrateStep(game, minutes); }; }
+  CM.stirredNow = (game, fl) => { if (!game || !game.ext || !fl || !(fl.number >= 1)) return false; if (CM.floodNow && CM.floodNow(game) > 0 && CM.FLOOD && CM.FLOOD.floors.includes(fl.number)) return true; if (!skyOn(game)) return false; const W = CM.aboveNow(game); return CM.themeIndex(fl.number) === 1 && (W.kind === "rain" || W.kind === "storm") && W.strength > 0.3; };
+  const P = CM.Game.prototype;
+  { const sc0 = P.startCombat; P.startCombat = function (key, thing, theyCame) { const out = sc0.call(this, key, thing, theyCame); const c = this.combat; if (!c || !thing || !thing.group || !CM.stirredNow(this, this.floor)) return out; if (!thing.group.some((m) => M.waterKinds.includes(m.kind || m.name)) || c.sure) return out;
+      if ((CM.hashSeed(`${this.seed}:stir:${this.floor.number}:${key}:${CM.clockOf(this)}`) >>> 0) % 1000 / 1000 < M.stirSure) { c.sure = true; c.stirred = true; this.say("The water's own come up fast out of the wet: they strike before anyone can set a foot."); } return out; }; }
 }
 
 // ---- 70-ui.js ----
@@ -46397,6 +46516,51 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
       return out; }; }
   // the look line
   { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, fl = g && g.floor; if (!fl || !CM.rockfallsOf) return out; const [dx, dy] = CM.DIRS[fl.facing], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; const el = this.$ && this.$("#view .sky .wxtext"); if (el && t && t.type === "debris" && !el.textContent.includes("rockfall")) el.textContent += " - a rockfall ahead (Space to clear)"; } catch (e) { /* (quiet) */ } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzu-blooms.js ----
+"use strict";
+// The blooms and the drafts - the window's side (UPGRADE_PLAN_63.md sets 2.2 and 3.1, release 4): a glowcap is a
+// pale green mushroom cluster at the wall's foot that throws a green light two squares about it; a spore patch is a
+// pale, faintly moving patch on the floor with spores drifting up from it; the draft streams the haze and the smoke
+// along the corridors (the renderer's wind set below) and the look line names what the party stands before.
+{ const r = Math.random, S = 64;
+  const PICS = {
+    "clut:glowcap": (p) => { for (const [x, w, h] of [[0.3, 0.26, 0.5], [0.55, 0.34, 0.62], [0.78, 0.2, 0.42]]) { p.fillStyle = "#C8E8C0"; p.fillRect(S * (x - w * 0.12), S * (1 - h * 0.55), S * w * 0.24, S * h * 0.55); const g = p.createRadialGradient(S * x, S * (1 - h), S * 0.02, S * x, S * (1 - h), S * w); g.addColorStop(0, "#EAFFE0"); g.addColorStop(0.6, "#9EE89A"); g.addColorStop(1, "rgba(120,200,130,0)"); p.fillStyle = g; p.beginPath(); p.ellipse(S * x, S * (1 - h), S * w, S * w * 0.55, 0, 0, Math.PI * 2); p.fill(); } },
+    "clut:spores": (p) => { const g = p.createRadialGradient(S / 2, S / 2, 2, S / 2, S / 2, S / 2); g.addColorStop(0, "rgba(220,215,190,0.75)"); g.addColorStop(0.6, "rgba(200,195,170,0.4)"); g.addColorStop(1, "rgba(190,185,160,0)"); p.fillStyle = g; p.fillRect(0, 0, S, S); p.fillStyle = "rgba(170,160,120,0.6)"; for (let i = 0; i < 14; i++) { p.beginPath(); p.arc(S * (0.2 + (i * 37 % 60) / 100), S * (0.2 + (i * 53 % 60) / 100), 1.5 + (i % 3), 0, Math.PI * 2); p.fill(); } } };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) { if (set.index[name] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; PICS[name](c.getContext("2d")); set.index[name] = set.layers.length; set.layers.push(c); } return set; }; }
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.bloomsOf || game.mode === "title") return out; const R0 = CM.renderer; if (!R0 || R0.index["clut:glowcap"] === undefined) return out; const Bl = CM.bloomsOf(fl), N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0;
+      for (const k of Bl.glowcaps) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; const f = CM.DIRS.findIndex(([dx, dy]) => !open(x + dx, y + dy)); if (f >= 0) out.push({ x, y, face: f, layer: "clut:glowcap", w: 0.5, h: 0.3, lift: -0.33, glow: 1.6 }); else out.push({ x, y, layer: "clut:glowcap", w: 0.45, h: 0.28, glow: 1.6 }); }
+      for (const k of Bl.spores) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "clut:spores", flat: true, w: 0.9, base: CM.floorAt(fl, x, y) + 0.005, alpha: 0.75 + 0.1 * Math.sin(now / 700 + x), spin: 0.03 }); if (CM.air && r() < 0.06) CM.air.parts.push({ kind: "spore", age: 0.4, seed: r() * 10, sway: 0.6, swayAmp: 0.1, windy: 0.6, vx: 0, vy: 0.08, vz: 0, life: 4, size: 0.04, glow: 1.3, alpha: 0.7, x: x + 0.2 + r() * 0.6, z: y + 0.2 + r() * 0.6, y: 0.05, top: 1.2, layer: "air:spore" }); }
+      return out; }; }
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl || !(fl.number >= 1) || !CM.bloomsOf) return; for (const k of CM.bloomsOf(fl).glowcaps) { const [x, y] = k.split(",").map(Number), d = Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]); if (d > 9) continue; out.push({ x: x + 0.5, y: 0.25, z: y + 0.5, reach: 2.2, colour: [0.35, 0.9, 0.45], flicker: false, d }); } }; }
+  // the draft: the haze and the smoke stream along the corridors; the look line
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || !game.ext || ren.sky) return; const d = CM.draftNow ? CM.draftNow(game) : 0; if (d <= 0) return; const fl = game.floor, P = CM.draftPath(fl), k = `${fl.pos[0]},${fl.pos[1]}`; if (!P.has(k)) return;
+    const here = P.get(k), away = CM.DIRS.find(([dx, dy]) => P.has(`${fl.pos[0] + dx},${fl.pos[1] + dy}`) && P.get(`${fl.pos[0] + dx},${fl.pos[1] + dy}`) > here) || [1, 0]; ren.wind = { dir: away, k: Math.max(ren.wind ? ren.wind.k : 0, 0.5 + 0.5 * d) }; if (ren.air) ren.air = Object.assign({}, ren.air, { haze: Math.min(1, (ren.air.haze || 0) + 0.15 * d) }); };
+  { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, fl = g && g.floor; if (!fl || !CM.bloomsOf) return out; const [dx, dy] = CM.DIRS[fl.facing], t = fl.things[`${fl.pos[0] + dx},${fl.pos[1] + dy}`], el = this.$ && this.$("#view .sky .wxtext"); if (el && t && t.type === "spores" && !el.textContent.includes("spores")) el.textContent += " - spores ahead (a point a step)"; if (el && CM.draftNow && CM.draftNow(g) > 0 && CM.draftPath(fl).has(`${fl.pos[0]},${fl.pos[1]}`) && !el.textContent.includes("draft")) el.textContent += " - a draft"; } catch (e) { /* (quiet) */ } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzv-steam.js ----
+"use strict";
+// Steam and the burning roots - the window's side (UPGRADE_PLAN_63.md sets 1.3 and 3.2, release 5): on a steam
+// square the white billows thicken to a screen about the party; while the roots burn (69zzx-steam.js) the walls
+// near the party wear flames and smoke and throw an orange, flickering light, and a crackle is heard; the look
+// line names the steam.
+{ const r = Math.random;
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, fl = g && g.floor; if (env.surface || !fl || !(fl.number >= 1) || g.mode === "title") return out;
+      if (CM.steamHere && CM.steamHere(g)) out.push({ id: "steamscreen", rate: 22 });
+      if (CM.rootsBurning && CM.rootsBurning(g, fl) > 0) out.push({ id: "rootfire", rate: 40 }, { id: "smoke", rate: 8 }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game;
+      if (k.id === "steamscreen") { const a = r() * Math.PI * 2, d = 0.4 + r() * 2.2; return { kind: "steam", age: 0.4, seed: r() * 10, sway: 0.5 + r(), swayAmp: 0.12, windy: 0.2, vx: 0, vy: 0.2 + r() * 0.2, vz: 0, life: 3 + r() * 2.5, size: 0.5 + r() * 0.4, grow: 0.25, glow: 1.3, alpha: 0.55, x: eye[0] + Math.cos(a) * d, z: eye[2] + Math.sin(a) * d, y: 0.05 + r() * 0.3, top: 2.4, layer: "life:breath" }; }
+      if (k.id === "rootfire") { const fl = g.floor, N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0; for (let tries = 0; tries < 6; tries++) { const x = Math.floor(eye[0]) + Math.floor(r() * 9) - 4, y = Math.floor(eye[2]) + Math.floor(r() * 9) - 4; if (!open(x, y)) continue; const W = CM.DIRS.filter(([dx, dy]) => !open(x + dx, y + dy)); if (!W.length) continue; const [dx, dy] = W[Math.floor(r() * W.length)];
+          return { kind: "rootfire", age: 0.4, seed: r() * 10, sway: 3 + r() * 3, swayAmp: 0.2, windy: 0, vx: 0, vy: 0.8 + r() * 0.6, vz: 0, life: 0.9 + r() * 0.6, size: 0.18 + r() * 0.2, h: 0.4 + r() * 0.3, glow: 2, alpha: 0.95, x: x + 0.5 + dx * 0.42 + (r() - 0.5) * 0.5 * Math.abs(dy), z: y + 0.5 + dy * 0.42 + (r() - 0.5) * 0.5 * Math.abs(dx), y: 0.05 + r() * 0.7, top: 1.3, layer: "life:treefire" }; } return null; }
+      return sp0.call(this, k, eye, R, env); }; }
+  { const xl0 = CM.extraLights; CM.extraLights = (game, fl, out, renderer) => { if (xl0) xl0(game, fl, out, renderer); if (!fl || !(fl.number >= 1) || !CM.rootsBurning || !CM.rootsBurning(game, fl) || !renderer || !renderer.eye) return; const [px, py] = fl.pos; for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.4, x = px + 0.5 + Math.cos(a) * 1.6, z = py + 0.5 + Math.sin(a) * 1.6; out.push({ x, y: 0.7, z, reach: 3, colour: [1.0, 0.5, 0.15], flicker: true, d: 2 }); } }; }
+  // the look line
+  { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, el = this.$ && this.$("#view .sky .wxtext"); if (!el || !g || !g.floor) return out; if (CM.steamHere && CM.steamHere(g) && !el.textContent.includes("steam")) el.textContent += " - steam (a square's sight, bows at three quarters)"; if (CM.rootsDry && CM.rootsDry(g) && !el.textContent.includes("roots")) el.textContent += " - the roots are dry"; } catch (e) { /* (quiet) */ } return out; }; }
+  // the fire's sound: a crackle while the roots burn
+  let crackleAt = 0; const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || !game.ext || !CM.rootsBurning || !CM.rootsBurning(game, game.floor)) return; if (now < crackleAt) return; crackleAt = now + 300 + r() * 500; const A = CM.audio; if (!A || !A.ctx || !A.enabled || !A.master) return;
+    try { const ctx = A.ctx, at = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(); o.type = "square"; o.frequency.setValueAtTime(1800 + r() * 2400, at); g.gain.setValueAtTime(0.035, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.03); o.connect(g); g.connect(A.master); o.start(at); o.stop(at + 0.04); } catch (e) { /* quiet */ } };
 }
 
 // ---- 77-splash.js ----
