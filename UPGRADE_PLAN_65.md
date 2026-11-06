@@ -164,6 +164,15 @@ on one square.
   against its flights: the relic, or "not yet" and no curse), the Dice Room (a stake of fifty on a stone die: six
   opens the chest, one is a Mimic, once a day). Letters E $ N U Q K and "," (the die: X is the old templates' dark
   floor).
+- v95.0 - release 5, the lairs 21-26: 69zzzh-lairs.js - the Rat King's Nest (the clutter's rats, a crowned elite
+  rat on a nest with a chest under it), the Hatchery (eggs worth selling; the first taken brings a Wyvern down, once),
+  the Bandit Camp (a rivals thing at a fire: the rivals' own parley, with their pile a guarded chest), the Vampire's
+  Parlour (Space twice: five of a hero's health for the run, the band's relic; the candlesticks a Vampire-guarded
+  chest), the Golem Forge (the lever finishes the golem and it fights), the Drowned Shrine (flesh on the stone buys
+  the pearl; bare, the Drowned rise). Letters P ( ) < > {.
+- Decisions taken (release 5): the egg is a thing of value, not a pet (the farm's pets are a plan of their own); the
+  golem never fights for the party (no follower slot for a golem); the vampire's bargain is two presses of Space,
+  not a choice dialog.
 - Decisions taken (release 1): the chasm is solid, not a fall (the soft-lock rule); the bridge sways in the view,
   the planks never give; the ship's Drowned come down only at the bell; the mushroom's cap is a dome round the
   party's feet on the raised disc, not a climb through the mesh.

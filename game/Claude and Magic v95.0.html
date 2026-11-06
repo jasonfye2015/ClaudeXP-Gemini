@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v94.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v95.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "94.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "95.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -32095,6 +32095,70 @@ Object.assign(CM.Game.prototype, {
       return ar0.call(this, f, k); }; }
 }
 
+// ---- 69zzzh-lairs.js ----
+"use strict";
+// Lairs and dens (UPGRADE_PLAN_65.md, release 5): the Rat King's Nest (rats on every square of the clutter's, a nest of
+// rags with an elite rat on it, crowned, and under it what the fled have dropped), the Hatchery (wyvern eggs on warm
+// sand - one taken is a thing worth selling, and the mother comes down the shaft), the Bandit Camp (a fire, a loot
+// pile, and the rivals' own parley: pass with a toll, trade, or fight), the Vampire's Parlour (a table set for guests:
+// sit, and a bargain is offered - blood for a relic, five of a hero's health for the run; the candlesticks are a chest
+// the Vampire guards), the Golem Forge (a Crystal Golem half made on a slab: throw the lever and it finishes, and it
+// knows no friend), and the Drowned Shrine (the Drowned kneeling round a sea-stone with a pearl on it: a thing of
+// flesh laid on the stone first and they let the pearl go; taken bare, they rise).
+//   letters: n2 -> uses the clutter's rats (rats: true), W is excluded by the templates, so: P the nest, e2 -> ; letters
+//   here: V-free... (see the table): @ is the grate (stage 2); new: P the nest, L? (ring) no; used: P nest, 3? taken;
+//   assigned: P nest, "e"? taken. Final: P nest, q? taken (key) -> O taken (ice). The letters of this file: P (nest),
+//   y? taken. => P nest, 7? taken. Chosen: P nest, "(" an egg, ")" the camp's fire, "<" the vampire's table,
+//   ">" the slab's lever, "{" the sea-stone.
+{ const LR = CM.LAIRS = { eggValue: 400, bloodPrice: 5, pearlRare: true };
+  const SP9 = [
+    { name: "the Rat King's Nest", min: 3, bands: [0, 1], rats: true, line: "Rags and bones and the smell, and rats - on every flag, in every corner, going over one another - and in the middle a nest of what they have dragged in, and on it one of them, bigger, with something on its head that shines.",
+      rows: ["#########", "#.......#", "#.......#", "#...P...#", "#.......#", "#.......#", "#.......#", "###D#####"] },
+    { name: "the Hatchery", min: 36, bands: [6, 7], line: "Warm sand underfoot, and the heat coming up through it, and in the sand, in a ring, eggs the size of a man's chest, leathery and grey and one of them rocking. Overhead a shaft goes up into the dark, and something up there breathes.",
+      rows: ["###########", "#.........#", "#..(...(..#", "#.........#", "#.(..R..(.#", "#.........#", "#..(...(..#", "#.........#", "#.........#", "#####D#####"] },
+    { name: "the Bandit Camp", min: 6, line: "A fire in the middle of the hall and four about it with their backs to the walls and their hands near their hilts, and behind them a pile of what they have taken off the people who came this way before you. They have seen you. They are deciding.",
+      rows: ["###########", "#.........#", "#...c.....#", "#....)....#", "#.........#", "#.........#", "#.........#", "#.........#", "#####D#####"], chests: { c: { note: "the bandits' pile, behind the fire", guard: ["Sellsword", "Sellsword", "Hedge Wizard"] } } },
+    { name: "the Vampire's Parlour", min: 16, bands: [3], line: "A parlour: a long table laid for guests who are not here, candles burning that no one lit, a mirror that shows the room and not you, and at the table's head a chair with someone in it, very still, who smiles.",
+      rows: ["#########", "#.......#", "#..<....#", "#.......#", "#.......#", "#.....c.#", "#.......#", "###D#####"], chests: { c: { note: "the candlesticks", guard: ["Vampire"] } } },
+    { name: "the Golem Forge", min: 36, bands: [6, 7], line: "A slab, and on it a golem of crystal half made - the legs and the trunk and one arm, the rest in pieces on the floor beside it - and a lever by the furnace mouth that someone did not pull. The vents breathe round it.",
+      rows: ["###########", "#.........#", "#.v..RR..v#", "#....R>...#", "#.........#", "#.v.....v.#", "#.........#", "#.........#", "#####D#####"] },
+    { name: "the Drowned Shrine", min: 21, bands: [4], line: "Water to the knee, and in it a ring of the Drowned on their knees with their faces down, and in the middle a stone the sea shaped, and on the stone a pearl. They have not looked up. They are waiting for something to be put on the stone.",
+      rows: ["#########", "#~~~~~~~#", "#~~~~~~~#", "#~~~{~~~#", "#~~~~~~~#", "#~~~~~~~#", "#.......#", "###D#####"] },
+  ];
+  for (const r of SP9) { r.ownDice = true; if (!CM.SETPIECES.some((t) => t.name === r.name)) CM.SETPIECES.push(r); }
+  const kind = (...names) => { for (const n of names) { const k = CM.monsterKind(n); if (k) return k; } return CM.MONSTERS[0]; };
+  const uniqueFor = (fl) => { const b = CM.themeIndex(fl.number); return Object.keys(CM.UNIQUES).find((k) => CM.UNIQUES[k].band === b) || Object.keys(CM.UNIQUES)[0]; };
+  const level = (fl, k, h) => { fl.levels = fl.levels || {}; fl.levels[k] = [h, 1]; };
+  CM.SETPIECE_LETTERS = Object.assign(CM.SETPIECE_LETTERS || {}, {
+    P: (fl, x, y, k, T, R) => { const L = Math.max(1, CM.storyOf(fl.number)), group = [CM.makeMonster(kind("Giant Rat"), L, R), CM.makeMonster(kind("Giant Rat"), L, R), CM.makeMonster(kind("Giant Rat"), L, R)]; if (CM.makeElite) CM.makeElite(group, R, 2); group[0].name = "the Rat King's heir"; group[0].crowned = true;
+      fl.things[k] = { type: "ratnest", group, chest: { type: "chest", gold: R.int(15, 40) * L, items: [CM.trinket(R.pick(Object.keys(CM.TRINKETS))), CM.makeItem(CM.storyOf(fl.number), R, undefined, 2)], trap: null, note: "what the fled have dropped, under the rags" } }; },
+    "(": (fl, x, y, k) => { fl.things[k] = { type: "egg" }; },
+    ")": (fl, x, y, k) => { fl.things[k] = { type: "rivals", met: false, camp: true }; },
+    "<": (fl, x, y, k) => { fl.things[k] = { type: "vampiretable", relic: uniqueFor(fl) }; },
+    ">": (fl, x, y, k) => { level(fl, k, CM.LEVELS ? CM.LEVELS.dais : 0.3); fl.things[k] = { type: "golemlever" }; },
+    "{": (fl, x, y, k) => { fl.decor = fl.decor || []; if (!fl.decor.some((d) => d.kind === "water" && d.x === x && d.y === y)) fl.decor.push({ kind: "water", x, y, fish: false }); level(fl, k, CM.LEVELS ? CM.LEVELS.dais : 0.3); fl.things[k] = { type: "seastone", pearl: true }; },
+  });
+  // the Hatchery's sand is warm: the egg is a thing of value; the nest's rats are the clutter's, many
+  CM.wyvernEgg = () => ({ name: "A wyvern's egg", kind: "egg", power: 0, value: LR.eggValue, props: {} });
+  const P = CM.Game.prototype;
+  const groupAt = (game, fl, group) => { const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; const was = fl.things[sq]; fl.things[sq] = th; game.startCombat(sq, th); if (fl.things[sq] === th) { if (was) fl.things[sq] = was; else delete fl.things[sq]; } };
+  const LINES = { ratnest: (t) => (t.group ? "A nest of rags and bones, and on it the big one with the crown, watching you with both red eyes. The others are watching it. (Space to go for it)" : "The nest, empty, the rags turned over."), egg: () => "An egg the size of a man's chest, leathery, grey, warm. One of them is rocking. (Space to take this one)",
+    vampiretable: (t) => (t.done ? "The table, and the host's chair, empty. The candles are out." : "The host at the table's head smiles and gestures at a chair. There is a bargain in the gesture. (Space to sit)"), golemlever: (t) => (t.thrown ? "The lever, thrown; the slab is empty." : "The lever by the furnace mouth. It finishes what is on the slab. (Space to throw it)"),
+    seastone: (t) => (t.pearl ? "The sea-stone, and on it a pearl the size of a plum, and round it the Drowned on their knees, waiting. (Space: lay something on the stone, or take the pearl)" : "The sea-stone, bare. The Drowned have gone down into the water.") };
+  { const l0 = P.look; P.look = function (...a) { const out = l0.apply(this, a); const fl = this.floor; if (fl && this.mode === "explore" && !this.perch && fl.things) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`; for (const k of [here, ahead]) { const t = fl.things[k]; if (t && LINES[t.type]) { this.say(LINES[t.type](t)); break; } } } return out; }; }
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, L = Math.max(1, CM.storyOf(fl.number));
+        for (const k of [here, ahead]) { const t = fl.things[k]; if (!t) continue;
+          if (t.type === "ratnest") { if (!t.group) { this.say("The nest, empty, the rags turned over."); return true; } const group = t.group; t.group = null; fl.things[k] = Object.assign(t.chest, { nest: true }); this.say("You go for the crown, and the whole floor of rats goes for you, and the big one comes off its nest with a scream like a child's."); groupAt(this, fl, group); return true; }
+          if (t.type === "egg") { delete fl.things[k]; this.bag.push(CM.wyvernEgg()); this.sound("coin"); const E = this.ext("hatchery"); if (!E[fl.number]) { E[fl.number] = true; const R = new CM.Random(CM.hashSeed(`${this.seed}:wyvern:${fl.number}`)); this.say("You lift the egg out of the sand, warm as a loaf - and overhead the breathing stops, and something comes down the shaft with its wings folded."); this.emit("change"); groupAt(this, fl, [CM.makeMonster(kind("Wyvern", "Gargoyle"), L, R)]); return true; } this.say("Another egg, warm as a loaf. The shaft overhead is quiet now."); this.emit("change"); return true; }
+          if (t.type === "vampiretable") { if (t.done) { this.say("The table, and the host's chair, empty."); return true; } if (!t.sat) { t.sat = true; this.say("You sit. \"Guests,\" says the host, \"at last. I have something of the band's that I do not need, and you have something I do. A little of one of you - five of your blood, for the run - and it is yours. Sit again if you agree. Stand and go if you do not; I will not follow. Touch the candlesticks and I will.\""); return true; }
+            t.done = true; const h = this.alive()[0]; if (h) { h.max = Math.max(1, h.max - LR.bloodPrice); h.hp = Math.min(h.hp, h.max); } const relic = CM.makeUnique(t.relic); this.bag.push(relic); this.sound("ailment"); this.say(`${h ? h.name : "Someone"} gives the host a wrist, and five of ${h ? h.name + "'s" : "their"} blood for the run, and the host, courteous, gives ${relic.name} across the table and shows you to the door.`); this.emit("change"); return true; }
+          if (t.type === "golemlever") { if (t.thrown) { this.say("The lever, thrown; the slab is empty."); return true; } t.thrown = true; this.sound("lever"); const R = new CM.Random(CM.hashSeed(`${this.seed}:golem:${fl.number}`)); this.say("The lever goes over and the furnace roars and the pieces on the floor get up and go to the slab, and the golem stands, finished. It was made for the Foundry Master's war, and it knows no friend."); if (this.count) this.count("golemsWoken", 1); groupAt(this, fl, [CM.makeMonster(kind("Crystal Golem", "Gargoyle"), L, R)]); return true; }
+          if (t.type === "seastone") { if (!t.pearl) { this.say("The sea-stone, bare."); return true; } const i = this.bag.findIndex((it) => it.kind === "meat" || it.kind === "fish" || it.meat); const pearl = CM.ingredient("cavepearl"); t.pearl = false;
+            if (i >= 0) { const gift = this.bag.splice(i, 1)[0]; this.bag.push(pearl); this.sound("coin"); this.say(`You lay ${gift.name} on the stone. The Drowned lift their faces, and look at it, and one by one they go down under the water and are gone. The pearl is yours.`); this.emit("change"); return true; }
+            this.bag.push(pearl); const R = new CM.Random(CM.hashSeed(`${this.seed}:shrine:${fl.number}`)), group = []; for (let j = 0; j < 3; j++) group.push(CM.makeMonster(kind("Drowned", "Zombie"), L, R)); this.say("You take the pearl off the bare stone, and the ring of the Drowned lift their faces and rise, all together, with the water running off them."); groupAt(this, fl, group); return true; } } }
+      return u0.apply(this, a); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -47397,6 +47461,37 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, fl = g && g.floor; if (env.surface || !fl || !(fl.number >= 1) || g.mode === "title" || !fl.features) return out; const n = Object.entries(fl.features).filter(([k, f]) => { if (f.type !== "wind") return false; const [x, y] = k.split(",").map(Number); return Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 10; }).length; if (n && has("air:mote")) out.push({ id: "tunneldust", rate: Math.min(10, n) }); return out; }; }
   { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "tunneldust") return sp0.call(this, k, eye, R, env); const g = CM.game, fl = g.floor, W = Object.keys(fl.features).filter((q) => fl.features[q].type === "wind").map((q) => q.split(",").map(Number)); if (!W.length) return null; const xs = W.map(([x]) => x), ys = W.map(([, y]) => y), along = (Math.max(...ys) - Math.min(...ys)) >= (Math.max(...xs) - Math.min(...xs)); const [x, y] = W[Math.floor(r() * W.length)];
       return { kind: "mote", age: 0.4, seed: r() * 10, sway: 1, swayAmp: 0.03, windy: 1, vx: along ? 0 : 2.2, vy: (r() - 0.5) * 0.1, vz: along ? 2.2 : 0, life: 1.5 + r(), size: 0.03 + r() * 0.03, h: 0.03, glow: 0.05, alpha: 0.6, x: x + r(), z: y + r(), y: 0.2 + r() * 0.6, top: 0.95, layer: "air:mote" }; }; }
+}
+
+// ---- 76zzzzzzzzzzzc-lairs.js ----
+"use strict";
+// Lairs, dens and the memory rooms - the window's side (UPGRADE_PLAN_65.md, releases 5 and 6): the nest and its crowned
+// rat, the eggs in the sand, the bandits' fire, the host at the table, the golem on the slab, the sea-stone and the
+// kneeling Drowned, the murals, the old camp's cold fire, the smugglers' mark.
+{ const S = 64;
+  const PICS = {
+    "sp:nest": (p) => { p.fillStyle = "#5A4A3A"; p.beginPath(); p.ellipse(32, 46, 28, 12, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#3A2E22"; p.lineWidth = 1.5; for (let i = 0; i < 12; i++) { p.beginPath(); p.moveTo(6 + i * 4.5, 52); p.lineTo(12 + i * 4.5, 38 + (i % 3) * 3); p.stroke(); } p.fillStyle = "#E8E0C8"; p.fillRect(20, 40, 8, 2); p.fillRect(36, 44, 6, 2); },
+    "sp:egg": (p) => { p.fillStyle = "#9A948A"; p.beginPath(); p.ellipse(32, 38, 16, 22, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.25)"; p.beginPath(); p.ellipse(26, 30, 6, 9, -0.3, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#6A645A"; p.lineWidth = 1.2; p.beginPath(); p.moveTo(24, 46); p.lineTo(30, 40); p.lineTo(36, 48); p.stroke(); p.fillStyle = "#C8A060"; p.beginPath(); p.ellipse(32, 58, 24, 5, 0, 0, Math.PI * 2); p.fill(); },
+    "sp:fire": (p) => { p.fillStyle = "#4A4640"; for (let i = 0; i < 7; i++) { p.beginPath(); p.arc(10 + i * 7.5, 56, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#F0A030"; p.beginPath(); p.moveTo(18, 54); p.quadraticCurveTo(24, 30, 32, 12); p.quadraticCurveTo(40, 30, 46, 54); p.closePath(); p.fill(); p.fillStyle = "#FFE080"; p.beginPath(); p.moveTo(26, 54); p.quadraticCurveTo(30, 36, 32, 26); p.quadraticCurveTo(34, 36, 38, 54); p.closePath(); p.fill(); },
+    "sp:coldfire": (p) => { p.fillStyle = "#4A4640"; for (let i = 0; i < 7; i++) { p.beginPath(); p.arc(10 + i * 7.5, 54, 4, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#2A2824"; p.beginPath(); p.ellipse(32, 52, 14, 5, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#3A3632"; p.lineWidth = 3; p.beginPath(); p.moveTo(20, 50); p.lineTo(44, 44); p.moveTo(24, 44); p.lineTo(42, 52); p.stroke(); p.fillStyle = "#E8E0C8"; p.fillRect(44, 48, 12, 9); },
+    "sp:table": (p) => { p.fillStyle = "#5A3A2A"; p.fillRect(4, 26, 56, 8); p.fillRect(8, 34, 5, 24); p.fillRect(51, 34, 5, 24); p.fillStyle = "#E8E0D0"; p.fillRect(6, 22, 52, 5); p.fillStyle = "#F0C040"; for (const x of [16, 32, 48]) { p.fillRect(x - 1, 8, 2, 14); p.beginPath(); p.arc(x, 6, 2.5, 0, Math.PI * 2); p.fill(); } },
+    "sp:slab": (p) => { p.fillStyle = "#4A4640"; p.fillRect(6, 36, 52, 20); p.fillStyle = "#5A5650"; p.fillRect(4, 32, 56, 6); p.fillStyle = "rgba(150,200,230,0.8)"; p.fillRect(22, 14, 10, 20); p.fillRect(30, 22, 12, 12); p.fillRect(16, 20, 8, 8); p.strokeStyle = "#A0D0E8"; p.lineWidth = 1.5; p.strokeRect(22, 14, 10, 20); },
+    "sp:seastone": (p) => { p.fillStyle = "#6A7A80"; p.beginPath(); p.ellipse(32, 44, 22, 14, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#8A9AA0"; p.beginPath(); p.ellipse(30, 38, 16, 8, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#F0ECF4"; p.beginPath(); p.arc(32, 32, 5, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.8)"; p.beginPath(); p.arc(30, 30, 1.6, 0, Math.PI * 2); p.fill(); },
+    "sp:mural": (p) => { p.fillStyle = "#6A5A48"; p.fillRect(4, 6, 56, 52); p.fillStyle = "#C8B890"; p.fillRect(8, 10, 48, 44); p.fillStyle = "#3A5A8A"; p.fillRect(12, 36, 40, 12); p.fillStyle = "#8A3A2A"; for (const x of [16, 26, 36, 46]) p.fillRect(x, 20, 6, 16); p.fillStyle = "#2A2824"; p.fillRect(12, 50, 20, 2); },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) { if (set.index[name] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; PICS[name](c.getContext("2d")); set.index[name] = set.layers.length; set.layers.push(c); } return set; }; }
+  const has = (L) => { const R0 = CM.renderer; return R0 && R0.index && R0.index[L] !== undefined; };
+  const mon = (name, fallback) => (has(`monster:${name}`) ? `monster:${name}` : fallback);
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, {
+    ratnest: (t, x, y, now) => { const out = [{ x, y, layer: "sp:nest", w: 0.9, h: 0.5 }]; if (t.group) out.push({ x, y, layer: mon("Giant Rat", "bones"), w: 0.5, h: 0.42, lift: 0.12, dx: Math.sin(now / 600) * 0.02, shade: 1 }, { x, y, layer: "key", w: 0.14, h: 0.1, lift: 0.5, glow: 0.4 }); return out; },
+    egg: (t, x, y, now) => [{ x, y, layer: "sp:egg", w: 0.5, h: 0.55, dx: Math.sin(now / 350 + x * 3) * 0.006 }],
+    vampiretable: (t, x, y, now) => (t.done ? [{ x, y, layer: "sp:table", w: 0.95, h: 0.6, shade: 0.6 }] : [{ x, y, layer: "sp:table", w: 0.95, h: 0.6, glow: 0.25 }, { x, y, layer: mon("Vampire", "npc:ghost"), w: 0.7, h: 0.85, dz: -0.3, lift: 0.0, alpha: 0.95, shade: 0.9 + 0.05 * Math.sin(now / 1200) }]),
+    golemlever: (t, x, y) => (t.thrown ? [{ x, y, layer: "sp:slab", w: 0.95, h: 0.6, shade: 0.6 }] : [{ x, y, layer: "sp:slab", w: 0.95, h: 0.6 }, { x, y, layer: "sp:lever", w: 0.4, h: 0.6, dx: 0.3, dz: 0.2 }]),
+    seastone: (t, x, y, now) => { const out = [{ x, y, layer: "sp:seastone", w: 0.8, h: 0.6, glow: t.pearl ? 0.3 + 0.1 * Math.sin(now / 700) : 0 }]; if (t.pearl && has("monster:Drowned")) for (const [dx, dz] of [[-0.8, 0], [0.8, 0], [0, 0.8], [0, -0.8]]) out.push({ x, y, layer: "monster:Drowned", w: 0.55, h: 0.5, dx, dz, lift: -0.1, shade: 0.6, alpha: 0.9 }); return out; },
+    mural: (t, x, y) => [{ x, y, layer: "sp:mural", w: 0.8, h: 0.8, lift: 0.1 }],
+    oldcamp: (t, x, y, now) => (t.rested ? [{ x, y, layer: "sp:fire", w: 0.8, h: 0.7, glow: 0.4 + 0.1 * Math.sin(now / 150) }] : [{ x, y, layer: "sp:coldfire", w: 0.8, h: 0.6 }]),
+  });
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || game.mode === "title" || !fl.things) return out; for (const [k, t] of Object.entries(fl.things)) { if (t.type !== "rivals" || !t.camp) continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "sp:fire", w: 0.7, h: 0.6, glow: 0.45 + 0.12 * Math.sin(now / 140 + x), dz: 0.25 }); } return out; }; }
 }
 
 // ---- 77-splash.js ----
