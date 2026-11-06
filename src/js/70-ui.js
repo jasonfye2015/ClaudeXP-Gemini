@@ -828,7 +828,7 @@ CM.UI = class {
   }
 
   portrait(cls, size) {
-    const look = this.game.settings.look, key = `${look}:${cls}:${size}`;
+    const look = this.game.settings.look, key = `${look}:${CM.art.hasDolls && CM.art.hasDolls() ? "dolls" : "drawn"}:${cls && cls.cls ? cls.cls : cls}:${size}`;
     if (!this.portraits[key]) this.portraits[key] = CM.art.portrait(cls, size, look);
     const c = document.createElement("canvas");
     c.width = c.height = size;

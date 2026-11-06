@@ -7,7 +7,7 @@
   const sig = (h) => ["weapon", "helm", "armor"].map((k) => (h[k] ? `${h[k].name}|${h[k].unknown ? 1 : 0}` : "-")).join("/");
   P.portrait = function (who, size) {
     if (typeof who === "string" || !who || !who.cls) return base.call(this, who, size);
-    const look = this.game.settings.look, key = `${look}:${who.cls}:${size}:${sig(who)}`;
+    const look = this.game.settings.look, key = `${look}:${CM.art.hasDolls && CM.art.hasDolls() ? "dolls" : "drawn"}:${who.cls}:${size}:${sig(who)}`;   /* (the sprites' arrival makes a new key: a portrait drawn before the dolls were decoded is not kept) */
     let src = cache.get(key);
     if (!src) { const b = base.call(this, who.cls, size), c = document.createElement("canvas"); c.width = c.height = size; const p = c.getContext("2d"); p.drawImage(b, 0, 0);
       const put = (it, s, x, y, rot) => { if (!it || (it.props && it.props.fists)) return; let ic; try { ic = CM.art.itemIcon(it, Math.round(s), look); } catch (e) { return; }

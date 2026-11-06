@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The sprite portraits, every time (v99.0, the party's pictures)
+  (src/js/76zzzzx-herogear.js, src/js/70-ui.js, src/js/76d-fortress.js, src/js/76h-claudecraft.js)
+  - The sprite portraits, every time: opened from the launcher straight into a saved run, the party's cards were
+    drawn in the instant before the sprites were decoded, and the drawn pictures were kept for the whole session.
+    Every portrait kept for reuse - the party's cards with their gear, the sheet, the Fortress's token and
+    Claudecraft's corner - now knows whether the sprites had arrived, and is drawn again from them when they do.
+
 Facing the attacker (v98.0, UPGRADE_PLAN_67.md)
   (src/js/69zzzj-engage.js, src/js/76zzzzzzzzzzzd-engage.js, src/js/62-combat.js, src/js/50-audio.js, UPGRADE_PLAN_67.md)
   - Facing the attacker (plan 67): when a fight begins with the foes beside or behind the party, the party turns to
