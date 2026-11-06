@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Margins (v105.0, UPGRADE_PLAN_70.md)
+  (src/js/69zzzn-margins.js, src/js/76zzzzzzzzzzzzg-margins.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js)
+  - The Margins (plan 70, release 2): Claude was writing a true account of Caer Duin, and one stormy night the pages
+    blew down the shaft. Ten of them lie loose in the dungeon, one in each band, on a floor the seed chooses - a page
+    in a neat hand under a pebble. Carried home and handed over at the cabin, Claude reads each one aloud (the first
+    dead, the water, the sealed doors, the court, two kinds of wall, the names, the crystal, the bells, the teacher,
+    and the last page) and pins it to the map wall, which fills with pages and red string as they come home; any of
+    them can be read again. Every third page brings a thank-you: Claude's bookmark (a trinket that marks the way
+    down), two Scrolls of Mapping, and a green clay cup that makes his tea last two floors. The tenth ends the
+    account with a confession, and an achievement. Pages pinned are kept with the village, and a page already on the
+    wall isn't laid again. Also: Claude's memory of the party is now saved the moment it changes, and a weather test
+    no longer trips on mud left by its own rain.
+
 Claude, at the end of the green path (v104.0, UPGRADE_PLAN_70.md)
   (src/js/69zzzm-claude.js, src/js/76zzzzzzzzzzzzf-claude.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_70.md)
   - Claude, at the end of the green path (plan 70, release 1): a faint path leaves the road just west of the farm,

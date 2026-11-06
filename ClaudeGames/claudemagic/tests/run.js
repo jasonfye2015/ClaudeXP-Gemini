@@ -2029,7 +2029,7 @@ test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors
 
 test("living items: a relic's power once a floor, a trinket's oddity, a weapon's marks and its name kept through save, vault and a later party, an heirloom's third bearer", () => {
   const CM = load();
-  assert.strictEqual(Object.keys(CM.TRINKETS).length, 23);   /* (the twenty-third: the chronicle's rubbing, plan 65) */   /* (the twenty-second: the kennel-master's whistle, plan 64 release 4) */ assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 10);   /* (the twenty-first: the painted likeness, plan 64) */   // (the tenth: the Undercroft's, v9.9) assert.ok(CM.SLOTS.includes("trinket"));
+  assert.strictEqual(Object.keys(CM.TRINKETS).length, 24);   /* (the twenty-fourth: Claude's bookmark, plan 70) */   /* (the twenty-third: the chronicle's rubbing, plan 65) */   /* (the twenty-second: the kennel-master's whistle, plan 64 release 4) */ assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 10);   /* (the twenty-first: the painted likeness, plan 64) */   // (the tenth: the Undercroft's, v9.9) assert.ok(CM.SLOTS.includes("trinket"));
   for (const id of Object.keys(CM.GUARDIANS)) if (CM.GUARDIANS[id].relic) assert.ok(CM.powerOf(CM.relic(id)), `${id}'s relic has a power`);
   assert.ok(CM.powerOf(CM.makeUnique("firstroot")) && CM.powerOf(CM.makeUnique("firstroot")).id === "regrow");
   const game = new CM.Game(); game.newGame("living-1", fixedParty(CM));
@@ -5468,7 +5468,7 @@ test("weather that matters: rain at night in the Wood burns a torch twice as fas
   g.light = { kind: "lantern", left: 300 }; const lb = g.light.left; g.steps = 4; g.burn(); assert.ok(lb - g.light.left <= 1, "a lantern doesn't mind");
   CM.weather = () => "mist"; g.floor.seen = []; g.floor.pos = CM.WOOD_GATE.slice(); g.floor.facing = 3; g.look(); const far = g.floor.seen.filter(([x, y]) => Math.max(Math.abs(x - g.floor.pos[0]), Math.abs(y - g.floor.pos[1])) > 2); assert.strictEqual(far.length, 0, "in the mist, two squares");
   CM.weather = () => "clear"; g.floor.seen = []; g.look(); assert.ok(g.floor.seen.some(([x, y]) => Math.max(Math.abs(x - g.floor.pos[0]), Math.abs(y - g.floor.pos[1])) > 2), "on a clear night, further");
-  CM.snowDepth = () => 1; const c0 = g.clock; g.light = { kind: "torch", left: 300 }; g.burn(); assert.strictEqual(g.clock - c0, 1, "a step in the snow: a minute more"); assert.ok(g.walkPace() >= 1.5);
+  CM.snowDepth = () => 1; CM.mudNow = () => 0;   /* (no mud left by the rain above: the snow alone) */ const c0 = g.clock; g.light = { kind: "torch", left: 300 }; g.burn(); assert.strictEqual(g.clock - c0, 1, "a step in the snow: a minute more"); assert.ok(g.walkPace() >= 1.5);
 });
 
 test("things that break: crates, barrels and urns stand in the dungeon's rooms (the same for a seed, none above ground), a step into one breaks it and the step goes on; a brazier knocked over sets the floor about it alight for half an hour, and a fight in the fire burns the foes", () => {
@@ -7026,6 +7026,33 @@ test("Claude, at the end of the green path: the path leaves the road and is walk
   g.floor.pos = CM.WOOD_GATE.slice(); assert.ok(CM.wayPlaces(g).some((p) => p.name === "Claude's cabin"), "on the Where-to list once seen");
   // nothing required: a run that never goes there is unchanged (no bit of Claude's in the rules of the dungeon)
   const h = new CM.Game(); h.newGame("claude-4", fixedParty(CM)); h.enterFloor(1, "down"); assert.ok(!Object.values(h.floor.things).some((t) => /claude(cabin|exit)?$|quillpost|cabincat/.test(t.type)));
+});
+
+test("the Margins: ten of Claude's pages, one a band on a floor the seed chooses, laid once and not when already pinned; taken, handed over, read aloud and pinned; a thank-you every third page, the cup's tea two floors; the tenth page's confession", () => {
+  const CM = load(), C = CM.CLAUDE_CABIN;
+  assert.strictEqual(CM.MARGINS.length, 10); assert.strictEqual(CM.THEMES.length, 10, "one page a band");
+  for (let b = 0; b < 10; b++) { const n = CM.marginFloor("marg-1", b); assert.ok(n >= CM.THEMES[b].floors[0] && n <= CM.THEMES[b].floors[1], `page ${b} in its band`); assert.strictEqual(n, CM.marginFloor("marg-1", b), "the seed's"); }
+  assert.ok(/had a hand in the making of this place/.test(CM.MARGINS[9].text), "the last page's confession");
+  const g = new CM.Game(); g.newGame("marg-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const n0 = CM.marginFloor("marg-1", 0); g.enterFloor(n0, "down"); let at = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "margin"); assert.ok(at, "laid on its floor");
+  g.floor.pos = at.split(",").map(Number); assert.ok(g.use()); assert.ok(g.bag.some((i) => i.kind === "margin" && i.page === 0), "taken into the pack"); assert.ok(!g.floor.things[at]);
+  const other = n0 === 1 ? 2 : 1; g.enterFloor(other, "down"); assert.ok(!Object.values(g.floor.things).some((t) => t.type === "margin" && t.page === 0), "one floor only");
+  // handed over
+  const talks = [], choices = []; g.on("talk", (t) => talks.push(t.text)); g.on("choice", (c) => choices.push(c));
+  g.enterFloor(-1, "rope", C.front.slice()); g.floor.facing = 2; g.use(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  const pick = (label) => { g.claudeTalk(k); const i = g.claudeMenu.findIndex((o) => o[0] === label); assert.ok(i >= 0, `${label} offered`); return g.choose(k, i); };
+  pick("margin"); assert.ok(talks.some((t) => t.includes(CM.MARGINS[0].text)), "read aloud"); assert.strictEqual(JSON.stringify(g.marginsPinned()), "[0]"); assert.ok(!g.bag.some((i) => i.kind === "margin"), "out of the pack");
+  assert.ok(Object.keys(g.floor.things).some((kk) => g.floor.things[kk].type === "mapwall"), "the map wall in the cabin");
+  // the rest, quickly: gifts at three, six and nine
+  for (let b = 1; b < 9; b++) g.bag.push(CM.marginItem(b)); const scrolls = () => g.bag.filter((i) => i.kind === "scroll" && i.spell === "mapping").length, s0 = scrolls();
+  for (let b = 1; b < 9; b++) pick("margin"); assert.strictEqual(g.marginsPinned().length, 9);
+  assert.ok(g.bag.some((i) => i.trinket === "bookmark" && i.props.lodestone), "the bookmark, at three"); assert.strictEqual(scrolls(), s0 + 2, "two maps, at six"); assert.ok(g.vext("claude").cup, "the cup, at nine");
+  pick("tea"); assert.strictEqual(g.ext("claude").tea, 2, "the cup's tea lasts two floors");
+  // a pinned page is not laid again: a new run on the same seed
+  const h = new CM.Game(); h.newGame("marg-1", fixedParty(CM)); h.mode = "explore"; h.enterFloor(n0, "down"); assert.ok(!Object.values(h.floor.things).some((t) => t.type === "margin" && t.page === 0), "already on the wall");
+  g.bag.push(CM.marginItem(9)); pick("margin"); assert.strictEqual(g.marginsPinned().length, 10);
+  g.claudeTalk(k); const wi = g.claudeMenu.findIndex((o) => o[0] === "wall"); assert.ok(/10 of 10/.test(g.claudeMenu[wi][1])); g.choose(k, wi); assert.strictEqual(g.claudeMenu.length, 11, "every page to read again");
+  g.choose(k, 9); assert.ok(talks.pop().includes("Was it?"));
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
