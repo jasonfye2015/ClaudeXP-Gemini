@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Last Page (v111.0, UPGRADE_PLAN_71.md)
+  (src/js/69zzzt-lastpage.js, src/js/76zzzzzzzzzzzzm-lastpage.js, tools/headless.js, tests/run.js)
+  - The Last Page (plan 71, release 5): with all ten pages of the Margins home, Claude tells the true account of the
+    name - Mordeth found among the books on death one still being written, Claude's, and took the author's name to
+    take the author's power, to write the queen back; it never could work, because the pen only writes what
+    happened. Once the letter to the king is written, ask him to come down with you: he won't fight, but he walks
+    behind the back row, says a line on each floor and reads every wall aloud as you pass it. Remind the king with
+    Claude there and the quiet ending becomes the Last Page: the two Claudes meet, the king asks the author for the
+    other ending and is told no, kindly; he gives the name back - "I was Mordeth" - and Claude closes the book by
+    reading the names of everyone who ever went down. After it the runs are the second edition: a new opening, and
+    the first edition on a shelf of its own in his cabin. Four achievements for the arc: A Knock at the Door, In His
+    Own Hand, The Last Page, and Without a Nudge (the crown with Claude met and no hint asked).
+
 Red ink (v110.0, UPGRADE_PLAN_71.md)
   (src/js/69zzzs-redink.js, src/js/76zzzzzzzzzzzzl-redink.js, src/js/71-title.js, tools/headless.js, tests/run.js)
   - Red ink (plan 71, release 4): under the edge of Claude's desk sits a pot of red ink nobody mentions. Press
