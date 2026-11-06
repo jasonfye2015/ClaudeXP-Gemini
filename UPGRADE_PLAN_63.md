@@ -172,6 +172,22 @@ how that is ruled out, and the order of work. Nothing here is built yet.
   76zzzzzzzzzzs-basins.js draws the grating flat (dark and dim under water), the chest's basin, splashes the deep
   step and names the depth on the sky bar. The test asserts every square still reachable from the stairs with the
   grating counted as a wall.
+- v84.0 - release 3, the rockfalls: 69zzv-rockfalls.js (CM.ROCKFALL; CM.isOpen wrapped so a "debris" thing is a
+  wall for the walk, the pathing and the monsters but not the map; CM.rockfallAt with every refusal - a room, a
+  thing, a feature, the party's square or its neighbour, six of the way up on the first floor, six of another
+  fall, three a floor, and wayHolds(): every square reachable from the stairs before must be reachable with the
+  fall counted as a wall; CM.rockfallStep on the clock by the mud's number, a gale above and the hour after a
+  meteor's shock, said near or far, clearing itself after a day; move wrapped to say the block, use wrapped to
+  clear it - twenty minutes and two torch steps, a pick named if carried but never needed). 69zzs-plants.js heaps
+  four of the pack's rocks on a fall. 76zzzzzzzzzzt-rockfalls.js: the shake, the crack, the dust burst and the dust
+  sifting from the broken roof over it, the look line's "a rockfall ahead (Space to clear)".
+- v85.0 - release 4, the blooms and the drafts: 69zzw-blooms.js (CM.bloomNow from the rain over the last day;
+  CM.bloomStep on the clock - the density quartile, the sprouting once a floor a day with wayHolds for the spore
+  patches, the day's life, the blown spores along CM.draftPath; CM.glowcapNear into hasLight; the spores' bite in
+  move; CM.draftNow by the wind above and the depth; the torch snuffed with the gust's own gutter, never the spell
+  light). 69zzs-plants.js's dungeon density follows the bloom. 76zzzzzzzzzzu-blooms.js draws the glowcaps (a wall
+  decal with a green light), the spore patches (a flat picture, spores drifting), the draft's wind and haze and
+  the look lines.
 
 ## 7. Decisions taken (2026-11-05, on the plan's own suggestions)
 

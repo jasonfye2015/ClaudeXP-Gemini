@@ -1,0 +1,20 @@
+"use strict";
+// Rockfalls - the window's side (UPGRADE_PLAN_63.md set 1.2, release 3): a fall of rock (69zzv-rockfalls.js) is a
+// heap of the pack's rocks on its square (added to the plants' instances by 69zzs-plants.js), the roof above it
+// broken dark, dust sifting down; when it falls the view shakes and a crack and a rumble are heard, and dust bursts
+// from the square; the look line names it.
+{ const r = Math.random; let dustAt = null;
+  const crack = (near) => { const A = CM.audio; if (!A || !A.ctx || !A.enabled || !A.master) return; try { const ctx = A.ctx, rate = ctx.sampleRate, secs = 2.6, n = Math.floor(rate * secs), b = ctx.createBuffer(1, n, rate), d = b.getChannelData(0); let lp = 0, lp2 = 0, s = 9191;
+      for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; const w = s / 0x7fffffff * 2 - 1, t = i / rate; lp += (w - lp) * 0.05; lp2 += (lp - lp2) * 0.08; d[i] = (lp2 * 9 + Math.exp(-t * 30) * w * 0.6 + Math.exp(-(t - 0.12) * (t - 0.12) * 400) * w * 0.3) * Math.min(1, t / 0.02) * Math.exp(-t * 1.4); }
+      const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; g.gain.value = near ? 0.7 : 0.4; src.connect(g); g.connect(A.master); src.start(); } catch (er) { /* quiet */ } };
+  const burst = (x, z) => { const A = CM.air && CM.air.parts; if (!A) return; for (let i = 0; i < 30; i++) { const a = r() * Math.PI * 2, sp = 0.4 + r() * 1.2; A.push({ kind: "smoke", age: 0.4, seed: r() * 10, sway: 0.5, swayAmp: 0.05, windy: 0, vx: Math.cos(a) * sp, vy: 0.3 + r() * 0.6, vz: Math.sin(a) * sp, life: 2.5 + r() * 2, size: 0.25 + r() * 0.2, grow: 0.15, glow: 0, alpha: 0.6, x: x + 0.5, z: z + 0.5, y: 0.2 + r() * 0.5, top: 1.2, layer: "air:smoke", drag: 1.5 }); } };
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || !game.ext) return;
+    if (game.on && !game._rockHooked) { game._rockHooked = true; game.on("rockfall", (ev) => { const fl = game.floor, d = Math.abs(ev.x - fl.pos[0]) + Math.abs(ev.y - fl.pos[1]); ren.shake(d <= 4 ? 0.9 : 0.45); crack(d <= 6); burst(ev.x, ev.y); dustAt = { x: ev.x, y: ev.y, until: now + 4000 }; }); }
+    if (dustAt && now < dustAt.until && CM.air && r() < dt * 12) { const A = CM.air.parts; A.push({ kind: "dust", age: 0.4, seed: r() * 10, sway: 0.3, swayAmp: 0.03, windy: 0, vx: 0, vy: -0.35, vz: 0, life: 2.2, size: 0.03, glow: 0.4, alpha: 0.5, x: dustAt.x + 0.2 + r() * 0.6, z: dustAt.y + 0.2 + r() * 0.6, y: 0.95, top: 1.2, layer: "air:mote" }); } else if (dustAt && now >= dustAt.until) dustAt = null; };
+  // the roof over a fall, broken dark; the dust sifting down it while it stands
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.rockfallsOf || game.mode === "title") return out;
+      for (const k of CM.rockfallsOf(fl)) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "clut:port", flat: true, w: 0.95, base: CM.ceilAt(fl, x, y) - 0.012, shade: 0.5, alpha: 0.9 }); if (CM.air && r() < 0.08) CM.air.parts.push({ kind: "dust", age: 0.4, seed: r() * 10, sway: 0.3, swayAmp: 0.03, windy: 0, vx: 0, vy: -0.3, vz: 0, life: 2.5, size: 0.025, glow: 0.4, alpha: 0.4, x: x + 0.2 + r() * 0.6, z: y + 0.2 + r() * 0.6, y: 0.95, top: 1.2, layer: "air:mote" }); }
+      return out; }; }
+  // the look line
+  { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, fl = g && g.floor; if (!fl || !CM.rockfallsOf) return out; const [dx, dy] = CM.DIRS[fl.facing], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; const el = this.$ && this.$("#view .sky .wxtext"); if (el && t && t.type === "debris" && !el.textContent.includes("rockfall")) el.textContent += " - a rockfall ahead (Space to clear)"; } catch (e) { /* (quiet) */ } return out; }; }
+}

@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v83.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v84.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "83.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "84.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -31166,7 +31166,7 @@ Object.assign(CM.Game.prototype, {
         const dx = w ? 0.5 + w[0] * 0.3 + (roll(10 + i) - 0.5) * 0.3 : 0.2 + roll(10 + i) * 0.6, dz = w ? 0.5 + w[1] * 0.3 + (roll(20 + i) - 0.5) * 0.3 : 0.2 + roll(20 + i) * 0.6;
         place(out, name, x, y, dx, dz, name.startsWith("bush") ? 0.35 + roll(30 + i) * 0.2 : name.startsWith("log") ? 0.45 : name.startsWith("stump") ? 0.28 : 0.22 + roll(30 + i) * 0.18, hh + i * 211, { sway: 0, kind: "fungus", small: true, wide: name.startsWith("log") }); } } };
   CM.plantInstancesOf = (game, fl, at, reach, density = 1) => { const out = []; if (!fl || !reach || !models() || !fl.grid) return out; const [ax, ay] = at || fl.pos;
-    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density, out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); }   /* (plan 63: the stalagmites and the stalactites) */
+    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density, out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); if (CM.rockfallsOf) for (const k of CM.rockfallsOf(fl)) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - ax) + Math.abs(y - ay) > reach + 1) continue; for (let i = 0; i < 4; i++) { const hh = CM.hashSeed(`${fl.number}:heap:${k}:${i}`) >>> 0; place(out, i % 2 ? "rock2" : "rock1", x, y, 0.2 + (hh % 60) / 100, 0.2 + ((hh >> 6) % 60) / 100, 0.45 + ((hh >> 12) % 40) / 100, hh, { kind: "stone", small: true, y: CM.floorAt(fl, x, y) + (i >= 2 ? 0.25 : 0) }); } } }   /* (plan 63: a fall of rock is a heap of the pack's rocks) */   /* (plan 63: the stalagmites and the stalactites) */
     return out; };
   CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const band = CM.themeIndex(fl.number); if (/^stala[cg]/.test(model)) return CM.CLUTTER ? (band === 6 ? CM.CLUTTER.crystal : CM.CLUTTER.stone) : null; const B = P.bands[band]; return B ? B.tint : null; };   /* (the stone: grey, crystal-blue in the Crystal Caverns) */
 }
@@ -31261,6 +31261,52 @@ Object.assign(CM.Game.prototype, {
   // the sunk chest: dived for while the water stands
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && fl.pos && this.mode === "explore") { const k = `${fl.pos[0]},${fl.pos[1]}`, t = fl.things[k]; if (t && t.type === "chest" && t.sunk && !t.opened && CM.floodDepth(this, fl, fl.pos[0], fl.pos[1]) > 0) { this.clock = (this.clock || 0) + B.diveMinutes; this.say(`The chest is under the water: ${this.alive()[0] ? this.alive()[0].name : "someone"} goes down for it, and comes up streaming, a quarter hour on.`); } }
       return u0.apply(this, a); }; }
+}
+
+// ---- 69zzv-rockfalls.js ----
+"use strict";
+// Rockfalls (UPGRADE_PLAN_63.md set 1.2, release 3): on the first four floors the roof is not to be trusted when
+// the ground above is sodden (CM.mudNow), when a gale blows above, or in the hour after a meteor's shock: now and
+// then, on the clock, a fall of rock comes down on a corridor square of the party's floor within twenty squares -
+// never a room, a doorway, a thing or a feature, never the party's square or the one beside it, never within six
+// squares of the way up on the first floor, never within six of another fall, never more than three a floor - and
+// it blocks that square. The rule that keeps a run from locking: before a fall is placed, every square that could be
+// reached from the stairs before must still be reachable with the fall counted as a wall, or it is not placed. A
+// fall is cleared by standing before it and pressing Space - twenty minutes of the clock and a little torch, never
+// an item - and clears itself after a day of the clock whatever the party does.
+//   CM.ROCKFALL                                 the numbers
+//   CM.rockfallStep(game, minutes)              the chance and the fall; wrapped into CM.tickClock
+//   CM.rockfallAt(game, fl, key)                a fall placed by hand (the harness, the tests): false if the way would close
+//   CM.rockfallsOf(fl) -> ["x,y"]               the falls standing
+//   CM.rockfallClear(game, key)                 the clearing (what Space does before one)
+{ const R = CM.ROCKFALL = { floors: [1, 2, 3, 4], perMinuteWet: 0.004, perMinuteGale: 0.003, perMinuteShock: 0.02, afterShockMinutes: 60, mostPerFloor: 3, apart: 6, nearShaft: 6, reach: 20, clearMinutes: 20, clearTorch: 2, lifeMinutes: 24 * 60 };
+  const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random());
+  CM.rockfallsOf = (fl) => Object.keys((fl && fl.things) || {}).filter((k) => fl.things[k].type === "debris");
+  // a fall is a wall for the walk (the party's, the pathing's, the monsters') - never for the map's shape
+  { const o0 = CM.isOpen; CM.isOpen = function (floor, x, y) { if (!o0(floor, x, y)) return false; const t = floor.things && floor.things[`${x},${y}`]; return !(t && t.type === "debris"); }; }
+  const stairsOf = (fl) => { for (const [k, t] of Object.entries(fl.things)) if (t.type === "ladder" || t.type === "stairs_up") return k.split(",").map(Number); return fl.pos; };
+  const inRoom = (fl, x, y) => (fl.rooms || []).some((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
+  const wayHolds = (fl, key) => { const S = stairsOf(fl), before = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y)), after = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y) && `${x},${y}` !== key); for (const k of before.keys()) if (k !== key && !after.has(k)) return false; return true; };
+  CM.rockfallAt = (game, fl, key, how) => { if (!fl || !R.floors.includes(fl.number) || !fl.things) return false; const [x, y] = key.split(",").map(Number), N = fl.grid.length; if (!(x > 0 && y > 0 && x < N - 1 && y < N - 1) || fl.grid[y][x] !== 0 || fl.things[key] || (fl.features || {})[key] || inRoom(fl, x, y)) return false;
+    if (fl.pos && Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 1) return false; const S = stairsOf(fl); if (fl.number === 1 && Math.abs(x - S[0]) + Math.abs(y - S[1]) <= R.nearShaft) return false;
+    const falls = CM.rockfallsOf(fl); if (falls.length >= R.mostPerFloor) return false; for (const f of falls) { const [fx, fy] = f.split(",").map(Number); if (Math.abs(fx - x) + Math.abs(fy - y) < R.apart) return false; }
+    if (!wayHolds(fl, key)) return false;
+    fl.things[key] = { type: "debris", at: CM.clockOf(game), how: how || "rain" }; game.plantsVersion = (game.plantsVersion || 0) + 1; if (game.emit) game.emit("rockfall", { x, y, how: how || "rain" }); return true; };
+  const chance = (game) => { const W = CM.aboveNow ? CM.aboveNow(game) : { wind: { speed: 0 } }, mud = CM.mudNow ? CM.mudNow(game) : 0, M = CM.lastMeteor ? CM.lastMeteor(game) : null, t = CM.clockOf(game);
+    return mud * R.perMinuteWet + (W.wind.speed > 0.8 ? R.perMinuteGale : 0) + (M && t - M.at >= 0 && t - M.at <= R.afterShockMinutes ? R.perMinuteShock : 0); };
+  CM.rockfallStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || !(minutes > 0)) return null; const fl = game.floor, t = CM.clockOf(game);
+    for (const k of CM.rockfallsOf(fl)) if (t - (fl.things[k].at || 0) >= R.lifeMinutes) { delete fl.things[k]; game.plantsVersion = (game.plantsVersion || 0) + 1; if (game.say && Math.abs(Number(k.split(",")[0]) - fl.pos[0]) + Math.abs(Number(k.split(",")[1]) - fl.pos[1]) <= R.reach) game.say("Somewhere near, a fall of rock has settled and slid: the way through it is open again."); }   // (a day on, it clears itself)
+    if (!R.floors.includes(fl.number) || game.mode !== "explore") return null; const p = chance(game); if (p <= 0 || rnd() >= 1 - Math.pow(1 - p, minutes)) return null;
+    const cands = []; const N = fl.grid.length; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { if (fl.grid[y][x] !== 0 || Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > R.reach) continue; cands.push(`${x},${y}`); }
+    for (let tries = 0; tries < 12 && cands.length; tries++) { const k = cands.splice(Math.floor(rnd() * cands.length), 1)[0]; if (CM.rockfallAt(game, fl, k, chance(game) >= R.perMinuteShock ? "shock" : CM.aboveNow(game).wind.speed > 0.8 ? "gale" : "rain")) { const [x, y] = k.split(",").map(Number), d = Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]); game.say(d <= 4 ? "The roof comes down close by with a crack and a roar - a fall of rock across the way, and dust in the torchlight." : "A rumble through the stone, and dust from the roof: somewhere near, the way has come down."); return k; } }
+    return null; };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.rockfallStep(game, minutes); }; }
+  // the way blocked, said; the clearing
+  const P = CM.Game.prototype;
+  { const m0 = P.move; P.move = function (rel) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; if (t && t.type === "debris") { this.sound("bump"); this.say("A fall of rock fills the way. (Space to clear it: twenty minutes' work)"); return false; } } return m0.call(this, rel); }; }
+  CM.rockfallClear = (game, key) => { const fl = game.floor, t = fl && fl.things[key]; if (!t || t.type !== "debris") return false; game.clock = (game.clock || 0) + R.clearMinutes; for (let i = 0; i < R.clearTorch; i++) if (game.burn) game.burn(); delete fl.things[key]; game.plantsVersion = (game.plantsVersion || 0) + 1; if (game.count) game.count("rockfallsCleared", 1);
+    game.say(`Twenty minutes with hands and shoulders${game.bag.some((i) => /pick/i.test(i.name || "")) ? " and the pick" : ""}, and the rock is shifted aside: the way is open.`); if (game.emit) game.emit("change"); return true; };
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const [dx, dy] = CM.DIRS[fl.facing], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; if (t && t.type === "debris") return CM.rockfallClear(this, k); } return u0.apply(this, a); }; }
 }
 
 // ---- 70-ui.js ----
@@ -46329,6 +46375,28 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
     if (game.on && !game._basinHooked) { game._basinHooked = true; game.on("moved", () => { if (CM.floodDepthHere(game) === 2 && CM.wadeSound) CM.wadeSound(true); }); } };
   // the look line names the water
   { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, w = g && look(g); const el = this.$ && this.$("#view .sky .wxtext"); if (el && w && !el.textContent.includes(w)) el.textContent += ` - ${w} in water`; } catch (e) { /* (quiet) */ } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzt-rockfalls.js ----
+"use strict";
+// Rockfalls - the window's side (UPGRADE_PLAN_63.md set 1.2, release 3): a fall of rock (69zzv-rockfalls.js) is a
+// heap of the pack's rocks on its square (added to the plants' instances by 69zzs-plants.js), the roof above it
+// broken dark, dust sifting down; when it falls the view shakes and a crack and a rumble are heard, and dust bursts
+// from the square; the look line names it.
+{ const r = Math.random; let dustAt = null;
+  const crack = (near) => { const A = CM.audio; if (!A || !A.ctx || !A.enabled || !A.master) return; try { const ctx = A.ctx, rate = ctx.sampleRate, secs = 2.6, n = Math.floor(rate * secs), b = ctx.createBuffer(1, n, rate), d = b.getChannelData(0); let lp = 0, lp2 = 0, s = 9191;
+      for (let i = 0; i < n; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; const w = s / 0x7fffffff * 2 - 1, t = i / rate; lp += (w - lp) * 0.05; lp2 += (lp - lp2) * 0.08; d[i] = (lp2 * 9 + Math.exp(-t * 30) * w * 0.6 + Math.exp(-(t - 0.12) * (t - 0.12) * 400) * w * 0.3) * Math.min(1, t / 0.02) * Math.exp(-t * 1.4); }
+      const src = ctx.createBufferSource(), g = ctx.createGain(); src.buffer = b; g.gain.value = near ? 0.7 : 0.4; src.connect(g); g.connect(A.master); src.start(); } catch (er) { /* quiet */ } };
+  const burst = (x, z) => { const A = CM.air && CM.air.parts; if (!A) return; for (let i = 0; i < 30; i++) { const a = r() * Math.PI * 2, sp = 0.4 + r() * 1.2; A.push({ kind: "smoke", age: 0.4, seed: r() * 10, sway: 0.5, swayAmp: 0.05, windy: 0, vx: Math.cos(a) * sp, vy: 0.3 + r() * 0.6, vz: Math.sin(a) * sp, life: 2.5 + r() * 2, size: 0.25 + r() * 0.2, grow: 0.15, glow: 0, alpha: 0.6, x: x + 0.5, z: z + 0.5, y: 0.2 + r() * 0.5, top: 1.2, layer: "air:smoke", drag: 1.5 }); } };
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, ren, dt, now) => { if (bf0) bf0(game, ren, dt, now); if (!game || !game.floor || !game.ext) return;
+    if (game.on && !game._rockHooked) { game._rockHooked = true; game.on("rockfall", (ev) => { const fl = game.floor, d = Math.abs(ev.x - fl.pos[0]) + Math.abs(ev.y - fl.pos[1]); ren.shake(d <= 4 ? 0.9 : 0.45); crack(d <= 6); burst(ev.x, ev.y); dustAt = { x: ev.x, y: ev.y, until: now + 4000 }; }); }
+    if (dustAt && now < dustAt.until && CM.air && r() < dt * 12) { const A = CM.air.parts; A.push({ kind: "dust", age: 0.4, seed: r() * 10, sway: 0.3, swayAmp: 0.03, windy: 0, vx: 0, vy: -0.35, vz: 0, life: 2.2, size: 0.03, glow: 0.4, alpha: 0.5, x: dustAt.x + 0.2 + r() * 0.6, z: dustAt.y + 0.2 + r() * 0.6, y: 0.95, top: 1.2, layer: "air:mote" }); } else if (dustAt && now >= dustAt.until) dustAt = null; };
+  // the roof over a fall, broken dark; the dust sifting down it while it stands
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.rockfallsOf || game.mode === "title") return out;
+      for (const k of CM.rockfallsOf(fl)) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "clut:port", flat: true, w: 0.95, base: CM.ceilAt(fl, x, y) - 0.012, shade: 0.5, alpha: 0.9 }); if (CM.air && r() < 0.08) CM.air.parts.push({ kind: "dust", age: 0.4, seed: r() * 10, sway: 0.3, swayAmp: 0.03, windy: 0, vx: 0, vy: -0.3, vz: 0, life: 2.5, size: 0.025, glow: 0.4, alpha: 0.4, x: x + 0.2 + r() * 0.6, z: y + 0.2 + r() * 0.6, y: 0.95, top: 1.2, layer: "air:mote" }); }
+      return out; }; }
+  // the look line
+  { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, fl = g && g.floor; if (!fl || !CM.rockfallsOf) return out; const [dx, dy] = CM.DIRS[fl.facing], k = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, t = fl.things[k]; const el = this.$ && this.$("#view .sky .wxtext"); if (el && t && t.type === "debris" && !el.textContent.includes("rockfall")) el.textContent += " - a rockfall ahead (Space to clear)"; } catch (e) { /* (quiet) */ } return out; }; }
 }
 
 // ---- 77-splash.js ----
