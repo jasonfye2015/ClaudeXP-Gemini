@@ -33,7 +33,7 @@ APPS = {
                  "Your AI Companion, with a memory that grows day by day"),
     "rpg": ("ClaudeRPG", "clauderpg", "open_rpg", "rpg_icon", "A cozy, endless dungeon adventure"),
     "claudemagic": ("Claude and Magic", "claudemagic", "launch", "magic_icon",
-                    "Twenty floors down, the Lich King waits: four go in together, in first person"),
+                    "Seventy floors down, the Lich King waits: four go in together, in first person"),
     "pystudio": ("Copilot Python Studio", "pystudio", "launch", "studio_icon",
                  "Write, debug and run Python, with an AI Helper"),
     "qbstudio": ("Claude QBasic Studio", "qbstudio", "launch", "studio_icon",
