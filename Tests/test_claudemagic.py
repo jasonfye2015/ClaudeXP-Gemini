@@ -25,6 +25,7 @@ import claudemagic as M  # noqa: E402
 
 GAME = support.TIMELINE / "ClaudeGames" / "claudemagic"
 SEED = "ember-crypt-417"
+TIMEOUT = 360   # (five tests in Qt's software WebGL take about 150 s on a quiet machine, more under load)
 _page = {}
 
 
@@ -98,7 +99,7 @@ def test_the_build_is_current():
     built = M.game_file()
     assert built is not None and built.name == b.NAME.format(b.VERSION), built
     text = built.read_text(encoding="utf-8")
-    assert text == b.build_text(), "game/Claude and Magic v*.html is out of date: run  python build.py  in ClaudeGames/claudemagic"
+    assert b.same_but_stamp(text, b.build_text()), "game/Claude and Magic v*.html is out of date: run  python build.py  in ClaudeGames/claudemagic"   # (the day stamp aside)
     assert "<script src" not in text and "<link rel=\"stylesheet\"" not in text, "the one file leans on another"
     assert f"v{b.VERSION}" in text and "__VERSION__" not in text
 
