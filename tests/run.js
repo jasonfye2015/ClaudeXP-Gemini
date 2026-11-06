@@ -7116,6 +7116,35 @@ test("Return to Claude: only once met; free above ground, once a floor below at 
   g.floor.pos = [8, 9]; g.floor.facing = 0; g.use(); assert.strictEqual(panels.pop(), "look", "Space at the lamp");
 });
 
+test("the lore-master: the shelves open the journal's pages; a kind met, a guardian reached and a thing carried answered from the game's own tables; hints in three tiers, remembered; the walls that disagree told", () => {
+  const CM = load(), C = CM.CLAUDE_CABIN;
+  const g = new CM.Game(); g.newGame("lore-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  const talks = [], panels = []; g.on("talk", (t) => talks.push(t.text)); g.on("claudePanel", (id) => panels.push(id));
+  const go = (label) => { const i = g.claudeMenu.findIndex((o) => o[0] === label); assert.ok(i >= 0, `${label} offered: ${g.claudeMenu.map((o) => o[0])}`); g.choose(k, i); };
+  g.claudeTalk(k); go("lore-master"); assert.ok(!g.claudeMenu.some((o) => o[0] === "foes"), "nothing fought, nothing to ask");
+  go("library"); for (const id of ["codex", "things", "journal"]) { g.choose(k, g.claudeMenu.findIndex((o) => o[2] === id)); g.claudeTalk(k); go("lore-master"); go("library"); }
+  assert.strictEqual(panels.join(","), "codex,things,journal");
+  // a kind met: from the tables
+  g.bestiary = { Wraith: { seen: 3, slain: 1, weak: [], resist: [] } }; g.claudeTalk(k); go("lore-master"); go("foes"); g.choose(k, 0);
+  const w = talks.pop(); assert.ok(/You've met 3 of them, and put down 1/.test(w) && /holy/.test(w) && /frost/i.test(w) && /little to it/.test(w), w);
+  // a guardian: the reached and the next, never all
+  g.claudeTalk(k); go("lore-master"); go("guardians"); const shown = g.claudeMenu.filter((o) => o[0] === "guardian"); assert.ok(shown.length >= 1 && shown.length < CM.GUARDIAN_ORDER.length, "not the ones far below");
+  g.choose(k, 0); const r = talks.pop(); assert.ok(/The Rat King, on floor 17/.test(r) && /fire/.test(r) && /talks before it fights/.test(r), r);
+  // a thing carried
+  g.bag.unshift({ name: "Odd ring", kind: "trinket", unknown: true, props: {} }); g.claudeTalk(k); go("lore-master"); go("things"); g.choose(k, 0); assert.ok(/can't say what it is/.test(talks.pop()));
+  // hints: three tiers, remembered
+  g.claudeTalk(k); go("lore-master"); go("hints"); const names = g.claudeMenu.filter((o) => o[0] === "hint").map((o) => o[2]); assert.ok(names.includes("heart") && names.includes("remind") && names.includes("margins"));
+  g.choose(k, g.claudeMenu.findIndex((o) => o[2] === "remind")); assert.strictEqual(g.claudeMenu.filter((o) => o[0] === "tier").length, 3);
+  g.choose(k, 0); assert.ok(/can't yet answer 5 of them/.test(talks.pop()), "a nudge"); assert.strictEqual(g.vext("claude").hints.remind, 0); assert.ok(g.ext("claude").hinted);
+  CM.claudeActs.hint(g, k, null, "remind"); g.choose(k, 2); const ans = talks.pop(); assert.ok(/Floors? \d/.test(ans), ans); assert.strictEqual(g.vext("claude").hints.remind, 2, "the answer, remembered");
+  CM.claudeActs.hint(g, k, null, "remind"); assert.ok(/again/.test(g.claudeMenu[0][1]), "taken before, marked");
+  CM.claudeActs.hint(g, k, null, "margins"); g.choose(k, 2); assert.ok(new RegExp(`Floor ${CM.marginFloor("lore-1", 0)}`).test(talks.pop()), "the page's floor");
+  // the walls that disagree
+  const L = Object.values(CM.LORE_TEXT).find((l) => l.contradicts); g.story.read[L.key] = 30; g.story.read[L.contradicts] = 5;
+  g.claudeTalk(k); go("lore-master"); go("lies"); g.choose(k, 0); assert.ok(/The lower one's the truer/.test(talks.pop()));
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
