@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Six lairs and dens (v95.0, UPGRADE_PLAN_65.md release 5)
+  (src/js/69zzzh-lairs.js, src/js/76zzzzzzzzzzzc-lairs.js, UPGRADE_PLAN_65.md)
+  - Lairs and dens (plan 65, release 5): the Rat King's Nest, rats on every flag and a nest of rags with a crowned
+    rat on it - go for the crown and the floor goes for you, and under the rags is what the fled have dropped; the
+    Hatchery, wyvern eggs in warm sand - one taken is worth selling, and the mother comes down the shaft after it,
+    once; the Bandit Camp, four round a fire with their pile behind them: the rivals' own parley, a toll, a trade or a
+    fight; the Vampire's Parlour, a table laid for guests and a host who offers the band's relic for five of a hero's
+    blood for the run - sit again to agree, stand and go to refuse, touch the candlesticks and he follows; the Golem
+    Forge, a crystal golem half made on a slab and a lever that finishes it - it was made for a war, and knows no
+    friend; and the Drowned Shrine, a ring of the Drowned on their knees round a sea-stone with a pearl on it - lay
+    a thing of flesh on the stone and they let it go, take it bare and they rise. Fifty-six rooms now.
+
 The second five trials (v94.0, UPGRADE_PLAN_65.md release 4)
   (src/js/69zzzg-trials2.js, src/js/76zzzzzzzzzzzb-trials2.js, UPGRADE_PLAN_65.md)
   - The trials, the second five (plan 65, release 4): the Wind Tunnel, a draught down the middle of a long hall
