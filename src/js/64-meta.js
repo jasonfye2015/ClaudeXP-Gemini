@@ -759,6 +759,7 @@ CM.ledgerFromFame = function (entry) {
   return Object.assign(CM.ledgerLine(entry, classes), { t: 0, old: 1 });
 };
 CM.BANDS = [[1, 5], [6, 10], [11, 15], [16, 20], [21, 25], [26, 30], [31, 35], [36, 40], [41, 45], [46, 50], [51, Infinity]];
+CM.BANDS = CM.BANDS.map(([a, b]) => [CM.realOf(a - 1) + 1, b === Infinity ? Infinity : CM.realOf(b)]);   // (plan 66: the statistics' bands in real floors)
 CM.statistics = function (ledger) {
   const st = { runs: 0, crowns: 0, bottoms: 0, fell: 0, old: 0, deepest: 0, steps: 0, fights: 0, kills: 0, fled: 0, chests: 0, gold: 0, spent: {}, spentTotal: 0, first: null, last: null,
     bands: CM.BANDS.map(([from, to]) => ({ from, to, fell: 0, through: 0 })), callings: {}, difficulties: {} };
