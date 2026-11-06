@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Facing the attacker (v98.0, UPGRADE_PLAN_67.md)
+  (src/js/69zzzj-engage.js, src/js/76zzzzzzzzzzzd-engage.js, src/js/62-combat.js, src/js/50-audio.js, UPGRADE_PLAN_67.md)
+  - Facing the attacker (plan 67): when a fight begins with the foes beside or behind the party, the party turns to
+    face them before the first blow - the view swings round to them, and a flight now runs away from them. One fight
+    is one group, so the facing changes only when a fight begins: a second group that comes up mid-fight waits its
+    turn and is faced when its own fight starts, with no bouncing between them. The fight's start has its own
+    flourish: a red border and a jolt with a hard stinger when the party is caught napping, amber with two notes when
+    they come in plain sight, gold and a rising phrase when the party has the drop on them, and a word for a moment -
+    FROM BEHIND, FROM THE LEFT, AMBUSH - so the turn reads as the party's. A faint border stays for the fight. A
+    movement key pressed in a fight says, once, how to get out of it.
+
 The heroes' portraits are sprites (v97.0, the party's pictures)
   (src/js/35e-dolls.js, src/js/36-looks.js, src/js/80-main.js, src/js/76d-fortress.js, src/js/76h-claudecraft.js, tools/dolls.py)
   - The heroes' portraits are sprites now: every calling's doll - body, boots, legs, armour, cloak, hair, helm or

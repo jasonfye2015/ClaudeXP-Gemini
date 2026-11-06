@@ -85,3 +85,18 @@ Three tiers, by how the fight began, each with a look and a sound:
 2. Release 2: the flourish - the border glow and the direction word, the three stingers, the fight bed in the
    music, the dimmed movement buttons with their tooltip and the once-a-fight line.
 3. Later, if wanted: Option C as a setting ("Turn freely in a fight").
+
+## 5. Progress
+
+- v98.0 - both releases at once (snap-and-settle for every fight, as asked): 69zzzj-engage.js wraps startCombat -
+  a fight whose foes stand beside or behind the party turns the party to them before the first blow (dungeon, Wood
+  and Undercroft; not the town, the tower or the Fortress), and emits "engaged" { how: ambush | met | drop, from,
+  turned, facing } (62-combat.js records how). 50-audio.js: three stingers (stinger_ambush, stinger_met,
+  stinger_drop), panned toward the side the attacker came from, under the battle music that already plays.
+  76zzzzzzzzzzzd-engage.js: the camera's eased turn (instant under reduced motion), the border glow (red with a
+  short shake and the party bar flashing for an ambush, amber for a plain meeting, gold with a punch-in for the
+  drop), a word for a second ("FROM BEHIND", "AMBUSH - FROM THE LEFT", "THE DROP ON THEM"), the faint border kept
+  for the fight's length, and a movement key pressed in a fight says once how to get out (the flee key).
+- Decisions taken: no setting for the turn - the turn is part of the rules (a flight reads the facing), so a
+  setting would make a replay disagree with the run it replays; the dimmed movement buttons are not needed - the
+  action bar already shows only the fight's actions in a fight - so the key hint does that job.

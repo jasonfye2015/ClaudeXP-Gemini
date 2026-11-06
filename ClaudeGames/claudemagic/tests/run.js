@@ -6941,6 +6941,25 @@ test("the heroes' portraits are sprites: the dolls' atlas (Dungeon Crawl Stone S
   for (const f of ["76d-fortress.js", "76h-claudecraft.js"]) assert.ok(!/portraitDrawn\(/.test(fs.readFileSync(path.join(__dirname, "..", "src", "js", f), "utf8")), `${f} draws the sprite portrait`);
 });
 
+test("being engaged (plan 67): a group that reaches the party from the right, from behind or from the left turns the party to face it before the first blow, and says how the fight began; a group already ahead turns nothing; a second group arriving mid-fight waits and the facing holds; flight then runs away from the attacker; the turn is the same in a replay", () => {
+  const CM = load();
+  const setup = (seed) => { const g = new CM.Game(); g.newGame(seed, fixedParty(CM)); const fl = g.floor; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { if (Math.abs(x - 10) <= 3 && Math.abs(y - 10) <= 3) { fl.grid[y][x] = 0; delete fl.things[`${x},${y}`]; delete fl.features[`${x},${y}`]; } } fl.pos = [10, 10]; fl.facing = 0; g.mode = "explore"; g.combat = null; g.foes = []; return g; };
+  const group = (CM, g) => { const R = new CM.Random(4); return { type: "monsters", group: [CM.makeMonster(CM.monsterKind("Giant Rat"), 1, R)] }; };
+  const DIRS = CM.DIRS, names = ["ahead", "right", "behind", "left"];
+  for (const rel of [1, 2, 3]) {
+    const g = setup(`eng-${rel}`), fl = g.floor, d = (fl.facing + rel) % 4, k = `${10 + DIRS[d][0]},${10 + DIRS[d][1]}`, seen = []; g.on("engaged", (ev) => seen.push(ev));
+    fl.things[k] = group(CM, g); g.startCombat(k, fl.things[k], true);
+    assert.strictEqual(fl.facing, d, `from the ${names[rel]}: turned to face it`); assert.strictEqual(seen.length, 1);
+    assert.ok(seen[0].turned && seen[0].from === names[rel] && ["ambush", "met", "drop"].includes(seen[0].how), JSON.stringify(seen[0]));
+    if (g.mode === "combat") { // a second group comes up behind mid-fight: the facing holds
+      const back = (d + 2) % 4, k2 = `${10 + DIRS[back][0]},${10 + DIRS[back][1]}`; fl.things[k2] = group(CM, g); g.wanderMonsters(); assert.strictEqual(fl.facing, d, "no bouncing: the first attacker stays faced");
+      const before = fl.pos.slice(); delete fl.things[k2]; g.flee(true); const dx = fl.pos[0] - before[0], dy = fl.pos[1] - before[1], n = Math.abs(dx) + Math.abs(dy); assert.ok(n >= 1 && dx === -DIRS[d][0] * n && dy === -DIRS[d][1] * n, `flight runs away from the attacker (${dx},${dy})`); }
+  }
+  { const g = setup("eng-0"), fl = g.floor, k = `${10 + DIRS[0][0]},${10 + DIRS[0][1]}`, seen = []; g.on("engaged", (ev) => seen.push(ev)); fl.things[k] = group(CM, g); g.startCombat(k, fl.things[k], false); assert.strictEqual(fl.facing, 0, "ahead: no turn"); assert.ok(seen.length === 1 && !seen[0].turned && seen[0].from === "ahead"); }
+  { const g = setup("eng-far"), fl = g.floor, seen = []; g.on("engaged", (ev) => seen.push(ev)); fl.things["13,13"] = group(CM, g); g.startCombat("13,13", fl.things["13,13"], true); assert.strictEqual(fl.facing, 0, "a fight not beside the party (a spell, a set piece) turns nothing"); }
+  assert.strictEqual(CM.engageFrom({ pos: [5, 5] }, "6,5"), CM.DIRS.findIndex(([x, y]) => x === 1 && y === 0)); assert.strictEqual(CM.engageFrom({ pos: [5, 5] }, "7,5"), null);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

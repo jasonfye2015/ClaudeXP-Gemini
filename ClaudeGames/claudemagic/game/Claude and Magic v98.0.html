@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v97.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v98.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "97.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "98.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -11146,6 +11146,9 @@ CM.audio = {
       fallen: () => T([[220, 0.15], [165, 0.2], [110, 0.45]], "square", 0.14),
       ailment: () => this._mix(T([[440, 0.35]], "sine", 0.1), T([[466, 0.35]], "sine", 0.1)),
       grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),
+      stinger_ambush: () => this._mix(N(0.18, 0.6, 0.35, 83), this._sweep(110, 55, 0.5, "sawtooth", 0.16), this._after(0.08, T([[147, 0.5]], "sawtooth", 0.1)), this._after(0.08, T([[156, 0.5]], "sawtooth", 0.08)), this._after(0.12, N(0.35, 0.2, 0.1, 89))),   // (plan 67: caught napping - a drum and a low brass clash)
+      stinger_met: () => this._mix(N(0.1, 0.4, 0.4, 87), T([[220, 0.12], [294, 0.3]], "sawtooth", 0.09)),   // (they come, in plain sight: two notes)
+      stinger_drop: () => this._mix(T([[294, 0.09], [370, 0.09], [440, 0.09], [587, 0.3]], "triangle", 0.12), this._after(0.02, N(0.06, 0.25, 0.5, 91))),   // (the drop on them: rising)
       shatter: () => this._mix(N(0.3, 0.4, 0.95, 53), this._after(0.05, T(Array.from({ length: 10 }, (_, i) => [2000 + i * 300, 0.02]), "sine", 0.1)), this._after(0.4, this._sweep(300, 60, 0.8, "sine", 0.12))),
     };
     for (const [name, make] of Object.entries(recipes)) Object.defineProperty(this.buffers, name, { configurable: true, enumerable: true,   // (v26.4: made when first wanted - all of them at the start was a quarter of a second)
@@ -14222,6 +14225,7 @@ Object.assign(CM.Game.prototype, {
       if (m.champion === "shadowed" && !m.hidden) this.say(`${this.alive().find((h) => h.cls === "Rogue").name} sees ${CM.the(m)} in the shadows.`);
     }
     if (this.foes.some((m) => m.champion)) this.say(`A champion leads them: ${this.foes.filter((m) => m.champion).map((m) => `${m.name} (${CM.CHAMPIONS[m.champion].blurb})`).join("; ")}.`);
+    this.engagedHow = "met";
     let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
@@ -14230,14 +14234,17 @@ Object.assign(CM.Game.prototype, {
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
     if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); this.sound("bark"); }
     if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
+      this.engagedHow = "drop";
       this.say("They are asleep. The party's blows fall before they wake.");
       this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
     } else if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+      this.engagedHow = "ambush";   /* (plan 67: the window's flourish reads it) */
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
       if (this.mode !== "combat") return;
     } else if (!theyCame && !this.asc("watchful") && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
+      this.engagedHow = "drop";
       this.say("You have the drop on them: a free round!");
       this.combat.surprise = true;
     }
@@ -32231,6 +32238,30 @@ Object.assign(CM.Game.prototype, {
       return u0.apply(this, a); }; }
 }
 
+// ---- 69zzzj-engage.js ----
+"use strict";
+// Being engaged (UPGRADE_PLAN_67.md): when a fight begins with the foes on a square beside or behind the party, the
+// party turns to face them first - before the fight's first blow, so the attacker is in view and a flight runs away
+// from it. One group is one fight and one square, so the facing changes only at a fight's start: a second group that
+// reaches the party mid-fight waits (as it always has) and is faced only when its own fight begins - no bouncing
+// between attackers. Then the game says how the fight began, for the window's flourish:
+//   game.on("engaged", { how, from, turned, facing })   how: ambush | met | drop;  from: ahead | right | behind | left
+// The turn is part of the rules (the fight's dice don't read the facing, a flight does), so a replay turns the same.
+{ CM.ENGAGE = { from: ["ahead", "right", "behind", "left"] };
+  const P = CM.Game.prototype;
+  const plainFloor = (game, fl) => fl && fl.pos && fl.grid && fl.number !== 0 && game.mode === "explore" && !(CM.isTowerFloor && CM.isTowerFloor(fl.number));   /* (the dungeon, the Wood, the Undercroft; not the town or the tower) */
+  CM.engageFrom = (fl, key) => { if (!fl || !fl.pos || typeof key !== "string") return null; const [x, y] = key.split(",").map(Number), dx = x - fl.pos[0], dy = y - fl.pos[1]; if (Math.abs(dx) + Math.abs(dy) !== 1) return null; const d = CM.DIRS.findIndex(([ex, ey]) => ex === dx && ey === dy); return d < 0 ? null : d; };
+  const sc0 = P.startCombat;
+  P.startCombat = function (key, thing, theyCame = false) {
+    const fl = this.floor; let turned = false, from = "ahead";
+    if (plainFloor(this, fl)) { const d = CM.engageFrom(fl, key); if (d !== null && d !== fl.facing) { from = CM.ENGAGE.from[(d - fl.facing + 4) % 4]; fl.facing = d; turned = true; } }
+    this.engagedHow = "met";
+    const out = sc0.call(this, key, thing, theyCame);
+    if (fl && this.floor === fl) this.emit("engaged", { how: this.engagedHow || "met", from, turned, facing: fl.facing, theyCame: Boolean(theyCame) });
+    return out;
+  };
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -47564,6 +47595,49 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
     oldcamp: (t, x, y, now) => (t.rested ? [{ x, y, layer: "sp:fire", w: 0.8, h: 0.7, glow: 0.4 + 0.1 * Math.sin(now / 150) }] : [{ x, y, layer: "sp:coldfire", w: 0.8, h: 0.6 }]),
   });
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || game.mode === "title" || !fl.things) return out; for (const [k, t] of Object.entries(fl.things)) { if (t.type !== "rivals" || !t.camp) continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "sp:fire", w: 0.7, h: 0.6, glow: 0.45 + 0.12 * Math.sin(now / 140 + x), dz: 0.25 }); } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzzd-engage.js ----
+"use strict";
+// Being engaged - the window's side (UPGRADE_PLAN_67.md): when a fight begins the view turns to the attacker (quick,
+// eased; at once under reduced motion), its border glows by how the fight began - red for an ambush with a short
+// shake, amber when they come in plain sight, gold when the party has the drop on them - a stinger sounds under the
+// battle music, and a word says where they came from ("FROM BEHIND") so the turn reads as the party's, not the
+// camera's. A movement key pressed in a fight says, once a fight, how to get out of it.
+{ const CSS = `
+#view .engage-glow { position: absolute; inset: 0; pointer-events: none; z-index: 6; opacity: 0; border-radius: 2px; }
+#view .engage-glow.on { animation: engageGlow 1.4s ease-out forwards; }
+#view .engage-glow.ambush { box-shadow: inset 0 0 0 3px rgba(255,60,40,0.95), inset 0 0 70px 18px rgba(200,20,10,0.75); }
+#view .engage-glow.met { box-shadow: inset 0 0 0 3px rgba(255,170,50,0.9), inset 0 0 60px 14px rgba(210,120,20,0.55); }
+#view .engage-glow.drop { box-shadow: inset 0 0 0 3px rgba(255,225,120,0.95), inset 0 0 60px 14px rgba(230,190,60,0.55); }
+@keyframes engageGlow { 0% { opacity: 0; } 12% { opacity: 1; } 55% { opacity: 0.85; } 100% { opacity: 0.32; } }
+#view .engage-word { position: absolute; left: 0; right: 0; top: 18%; text-align: center; pointer-events: none; z-index: 7; font: 700 22px Georgia, serif; letter-spacing: 0.18em; color: #fff; text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 2px #000; opacity: 0; }
+#view .engage-word.on { animation: engageWord 1.5s ease-out forwards; }
+#view .engage-word.ambush { color: #FFB0A0; } #view .engage-word.drop { color: #FFE8A0; }
+@keyframes engageWord { 0% { opacity: 0; transform: scale(1.25); } 15% { opacity: 1; transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; } }
+#party.engaged-ambush { animation: engageParty 0.6s ease-out 1; }
+@keyframes engageParty { 0% { box-shadow: 0 0 0 0 rgba(255,60,40,0); } 30% { box-shadow: 0 0 18px 4px rgba(255,60,40,0.8); } 100% { box-shadow: 0 0 0 0 rgba(255,60,40,0); } }
+@media (prefers-reduced-motion: reduce) { #view .engage-glow.on, #view .engage-word.on { animation-duration: 0.01s; opacity: 0.4; } }`;
+  const WORDS = { right: "FROM THE RIGHT", behind: "FROM BEHIND", left: "FROM THE LEFT" }, HOW = { ambush: "AMBUSH!", drop: "THE DROP ON THEM" };
+  const setup = () => { if (document.getElementById("engage-css")) return; const st = document.createElement("style"); st.id = "engage-css"; st.textContent = CSS; document.head.appendChild(st); };
+  const restart = (el, cls) => { el.className = cls; void el.offsetWidth; el.className = `${cls} on`; };
+  const flourish = (ev) => { const view = document.getElementById("view"); if (!view) return; setup();
+    let glow = view.querySelector(".engage-glow"); if (!glow) { glow = document.createElement("div"); view.appendChild(glow); } restart(glow, `engage-glow ${ev.how}`);
+    const text = ev.turned ? WORDS[ev.from] : HOW[ev.how]; let word = view.querySelector(".engage-word"); if (!word) { word = document.createElement("div"); view.appendChild(word); } if (text) { word.textContent = ev.turned && ev.how === "ambush" ? `AMBUSH - ${text}` : text; restart(word, `engage-word ${ev.how}`); } else word.className = "engage-word";
+    clearTimeout(flourish.t); flourish.t = setTimeout(() => { const g = CM.game; if (!g || g.mode !== "combat") glow.className = "engage-glow"; }, 1500);
+    const party = document.getElementById("party"); if (party && ev.how === "ambush") { party.classList.remove("engaged-ambush"); void party.offsetWidth; party.classList.add("engaged-ambush"); } };
+  const bind = () => { const g = CM.game; if (!g || !g.on || g._engageBound) return Boolean(g && g._engageBound); g._engageBound = true;
+    g.on("engaged", (ev) => { const R = CM.renderer, smooth = g.settings && g.settings.smooth && !CM.reducedMotion;
+      if (ev.turned && R && R.turnTo) R.turnTo(ev.facing, smooth ? 240 : 0);
+      if (R && R.shake && ev.how === "ambush") R.shake(0.45); else if (R && R.punch && ev.how === "drop") R.punch();
+      if (CM.audio && CM.audio.play) CM.audio.play(`stinger_${ev.how}`, 0.85, ev.from === "left" ? -0.5 : ev.from === "right" ? 0.5 : 0);
+      g.engageHinted = false; flourish(ev); });
+    g.on("mode", (m) => { if (m !== "combat") { const glow = document.querySelector("#view .engage-glow"); if (glow) glow.className = "engage-glow"; } });
+    // a movement key in a fight: say once how to get out
+    window.addEventListener("keydown", (e) => { if (g.mode !== "combat" || g.engageHinted || (CM.ui && CM.ui.dialogOpen && CM.ui.dialogOpen())) return; const K = (g.settings && g.settings.keys) || CM.DEFAULT_KEYS || {}, moves = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", K.forward, K.back, K.left, K.right, K.strafeLeft, K.strafeRight].filter(Boolean); if (!moves.includes(e.code)) return;
+      g.engageHinted = true; const run = String(K.run || "KeyR").replace(/^Key|^Digit/, ""); g.say(`You're in a fight: no walking off. Fight it out, or Flee (${run}) - back, away from them.`); g.emit("change"); });
+    return true; };
+  if (!bind()) { const i0 = setInterval(() => { if (bind()) clearInterval(i0); }, 400); }
 }
 
 // ---- 77-splash.js ----
