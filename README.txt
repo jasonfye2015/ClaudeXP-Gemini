@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The memory rooms (v96.0, UPGRADE_PLAN_65.md release 6)
+  (src/js/69zzzi-memory.js, tests/run.js, UPGRADE_PLAN_65.md)
+  - Memory, story and the town (plan 65, release 6): the Chronicle Wall, ten panels painted with this house's own
+    runs off the ledger - who went down, how far, how it ended - and a rubbing of one is a trinket, +1 to the stat
+    the party has least of; the Old Camp, a ring of cold stones, a note in the hand of one of the memorial's dead,
+    and an hour at the old fire that mends the party a little, once; the Festival Hall, dressed when entered for the
+    calendar's nearest festival - lanterns for the Night of Bells and Midwinter, bones for the Feast of the Dead,
+    glowcaps for the Greening - with a chest whose bar lifts on the festival's own day; and the Smuggler's Drop, a
+    false door with a mark cut low in its frame, and behind it three things of the town's trade worth double.
+    Sixty curated rooms, two plans complete.
+
 Six lairs and dens (v95.0, UPGRADE_PLAN_65.md release 5)
   (src/js/69zzzh-lairs.js, src/js/76zzzzzzzzzzzc-lairs.js, UPGRADE_PLAN_65.md)
   - Lairs and dens (plan 65, release 5): the Rat King's Nest, rats on every flag and a nest of rags with a crowned
