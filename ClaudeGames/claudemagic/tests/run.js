@@ -7004,7 +7004,7 @@ test("Claude, at the end of the green path: the path leaves the road and is walk
   g.floor.pos = C.front.slice(); g.floor.facing = 2; assert.ok(g.use()); assert.strictEqual(g.floor.number, CM.CLAUDE_ROOM); assert.ok(!g.inTown(), "the cabin is not the town");
   const at = (spot) => { g.clock = 0; while (CM.claudeSpot(g) !== spot) g.clock += 30; g.claudeLeave(); g.floor.pos = C.front.slice(); g.floor.facing = 2; g.use(); return Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "claude"); };
   assert.strictEqual(at("hearth"), "4,7"); assert.strictEqual(at("bed"), "9,3"); const k = at("desk"); assert.strictEqual(k, "6,4");
-  g.claudeTalk(k); const menu = choices.pop(); assert.strictEqual(menu.title, "Claude"); assert.strictEqual(menu.options.length, 8);
+  g.claudeTalk(k); const menu = choices.pop(); assert.strictEqual(menu.title, "Claude"); assert.ok(menu.options.length >= 8 && menu.options.includes("How are we doing?") && menu.options[menu.options.length - 1] === "Goodbye");
   const pick = (label) => g.choose(k, g.claudeMenu.findIndex((o) => o[0] === label));
   // how are we doing: from the party's real state
   g.party[0].hp = 1; pick("read"); assert.ok(talks.pop().includes(`${g.party[0].name} is hurt - 1 of ${g.party[0].max}`), "the weakest hero, by name");
@@ -7082,6 +7082,38 @@ test("the two Claudes: the letter to the king, written once the Margins are home
   assert.strictEqual(offered("kingletter"), -1, "no letter needed after he's remembered");
   // a letter home after a guardian
   g.trip().deepest = 17; g.trip().guardians.push("The Rat King"); const L0 = g.letters().length; g.writeLetters(); assert.ok(g.letters().some((l) => l.hero === "Claude" && /The Rat King/.test(l.text)), "Claude's letter"); assert.ok(g.letters().length > L0);
+});
+
+test("Return to Claude: only once met; free above ground, once a floor below at an hour's cost, never on a ladder run or from the king's floor; his door back where we were, to the clearing or to the town; the house's things open the game's panels", () => {
+  const CM = load(), C = CM.CLAUDE_CABIN;
+  const g = new CM.Game(); g.newGame("home-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.ok(/haven't met Claude/.test(g.claudeReturnWhy()), "not before he's met"); assert.ok(!g.returnToClaude());
+  g.vext("claude").met = 1;
+  // from the town: free
+  const c0 = g.clock; const town = g.floor.pos.slice(); assert.strictEqual(g.claudeReturnWhy(), ""); g.returnToClaude(); assert.strictEqual(g.floor.number, CM.CLAUDE_ROOM); assert.ok(g.clock - c0 <= 2, "no hour from above ground");
+  assert.ok(/already/.test(g.claudeReturnWhy()), "not from his own floor");
+  const choices = []; g.on("choice", (c) => choices.push(c));
+  g.floor.pos = [6, 9]; g.floor.facing = 2; g.use(); const door = choices.pop(); assert.strictEqual(door.options.length, 3); assert.ok(/the town/.test(door.options[0]), door.options[0]);
+  g.choose("6,10", 0); assert.strictEqual(g.floor.number, 0); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(town), "back where we were");
+  // from below: once a floor, an hour
+  g.enterFloor(3, "down"); const at = g.floor.pos.slice(), c1 = g.clock; assert.ok(g.returnToClaude()); assert.ok(g.clock - c1 >= CM.RETURN_COST, "an hour from below");
+  g.claudeLeave("back"); assert.strictEqual(g.floor.number, 3); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(at));
+  assert.ok(/once already/.test(g.claudeReturnWhy()), "once a floor"); g.enterFloor(4, "down"); assert.strictEqual(g.claudeReturnWhy(), "", "the next floor, again");
+  g.mode = "combat"; assert.ok(g.claudeReturnWhy()); g.mode = "explore";
+  g.returnToClaude(); g.claudeLeave("clearing"); assert.strictEqual(g.floor.number, -1); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(C.front), "out into the clearing");
+  g.returnToClaude(); g.claudeLeave("town"); assert.strictEqual(g.floor.number, 0, "home to the town");
+  // never on a ladder run, nor from the king's floor
+  g.iron = true; assert.ok(/ladder/.test(g.claudeReturnWhy())); g.iron = false; g.ascension = 2; assert.ok(/ladder/.test(g.claudeReturnWhy())); g.ascension = 0;
+  g.enterFloor(CM.LAST_FLOOR, "down"); assert.ok(/king/.test(g.claudeReturnWhy())); g.enterFloor(0, "rope", CM.TOWN_AT.well.slice());
+  // the house
+  const panels = [], talks = []; g.on("claudePanel", (id) => panels.push(id)); g.on("talk", (t) => talks.push(t.text));
+  g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.claudeTalk(k); const hi = g.claudeMenu.findIndex((o) => o[0] === "house"); assert.ok(hi >= 0); g.choose(k, hi); assert.strictEqual(g.claudeMenu.length, Object.keys(CM.CLAUDE_HOUSE).length + 1);
+  for (const id of ["transfer", "look", "pace", "keys", "sound", "stats", "credits"]) { g.claudeTalk(k, "house", Object.keys(CM.CLAUDE_HOUSE).map((i) => ["panel", i, i])); g.choose(k, Object.keys(CM.CLAUDE_HOUSE).indexOf(id)); }
+  assert.strictEqual(panels.join(","), "transfer,look,pace,keys,sound,stats,credits", "each thing its panel");
+  g.claudePanel("run"); assert.ok(talks.pop().includes(`seed ${g.seed}`), "the window: this run");
+  g.floor.pos = [6, 9]; g.floor.facing = 3; for (let i = 0; i < 3; i++) g.move(0); g.floor.pos = [3, 7]; g.floor.facing = 3; g.use(); assert.strictEqual(panels.pop(), "sound", "Space at the kettle");
+  g.floor.pos = [8, 9]; g.floor.facing = 0; g.use(); assert.strictEqual(panels.pop(), "look", "Space at the lamp");
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

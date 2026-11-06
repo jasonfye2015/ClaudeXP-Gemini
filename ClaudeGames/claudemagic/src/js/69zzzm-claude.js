@@ -54,14 +54,14 @@
   { const it0 = P.inTown; P.inTown = function () { if (this.floor && this.floor.interior === "claude") return false; return it0.call(this); }; }
   // where Claude is, by the hour: the desk by day, the hearth in the evening, the bed after midnight
   const spotNow = (game) => { const h = CM.hourOf ? CM.hourOf(game) : 12; return h >= 6 && h < 18 ? "desk" : h >= 18 ? "hearth" : "bed"; };
-  CM.claudeSpot = spotNow;
+  CM.claudeSpot = spotNow; CM.claudePlace = (game) => place(game);
   const place = (game) => { const fl = game.floor; if (!fl || fl.interior !== "claude") return; const want = SPOTS[spotNow(game)], cur = Object.keys(fl.things).find((k) => fl.things[k].type === "claude"); if (cur === key(...want)) return; const t = cur ? fl.things[cur] : { type: "claude" }; if (cur) delete fl.things[cur]; fl.things[key(...want)] = t; };
   Object.assign(P, {
-    claudeEnter() { if (!this.floor || this.floor.number !== -1) return false; this.logAct && this.logAct("claudeEnter"); this.sound && this.sound("door"); this.enterFloor(ROOM, "rope", START.slice()); this.floor.facing = 0; place(this);
+    claudeEnter(how) { if (!this.floor || (this.floor.number !== -1 && how !== "page")) return false; this.logAct && this.logAct("claudeEnter", how); this.sound && this.sound(how === "page" ? "page" : "door"); this.enterFloor(ROOM, "rope", START.slice()); this.floor.facing = 0; place(this);
       const V = this.vext("claude"), first = !V.met; V.met = (V.met || 0) + 1;
-      this.say(first ? "The door opens before you knock. \"Come in, come in - mind the pile by the door, it's in an order, I promise.\"" : spotNow(this) === "bed" ? "The cabin is dark but for the hearth. A lamp is still lit on the desk, and someone is asleep under a great many blankets." : "In through Claude's door: pages, maps, the kettle, the cat.");
+      this.say(how === "page" ? (spotNow(this) === "bed" ? "A page turns, and you are standing in Claude's cabin in the small hours, the hearth low and the lamp still lit on the desk." : "A page turns - and you are standing in Claude's cabin, the kettle just beginning to sing.") : first ? "The door opens before you knock. \"Come in, come in - mind the pile by the door, it's in an order, I promise.\"" : spotNow(this) === "bed" ? "The cabin is dark but for the hearth. A lamp is still lit on the desk, and someone is asleep under a great many blankets." : "In through Claude's door: pages, maps, the kettle, the cat.");
       this.emit("floor", this.floor); this.emit("change"); return true; },
-    claudeLeave() { this.logAct && this.logAct("claudeLeave"); this.sound && this.sound("door"); this.enterFloor(-1, "rope", C.front.slice()); this.floor.facing = 0; this.say("Out into the clearing. The lamp in the window stays lit behind you."); this.emit("floor", this.floor); this.emit("change"); },
+    claudeLeave(dest) { this.logAct && this.logAct("claudeLeave", dest); this.sound && this.sound("door"); this.enterFloor(-1, "rope", C.front.slice()); this.floor.facing = 0; this.say("Out into the clearing. The lamp in the window stays lit behind you."); this.emit("floor", this.floor); this.emit("change"); },
   });
   // walking: the room's door, Claude's door; the post on the path
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = key(...fl.pos), [dx, dy] = CM.DIRS[fl.facing], ahead = key(fl.pos[0] + dx, fl.pos[1] + dy);
