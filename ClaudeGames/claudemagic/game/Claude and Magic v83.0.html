@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v82.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v83.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "82.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "83.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -31220,6 +31220,49 @@ Object.assign(CM.Game.prototype, {
     for (let i = 0; i < want && cands.length; i++) { const j = h(fl, "rat", String(i)) % cands.length; const [x, y] = cands.splice(j, 1)[0]; out.push({ x, y, id: `rat:${fl.number}:${i}` }); } return out; };
 }
 
+// ---- 69zzu-basins.js ----
+"use strict";
+// The water basins (UPGRADE_PLAN_63.md set 1.1, release 2): the flood of the sunken rooms (69zzq-below.js) has two
+// depths now - knee-deep as the water drains, waist-deep while the storm's level stands - and the deep water slows
+// the party more (two minutes a step, the walk at twice the pace). What the water hides: a spike grating, placed at
+// a floor's making in a sunken room of four squares' width or more, harmless and drawn when dry, a point a step to
+// each hero when flooded, said on the look line and never on a room's doorway; a leech, fastened on a hero now and
+// then while wading waist-deep (a bite that festers like a poison - any healing or the camp pulls it off); and a
+// sunk chest, one of the sunken rooms' chests marked so, that is dived for at the cost of a quarter hour while the
+// water stands. Nothing here blocks a way: a grating is one square in a room three squares wide at least.
+//   CM.floodDepth(game, fl, x, y) -> 0 | 1 | 2        knee-deep | waist-deep (CM.floodNow at BASINS.waistFrom or more)
+//   CM.floodDepthHere(game) -> 0 | 1 | 2
+//   CM.basinsOf(fl) -> { grates: ["x,y"], chests: ["x,y"] }   what the floor's making placed (features and things)
+//   CM.leechStep(game, minutes)                        the leeches, on the clock; wrapped into CM.tickClock
+{ const B = CM.BASINS = { waistFrom: 0.75, grateBite: 1, leechEvery: 10, leechChance: 0.3, leechPoison: 4, diveMinutes: 15, chestEvery: 3 };
+  CM.floodDepth = (game, fl, x, y) => { if (!CM.floodedAt || !CM.floodedAt(game, fl, x, y)) return 0; return CM.floodNow(game) >= B.waistFrom ? 2 : 1; };
+  CM.floodDepthHere = (game) => { const fl = game && game.floor; return fl && fl.pos ? CM.floodDepth(game, fl, fl.pos[0], fl.pos[1]) : 0; };
+  // the floor's making: a grating in a sunken room wide enough, a chest of the sunken rooms marked sunk
+  const sunkenRooms = (fl) => (fl.rooms || []).filter((r) => !r.name && !r.template && r.x1 - r.x0 >= 4 && r.y1 - r.y0 >= 4 && fl.levels && fl.levels[`${r.x0 + 1},${r.y0 + 1}`] && fl.levels[`${r.x0 + 1},${r.y0 + 1}`][0] < 0);
+  CM.basinsOf = (fl) => { const out = { grates: [], chests: [] }; if (!fl || !fl.features) return out; for (const [k, f] of Object.entries(fl.features)) if (f.type === "grate") out.grates.push(k); for (const [k, t] of Object.entries(fl.things || {})) if (t.type === "chest" && t.sunk) out.chests.push(k); return out; };
+  const furnish = (fl) => { if (!fl || !(fl.number >= 1) || !fl.levels || !fl.rooms || fl.basinsMade) return; fl.basinsMade = true; let i = 0;
+    for (const r of sunkenRooms(fl)) { const h = CM.hashSeed(`${fl.number}:basin:${r.x0},${r.y0}`) >>> 0, cx = r.x0 + 2 + h % (r.x1 - r.x0 - 3), cy = r.y0 + 2 + (h >> 8) % (r.y1 - r.y0 - 3), k = `${cx},${cy}`;   // (inside the room, a square in from its edge: never a doorway)
+      if (fl.grid[cy][cx] === 0 && !fl.things[k] && !fl.features[k]) fl.features[k] = { type: "grate", known: true };
+      if (i++ % B.chestEvery === 0) { const chest = Object.entries(fl.things).find(([ck, t]) => t.type === "chest" && !t.mimic && !t.sunk && (() => { const [x, y] = ck.split(",").map(Number); return x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1; })()); if (chest) chest[1].sunk = true; } } };
+  const P = CM.Game.prototype;
+  { const ef0 = P.enterFloor; P.enterFloor = function (...a) { const out = ef0.apply(this, a); if (this.floor) furnish(this.floor); return out; }; }   // (on the first visit, not at the making: the generator's fingerprints stay as they are, and the save's deltas carry the grating)
+  // the deep water: a minute more again, the pace doubled
+  { const b0 = P.burn; P.burn = function (...a) { if (CM.floodDepthHere(this) === 2) this.clock = (this.clock || 0) + 1; return b0.apply(this, a); }; }
+  { const w0 = P.walkPace; P.walkPace = function (...a) { const p = w0.apply(this, a); return CM.floodDepthHere(this) === 2 ? p * 4 / 3 : p; }; }   // (69zzq's x1.5 and this: x2)
+  // the grating underfoot
+  { const ar0 = P.arrive; P.arrive = function (f, k) { if (f && f.type === "grate") { const [x, y] = k.split(",").map(Number), d = CM.floodDepth(this, this.floor, x, y);
+        if (d) { let bit = 0; for (const h of this.alive()) if (h.hp > 1) { h.hp = Math.max(1, h.hp - B.grateBite); bit++; } this.sound("trap"); this.say(bit ? `The water hides a spiked grating: it bites through the boots (-${B.grateBite} each).` : "The water hides a spiked grating, and there is nothing left for it to bite."); }
+        else this.say("An iron grating, spiked, set in the floor: harmless dry, and a thing to remember when the hall floods."); return; }
+      return ar0.call(this, f, k); }; }
+  // the leeches, while wading waist-deep
+  CM.leechStep = (game, minutes = 1) => { if (!game || !game.ext || !(minutes > 0) || CM.floodDepthHere(game) !== 2 || game.mode !== "explore") return; const E = game.ext("basins"); E.wade = (E.wade || 0) + minutes;
+    while (E.wade >= B.leechEvery) { E.wade -= B.leechEvery; for (const h of game.alive()) { if ((CM.hashSeed(`${game.seed}:leech:${h.name}:${CM.clockOf(game)}`) >>> 0) % 100 >= B.leechChance * 100) continue; h.status = h.status || {}; if (h.status.poison) continue; h.status.poison = B.leechPoison; game.say(`A leech has fastened on ${h.name} under the water: the bite will fester a while - any healing, or the camp, pulls it off.`); } } };
+  { const t0 = CM.tickClock; CM.tickClock = (game, minutes) => { t0(game, minutes); if (game && game.ext) CM.leechStep(game, minutes); }; }
+  // the sunk chest: dived for while the water stands
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && fl.pos && this.mode === "explore") { const k = `${fl.pos[0]},${fl.pos[1]}`, t = fl.things[k]; if (t && t.type === "chest" && t.sunk && !t.opened && CM.floodDepth(this, fl, fl.pos[0], fl.pos[1]) > 0) { this.clock = (this.clock || 0) + B.diveMinutes; this.say(`The chest is under the water: ${this.alive()[0] ? this.alive()[0].name : "someone"} goes down for it, and comes up streaming, a quarter hour on.`); } }
+      return u0.apply(this, a); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -46268,6 +46311,24 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); const eye = env.eye;
       for (const p of this.parts) { if (!p.bug) continue; const dx = p.x - eye[0], dz = p.z - eye[2], d = Math.hypot(dx, dz); if (d < 1.3 && d > 0.001) { p.vx = dx / d * 0.9; p.vz = dz / d * 0.9; } else if (r() < dt * 0.8) { const a = r() * Math.PI * 2; p.vx = Math.cos(a) * 0.12; p.vz = Math.sin(a) * 0.12; }
         if (env.open && !env.open(Math.floor(p.x), Math.floor(p.z))) { p.vx = -p.vx; p.vz = -p.vz; p.x += p.vx * 2 * dt; p.z += p.vz * 2 * dt; } } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzs-basins.js ----
+"use strict";
+// The water basins - the window's side (UPGRADE_PLAN_63.md set 1.1, release 2): the spiked grating is drawn on its
+// square (the barred-grate picture, flat, with spikes when dry and a dark shape under the water when flooded); a
+// sunk chest lies in a stone basin; the waist-deep water sounds deeper under the step and the look line names the
+// depth; and standing in deep water the view sits a little lower.
+{ const look = (game) => { const fl = game.floor; if (!fl || !fl.pos) return null; const d = CM.floodDepth(game, fl, fl.pos[0], fl.pos[1]); return d === 2 ? "waist-deep" : d === 1 ? "knee-deep" : null; };
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.basinsOf || game.mode === "title") return out; const R0 = CM.renderer; if (!R0 || R0.index["clut:grate"] === undefined) return out; const Bs = CM.basinsOf(fl);
+      for (const k of Bs.grates) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; const d = CM.floodDepth(game, fl, x, y); out.push({ x, y, layer: "clut:grate", flat: true, w: 0.82, base: CM.floorAt(fl, x, y) + 0.004, shade: d ? 0.55 : 0.95, alpha: d ? 0.7 : 1 }); }
+      for (const k of Bs.chests) { const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "clut:port", flat: true, w: 0.9, base: CM.floorAt(fl, x, y) + 0.003, shade: 0.8 }); }   // (the basin the chest sits in)
+      return out; }; }
+  // the step's splash, deeper; the view lower
+  const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); if (!game || !game.floor || !game.ext) return; void r;
+    if (game.on && !game._basinHooked) { game._basinHooked = true; game.on("moved", () => { if (CM.floodDepthHere(game) === 2 && CM.wadeSound) CM.wadeSound(true); }); } };
+  // the look line names the water
+  { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, w = g && look(g); const el = this.$ && this.$("#view .sky .wxtext"); if (el && w && !el.textContent.includes(w)) el.textContent += ` - ${w} in water`; } catch (e) { /* (quiet) */ } return out; }; }
 }
 
 // ---- 77-splash.js ----
