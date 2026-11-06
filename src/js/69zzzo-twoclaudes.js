@@ -29,7 +29,8 @@
     if (e.reminded) out.push("At the bottom they didn't fight him. They reminded him who he was, and he sat down. I have waited a long time to write that sentence.");
     else if (e.won) out.push("At the bottom they fought him, and won. I'd hoped for the other way. Then I'll write it down this way. Truthfully.");
     else if (g.party && g.party.every((h) => h.hp <= 0)) out.push(foe ? `They didn't come back. It was ${/^the /i.test(foe.name) ? foe.name : `a ${String(foe.name).toLowerCase()}`}, on floor ${e.floor}. I've written their names on the wall at the top of the shaft, with the others.` : `They didn't come back from floor ${e.floor}. I've written their names on the wall at the top of the shaft, with the others.`);
-    else { const fell = (g.party || []).filter((h) => h.hp <= 0).map((h) => h.name); out.push(fell.length ? `They came back up - not all of them. ${fell.join(" and ")} stayed below.` : "They came back up on their own feet, which is the best way to come back."); }
+    else if (e.left || (g.floor && g.floor.number <= 0)) { const fell = (g.party || []).filter((h) => h.hp <= 0).map((h) => h.name); out.push(fell.length ? `They came back up - not all of them. ${fell.join(" and ")} stayed below.` : "They came back up on their own feet, which is the best way to come back."); }
+    else { const fell = (g.party || []).filter((h) => h.hp <= 0).map((h) => h.name); out.push(`The account stops on floor ${e.floor}${fell.length ? `, with ${fell.join(" and ")} already fallen` : ""}. I don't know how it ended, and I won't guess.`); }
     return out.join(" "); };
   { const pc0 = P.payChapters; P.payChapters = function (entry, ...a) { const out = pc0.call(this, entry, ...a), V = this.vext("claude");
       if (V.met && entry && !this.replaying && !this.film) { const foe = this.mode === "combat" && Array.isArray(this.foes) ? this.foes.filter((m) => m && m.hp > 0 && !m.summoned).sort((x, y) => (y.max || 0) - (x.max || 0))[0] || null : null;
