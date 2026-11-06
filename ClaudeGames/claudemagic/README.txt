@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Six more stage pieces (v92.0, UPGRADE_PLAN_65.md release 2)
+  (src/js/69zzze-stage2.js, src/js/76zzzzzzzzzzz-stage2.js, UPGRADE_PLAN_65.md)
+  - Six more stage pieces (plan 65, release 2): the Fallen Star, a crater in the floor and the star itself, a lump of
+    star-iron a pick will have; the Waterfall Hall, the aquifer through the wall in a sheet into a pool - walk through
+    it and the torch gutters a step, and behind it a niche with a chest; the Lantern Shaft, a small hall with a grate
+    in its roof and daylight and weather down it, and a rope ladder up to a ledge with a chest; the Sunken Chapel,
+    half under black water with the pews still standing in it and a bell under the water - dive and ring it on a
+    holy day for a blessing, on any other day for the drowned; the Petrified Wood, trees stone to the last leaf, a
+    stone deer and a stone traveller, a fountain, and a chest under a basilisk's eye - its gaze turns one hero to
+    stone for two turns and the fountain undoes it; and the Throne of the Hollow One, a crown on a sleeper's head -
+    take it and it wakes, and if the hall's roots are burning it cannot rise for three turns. Forty rooms now.
+
 Four stage pieces (v91.0, UPGRADE_PLAN_65.md release 1)
   (src/js/69zzzd-stage.js, src/js/76zzzzzzzzzzy-stage.js, UPGRADE_PLAN_65.md)
   - Four stage pieces (plan 65, release 1), rooms whose point is a sight built from several squares, their meshes
