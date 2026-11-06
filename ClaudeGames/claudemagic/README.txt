@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Four stage pieces (v91.0, UPGRADE_PLAN_65.md release 1)
+  (src/js/69zzzd-stage.js, src/js/76zzzzzzzzzzy-stage.js, UPGRADE_PLAN_65.md)
+  - Four stage pieces (plan 65, release 1), rooms whose point is a sight built from several squares, their meshes
+    made in code: the Giant's Ribcage, ribs arching the whole hall in two rows and a skull the size of a cart at the
+    far end with a chest between its teeth - by day only a chest, by night the thing the bones belonged to stirs;
+    the Shipwreck, a hull and a mast broken through the Drowned Town's vault into a ring of black water with fish in
+    it, a deck to walk, the captain's chart in the cabin, and a green bell at the mast's foot that brings the
+    Drowned down off the deck together; the Rope Bridge, one bridge of planks and rope over a dark that goes down
+    farther than any light, swaying at every step, wyverns passing under it, a chest hauled up at the far end - and
+    the chasm itself never walked into; and the Great Mushroom, one cap as wide as the hall on a stalk with steps cut
+    in it, glowcaps burning at its foot and Sporelings asleep under the cap, and from the top the whole floor round
+    it seen at once. Thirty-four curated rooms now.
+
 The deeper shaft (v90.0, UPGRADE_PLAN_66.md)
   (src/js/10-data.js, src/js/20-world.js, src/js/21-gen1.js, src/js/22-gen2.js, src/js/62-combat.js, src/js/61-explore.js, src/js/13-lore.js, src/js/14-items.js, src/js/23c-ore.js, src/js/60-game.js, src/js/64-meta.js, src/js/68-shops.js, src/js/70-ui.js, src/js/71-title.js, the set-piece and room files, tests/fixtures/gen1.json, UPGRADE_PLAN_66.md)
   - The deeper shaft (plan 66): a hundred floors. The old fifty are the story floors now, and the real shaft is

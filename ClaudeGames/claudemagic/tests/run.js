@@ -1286,11 +1286,11 @@ test("around the game, again: the ledger and the statistics, a save as a link, t
   assert.ok(l.f >= 1 && !l.w && l.c.length === 4 && l.sp.temple === 30 && l.s > 0, JSON.stringify(l));
   // the statistics: bands, callings, gold
   const lines = game.ledger.concat([
-    Object.assign(CM.ledgerLine({ date: "01/02/2026", seed: "x", floor: 20, won: true, gold: 500, difficulty: "hard", ascension: 3, tally: { steps: 900, fights: 40, kills: 90, spent: { temple: 100 } } }, ["fighter", "fighter", "mage", "priest"]), { t: 1 }),
-    Object.assign(CM.ledgerLine({ date: "01/03/2026", seed: "y", floor: 12, won: false, gold: 50, tally: { steps: 300 } }, ["thief", "mage", "mage", "ranger"]), { t: 2 }),
+    Object.assign(CM.ledgerLine({ date: "01/02/2026", seed: "x", floor: CM.realOf(20), won: true, gold: 500, difficulty: "hard", ascension: 3, tally: { steps: 900, fights: 40, kills: 90, spent: { temple: 100 } } }, ["fighter", "fighter", "mage", "priest"]), { t: 1 }),
+    Object.assign(CM.ledgerLine({ date: "01/03/2026", seed: "y", floor: CM.realOf(12), won: false, gold: 50, tally: { steps: 300 } }, ["thief", "mage", "mage", "ranger"]), { t: 2 }),
   ]);
   const st = CM.statistics(lines);
-  assert.strictEqual(st.runs, 3); assert.strictEqual(st.crowns, 1); assert.strictEqual(st.fell, 2); assert.strictEqual(st.deepest, 20);
+  assert.strictEqual(st.runs, 3); assert.strictEqual(st.crowns, 1); assert.strictEqual(st.fell, 2); assert.strictEqual(st.deepest, CM.realOf(20));
   assert.strictEqual(st.bands[2].fell, 1, "one fell on 11-15"); assert.strictEqual(st.bands[3].through, 1, "the crown went through 16-20");
   assert.strictEqual(st.callings.mage.n, 3); assert.strictEqual(st.callings.Mage.n, 1); assert.strictEqual(st.spent.temple, 130); assert.strictEqual(st.difficulties.hard.a, 3);
   // the runs from before the ledger: read back from the Hall of Fame, without their numbers
@@ -6771,6 +6771,37 @@ test("the shaft is a hundred floors deep (plan 66): story floors and real floors
   // Endless below the bottom
   const g = new CM.Game(); g.newGame("deep-2", fixedParty(CM), "pauper", "fair", [], "endless"); assert.ok(g.endless); g.enterFloor(101, "down"); assert.ok(g.messages.some((m) => m.includes("Below the Root")), "the stair goes on below 100");
   assert.ok(g.campBelow(100) && g.campBelow(105) && !g.campBelow(103)); assert.strictEqual(CM.echoOf(110), 1); assert.strictEqual(CM.echoOf(100), 0);
+  g.floor = null;
+});
+
+test("stage pieces (plan 65, release 1): the meshes made in code are well formed; the Ribcage's ribs arch the room and its skull holds a chest taken by day, the Colossus stirring by night; the Shipwreck's hull and mast stand in the water, the chart lies in the cabin, the mast's bell calls the Drowned down; the Rope Bridge's chasm is never walked into and its planks sway underfoot; the Great Mushroom's cap stands on its stalk and its top shows the floor round it", () => {
+  const CM = load(); const names = ["the Giant's Ribcage", "the Shipwreck", "the Rope Bridge", "the Great Mushroom"]; for (const n of names) assert.ok(CM.SETPIECES.some((t) => t.name === n), n);
+  for (const T of CM.SETPIECES) { const w = T.rows[0].length; assert.ok(T.rows.every((row) => row.length === w), `${T.name}: square`); let ok = false; T.rows.forEach((row, ry) => [...row].forEach((c, rx) => { if (c !== "D") return; const onSide = ry === 0 || ry === T.rows.length - 1; if ((onSide && rx % 2 === 1) || (!onSide && ry % 2 === 1)) ok = true; })); assert.ok(ok, `${T.name}: a plain door the maze can reach`); }
+  // the meshes
+  const M = CM.stageModels(); assert.deepStrictEqual(Object.keys(M).sort(), ["stage_cap", "stage_hull", "stage_mast", "stage_plank", "stage_rib", "stage_skull", "stage_stalk"]);
+  for (const [name, m] of Object.entries(M)) { assert.ok(m.verts > 8 && m.tris > 6 && m.pos.length === m.verts * 3 && m.ci.length === m.verts && m.index.length === m.tris * 3, `${name}: well formed`); assert.ok(m.index.every((i) => i < m.verts), `${name}: indices in range`); assert.ok(m.box[1][1] - m.box[0][1] > 0.02 && m.box[1][1] <= 1.0, `${name}: under the roof (${m.box[1][1]})`); assert.ok(m.palette.length >= 2 && m.ci.every((c) => c < m.palette.length), `${name}: colours`); }
+  const g = new CM.Game(); g.newGame("stage-1", fixedParty(CM));
+  const build = (T, n = 6) => { const fl = CM.makeFloor(n, "stage-1", 2); const H = T.rows.length - 2, W = T.rows[0].length - 2, x0 = 3, y0 = 3, x1 = x0 + W - 1, y1 = y0 + H - 1; for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { fl.grid[y][x] = 1; delete fl.things[`${x},${y}`]; delete fl.features[`${x},${y}`]; } for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fl.grid[y][x] = 0;
+    const room = { x0, y0, x1, y1, name: T.name }; T.rows.forEach((row, ry) => [...row].forEach((c, rx) => { const x = x0 - 1 + rx, y = y0 - 1 + ry; if ("DLG".includes(c)) { fl.grid[y][x] = 0; fl.features[`${x},${y}`] = { type: "door", open: true }; } })); fl.rooms = (fl.rooms || []).filter((q) => q.x1 < x0 - 2 || q.x0 > x1 + 2 || q.y1 < y0 - 2 || q.y0 > y1 + 2); fl.rooms.push(room); delete fl.treesIn; delete fl.chasm; CM.dressSetPieces(fl, "stage-1"); g.floors[n] = fl; g.floor = fl; fl.number = n; g.mode = "explore"; g.combat = null; g.foes = []; const fill = CM.fillOf(T, room); return { fl, room, fill, at: (c) => fill.find(([, , q]) => q === c), all: (c) => fill.filter(([, , q]) => q === c) }; };
+  const T = (n) => CM.SETPIECES.find((t) => t.name === n), endFight = () => { g.combat = null; g.mode = "explore"; g.foes = []; };
+  // the ribcage
+  { const { fl, room, at } = build(T("the Giant's Ribcage")); const S = CM.stageStaticsOf(g, fl, [room.x0 + 3, room.y0 + 6], 12); const ribs = S.filter((p) => p.model === "stage_rib"), skull = S.find((p) => p.model === "stage_skull"); assert.ok(ribs.length >= 5, `ribs over the hall (${ribs.length})`); assert.ok(ribs.every((p) => p.scale >= 3 && p.x > room.x0 && p.x < room.x1 + 1), "each spanning the hall"); assert.ok(skull, "the skull");
+    assert.ok(CM.plantInstancesOf(g, fl, [room.x0 + 3, room.y0 + 6], 12, 1).some((p) => p.model === "stage_rib"), "merged with the plants"); assert.strictEqual(CM.plantTintOf(g, fl, "stage_rib"), null, "in its own colours");
+    const [sx, sy] = at("0"); assert.strictEqual(fl.things[`${sx},${sy}`].type, "skull"); fl.pos = [sx, sy]; g.clock = 1440 + 6 * 60; g.messages = []; g.use(); assert.strictEqual(fl.things[`${sx},${sy}`].type, "chest", "the chest between its teeth"); assert.strictEqual(g.mode, "explore", "by day nothing moves"); assert.ok(g.messages[0].includes("daylight"));
+    const { fl: f2, at: at2 } = build(T("the Giant's Ribcage"), 7); const [sx2, sy2] = at2("0"); f2.pos = [sx2, sy2]; g.clock = 1440 + 19 * 60; g.use(); assert.strictEqual(g.mode, "combat", "by night the Colossus stirs"); assert.ok(g.foes.some((m) => m.kind === "Bone Colossus" || m.kind === "Skeleton")); endFight(); g.clock = 1440 + 6 * 60; }
+  // the shipwreck
+  { const { fl, room, at } = build(T("the Shipwreck"), 72); const S = CM.stageStaticsOf(g, fl, [room.x0 + 4, room.y0 + 4], 12); assert.ok(S.some((p) => p.model === "stage_hull" && p.scale >= 5) && S.some((p) => p.model === "stage_mast"), "the hull and the mast"); assert.ok((fl.decor || []).filter((d) => d.kind === "water" && d.fish).length >= 20, "water with fish round it");
+    const [cx, cy] = at("c"); assert.strictEqual(fl.things[`${cx},${cy}`].items[0].name, "The Captain's Chart"); assert.strictEqual(fl.things[`${cx},${cy}`].items[0].spell, "mapping");
+    const [bx, by] = at("8"); fl.pos = [bx, by]; g.messages = []; g.use(); assert.strictEqual(g.mode, "combat", "the bell calls the Drowned"); assert.ok(g.foes.length === 3 && g.foes.every((m) => m.kind === "Drowned" || m.kind === "Zombie")); endFight(); g.use(); assert.ok(g.messages[g.messages.length - 1].includes("empty now"), "once"); }
+  // the bridge
+  { const { fl, room, at, all } = build(T("the Rope Bridge"), 8); const chasm = all("_"), planks = all("="); assert.ok(chasm.length >= 20 && planks.length >= 10); assert.ok(chasm.every(([x, y]) => fl.chasm[`${x},${y}`] && !CM.isOpen(fl, x, y) && fl.levels[`${x},${y}`][0] < -0.5), "the chasm is solid and deep"); assert.ok(planks.every(([x, y]) => CM.isOpen(fl, x, y)), "the planks are walked");
+    const S = CM.stageStaticsOf(g, fl, [room.x0 + 1, room.y0 + 8], 12); assert.ok(S.filter((p) => p.model === "stage_plank").length >= 10, "planks drawn");
+    const [px, py] = planks[0]; fl.pos = [px, py]; fl.facing = 2; let swayed = 0; g.on("sway", () => swayed++); g.messages = []; g.move(0); assert.ok(fl.pos[1] === py + 1 && swayed === 1, "a step along the bridge sways it"); assert.ok(g.messages.some((m) => m.includes("sways"))); fl.facing = 1; g.move(0); assert.ok(fl.pos[0] === px, "never into the chasm");
+    const [cx, cy] = at("c"); assert.ok(fl.things[`${cx},${cy}`].type === "chest" && fl.things[`${cx},${cy}`].note.includes("rope")); }
+  // the mushroom
+  { const { fl, room, at, all } = build(T("the Great Mushroom"), 77); const S = CM.stageStaticsOf(g, fl, [room.x0 + 4, room.y0 + 4], 12); assert.ok(S.some((p) => p.model === "stage_cap" && p.scale > 1.5) && S.some((p) => p.model === "stage_stalk"), "the cap on its stalk"); assert.ok(all("R").every(([x, y]) => fl.levels[`${x},${y}`][0] >= 0.5), "the disc raised");
+    const [ax, ay] = at("A"); assert.strictEqual(fl.features[`${ax},${ay}`].type, "captop"); fl.seen = [[ax, ay]]; fl.pos = [ax, ay]; g.messages = []; g.arrive(fl.features[`${ax},${ay}`], `${ax},${ay}`); assert.ok(fl.seen.length > 100, `the floor seen from the top (${fl.seen.length})`); assert.ok(g.messages[0].includes("cap's top"));
+    const [mx, my] = at("M"); assert.ok(fl.things[`${mx},${my}`].asleep && fl.things[`${mx},${my}`].group.every((m) => m.kind === "Sporeling" || m.kind === "Giant Rat"), "Sporelings asleep under it"); assert.ok(all("G").every(([x, y]) => fl.things[`${x},${y}`].type === "glowcap"), "glowcaps at the foot"); }
   g.floor = null;
 });
 
