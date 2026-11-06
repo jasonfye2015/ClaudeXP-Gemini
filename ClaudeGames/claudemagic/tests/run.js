@@ -7347,6 +7347,13 @@ test("the account, presentation (plan 74, release 1): the built page carries the
   assert.ok(!JSON.stringify(g.tally).includes("cardBands"), "the cards keep their own memory");
 });
 
+test("the account, presentation (plan 74, release 2): the torch's pool is the renderer's own uniform (1 = as it always was), set below ground by the Lighting setting; the crit in red ink, the element's wash and the punch are in the page", () => {
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  assert.ok(/uniform float uFallK;/.test(html) && /2\.2 \* max\(uFallK, 0\.5\) \* d \* d/.test(html) && /"uFallK"/.test(html), "the uniform, the falloff and its location");
+  assert.ok(/this\.fallK \|\| 1/.test(html), "1 when not set: the old light exactly");
+  for (const s of ["set-lighting", "#view .edge-wash", "viewPunch", ".float.crit { color: #E2483A"]) assert.ok(html.includes(s), s);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

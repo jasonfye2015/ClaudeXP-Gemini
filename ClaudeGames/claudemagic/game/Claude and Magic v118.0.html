@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v117.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v118.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "117.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "118.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9876,7 +9876,7 @@ precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint; uniform float uStatic;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
  uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
-uniform float uReach; uniform float uFlicker; uniform float uAmbient;
+uniform float uReach; uniform float uFlicker; uniform float uAmbient; uniform float uFallK;   // (v118.0: the torch's pool - 1 as it was, more for a tighter pool below ground)
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
 uniform vec3 uTorchPos; uniform float uBump;   // (v22.0) where the party's torch is held, a little to the side and up; (v22.1) the relief's strength - 0 for all but walls, floors and the ground
@@ -10041,7 +10041,7 @@ void main() {
   vec3 tl = uTorchPos - vWorld, tdir = tl / max(length(tl), 0.001); float tface = 0.5 + 0.5 * max(dot(n0, tdir), 0.0);
   float relief = clamp(max(dot(n, tdir), 0.0) / max(dot(n0, tdir), 0.25), 0.35, 1.6);   // (v22.1: how much more or less a raised or sunk bit faces the torch than the flat wall does)
   tface *= mix(1.0, relief, min(1.0, uBump));   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
-  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
+  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * max(uFallK, 0.5) * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n0.y), 0.7));   // walls facing the sun lit, the others in shade
   if (uCloud.z > 0.0 && uSunK > 0.5 && uSun.y > 0.05) light *= 1.0 - 0.3 * cloudAt((vWorld.xz + uSun.xz / max(uSun.y, 0.25) * (30.0 - vWorld.y)) / 14.0 + uCloud.xy);   // (v30.2: a cloud's shadow passing)
   vec3 extra = vec3(0.0), vdir = (vWorld - uEye) / max(d, 0.001), airGlow = vec3(0.0), pudLamp = vec3(0.0);
@@ -10262,7 +10262,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint", "uStatic"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uFallK", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint", "uStatic"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -10743,6 +10743,7 @@ CM.Renderer = class {
     gl.uniform3fv(this.loc.uFog, fogc);
     gl.uniform1f(this.loc.uReach, sky ? (6 + 54 * sky.light) * (sky.night ? Math.max(0.5, this.lightNow) : 1) * (this.mist ? 0.35 : 1) : t.reach * this.lightNow);   // (v27.0: mist shortens the sight)
     gl.uniform1f(this.loc.uFlicker, sky ? this.flicker * (1 - sky.light) : this.flicker);
+    gl.uniform1f(this.loc.uFallK, this.fallK || 1);   // (v118.0: the torch's pool, plan 74)
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);
@@ -49539,6 +49540,44 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
     CM.addSetting("set-skycard", "Sky card - the dial and the hour (the date, weather and moon on hover), or everything always", [["compact", "Compact"], ["full", "Full"]], "skycard", "compact", ui);
     CM.addSetting("set-chapters", "Chapter cards - the floor and its band across the view as you go down", [["on", "On"], ["off", "Off"]], "chapters", "on", ui); });
   { const g0 = () => { const g = CM.game; if (g && g.on) { g.on("settings", () => { if (CM.ui) { CM.ui.drawSky && CM.ui.drawSky(); } }); return true; } return false; }; if (!g0()) { const t = setInterval(() => { if (g0()) clearInterval(t); }, 300); } }
+}
+
+// ---- 77j-depth.js ----
+"use strict";
+// Presentation, second pass (UPGRADE_PLAN_74.md, release 2): light with depth, and combat that hits.
+//  Light: the engine already casts shadows from the sun, the lamps and the torch, sways them with the flame, darkens
+//  the corners along the walls and stops a lamp at a wall - so this is tuning. Below ground the party's torch makes a
+//  tighter pool (Settings > Lighting: Deep, the default, or Classic as before), so the near floor glows and the far
+//  corridor falls away; and the small shadow under every foot is a little firmer.
+//  Combat: a crit lands in Claude's red ink; a spell's hit washes the view's edge in its element's colour for a
+//  moment; a crit gives the view a short, hard punch (not with Reduce motion).
+
+{ const css = `
+.float.crit { color: #E2483A; font: italic 700 32px Georgia, serif; text-shadow: 0 0 2px #2A0A04, 0 0 10px rgba(255,220,180,0.55), 0 2px 3px #000; letter-spacing: 0.01em; }
+#view .edge-wash { position: absolute; inset: 0; pointer-events: none; z-index: 5; opacity: 0; transition: opacity 0.5s ease-out; }
+#view .edge-wash.on { opacity: 1; transition: opacity 0.06s; }
+@keyframes viewPunch { 0% { transform: scale(1); } 30% { transform: scale(1.012) translateY(1px); } 100% { transform: scale(1); } }
+#view .canvas-slot.punch { animation: viewPunch 0.16s ease-out; }`;
+  const style = () => { if (document.getElementById("depth-css")) return; const st = document.createElement("style"); st.id = "depth-css"; st.textContent = css; document.head.appendChild(st); };
+  // light: the torch's pool
+  const deep = () => { const g = CM.game; return Boolean(g && g.floor && g.floor.number >= 1 && ((g.settings || {}).lighting || "deep") === "deep"); };
+  { const t = () => { const r = CM.renderer; if (r) r.fallK = deep() ? 3.2 : 1; requestAnimationFrame(t); }; requestAnimationFrame(t); }
+  // the shadow under each foot, firmer
+  { const sc0 = CM.shadowCaster; if (sc0) CM.shadowCaster = (game, renderer, fl) => { const c = sc0(game, renderer, fl); return (...a) => { const out = c(...a); if (out[0] && out[0].rot === undefined) { out[0].alpha = Math.min(0.92, (out[0].alpha || 0.75) * 1.18); out[0].w *= 1.06; } return out; }; }; }
+  // combat: the element's wash, the punch
+  const HUE = { fire: "255,120,40", flame: "255,120,40", firebolt: "255,120,40", fireball: "255,120,40", bomb: "255,120,40", frost: "150,210,255", ice: "150,210,255", blizzard: "150,210,255", lightning: "200,180,255", storm: "200,180,255", shock: "200,180,255", chain: "200,180,255",
+    holy: "255,220,120", turn: "255,220,120", heal: "140,230,140", poison: "130,220,90", venom: "130,220,90", shadow: "170,110,230", drain: "170,110,230", missile: "190,170,255" };
+  const elementOf = (id) => { if (!id) return null; const S = (CM.SPELLS || {})[id]; const e = (S && (S.element || S.elem)) || id; return HUE[e] ? e : Object.keys(HUE).find((k) => String(id).toLowerCase().includes(k)) || null; };
+  const wash = (ui, rgb) => { const v = ui.$("#view"); if (!v) return; style(); let w = v.querySelector(".edge-wash"); if (!w) { w = document.createElement("div"); w.className = "edge-wash"; v.appendChild(w); }
+    w.style.boxShadow = `inset 0 0 70px 18px rgba(${rgb},0.55)`; w.classList.add("on"); setTimeout(() => w.classList.remove("on"), 90); };
+  const punch = (ui) => { if (CM.reducedMotion) return; const s = ui.$("#view .canvas-slot"); if (!s) return; s.classList.remove("punch"); void s.offsetWidth; s.classList.add("punch"); };
+  const bind = () => { const g = CM.game, ui = CM.ui; if (!g || !g.on || !ui) return false; style();
+    g.on("fx", (fx) => { if (!fx || g.replaying || g.film) return;
+      if (fx.kind === "cast") { const e = elementOf(fx.id); if (e) wash(ui, HUE[e]); }
+      if (fx.kind === "hit" && fx.crit) punch(ui); });
+    return true; };
+  if (!bind()) { const t = setInterval(() => { if (bind()) clearInterval(t); }, 300); }
+  if (CM.settingLater && CM.addSetting) CM.settingLater((ui) => CM.addSetting("set-lighting", "Lighting below ground - Deep: the torch makes a tighter pool and the dark comes closer; Classic: as it always was", [["deep", "Deep"], ["classic", "Classic"]], "lighting", "deep", ui));
 }
 
 // ---- 79-artworker.js ----
