@@ -142,6 +142,14 @@ on one square.
   the bridge, wyverns passing under it, a chest hauled up at the far end), the Great Mushroom (the Fungal Deep: a
   stalk and a cap on a raised disc with steps, glowcaps at the foot, Sporelings asleep under it; the cap's top shows
   the floor for twelve squares round). Letters 0 8 M A _ =.
+- v92.0 - release 2, the weather-and-water stage pieces and two more: 69zzze-stage2.js - the Fallen Star (a sunk
+  ring and the star, a vein of star-iron the pick mines), the Waterfall Hall (a curtain of water into a pool, the
+  torch guttering a step through it, a niche with a chest behind), the Lantern Shaft (a grate feature for the
+  daylight, a rope ladder, a chest on the ledge), the Sunken Chapel (pews under the water, a bell dived for: a
+  blessing on a holy day, the Drowned otherwise), the Petrified Wood (stone trees and figures - the room's plant
+  instances stand still and grey - a fountain, and a chest whose Gargoyle guard carries a basilisk's gaze: one hero
+  stone for two turns, the fountain undoes it), the Throne of the Hollow One (the crown is the band's relic; held
+  three turns when the roots burn). Letters + | @ ^ & % ! F Y.
 - Decisions taken (release 1): the chasm is solid, not a fall (the soft-lock rule); the bridge sways in the view,
   the planks never give; the ship's Drowned come down only at the bell; the mushroom's cap is a dome round the
   party's feet on the raised disc, not a climb through the mesh.
