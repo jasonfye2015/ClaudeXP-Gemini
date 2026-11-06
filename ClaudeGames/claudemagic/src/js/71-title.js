@@ -116,6 +116,7 @@ Object.assign(CM.UI.prototype, {
           + (t && t.guardians && t.guardians.length ? `<div>Guardians slain: ${this.esc(this.guardianNames(t.guardians))}.</div>` : "")
           + (e.mutators && e.mutators.length ? `<div>${e.endless ? "The dark deepened" : "Today's dungeon"}: ${this.esc(e.mutators.map((m) => (CM.MUTATORS[m] || { name: m }).name).join(", "))}.</div>` : "")
           + (e.titles && e.titles.length ? `<div>Earned: ${this.esc(e.titles.map((id) => (CM.ACHIEVEMENTS[id] || { name: id }).name).join(", "))}.</div>` : "")
+          + (e.claudeNote ? `<div class="claude-note"><i>Claude's note:</i> ${this.esc(e.claudeNote)}</div>` : "")   // (plan 70: his account of the run)
           + `<div><button data-card="${i}">Summary card</button>${e.trail && e.trail.length > 1 ? ` <small>a ghost to race: Play this seed</small>` : ""}</div>`
           + "</td></tr>";
       }

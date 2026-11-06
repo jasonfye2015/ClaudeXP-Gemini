@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The two Claudes (v106.0, UPGRADE_PLAN_70.md)
+  (src/js/69zzzo-twoclaudes.js, src/js/77f-claudelamp.js, src/js/71-title.js, tools/headless.js, tests/run.js)
+  - The two Claudes (plan 70, release 3): with all ten pages of the Margins home, Claude writes a letter to the king,
+    in the round careful hand the king wrote at twenty. Carried down to the throne, it answers one question the party
+    can't when the king asks to be reminded - a sixth line for any one gap in the five (and only one). Claude hears of
+    the ending either way: if the king sat down, he pins the page he hadn't written yet; if the party fought, he'll
+    write it down that way, truthfully. The scribe of your runs: once the party has met him, every run that ends gets
+    a short true account in Claude's hand - who went, how deep, what fell to them, how it ended - read again at his
+    desk and shown in the Hall of Fame as Claude's note. After a guardian falls, a letter from him is waiting at home
+    (the Journal keeps it). The regular at the Hanged Lantern mentions the one with the quill, out past the farm. And
+    once he has been found, his cabin shows low in the title card's tree line, a lit window and a thread of smoke.
+
 The Margins (v105.0, UPGRADE_PLAN_70.md)
   (src/js/69zzzn-margins.js, src/js/76zzzzzzzzzzzzg-margins.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js)
   - The Margins (plan 70, release 2): Claude was writing a true account of Caer Duin, and one stormy night the pages

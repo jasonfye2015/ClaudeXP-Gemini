@@ -2454,7 +2454,7 @@ test("the tavern, the merchant and the smith in town: the full stock at the part
   { const m = CM.gearOfBase("Chain Mail", 6, new CM.Random(1)) || CM.gearOfBase(Object.values(CM.BASES).find((B) => B.kind === "armor").id, 6, new CM.Random(1)); assert.ok(m && m.kind === "armor" && m.props.weight, "armour of a base has its weight"); assert.strictEqual(CM.gearOfBase("Lockpick", 3, new CM.Random(1)), null); }
   // the Hanged Lantern: a round, the regular, the board; the fence drinks here and not at the camp
   g.morale = 40; assert.strictEqual(g.drink(), ""); assert.strictEqual(g.morale, 90); assert.ok(g.drink().includes("One round")); assert.strictEqual(g.tally.spent.tavern, CM.DRINK_PRICE);
-  assert.strictEqual(g.gossip(), ""); assert.ok(/floor \d+/.test(g.messages.slice(-1)[0]) && g.messages.slice(-1)[0].includes("palace")); assert.ok(g.gossip().includes("told you"));
+  assert.strictEqual(g.gossip(), ""); { const said = g.messages.slice(-2).join(" "); assert.ok(/floor \d+/.test(said) && said.includes("palace")); }   /* (and the one with the quill after it, plan 70) */ assert.ok(g.gossip().includes("told you"));
   assert.strictEqual(g.takeBounty(), ""); assert.ok(g.bounty && g.bounty.floor === 0); g.bounty = null;
   // down to the first camp: the order and the commission are waiting; the fence is not at the camp's bench
   g.enterFloor(CM.CAMP_FLOORS[0], "down"); g.floor.things[g.floor.pos.join(",")] = { type: "ladder" }; g.use(); assert.strictEqual(g.mode, "camp");
@@ -7053,6 +7053,35 @@ test("the Margins: ten of Claude's pages, one a band on a floor the seed chooses
   g.bag.push(CM.marginItem(9)); pick("margin"); assert.strictEqual(g.marginsPinned().length, 10);
   g.claudeTalk(k); const wi = g.claudeMenu.findIndex((o) => o[0] === "wall"); assert.ok(/10 of 10/.test(g.claudeMenu[wi][1])); g.choose(k, wi); assert.strictEqual(g.claudeMenu.length, 11, "every page to read again");
   g.choose(k, 9); assert.ok(talks.pop().includes("Was it?"));
+});
+
+test("the two Claudes: the letter to the king, written once the Margins are home, answers one gap when he asks to be reminded (and only one); Claude's account of a run in the Hall of Fame; the news of the ending at the cabin; a letter home after a guardian; the regular's word", () => {
+  const CM = load(), C = CM.CLAUDE_CABIN;
+  const g = new CM.Game(); g.newGame("two-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const talks = []; g.on("talk", (t) => talks.push(t.text));
+  // the regular, before the party has met him
+  g.gold = 100; g.gossip(); assert.ok(g.messages.some((m) => /one with the quill/.test(m)), "the regular's word");
+  g.enterFloor(-1, "rope", C.front.slice()); g.floor.facing = 2; g.use(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  const offered = (label) => { g.claudeTalk(k); return g.claudeMenu.findIndex((o) => o[0] === label); };
+  assert.strictEqual(offered("kingletter"), -1, "no letter before the Margins are home");
+  const V = g.vext("claude"); V.pages = {}; for (let b = 0; b < 10; b++) V.pages[b] = 1;
+  const li = offered("kingletter"); assert.ok(li >= 0); g.choose(k, li); assert.ok(g.bag.some((i) => i.kind === "kingletter"), "the letter in the pack"); assert.strictEqual(offered("kingletter"), -1, "one at a time");
+  // at the throne: two gaps, one letter
+  g.story.read = {}; const thing = { type: "boss" }; const choices = []; g.on("choice", (c) => choices.push(c));
+  for (const R of CM.REMIND.slice(2)) g.story.read[R.key] = 70;   /* (the first two unread) */
+  g.askRemind("1,1", thing); assert.strictEqual(choices.pop().options[0], "Give him Claude's letter");
+  let fought = false; const sc = g.startCombat; g.startCombat = () => { fought = true; };
+  g.answerRemind("1,1", thing, 0); assert.strictEqual(thing.remind, 1, "the letter answers the first gap"); assert.ok(!g.bag.some((i) => i.kind === "kingletter"), "and is given up");
+  assert.ok(/his own, from before/.test(talks.find((t) => /takes the letter/.test(t)) || ""));
+  assert.ok(!choices[choices.length - 1].options.includes("Give him Claude's letter"), "not a second time"); g.answerRemind("1,1", thing, 0); assert.ok(fought, "the second gap: he draws"); g.startCombat = sc;
+  // the account of a run, and the news
+  const entry = { name: "x", floor: 23, won: false, date: "today", tally: { kills: 40, guardians: ["rat"] } }; g.payChapters(entry);
+  assert.ok(/reached floor 23/.test(entry.claudeNote) && /40 things fell/.test(entry.claudeNote), entry.claudeNote); assert.strictEqual(V.accounts.length, 1);
+  const won = { name: "x", floor: 70, won: true, reminded: true, date: "today", tally: {} }; g.payChapters(won); assert.ok(/sat down/.test(won.claudeNote)); assert.strictEqual(V.kingNews, "reminded");
+  const ai = offered("accounts"); assert.ok(ai >= 0); assert.ok(talks.some((t) => /They say he said her name/.test(t)), "the news, at the next talk"); const n = talks.length; g.claudeTalk(k); assert.strictEqual(talks.length, n, "told once");
+  assert.strictEqual(offered("kingletter"), -1, "no letter needed after he's remembered");
+  // a letter home after a guardian
+  g.trip().deepest = 17; g.trip().guardians.push("The Rat King"); const L0 = g.letters().length; g.writeLetters(); assert.ok(g.letters().some((l) => l.hero === "Claude" && /The Rat King/.test(l.text)), "Claude's letter"); assert.ok(g.letters().length > L0);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
