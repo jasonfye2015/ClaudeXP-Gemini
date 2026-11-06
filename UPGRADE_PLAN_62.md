@@ -85,6 +85,12 @@ their own that is smaller and simpler.
   bands), tinted a draw a model (CM.plantTintOf -> uTint), toward a wall when there is one, never on a solid
   square, a thing, a feature, in a cave, a house or the Joker's hall. The small plants' reach is eleven squares;
   the density scales with Detail. Not done: the daylit squares under the grates (the grates are the window's).
+- Phase 5, checked after v81.0 in the harness: the Wood in summer, autumn, winter and under snow reads right (green
+  crowns, orange, bare broadleaves with the pines green, the snow shapes with the ground whitened); 434 instances
+  drawn at high Detail with a tree in reach; the frame rate with the plants against without differed by under a
+  frame a second (45.5 against 46.1 in the harness, which is CPU-bound). Nothing more was changed for it. Open: the
+  far pictures' colours against the meshes' (the painted far trees stay green in winter beyond sixteen squares),
+  and the daylit grates' grass.
 
 ## 4. Budget
 

@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The clutter below ground (v82.0, UPGRADE_PLAN_63.md release 1)
+  (src/js/69zzt-clutter.js, src/js/76zzzzzzzzzzr-clutter.js, src/js/69zzs-plants.js, src/js/36-looks.js, src/js/80-main.js, src/js/76zzzzzzzzzzq-plants.js)
+  - The clutter below ground (plan 63, release 1): the dungeon is a lived-in place. Stalagmites stand at the walls'
+    feet and in the corners, three sizes, and stalactites hang from the ceilings over them - stone grey, crystal
+    blue in the Crystal Caverns, never in the middle of a narrow way. By band the walls carry drainage ports and
+    barred grates at their feet (the damp halls), pipe mouths that drip (the Foundry and the damp halls), and
+    spiderwebs in the corners (most in the Catacombs and the bone halls). Bugs crawl on the floor about the party and
+    scatter from its feet. A few rats sit at the corridors' edges and scurry off two squares as the party comes
+    within two, never fought, never in the way, home again when the party is far. All of it a sight: nothing is
+    solid, nothing stands on the stairs, a thing or a feature; the Detail setting sets how much.
+  - Under the hood: a set of pictures painted ahead in the art worker now passes through the window's own
+    additions, so no floor painted ahead lacks the twister's, the fogs', the plants' or the clutter's pictures; and
+    the floor's pictures are made again if the plants' pack arrives after them.
+
 The plants (v81.0, UPGRADE_PLAN_62.md phases 3-4)
   (src/js/69zzs-plants.js, src/js/76zzzzzzzzzzq-plants.js)
   - The plants (plan 62, phases 3-4): the world is painted with them, as meshes from the same CC0 pack as the
