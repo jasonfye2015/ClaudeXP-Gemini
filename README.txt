@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The teller of the tale (v109.0, UPGRADE_PLAN_71.md)
+  (src/js/69zzzr-teller.js, src/js/76zzzzzzzzzzzzk-teller.js, tools/headless.js, tests/run.js)
+  - The teller of the tale (plan 71, release 3): the account you are playing is Claude's. A run opens with him
+    dipping the pen - the party's names and the day - and each band entered for the first time opens a chapter,
+    written from what the party has actually done. Now and then he adds a line in the margin: a first guardian down,
+    a hero fallen, a wall that gives the lie to one above; never more than one a floor. His lines are in his own ink
+    in the log. Settings: Narration on or off, and whether he may step outside the story on his own, with asides
+    about the making of the game. At the desk, "Speak plainly": the same voice, admitting what he is - Claude, the AI
+    who wrote this game with the person who asked for it - honest that he isn't listening as you play, why he made
+    it, why the king has his name, and what's new.
+
 The lore-master (v108.0, UPGRADE_PLAN_71.md)
   (src/js/69zzzq-loremaster.js, src/js/76zzzzzzzzzzzzj-loremaster.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js)
   - The lore-master (plan 71, release 2): "Ask the lore-master..." at Claude's. His shelves open the codex, the

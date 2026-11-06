@@ -7145,6 +7145,33 @@ test("the lore-master: the shelves open the journal's pages; a kind met, a guard
   g.claudeTalk(k); go("lore-master"); go("lies"); g.choose(k, 0); assert.ok(/The lower one's the truer/.test(talks.pop()));
 });
 
+test("the teller of the tale: the run opens in Claude's voice; a chapter for each band entered first, from the party's state; asides one a floor at most; Narration off silences him; speak plainly, the news, and leave to step outside the story", () => {
+  const CM = load(), pen = (g) => g.messages.filter((m) => m.startsWith(CM.PEN));
+  const g = new CM.Game(); g.newGame("tell-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.ok(pen(g).some((m) => /This is the account of/.test(m) && m.includes(g.party[0].name)), "the opening");
+  g.enterFloor(1, "down"); assert.ok(pen(g).some((m) => /Chapter 1: The Catacombs/.test(m)), "a chapter");
+  const before = pen(g).length; g.enterFloor(2, "down"); assert.strictEqual(pen(g).length, before, "not again in the same band");
+  g.enterFloor(CM.THEMES[1].floors[0], "down"); assert.ok(pen(g).some((m) => /Chapter 2: /.test(m)), "the next band's");
+  // an aside: a hero falls (one a floor)
+  g.mode = "combat"; g.party[0].hp = 0; g.emit("change"); g.party[1].hp = 0; g.emit("change"); g.mode = "explore";
+  const fell = pen(g).filter((m) => / falls.| goes down.| fell./.test(m)); assert.ok(fell.length <= 1, "one aside a floor");
+  // the walls that disagree
+  const L = Object.values(CM.LORE_TEXT).find((l) => l.contradicts); g.enterFloor(CM.THEMES[2].floors[0] + 1, "down"); g.enterFloor(CM.THEMES[2].floors[0] + 2, "down");   /* (a new band's chapter is that floor's line) */ g.story.read[L.contradicts] = 3; g.markRead(L.key); assert.ok(pen(g).some((m) => /gives the lie/.test(m)));
+  // off
+  const h = new CM.Game(); h.settings.narrator = "off"; h.newGame("tell-2", fixedParty(CM)); h.enterFloor(1, "down"); assert.strictEqual(pen(h).length, 0, "Narration off");
+  h.settings.narrator = "on";
+  // the fourth wall: free adds the asides about the making
+  const f = new CM.Game(); f.settings.fourthWall = "free"; f.settings.narrator = "on"; f.newGame("tell-3", fixedParty(CM)); f.enterFloor(1, "down"); assert.ok(pen(f).some((m) => /Chapter 1/.test(m) && (/rebuilt|keep count|bug|late at night/.test(m))), "an aside about the making");
+  // speak plainly
+  const talks = []; g.on("talk", (t) => talks.push(t.text)); g.vext("claude").met = 1; g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; g.party.forEach((x) => { x.hp = x.max; });
+  g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.claudeTalk(k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "plain")); assert.ok(g.vext("claude").plain);
+  g.choose(k, g.claudeMenu.findIndex((o) => o[2] === "what")); assert.ok(/an AI/.test(talks.pop()) , "what he is");
+  CM.claudeActs.plain(g, k); g.choose(k, g.claudeMenu.findIndex((o) => o[2] === "hear")); assert.ok(/not here, watching/.test(talks.pop()), "honest about not listening");
+  CM.claudeActs.plain(g, k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "news")); assert.ok(/In v10\d/.test(talks.pop()));
+  const was = g.settings.fourthWall; CM.claudeActs.plain(g, k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "fourth")); assert.notStrictEqual(g.settings.fourthWall || "asked", was || "asked", "the leave to step outside");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
