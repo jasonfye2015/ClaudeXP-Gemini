@@ -63,6 +63,7 @@ Object.assign(CM.Game.prototype, {
       if (m.champion === "shadowed" && !m.hidden) this.say(`${this.alive().find((h) => h.cls === "Rogue").name} sees ${CM.the(m)} in the shadows.`);
     }
     if (this.foes.some((m) => m.champion)) this.say(`A champion leads them: ${this.foes.filter((m) => m.champion).map((m) => `${m.name} (${CM.CHAMPIONS[m.champion].blurb})`).join("; ")}.`);
+    this.engagedHow = "met";
     let wary = this.alive().some((h) => CM.trait(h, "slippery") || h.quirk === "quiet" || (h.boots && h.boots.props && h.boots.props.silence && !h.boots.unknown) || CM.equipped(h).some((it) => it.temper && it.props && it.props.silence) || (this.inDark() && h.cloak && h.cloak.props && h.cloak.props.hood && !h.cloak.unknown));
     const loud = this.alive().some((h) => h.armor && h.armor.props && h.armor.props.weight === "heavy" && CM.baseIdOf(h.armor) !== "Mithril Plate");   // (heavy armour is loud)
     const ratproof = CM.partyProp(this.party, "ratproof") && this.foes.every((m) => (m.kind || m.name) === "Giant Rat");   // (a rat's tooth)
@@ -71,14 +72,17 @@ Object.assign(CM.Game.prototype, {
     for (const p of this.alive()) p.prism = CM.gearProp(p, "mirror") ? 1 : 0;   // (a mirror shard: the first blow halved)
     if (theyCame && this.followerIs && this.followerIs("dog") && !sleepers) { wary = true; this.say(`${this.follower.name} growls low before they're in sight: no one is caught napping.`); this.sound("bark"); }
     if (sleepers) {                                                      // asleep: the party's blows fall before they are awake, and all of them land
+      this.engagedHow = "drop";
       this.say("They are asleep. The party's blows fall before they wake.");
       this.combat.surprise = true; this.combat.sure = true; this.tally.sleepersStruck = (this.tally.sleepersStruck || 0) + 1;
     } else if ((theyCame || this.inDark()) && !wary && !(this.buffs && this.buffs.night !== undefined) && this.rnd.chance((loud ? 0.65 : 0.5) + (CM.newMoon(this) && CM.isNight(this) && this.floor && this.floor.number <= 5 ? 0.1 : 0))) {   // (a moonless night near the surface: they come quieter)   // surprise: they're on you before you can draw... (not past silent boots, a hood, a quiet one)
+      this.engagedHow = "ambush";   /* (plan 67: the window's flourish reads it) */
       this.say("They're on you before you can draw!");
       for (const m of this.living()) this.monsterAct(m);
       this.afterBlows();
       if (this.mode !== "combat") return;
     } else if (!theyCame && !this.asc("watchful") && (this.rnd.chance(sneaky ? 0.35 : 0.2) || this.alive().some((h) => CM.trait(h, "foresight")))) {     // ...or you have the drop on them (never, past the tenth rung)
+      this.engagedHow = "drop";
       this.say("You have the drop on them: a free round!");
       this.combat.surprise = true;
     }

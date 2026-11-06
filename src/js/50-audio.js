@@ -154,6 +154,9 @@ CM.audio = {
       fallen: () => T([[220, 0.15], [165, 0.2], [110, 0.45]], "square", 0.14),
       ailment: () => this._mix(T([[440, 0.35]], "sine", 0.1), T([[466, 0.35]], "sine", 0.1)),
       grind: () => this._mix(N(0.9, 0.35, 0.02, 67), this._sweep(90, 60, 0.9, "square", 0.04), this._after(0.85, T([[55, 0.15]], "square", 0.2))),
+      stinger_ambush: () => this._mix(N(0.18, 0.6, 0.35, 83), this._sweep(110, 55, 0.5, "sawtooth", 0.16), this._after(0.08, T([[147, 0.5]], "sawtooth", 0.1)), this._after(0.08, T([[156, 0.5]], "sawtooth", 0.08)), this._after(0.12, N(0.35, 0.2, 0.1, 89))),   // (plan 67: caught napping - a drum and a low brass clash)
+      stinger_met: () => this._mix(N(0.1, 0.4, 0.4, 87), T([[220, 0.12], [294, 0.3]], "sawtooth", 0.09)),   // (they come, in plain sight: two notes)
+      stinger_drop: () => this._mix(T([[294, 0.09], [370, 0.09], [440, 0.09], [587, 0.3]], "triangle", 0.12), this._after(0.02, N(0.06, 0.25, 0.5, 91))),   // (the drop on them: rising)
       shatter: () => this._mix(N(0.3, 0.4, 0.95, 53), this._after(0.05, T(Array.from({ length: 10 }, (_, i) => [2000 + i * 300, 0.02]), "sine", 0.1)), this._after(0.4, this._sweep(300, 60, 0.8, "sine", 0.12))),
     };
     for (const [name, make] of Object.entries(recipes)) Object.defineProperty(this.buffers, name, { configurable: true, enumerable: true,   // (v26.4: made when first wanted - all of them at the start was a quarter of a second)
