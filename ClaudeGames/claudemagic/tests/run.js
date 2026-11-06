@@ -6511,6 +6511,30 @@ test("the water basins (plan 63, release 2): the flood has two depths - waist-de
   delete CM.wxRandom; void floorN;
 });
 
+test("rockfalls (plan 63, release 3): a fall comes down on a corridor square of the first four floors when the ground above is sodden, in a gale or after a meteor's shock - never a room, a thing, a feature, the party's square or the one beside it, never within six of the way up on the first floor, never within six of another, never more than three a floor - and only where every square reachable from the stairs stays reachable; it blocks the walk and is said; Space before it clears it in twenty minutes; a day on it clears itself", () => {
+  const CM = load(); let seq = 0.5; CM.wxRandom = () => seq; const R = CM.ROCKFALL, g = new CM.Game(); g.newGame("rock-1", fixedParty(CM)); g.enterFloor(2, "down"); const fl = g.floor, N = fl.grid.length;
+  const force = (kind, strength = 1) => { const W = g.ext("wx"); W.cur = { kind, strength, from: g.clock - 60, until: g.clock + 300 }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; W.prev = null; };
+  force("clear"); assert.strictEqual(CM.rockfallStep(g, 60), null, "dry and still: nothing falls");
+  force("storm", 1); g.mode = "explore"; seq = 0.0; const k = CM.rockfallStep(g, 10); assert.ok(k, "sodden: a fall"); const [x, y] = k.split(",").map(Number); assert.strictEqual(fl.things[k].type, "debris"); assert.ok(g.messages[g.messages.length - 1].includes("rock") || g.messages[g.messages.length - 1].includes("roof"));
+  assert.ok(!(fl.rooms || []).some((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1), "a corridor square"); assert.ok(Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 1, "not beside the party"); assert.ok(!CM.isOpen(fl, x, y) && fl.grid[y][x] === 0, "a wall for the walk, not for the map");
+  // every square still reachable from the stairs
+  const S = Object.keys(fl.things).find((q) => ["ladder", "stairs_up"].includes(fl.things[q].type)).split(",").map(Number), D = CM.distances(fl.grid, S, (a, b) => CM.passable(fl, a, b)); let open = 0; for (let yy = 0; yy < N; yy++) for (let xx = 0; xx < N; xx++) if (fl.grid[yy][xx] === 0 && !(xx === x && yy === y)) { open++; }
+  const D0 = CM.distances(fl.grid, S, (a, b) => fl.grid[b] && fl.grid[b][a] === 0 && !(fl.features[`${a},${b}`] && ["door", "gate"].includes(fl.features[`${a},${b}`].type) && !fl.features[`${a},${b}`].open)); for (const q of D0.keys()) if (q !== k) assert.ok(D.has(q), `still reachable: ${q}`); void open;
+  // the cap and the spacing
+  for (let i = 0; i < 40; i++) CM.rockfallStep(g, 10); const falls = CM.rockfallsOf(fl); assert.ok(falls.length <= R.mostPerFloor, `at most three (${falls.length})`); for (const a of falls) for (const b of falls) if (a !== b) { const [ax, ay] = a.split(",").map(Number), [bx, by] = b.split(",").map(Number); assert.ok(Math.abs(ax - bx) + Math.abs(ay - by) >= R.apart, "six apart"); }
+  // by hand: refused where the way would close - a corridor's only square
+  let only = null; for (let yy = 1; yy < N - 1 && !only; yy++) for (let xx = 1; xx < N - 1 && !only; xx++) { const q = `${xx},${yy}`; if (fl.grid[yy][xx] !== 0 || fl.things[q] || fl.features[q] || (fl.rooms || []).some((r) => xx >= r.x0 && xx <= r.x1 && yy >= r.y0 && yy <= r.y1)) continue; const before = CM.distances(fl.grid, S, (a, b) => CM.passable(fl, a, b)), after = CM.distances(fl.grid, S, (a, b) => CM.passable(fl, a, b) && `${a},${b}` !== q); if ([...before.keys()].some((z) => z !== q && !after.has(z)) && Math.abs(xx - fl.pos[0]) + Math.abs(yy - fl.pos[1]) > 1) only = q; }
+  if (only) assert.strictEqual(CM.rockfallAt(g, fl, only, "test"), false, "refused where the way would close");
+  // the walk blocked, and the clearing
+  const first = falls[0], [fx, fy] = first.split(",").map(Number); const from = CM.DIRS.map(([dx, dy], i) => [fx - dx, fy - dy, i]).find(([a, b]) => CM.passable(fl, a, b)); assert.ok(from, "a square before it"); fl.pos = [from[0], from[1]]; fl.facing = from[2]; g.messages = [];
+  assert.strictEqual(g.move(0), false, "the walk is blocked"); assert.ok(g.messages[0].includes("Space to clear")); const c0 = g.clock; g.use(); assert.ok(!fl.things[first], "cleared"); assert.ok(g.clock >= c0 + R.clearMinutes, "twenty minutes"); assert.ok(g.messages[g.messages.length - 1].includes("open")); assert.ok(CM.isOpen(fl, fx, fy));
+  // a day on, the rest clear themselves
+  g.clock += R.lifeMinutes + 1; seq = 0.99; CM.rockfallStep(g, 1); assert.strictEqual(CM.rockfallsOf(fl).length, 0, "settled and gone");
+  // the first floor: never near the way up; the fifth: none
+  g.enterFloor(1, "down"); const f1 = g.floor, up = Object.keys(f1.things).find((q) => ["ladder", "stairs_up"].includes(f1.things[q].type)).split(",").map(Number); seq = 0.0; for (let i = 0; i < 30; i++) CM.rockfallStep(g, 10); for (const q of CM.rockfallsOf(f1)) { const [a, b] = q.split(",").map(Number); assert.ok(Math.abs(a - up[0]) + Math.abs(b - up[1]) > R.nearShaft, "clear of the way up"); }
+  g.enterFloor(5, "down"); assert.strictEqual(CM.rockfallStep(g, 60), null, "the fifth floor's roof holds"); delete CM.wxRandom;
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

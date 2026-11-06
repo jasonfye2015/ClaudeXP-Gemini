@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The rockfalls (v84.0, UPGRADE_PLAN_63.md release 3)
+  (src/js/69zzv-rockfalls.js, src/js/76zzzzzzzzzzt-rockfalls.js, src/js/69zzs-plants.js)
+  - The rockfalls (plan 63, release 3): the first four floors' roofs are not to be trusted when the ground above
+    is sodden with rain, when a gale blows above, or in the hour after a meteor's shock. Now and then a fall of rock
+    comes down on a corridor square - a crack and a roar, the view shaken, dust bursting and sifting from the broken
+    roof - and blocks it: a heap of rock, named on the look line. It never falls in a room or a doorway, on a thing
+    or a feature, on the party or beside it, near the way up on the first floor, near another fall, or more than
+    three to a floor; and it never falls where it would cut off any square from the stairs - the whole floor's
+    reach is checked before each one. Stand before it and press Space: twenty minutes with hands and shoulders
+    (and the pick, if one is carried, but none is needed) and the way is open. Left alone, a fall settles and
+    clears itself after a day.
+
 The water basins (v83.0, UPGRADE_PLAN_63.md release 2)
   (src/js/69zzu-basins.js, src/js/76zzzzzzzzzzs-basins.js)
   - The water basins (plan 63, release 2): the flood has two depths. While a heavy storm's water stands the sunken
