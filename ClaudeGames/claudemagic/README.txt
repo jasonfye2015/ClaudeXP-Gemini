@@ -1392,6 +1392,13 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The sprite portraits on the title card (v100.0, the party's pictures)
+  (src/js/76zzzzzzzzzzzze-portraitswap.js)
+  - The sprite portraits on the title card: the card with the eleven callings is drawn about a second before the
+    heroes' sprites finish loading, so it kept the drawn pictures. Every portrait handed out before the sprites
+    arrive - the title card, the Hall of Fame, the legends, a saved run's cards - is now remembered and drawn over in
+    place as soon as they do, so no screen is left with the old pictures.
+
 The sprite portraits, every time (v99.0, the party's pictures)
   (src/js/76zzzzx-herogear.js, src/js/70-ui.js, src/js/76d-fortress.js, src/js/76h-claudecraft.js)
   - The sprite portraits, every time: opened from the launcher straight into a saved run, the party's cards were
