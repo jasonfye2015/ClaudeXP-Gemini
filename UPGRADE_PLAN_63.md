@@ -162,6 +162,16 @@ how that is ruled out, and the order of work. Nothing here is built yet.
   art worker now goes through the window files' build hooks (CM.art._prebuilt, 36-looks.js and 80-main.js), and
   CM.rebuildArt makes the floor's set again when the plants' pack arrives after it. Not done: the water leaks and
   trickles (the walls' streaks need the surface's wet uniform; a later look).
+- v83.0 - release 2, the water basins: 69zzu-basins.js (CM.floodDepth 0/1/2 by CM.floodNow against
+  BASINS.waistFrom; burn and walkPace wrapped for the deep water - two minutes a step, the pace doubled; the
+  grating and the sunk chest furnished on a floor's first visit, not at its making, so the generator's fingerprints
+  and the save's deltas hold: a "grate" feature two squares in from a sunken room's edge of five squares' width or
+  more, a sunken room's chest marked sunk one room in three; arrive wrapped for the grating's bite, a point each
+  when flooded, never below one, harmless and said when dry; CM.leechStep on the clock while wading waist-deep -
+  a poison of four, cleared by any healing; use wrapped for the dive, a quarter hour while the water stands).
+  76zzzzzzzzzzs-basins.js draws the grating flat (dark and dim under water), the chest's basin, splashes the deep
+  step and names the depth on the sky bar. The test asserts every square still reachable from the stairs with the
+  grating counted as a wall.
 
 ## 7. Decisions taken (2026-11-05, on the plan's own suggestions)
 

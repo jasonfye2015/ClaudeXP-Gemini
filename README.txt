@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The water basins (v83.0, UPGRADE_PLAN_63.md release 2)
+  (src/js/69zzu-basins.js, src/js/76zzzzzzzzzzs-basins.js)
+  - The water basins (plan 63, release 2): the flood has two depths. While a heavy storm's water stands the sunken
+    halls are waist-deep - two minutes more a step, the walk at twice the pace, the step a deep splash, the sky bar
+    naming the depth - and knee-deep as it drains over the day after. The water hides things. A spiked grating set
+    in the floor of a wide sunken hall is harmless and plain when dry, a point a step to each hero when flooded,
+    never below one, and never on a doorway: a hall is always crossed another way. A leech may fasten on a hero
+    wading waist-deep a while - a bite that festers like a poison, pulled off by any healing or the camp. One chest
+    in three of the sunken halls is sunk: while the water stands it is dived for, a quarter hour of the clock.
+
 The clutter below ground (v82.0, UPGRADE_PLAN_63.md release 1)
   (src/js/69zzt-clutter.js, src/js/76zzzzzzzzzzr-clutter.js, src/js/69zzs-plants.js, src/js/36-looks.js, src/js/80-main.js, src/js/76zzzzzzzzzzq-plants.js)
   - The clutter below ground (plan 63, release 1): the dungeon is a lived-in place. Stalagmites stand at the walls'
