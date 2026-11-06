@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v113.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v114.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "113.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "114.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -33041,6 +33041,77 @@ Object.assign(CM.Game.prototype, {
   { const ca0 = P.claudeAnswer; P.claudeAnswer = function (k, opt, ...a) { const before = V(this).tea, out = ca0.call(this, k, opt, ...a); if (opt && opt[0] === "tea" && V(this).tea !== before) { const s = CM.season ? CM.season(this) : "spring"; if (TEA[s]) this.say(TEA[s]); } return out; }; }
 }
 
+// ---- 69zzzw-curios.js ----
+"use strict";
+// Curiosities (UPGRADE_PLAN_73.md). Small things to find, kept quiet on purpose. Each one found is written in the
+// village's ledger (vext curios), and Claude keeps a count on his shelf - never what, never how many there are.
+//   game.curio(id) -> true the first time; game.curiosFound() -> count; CM.CURIOS (ids)
+{ const P = CM.Game.prototype, key = (x, y) => `${x},${y}`, V = (g) => g.vext("curios"), R = (g) => g.ext("curios");
+  CM.CURIOS = new Set();
+  P.curio = function (id) { CM.CURIOS.add(id); if (this.replaying || this.film || !this.vext) return false; const L = V(this); if (L[id]) return false; L[id] = CM.dayOf ? CM.dayOf(this) + 1 : 1;
+    this.say("✧ A curiosity. (Claude will want to hear about it.)"); if (this.saveVillage) this.saveVillage(); this.emit("curio", id); return true; };
+  P.curiosFound = function () { return Object.keys((this.village && this.village.ext && this.village.ext.curios) || {}).length; };
+  const once = (g, id, text) => { const fresh = !V(g)[id]; if (text && fresh) g.say(text); g.curio(id); return fresh; };
+  // ---- the ledger on Claude's shelf ----
+  { const cp0 = P.claudePanel; if (cp0) P.claudePanel = function (id, ...a) { const out = cp0.call(this, id, ...a); if (id === "stats") { const n = this.curiosFound(); this.say(n ? `On the shelf, a small box labelled "Curiosities", in Claude's hand. Inside, ${CM.plural(n, "folded slip")}. He doesn't say what's on them.` : "On the shelf, a small empty box labelled \"Curiosities\". Claude sees you looking. \"For later,\" he says."); } return out; }; }
+  // ---- walking ----
+  { const m0 = P.move; P.move = function (rel, ...a) { const out = m0.call(this, rel, ...a), C = R(this), fl = this.floor;
+      if (this.mode === "explore" && fl) {
+        if (out === false && /solid wall/i.test(String(this.messages[this.messages.length - 1] || ""))) { C.bump = (C.bump || 0) + 1; if (C.bump === 10) once(this, "bump", "The wall, quite politely: \"Still a wall.\""); } else C.bump = 0;
+        if (out && rel === 2) { C.back = (C.back || 0) + 1; if (C.back === 30) once(this, "backwards", "Thirty steps backwards, smoothly. Somewhere, very faintly, a crowd applauds."); } else if (out) C.back = 0;
+        C.spin = 0; }
+      return out; }; }
+  { const t0 = P.turn; P.turn = function (way, ...a) { const out = t0.call(this, way, ...a), C = R(this); if (out) { C.spin = C.spinWay === way ? (C.spin || 0) + 1 : 1; C.spinWay = way; if (C.spin === 12) once(this, "spin", "The party turns round three times on the spot and sits down hard. Nothing happens. You just look silly."); } return out; }; }
+  // ---- the cabin ----
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor, C = R(this);
+      if (this.mode === "explore" && fl && fl.interior === "claude") { const [dx, dy] = CM.DIRS[fl.facing], here = key(...fl.pos), ahead = key(fl.pos[0] + dx, fl.pos[1] + dy), t = fl.things[ahead] || fl.things[here];
+        if (t && t.type === "cabincat") { C.cat = (C.cat || 0) + 1; if (C.cat === 20) { once(this, "cat", "The cat looks you full in the face for the first time, and says, quite clearly: \"Fine.\" Then it goes back to sleep."); return true; } }
+        if (t && t.type === "redink" && this.vext("claude").redink) { C.ink = (C.ink || 0) + 1; if (C.ink === 10) { once(this, "ink", "Claude, without turning: \"That's an inkpot, not a fountain. Nothing comes out if you keep tapping it.\" A pause. \"Mostly nothing.\""); return true; } }
+        if (t && t.type === "claude" && CM.claudeSpot && CM.claudeSpot(this) === "bed" && !C.mumbled) { C.mumbled = true; const M = (CM.MARGINS || [])[CM.hashSeed(`${this.seed}:mumble:${CM.dayOf(this)}`) % Math.max(1, (CM.MARGINS || []).length)]; if (M) once(this, "mumble", `Claude, still asleep, mumbles: "...${M.text.split(". ")[1] || M.text}..." and then wakes, and has no idea he said anything.`); } }
+      if (this.mode === "explore" && fl && fl.number === 0) { const [dx, dy] = CM.DIRS[fl.facing], t = fl.things[key(fl.pos[0] + dx, fl.pos[1] + dy)] || fl.things[key(...fl.pos)];
+        if (t && t.type === "well") { C.well = (C.well || 0) + 1; if (C.well === 10) { this.gold += 1; once(this, "well", "You drop a coin in the well for the tenth time. Plink. A moment later, something flicks one back up: 1 gold, and a little wet. (The well keeps no other accounts.)"); return true; } }
+        if (t && t.type === "scarecrow") { C.crow = (C.crow || 0) + 1; if (C.crow === 5) { once(this, "scarecrow", "The scarecrow turns its head, slowly, all the way round to look at you - and back. The merchant's hat doesn't move at all."); return true; } }
+        if (t && t.type === "memorialwall" && CM.hourOf && CM.hourOf(this) === 3) once(this, "flower", "At this hour there's a single flower at the foot of the wall, still wet. Nobody you ask will say who leaves it."); }
+      return u0.apply(this, a); }; }
+  { const rc0 = P.returnToClaude; if (rc0) P.returnToClaude = function (...a) { if (this.floor && this.floor.interior === "claude") { const C = R(this); C.home = (C.home || 0) + 1; if (C.home === 3) once(this, "home", "Claude, from the desk: \"You're already here. You can stop pressing it.\" He doesn't look up. He's smiling."); } return rc0.apply(this, a); }; }
+  { const ac = CM.claudeActs || {}, pl0 = ac.plainly; if (pl0) ac.plainly = function (g, k, say, id) { if (id === "hear") { const C = R(g); C.hear = (C.hear || 0) + 1; if (C.hear === 5) { once(g, "hear"); say("\"Still no. But I like that you keep checking. Most people only ask once.\""); return; } } return pl0(g, k, say, id); }; }
+  { const ct0 = P.claudeTalk; P.claudeTalk = function (k, menu = "main", ...a) { if (menu === "main" && (this.party || []).some((h) => /^claude$/i.test(h.name)) && !R(this).namesake) { R(this).namesake = true; once(this, "namesake"); this.emit("talk", { title: "Claude", text: "Claude looks at the one named Claude for quite a long time. \"It's a popular name this year,\" he says at last. \"Mind you live up to it. I'm still trying to.\"" }); } return ct0.call(this, k, menu, ...a); }; }
+  // ---- runs, seeds and names ----
+  { const ng0 = P.newGame; P.newGame = function (...a) { const out = ng0.apply(this, a), s = String(this.seed || "").toLowerCase(), say = (t) => (CM.narrate ? CM.narrate(this, t) || this.say(t) : this.say(t));
+      if (s === "claude") { say("A seed named after me. I'm flattered, and slightly worried."); this.curio("seedclaude"); }
+      if (s === "aelith") { say("Her name, for a seed. Somewhere below, a king turns his head and doesn't know why."); this.curio("seedaelith"); }
+      if ((this.party || []).length === 4 && new Set(this.party.map((h) => h.cls)).size === 1) { say(`Four ${this.party[0].cls}s. I've checked twice. It's either a very bad plan or a very good joke.`); this.curio("quartet"); }
+      return out; }; }
+  const FLOORS = { 13: "Floor thirteen. A small black cat crosses the corridor ahead, looks at you, and very deliberately crosses back.", 42: "Floor forty-two. Someone has chalked on the wall: THIS WAS THE ANSWER. I'VE FORGOTTEN THE QUESTION.", 99: "Ninety-nine. Nearly. You can feel the bottom in your teeth.", 100: null };
+  { const em0 = P.emit; P.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally && this.vext) { const n = this.floor.number, C = R(this); C.floors = C.floors || {};
+        if (FLOORS[n] && !C.floors[n] && n >= 1) { C.floors[n] = true; this.say(FLOORS[n]); this.curio(`floor${n}`); }
+        if (n === CM.LAST_FLOOR && (this.party || []).some((h) => /^mordeth$/i.test(h.name)) && !C.mordeth) { C.mordeth = true; this.say("From the throne room, before you're even through the door, a voice: \"...Who said my name?\""); this.curio("mordeth"); }
+        if (n === CM.BOTTOM && (this.bag || []).some((i) => i.curio === "sock") && !C.pair) { C.pair = true; this.say("Down here at the very bottom of the world, under a root older than the town, lies a single sock. It matches the one in your pack exactly. You put them together. It feels like the end of something."); this.curio("pair"); } }
+      if (ev === "change" && this.tally && this.gold === 777 && !R(this).sevens) { R(this).sevens = true; this.say("Your purse chimes, three times, very softly."); this.curio("sevens"); }
+      return em0.call(this, ev, ...a); }; }
+  // ---- things to find ----
+  const ITEMS = { fluff: { name: "A ball of fluff", kind: "trinket", slot: "trinket", power: 0, value: 1, curio: "fluff", props: { stats: { luck: 1 } }, lore: "It was alive a moment ago. It may still be." },
+    duck: { name: "A rubber duck", kind: "trinket", slot: "trinket", power: 0, value: 1, curio: "duck", props: { init: 1 }, lore: "It squeaks. Things that hear it hesitate, just for a moment." },
+    sock: { name: "A single sock", kind: "trinket", slot: "trinket", power: 0, value: 0, curio: "sock", props: {}, lore: "Grey wool, darned once. Its partner must be somewhere." } };
+  CM.curioItem = (id) => JSON.parse(JSON.stringify(ITEMS[id]));
+  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
+  CM.curioFloor = (seed, band, salt) => { const T = CM.THEMES[band]; return T.floors[0] + CM.hashSeed(`${seed}:${salt}`) % (T.floors[1] - T.floors[0] + 1); };
+  { const em1 = P.emit; P.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally && this.vext) { const fl = this.floor, n = fl.number, C = R(this); C.laid = C.laid || {};
+        if (n >= 1 && n % 1 === 0 && fl.special !== "interior" && !(this.deltas && this.deltas[n])) for (const [id, band] of [["fluff", 0], ["duck", 1]]) if (!C.laid[id] && CM.curioFloor(this.seed, band, `curio:${id}`) === n) { C.laid[id] = true; layOn(fl, this.seed, `curioat:${id}`, { type: "curio", id }); }
+        if (n === -1 && !C.laid.sock && !V(this).sock) { C.laid.sock = true; layOn(fl, this.seed, "curioat:sock", { type: "curio", id: "sock" }); } }
+      return em1.call(this, ev, ...a); }; }
+  const FIND = { fluff: "A ball of grey fluff with two bright eyes looks up at you - and bolts, under a door, gone. It leaves a smaller ball of fluff behind, which you keep, because what else would you do.", duck: "Bobbing in a puddle that has no business being this round: a small yellow duck. It squeaks when you pick it up. Something down the corridor goes very quiet.", sock: "In the long grass, a single grey sock, darned once at the heel. Whose? Where's the other one?" };
+  { const u1 = P.use; P.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.things) { const k = key(...fl.pos), [dx, dy] = CM.DIRS[fl.facing], ahead = key(fl.pos[0] + dx, fl.pos[1] + dy);
+        for (const kk of [k, ahead]) { const t = fl.things[kk]; if (t && t.type === "curio" && ITEMS[t.id]) { this.logAct && this.logAct("use"); delete fl.things[kk]; this.bag.push(CM.curioItem(t.id)); this.say(FIND[t.id]); if (t.id === "sock") V(this).sock = true; this.curio(t.id); this.emit("change"); return true; } } }
+      return u1.apply(this, a); }; }
+  { const m1 = P.move; P.move = function (rel, ...a) { const out = m1.call(this, rel, ...a), fl = this.floor; if (out && fl && fl.things) { const t = fl.things[key(...fl.pos)]; if (t && t.type === "curio") this.say("Something small, here, that doesn't belong. (Space)"); } return out; }; }
+  // ---- a fight that isn't ----
+  { const sc0 = P.startCombat; P.startCombat = function (k, thing, ...a) { const fl = this.floor, G = thing && thing.group;
+      if (fl && fl.number >= 1 && Array.isArray(G) && G.length === 1 && /Skeleton/.test(G[0].kind || G[0].name || "") && !thing.boss && !thing.guardian && CM.hashSeed(`${this.seed}:wave:${fl.number}:${k}`) % 12 === 0) {
+        delete fl.things[k]; this.say("The skeleton raises one bony hand - and waves. After a moment you wave back. It nods, and clatters off down a side passage, and that is the whole of it."); this.curio("wave"); this.emit("change"); return; }
+      return sc0.call(this, k, thing, ...a); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -49187,6 +49258,36 @@ Object.assign(CM.UI.prototype, {
       p.fillStyle = `rgba(255,${Math.round(196 + 30 * flick)},120,${flick})`; p.fillRect(x - 14 * s, y + 1 * s, 12 * s, 10 * s); p.fillStyle = "#140E0A"; p.fillRect(x - 8.6 * s, y + 1 * s, 1.2 * s, 10 * s);
       if (!CM.reducedMotion) { p.fillStyle = "rgba(170,160,150,0.18)"; for (let i = 0; i < 6; i++) { const k = (t * 0.25 + i / 6) % 1; p.beginPath(); p.arc(x + 18 * s + Math.sin(t + i) * 6 * s * k, y - 36 * s - k * 60 * s, (3 + 8 * k) * s, 0, Math.PI * 2); p.fill(); } }
       p.restore(); }; }
+}
+
+// ---- 77g-curios.js ----
+"use strict";
+// Curiosities - the window's side (UPGRADE_PLAN_73.md): the few that live in the window rather than the rules, and the
+// pictures of the small things to find. Rules: 69zzzw-curios.js.
+{ const S = 128, mk = (f) => { const c = document.createElement("canvas"); c.width = c.height = S; f(c.getContext("2d")); return c; };
+  const P = { fluff: (p) => { p.fillStyle = "#8A8680"; for (let i = 0; i < 40; i++) { const a = i * 2.4, r = 18 + (i % 5) * 3; p.beginPath(); p.arc(64 + Math.cos(a) * r * 0.6, 96 + Math.sin(a) * r * 0.45, 10, 0, Math.PI * 2); p.fill(); } p.fillStyle = "#FFF"; p.fillRect(54, 88, 6, 6); p.fillRect(70, 88, 6, 6); p.fillStyle = "#111"; p.fillRect(56, 90, 3, 3); p.fillRect(72, 90, 3, 3); },
+    duck: (p) => { p.fillStyle = "#F2C83A"; p.beginPath(); p.ellipse(60, 100, 30, 18, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(80, 76, 14, 0, Math.PI * 2); p.fill(); p.fillStyle = "#E8742A"; p.beginPath(); p.moveTo(92, 76); p.lineTo(106, 80); p.lineTo(92, 84); p.fill(); p.fillStyle = "#111"; p.fillRect(82, 70, 4, 4); },
+    sock: (p) => { p.fillStyle = "#8A8A90"; p.beginPath(); p.moveTo(50, 40); p.lineTo(74, 40); p.lineTo(74, 92); p.quadraticCurveTo(74, 112, 96, 112); p.lineTo(96, 120); p.lineTo(52, 120); p.quadraticCurveTo(46, 104, 50, 92); p.closePath(); p.fill(); p.fillStyle = "#6E6E74"; p.fillRect(50, 40, 24, 8); p.fillStyle = "#A8706A"; p.fillRect(84, 112, 10, 6); } };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const [n, f] of Object.entries(P)) { set.index[`curio:${n}`] = set.layers.length; set.layers.push(mk(f)); } return set; }; }
+  Object.assign(P, { odd: (p) => { const g = p.createRadialGradient(64, 92, 1, 64, 92, 30); g.addColorStop(0, "rgba(255,240,200,0.95)"); g.addColorStop(1, "rgba(255,200,120,0)"); p.fillStyle = g; p.fillRect(30, 60, 68, 64); p.fillStyle = "#6A5A48"; p.beginPath(); p.ellipse(64, 108, 18, 8, 0, 0, Math.PI * 2); p.fill(); },
+    door: (p) => { p.fillStyle = "#3A2A1A"; p.fillRect(40, 30, 48, 96); p.fillStyle = "#3C6EA8"; p.beginPath(); p.moveTo(46, 124); p.lineTo(46, 52); p.quadraticCurveTo(64, 30, 82, 52); p.lineTo(82, 124); p.fill(); p.fillStyle = "#E8C850"; p.beginPath(); p.arc(76, 90, 3, 0, Math.PI * 2); p.fill(); } });
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { oddity: (t, x, y, now) => [t.id === "door" ? { x, y, layer: "curio:door", w: 0.3, h: 0.3 } : { x, y, layer: "curio:odd", w: 0.32, h: 0.32, glow: 0.25 + 0.15 * Math.sin(now / 400 + x) }] });
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { curio:(t, x, y, now) => [{ x, y, layer: `curio:${t.id}`, w: 0.3, h: 0.3, lift: t.id === "duck" ? Math.abs(Math.sin(now / 600)) * 0.01 : 0 }] });
+  const egg = (id) => { const g = CM.game; if (g && g.curio) g.curio(id); };
+  // the title card: a name typed at it; a long wait; the hour and the day
+  let typed = "";
+  window.addEventListener("keydown", (e) => { const sp = document.getElementById("splash"); if (!sp || sp.classList.contains("gone") || !e.key || e.key.length !== 1) return; typed = (typed + e.key.toLowerCase()).slice(-6);
+    if (typed === "claude") { const h = sp.querySelector("h1"); if (h && !h.dataset.flipped) { h.dataset.flipped = "1"; const was = h.innerHTML; h.innerHTML = "<span>Magic and </span>Claude"; setTimeout(() => { h.innerHTML = was; delete h.dataset.flipped; }, 4000); egg("titlename"); } } }, true);
+  const S0 = CM.SplashStage;
+  if (S0) { const a0 = S0.prototype.actors; S0.prototype.actors = function (p, layer, t) { if (a0) a0.call(this, p, layer, t); if (layer !== "front" || !this.W || CM.reducedMotion) return;
+      if (t > 180 && !this.wanderer) { this.wanderer = { t0: t }; egg("idle"); } const Wd = this.wanderer; if (!Wd) return; const k = (t - Wd.t0) / 40; if (k > 1) return;
+      const W = this.W, H = this.H, x = -20 + k * (W + 40), y = H * 0.985 - 6, s = Math.max(0.6, H / 900), bob = Math.abs(Math.sin(t * 6)) * 2 * s;
+      p.save(); p.fillStyle = "#1A120C"; p.fillRect(x - 4 * s, y - 22 * s - bob, 8 * s, 16 * s); p.beginPath(); p.arc(x, y - 26 * s - bob, 5 * s, 0, Math.PI * 2); p.fill(); p.beginPath(); p.moveTo(x - 7 * s, y - 29 * s - bob); p.lineTo(x, y - 42 * s - bob); p.lineTo(x + 7 * s, y - 29 * s - bob); p.fill();
+      const g = p.createRadialGradient(x + 9 * s, y - 16 * s - bob, 1, x + 9 * s, y - 16 * s - bob, 16 * s); g.addColorStop(0, "rgba(255,200,110,0.9)"); g.addColorStop(1, "rgba(255,150,60,0)"); p.fillStyle = g; p.fillRect(x - 10 * s, y - 36 * s, 40 * s, 40 * s); p.restore(); }; }
+  const tag = () => { const el = document.querySelector("#splash .tag"); if (!el || el.dataset.curio) return; const d = new Date(), h = d.getHours(), m = d.getMonth(), day = d.getDate();
+    if (m === 3 && day === 1) { el.dataset.curio = "1"; el.textContent = "Seventy floors down, the Lich King waits - and today, so do several very convincing fake trapdoors"; egg("fools"); }
+    else if (h === 0) { el.dataset.curio = "1"; el.textContent = "Seventy floors down, the Lich King waits - and at this hour, so does the scribe, with the lamp still lit"; egg("midnight"); } };
+  { const ss0 = CM.UI.prototype.showSplash; if (ss0) CM.UI.prototype.showSplash = function (...a) { const out = ss0.apply(this, a); setTimeout(tag, 50); return out; }; }
 }
 
 // ---- 79-artworker.js ----
