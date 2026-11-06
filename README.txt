@@ -1392,6 +1392,28 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The title card's weather (v101.0, UPGRADE_PLAN_68.md release 1)
+  (src/js/77b-splashwx.js, src/js/77-splash.js, UPGRADE_PLAN_68.md)
+  - The title card's weather (plan 68): over "Claude" a star falls, burning, and strikes just above the word - a
+    flash that lights the letters, a shake, sparks and rock and a ring of dust - and leaves a chunk of meteor iron on
+    the crater's lip, glowing and steaming as it cools, with a smaller star far off now and then. Over "and" a dark
+    storm cloud rains, and every few seconds a fork of lightning strikes beside the emblem, the card flashes
+    blue-white, the word lights up, and the thunder follows a beat later. Over "Magic" a tornado hangs from its own
+    cloud, nearly still, swirling, with grit and leaves on its orbits flung out of its top. Below, behind the drifting
+    lines, a dense line of trees dressed by the season bends in the gusts and leans toward the funnel. The sky still
+    keeps the real hour. Under reduced motion the card is a still picture of all of it. The card's words are up to
+    date too: seventy floors to the Lich King, a hundred to the bottom, sixty curated rooms - and the launcher's
+    description says so.
+  - The title card's foes (plan 68, part 2): ten small scenes cast into the weather, each brief and rare. Something
+    claws up out of the star's crater, looks at the ore and sinks back; for the instant of a fork, the Lich King's
+    crowned silhouette rises in the storm cloud behind the emblem, eyes burning; a wyvern caught in the tornado's
+    orbit fights free and flaps off; the Drowned stand faint in the downpour at the tree line and are gone when it
+    eases; by night eyes open between the trunks, by day a wolf trots through and stops to look; rats run along the
+    bottom and scatter at a flash; now and then a guardian walks slowly behind the trees, half hidden; the monster
+    that killed your last party lurks at the tree line's edge with that said under it; the creatures come from the
+    band of your deepest floor; and the heroes in their row glance toward each of them, the Knight lifting his
+    shield at the Lich King. A test now parses the whole built page as a browser does.
+
 The sprite portraits on the title card (v100.0, the party's pictures)
   (src/js/76zzzzzzzzzzzze-portraitswap.js)
   - The sprite portraits on the title card: the card with the eleven callings is drawn about a second before the
