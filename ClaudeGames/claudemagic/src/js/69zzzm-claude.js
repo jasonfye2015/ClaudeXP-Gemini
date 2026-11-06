@@ -128,6 +128,7 @@
     else if (menu === "look") { const things = (this.bag || []).map((it, i) => [it, i]).filter(([it]) => it.unknown).slice(0, 6);
       if (!things.length) { this.say("\"Everything you're carrying has a name already. Come back with something odd.\""); return; }
       text = "\"Hand it here. I'll tell you what I think, and how sure I am.\""; opts = things.map(([it, i]) => ["judge", CM.baseName ? CM.baseName(it) : it.name, i]).concat([["main", "Never mind"]]); }
+    if (!opts) { if (menu === "main") return; return this.claudeTalk(k, "main"); }   /* (a menu not known here: back to the start) */
     this.claudeMenu = opts; this.emit("choice", { k, title: "Claude", text, options: opts.map((o) => o[1]), claude: true }); };
   { const ch0 = P.choose; P.choose = function (k, i) { const fl = this.floor, t = fl && fl.things[k]; if (!t || t.type !== "claude") return ch0.call(this, k, i); const opt = (this.claudeMenu || [])[i]; if (!opt) return false; this.logAct && this.logAct("choose", k, i); return this.claudeAnswer(k, opt); }; }
   P.claudeAnswer = function (k, [act, , arg]) { const V = this.vext("claude"), today = day(this), say = (s) => { this.emit("talk", { title: "Claude", text: s }); this.say(s); };

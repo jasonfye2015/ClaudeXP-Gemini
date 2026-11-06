@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The lore-master (v108.0, UPGRADE_PLAN_71.md)
+  (src/js/69zzzq-loremaster.js, src/js/76zzzzzzzzzzzzj-loremaster.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js)
+  - The lore-master (plan 71, release 2): "Ask the lore-master..." at Claude's. His shelves open the codex, the
+    compendium of things and the journal with its bestiary. Ask about something you've fought - how many you've met
+    and put down, what it does, what its touch leaves you with, what it fears and what does little to it, where it
+    stands. Ask about a guardian - the ones you've reached, and the next, never the ones far below: where it waits,
+    what it does, what it hates, whether it talks first, and whether it's what took your last party. Ask about
+    something you carry. When you're stuck, he gives a nudge, a hint or the answer, your choice, for where the king
+    keeps his heart, for reminding the king who he was and for his own next lost page - and remembers what he's told
+    you. And when two walls disagree, he tells the story behind it, and which to believe. Every answer comes from the
+    game's own tables, so it is always true.
+
 Return to Claude (v107.0, UPGRADE_PLAN_71.md)
   (src/js/69zzzp-claudehouse.js, src/js/76zzzzzzzzzzzzi-claudehouse.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_71.md)
   - Return to Claude (plan 71, release 1): once the party has met him, "Return to Claude... (H)" in the actions row
