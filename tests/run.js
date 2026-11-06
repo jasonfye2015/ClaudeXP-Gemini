@@ -7387,6 +7387,27 @@ test("vows: sworn at Claude's desk, three at most and one of each a run, to the 
   d.claudeTalk(k); d.choose(k, d.claudeMenu.findIndex((o) => o[0] === "vows")); assert.strictEqual(d.claudeMenu.filter((o) => o[0] === "swear").length, 5); d.choose(k, 0); assert.strictEqual(d.vows().length, 1);
 });
 
+test("your own dead come back: a hero on the memorial may rise in the band where they fell, on a later seed, one a band, with their name and stronger; laid to rest in a fight, what they carried comes home, the memorial marks them at rest, and Claude keeps an epilogue", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("rev-x", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  // find a seed on which the first band raises someone
+  const sword = { name: "Old Tam's sword", kind: "weapon", power: 4, value: 60, props: {} };
+  g.memorial = [{ name: "Old Tam", cls: "Knight", level: 4, floor: 9, seed: "fell-here", date: "d1", buried: sword }];
+  let seed = null; for (let i = 0; i < 200 && !seed; i++) { g.seed = `rev-${i}`; if (CM.revenantFor(g, 0)) seed = g.seed; } assert.ok(seed, "some seed raises them");
+  g.seed = "fell-here"; assert.strictEqual(CM.revenantFor(g, 0), null, "never on the seed they fell on");
+  g.seed = seed; assert.strictEqual(CM.revenantFor(g, 1), null, "only in their own band");
+  const h = new CM.Game(); h.memorial = g.memorial; h.newGame(seed, fixedParty(CM)); h.memorial = g.memorial; h.mode = "explore";
+  let found = null; for (let n = CM.THEMES[0].floors[0]; n <= CM.THEMES[0].floors[1] && !found; n++) { h.enterFloor(n, "down"); const k = Object.keys(h.floor.things).find((kk) => h.floor.things[kk].revenant); if (k) found = [n, k]; }
+  assert.ok(found, "risen somewhere in the band"); const thing = h.floor.things[found[1]], foe = thing.group[0];
+  assert.ok(/Old Tam, risen/.test(foe.name) && foe.revenant); h.enterFloor(found[0] + 1 <= CM.THEMES[0].floors[1] ? found[0] + 1 : found[0] - 1, "down"); assert.ok(!Object.values(h.floor.things).some((t) => t.revenant), "one a band");
+  // laid to rest
+  h.foes = [foe]; foe.hp = 0; h.emit("fx", { kind: "die", foe }); assert.ok(h.memorial[0].atRest, "at rest"); assert.ok(h.bag.some((i) => i.name === "Old Tam's sword"), "what they carried comes home"); assert.ok((h.vext("claude").epilogues || []).some((e) => e.name === "Old Tam"));
+  h.emit("fx", { kind: "die", foe }); assert.strictEqual(h.bag.filter((i) => i.name === "Old Tam's sword").length, 1, "once");
+  assert.strictEqual(CM.revenantFor(h, 0), null, "at rest stays at rest");
+  // the wall knows
+  h.enterFloor(0, "rope", [CM.MEMORIAL_WALL[0], CM.MEMORIAL_WALL[1] + 1]); h.floor.facing = 0; h.mode = "explore"; h.readMemorialWall(); assert.ok(/AT REST/.test(h.messages.slice(-1)[0]));
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

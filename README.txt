@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Your own dead come back (v121.0, UPGRADE_PLAN_75.md)
+  (src/js/69zzzzb-revenants.js, tools/headless.js, tests/run.js)
+  - Your own dead come back (plan 75, release 2): a hero on the memorial may rise on a later run in the band where
+    they fell - a revenant with their name, stronger than the floor's own foes, about one band in three that holds
+    such a name and never more than one a band, never on the seed they fell on and never on a guardian's, a camp's or
+    the king's floor. You're told when one walks the floor. Lay them to rest in a fight and what they were buried
+    with comes home with you, the memorial wall at the shaft's head has AT REST cut beside the name, and Claude writes
+    them an epilogue - "The ones we laid to rest", at his desk.
+
 Vows (v120.0, UPGRADE_PLAN_75.md)
   (src/js/69zzzz-vows.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_75.md)
   - Vows (plan 75, release 1, from the gameplay review): at Claude's desk, swear up to three vows for the run, each
