@@ -7360,6 +7360,33 @@ test("the account, presentation (plan 74, releases 3 and 4): the pack's grid, he
   const CM = load(); assert.ok(CM.BAG_FILTERS && CM.itemCard && CM.rarityOf, "the pack's own pieces are still there for the window to use");
 });
 
+test("vows: sworn at Claude's desk, three at most and one of each a run, to the end of the next band; a draught, a purchase, a rest or a stair back up is asked once and then breaks it; a fallen hero breaks Four Together; kept to the floor, a ring; the Automatic hand never breaks one; red ink voids them; all in Claude's account", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("vow-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  assert.strictEqual(CM.vowTarget(g), CM.THEMES[0].floors[1], "from the top: the first band's end");
+  assert.strictEqual(g.swearVow("dry"), ""); assert.strictEqual(g.swearVow("unbought"), ""); assert.strictEqual(g.swearVow("dry").includes("already"), true, "one of each");
+  assert.strictEqual(g.swearVow("unrested"), ""); assert.ok(/Three at once/.test(g.swearVow("together")), "three at most");
+  // a draught: asked, then broken
+  const row = g.bag.findIndex((i) => i.kind === "heal"); g.party[0].hp = 5; const morale = g.morale;
+  assert.ok(/Do that again/.test(g.give(row, 0)), "asked once"); assert.ok(g.vowActive("dry"));
+  assert.strictEqual(g.give(row, 0), ""); assert.ok(!g.vowActive("dry") && g.vows().find((v) => v.id === "dry").broken, "broken the second time"); assert.ok((g.morale || 0) < (morale === undefined ? 100 : morale), "a bad omen");
+  // the Automatic hand keeps it
+  g.vows().push({ id: "forward", to: 17, at: 0 }); const auto = g.autoOn; g.autoOn = () => true; assert.ok(/keeps your vow/.test(g.buy(0) || ""), "never broken by the Automatic hand"); g.autoOn = auto;
+  // kept: reach the floor
+  g.enterFloor(5, "down"); g.enterFloor(4, "up"); assert.ok(g.vows().find((v) => v.id === "forward").broken, "a stair back up breaks No Retreat");
+  const rings = () => g.bag.filter((i) => i.vow).map((i) => i.vow);
+  g.enterFloor(17, "down"); assert.ok(rings().includes("unbought") && rings().includes("unrested"), "kept to the floor: rings"); assert.ok(!rings().includes("dry"), "not for a broken one");
+  assert.ok(g.bag.find((i) => i.vow === "unrested").props.hitBonus > 0, "a gift that fits");
+  // Four Together, broken by a fall; red ink voids the rest
+  const h = new CM.Game(); h.newGame("vow-2", fixedParty(CM)); h.mode = "explore"; h.swearVow("together"); h.swearVow("dry"); h.party[2].hp = 0; h.emit("change"); assert.ok(h.vows().find((v) => v.id === "together").broken);
+  h.redInkDo("gold1k"); assert.strictEqual(h.vows().find((v) => v.id === "dry").broken, "red ink"); assert.ok(/red ink/.test(h.swearVow("unrested")), "no vows on a red-ink run");
+  // the account
+  const e = { name: "x", floor: 17, won: false, date: "d", tally: {} }; g.vext("claude").met = 1; g.payChapters(e); assert.ok(/Vows: kept/.test(e.claudeNote) && /broken Dry Throat/.test(e.claudeNote), e.claudeNote);
+  // at the desk
+  const d = new CM.Game(); d.newGame("vow-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); d.mode = "explore"; d.vext("claude").met = 1; d.clock = 6 * 60; d.returnToClaude(); const k = Object.keys(d.floor.things).find((kk) => d.floor.things[kk].type === "claude");
+  d.claudeTalk(k); d.choose(k, d.claudeMenu.findIndex((o) => o[0] === "vows")); assert.strictEqual(d.claudeMenu.filter((o) => o[0] === "swear").length, 5); d.choose(k, 0); assert.strictEqual(d.vows().length, 1);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

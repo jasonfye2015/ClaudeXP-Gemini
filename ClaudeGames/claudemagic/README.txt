@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Vows (v120.0, UPGRADE_PLAN_75.md)
+  (src/js/69zzzz-vows.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_75.md)
+  - Vows (plan 75, release 1, from the gameplay review): at Claude's desk, swear up to three vows for the run, each
+    held to the end of the next band below the deepest floor you've reached: Dry Throat (no healing draughts), No
+    Retreat (no stair back up, no Return to Claude), Unbought (nothing bought), Four Together (no hero falls), and
+    Unrested (no rest at a camp). Keep one to its floor and a ring named for it appears in the pack, with a gift that
+    fits the vow; break one and the party's heart sinks. The game asks once before your own choice breaks a vow, the
+    Automatic hand never breaks one, and red ink voids them all. Claude writes the swearing, the keeping and the
+    breaking into his account.
+
 The pack, Claude's map and the families' shapes (v119.0, UPGRADE_PLAN_74.md)
   (src/js/77k-pack.js, src/js/77l-claudemap.js, src/js/77m-silhouettes.js, tests/run.js)
   - The pack and the gear (plan 74, release 3): the pack is a grid of framed things, the frame's colour its rarity;
