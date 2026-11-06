@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The pack, Claude's map and the families' shapes (v119.0, UPGRADE_PLAN_74.md)
+  (src/js/77k-pack.js, src/js/77l-claudemap.js, src/js/77m-silhouettes.js, tests/run.js)
+  - The pack and the gear (plan 74, release 3): the pack is a grid of framed things, the frame's colour its rarity;
+    beside it the four heroes as cards, their portraits and what each wears, a click on a card the same as giving
+    to that hero (and dragging still works); the thing picked is described on a parchment card. The shop, the belt,
+    the filters and every button are the game's own.
+  - Claude's map: below ground the map is the one he draws as you go - the walls hatched and edged in brown ink with
+    a hand's small wobble, the unknown lightly hatched rather than blank, the sheet's edges darkened, and the rooms
+    named once the map is big enough to write in. Settings > Map: Claude's or Plain. The town and the Wood keep their
+    coloured map.
+  - The families' shapes (plan 74, release 4): many kinds share a few bodies, so each family now stands its own way -
+    an ogre broad, a troll tall and stooped, a kobold squat, a dark elf slender, a zombie and a ghoul hunched, a
+    gargoyle crouched, a demon upright. Their joints, gear and animations go with them.
+
 Light with depth, combat that hits (v118.0, UPGRADE_PLAN_74.md)
   (src/js/40-render.js, src/js/77j-depth.js, tests/run.js)
   - Light with depth (plan 74, release 2): the game already casts shadows from the sun, the lamps and the torch and
