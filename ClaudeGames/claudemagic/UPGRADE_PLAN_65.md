@@ -157,6 +157,13 @@ on one square.
   asleep; the far door the way on), the Frozen Pond (ice slides the party till a wall, a thing or dry stone; the
   slide's own steps unlogged so a replay slides again). Letters I ? J Z O. The riddles' experience follows the story
   floor now.
+- v94.0 - release 4, the trials 16-20: 69zzzg-trials2.js - the Wind Tunnel (the torch out and a square back every
+  third step on the middle way, a lantern stands, the walls' squares are still), the Counting Room (coins on every
+  square taken by walking; past eight the inner gate drops; the altar takes a square's worth back at a time and
+  lifts it), the Crawlway (crawl height end to end, rats asleep, a low chest), the Weighing of Deeds (the run's deeds
+  against its flights: the relic, or "not yet" and no curse), the Dice Room (a stake of fifty on a stone die: six
+  opens the chest, one is a Mimic, once a day). Letters E $ N U Q K and "," (the die: X is the old templates' dark
+  floor).
 - Decisions taken (release 1): the chasm is solid, not a fall (the soft-lock rule); the bridge sways in the view,
   the planks never give; the ship's Drowned come down only at the bell; the mushroom's cap is a dome round the
   party's feet on the raised disc, not a climb through the mesh.
