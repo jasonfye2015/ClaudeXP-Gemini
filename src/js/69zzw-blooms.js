@@ -22,7 +22,7 @@
   CM.bloomsOf = (fl) => { const out = { glowcaps: [], spores: [] }; for (const [k, t] of Object.entries((fl && fl.things) || {})) { if (t.type === "glowcap") out.glowcaps.push(k); else if (t.type === "spores") out.spores.push(k); } return out; };
   const stairsOf = (fl) => { for (const [k, t] of Object.entries(fl.things)) if (t.type === "ladder" || t.type === "stairs_up") return k.split(",").map(Number); return fl.pos; };
   const inRoom = (fl, x, y) => (fl.rooms || []).some((r) => x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1);
-  const wayHolds = (fl, key) => { const S = stairsOf(fl), before = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y)), after = CM.distances(fl.grid, S, (x, y) => CM.passable(fl, x, y) && `${x},${y}` !== key); for (const k of before.keys()) if (k !== key && !after.has(k)) return false; return true; };
+  const wayHolds = (fl, key) => { const S = stairsOf(fl), before = CM.distances(fl.grid, S, (x, y) => CM.isOpen(fl, x, y)), after = CM.distances(fl.grid, S, (x, y) => CM.isOpen(fl, x, y) && `${x},${y}` !== key); for (const k of before.keys()) if (k !== key && !after.has(k)) return false; return true; };   // (the map's shape, doors and all - a locked door's key may lie beyond, and the way to it must hold)
   const okFloor = (fl) => fl && fl.number >= 1 && fl.grid && !["joker", "interior", "cave"].includes(fl.special) && B.bands.includes(CM.themeIndex(fl.number));
   const sprout = (game, fl) => { const N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0, S = stairsOf(fl); let glow = 0, spores = 0;
     for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { if (!open(x, y)) continue; const k = `${x},${y}`; if (fl.things[k] || (fl.features || {})[k] || (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 1) || (Math.abs(x - S[0]) + Math.abs(y - S[1]) <= 1)) continue;
@@ -32,7 +32,7 @@
     return { glow, spores }; };
   CM.bloomStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || !(minutes > 0)) return; const fl = game.floor, t = CM.clockOf(game), E = game.ext("bloom"), b = CM.bloomNow(game), q = Math.round(b * 4);
     if (E.q !== q) { E.q = q; game.plantsVersion = (game.plantsVersion || 0) + 1; }   // (the meshes' density follows the bloom)
-    for (const [k, th] of Object.entries(fl.things)) if ((th.type === "glowcap" || th.type === "spores") && t - (th.at || 0) >= B.lifeMinutes) { delete fl.things[k]; game.plantsVersion = (game.plantsVersion || 0) + 1; }
+    for (const [k, th] of Object.entries(fl.things)) if ((th.type === "glowcap" || th.type === "spores") && !th.permanent && t - (th.at || 0) >= B.lifeMinutes) { delete fl.things[k]; game.plantsVersion = (game.plantsVersion || 0) + 1; }
     if (okFloor(fl) && b >= B.from) { const key = `${fl.number}:${CM.dayOf(game)}`; if (E.last !== key) { E.last = key; const n = sprout(game, fl); if (n.glow || n.spores) game.say(`The damp has brought the walls out in growth: ${n.glow ? "glowcaps, pale green in the dark" : ""}${n.glow && n.spores ? ", and " : ""}${n.spores ? "patches of spore that are best walked round" : ""}.`); } }
     // the draft: the spore patches blown along it
     const d = CM.draftNow(game); if (d > 0) { E.blow = (E.blow || 0) + minutes; while (E.blow >= B.blowEvery) { E.blow -= B.blowEvery; const path = CM.draftPath(fl), S = stairsOf(fl), open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0;

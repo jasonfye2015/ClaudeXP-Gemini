@@ -166,6 +166,20 @@ a way always stands, every block clears, no hazard unseen or unbounded).
   from every entrance with the `T`, `~` (when not wadable) and `B` squares counted as they are; the generator's
   reach check after placement (the one that exists) stays the last word.
 
+## 3a. Progress
+
+- v86.0 - release 1 (with plan 63's release 7): 69zzz-setpieces.js - CM.SETPIECES (the Oasis, the Bone Room, the
+  Hall of Doors, the Fish Pool as templates with their own dice), CM.planFloor wrapped so one floor in three from
+  the third takes one, chosen by a hash of its own (22-gen2.js places an ownDice template with its own Random, so
+  the floor's other rooms stand where they stood and generator 1's frozen floors are untouched); the letters read
+  after the making (dress): T a tree square on open stone that bars the walk (CM.isOpen wrapped; the plants stand
+  a mesh tree there - 69zzs-plants.js), ~ water decor with fish, B and b bone heaps (a chest under one, the
+  skeletons' stir), H/h/m false doors, niche doors and a mimic's door as "falsedoor" features, R/V the levels, *
+  a brazier, G a glowcap that never fades (69zzw-blooms.js), c a chest with a guard and a note, the pond's sunk
+  chest dived for (69zzu-basins.js); the room's line said on the first step in. 76zzzzzzzzzzw-setpieces.js draws the
+  heaps, the false doors on the walls, the fish and the chests' notes. Not done: the plank bridge picture, the
+  fishing rod, the daylight grate over the Oasis, the rooms' own names on the look line.
+
 ## 4. Order (when asked)
 
 1. The letters and the shared mechanics (`T`, `~`, `B`, `H`, `R`/`V`, the room's name and lore line) - one release.

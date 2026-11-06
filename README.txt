@@ -1392,6 +1392,38 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The set-piece rooms, and the soft-lock pass (v86.0, UPGRADE_PLAN_64.md release 1, UPGRADE_PLAN_63.md release 7)
+  (src/js/69zzz-setpieces.js, src/js/76zzzzzzzzzzw-setpieces.js, src/js/22-gen2.js, src/js/69zzs-plants.js, src/js/69zzv-rockfalls.js, src/js/69zzw-blooms.js, src/js/69zzu-basins.js)
+  - Set-piece rooms (plan 64, release 1): one floor in three from the third holds a curated room of its own. The
+    Oasis: a ring of trees about a pool with lilypads, a chest on the far bank that the wolves who drink there
+    guard, and a second chest under the water to dive for. The Bone Room: heaps to the walls, the floor black, a
+    chest under one heap - turn the right bones over and the bones stand up. The Hall of Doors: a long hall of
+    doors down both walls, two real, two opening on a niche with a key or a chest, one with teeth, the rest painted,
+    nailed or bricked. The Fish Pool: water wall to wall with fish flicking under it, a plank walk to a stone and a
+    chest the Drowned rise for. Each room says its line on the first step in. The rooms roll their own dice, so
+    every other room on every floor stands where it stood.
+  - The soft-lock pass (plan 63, release 7): a test storms three runs through their first eight floors with the
+    flood, the blooms, the beasts and every rockfall the dice allow, and proves the whole map's reach holds, every
+    fall clears, no hazard lies in a narrow way or by the stairs, and no hero drops below one. It found that the
+    reach checks judged the way by passable squares and so missed a locked door's far side and the key beyond it;
+    they judge the map's shape now.
+
+The set-piece rooms, and the soft-lock pass (v86.0, UPGRADE_PLAN_64.md release 1, UPGRADE_PLAN_63.md release 7)
+  (src/js/69zzz-setpieces.js, src/js/76zzzzzzzzzzw-setpieces.js, src/js/22-gen2.js, src/js/69zzs-plants.js, src/js/69zzv-rockfalls.js, src/js/69zzw-blooms.js, src/js/69zzu-basins.js)
+  - Set-piece rooms (plan 64, release 1): one floor in three from the third holds a curated room of its own. The
+    Oasis: a ring of trees about a pool with lilypads, a chest on the far bank that the wolves who drink there
+    guard, and a second chest under the water to dive for. The Bone Room: heaps to the walls, the floor black, a
+    chest under one heap - turn the right bones over and the bones stand up. The Hall of Doors: a long hall of
+    doors down both walls, two real, two opening on a niche with a key or a chest, one with teeth, the rest painted,
+    nailed or bricked. The Fish Pool: water wall to wall with fish flicking under it, a plank walk to a stone and a
+    chest the Drowned rise for. Each room says its line on the first step in. The rooms roll their own dice, so
+    every other room on every floor stands where it stood.
+  - The soft-lock pass (plan 63, release 7): a test storms three runs through their first eight floors with the
+    flood, the blooms, the beasts and every rockfall the dice allow, and proves the whole map's reach holds, every
+    fall clears, no hazard lies in a narrow way or by the stairs, and no hero drops below one. It found that the
+    reach checks judged the way by passable squares and so missed a locked door's far side and the key beyond it;
+    they judge the map's shape now.
+
 The blooms, the drafts, the steam and the beasts (v85.0, UPGRADE_PLAN_63.md releases 4-6)
   (src/js/69zzw-blooms.js, src/js/76zzzzzzzzzzu-blooms.js, src/js/69zzx-steam.js, src/js/76zzzzzzzzzzv-steam.js, src/js/69zzy-migrate.js, src/js/69zzs-plants.js)
   - The blooms (plan 63, release 4): rain above over the last day is a bloom below. The damp bands' moss, weeds and
