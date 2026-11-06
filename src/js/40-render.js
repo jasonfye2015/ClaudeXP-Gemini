@@ -47,7 +47,7 @@ precision highp float; precision highp sampler2DArray;
 in vec3 vWorld; in vec3 vUV; in float vShade; in vec3 vFx;
 uniform sampler2DArray uTex; uniform sampler2DArray uShared; uniform sampler2DArray uSurf; uniform sampler2DArray uFig; uniform float uSkin; uniform vec3 uTint; uniform float uStatic;   // (v66.0: the figures' pictures, 3000 and up, and their tint)   // (v26.0: the outdoors' drawn pictures, 2000 and up)
  uniform vec3 uEye; uniform vec3 uTorch; uniform vec3 uFog;
-uniform float uReach; uniform float uFlicker; uniform float uAmbient;
+uniform float uReach; uniform float uFlicker; uniform float uAmbient; uniform float uFallK;   // (v118.0: the torch's pool - 1 as it was, more for a tighter pool below ground)
 uniform vec3 uZenith; uniform vec3 uHorizon;
 uniform int uLights; uniform vec4 uLightPos[24]; uniform vec3 uLightCol[24];   // the lights about the party: xyz, reach in w; colour (24 since v22.0)
 uniform vec3 uTorchPos; uniform float uBump;   // (v22.0) where the party's torch is held, a little to the side and up; (v22.1) the relief's strength - 0 for all but walls, floors and the ground
@@ -212,7 +212,7 @@ void main() {
   vec3 tl = uTorchPos - vWorld, tdir = tl / max(length(tl), 0.001); float tface = 0.5 + 0.5 * max(dot(n0, tdir), 0.0);
   float relief = clamp(max(dot(n, tdir), 0.0) / max(dot(n0, tdir), 0.25), 0.35, 1.6);   // (v22.1: how much more or less a raised or sunk bit faces the torch than the flat wall does)
   tface *= mix(1.0, relief, min(1.0, uBump));   // (v22.0: the torch is held, not worn at the eye: what faces it, lit more)
-  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * d * d + 0.4 * d) * tface;
+  float light = uAmbient + uFlicker * r2 / (r2 + 2.2 * max(uFallK, 0.5) * d * d + 0.4 * d) * tface;
   if (uSunK > 0.0) light *= mix(1.0, 0.62 + 0.55 * max(dot(n, uSun), 0.0), uSunK * step(abs(n0.y), 0.7));   // walls facing the sun lit, the others in shade
   if (uCloud.z > 0.0 && uSunK > 0.5 && uSun.y > 0.05) light *= 1.0 - 0.3 * cloudAt((vWorld.xz + uSun.xz / max(uSun.y, 0.25) * (30.0 - vWorld.y)) / 14.0 + uCloud.xy);   // (v30.2: a cloud's shadow passing)
   vec3 extra = vec3(0.0), vdir = (vWorld - uEye) / max(d, 0.001), airGlow = vec3(0.0), pudLamp = vec3(0.0);
@@ -433,7 +433,7 @@ CM.Renderer = class {
     this.program = this.parallel ? this._programLater(VERT, FRAG) : this._program(VERT, FRAG);
     if (!this.program) return;
     this.loc = {};
-    this._locNames = ["uViewProj", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint", "uStatic"]; if (!this.parallel) this._locate();
+    this._locNames = ["uViewProj", "uFallK", "uDamp", "uDust", "uWorn", "uLShadow", "uBounce", "uLowFog", "uGBlend", "uGLayer", "uMoss", "uDapple", "uSunCol", "uWaterMist", "uRainbow", "uGroundFrost", "uBankTint", "uLily", "uGSeason", "uHideAt", "uTex", "uShared", "uSurf", "uEye", "uTorch", "uFog", "uReach", "uFlicker", "uAmbient", "uZenith", "uHorizon", "uLights", "uLightPos", "uLightCol", "uTorchPos", "uBump", "uSun", "uSunK", "uGrade", "uTime", "uWet", "uMud", "uSnow", "uMist", "uHaze", "uShaft", "uLift", "uLook", "uWind", "uRight", "uRain", "uPuddle", "uStars", "uAurora", "uCloud", "uCloudCol", "uFlash", "uMap", "uMapN", "uAO", "uCeil", "uSparkle", "uPush", "uAge", "uFadeFar", "uSkin", "uJoints", "uModel", "uFigFx", "uFig", "uTint", "uStatic"]; if (!this.parallel) this._locate();
     this.staticBuf = gl.createBuffer(); this.staticCount = 0;
     this.dynBuf = gl.createBuffer(); this.dynCount = 0;
     this.texture = null; this.index = {};
@@ -914,6 +914,7 @@ CM.Renderer = class {
     gl.uniform3fv(this.loc.uFog, fogc);
     gl.uniform1f(this.loc.uReach, sky ? (6 + 54 * sky.light) * (sky.night ? Math.max(0.5, this.lightNow) : 1) * (this.mist ? 0.35 : 1) : t.reach * this.lightNow);   // (v27.0: mist shortens the sight)
     gl.uniform1f(this.loc.uFlicker, sky ? this.flicker * (1 - sky.light) : this.flicker);
+    gl.uniform1f(this.loc.uFallK, this.fallK || 1);   // (v118.0: the torch's pool, plan 74)
     gl.uniform1f(this.loc.uAmbient, sky ? 0.04 + 0.98 * sky.light : 0.06 * Math.min(1, this.lightNow * 2));
     gl.uniform3fv(this.loc.uZenith, clear);
     gl.uniform3fv(this.loc.uHorizon, fogc);

@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Light with depth, combat that hits (v118.0, UPGRADE_PLAN_74.md)
+  (src/js/40-render.js, src/js/77j-depth.js, tests/run.js)
+  - Light with depth (plan 74, release 2): the game already casts shadows from the sun, the lamps and the torch and
+    darkens the corners along the walls, so this is a targeted pass. Below ground the party's torch makes a tighter
+    pool: the walls beside you stay warm while a long corridor falls away into the dark ahead (Settings > Lighting:
+    Deep, the default, or Classic, exactly as before). The small shadow under every foot is a little firmer.
+  - Combat that hits: a critical blow lands in Claude's red ink and gives the view a short, hard punch (not with
+    Reduce motion), and a spell washes the edge of the view in its element's colour for a moment - fire, frost,
+    storm, holy light, venom, shadow.
+
 The account, presentation (v117.0, UPGRADE_PLAN_74.md)
   (src/js/77i-presentation.js, tests/run.js, UPGRADE_PLAN_74.md)
   - The account, presentation (plan 74, release 1, from the visual review): the art direction is now "the account" -
