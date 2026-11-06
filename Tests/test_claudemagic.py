@@ -70,8 +70,8 @@ def load(view, reload=False):
         view.reload()
     else:
         view.load(QUrl.fromLocalFile(str(M.game_file())))
-    assert support.pump(30, until=lambda: done), "the page didn't load"
-    assert support.pump(10, until=lambda: ask("typeof CM !== 'undefined' && !!CM.game")), "the game didn't start"
+    assert support.pump(120, until=lambda: done), "the page didn't load"   # 11 MB of game and plant data: slow in the offscreen engine
+    assert support.pump(40, until=lambda: ask("typeof CM !== 'undefined' && !!CM.game")), "the game didn't start"
     support.pump(0.4)
 
 
