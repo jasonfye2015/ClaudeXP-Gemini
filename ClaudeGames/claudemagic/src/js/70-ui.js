@@ -13,7 +13,7 @@ CM.UI = class {
   <div class="backdrop-slot"></div><div class="shade"></div>
   <div class="sheet">
     <h1><span class="emblem-slot"></span>Claude and Magic</h1>
-    <div class="tagline">Twenty floors down, the Lich King waits - and below him, the Deep. Four go in together.</div>
+    <div class="tagline">Seventy floors down, the Lich King waits - and below him, the Deep. Four go in together.</div>
     <div class="note" id="title-note"></div>
     <div class="honours" id="honours"></div>
     <div class="card" id="expedition">

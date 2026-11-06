@@ -12,7 +12,7 @@
   TH.NOTES = [
     ["yard", "The Undercroft", "shaft", "Find the Bell-Founder's Boy, in the bell-yard under the Wood's third cave", (g) => (g.trail || []).some(([n]) => n === TH.yard) || ((g.tally || {}).guardians || []).includes("bell") || CM.undercroftDoorOpen(g),
       "He swings the bell and it makes no sound, and he swings it again. Round the cross: WE WILL LISTEN FOR IT. Whoever cut that was sure someone would come. The bell has a socket where the tongue should hang. It is the size of a man's fist, and empty, and polished by two hundred years of waiting."],
-    ["ropes", "The dungeon", "shaft", "Go down past the fifteenth floor, or bring Brother Cael his bell", (g) => deepest(g) >= 15 || Boolean(g.story && g.story.bell),
+    ["ropes", "The dungeon", "shaft", "Go down past the fifty-second floor, or bring Brother Cael his bell", (g) => deepest(g) >= CM.realOf(15) || Boolean(g.story && g.story.bell),
       "Low in the shaft, grooves worn into the stone where the bell-ropes ran down from the hill - the town rang for the lower town, once, and the ropes hung all the way. They stop at a line cut level, clean. Someone above took a knife to them. A thread of the old rope is still in the groove: tarred, and good."],
     ["tower", "The Mage Tower", "yard", "Clear the Mage Tower's tenth floor", (g) => ((g.tower || {}).cleared || 0) >= 10,
       "A ledger on a lectern, in a mage's square hand: every portal in the Keep-yard, who opened it, and when. Each of them had stood at the shaft first and listened. The last line, underlined twice: THEY DO NOT OPEN ON OTHER PLACES. THEY OPEN ON WHAT IT DREAMS. He took the ledger's clasp off to use as a bookmark. It is bell-metal."],

@@ -185,7 +185,7 @@ CM.replayStep = function (game, line) {
       case "chooseFamiliar": game.chooseFamiliar(game.party[args[0]], args[1]); break;
       case "secondCalling": game.secondCalling(args[0], args[1]); break;
       case "talk": { const t = game.floor.things[args[0]]; if (t) game.talk(t, args[0]); break; }
-      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.drink(f); break; }
+      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; game.drink(f); break; }   // (a fountain under the party, or the Hanged Lantern's round in town - plan 66: the round was skipped in a replay)
       case "kneel": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.kneel(f); break; }
       case "openBag": game.openBag(Boolean(args[0])); break;
       case "autoFight": game.autoFight(Boolean(args[0])); break;

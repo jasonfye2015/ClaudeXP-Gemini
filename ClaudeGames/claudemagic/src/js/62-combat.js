@@ -625,7 +625,7 @@ Object.assign(CM.Game.prototype, {
 
   summonSkeletons(n) {
     for (let i = 0; i < n; i++) {
-      const s = CM.skeleton(CM.LAST_FLOOR, this.rnd);
+      const s = CM.skeleton(CM.STORY_LAST, this.rnd);
       Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
       this.foes.push(this.tune(s));
     }
@@ -722,7 +722,7 @@ Object.assign(CM.Game.prototype, {
   summonFor(m, mv, n) {
     const kind = CM.monsterKind(mv.what);
     if (!kind) return;
-    const level = mv.level === "deep" ? CM.monsterLevel(this.floor ? this.floor.number : CM.LAST_FLOOR) : (this.floor ? this.floor.number : 5);
+    const level = mv.level === "deep" ? CM.monsterLevel(this.floor ? this.floor.number : CM.LAST_FLOOR) : (this.floor ? CM.storyOf(this.floor.number) : 5);
     for (let i = 0; i < n; i++) {
       const r = CM.makeMonster(kind, level, this.rnd);
       Object.assign(r, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
@@ -1438,15 +1438,15 @@ Object.assign(CM.Game.prototype, {
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
     const fought0 = this.floor.things[this.foeKey];
     if (fought0 && fought0.rivalsFight) {                                 // the rivals' best thing, and their purse, on top
-      const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(this.floor.number + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
-      best.unknown = false; this.gain([best], "rivals"); gold += 30 * this.floor.number;
+      const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
+      best.unknown = false; this.gain([best], "rivals"); gold += 30 * CM.storyOf(this.floor.number);
       this.achieve("rivals");
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
-    const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    const D = CM.storyOf(this.floor.number), loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(D, rnd), D, rnd)] : [];
     for (const m of slain) if (m.champion && !m.summoned) {               // a champion: its own thing, a hoarder its hoard; counted for the card
-      loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
-      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
+      loot.push(CM.affix(CM.makeItem(D + 2, rnd), D + 4, rnd));
+      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(D + 2, rnd), D + 4, rnd), CM.affix(CM.makeItem(D, rnd), D, rnd));
       this.tally.champions = (this.tally.champions || 0) + 1;
       if (this.findCard) this.findCard(`champion:${this.floor.number}:${this.tally.champions}`, CM.CARD_FIND.champion, "common", `On ${CM.the(m)}:`);
       if (this.tally.champions >= 5) this.achieve("champions");
@@ -1487,7 +1487,7 @@ Object.assign(CM.Game.prototype, {
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
-      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
+      hero.xp += Math.floor(xp / 2 * CM.xpScale(this.floor ? this.floor.number : 0) * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
         CM.upgradeHero(hero);

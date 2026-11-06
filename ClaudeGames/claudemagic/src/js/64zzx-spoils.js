@@ -18,7 +18,7 @@
       if (S.at) S.bucket = Math.min(SP.cap, S.bucket + ((now - S.at) / 60000) * SP.rate); S.at = now; const use = Math.min(k, Math.floor(S.bucket)); if (use <= 0) return null; S.bucket -= use;
       const L = this.spLevel(), xp = Math.max(1, Math.round(use * SP.xp(L))), heroes = (this.alive ? this.alive() : this.party || []), out = { xp, items: [] };
       for (const h of heroes) h.xp = (h.xp || 0) + xp; S.xp += xp; if (heroes.length && this.checkLevels) this.checkLevels();
-      S.tk += use; while (S.tk >= SP.per) { S.tk -= SP.per; S.n += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:spoils:${S.n}`)), depth = Math.max(1, Math.min(CM.BOTTOM || 50, L));
+      S.tk += use; while (S.tk >= SP.per) { S.tk -= SP.per; S.n += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:spoils:${S.n}`)), depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, L));
         let it = CM.makeItem(depth, R, R.pick(SP.GEAR)); if (it && CM.affix && R.chance(SP.enchant)) it = CM.affix(it, depth + 2, R) || it;
         if (it) { this.gain([it], "casino"); out.items.push(it); S.items += 1; } }
       const res = this.cgRes = this.cgRes || { gold: 0, tickets: 0, cards: [] }; res.xp = (res.xp || 0) + xp; res.items = (res.items || []).concat(out.items);

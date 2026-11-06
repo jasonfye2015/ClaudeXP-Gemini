@@ -425,7 +425,7 @@ CM.Game = class {
     this.ironAllow = false;
     this.say((town ? CM.t("town.open") : "Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.") + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
-      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the hundredth floor the dark deepens every ten." : "")
       + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
       + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : "")
       + (this.dream ? " The Other Dream: the Root dreams otherwise. The floors are the floors; the walls are not; the monsters are the Awakened ones." : ""));
@@ -559,5 +559,5 @@ CM.Game = class {
 
   // ---- Endless: no bottom - the bands come round again, the guardians echo, and the dark deepens ----
   get allFame() { return this.fame.concat(this.fameEndless || []); }   // (both boards: what has been reached, ever, unlocks the kits)
-  campBelow(n) { return CM.CAMP_AFTER.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
+  campBelow(n) { return CM.CAMP_FLOORS.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
 };

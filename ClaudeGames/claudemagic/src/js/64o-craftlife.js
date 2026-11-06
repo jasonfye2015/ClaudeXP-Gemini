@@ -99,7 +99,7 @@ Object.assign(CM.Game.prototype, {
     const bits = [`+${xp} experience`];
     if (CM.CL.GOLD.includes(o.kind)) { const gold = Math.max(1, Math.round(o.m.gold * CM.CL.goldShare)); L.gold += gold; bits.push(`${gold} gold`); }
     if (o.K.flees || o.kind === "Boar") { const meat = o.kind === "Boar" ? 109 : 108; if (cr.satchel.add(meat, CM.CL.wildMeat)) bits.push(CM.CC.NAMES[meat].toLowerCase()); }
-    else if (L.rnd.chance(CM.CL.lootChance)) { const depth = Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(o.level * 1.5))), it = CM.makeItem(depth, L.rnd); L.loot.push(it); bits.push(`${it.unknown ? "something" : it.name}!`); }
+    else if (L.rnd.chance(CM.CL.lootChance)) { const depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, Math.round(o.level * 1.5))), it = CM.makeItem(depth, L.rnd); L.loot.push(it); bits.push(`${it.unknown ? "something" : it.name}!`); }
     this.craftSay(`${o.kind}: ${bits.join(", ")}`); L.events.push({ kind: "die", mob: o });
   },
   // a monster's blow or shot on the hero: the main game's sum against their defence, scaled as the Fortress scales it

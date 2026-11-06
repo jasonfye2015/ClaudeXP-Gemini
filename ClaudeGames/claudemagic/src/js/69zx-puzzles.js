@@ -36,7 +36,7 @@
   G.beamPath = function () { return this.floor ? CM.beamOf(this.floor) : { cells: [], hit: false }; };
   G.puzzleCheck = function () { const fl = this.floor, P = fl && fl.puzzle; if (!P || P.solved) return false;
     const ok = P.kind === "statues" ? Object.values(fl.things).filter((t) => t.type === "statue").every((t) => t.face === t.want) : CM.beamOf(fl).hit; if (!ok) return false;
-    P.solved = true; const n = fl.number, rnd = new CM.Random(CM.hashSeed(`${this.seed}:puzzlechest:${n}`)), items = [CM.affix(CM.makeItem(n + 4, rnd), n + 8, rnd), CM.affix(CM.makeItem(n + 2, rnd), n + 5, rnd)];
+    P.solved = true; const n = CM.storyOf(fl.number), rnd = new CM.Random(CM.hashSeed(`${this.seed}:puzzlechest:${fl.number}`)), items = [CM.affix(CM.makeItem(n + 4, rnd), n + 8, rnd), CM.affix(CM.makeItem(n + 2, rnd), n + 5, rnd)];
     if (P.kind === "beam") fl.things[P.chestAt] = { type: "chest", gold: 40 * n, items, puzzle: true }; else fl.things[P.chestAt] = { type: "chest", gold: 40 * n, items, puzzle: true };
     this.sound && this.sound("chest"); this.say(P.kind === "statues" ? "The last statue grinds round to face the altar - and the floor beside it sinks, and comes up again carrying a chest." : "The beam leaps from mirror to mirror and falls full on the sun-plate. It glows, and with a sound like a held breath let go, a chest rises where it lay.");
     this.tally.puzzles = (this.tally.puzzles || 0) + 1; if (this.achieve) this.achieve("puzzler"); this.saveRun && this.saveRun(); this.emit("change"); return true; };

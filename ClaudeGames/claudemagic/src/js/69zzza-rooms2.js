@@ -35,7 +35,7 @@
     r: (fl, x, y, k) => { fl.things[k] = { type: "rod" }; },
   });
   // the fixed things a chest may hold
-  CM.setPieceItem = (what, number) => { if (what === "mapping") return CM.scroll("mapping"); if (what === "shears") return { name: "Gardener's Shears", base: "Knife", kind: "weapon", slot: "weapon", power: 4 + Math.floor(Math.max(1, number) / 3), value: 90, props: { crit: 0.12, bleed: 0.15 } }; return CM.makeItem(number, new CM.Random(CM.hashSeed(`${what}:${number}`))); };
+  CM.setPieceItem = (what, number) => { if (what === "mapping") return CM.scroll("mapping"); if (what === "shears") return { name: "Gardener's Shears", base: "Knife", kind: "weapon", slot: "weapon", power: 4 + Math.floor(Math.max(1, number) / 3), value: 90, props: { crit: 0.12, bleed: 0.15 } }; return CM.makeItem(CM.storyOf(number), new CM.Random(CM.hashSeed(`${what}:${number}`))); };
   const P = CM.Game.prototype;
   // the map table and the nest
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`;

@@ -30,7 +30,7 @@
   GD.colourOf = (it) => ({ weapon: "#C0C8D0", armor: "#B09070", shield: "#B09070", helm: "#B09070", ring: "#F0D040", amulet: "#F0A040", heal: "#F06060", mana: "#6080FF", ration: "#C08040", seed: "#80D060", gscroll: "#F0F0C0", gcard: "#E080E0", gtickets: "#F0C040", ggold: "#F0D040" })[it.kind] || "#FFFFFF";
   GD.SCROLLS = { mapping: "magic mapping", teleport: "teleportation", fire: "fire", enchantWeapon: "enchant weapon", enchantArmour: "enchant armour" };
   GD.scroll = (sub) => ({ name: `Scroll of ${GD.SCROLLS[sub]}`, kind: "gscroll", sub, power: 0, value: 15 });
-  GD.depthOf = (L) => Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(L * 2.4)));
+  GD.depthOf = (L) => Math.max(1, Math.min(CM.STORY_BOTTOM || 50, Math.round(L * 2.4)));
   const DIRS8 = [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]];
   const key = (x, y) => `${x},${y}`;
 

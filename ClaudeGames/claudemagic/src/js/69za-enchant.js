@@ -43,7 +43,7 @@
       const roll = (CM.hashSeed(`${this.seed}:towerroll:${it.name}:${p.towerTries}:${this.clock || 0}`) % 1000) / 1000;
       if (roll < chance) {
         const where = how === "add" ? whereOf(word) : null, base = tableFor(it, whereOf(word))[word];
-        if (how === "add") { const tier = CM.affixTier(Math.max(1, this.deepestReached())); CM.applyProps(it, CM.scaledAffix(base, tier)); p.affixes = wordsOf(it).concat(word); (p.wordTiers = p.wordTiers || {})[word] = tier; it.value += (where === "prefix" ? 60 : 90) * tier; }
+        if (how === "add") { const tier = CM.affixTier(Math.max(1, CM.storyOf(this.deepestReached()))); CM.applyProps(it, CM.scaledAffix(base, tier)); p.affixes = wordsOf(it).concat(word); (p.wordTiers = p.wordTiers || {})[word] = tier; it.value += (where === "prefix" ? 60 : 90) * tier; }
         else { const t0 = tierOf(it, word), t1 = t0 + 1; CM.applyProps(it, negate(CM.scaledAffix(base, t0))); CM.applyProps(it, CM.scaledAffix(base, t1)); strip(p); (p.wordTiers = p.wordTiers || {})[word] = t1; it.value += 60; }
         p.towerDone = (p.towerDone || 0) + 1; rename(it); this.sound("spell"); this.tally.enchanted = (this.tally.enchanted || 0) + 1;
         this.say(`The enchanter's hands go still over it, and the light in the shards goes into the ${CM.baseName(it).toLowerCase()}: ${it.name}.`);

@@ -420,7 +420,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && thing.type === "chest" && thing.mimic) {               // a chest that isn't: it has teeth, and the hoard is in it
-      const L = fl.number > CM.LAST_FLOOR ? CM.monsterLevel(fl.number) : fl.number, rnd = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${fl.number}:${k}`));
+      const L = CM.monsterLevel(fl.number), rnd = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${fl.number}:${k}`));
       const group = [this.tune(CM.makeMonster(CM.MIMIC, L, rnd))];
       fl.things[k] = { type: "monsters", group, mimicOf: { gold: thing.gold || 0, items: thing.items || [] }, still: true };
       this.sound("roar"); this.say("The lid lifts by itself, and the chest is all mouth.");
@@ -1084,7 +1084,7 @@ Object.assign(CM.Game.prototype, {
     } else this.bag.splice(row, 1);
     thing.opened = true;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
-    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
+    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
     it.unknown = false;
     this.gold += gold; this.count("goldFound", gold); this.gain([it], "strongbox");
     this.sound("chest");

@@ -1,11 +1,11 @@
-Claude and Magic - twenty floors down, the Lich King waits
-==========================================================
+Claude and Magic - seventy floors down, the Lich King waits
+===========================================================
 
 A first-person dungeon crawler ("blobber", after Wizardry, Might and Magic and Eye of the Beholder): a party of four
-moves as one through twenty floors of stone, a square and a quarter-turn at a time, smoothly, in 3D. Chests and
-fallen monsters give gear and gold; a merchant's camp waits below floors 5, 10 and 15; the Lich King is on floor 20.
+moves as one through seventy floors of stone, a square and a quarter-turn at a time, smoothly, in 3D. Chests and
+fallen monsters give gear and gold; a merchant's camp waits below floors 17, 35 and 52; the Lich King is on floor 70.
 When the whole party falls the run is over - the deepest runs go in the Hall of Fame. Below the Lich King, the Deep goes
-down to the Root of the World on floor 50; an Endless expedition goes on below that, with no bottom.
+down to the Root of the World on floor 100; an Endless expedition goes on below that, with no bottom.
 
 The dungeon (phase 2 of the big update)
   Each floor is rooms joined by corridors, with a set-piece room or two dropped in (a treasure vault behind a locked
@@ -1391,6 +1391,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   come late for two seconds the Detail steps down first, then the render scale; quick frames for ten seconds step
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
+
+The deeper shaft (v90.0, UPGRADE_PLAN_66.md)
+  (src/js/10-data.js, src/js/20-world.js, src/js/21-gen1.js, src/js/22-gen2.js, src/js/62-combat.js, src/js/61-explore.js, src/js/13-lore.js, src/js/14-items.js, src/js/23c-ore.js, src/js/60-game.js, src/js/64-meta.js, src/js/68-shops.js, src/js/70-ui.js, src/js/71-title.js, the set-piece and room files, tests/fixtures/gen1.json, UPGRADE_PLAN_66.md)
+  - The deeper shaft (plan 66): a hundred floors. The old fifty are the story floors now, and the real shaft is
+    stretched over them - three or four floors to a story floor above the Lich King, so the Catacombs run 1-17, the
+    Flooded Vaults 18-35, the Dwarven Halls 36-52 and the palace 53-70, with the Lich King on 70; and one to one
+    below him, the Drowned Town from 71 to the Root of the World on 100. The guardians and the merchants' camps
+    stand on the story floors' key floors (the Rat King on 17, the Drowned Knight on 35, the Forge-Warden on 52, the
+    Deep's on 75, 80 ... 100); the other floors are ordinary floors of their band, with room for the set pieces. The
+    monsters' levels and the loot keep the old curve by story floor, fights above the palace's floor give less
+    experience so the party reaches the king a little stronger than before, the carvings read the story floor's
+    chapter, and the kits and achievements ask their real floors (Delver 17, the Vaults 35, the Halls 52, the Palace
+    70, the Deep 80, the Bottom 100, Without End 110, Beyond the Dream 150). Endless deepens every ten floors below
+    the hundredth. The first generator's frozen fingerprints are regenerated: the world below the third floor is
+    not the world it was.
 
 The last seven rooms (v89.0, UPGRADE_PLAN_64.md release 4)
   (src/js/69zzzc-rooms4.js, src/js/76zzzzzzzzzzx-rooms4.js, UPGRADE_PLAN_64.md)

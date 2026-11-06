@@ -206,7 +206,7 @@ CM.generators[1] = function (number, seed) {
   const stillGroups = [];
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
-    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(CM.storyOf(number), rnd), CM.makeItem(CM.storyOf(number), rnd)], trap: trap() };
     else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
@@ -297,7 +297,7 @@ CM.generators[1] = function (number, seed) {
   // the carving for this floor, on a wall the party can stand before
   const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
   if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
-    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : CM.storyOf(number) - 1, read: false };   // (below the bottom: the dream, still dreaming)
   // keys: one for every locked door, somewhere before it
   for (const [dk, f] of Object.entries(floor.features)) {
     if (f.type !== "door" || !f.locked) continue;
@@ -313,7 +313,7 @@ CM.generators[1] = function (number, seed) {
     const [x, y] = spare.pop();
     const items = [];
     const n = rnd.int(1, 2);
-    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(CM.storyOf(number), rnd));
     floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
   for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
@@ -321,7 +321,7 @@ CM.generators[1] = function (number, seed) {
     floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
   }
   if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
-    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
+    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), CM.storyOf(number) + 3, rnd);
     Object.assign(m, { name: "Minotaur of the Labyrinth", elite: "hulking", max: Math.round(m.max * 1.5), atk: m.atk + 3, xp: m.xp * 3, gold: m.gold * 4 });
     m.hp = m.max;
     floor.things[key(x, y)] = { type: "monsters", group: [m], hunter: true };
@@ -371,7 +371,7 @@ CM.generators[1] = function (number, seed) {
       if (spot) floor.things[key(spot[0], spot[1])] = { type: "hermit", heard: 0, greeted: false };
     } else if (roll < 0.5 && number >= 3) {
       const spot = freeCells(room)[0];
-      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(number / 2)), rnd), freed: false };
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(CM.storyOf(number) / 2)), rnd), freed: false };
     }
   }
   if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
