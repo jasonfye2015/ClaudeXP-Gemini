@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The second five trials (v94.0, UPGRADE_PLAN_65.md release 4)
+  (src/js/69zzzg-trials2.js, src/js/76zzzzzzzzzzzb-trials2.js, UPGRADE_PLAN_65.md)
+  - The trials, the second five (plan 65, release 4): the Wind Tunnel, a draught down the middle of a long hall
+    that puts the torch out and shoves the party a square back every third step - a lantern stands in it, and the
+    squares along the walls are out of it; the Counting Room, gold on every flag of the floor, taken by walking,
+    and past eight squares' worth the gate behind the party drops - a square's worth back on the altar at a time
+    lifts it, and the altar always takes; the Crawlway, a room crossed bent double with rats asleep in it and a
+    chest under the crawl's roof; the Weighing of Deeds, two stone hands with the band's relic between them that
+    weigh what the run has done - foes slain, guardians spoken with, the dead laid to rest, chests opened - against
+    fights fled, and give or say not yet, and never curse; and the Dice Room, a stone die the size of a stool for a
+    stake of fifty - a six triples it and opens the chest, a one opens the box the die sits in, which is a mouth.
+    Fifty rooms now.
+
 The first five trials (v93.0, UPGRADE_PLAN_65.md release 3)
   (src/js/69zzzf-trials.js, src/js/76zzzzzzzzzzza-trials.js, src/js/64-meta.js, UPGRADE_PLAN_65.md)
   - The trials, the first five (plan 65, release 3): the Hourglass Room, where turning the glass lifts the bars on

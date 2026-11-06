@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v93.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v94.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "93.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "94.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -32031,6 +32031,70 @@ Object.assign(CM.Game.prototype, {
   { const ar0 = P.answerRiddle; P.answerRiddle = function (k, answer) { const fl = this.floor, f = fl && fl.features[k], r = f && CM.RIDDLES[f.riddle], wasOpen = f && f.open; const out = ar0.call(this, k, answer); if (f && f.statue && r && !wasOpen && answer !== r.a && !f.woke && this.mode === "explore") { f.woke = true; const R = new CM.Random(CM.hashSeed(`${this.seed}:statue:${fl.number}:${k}`)); this.say("The statue's hand comes down. It is not stone, or not only."); groupAt(this, fl, [CM.makeMonster(kind("Gargoyle", "Skeleton"), Math.max(1, CM.storyOf(fl.number)), R)]); } return out; }; }
 }
 
+// ---- 69zzzg-trials2.js ----
+"use strict";
+// The trials, the second five (UPGRADE_PLAN_65.md, release 4): the Wind Tunnel (a draught that puts the torch out and
+// shoves the party a square back every third step on the middle way - a lantern stands, and the squares along the
+// walls are out of it; a chest in the wind's eye), the Counting Room (coins on every square, taken by walking; past
+// eight squares' worth the inner gate drops, and opens again when enough goes back on the altar - the altar always
+// takes), the Crawlway (a room at crawl height end to end, Giant Rats asleep in it, a low chest), the Weighing of
+// Deeds (a scale that weighs the run's deeds - foes slain, guardians spoken with, the dead laid to rest, chests opened,
+// against fights fled - and gives the band's relic to a party whose good outweighs; otherwise "not yet", and no
+// curse), and the Dice Room (the Joker's stone die: a stake of fifty, a six triples it and opens the chest, a one
+// hatches a Mimic from the die's box, anything else is the house's; once a day).
+//   letters: E a wind square, $ coins, N the inner gate, U the altar, Q rats asleep, K the deeds' scale, "," the die.
+{ const TR2 = CM.TRIALS2 = { windEvery: 3, coinsLimit: 8, stake: 50, winTimes: 3, deedsMargin: 10, fledWeight: 4 };
+  const SP8 = [
+    { name: "the Wind Tunnel", min: 6, line: "The draught comes down the hall like a hand on your chest, and the torch goes to nothing in it. Along the walls the air is still. Down the middle, it is not.",
+      rows: ["#####", "#.c.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#.E.#", "#...#", "#D###"], chests: { c: { note: "in the eye of the wind" } } },
+    { name: "the Counting Room", min: 5, line: "Gold on the floor: not a chest of it, the floor itself, coin on coin, wall to wall, and an altar in the middle with a plate on it, and an iron gate drawn up over the door you came in by. The Counting-House's cousin, and its rule is cut on the altar: take what you like. Leave what you must.",
+      rows: ["#########", "#$$$$$$$#", "#$$$$$$$#", "#$$$$$$$#", "#$$$U$$$#", "#$$$$$$$#", "#$$$$$$$#", "#$$N$$$$#", "###D#####"] },
+    { name: "the Crawlway", min: 4, bands: [0, 2, 8], line: "The roof comes down to your shoulders and stays there: a room you cross bent double, with the breath of something small and many in it, and a chest so low you could step over it.",
+      rows: ["###########", "#.........#", "#..Q......#", "#.........#", "#.........#", "#....c....#", "#.........#", "#......Q..#", "#.........#", "#.........#", "#####D#####"], chests: { c: { note: "low, under the crawl's roof" } } },
+    { name: "the Weighing of Deeds", min: 14, line: "A scale, but no pans: two hands of stone held out, and between them a thing of the band's that shines. The carving under it says the scale weighs not gold but what you have done, and gives or does not.",
+      rows: ["#########", "#.......#", "#.......#", "#...K...#", "#.......#", "#.......#", "#.......#", "###D#####"] },
+    { name: "the Dice Room", min: 8, line: "A stone die the size of a stool in a box of its own, a painted board on the wall with a six and a one on it, and a chest with its lid barred. The Joker's room, or one of his friends'. The stake is fifty.",
+      rows: ["#######", "#..9..#", "#.....#", "#..,..#", "#.....#", "#.....#", "###D###"], sealed: "barred till the die shows six" },
+  ];
+  for (const r of SP8) { r.ownDice = true; if (!CM.SETPIECES.some((t) => t.name === r.name)) CM.SETPIECES.push(r); }
+  const kind = (...names) => { for (const n of names) { const k = CM.monsterKind(n); if (k) return k; } return CM.MONSTERS[0]; };
+  const uniqueFor = (fl) => { const b = CM.themeIndex(fl.number); return Object.keys(CM.UNIQUES).find((k) => CM.UNIQUES[k].band === b) || Object.keys(CM.UNIQUES)[0]; };
+  CM.SETPIECE_LETTERS = Object.assign(CM.SETPIECE_LETTERS || {}, {
+    E: (fl, x, y, k) => { fl.features[k] = { type: "wind", known: true }; },
+    $: (fl, x, y, k, T, R) => { fl.features[k] = { type: "coins", gold: R.int(3, 9) * Math.max(1, CM.storyOf(fl.number)), known: true }; },
+    N: (fl, x, y, k) => { fl.features[k] = { type: "gate", open: true, counting: true }; },
+    U: (fl, x, y, k) => { fl.things[k] = { type: "countaltar" }; },
+    Q: (fl, x, y, k, T, R) => { const group = []; for (let i = 0; i < 3; i++) group.push(CM.makeMonster(kind("Giant Rat"), Math.max(1, CM.storyOf(fl.number)), R)); fl.things[k] = { type: "monsters", group, asleep: true, still: true }; },
+    K: (fl, x, y, k) => { fl.things[k] = { type: "deedscale", unique: uniqueFor(fl) }; },
+    ",": (fl, x, y, k) => { fl.things[k] = { type: "die" }; },   /* (X is the old templates' dark floor) */
+  });
+  // the Crawlway's roof comes down over the whole room
+  const crawlRoom = (fl) => { if (!fl || !fl.rooms) return; for (const r of fl.rooms) if (r.name === "the Crawlway") { fl.levels = fl.levels || {}; fl.crawl = fl.crawl || []; for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const k = `${x},${y}`; fl.levels[k] = [0, CM.LEVELS ? CM.LEVELS.crawl : 0.8]; if (!fl.crawl.includes(k)) fl.crawl.push(k); } } };
+  { const d0 = CM.dressSetPieces; CM.dressSetPieces = function (fl, seed) { const out = d0.call(this, fl, seed); crawlRoom(fl); return out; }; const mf0 = CM.makeFloor; CM.makeFloor = function (number, seed, gen) { const fl = mf0.call(this, number, seed, gen); if (fl && fl.number === number && number >= 1) crawlRoom(fl); return fl; }; }
+  const P = CM.Game.prototype;
+  const groupAt = (game, fl, group) => { const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; const was = fl.things[sq]; fl.things[sq] = th; game.startCombat(sq, th); if (fl.things[sq] === th) { if (was) fl.things[sq] = was; else delete fl.things[sq]; } };
+  const roomOf = (fl) => { const r = CM.setPieceOf(fl, fl.pos[0], fl.pos[1]); return r ? r.template.name : null; };
+  const gateOf = (fl) => Object.entries(fl.features).find(([, f]) => f.type === "gate" && f.counting) || null;
+  const deeds = (game) => { const t = game.tally || {}; const good = (t.kills || 0) + 3 * (t.spoken || []).length + 2 * (game.remainsFound || []).length + (t.chests || 0) + (game.journal || []).length, bad = TR2.fledWeight * (t.fled || 0); return { good, bad }; };
+  CM.deedsOf = deeds;
+  const LINES = { countaltar: () => "The altar, and its plate, and the rule cut under it: take what you like, leave what you must. (Space to leave a square's worth)", deedscale: (t) => (t.taken ? "The stone hands, empty." : "Two hands of stone and the relic between them. The carving: it weighs what you have done. (Space to be weighed)"), die: () => "A stone die the size of a stool in its box. The stake is fifty: a six triples it and opens the chest; a one is the house's, and worse. (Space to throw it)" };
+  { const l0 = P.look; P.look = function (...a) { const out = l0.apply(this, a); const fl = this.floor; if (fl && this.mode === "explore" && !this.perch && fl.things) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`; for (const k of [here, ahead]) { const t = fl.things[k]; if (t && LINES[t.type]) { this.say(LINES[t.type](t)); break; } } } return out; }; }
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`;
+        for (const k of [here, ahead]) { const t = fl.things[k]; if (!t) continue;
+          if (t.type === "countaltar") { const E = this.ext("counting"), S = (E[fl.number] = E[fl.number] || { taken: 0, pile: [] }); if (!S.pile.length) { this.say("The plate is empty, and so are your hands of this room's gold. Nothing to leave."); return true; } const back = Math.min(this.gold, S.pile.pop()); this.gold -= back; S.taken = Math.max(0, S.taken - 1); this.sound("coin"); const g = gateOf(fl); if (g && !g[1].open && S.taken <= TR2.coinsLimit) { g[1].open = true; this.dirty = true; this.say(`${back} gold goes back on the plate - and behind you the gate goes up with a groan. Enough was left.`); } else this.say(`${back} gold goes back on the plate.${g && !g[1].open ? ` The gate stays down: ${S.taken - TR2.coinsLimit} more square${S.taken - TR2.coinsLimit === 1 ? "" : "s"}' worth.` : ""}`); this.emit("change"); return true; }
+          if (t.type === "deedscale") { if (t.taken) { this.say("The stone hands, empty."); return true; } const d = deeds(this); if (d.good > d.bad + TR2.deedsMargin) { t.taken = true; const relic = CM.makeUnique(t.unique); this.bag.push(relic); this.sound("coin"); this.say(`The hands weigh you: ${d.good} of good against ${d.bad} of flight. They tilt your way, and ${relic.name} is yours.`); this.emit("change"); } else this.say(`The hands weigh you: ${d.good} of good against ${d.bad} of flight, and they do not tilt. Not yet. The relic stays where it is, and nothing follows you for asking.`); return true; }
+          if (t.type === "die") { const E = this.ext("dice"), day = CM.dayOf ? CM.dayOf(this) : 0, S = (E[fl.number] = E[fl.number] || {}); if (S.day === day) { this.say("The die has been thrown today. Tomorrow, if you are still here."); return true; } if (this.gold < TR2.stake) { this.say(`The stake is ${TR2.stake} gold, and you have not got it.`); return true; } S.day = day; this.gold -= TR2.stake; const roll = this.rnd.int(1, 6); this.sound("grind");
+            if (roll === 6) { this.gold += TR2.stake * TR2.winTimes; const chest = Object.values(fl.things).find((q) => q.type === "chest" && q.sealed === "the Dice Room"); if (chest) { delete chest.sealed; chest.note = "opened by the six"; } this.say(`The die goes over twice and shows six. ${TR2.stake * TR2.winTimes} gold back, and the bar on the chest lifts.`); this.emit("change"); return true; }
+            if (roll === 1) { const R = new CM.Random(CM.hashSeed(`${this.seed}:dicemimic:${fl.number}`)); this.say("The die shows one - and the box it sits in opens its lid, which is a mouth."); groupAt(this, fl, [CM.makeMonster(kind("Mimic", "Orc"), Math.max(1, CM.storyOf(fl.number)), R)]); return true; }
+            this.say(`The die shows ${roll}. The house keeps the stake.`); this.emit("change"); return true; } } }
+      return u0.apply(this, a); }; }
+  // the coins: taken by walking; past the limit the gate drops. The wind: the torch out, and a square back every third step without a lantern
+  { const ar0 = P.arrive; P.arrive = function (f, k) { const fl = this.floor;
+      if (f && f.type === "coins") { const E = this.ext("counting"), S = (E[fl.number] = E[fl.number] || { taken: 0, pile: [] }); delete fl.features[k]; this.gold += f.gold; S.taken++; S.pile.push(f.gold); this.sound("coin"); const g = gateOf(fl); if (g && g[1].open && S.taken > TR2.coinsLimit) { g[1].open = false; this.dirty = true; this.say(`${f.gold} gold off the floor - and the gate behind you comes down with a crash. The altar is the way to put it right.`); } else this.say(`${f.gold} gold off the floor.`); this.emit("change"); return; }
+      if (f && f.type === "wind") { this.gutter = Math.max(this.gutter || 0, 1); const E = this.ext("wind"), S = (E[fl.number] = E[fl.number] || { steps: 0 }); S.steps++; const lantern = this.light && this.light.kind === "lantern"; if (S.steps % TR2.windEvery === 0 && !lantern) { const [dx, dy] = CM.DIRS[fl.facing], back = [fl.pos[0] - dx, fl.pos[1] - dy]; if (CM.isOpen(fl, back[0], back[1]) && !fl.things[`${back[0]},${back[1]}`]) { fl.pos = back; this.say("The wind takes you off your feet and puts you down a square back."); } else this.say("The wind leans on you, and you lean back."); } else if (!S.said) { S.said = true; this.say(lantern ? "The wind puts the torch out and howls at the lantern, which does not care." : "The wind puts the torch out and shoves. Along the walls it is quieter."); } this.emit("change"); return; }
+      return ar0.call(this, f, k); }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -47313,6 +47377,26 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
         else if (f.type === "ice") out.push({ x, y, layer: "sp:ice", w: 0.98, flat: true, alpha: 0.8 });
         else if (f.type === "door" && f.statue && !f.open && has("monster:Gargoyle")) { for (let d = 0; d < 4; d++) { const [dx, dy] = CM.DIRS[d]; if (fl.grid[y + dy] && fl.grid[y + dy][x + dx] === 0 && !(fl.features[`${x + dx},${y + dy}`] || {}).statue) out.push({ x: x + dx, y: y + dy, face: (d + 2) % 4, layer: "monster:Gargoyle", w: 0.6, h: 0.85, lift: 0.0, shade: 0.5, alpha: 0.9 }); } } }
       return out; }; }
+}
+
+// ---- 76zzzzzzzzzzzb-trials2.js ----
+"use strict";
+// The trials, the second five - the window's side (UPGRADE_PLAN_65.md, release 4): coins on the Counting Room's floor,
+// its altar, the deeds' scale, the die in its box, dust streaming down the Wind Tunnel.
+{ const S = 64, r = Math.random;
+  const PICS = {
+    "sp:coins": (p) => { for (let i = 0; i < 14; i++) { const x = 8 + (i * 37) % 48, y = 8 + (i * 23) % 48; p.fillStyle = i % 3 ? "#E0B840" : "#C89A28"; p.beginPath(); p.ellipse(x, y, 5, 3.2, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,240,180,0.6)"; p.beginPath(); p.ellipse(x - 1, y - 1, 2, 1.2, 0, 0, Math.PI * 2); p.fill(); } },
+    "sp:altar": (p) => { p.fillStyle = "#5A5650"; p.fillRect(14, 30, 36, 30); p.fillStyle = "#6E6A62"; p.fillRect(10, 26, 44, 6); p.fillStyle = "#C8A040"; p.beginPath(); p.ellipse(32, 24, 14, 4, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "#2A2824"; p.fillRect(20, 40, 24, 2); p.fillRect(20, 46, 16, 2); },
+    "sp:die": (p) => { p.fillStyle = "#3A3632"; p.fillRect(6, 40, 52, 22); p.fillStyle = "#D8D4CC"; p.fillRect(16, 14, 32, 32); p.strokeStyle = "#8A8680"; p.lineWidth = 2; p.strokeRect(16, 14, 32, 32); p.fillStyle = "#1A1816"; for (const [x, y] of [[24, 22], [40, 22], [32, 30], [24, 38], [40, 38]]) { p.beginPath(); p.arc(x, y, 2.6, 0, Math.PI * 2); p.fill(); } },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) { if (set.index[name] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; PICS[name](c.getContext("2d")); set.index[name] = set.layers.length; set.layers.push(c); } return set; }; }
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, { countaltar: (t, x, y) => [{ x, y, layer: "sp:altar", w: 0.8, h: 0.7 }], deedscale: (t, x, y) => [{ x, y, layer: "sp:scale", w: 0.8, h: 0.8, glow: t.taken ? 0 : 0.2 }], die: (t, x, y) => [{ x, y, layer: "sp:die", w: 0.6, h: 0.6 }] });
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || game.mode === "title" || !fl.features) return out; for (const [k, f] of Object.entries(fl.features)) { if (f.type !== "coins") continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) > 12) continue; out.push({ x, y, layer: "sp:coins", w: 0.96, flat: true, glow: 0.15 + 0.05 * Math.sin(now / 700 + x + y) }); } return out; }; }
+  // dust down the tunnel
+  const has = (L) => { const R0 = CM.renderer; return R0 && R0.index && R0.index[L] !== undefined; };
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, fl = g && g.floor; if (env.surface || !fl || !(fl.number >= 1) || g.mode === "title" || !fl.features) return out; const n = Object.entries(fl.features).filter(([k, f]) => { if (f.type !== "wind") return false; const [x, y] = k.split(",").map(Number); return Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= 10; }).length; if (n && has("air:mote")) out.push({ id: "tunneldust", rate: Math.min(10, n) }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { if (k.id !== "tunneldust") return sp0.call(this, k, eye, R, env); const g = CM.game, fl = g.floor, W = Object.keys(fl.features).filter((q) => fl.features[q].type === "wind").map((q) => q.split(",").map(Number)); if (!W.length) return null; const xs = W.map(([x]) => x), ys = W.map(([, y]) => y), along = (Math.max(...ys) - Math.min(...ys)) >= (Math.max(...xs) - Math.min(...xs)); const [x, y] = W[Math.floor(r() * W.length)];
+      return { kind: "mote", age: 0.4, seed: r() * 10, sway: 1, swayAmp: 0.03, windy: 1, vx: along ? 0 : 2.2, vy: (r() - 0.5) * 0.1, vz: along ? 2.2 : 0, life: 1.5 + r(), size: 0.03 + r() * 0.03, h: 0.03, glow: 0.05, alpha: 0.6, x: x + r(), z: y + r(), y: 0.2 + r() * 0.6, top: 0.95, layer: "air:mote" }; }; }
 }
 
 // ---- 77-splash.js ----
