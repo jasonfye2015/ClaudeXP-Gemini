@@ -188,6 +188,14 @@ how that is ruled out, and the order of work. Nothing here is built yet.
   light). 69zzs-plants.js's dungeon density follows the bloom. 76zzzzzzzzzzu-blooms.js draws the glowcaps (a wall
   decal with a green light), the spore patches (a flat picture, spores drifting), the draft's wind and haze and
   the look lines.
+- v85.0 - releases 5 and 6 with 4: 69zzx-steam.js (steamHere -> the "steam" terrain, a bow at three quarters,
+  the sight a square; rootsDry by the heat above; a fire spell x1.25 at the Root and the roots alight a quarter
+  hour; the fog pools by CM.floorAt, said on stepping down), 76zzzzzzzzzzv-steam.js (the steam screen, the root
+  flames, the crackle); 69zzy-migrate.js (the first two floors' wandering groups reseeded with the Wood's kinds
+  under a storm, restored when it clears; the water's kinds' sure strike one fight in three on a wet floor). Not
+  done: the foes' archers at three quarters in steam (the fight does not mark its shooter), the leech added to a
+  stirred group (leeches are a status), the ambush reach +1. A rule learned: a fight's rules must not roll the
+  weather's dice - every new reader of the sky checks skyOn first, or a run and its replay part.
 
 ## 7. Decisions taken (2026-11-05, on the plan's own suggestions)
 
