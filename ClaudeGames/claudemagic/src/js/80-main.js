@@ -236,7 +236,7 @@ window.addEventListener("DOMContentLoaded", () => {
   applySettings(game.settings);
   CM.audio.unlock();                                                     // (where the page may: the Timeline's window; a browser waits for a click or key)
   soundscape();
-  CM.art.load().then(() => { CM.startLog.push([Math.round(performance.now()), "packs decoded"]); if (lookNow() !== lookOn) relook(); });    // the packs, decoded: a theme that waited for them comes in
+  CM.art.load().then(() => { CM.startLog.push([Math.round(performance.now()), "packs decoded"]); if (lookNow() !== lookOn) relook(); else if (CM.ui && CM.ui.restyle) CM.ui.restyle(); });   // (the dolls arrived: the portraits are drawn again from them)    // the packs, decoded: a theme that waited for them comes in
 
   // ---- spectacle: what flies, bursts and shakes for each thing that happens; CM.Effects (45-fx.js) carries them ----
   const fxs = new CM.Effects();

@@ -10,18 +10,19 @@
 CM.LOOKS = {                                                            // (v44.6: Stone only - it has every picture; Pixel built its own set and fell behind)
   stone: { name: "Stone", what: "photographed stone, grass, plaster and bark on the walls and the ground, with the drawn monsters" },
 };
-CM.art.packs = { ready: false, atlas: null, stone: {}, loading: null };
+CM.art.packs = { ready: false, atlas: null, stone: {}, dolls: null, loading: null };   // (dolls: the heroes' CC0 tiles, 35e-dolls.js)
 
 // decode the packs (a promise; it resolves at once when the file carries none)
 CM.art.load = function () {
   const packs = CM.art.packs;
   if (packs.loading) return packs.loading;
   const P = CM.packs;
-  if (!P) { packs.ready = true; return (packs.loading = Promise.resolve()); }
+  if (!P && !(CM.dolls && CM.dolls.atlas)) { packs.ready = true; return (packs.loading = Promise.resolve()); }
+  if (!P) { packs.loading = decode(CM.dolls.atlas).then((im) => { packs.dolls = im; packs.ready = true; }); return packs.loading; }
   const decode = (src) => new Promise((done) => { const im = new Image(); im.onload = () => done(im); im.onerror = () => done(null); im.src = src; });
-  packs.loading = Promise.all([P.pixel && P.pixel.atlas ? decode(P.pixel.atlas) : Promise.resolve(null), ...Object.entries(P.stone.textures || {}).map(([k, src]) => decode(src).then((im) => [k, im]))])
-    .then(([atlas, ...stones]) => {
-      packs.atlas = atlas;
+  packs.loading = Promise.all([P.pixel && P.pixel.atlas ? decode(P.pixel.atlas) : Promise.resolve(null), CM.dolls && CM.dolls.atlas ? decode(CM.dolls.atlas) : Promise.resolve(null), ...Object.entries(P.stone.textures || {}).map(([k, src]) => decode(src).then((im) => [k, im]))])
+    .then(([atlas, dolls, ...stones]) => {
+      packs.atlas = atlas; packs.dolls = dolls;
       for (const [k, im] of stones) if (im) packs.stone[k] = im;
       packs.ready = true;
     });
@@ -225,12 +226,24 @@ CM.art.DOLLS = {
   Artificer: ["human_male", "boots.brown", "legs.blue", "body.leather", "hair.short_black", "left.shield_round", "right.mace"],
 };
 CM.art.PORTRAIT_BG = { Knight: "#3A3E4A", Rogue: "#2E3A2A", Cleric: "#4A3E2A", Mage: "#2E2A4A", Paladin: "#4A3A2A", Ranger: "#2A3A2E", Druid: "#3A4A2A", Bard: "#4A2A3A", Monk: "#4A3A20", Necromancer: "#2A1A3A", Artificer: "#3A3A2A" };
+// a doll tile (35e-dolls.js) drawn crisp into a rectangle; false when the atlas isn't decoded yet or has no such part
+CM.art.dollOnto = function (p, part, x, y, w, h) {
+  const D = CM.dolls, im = CM.art.packs.dolls, at = D && D.index[`d.${part}`];
+  if (!at || !im) return false;
+  p.save(); p.imageSmoothingEnabled = false; p.drawImage(im, at[0], at[1], D.size, D.size, x, y, w, h); p.restore();
+  return true;
+};
+CM.art.hasDolls = () => Boolean(CM.art.packs.dolls);
+// the heroes' portraits: the dolls (CC0 sprites) in every look, the drawn ones only until the atlas is decoded
 CM.art.portrait = function (cls, size = 56, look = "drawn") {
-  if (look !== "pixel" || !CM.art.hasLook("pixel")) return CM.art.portraitDrawn(cls, size);
+  const parts = CM.art.DOLLS[cls] || CM.art.DOLLS.Knight;
+  if (!CM.art.hasDolls() || !CM.dolls.index[`d.${parts[0]}`]) { if (look !== "pixel" || !CM.art.hasLook("pixel")) return CM.art.portraitDrawn(cls, size); }
   const c = artCanvas(size), p = c.getContext("2d");
   p.fillStyle = CM.art.PORTRAIT_BG[cls] || "#333";
   p.fillRect(0, 0, size, size);
-  for (const part of CM.art.DOLLS[cls] || CM.art.DOLLS.Knight) CM.art.tileOnto(p, `d.${part}`, 0, 0, size, size);
+  const g = p.createRadialGradient(size / 2, size * 0.45, size * 0.1, size / 2, size * 0.45, size * 0.75); g.addColorStop(0, "rgba(255,255,255,0.14)"); g.addColorStop(1, "rgba(0,0,0,0.25)"); p.fillStyle = g; p.fillRect(0, 0, size, size);
+  const pad = Math.round(size * 0.06);
+  for (const part of parts) if (!CM.art.dollOnto(p, part, pad, pad, size - 2 * pad, size - 2 * pad)) CM.art.tileOnto(p, `d.${part}`, pad, pad, size - 2 * pad, size - 2 * pad);
   return c;
 };
 
