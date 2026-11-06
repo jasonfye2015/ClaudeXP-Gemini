@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v118.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v119.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "118.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "119.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -49578,6 +49578,121 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
     return true; };
   if (!bind()) { const t = setInterval(() => { if (bind()) clearInterval(t); }, 300); }
   if (CM.settingLater && CM.addSetting) CM.settingLater((ui) => CM.addSetting("set-lighting", "Lighting below ground - Deep: the torch makes a tighter pool and the dark comes closer; Classic: as it always was", [["deep", "Deep"], ["classic", "Classic"]], "lighting", "deep", ui));
+}
+
+// ---- 77k-pack.js ----
+"use strict";
+// Presentation, third pass (UPGRADE_PLAN_74.md, release 3): the pack and the gear. The pack is a grid of framed things
+// (the frame's colour its rarity) rather than a long list; beside it, the four heroes as cards with their portraits
+// and what each wears, a click on a card the same as its "Equip on" button (and a dragged thing still lands on the
+// party's own cards below); and the thing picked is described on a parchment card in Claude's ink. Every button, the
+// shop's list, the belt, the filters and the drag and drop are the game's own, unchanged.
+{ const css = `
+#bag { background: radial-gradient(ellipse at 50% 30%, #2A2016 0%, #15100B 70%); }
+#bag .lists { gap: 12px; }
+#bag-heroes { flex: 0 0 210px; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+#bag-heroes .hcard { display: grid; grid-template-columns: 46px 1fr; gap: 2px 8px; padding: 6px; border: 1px solid rgba(200,168,96,0.35); border-radius: 6px; background: rgba(40,30,20,0.75); cursor: pointer; }
+#bag-heroes .hcard:hover { border-color: rgba(232,184,96,0.9); } #bag-heroes .hcard.fallen { opacity: 0.55; }
+#bag-heroes .hcard .who { font: 600 13px Georgia, serif; color: #E8D4A8; } #bag-heroes .hcard .who small { color: #A89878; font-weight: normal; }
+#bag-heroes .hcard .worn { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 3px; }
+#bag-heroes .hcard .worn span { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; background: rgba(0,0,0,0.35); border: 1px solid rgba(200,168,96,0.25); }
+#bag-heroes .hcard .worn canvas, #bag-heroes .hcard .worn img { width: 22px; height: 22px; }
+#bag-heroes .hcard .cmp { grid-column: 2; font: 11px Georgia, serif; color: #A89878; } #bag-heroes .hcard .cmp.good { color: #9AD08A; } #bag-heroes .hcard .cmp.bad { color: #E09080; }
+#bag-list, #shop-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 6px; align-content: start; overflow: auto; }
+#bag-list > .head, #shop-list > .head, #bag-list > .empty, #shop-list > .empty { grid-column: 1 / -1; }
+#bag-list > .item, #shop-list > .item { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 8px 4px 6px; min-height: 86px; border-radius: 6px;
+  border: 1px solid rgba(160,140,110,0.4); background: linear-gradient(180deg, rgba(56,42,28,0.9), rgba(30,22,14,0.9)); font-size: 11px; line-height: 1.2; }
+#bag-list > .item canvas, #bag-list > .item img, #shop-list > .item canvas, #shop-list > .item img { width: 40px; height: 40px; image-rendering: pixelated; }
+#bag-list > .item .what, #shop-list > .item .what { display: none; }
+#bag-list > .item.r-fine, #shop-list > .item.r-fine { border-color: #6A9AD8; } #bag-list > .item.r-rare, #shop-list > .item.r-rare { border-color: #E0C050; }
+#bag-list > .item.r-relic, #shop-list > .item.r-relic { border-color: #E07838; box-shadow: inset 0 0 10px rgba(224,120,56,0.25); } #bag-list > .item.r-unique, #shop-list > .item.r-unique { border-color: #C070E0; box-shadow: inset 0 0 10px rgba(192,112,224,0.25); }
+#bag-list > .item.r-cursed, #shop-list > .item.r-cursed { border-color: #A03030; }
+#bag-list > .item.sel, #shop-list > .item.sel { outline: 2px solid #E8B860; outline-offset: 1px; background: linear-gradient(180deg, rgba(90,66,36,0.95), rgba(46,34,20,0.95)); }
+#bag .note { min-height: 44px; padding: 10px 14px; border-radius: 4px; color: #2E2014; font: 14px/1.4 Georgia, serif; white-space: pre-line;
+  background: linear-gradient(180deg, #EFE2C2, #E2D0A8); box-shadow: inset 0 0 18px rgba(120,80,30,0.25), 0 2px 6px rgba(0,0,0,0.5); }
+#bag .note b.title { display: block; font: 600 16px Georgia, serif; margin-bottom: 2px; }`;
+  const style = () => { if (document.getElementById("pack-css")) return; const st = document.createElement("style"); st.id = "pack-css"; st.textContent = css; document.head.appendChild(st); };
+  const shown = (ui, g) => { const F = CM.BAG_FILTERS[ui.bagFilter || "all"]; return g.bag.map((it, i) => i).filter((i) => !F.kinds || F.kinds.includes(g.bag[i].kind)); };
+  const fb0 = CM.UI.prototype.fillBag; CM.UI.prototype.fillBag = function (...a) { const out = fb0.apply(this, a), g = this.game; style(); try {
+      // the frames: each row's rarity
+      const rows = shown(this, g), packItems = [...this.$("#bag-list").querySelectorAll(":scope > .item")]; packItems.forEach((el, n) => { const it = g.bag[rows[n]]; if (it) el.classList.add(`r-${CM.rarityOf(it)}`); });
+      [...this.$("#shop-list").querySelectorAll(":scope > .item")].forEach((el, n) => { const it = (g.stock || [])[n]; if (it) el.classList.add(`r-${CM.rarityOf(it)}`); });
+      // the heroes, and what each wears
+      const lists = this.$("#bag .lists"); let H = this.$("#bag-heroes"); if (!H) { H = document.createElement("div"); H.id = "bag-heroes"; lists.insertBefore(H, lists.firstChild); }
+      H.innerHTML = ""; const give = [...this.$("#bag-give").querySelectorAll("button")];
+      g.party.forEach((h, i) => { const c = document.createElement("div"); c.className = "hcard" + (h.hp <= 0 ? " fallen" : ""); c.title = give[i] ? give[i].title || give[i].textContent : h.name;
+        c.appendChild(this.portrait(h, 44)); const who = document.createElement("div"); who.innerHTML = `<div class="who">${this.esc(h.name)} <small>${this.esc(h.cls)} ${h.level}</small></div>`;
+        const cmp = give[i] && give[i].querySelector(".cmp"); if (cmp) { const d = document.createElement("div"); d.className = cmp.className; d.textContent = cmp.textContent; who.appendChild(d); }
+        c.appendChild(who); const worn = document.createElement("div"); worn.className = "worn"; for (const it of CM.equipped(h)) { if (!it || (it.props && it.props.fists)) continue; const s = document.createElement("span"); s.title = it.name; s.appendChild(this.icon(it)); worn.appendChild(s); }
+        c.appendChild(worn); c.addEventListener("click", () => { const b = this.$("#bag-give").querySelectorAll("button")[i]; if (b) b.click(); }); H.appendChild(c); });
+      // the picked thing, on parchment
+      const picked = this.bagRow >= 0 ? g.bag[this.bagRow] : null, note = this.$("#bag-note");
+      if (picked && note && note.textContent === CM.itemCard(picked)) { const name = picked.unknown ? CM.baseName(picked) : picked.name, body = CM.itemCard(picked).replace(name, "").replace(/^[\s:,.-]+/, "");
+        note.innerHTML = `<b class="title rarity-${CM.rarityOf(picked)}">${this.esc(name)}</b>${this.esc(body)}`; }
+    } catch (e) { /* (the game's own pack stands if anything here fails) */ }
+    return out; };
+}
+
+// ---- 77l-claudemap.js ----
+"use strict";
+// Presentation, third pass (UPGRADE_PLAN_74.md, release 3): Claude's map. Below ground the automap is the map he draws
+// as you go - the game's own map first (its marks, its doors, the party's arrow, your flags all as they were), then his
+// ink over it: the walls' edges ruled in brown ink with a hand's small wobble, the unknown hatched rather than blank,
+// a soft darkening at the sheet's edges, and once the map is large enough, the rooms' names written in. Settings >
+// Map: Claude's or Plain. The town and the Wood keep their coloured map.
+{ const hash = (x, y) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const da0 = CM.UI.prototype.drawAutomap; CM.UI.prototype.drawAutomap = function (canvas, ...a) { const out = da0.call(this, canvas, ...a), g = this.game, fl = g.towerRun ? g.towerRun.fl : g.floor;
+    if (!fl || !(fl.number >= 1) || fl.special === "interior" || ((g.settings || {}).mapstyle || "claude") !== "claude") return out;
+    try { const p = canvas.getContext("2d"), W = canvas.width, N = fl.grid.length, cell = W / N, seen = new Set((fl.seen || []).map(([x, y]) => `${x},${y}`)), open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0;
+      // the unknown, hatched
+      p.save(); p.strokeStyle = "rgba(120,90,50,0.28)"; p.lineWidth = Math.max(0.6, cell * 0.06);
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (seen.has(`${x},${y}`)) continue; p.fillStyle = "rgba(214,196,160,0.85)"; p.fillRect(x * cell, y * cell, cell, cell);
+        p.beginPath(); for (let k = -1; k <= 1; k++) { const o = (k + 0.5) * cell * 0.5; p.moveTo(x * cell + Math.max(0, o), y * cell + Math.max(0, -o)); p.lineTo(x * cell + Math.min(cell, cell + o), y * cell + Math.min(cell, cell - o)); } p.stroke(); }
+      // seen walls: a darker wash, and their edges against the floor ruled in ink
+      p.strokeStyle = "rgba(90,60,30,0.55)"; p.lineWidth = Math.max(0.7, cell * 0.07); for (const k of seen) { const [x, y] = k.split(",").map(Number); if (open(x, y)) continue; p.fillStyle = "#CDB48A"; p.fillRect(x * cell, y * cell, cell, cell); p.beginPath(); for (let j = 1; j < 4; j++) { const o = j * cell / 4; p.moveTo(x * cell + o, y * cell); p.lineTo(x * cell, y * cell + o); p.moveTo(x * cell + cell, y * cell + o); p.lineTo(x * cell + o, y * cell + cell); } p.moveTo(x * cell + cell, y * cell); p.lineTo(x * cell, y * cell + cell); p.stroke(); }
+      p.strokeStyle = "#4A2E16"; p.lineWidth = Math.max(1.2, cell * 0.14); p.lineCap = "round"; p.beginPath();
+      for (const k of seen) { const [x, y] = k.split(",").map(Number); if (!open(x, y)) continue; const w = (u, v) => (hash(u, v) - 0.5) * cell * 0.08;
+        for (const [dx, dy, x0, y0, x1, y1] of [[0, -1, 0, 0, 1, 0], [0, 1, 0, 1, 1, 1], [-1, 0, 0, 0, 0, 1], [1, 0, 1, 0, 1, 1]]) if (!open(x + dx, y + dy)) {
+          const ax = (x + x0) * cell, ay = (y + y0) * cell, bx = (x + x1) * cell, by = (y + y1) * cell; p.moveTo(ax + w(ax, ay), ay + w(ay, ax)); p.lineTo(bx + w(bx, by), by + w(by, bx)); } }
+      p.stroke();
+      // the sheet's edges
+      const vg = p.createRadialGradient(W / 2, W / 2, W * 0.35, W / 2, W / 2, W * 0.75); vg.addColorStop(0, "rgba(120,80,30,0)"); vg.addColorStop(1, "rgba(120,80,30,0.28)"); p.fillStyle = vg; p.fillRect(0, 0, W, W);
+      // the rooms' names, in his hand, when there's room to write them
+      if (cell >= 14) { p.font = `italic ${Math.max(10, Math.min(16, cell * 0.55))}px Georgia`; p.textAlign = "center"; p.fillStyle = "rgba(70,44,20,0.85)";
+        for (const R of fl.rooms || []) { if (!R.name) continue; const cx = Math.floor((R.x0 + R.x1) / 2), cy = Math.floor((R.y0 + R.y1) / 2); if (!seen.has(`${cx},${cy}`)) continue; p.save(); p.strokeStyle = "rgba(240,228,200,0.95)"; p.lineWidth = 3; p.strokeText(R.name, (R.x0 + R.x1 + 1) / 2 * cell, (R.y0 - 0.25) * cell > 10 ? (R.y0 - 0.2) * cell : (R.y1 + 1.2) * cell); p.restore(); p.fillText(R.name, (R.x0 + R.x1 + 1) / 2 * cell, (R.y0 - 0.25) * cell > 10 ? (R.y0 - 0.2) * cell : (R.y1 + 1.2) * cell); } }
+      p.restore(); } catch (e) { /* (the plain map stands) */ }
+    return out; };
+  if (CM.settingLater && CM.addSetting) CM.settingLater((ui) => CM.addSetting("set-mapstyle", "Map below ground - Claude's (ink, hatched where unknown, the rooms named) or Plain (the graph paper)", [["claude", "Claude's"], ["plain", "Plain"]], "mapstyle", "claude", ui));
+}
+
+// ---- 77m-silhouettes.js ----
+"use strict";
+// Presentation, fourth pass (UPGRADE_PLAN_74.md, release 4): enemy silhouettes. Many kinds share a handful of bodies
+// (the rogue's, the barbarian's, the knight's) told apart by colour and size alone, so a kobold could read as a
+// person in a hood. Now each family stands its own way: its proportions (an ogre broad, a troll tall and stooped, a
+// kobold squat, a dark elf slender) and its carriage (a zombie or a ghoul hunched forward, a gargoyle crouched, a
+// demon upright). The body's own joints, its gear and its animations go with it; only how the figure is set on the
+// square changes, and only in the figures' own pass (not the far impostors, which keep the painted look).
+//   CM.SILHOUETTES[kind] -> { sx, sy, sz, lean } (widths, height, depth, and the forward lean in radians)
+{ CM.SILHOUETTES = {
+    Kobold: { sx: 1.16, sy: 0.84, sz: 1.12, lean: 0.12 }, Goblin: { sx: 1.08, sy: 0.88, sz: 1.04, lean: 0.16 }, Zombie: { sx: 1.02, sy: 0.95, sz: 1.0, lean: 0.3 },
+    Ghoul: { sx: 0.9, sy: 0.98, sz: 0.95, lean: 0.34 }, Orc: { sx: 1.16, sy: 1.0, sz: 1.12, lean: 0.06 }, Troll: { sx: 0.9, sy: 1.18, sz: 0.95, lean: 0.2 },
+    Ogre: { sx: 1.3, sy: 0.94, sz: 1.24, lean: 0.08 }, Minotaur: { sx: 1.2, sy: 1.08, sz: 1.1, lean: 0.12 }, Demon: { sx: 1.1, sy: 1.1, sz: 1.05, lean: -0.05 },
+    "Dark Elf": { sx: 0.88, sy: 1.08, sz: 0.9, lean: 0 }, Wraith: { sx: 0.85, sy: 1.15, sz: 0.85, lean: 0.1 }, Vampire: { sx: 0.92, sy: 1.06, sz: 0.94, lean: -0.03 },
+    Drowned: { sx: 0.96, sy: 1.0, sz: 0.96, lean: 0.16 }, "Weed Hag": { sx: 1.0, sy: 0.9, sz: 1.0, lean: 0.3 }, "Crystal Golem": { sx: 1.26, sy: 1.05, sz: 1.2, lean: 0.04 },
+    "Slag Golem": { sx: 1.3, sy: 0.95, sz: 1.25, lean: 0.06 }, Gargoyle: { sx: 1.2, sy: 0.86, sz: 1.1, lean: 0.24 }, "Foundry Imp": { sx: 1.12, sy: 0.84, sz: 1.06, lean: 0.12 },
+    "Bellows Imp": { sx: 1.12, sy: 0.84, sz: 1.06, lean: 0.12 }, "Grave Priest": { sx: 0.96, sy: 1.04, sz: 0.96, lean: 0.12 }, "Hollow One": { sx: 0.86, sy: 1.12, sz: 0.86, lean: 0.04 },
+    "Prism Sentinel": { sx: 1.1, sy: 1.1, sz: 1.06, lean: 0 }, "Drowned Townsfolk": { sx: 0.96, sy: 0.98, sz: 0.96, lean: 0.14 }, "Shard Wisp": { sx: 0.9, sy: 1.0, sz: 0.9, lean: 0.06 },
+    "Bone Colossus": { sx: 1.15, sy: 1.0, sz: 1.1, lean: 0.08 }, "Grave Lantern": { sx: 0.9, sy: 1.05, sz: 0.9, lean: 0.08 } };
+  const F = CM.Figures; if (F && F.modelMatrix && CM.Renderer) {
+  const L = new Float32Array(16), T = new Float32Array(16);
+  const shapeOf = (f) => { const layer = (f && f.s && f.s.layer) || "", parts = layer.split(":"); if (parts[0] !== "monster") return null; const K = CM.monsterKind ? CM.monsterKind(parts[1]) : null; return CM.SILHOUETTES[parts[1]] || (K && CM.SILHOUETTES[K.name]) || null; };
+  let queue = null;
+  const mm0 = F.modelMatrix; F.modelMatrix = function (out, ...a) { const res = mm0.call(this, out, ...a); if (!queue) return res; const S = queue.list[queue.i++]; if (!S || CM.silhouettesOff) return res;
+    const c = Math.cos(S.lean || 0), s = Math.sin(S.lean || 0);   // (local: the lean about the feet, then the proportions - Rx(lean) * diag(sx, sy, sz), column-major)
+    L.fill(0); L[0] = S.sx; L[5] = c * S.sy; L[6] = s * S.sy; L[9] = -s * S.sz; L[10] = c * S.sz; L[15] = 1; T.set(res); F.mul(res, T, L); return res; };
+  const df0 = CM.Renderer.prototype.drawFigures; CM.Renderer.prototype.drawFigures = function (...a) { queue = { list: (this.figList || []).map(shapeOf), i: 0 }; try { return df0.apply(this, a); } finally { queue = null; } };
+  }
 }
 
 // ---- 79-artworker.js ----
