@@ -7283,6 +7283,28 @@ test("the world around Claude: the memorial wall at the shaft's head reads the f
   g.festival = null; const was = CM.weather; CM.weather = () => "rain"; g.ext("claude").seasonSaid = null; g.claudeSeason(); assert.ok(/soaked/.test(g.messages.slice(-1)[0])); assert.ok(!Object.values(g.floor.things).some((t) => t.type === "festdeco")); CM.weather = was;
 });
 
+test("small things, kept quiet (plan 73, part one): each is counted once in the village's ledger, never twice and never in a replay; the box on Claude's shelf says how many, not what", () => {
+  const CM = load(), key = (x, y) => `${x},${y}`;
+  const g = new CM.Game(); g.newGame("claude", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const found = () => g.curiosFound(); assert.ok(found() >= 1, "a first one at the start");
+  assert.strictEqual(g.curio("seedclaude"), false, "never twice");
+  const r = new CM.Game(); r.replaying = true; assert.strictEqual(r.curio("anything"), false, "never in a replay");
+  // a walk into a wall, ten times
+  const n0 = found(); g.enterFloor(1, "down"); { const fl = g.floor, N = fl.grid.length; outer: for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (CM.isOpen(fl, x, y) && !fl.things[key(x, y)] && !CM.isOpen(fl, x, y - 1)) { fl.pos = [x, y]; fl.facing = 0; break outer; } } for (let i = 0; i < 10; i++) g.move(0); assert.strictEqual(found(), n0 + 1);
+  // turning on the spot
+  for (let i = 0; i < 12; i++) g.turn(1); assert.strictEqual(found(), n0 + 2);
+  // the gold
+  g.gold = 777; g.emit("change"); assert.strictEqual(found(), n0 + 3);
+  // the things laid by the seed: on their floors, taken with Space, the item kept
+  for (const [id, band] of [["fluff", 0], ["duck", 1]]) { const n = CM.curioFloor(g.seed, band, `curio:${id}`); g.enterFloor(n, "down"); const at = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "curio" && g.floor.things[k].id === id); assert.ok(at, `${id} on floor ${n}`);
+    g.floor.pos = at.split(",").map(Number); g.mode = "explore"; g.use(); assert.ok(g.bag.some((i) => i.curio === id), `${id} kept`); }
+  // a floor of note
+  g.enterFloor(42, "down"); assert.ok(g.vext("curios").floor42);
+  // the shelf: a count, not a list
+  g.vext("claude").met = 1; g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; g.clock = 6 * 60; g.returnToClaude(); g.claudePanel("stats"); const said = g.messages.slice(-1)[0]; assert.ok(/Curiosities/.test(said) && new RegExp(`${found()} folded slip`).test(said));
+  assert.ok(g.curiosFound() >= 6);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
