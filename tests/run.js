@@ -6930,6 +6930,17 @@ test("memory, story and the town (plan 65, release 6): the Chronicle Wall's pane
   g.floor = null;
 });
 
+test("the heroes' portraits are sprites: the dolls' atlas (Dungeon Crawl Stone Soup, CC0) carries every part of every calling's doll, thirty-two a side, and the window composes the portraits from it in every look, the drawn ones standing in only until it is decoded", () => {
+  const CM = load(); const D = CM.dolls; assert.ok(D && D.size === 32 && D.atlas.startsWith("data:image/png;base64,") && D.atlas.length > 4000, "the atlas is bundled");
+  const src = fs.readFileSync(path.join(__dirname, "..", "src", "js", "36-looks.js"), "utf8"), m = /CM\.art\.DOLLS = \{([\s\S]*?)\n\};/.exec(src); assert.ok(m, "the dolls' parts are listed");
+  const classes = [...m[1].matchAll(/^\s*(\w+): \[([^\]]*)\]/gm)].map(([, cls, parts]) => [cls, [...parts.matchAll(/"([^"]+)"/g)].map((x) => x[1])]);
+  assert.ok(classes.length >= 11, `eleven callings dressed (${classes.length})`);
+  for (const [cls, parts] of classes) { assert.ok(parts.length >= 4, `${cls}: a body and clothes`); for (const part of parts) assert.ok(D.index[`d.${part}`], `${cls}: the atlas has ${part}`); }
+  for (const [k, at] of Object.entries(D.index)) assert.ok(k.startsWith("d.") && at.length === 2 && at[0] % 32 === 0 && at[1] % 32 === 0, `${k} sits on the grid`);
+  assert.ok(/CM\.art\.dollOnto/.test(src) && /CM\.art\.hasDolls/.test(src), "the window composes from the dolls");
+  for (const f of ["76d-fortress.js", "76h-claudecraft.js"]) assert.ok(!/portraitDrawn\(/.test(fs.readFileSync(path.join(__dirname, "..", "src", "js", f), "utf8")), `${f} draws the sprite portrait`);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

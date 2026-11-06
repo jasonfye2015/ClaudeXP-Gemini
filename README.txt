@@ -1392,6 +1392,14 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The heroes' portraits are sprites (v97.0, the party's pictures)
+  (src/js/35e-dolls.js, src/js/36-looks.js, src/js/80-main.js, src/js/76d-fortress.js, src/js/76h-claudecraft.js, tools/dolls.py)
+  - The heroes' portraits are sprites now: every calling's doll - body, boots, legs, armour, cloak, hair, helm or
+    hood, shield and weapon - from the Dungeon Crawl Stone Soup tiles (CC0), packed into one small atlas and
+    composed in every look, wherever a hero's picture is shown: the party bar, the hero's sheet, the camp's
+    recruits, the title's callings and the Hall of Fame, the fireside, the legends, the end card, the Fortress's
+    token and Claudecraft's corner. The drawn portraits stand in only for the moment before the atlas is decoded.
+
 The memory rooms (v96.0, UPGRADE_PLAN_65.md release 6)
   (src/js/69zzzi-memory.js, tests/run.js, UPGRADE_PLAN_65.md)
   - Memory, story and the town (plan 65, release 6): the Chronicle Wall, ten panels painted with this house's own
