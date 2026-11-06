@@ -204,6 +204,28 @@ a way always stands, every block clears, no hazard unseen or unbounded).
   Kennel, the Mirror Hall, the Cold Store, the Hall of Fame Annex (each wants a mechanic of its own - plates that
   tilt, lamps in order, cocoons, cages, reflections, hanging meat, plaques).
 
+- v89.0 - release 4, the last seven: 69zzzc-rooms4.js - the Mirror Hall (the Lich King's palace and the Crystal
+  Caverns: looked at, then struck - a mirror shard to carry and the party's own shades, one a hero, step out of the
+  glass), the Cold Store (four meals on hooks, free; the last one taken cracks the ice at the back and wakes the
+  wraith kept in it), the Tilting Floor (four plates about a sealed chest: stepped in the carving's order the bar
+  draws back, the view leaning at every step; stepped wrong a pit opens under the plate across the room for one
+  turn - a bounded fall, never a floor lost - and the sequence starts over), the Puzzle of Lamps (five lamps and a
+  carving: lit in its pattern the secret door in the room's wall opens; the wrong set of the same count puts them
+  all out and wakes a wraith, once), the Spider Hollow (the Catacombs, the Fungal Deep and the Ossuary: four
+  cocoons, one with a bound adventurer in it and one with a husk's gear, five egg sacs that hatch Sporelings when
+  the first cocoon is cut, and the spider on its ledge, a sight), the Kennel (the Dwarven Halls and the Foundry: six
+  cages, an Iron Hound in every other one, a lever that opens them all at once - one fight of three - and the
+  kennel-master's whistle on a hook, a new trinket, +1 Luck), the Hall of Fame Annex (twelve plaques that read the
+  memorial's dead by name, a bell rung once for each, and a chest the bell opens). 76zzzzzzzzzzx-rooms4.js paints
+  pictures for every room thing that had none (releases 2 and 3 included: the map table, the nest, the bell, the
+  scale, the coffin, the troll, the painter, the orrery, the desk), leans the camera when a plate tilts, frosts the
+  Cold Store's walls and webs the Hollow's corners. Thirty rooms: plan 64 complete.
+- Decisions taken (release 4): the whistle is a luck trinket (the dog already goes everywhere the party goes, so
+  "calls the dog from anywhere" had nothing to call); the Tilting Floor's pit is a bounded drop in place, not a fall
+  to the next floor; the Spider Hollow's spider never comes down (no Giant Spider kind: the hatchlings are
+  Sporelings); the Mirror Hall's shades are Wraith-kind, named for the heroes; new letters i f l a k g j 1 7 2 3 4
+  5 6 9 are listed at the top of 69zzzc-rooms4.js.
+
 ## 4. Order (when asked)
 
 1. The letters and the shared mechanics (`T`, `~`, `B`, `H`, `R`/`V`, the room's name and lore line) - one release.
