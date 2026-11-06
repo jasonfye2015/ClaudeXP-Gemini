@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Return to Claude (v107.0, UPGRADE_PLAN_71.md)
+  (src/js/69zzzp-claudehouse.js, src/js/76zzzzzzzzzzzzi-claudehouse.js, src/js/69zzzm-claude.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_71.md)
+  - Return to Claude (plan 71, release 1): once the party has met him, "Return to Claude... (H)" in the actions row
+    turns a page and the party is at his cabin. Above ground it is free; below, once a floor and an hour gone; never
+    in a fight, from the king's own floor, or on an Iron or Ascension run (those walk every step). His bookmark keeps
+    the place you left, and his door opens three ways: back where we were, out into the clearing, or home to the town.
+    The green path is still how he is first found.
+  - Claude keeps the house: ask him for help with the house, or press Space at the thing itself. The desk keeps your
+    saves (Export / Import), the lamp how the world looks, the clock the pace and its key the keys, the kettle the
+    sound, the shelf the record (Statistics), the window this run's seed and terms, and the back door the credits.
+    Each opens the game's own panel, Settings at the right row; the Esc menu keeps them all as before.
+
 The two Claudes (v106.0, UPGRADE_PLAN_70.md)
   (src/js/69zzzo-twoclaudes.js, src/js/77f-claudelamp.js, src/js/71-title.js, tools/headless.js, tests/run.js)
   - The two Claudes (plan 70, release 3): with all ten pages of the Margins home, Claude writes a letter to the king,
