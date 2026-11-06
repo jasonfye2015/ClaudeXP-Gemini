@@ -6960,6 +6960,25 @@ test("being engaged (plan 67): a group that reaches the party from the right, fr
   assert.strictEqual(CM.engageFrom({ pos: [5, 5] }, "6,5"), CM.DIRS.findIndex(([x, y]) => x === 1 && y === 0)); assert.strictEqual(CM.engageFrom({ pos: [5, 5] }, "7,5"), null);
 });
 
+test("the nemesis (plan 68, part 2): a run lost in a fight remembers the strongest foe still standing, the party it took and the floor, for the title card; a run lost elsewhere or won leaves the last nemesis as it was", () => {
+  const CM = load(); CM.store.remove("nemesis");
+  const g = new CM.Game(); g.newGame("nem-1", fixedParty(CM)); g.enterFloor(5, "down");
+  const R = new CM.Random(2), rat = CM.makeMonster(CM.monsterKind("Giant Rat"), 3, R), ogre = CM.makeMonster(CM.monsterKind("Ogre"), 3, R); ogre.max = ogre.hp = 400;
+  const k = `${g.floor.pos[0]},${g.floor.pos[1]}`; g.floor.things[k] = { type: "monsters", group: [rat, ogre] }; g.startCombat(k, g.floor.things[k]);
+  for (const h of g.party) h.hp = 0; g.endRun(false);
+  const n = CM.store.get("nemesis", null); assert.ok(n && n.kind === "Ogre" && n.floor === 5 && n.party.length === 4, JSON.stringify(n));
+  assert.strictEqual(CM.nemesisLine(n), `The Ogre that took ${n.party[0]}'s party, floor 5`);
+  const g2 = new CM.Game(); g2.newGame("nem-2", fixedParty(CM)); g2.enterFloor(3, "down"); g2.mode = "explore"; g2.endRun(false); assert.strictEqual(CM.store.get("nemesis", null).kind, "Ogre", "a fall outside a fight keeps the old nemesis");
+  assert.strictEqual(CM.nemesisLine(null), ""); g.floor = null; g2.floor = null;
+});
+
+test("the built page parses as a browser reads it: every inline script compiles as a classic script (a top-level return or a stray brace in a window-only file would stop the whole game)", () => {
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(); assert.ok(file, "a built page");
+  const html = fs.readFileSync(path.join(dir, file), "utf8"); let n = 0;
+  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) { n++; assert.doesNotThrow(() => new (require("vm").Script)(m[1], { filename: `${file} script ${n}` }), `script ${n} parses`); }
+  assert.ok(n >= 1, "the game's script is inline");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

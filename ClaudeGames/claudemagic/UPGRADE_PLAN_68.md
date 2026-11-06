@@ -71,3 +71,21 @@ Either way:
    lightning and thunder, the tornado, the painted tree line by season, the sound after a gesture, reduced motion,
    and the card's words brought up to date. Checked by screenshots at three window sizes and at night and by day.
 2. Release 2 (Option C): the real mesh trees rendered once into the tree line when the plants are ready, cross-faded in.
+
+## 4. Progress
+
+- v101.0 - release 1 (Option A): 77b-splashwx.js - the stage under the card, anchored to the three words: the star,
+  its strike and its ore; the storm with forks either side of the emblem (it stands under the cloud), the flash and
+  the thunder; the tornado hanging from its own cloud; the tree line in dusk tones by the real season; reduced motion
+  as one still frame. The card's words and the launcher's description brought up to the hundred-floor shaft.
+  Checked in the window at the strike, mid-show and at a lightning fork.
+- Next (release 2, Option C): the real mesh trees rendered once into the tree line when the plants are decoded.
+
+## 5. Part 2: the foes (all ten ideas, as asked)
+
+- v101.0, with the weather: 77c-splashfoes.js - the crater's riser, the Lich King's silhouette in a fork's flash (the
+  first fork always, then one in three), the wyvern in the funnel, the Drowned in the downpour, eyes by night or a
+  wolf by day in the trees, rats along the bottom scattering at a flash, a guardian walking behind the trees, the
+  nemesis at the tree line's edge with its line (69zzzk-nemesis.js keeps it), the deepest band's creatures for the
+  riser, the walker and the vermin, and the heroes glancing toward each (the Knight's shield at the Lich King). First
+  appearances at 3-22 s, then each on its own 18-80 s clock. Reduced motion leaves them out.
