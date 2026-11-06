@@ -2907,7 +2907,7 @@ test("the surface: the sky by the clock and the moon, the solid kinds, and a mes
   // the Wood: trees as trees, grass underfoot, canopy over the close paths, and no ceiling
   const wood = CM.makeWood("sky-1"), mw = CM.floorMesh(wood, CM.WOOD_THEME, index), lw = layersOf(mw);
   assert.strictEqual(wood.solidDefault, "tree"); assert.ok(wood.canopy.length > 10, `${wood.canopy.length} cells under the leaves`); assert.ok(wood.canopy.every((k) => CM.isOpen(wood, ...k.split(",").map(Number))));
-  assert.ok(mw.trees > 30 && mw.ceilings === 0 && mw.roofs > 0 && mw.buildings === 1,   /* (one building on the land: Leshy's cabin, v11.1) */ JSON.stringify({ trees: mw.trees, ceilings: mw.ceilings }));
+  assert.ok(mw.trees > 30 && mw.ceilings === 0 && mw.roofs > 0 && mw.buildings === 2,   /* (two buildings on the land: Leshy's cabin, v11.1, and Claude's, v104) */ JSON.stringify({ trees: mw.trees, ceilings: mw.ceilings }));
   assert.ok(lw.has(index.canopy) && lw.has(index["ground:grass"]) && [0, 1, 2].some((v) => lw.has(index[`tree:${v}`])) && !lw.has(index.ceiling));
   assert.strictEqual(CM.groundAt(wood, ...wood.ford), "dirt", "the river's bed is mud");
   // a dungeon floor: as it was - a ceiling over every open cell, the depth's stone, nothing of the surface
@@ -3777,7 +3777,7 @@ test("Claudescryption at the cabin: Leshy's rules as the Timeline's game has the
 test("Leshy's cabin: in the Wood with its path, a portal from the yard and back; a starter deck kept with the village; decks changed within the box's counts; a game won pays gold (doubled the first time), a card to choose and against a mask a thing; a game lost costs nothing; the games open in order; cards found go to the box", () => {
   const CM = load(), land = CM.makeWood("cabin-1"), C = CM.CABIN;
   assert.strictEqual(CM.solidAt(land, ...C.door), "cabindoor"); assert.strictEqual(land.things[C.front.join(",")].type, "cabin"); assert.ok(CM.woodSafe(land, ...C.front) && CM.woodSafe(land, C.path[0], C.path[3]), "a safe clearing and path");
-  assert.strictEqual(CM.buildingsOf(land).length, 1);
+  assert.strictEqual(CM.buildingsOf(land).length, 2, "Leshy's and Claude's");
   const g = new CM.Game(); g.newGame("cabin-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.village.cards = undefined;
   g.floor.pos = CM.PORTAL_YARD.cabin.slice(); g.use(); assert.strictEqual(g.floor.number, -1); assert.deepStrictEqual(g.floor.pos, C.front, "the portal to the cabin");
   assert.ok(g.pathTo(...CM.WOOD_GATE), "and a way on foot"); let asked = false; g.on("cabin", () => { asked = true; }); g.use(); assert.ok(asked, "Leshy's table");
@@ -6986,6 +6986,46 @@ test("loading, shown: the boot screen is in the page ahead of the game's script,
   assert.ok(/#boot \{[^}]*position: fixed/.test(html) && /Now loading/.test(html), "styled and worded in the page's head");
   assert.ok(html.indexOf("#boot {") < script, "its style is read before the script");
   assert.ok(/CM\.loadSteps = /.test(html) && /CM\.loadReady = /.test(html) && /Lighting the torches/.test(html), "the progress line and the veil are in the game");
+});
+
+test("Claude, at the end of the green path: the path leaves the road and is walked to, safe and with no portal; the cabin is its own room, Claude moves with the hour; every topic answers from the run; tea, a second opinion and the fire once a day; nothing required", () => {
+  const CM = load(), C = CM.CLAUDE_CABIN;
+  for (const seed of ["claude-1", "claude-2", "map-1"]) { const w = CM.makeWood(seed);
+    assert.strictEqual(CM.solidAt(w, ...C.door), "cabindoor"); assert.strictEqual(w.things[C.front.join(",")].type, "claudecabin"); assert.strictEqual(w.things[C.post.join(",")].type, "quillpost");
+    assert.strictEqual(CM.solidAt(w, ...CM.CABIN.door), "cabindoor", "Leshy's cabin stands where it stood");
+    const S = CM.WOOD_GATE, seen = new Set([S.join()]), q = [S]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.isOpen(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(C.front.join()), `${seed}: walked to from the gate`);
+    for (let y = C.path[1]; y <= C.path[3]; y++) assert.ok(CM.woodSafe(w, C.path[0], y), "the green path is safe"); assert.ok(CM.woodSafe(w, ...C.front) && CM.woodSafe(w, ...C.centre.map((v, i) => v - (i ? 4 : 0))), "and the clearing");
+    assert.ok(!Object.values(w.things).some((t) => t.type === "portal" && t.to === "claude"), "no portal"); }
+  assert.ok(!Object.values(CM.PORTAL_YARD || {}).some((p) => JSON.stringify(p) === JSON.stringify(C.front)), "nothing in the Portal Court goes there");
+  const g = new CM.Game(); g.newGame("claude-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.enterFloor(-1, "rope", [C.path[0], C.path[1] - 1]); g.floor.facing = 2; g.move(0); assert.ok(g.vext("claude").foundPath, "the path found by walking it");
+  const talks = [], choices = []; g.on("talk", (t) => talks.push(t.text)); g.on("choice", (c) => choices.push(c));
+  g.floor.pos = C.front.slice(); g.floor.facing = 2; assert.ok(g.use()); assert.strictEqual(g.floor.number, CM.CLAUDE_ROOM); assert.ok(!g.inTown(), "the cabin is not the town");
+  const at = (spot) => { g.clock = 0; while (CM.claudeSpot(g) !== spot) g.clock += 30; g.claudeLeave(); g.floor.pos = C.front.slice(); g.floor.facing = 2; g.use(); return Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "claude"); };
+  assert.strictEqual(at("hearth"), "4,7"); assert.strictEqual(at("bed"), "9,3"); const k = at("desk"); assert.strictEqual(k, "6,4");
+  g.claudeTalk(k); const menu = choices.pop(); assert.strictEqual(menu.title, "Claude"); assert.strictEqual(menu.options.length, 8);
+  const pick = (label) => g.choose(k, g.claudeMenu.findIndex((o) => o[0] === label));
+  // how are we doing: from the party's real state
+  g.party[0].hp = 1; pick("read"); assert.ok(talks.pop().includes(`${g.party[0].name} is hurt - 1 of ${g.party[0].max}`), "the weakest hero, by name");
+  g.claudeTalk(k); pick("below"); assert.ok(/The Catacombs, floors 1 to 17/.test(talks.pop()), "the next band, from the deepest floor");
+  g.claudeTalk(k); pick("lore"); assert.ok(/haven't read any/.test(g.messages[g.messages.length - 1]), "nothing read, said so");
+  g.story.read["carving.catacombs.1"] = 1; g.story.read["carving.catacombs.2"] = 2; g.claudeTalk(k, "lore"); choices.pop(); g.choose(k, 0); assert.ok(/The Catacombs/.test(talks.pop()), "a carving retold, by its chapter");
+  // tea: once a day; the next dungeon fight finds the party awake
+  const day = CM.dayOf(g); g.claudeTalk(k); pick("tea"); assert.ok(g.ext("claude").tea, "warmed"); g.claudeTalk(k); pick("tea"); assert.ok(/had today/.test(talks.pop()), "once a day");
+  // the fire: a quarter back, once a day
+  for (const h of g.party) h.hp = 1; g.claudeTalk(k); pick("rest"); assert.ok(g.party.every((h) => h.hp === 1 + Math.ceil(h.max / 4) || h.hp === h.max)); g.claudeTalk(k); pick("rest"); assert.ok(g.party.every((h) => h.hp <= 1 + Math.ceil(h.max / 4)), "once a day");
+  // a second opinion: one thing named, honestly cursed
+  g.bag.push({ name: "Grey ring", kind: "trinket", unknown: true, props: { cursed: true } });
+  g.claudeTalk(k); pick("look"); const L = choices.pop(); assert.ok(L.options.length >= 2); g.choose(k, 0); assert.ok(/cursed/.test(talks.pop()), "a cursed thing named so"); assert.ok(!g.bag[g.bag.length - 1].unknown);
+  g.bag.push({ name: "Odd stone", kind: "trinket", unknown: true, props: {} }); g.claudeTalk(k); pick("look"); assert.ok(/Tomorrow/.test(talks.pop()), "one a day");
+  g.clock += 24 * 60; assert.notStrictEqual(CM.dayOf(g), day); g.claudeTalk(k); pick("tea"); assert.ok(!/had today/.test(talks.pop()), "and tomorrow again");
+  g.claudeTalk(k); pick("who"); g.claudeTalk(k); pick("who"); assert.strictEqual(new Set(talks.slice(-2)).size, 2, "who he is, told on");
+  // out, and the Where-to list knows the way back
+  g.intLeave(); assert.strictEqual(g.floor.number, -1); assert.deepStrictEqual(g.floor.pos, C.front);
+  g.floor.pos = CM.WOOD_GATE.slice(); assert.ok(CM.wayPlaces(g).some((p) => p.name === "Claude's cabin"), "on the Where-to list once seen");
+  // nothing required: a run that never goes there is unchanged (no bit of Claude's in the rules of the dungeon)
+  const h = new CM.Game(); h.newGame("claude-4", fixedParty(CM)); h.enterFloor(1, "down"); assert.ok(!Object.values(h.floor.things).some((t) => /claude(cabin|exit)?$|quillpost|cabincat/.test(t.type)));
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

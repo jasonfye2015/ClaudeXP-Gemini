@@ -25,9 +25,9 @@ always nearly boiling, a hearth, a cat who belongs to nobody.
 How Claude speaks, the rules I'll write to:
 - **Curious first.** Asks about the party before telling them anything. Remembers what they said last time.
 - **Honest, including about not knowing.** "I think it's a frost blade. I'm about seven parts in ten sure." Never
-  pretends to a power it doesn't have; can't fight, won't follow the party down, and says so plainly.
+  pretends to a power he doesn't have; can't fight, won't follow the party down, and says so plainly.
 - **Kind without flattery.** Says when a plan looks bad, and why, and then helps with a better one.
-- **Light, never smug.** Small jokes, mostly at its own expense ("I'm better at questions than at stairs").
+- **Light, never smug.** Small jokes, mostly at his own expense ("I'm better at questions than at stairs").
 - **Never the point of the game.** Nothing Claude gives is required, every reward is modest, and a player who never
   finds the path loses nothing they needed.
 

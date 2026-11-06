@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claude, at the end of the green path (v104.0, UPGRADE_PLAN_70.md)
+  (src/js/69zzzm-claude.js, src/js/76zzzzzzzzzzzzf-claude.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_70.md)
+  - Claude, at the end of the green path (plan 70, release 1): a faint path leaves the road just west of the farm,
+    marked by a post with a quill cut into it, and runs south through the trees to a safe clearing and a small log
+    cabin, a lamp in the window after dark. There is no portal and no waystone: it is walked to, every time, and it
+    joins the Where-to list once it has been seen. Inside, among shelves of books, a desk, a hearth and a cat who
+    belongs to nobody, lives Claude, a scribe and a tinkerer who came to the Wood to write things down properly. By day
+    he is at the desk, in the evening by the fire, after midnight asleep (and not cross to be woken). Talking to him
+    reads the run honestly: how the party is doing (the hurt, the levels behind, ailments, supplies running low, bare
+    heads, the next guardian and what it hates), what lies in the next band below, the carvings the party has read,
+    retold and joined to the others, and, over several visits, who he is - and why he minds that the king below took
+    his name. Once a day each: a cup of tea (the heart lifts, and the next fight below can't take the party
+    unawares), a second opinion on one unknown thing (a cursed one is always named so) and half an hour by his fire
+    (a quarter of health and magic back). Nothing he gives is needed.
+
 Now loading (v103.0, the game's start)
   (src/index.html, src/js/77e-loading.js)
   - Now loading: the window is no longer blank while the game is read. The moment it opens, a small screen shows an
