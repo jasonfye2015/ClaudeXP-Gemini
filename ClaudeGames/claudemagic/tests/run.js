@@ -7107,7 +7107,7 @@ test("Return to Claude: only once met; free above ground, once a floor below at 
   g.enterFloor(CM.LAST_FLOOR, "down"); assert.ok(/king/.test(g.claudeReturnWhy())); g.enterFloor(0, "rope", CM.TOWN_AT.well.slice());
   // the house
   const panels = [], talks = []; g.on("claudePanel", (id) => panels.push(id)); g.on("talk", (t) => talks.push(t.text));
-  g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.clock = 6 * 60; g.returnToClaude(); const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
   g.claudeTalk(k); const hi = g.claudeMenu.findIndex((o) => o[0] === "house"); assert.ok(hi >= 0); g.choose(k, hi); assert.strictEqual(g.claudeMenu.length, Object.keys(CM.CLAUDE_HOUSE).length + 1);
   for (const id of ["transfer", "look", "pace", "keys", "sound", "stats", "credits"]) { g.claudeTalk(k, "house", Object.keys(CM.CLAUDE_HOUSE).map((i) => ["panel", i, i])); g.choose(k, Object.keys(CM.CLAUDE_HOUSE).indexOf(id)); }
   assert.strictEqual(panels.join(","), "transfer,look,pace,keys,sound,stats,credits", "each thing its panel");
@@ -7119,7 +7119,7 @@ test("Return to Claude: only once met; free above ground, once a floor below at 
 test("the lore-master: the shelves open the journal's pages; a kind met, a guardian reached and a thing carried answered from the game's own tables; hints in three tiers, remembered; the walls that disagree told", () => {
   const CM = load(), C = CM.CLAUDE_CABIN;
   const g = new CM.Game(); g.newGame("lore-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
-  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.vext("claude").met = 1; g.clock = 6 * 60; g.returnToClaude(); const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
   const talks = [], panels = []; g.on("talk", (t) => talks.push(t.text)); g.on("claudePanel", (id) => panels.push(id));
   const go = (label) => { const i = g.claudeMenu.findIndex((o) => o[0] === label); assert.ok(i >= 0, `${label} offered: ${g.claudeMenu.map((o) => o[0])}`); g.choose(k, i); };
   g.claudeTalk(k); go("lore-master"); assert.ok(!g.claudeMenu.some((o) => o[0] === "foes"), "nothing fought, nothing to ask");
@@ -7164,7 +7164,7 @@ test("the teller of the tale: the run opens in Claude's voice; a chapter for eac
   const f = new CM.Game(); f.settings.fourthWall = "free"; f.settings.narrator = "on"; f.newGame("tell-3", fixedParty(CM)); f.enterFloor(1, "down"); assert.ok(pen(f).some((m) => /Chapter 1/.test(m) && (/rebuilt|keep count|bug|late at night/.test(m))), "an aside about the making");
   // speak plainly
   const talks = []; g.on("talk", (t) => talks.push(t.text)); g.vext("claude").met = 1; g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; g.party.forEach((x) => { x.hp = x.max; });
-  g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.clock = 6 * 60; g.returnToClaude(); const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
   g.claudeTalk(k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "plain")); assert.ok(g.vext("claude").plain);
   g.choose(k, g.claudeMenu.findIndex((o) => o[2] === "what")); assert.ok(/an AI/.test(talks.pop()) , "what he is");
   CM.claudeActs.plain(g, k); g.choose(k, g.claudeMenu.findIndex((o) => o[2] === "hear")); assert.ok(/not here, watching/.test(talks.pop()), "honest about not listening");
@@ -7175,7 +7175,7 @@ test("the teller of the tale: the run opens in Claude's voice; a chapter for eac
 test("red ink: the pot under the desk found by Space three times; damage off, one blow, the torch that lasts, every floor seen, the wanderers still; gold, healing, levels, names, any floor, the walls read, the hour; every calling and kit for the village, asked twice; and a red-ink run earns no achievement, renown or rung, and says so", () => {
   const CM = load();
   const g = new CM.Game(); g.newGame("ink-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
-  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.vext("claude").met = 1; g.clock = 6 * 60; g.returnToClaude(); const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
   g.claudeTalk(k); assert.ok(!g.claudeMenu.some((o) => o[0] === "redink"), "hidden at first");
   g.floor.pos = [7, 4]; g.floor.facing = 0; g.use(); g.use(); assert.ok(!g.vext("claude").redink); g.use(); assert.ok(g.vext("claude").redink, "found the third time");
   g.claudeTalk(k); assert.ok(g.claudeMenu.some((o) => o[0] === "redink")); assert.ok(!g.redInk().used, "finding it isn't using it");
@@ -7237,14 +7237,14 @@ test("Claude asks, and remembers: a question a visit, answered or declined, kept
   const CM = load(), pen = (g) => g.messages.filter((m) => m.startsWith(CM.PEN));
   const g = new CM.Game(); g.newGame("ask-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
   const talks = []; g.on("talk", (t) => talks.push(t.text));
-  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.vext("claude").met = 1; g.clock = 6 * 60; g.returnToClaude(); const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
   const ask = () => { g.claudeTalk(k); return g.claudeMenu.findIndex((o) => o[0] === "question"); };
   let qi = ask(); assert.ok(qi >= 0, "a question"); g.choose(k, qi); assert.ok(g.claudeMenu.some((o) => o[1] === g.party[1].name), "which of them: the party's names");
   g.choose(k, g.claudeMenu.findIndex((o) => o[1] === g.party[1].name)); assert.strictEqual(g.claudeAnswers().trust, g.party[1].name); assert.strictEqual(ask(), -1, "one a visit");
-  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "To see what's there")); assert.strictEqual(g.claudeAnswers().why, "To see what's there");
-  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "unasked")); assert.strictEqual(g.claudeAnswers().fear, undefined, "declining is an answer too");
-  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "Losing one of them"));
-  g.claudeLeave("town"); g.returnToClaude(); g.clock = 6 * 60; qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "I don't know yet")); assert.strictEqual(ask(), -1, "nothing left to ask");
+  g.claudeLeave("town"); g.clock = 6 * 60; g.returnToClaude(); qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "To see what's there")); assert.strictEqual(g.claudeAnswers().why, "To see what's there");
+  g.claudeLeave("town"); g.clock = 6 * 60; g.returnToClaude(); qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "unasked")); assert.strictEqual(g.claudeAnswers().fear, undefined, "declining is an answer too");
+  g.claudeLeave("town"); g.clock = 6 * 60; g.returnToClaude(); qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "Losing one of them"));
+  g.claudeLeave("town"); g.clock = 6 * 60; g.returnToClaude(); qi = ask(); g.choose(k, qi); g.choose(k, g.claudeMenu.findIndex((o) => o[1] === "I don't know yet")); assert.strictEqual(ask(), -1, "nothing left to ask");
   g.saveVillage();
   // the account: who they trusted, what winning would be
   const entry = { name: "x", floor: 70, won: true, reminded: true, date: "d", tally: {} }; g.payChapters(entry); assert.ok(entry.claudeNote.includes(`${g.party[1].name}, the one you told me you trust most, came home`) && /something you'd find out/.test(entry.claudeNote), entry.claudeNote);
@@ -7258,6 +7258,29 @@ test("Claude asks, and remembers: a question a visit, answered or declined, kept
   // red ink: the buildings, and no rung announced
   h.redInkDo("open"); assert.ok(Object.entries(CM.VILLAGE).every(([id, B]) => !Array.isArray(B.costs) || h.villageLevel(id) === B.costs.length), "every building"); CM.store.set("redinkOpen", false);
   h.say("Ascension 3 is open: test"); assert.ok(h.messages.some((m) => /^Ascension 3/.test(m)), "an ordinary say is untouched");
+});
+
+test("the world around Claude: the memorial wall at the shaft's head reads the fallen, in his hand once he's met; some days he's out and a note waits, sometimes with an errand that's thanked; the tea and his greeting follow the season, the weather and the festival", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("world-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const W = CM.MEMORIAL_WALL; g.enterFloor(0, "rope", [W[0], W[1] + 1]); g.floor.facing = 0; assert.strictEqual(g.floor.things[W.join(",")].type, "memorialwall");
+  g.memorial = []; g.use(); assert.ok(/waiting for names/.test(g.messages.slice(-1)[0]));
+  g.memorial = [{ name: "Wren", cls: "Rogue", level: 3, floor: 9, date: "d1" }, { name: "Old Tam", cls: "Knight", level: 5, floor: 12, date: "d2" }]; g.use(); assert.ok(/Old Tam, Knight/.test(g.messages.slice(-1)[0]) && /\(1 of 2\)/.test(g.messages.slice(-1)[0]), "the newest first");
+  g.use(); assert.ok(/Wren/.test(g.messages.slice(-1)[0]), "and the next"); g.vext("claude").met = 1; g.use(); assert.ok(/In Claude's hand/.test(g.messages.slice(-1)[0]), "his hand, once met");
+  // a day out: find one, from the third day on
+  let d = 2; while (d < 60 && !(CM.hashSeed(`${g.seed}:out:${d}`) % 3 === 0)) d++; assert.ok(d < 60);
+  const talks = []; g.on("talk", (t) => talks.push(t.text));
+  g.clock = d * 1440 + (11 - 6) * 60; assert.ok(CM.claudeOut(g)); g.returnToClaude(); assert.ok(!Object.values(g.floor.things).some((t) => t.type === "claude"), "he's out"); assert.ok(g.floor.things["6,4"].type === "claudenote");
+  g.floor.pos = [6, 5]; g.floor.facing = 0; g.use(); assert.ok(/- C\./.test(talks.pop()), "the note");
+  g.clock = 0; assert.ok(!CM.claudeOut(g), "never in the first days");
+  // an errand: on a note that asks, brought and thanked
+  g.vext("claude").errand = { kind: "torch", name: "a torch", day: d }; g.claudeLeave("town"); g.clock = (d + 1) * 1440; g.returnToClaude(); g.clock = (d + 1) * 1440; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude"); assert.ok(k, "back at home");
+  if (!g.bag.some((i) => i.kind === "torch")) g.bag.push({ name: "Torch", kind: "torch", power: 0, value: 2 }); const torches = g.bag.filter((i) => i.kind === "torch").length;
+  g.claudeTalk(k); const ei = g.claudeMenu.findIndex((o) => o[0] === "errand"); assert.ok(ei >= 0); g.choose(k, ei); assert.strictEqual(g.bag.filter((i) => i.kind === "torch").length, torches - 1); assert.ok(g.bag.some((i) => i.kind === "scroll" && i.spell === "identify"), "thanked"); assert.ok(!g.vext("claude").errand);
+  // the year: the season's tea, the weather and the festival
+  const k2 = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude"); g.claudeTalk(k2); g.choose(k2, g.claudeMenu.findIndex((o) => o[0] === "tea")); assert.ok(/Nettle|Mint|Apple|Spiced/.test(g.messages.slice(-1)[0]), "the season's tea");
+  g.festival = "bells"; g.claudeSeason(); assert.ok(/Night of Bells/.test(g.messages.slice(-1)[0])); assert.ok(Object.values(g.floor.things).some((t) => t.type === "festdeco"), "something of it in the cabin");
+  g.festival = null; const was = CM.weather; CM.weather = () => "rain"; g.ext("claude").seasonSaid = null; g.claudeSeason(); assert.ok(/soaked/.test(g.messages.slice(-1)[0])); assert.ok(!Object.values(g.floor.things).some((t) => t.type === "festdeco")); CM.weather = was;
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
