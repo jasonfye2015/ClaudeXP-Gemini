@@ -7340,6 +7340,13 @@ test("small things, kept quiet (plan 73, part three): names and seeds, floors, t
   const n = g.curiosFound(); assert.ok(n >= 21, `${n} found`); assert.strictEqual(g.curio("teas"), false, "once");
 });
 
+test("the account, presentation (plan 74, release 1): the built page carries the compact sky, the health bands and ailment chips, the chapter cards and their settings - window-side, nothing of it in a run's state", () => {
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["#view .sky.compact", "#view.in-combat .sky", ".bar.hp[data-band=\"low\"]", ".member .ail .ailchip.a-poison", ".member.acting", "#view .chapter-card", "set-skycard", "set-chapters"]) assert.ok(html.includes(s), s);
+  const CM = load(); const g = new CM.Game(); g.newGame("look-1", fixedParty(CM)); g.enterFloor(1, "down"); g.enterFloor(2, "down");
+  assert.ok(!JSON.stringify(g.tally).includes("cardBands"), "the cards keep their own memory");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
