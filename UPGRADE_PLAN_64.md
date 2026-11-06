@@ -179,6 +179,18 @@ a way always stands, every block clears, no hazard unseen or unbounded).
   chest dived for (69zzu-basins.js); the room's line said on the first step in. 76zzzzzzzzzzw-setpieces.js draws the
   heaps, the false doors on the walls, the fish and the chests' notes. Not done: the plank bridge picture, the
   fishing rod, the daylight grate over the Oasis, the rooms' own names on the look line.
+- v87.0 - release 2, the second nine: 69zzza-rooms2.js - the Garden Gone Wild (raised beds, the well, glowcaps,
+  the Gardener's Shears in a chest, the plants grown thick by a garden flag in 69zzs-plants.js), the Chapel of
+  Candles (braziers in rows, the altar), the Map Room (a table that maps the floor once, a Scroll of Mapping in
+  the chest), the Rookery (a dark floor, a nest on a ledge with a trinket, a still group, bats that wheel under the
+  roof and scatter - the window's), the Cistern (a sunken hall in the damp bands of the first four floors, a sunk
+  chest in the middle that floods with the storm), the Dripping Gallery (floors 1-3, puddles, a key under one),
+  the Storm Drain (a channel and a gate), the Steam Room (the Foundry and the Root only, a pool that steams under a
+  cold sky, a still group), the Lightning Rod (floors 1-3, a rod that makes a lightning spell leap to every foe for
+  half, a still group). 69zzz-setpieces.js takes a template's bands and max and a CM.SETPIECE_LETTERS registry,
+  and a chest's fixed item (CM.setPieceItem) and sunk flag. The Cistern's floodwater is plan 63's. Not done: the
+  Mirror Hall and the Cold Store (rooms 6 and 7: the mirror's shades and the hanging meat want pictures of their
+  own).
 
 ## 4. Order (when asked)
 
