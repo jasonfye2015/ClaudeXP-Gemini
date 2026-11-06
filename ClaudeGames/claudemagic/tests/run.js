@@ -7206,6 +7206,33 @@ test("red ink: the pot under the desk found by Space three times; damage off, on
   const clean = new CM.Game(); clean.newGame("ink-2", fixedParty(CM)); assert.ok(!clean.redInk().used); assert.notStrictEqual(CM.renownFor({ floor: 30, won: false, tally: {} }, clean), 0);
 });
 
+test("the Last Page: the truth about the name once the Margins are home; Claude walks down with the party when the letter is written, reading each wall aloud; the king reminded with him there ends on the Last Page, the name given back and every hero's name read; the second edition after; the achievements of the arc", () => {
+  const CM = load(), pen = (g) => g.messages.filter((m) => m.startsWith(CM.PEN));
+  const g = new CM.Game(); g.newGame("last-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const talks = []; g.on("talk", (t) => talks.push(t.text));
+  g.enterFloor(-1, "rope", CM.CLAUDE_CABIN.front.slice()); g.floor.facing = 2; g.use(); assert.ok(g.achievements.claudemet, "a knock at the door");
+  g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.claudeTalk(k); assert.ok(!g.claudeMenu.some((o) => o[0] === "truth" || o[0] === "walk"), "not before the Margins");
+  const V = g.vext("claude"); V.pages = {}; for (let b = 0; b < 10; b++) V.pages[b] = 1;
+  g.claudeTalk(k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "truth")); assert.ok(/forty-one/i.test(talks.pop()), "the truth about the name");
+  assert.ok(!g.claudeMenu.some((o) => o[0] === "walk"), "not before the letter"); g.claudeTalk(k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "kingletter"));
+  g.claudeTalk(k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "walk")); assert.ok(g.claudeWalking(), "he comes");
+  g.claudeLeave("town"); g.enterFloor(1, "down"); assert.ok(pen(g).some((m) => /Claude/.test(m)), "a line from him below");
+  const key1 = Object.keys(CM.LORE_TEXT).find((x) => /^carving\./.test(x)); g.markRead(key1); assert.ok(pen(g).some((m) => m.includes(CM.LORE_TEXT[key1].text)), "the wall read aloud");
+  // at the throne: the letter, then the Last Page
+  for (const R of CM.REMIND.slice(1)) g.story.read[R.key] = 70; g.fame = [{ party: ["Old Tam the Knight 4"], floor: 9 }]; g.memorial = [{ name: "Wren" }];
+  const thing = { type: "boss" }, cr = g.crown; let crowned = false; g.crown = () => { crowned = true; };
+  g.floor.things["1,1"] = thing; g.askRemind("1,1", thing); g.answerRemind("1,1", thing, 0); assert.ok(g.achievements.inhishand, "in his own hand");
+  for (let i = 1; i < CM.REMIND.length; i++) g.answerRemind("1,1", thing, 0);
+  assert.ok(crowned && g.reminded && g.story.lastPage, "the quiet ending, as the Last Page"); g.crown = cr;
+  const end = talks.find((t) => /You're the one writing it/.test(t)); assert.ok(end && /I was Mordeth/.test(end) && /Old Tam/.test(end) && /Wren/.test(end), "the name given back, and every name read");
+  assert.ok(g.achievements.lastpage); assert.strictEqual(V.edition, 2); assert.strictEqual(CM.REMIND_END.includes("You're the one"), false, "the plain ending left as it was");
+  // the second edition
+  const h = new CM.Game(); h.newGame("last-2", fixedParty(CM)); assert.ok(pen(h).some((m) => /second edition/.test(m)));
+  // unhinted: a crown with Claude met and no hint asked
+  const u = new CM.Game(); u.newGame("last-3", fixedParty(CM)); u.vext("claude").met = 1; u.crown(); assert.ok(u.achievements.unhinted);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
