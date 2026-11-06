@@ -9,5 +9,6 @@
   if (CM.settingLater && CM.addSetting) CM.settingLater((ui) => {
     CM.addSetting("set-narrator", "Narration - Claude tells the story in the log: the opening, a chapter for each band, a line in the margin now and then", [["on", "On"], ["off", "Off"]], "narrator", "on", ui);
     CM.addSetting("set-fourthwall", "Claude may step outside the story on his own (asides about the making of the game)", [["asked", "Only when asked"], ["free", "Yes, now and then"]], "fourthWall", "asked", ui); });
-  { const oj0 = CM.UI.prototype.openJournal; if (oj0) CM.UI.prototype.openJournal = function (...a) { const out = oj0.apply(this, a), h = this.$("#dlg-journal h2"); if (h && (this.game.settings || {}).narrator !== "off" && !/Claude/.test(h.textContent) && /Journal/.test(h.textContent)) h.textContent = h.textContent.replace("Journal", "Journal - Claude's account"); return out; }; }
+  { const oj0 = CM.UI.prototype.openJournal; if (oj0) CM.UI.prototype.openJournal = function (...a) { const out = oj0.apply(this, a), h = this.$("#dlg-journal h2"); if (!h) return out;   /* (only the title's own words change: the tabs inside the heading stay) */
+      const t = [...h.childNodes].find((n) => n.nodeType === 3 && /Journal/.test(n.textContent)); if (t) { const base = t.textContent.replace(" - Claude's account", ""); t.textContent = (this.game.settings || {}).narrator !== "off" ? base.replace("Journal", "Journal - Claude's account") : base; } return out; }; }
 }
