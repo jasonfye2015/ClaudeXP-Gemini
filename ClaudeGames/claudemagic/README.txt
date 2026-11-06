@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The title screen on one page (v102.0, UPGRADE_PLAN_69.md)
+  (src/js/77d-titlepages.js, UPGRADE_PLAN_69.md)
+  - The title screen on one page (plan 69): the screen after the title card had grown to four screens of scrolling,
+    and now never scrolls. A one-line header; five pages behind tabs; the toolbar - the Village, Settings, Keys,
+    Export and Import, Statistics, Credits - always at the foot. Play shows the three save slots as cards with the
+    place, the gold, the day and the party's four faces, a large Continue, New Expedition with the seed and today's
+    and this week's dungeons (what seeds and run codes are sits behind a "?"), and a row at a glance: the best runs,
+    the deepest floor and the next kit to earn, and who fell lately - and the monster that did it. Callings is a grid
+    of the eleven, and the one chosen is told beside it: its role, its stats, what it starts with and its two paths.
+    The Hall of Fame's boards, the unlocks, trophies and achievements (with a filter: all, done, to do) and the
+    memorial page by measure - a tall window shows more, a short one fewer - with arrows and "1 / n". Keys 1 to 5,
+    Q and E or Tab switch the pages, the arrows turn a list's page, Enter and Space still go on; the page last open
+    is remembered. Checked at 1180 by 800, 1280 by 720, 1920 by 1080 and 900 by 600.
+
 The title card's weather (v101.0, UPGRADE_PLAN_68.md release 1)
   (src/js/77b-splashwx.js, src/js/77-splash.js, UPGRADE_PLAN_68.md)
   - The title card's weather (plan 68): over "Claude" a star falls, burning, and strikes just above the word - a
