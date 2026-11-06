@@ -7318,6 +7318,28 @@ test("small things, kept quiet (plan 73, part two): one in each deeper band laid
   assert.ok(g.bag.filter((i) => i.curio).length >= 3, "some are kept");
 });
 
+test("small things, kept quiet (plan 73, part three): names and seeds, floors, the gold and the long walk, the years of fighting, foes with names, things poked once too often, Claude over a long acquaintance, and one more in every band - each counted once", () => {
+  const CM = load(), key = (x, y) => `${x},${y}`;
+  const party = fixedParty(CM); party[0].name = "Hero";
+  const g = new CM.Game(); g.newGame("hello", party, "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const L = () => g.vext("curios"); assert.ok(L()["seed:hello"] && L()["name:hero"], "a seed and a name");
+  g.enterFloor(7, "down"); assert.ok(L()["floor:7"]); g.enterFloor(50, "down"); assert.ok(L()["floor:50"]);
+  g.gold = 1234; g.emit("change"); assert.ok(L()["gold:1234"]); g.gold = 0; g.emit("change"); assert.ok(L()["gold:zero"], "after having had a thousand");
+  g.tally.steps = 10000; g.emit("change"); assert.ok(L().steps);
+  g.party[0].level = 10; g.emit("change"); assert.ok(L()["level:10"]);
+  g.bestiary = { "Giant Rat": { seen: 120, slain: 99, weak: [], resist: [] } }; g.noteFoe({ kind: "Giant Rat", name: "Giant Rat" }, "slain"); assert.ok(L()["kills:Giant Rat"], "a hundred rats");
+  // a thing poked too often: the signpost in town
+  g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; const sp = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "signpost"); const [sx, sy] = sp.split(",").map(Number);
+  let at = null; for (let d = 0; d < 4 && !at; d++) { const [dx, dy] = CM.DIRS[d]; if (CM.isOpen(g.floor, sx - dx, sy - dy)) at = [[sx - dx, sy - dy], d]; } g.floor.pos = at[0]; g.floor.facing = at[1];
+  for (let i = 0; i < 8; i++) g.use(); assert.ok(L()["poke:signpost"]);
+  // one more in every band
+  for (let b = 0; b < 10; b++) { const n = CM.curioFloor(g.seed, b, `odd2:${b}`); g.enterFloor(n, "down"); g.mode = "explore"; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "oddity2"); assert.ok(k, `band ${b}, floor ${n}`); g.floor.pos = k.split(",").map(Number); g.use(); assert.ok(L()[`odd2:${b}`]); }
+  // Claude: twenty-five cups
+  g.vext("claude").met = 1; g.vext("claude").teas = 24; g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; g.clock = 6 * 60; g.returnToClaude(); const ck = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.claudeTalk(ck); g.choose(ck, g.claudeMenu.findIndex((o) => o[0] === "tea")); assert.ok(L().teas);
+  const n = g.curiosFound(); assert.ok(n >= 21, `${n} found`); assert.strictEqual(g.curio("teas"), false, "once");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
