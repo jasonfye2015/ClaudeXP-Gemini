@@ -196,6 +196,13 @@ how that is ruled out, and the order of work. Nothing here is built yet.
   done: the foes' archers at three quarters in steam (the fight does not mark its shooter), the leech added to a
   stirred group (leeches are a status), the ambush reach +1. A rule learned: a fight's rules must not roll the
   weather's dice - every new reader of the sky checks skyOn first, or a run and its replay part.
+- v86.0 - release 7, the soft-lock pass: a test over three seeds and the first eight floors each, under a forced
+  heavy storm with the flood, the bloom, the beasts and every rockfall the dice allow, asserting the map's reach
+  from the stairs (doors and all) before and after, every fall's clearing, no spores in a narrow way or by the
+  stairs, every grating inside a wide room, the party's square and the way down reached, no hero below one. Found
+  and fixed by it: the reach checks judged the way by passable squares, so a locked door's far side (and the key
+  that opens it) was not counted - they judge the map's shape now (CM.isOpen). The Settings toggles are the flags
+  CM.plantsOff and CM.ratsOff and the harness's force hooks; no new panel. Plan 63 is complete.
 
 ## 7. Decisions taken (2026-11-05, on the plan's own suggestions)
 

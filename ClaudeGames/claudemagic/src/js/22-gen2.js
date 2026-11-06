@@ -39,7 +39,8 @@ CM.generators[2] = function (number, seed) {
       spots.splice(0, spots.length, ...spots.filter(([x, y]) => x + y >= reach * 0.6));
     }
     for (let tries = 0; tries < 40; tries++) {
-      const [x0, y0] = tpl === lair ? rnd.pick(spots) : [3 + 2 * rnd.int(0, Math.floor((size - 6 - w) / 2)), 3 + 2 * rnd.int(0, Math.floor((size - 6 - h) / 2))];
+      const R = tpl.ownDice ? (tpl._dice = tpl._dice || new CM.Random(CM.hashSeed(`${seed}:setpiece:${number}:${tpl.name}`))) : rnd;   // (plan 64: a set piece added by CM.planFloor's wrap rolls its own dice, so the floor's other rooms stand where they stood)
+      const [x0, y0] = tpl === lair ? rnd.pick(spots) : [3 + 2 * R.int(0, Math.floor((size - 6 - w) / 2)), 3 + 2 * R.int(0, Math.floor((size - 6 - h) / 2))];
       const x1 = x0 + w - 1, y1 = y0 + h - 1;
       if (x1 > size - 4 || y1 > size - 4 || taken(x0, y0, x1, y1)) continue;         // (room for the maze beyond every entrance)
       const room = { x0, y0, x1, y1, template: tpl, entrances: [], fill: [], pillars: [] };

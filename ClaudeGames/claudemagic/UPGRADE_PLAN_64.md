@@ -166,6 +166,32 @@ a way always stands, every block clears, no hazard unseen or unbounded).
   from every entrance with the `T`, `~` (when not wadable) and `B` squares counted as they are; the generator's
   reach check after placement (the one that exists) stays the last word.
 
+## 3a. Progress
+
+- v86.0 - release 1 (with plan 63's release 7): 69zzz-setpieces.js - CM.SETPIECES (the Oasis, the Bone Room, the
+  Hall of Doors, the Fish Pool as templates with their own dice), CM.planFloor wrapped so one floor in three from
+  the third takes one, chosen by a hash of its own (22-gen2.js places an ownDice template with its own Random, so
+  the floor's other rooms stand where they stood and generator 1's frozen floors are untouched); the letters read
+  after the making (dress): T a tree square on open stone that bars the walk (CM.isOpen wrapped; the plants stand
+  a mesh tree there - 69zzs-plants.js), ~ water decor with fish, B and b bone heaps (a chest under one, the
+  skeletons' stir), H/h/m false doors, niche doors and a mimic's door as "falsedoor" features, R/V the levels, *
+  a brazier, G a glowcap that never fades (69zzw-blooms.js), c a chest with a guard and a note, the pond's sunk
+  chest dived for (69zzu-basins.js); the room's line said on the first step in. 76zzzzzzzzzzw-setpieces.js draws the
+  heaps, the false doors on the walls, the fish and the chests' notes. Not done: the plank bridge picture, the
+  fishing rod, the daylight grate over the Oasis, the rooms' own names on the look line.
+- v87.0 - release 2, the second nine: 69zzza-rooms2.js - the Garden Gone Wild (raised beds, the well, glowcaps,
+  the Gardener's Shears in a chest, the plants grown thick by a garden flag in 69zzs-plants.js), the Chapel of
+  Candles (braziers in rows, the altar), the Map Room (a table that maps the floor once, a Scroll of Mapping in
+  the chest), the Rookery (a dark floor, a nest on a ledge with a trinket, a still group, bats that wheel under the
+  roof and scatter - the window's), the Cistern (a sunken hall in the damp bands of the first four floors, a sunk
+  chest in the middle that floods with the storm), the Dripping Gallery (floors 1-3, puddles, a key under one),
+  the Storm Drain (a channel and a gate), the Steam Room (the Foundry and the Root only, a pool that steams under a
+  cold sky, a still group), the Lightning Rod (floors 1-3, a rod that makes a lightning spell leap to every foe for
+  half, a still group). 69zzz-setpieces.js takes a template's bands and max and a CM.SETPIECE_LETTERS registry,
+  and a chest's fixed item (CM.setPieceItem) and sunk flag. The Cistern's floodwater is plan 63's. Not done: the
+  Mirror Hall and the Cold Store (rooms 6 and 7: the mirror's shades and the hanging meat want pictures of their
+  own).
+
 ## 4. Order (when asked)
 
 1. The letters and the shared mechanics (`T`, `~`, `B`, `H`, `R`/`V`, the room's name and lore line) - one release.
