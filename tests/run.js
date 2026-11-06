@@ -7305,6 +7305,19 @@ test("small things, kept quiet (plan 73, part one): each is counted once in the 
   assert.ok(g.curiosFound() >= 6);
 });
 
+test("small things, kept quiet (plan 73, part two): one in each deeper band laid by the seed and found with Space, one in the Wood, and a few more that are counted when they happen", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("quiet-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const n0 = g.curiosFound();
+  for (let band = 2; band <= 9; band++) { const ids = ["coin", "portrait", "bottle", "hum", "mirror", "anvil", "reader", "sprout"], id = ids[band - 2], n = CM.curioFloor(g.seed, band, `odd:${id}`);
+    g.enterFloor(n, "down"); g.mode = "explore"; const at = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "oddity" && g.floor.things[k].id === id); assert.ok(at, `band ${band}: floor ${n}`);
+    g.floor.pos = at.split(",").map(Number); g.use(); assert.ok(g.vext("curios")[`odd:${id}`], id); }
+  assert.strictEqual(g.curiosFound(), n0 + 8);
+  g.enterFloor(-1, "rope", CM.WOOD_GATE.slice()); g.mode = "explore"; const door = Object.keys(g.floor.things).find((k) => g.floor.things[k].type === "oddity"); assert.ok(door, "one in the Wood"); g.floor.pos = door.split(",").map(Number); g.use(); assert.strictEqual(g.curiosFound(), n0 + 9);
+  g.tally.kills = 100; g.emit("change"); assert.strictEqual(g.curiosFound(), n0 + 10);
+  assert.ok(g.bag.filter((i) => i.curio).length >= 3, "some are kept");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

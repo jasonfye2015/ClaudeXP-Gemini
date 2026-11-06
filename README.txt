@@ -1392,6 +1392,10 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+More curiosities (v115.0, UPGRADE_PLAN_73.md)
+  (src/js/69zzzx-curios2.js, tools/headless.js, tests/run.js)
+  - Curiosities (plan 73, part two): more things to find, deeper down and further out. Still not saying what.
+
 Curiosities (v114.0, UPGRADE_PLAN_73.md)
   (src/js/69zzzw-curios.js, src/js/77g-curios.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_73.md)
   - Curiosities (plan 73, part one): there are things to find. Where, and what, is for you to find out. Each one
