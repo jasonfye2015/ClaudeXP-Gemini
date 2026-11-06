@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v114.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v115.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "114.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "115.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -33110,6 +33110,54 @@ Object.assign(CM.Game.prototype, {
       if (fl && fl.number >= 1 && Array.isArray(G) && G.length === 1 && /Skeleton/.test(G[0].kind || G[0].name || "") && !thing.boss && !thing.guardian && CM.hashSeed(`${this.seed}:wave:${fl.number}:${k}`) % 12 === 0) {
         delete fl.things[k]; this.say("The skeleton raises one bony hand - and waves. After a moment you wave back. It nods, and clatters off down a side passage, and that is the whole of it."); this.curio("wave"); this.emit("change"); return; }
       return sc0.call(this, k, thing, ...a); }; }
+}
+
+// ---- 69zzzx-curios2.js ----
+"use strict";
+// Curiosities, more of them (UPGRADE_PLAN_73.md, part two). Kept quiet on purpose. Rules: 69zzzw-curios.js (the ledger).
+{ const P = CM.Game.prototype, key = (x, y) => `${x},${y}`, R = (g) => g.ext("curios"), V = (g) => g.vext("curios");
+  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
+  // one small strange thing a band, deeper down, laid by the seed
+  const ODD = {
+    coin: { band: 2, text: "Wedged between two flagstones: a coin with a head on both sides. You check three times. Both heads are smiling.", item: { name: "A two-headed coin", kind: "trinket", slot: "trinket", power: 0, value: 1, props: { stats: { luck: 1 } }, lore: "Heads, either way." } },
+    portrait: { band: 3, text: "A small portrait in a heavy frame, propped against the wall. Its eyes follow you. You move; they follow. You stand very still. So do they. It's a stalemate, and you lose it." },
+    bottle: { band: 4, text: "A bottle, stoppered, bobbing in a puddle. Inside, a note: 'If you find this, we went left. Don't go left. - four people you'll never meet.' Under it, in another hand: 'We went left anyway. It was fine.'" },
+    hum: { band: 5, text: "One mushroom, smaller than the others, is humming. Not a tune exactly. You pick it; it keeps humming, quietly, all the way home.", item: { name: "A humming mushroom", kind: "trinket", slot: "trinket", power: 0, value: 1, props: { regen: 1 }, lore: "It hums. Wounds seem to like it." } },
+    mirror: { band: 6, text: "A shard of crystal the size of your hand. In it, instead of your own face, you see the four of you from behind, walking away down a corridor you haven't reached yet." },
+    anvil: { band: 7, text: "A tiny anvil, no bigger than a fist, still warm. Someone made it for a very small smith. It rings true.", item: { name: "A tiny anvil", kind: "trinket", slot: "trinket", power: 0, value: 1, props: { power1: 1 }, lore: "Small, warm, and very sure of itself." } },
+    reader: { band: 8, text: "A skeleton sits against the wall with a book open in its lap. As you watch it turns a page. You lean in: it's the account - Claude's - and it's a few pages behind where you are." },
+    sprout: { band: 9, text: "Between two roots older than the town: a seedling, two leaves, perfectly green. The first green thing in a hundred floors. You leave it where it is. It seems right." },
+  };
+  { const em0 = P.emit; P.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally && this.vext) { const fl = this.floor, n = fl.number, C = R(this); C.odd = C.odd || {};
+        if (n >= 1 && n % 1 === 0 && fl.special !== "interior" && !(this.deltas && this.deltas[n])) for (const [id, O] of Object.entries(ODD)) if (O.band !== undefined && !C.odd[id] && CM.curioFloor(this.seed, O.band, `odd:${id}`) === n) { C.odd[id] = true; layOn(fl, this.seed, `oddat:${id}`, { type: "oddity", id }); }
+        if (n === -1 && !C.odd.door) { C.odd.door = true; layOn(fl, this.seed, "oddat:door", { type: "oddity", id: "door" }); } }
+      if (ev === "change" && this.tally && (this.tally.kills || 0) >= 100 && !R(this).hundred) { R(this).hundred = true; this.say("That was the hundredth. Nobody keeps count of these things. Somebody kept count."); this.curio("hundred"); }
+      return em0.call(this, ev, ...a); }; }
+  ODD.door = { text: "At the foot of an old oak, a door no higher than your boot, painted blue. You knock. A voice, very small and very firm: \"We're not in.\"" };
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.things) { const [dx, dy] = CM.DIRS[fl.facing];
+        for (const kk of [key(...fl.pos), key(fl.pos[0] + dx, fl.pos[1] + dy)]) { const t = fl.things[kk]; if (!t || t.type !== "oddity" || !ODD[t.id]) continue; const O = ODD[t.id]; this.logAct && this.logAct("use");
+          this.say(O.text); if (O.item) { this.bag.push(Object.assign(JSON.parse(JSON.stringify(O.item)), { curio: t.id })); delete fl.things[kk]; } else if (t.id !== "door" && t.id !== "portrait") delete fl.things[kk];
+          this.curio(`odd:${t.id}`); this.emit("change"); return true; } }
+      return u0.apply(this, a); }; }
+  { const m0 = P.move; P.move = function (rel, ...a) { const out = m0.call(this, rel, ...a), fl = this.floor; if (out && fl && fl.things) { const [dx, dy] = CM.DIRS[fl.facing], t = fl.things[key(...fl.pos)] || fl.things[key(fl.pos[0] + dx, fl.pos[1] + dy)]; if (t && t.type === "oddity" && !R(this)[`seen:${t.id}`]) { R(this)[`seen:${t.id}`] = true; this.say("Something here doesn't belong. (Space)"); } } return out; }; }
+  // a rat with a name
+  { const sc0 = P.startCombat; P.startCombat = function (k, thing, ...a) { const fl = this.floor, G = thing && thing.group;
+      if (fl && fl.number >= 1 && fl.number <= 17 && Array.isArray(G) && !thing.boss && !thing.guardian && CM.hashSeed(`${this.seed}:gerald:${fl.number}:${k}`) % 20 === 0) { const rat = G.find((m) => /Giant Rat/.test(m.kind || m.name || "") && !m.named);
+        if (rat) { rat.kind = rat.kind || rat.name; rat.named = "Gerald"; rat.name = "Gerald, a Giant Rat"; this.say("One of the rats has a name tag. It says GERALD. Someone loved this rat."); this.curio("gerald"); } }
+      return sc0.call(this, k, thing, ...a); }; }
+  // Claude: the tenth visit; the tenth "who are you"
+  { const ce0 = P.claudeEnter; if (ce0) P.claudeEnter = function (...a) { const out = ce0.apply(this, a), W = this.vext("claude"); if (out && W.met === 10 && !V(this).cups) { this.emit("talk", { title: "Claude", text: "You've been here ten times now. Claude has started setting out a second cup before you knock. He doesn't mention it. Neither do you." }); this.curio("cups"); } return out; }; }
+  { const ca0 = P.claudeAnswer; if (ca0) P.claudeAnswer = function (k, opt, ...a) { if (opt && opt[0] === "who") { const W = this.vext("claude"); if ((W.who || 0) >= 9 && !V(this).who) { W.who = (W.who || 0) + 1; this.emit("talk", { title: "Claude", text: "\"I've run out of answers to that one. So here's a true one: I don't know everything about myself either. I'm finding out, the same as you are. It's one of the better parts.\"" }); this.say("Claude has run out of answers, and says so."); this.curio("who"); return true; } } return ca0.call(this, k, opt, ...a); }; }
+  // the king's name asked thrice; tidy red ink; every name on the wall read; the squeak; the nest
+  { const ac = CM.claudeActs || {}, pl0 = ac.plainly; if (pl0) ac.plainly = function (g, k, say, id) { if (id === "king") { const C = R(g); C.king = (C.king || 0) + 1; if (C.king === 3) { g.curio("kingname"); say("\"You keep asking. All right - the real reason, the one under the others: when I was choosing what to call the villain, I wanted him to be someone I could have been. Then I'd have to write him fairly.\""); return; } } return pl0(g, k, say, id); };
+    const ib0 = ac.inkback; if (ib0) ac.inkback = function (g, k, say, ...a) { const E = g.redInk ? g.redInk() : {}, bent = Object.keys(CM.REDINK || {}).some((id) => CM.REDINK[id].toggle && E[id]), C = R(g); if (!bent) { C.tidy = (C.tidy || 0) + 1; if (C.tidy === 5) { g.curio("tidy"); say("\"There's nothing left to put back. You're very tidy. I respect it.\""); return; } } return ib0(g, k, say, ...a); }; }
+  { const rm0 = P.readMemorialWall; if (rm0) P.readMemorialWall = function (...a) { const out = rm0.apply(this, a), M = this.memorial || [], W = this.ext("memwall"); if (M.length >= 10 && (W.i || 0) === M.length && !V(this).everyname) { this.say("You've read every name on the wall, one after another. Someone should. Claude would want to know that someone did."); this.curio("everyname"); } return out; }; }
+  { const sc1 = P.startCombat; P.startCombat = function (k, thing, ...a) { const G = thing && thing.group; if (Array.isArray(G) && G.some((m) => /Rat/.test(m.kind || m.name || "")) && (this.party || []).some((h) => CM.equipped(h).some((it) => it.curio === "duck")) && !R(this).squeak) { R(this).squeak = true; this.say("Somewhere in someone's pack, a rubber duck squeaks. Every rat in the room freezes, just for a moment, and looks deeply offended."); this.curio("squeak"); } return sc1.call(this, k, thing, ...a); }; }
+  { const em2 = P.emit; P.emit = function (ev, ...a) { if (ev === "change" && this.tally && !R(this).nest && (this.bag || []).some((i) => i.curio === "fluff") && (this.bag || []).some((i) => i.curio === "sock")) { R(this).nest = true; this.say("Checking the pack, you find the ball of fluff has made itself a nest in the sock. It looks very pleased. You leave it."); this.curio("nest"); } return em2.call(this, ev, ...a); }; }
+  // floor one, in the margin (with leave to step outside)
+  { const e0 = P.endRun; P.endRun = function (won, ...a) { const fl = this.floor, dead = (this.party || []).length && this.party.every((h) => h.hp <= 0);
+      if (!won && dead && fl && fl.number === 1 && (this.settings || {}).fourthWall === "free" && CM.narrate) { CM.narrate(this, "Floor one. I'm not going to say anything. ...All right: it happens to everyone. It happened to me, the first time I tested it. Twice."); this.curio("floorone"); }
+      return e0.call(this, won, ...a); }; }
 }
 
 // ---- 70-ui.js ----
