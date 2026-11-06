@@ -41,7 +41,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => { const want = CM.LOOKS[game.settings.look] ? game.settings.look : "stone"; return CM.art.hasLook(want) ? want : "drawn"; };   // (v44.6: any look not on the list is Stone)   // (a pack still decoding: the drawn art stands in)
   // a set, built once and kept (half a dozen at a time)
   function setFor(key, special, i, look) {
-    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { artCache[key] = pre; cacheOrder.push(key); } }   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
+    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { CM.art._prebuilt = pre; try { artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look); } finally { CM.art._prebuilt = null; } cacheOrder.push(key); } }   // (plan 63: through build, so the hooks add their pictures)   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
@@ -66,6 +66,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const look = lookNow(), season = CM.season ? CM.season(game) : "summer", key = `${look}:${CM.TOWN_THEME.name}:${season}`; if (townReady === key) return;
     const was = CM.art.season; CM.art.season = season; try { renderer.prepare(setFor(key, CM.TOWN_THEME, 0, look)); townReady = key; } finally { CM.art.season = was; }
   }
+  CM.rebuildArt = () => { artCache = {}; cacheOrder = []; themeOn = -99; if (game.floor && game.mode !== "title") useTheme(game.floor.number); };   // (plan 62: the plants' palette arrived after the set was built)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";

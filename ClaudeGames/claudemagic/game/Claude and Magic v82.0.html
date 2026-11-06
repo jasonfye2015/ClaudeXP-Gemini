@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v81.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v82.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "81.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "82.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -9389,7 +9389,8 @@ CM.art.buildStone = function (theme) {
 };
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
-CM.art.build = function (theme, look = "drawn") {
+CM.art.build = function (theme, look = "drawn") { return CM.art._prebuilt || CM.art._build(theme, look); };   // (plan 63: a set painted ahead in the worker is handed through here as _prebuilt, so the window files' hooks on build - the extra pictures they add - run on it too)
+CM.art._build = function (theme, look = "drawn") {
   const set = look === "pixel" && CM.art.hasLook("pixel") ? CM.art.buildPixel(theme) : look === "stone" && CM.art.hasLook("stone") ? CM.art.buildStone(theme) : CM.art.buildDrawn(theme);
   return Object.assign(set, { theme, sharedKey: `${look}:${CM.art.hasLook(look) ? look : "drawn"}` });
 };
@@ -31125,7 +31126,7 @@ Object.assign(CM.Game.prototype, {
     return two && has(`${kind}2`) ? `${kind}2` : kind; };
   // one instance: the model placed on its square (dx, dz in the square, 0..1), sized to `target` metres tall (or wide, for the flat)
   const place = (out, name, x, y, dx, dz, target, hh, opts = {}) => { const m = measure(name); if (!m) return; const scale = target / (opts.wide ? m.width : m.height), yaw = ((hh >> 8) % 360) * Math.PI / 180;
-    out.push({ model: name, x: x + dx - m.cx * scale, y: (opts.y || 0) - m.foot * scale, z: y + dz - m.cz * scale, yaw, scale, sway: opts.sway || 0, height: m.height * scale, shade: opts.shade === undefined ? 1 : opts.shade, kind: opts.kind || "plant", small: Boolean(opts.small) }); };
+    out.push({ model: name, x: x + dx - m.cx * scale, y: opts.raw ? opts.y || 0 : (opts.y || 0) - m.foot * scale, z: y + dz - m.cz * scale, yaw, scale, sway: opts.sway || 0, height: m.height * scale, shade: opts.shade === undefined ? 1 : opts.shade, kind: opts.kind || "plant", small: Boolean(opts.small), raw: Boolean(opts.raw) }); };
   const trees = (game, fl, ax, ay, reach, out) => { const M = models(), wet = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`)), S = game && game.ext ? CM.treeStateMap(game, fl) : {};
     for (const key of CM.treeSquares(fl)) { const [x, y] = key.split(",").map(Number); if (Math.abs(x - ax) + Math.abs(y - ay) > reach + 2) continue;
       const v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, byWater = CM.DIRS.some(([dx, dy]) => wet.has(`${x + dx},${y + dy}`)), kind = byWater && M.willow && h(fl, "willow", key) % 3 === 0 ? "willow" : KIND[v], state = S[key] || null;
@@ -31165,9 +31166,58 @@ Object.assign(CM.Game.prototype, {
         const dx = w ? 0.5 + w[0] * 0.3 + (roll(10 + i) - 0.5) * 0.3 : 0.2 + roll(10 + i) * 0.6, dz = w ? 0.5 + w[1] * 0.3 + (roll(20 + i) - 0.5) * 0.3 : 0.2 + roll(20 + i) * 0.6;
         place(out, name, x, y, dx, dz, name.startsWith("bush") ? 0.35 + roll(30 + i) * 0.2 : name.startsWith("log") ? 0.45 : name.startsWith("stump") ? 0.28 : 0.22 + roll(30 + i) * 0.18, hh + i * 211, { sway: 0, kind: "fungus", small: true, wide: name.startsWith("log") }); } } };
   CM.plantInstancesOf = (game, fl, at, reach, density = 1) => { const out = []; if (!fl || !reach || !models() || !fl.grid) return out; const [ax, ay] = at || fl.pos;
-    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) below(game, fl, ax, ay, reach, density, out);
+    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density, out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); }   /* (plan 63: the stalagmites and the stalactites) */
     return out; };
-  CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const B = P.bands[CM.themeIndex(fl.number)]; return B ? B.tint : null; };
+  CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const band = CM.themeIndex(fl.number); if (/^stala[cg]/.test(model)) return CM.CLUTTER ? (band === 6 ? CM.CLUTTER.crystal : CM.CLUTTER.stone) : null; const B = P.bands[band]; return B ? B.tint : null; };   /* (the stone: grey, crystal-blue in the Crystal Caverns) */
+}
+
+// ---- 69zzt-clutter.js ----
+"use strict";
+// The clutter below ground (UPGRADE_PLAN_63.md set 4, release 1): stalagmites on the floor and stalactites from the
+// ceiling - cones made here in code in the plants' own model shape, three sizes each, the stone's greys (the Crystal
+// Caverns tint them) - placed by hash at the walls' feet and in the corners, never in the middle of a corridor one
+// square wide; wall decals by band - drainage ports and barred grates at the walls' feet in the damp bands, pipe
+// mouths that drip in the Foundry and the damp bands, spiderwebs in the corners, most in the Catacombs and the bone
+// halls; and the rats' places - a few corridor squares a floor where a rat sits and scurries off when the party comes
+// (the window's). All of it a sight: nothing is solid, nothing is on a thing, a feature or the stairs.
+//   CM.clutterModels() -> { name: model }                           the cones, in CM.Plants' model shape
+//   CM.clutterOf(game, fl, at, reach, density) -> instances         merged by CM.plantInstancesOf (69zzs-plants.js)
+//   CM.clutterDecals(fl, at, reach) -> [{ x, y, face, kind, lift, w, h }]   kind: port | grate | pipe | web
+//   CM.clutterRats(fl) -> [{ x, y, id }]                             the rats' home squares
+{ const C = CM.CLUTTER = { stal: { 0: 0.28, 1: 0.2, 3: 0.12, 4: 0.22, 5: 0.16, 6: 0.34, 8: 0.2, 9: 0.18 }, decals: { 0: ["grate", "port", "web", "web"], 1: ["port", "pipe", "grate", "pipe"], 2: ["pipe"], 4: ["port", "grate"], 5: ["web"], 7: ["pipe", "pipe", "grate"], 8: ["web", "web", "web"], 9: ["web"] },
+    decalPer: 0.1, webPer: 0.22, ratsPerFloor: 3, crystal: [0.75, 0.85, 1.0], stone: [0.62, 0.6, 0.58] };
+  // a cone of n sides, h tall, r wide at the foot, pointing up (or down, foot at 0, tip at -h): pos int16 over the box, a colour index a vertex
+  const cone = (name, h, r, n, down) => { const pos = [], ci = [], idx = []; const tip = down ? -h : h; pos.push([0, 0, 0]); ci.push(0);   // the foot's centre
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, rr = r * (0.85 + 0.15 * Math.sin(i * 2.3)); pos.push([Math.cos(a) * rr, 0, Math.sin(a) * rr]); ci.push(i % 2 ? 1 : 2); }
+    pos.push([0, tip, 0]); ci.push(3); const T = n + 1;
+    for (let i = 0; i < n; i++) { const a = 1 + i, b = 1 + (i + 1) % n; idx.push(0, down ? a : b, down ? b : a); idx.push(a, b, T); if (down) { const last = idx.length - 3; const t = idx[last + 1]; idx[last + 1] = idx[last + 2]; idx[last + 2] = t; } }
+    const lo = [Math.min(...pos.map((p) => p[0])), Math.min(...pos.map((p) => p[1])), Math.min(...pos.map((p) => p[2]))], hi = [Math.max(...pos.map((p) => p[0])), Math.max(...pos.map((p) => p[1])), Math.max(...pos.map((p) => p[2]))], span = lo.map((l, k) => Math.max(1e-6, hi[k] - l));
+    const P = new Int16Array(pos.length * 3); pos.forEach((p, i) => { for (let k = 0; k < 3; k++) P[i * 3 + k] = Math.round((p[k] - lo[k]) / span[k] * 65534 - 32767); });
+    return { name, verts: pos.length, tris: idx.length / 3, box: [lo, hi], pos: P, ci: Uint8Array.from(ci), index: Uint16Array.from(idx), palette: [[150, 146, 140], [128, 124, 118], [162, 158, 150], [176, 172, 166]], tags: ["stone"] }; };
+  let made = null;
+  CM.clutterModels = () => made || (made = { stalagmite_s: cone("stalagmite_s", 0.3, 0.09, 8, false), stalagmite_m: cone("stalagmite_m", 0.55, 0.14, 8, false), stalagmite_l: cone("stalagmite_l", 0.85, 0.2, 10, false), stalactite_s: cone("stalactite_s", 0.3, 0.08, 8, true), stalactite_m: cone("stalactite_m", 0.5, 0.12, 8, true), stalactite_l: cone("stalactite_l", 0.8, 0.17, 10, true) });
+  const h = (fl, salt, k) => CM.hashSeed(`${fl.number}:${salt}:${k}`) >>> 0;
+  const okFloor = (fl) => fl && fl.number >= 1 && fl.grid && !["joker", "interior", "cave"].includes(fl.special);
+  CM.clutterOf = (game, fl, at, reach, density = 1) => { const out = []; if (!okFloor(fl) || !reach) return out; const per = C.stal[CM.themeIndex(fl.number)]; if (!per) return out; const M = CM.clutterModels(), N = fl.grid.length, R = Math.min(reach, 12) + 1, [ax, ay] = at || fl.pos;
+    const open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0;
+    for (let y = Math.max(1, ay - R); y <= Math.min(N - 2, ay + R); y++) for (let x = Math.max(1, ax - R); x <= Math.min(N - 2, ax + R); x++) { if (!open(x, y) || Math.abs(x - ax) + Math.abs(y - ay) > R) continue; const k = `${x},${y}`; if (fl.things[k] || (fl.features || {})[k]) continue;
+      const W = CM.DIRS.filter(([dx, dy]) => !open(x + dx, y + dy)); if (!W.length) continue; const narrow = (!open(x - 1, y) && !open(x + 1, y)) || (!open(x, y - 1) && !open(x, y + 1)), roll = (n) => (CM.hashSeed(`${fl.number}:c${n}:${k}`) >>> 0) % 1000 / 1000;
+      if (roll(1) < per * density * (W.length >= 2 ? 1.6 : 1)) { const w = W[h(fl, "w", k) % W.length], size = ["s", "s", "m", "m", "l"][h(fl, "sz", k) % 5], m = M[`stalagmite_${size}`], f = CM.floorAt(fl, x, y);
+        const dx = 0.5 + w[0] * (narrow ? 0.36 : 0.3) + (roll(2) - 0.5) * 0.14, dz = 0.5 + w[1] * (narrow ? 0.36 : 0.3) + (roll(3) - 0.5) * 0.14, sc = 0.85 + roll(4) * 0.3;
+        out.push({ model: m.name, x: x + dx, y: f, z: y + dz, yaw: roll(5) * Math.PI * 2, scale: sc, sway: 0, height: m.box[1][1] * sc, shade: 1, kind: "stone", small: true, raw: true }); }
+      if (roll(6) < per * density * 0.9) { const size = ["s", "m", "m", "l"][h(fl, "tz", k) % 4], m = M[`stalactite_${size}`], c = CM.ceilAt(fl, x, y), sc = 0.8 + roll(7) * 0.35;
+        out.push({ model: m.name, x: x + 0.2 + roll(8) * 0.6, y: c - 0.005, z: y + 0.2 + roll(9) * 0.6, yaw: roll(10) * Math.PI * 2, scale: sc, sway: 0, height: 0.3, shade: 0.85, kind: "stone", small: true, raw: true }); } }
+    return out; };
+  CM.clutterDecals = (fl, at, reach = 10) => { const out = []; if (!okFloor(fl)) return out; const kinds = C.decals[CM.themeIndex(fl.number)]; if (!kinds) return out; const N = fl.grid.length, [ax, ay] = at || fl.pos, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0;
+    for (let y = Math.max(0, ay - reach); y <= Math.min(N - 1, ay + reach); y++) for (let x = Math.max(0, ax - reach); x <= Math.min(N - 1, ax + reach); x++) { if (!open(x, y) || Math.abs(x - ax) + Math.abs(y - ay) > reach) continue; const k = `${x},${y}`; if (fl.things[k]) continue;
+      for (let f = 0; f < 4; f++) { const [dx, dy] = CM.DIRS[f]; if (open(x + dx, y + dy)) continue; const r = (CM.hashSeed(`${fl.number}:d${f}:${k}`) >>> 0) % 1000 / 1000, kind = kinds[(h(fl, "dk", k) + f) % kinds.length];
+        const corner = !open(x + CM.DIRS[(f + 1) % 4][0], y + CM.DIRS[(f + 1) % 4][1]) || !open(x + CM.DIRS[(f + 3) % 4][0], y + CM.DIRS[(f + 3) % 4][1]);
+        if (kind === "web") { if (corner && r < C.webPer) out.push({ x, y, face: f, kind, lift: 0.3, w: 0.42, h: 0.4, along: !open(x + CM.DIRS[(f + 1) % 4][0], y + CM.DIRS[(f + 1) % 4][1]) ? 1 : -1 }); }
+        else if (r < C.decalPer) out.push({ x, y, face: f, kind, lift: kind === "pipe" ? -0.2 : -0.33, w: kind === "grate" ? 0.36 : 0.26, h: kind === "grate" ? 0.2 : 0.26 }); } }
+    return out; };
+  CM.clutterRats = (fl) => { const out = []; if (!okFloor(fl)) return out; const N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0, want = C.ratsPerFloor, inRoom = new Set(); for (const r of fl.rooms || []) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
+    const cands = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { const k = `${x},${y}`; if (!open(x, y) || inRoom.has(k) || fl.things[k] || (fl.features || {})[k]) continue; const ns = CM.DIRS.filter(([dx, dy]) => open(x + dx, y + dy)).length; if (ns === 2) cands.push([x, y]); }
+    for (let i = 0; i < want && cands.length; i++) { const j = h(fl, "rat", String(i)) % cands.length; const [x, y] = cands.splice(j, 1)[0]; out.push({ x, y, id: `rat:${fl.number}:${i}` }); } return out; };
 }
 
 // ---- 70-ui.js ----
@@ -46140,7 +46190,7 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   CM.plantsReady = (async () => { try { const P = CM.plantsPack; if (!P || !P.data || typeof DecompressionStream === "undefined") return false;
       const t0 = performance.now(), ds = new DecompressionStream("deflate-raw"), stream = new Blob([b64(P.data)]).stream().pipeThrough(ds), bytes = new Uint8Array(await new Response(stream).arrayBuffer());
       CM.plants = CM.Plants.parse(bytes, P.manifest); CM.plants.loadedMs = Math.round(performance.now() - t0); atlas = CM.Plants.atlas(CM.plants.models); CM.plants.atlas = atlas;
-      if (CM.renderer && CM.renderer.index && CM.renderer.index["pal:plants"] === undefined && CM.renderer.art && CM.renderer.setTextures) { try { CM.renderer.setTextures(CM.art.build(CM.renderer.art.theme, CM.renderer.art.look), false); } catch (e) { /* (the next floor's build has it) */ } }
+      if (CM.rebuildArt && CM.renderer && CM.renderer.index && CM.renderer.index["pal:plants"] === undefined) CM.rebuildArt();   // (the floor's set was built before the pack arrived: again, with the palette)
       return true; } catch (e) { console.warn("plants: not loaded -", e && e.message); CM.plants = null; return false; } })();
   // the palette picture: every model's colours, a cell each
   const SIDE = 128;
@@ -46158,7 +46208,7 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   const groups = new Map(); let built = { key: null, at: null, version: -1 };
   R.plantInstances = function (game, fl) { const reach = this.plantReach || 0; if (!reach || !CM.plants) { groups.clear(); return; } const at = fl.pos, key = `${fl.number}|${this.floorKey}|${this.season}|${this.turnK}|${reach}`, v = (game.treesVersion || 0) + (game.plantsVersion || 0) * 1000;
     if (built.key === key && built.version === v && built.at && Math.abs(built.at[0] - at[0]) + Math.abs(built.at[1] - at[1]) < 4) return; built = { key, at: at.slice(), version: v };
-    const by = new Map(); for (const p of CM.plantInstancesOf(game, fl, at, reach, this.density === undefined ? 1 : this.density)) { let a = by.get(p.model); if (!a) by.set(p.model, (a = [])); a.push(p.x, p.y, p.z, p.yaw, p.scale, p.sway || 0, p.small ? Math.min(reach, CM.PLANTS.smallReach) : reach, p.height, 0, 0, 0, 0, p.shade === undefined ? 1 : p.shade, 1, 0, 0); }
+    const by = new Map(); for (const p of CM.plantInstancesOf(game, fl, at, reach, this.density === undefined ? 1 : this.density)) { if (!CM.plants.models[p.model]) continue; let a = by.get(p.model); if (!a) by.set(p.model, (a = [])); const base = p.raw ? p.y : p.y; a.push(p.x, base, p.z, p.yaw, p.scale, p.sway || 0, p.small ? Math.min(reach, CM.PLANTS.smallReach) : reach, p.height, 0, 0, 0, 0, p.shade === undefined ? 1 : p.shade, 1, 0, 0); }
     groups.clear(); const gl = this.gl; for (const [model, arr] of by) { const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); groups.set(model, { buf, n: arr.length / 16, tint: CM.plantTintOf ? CM.plantTintOf(game, fl, model) : null }); } this.plantsDrawn = 0; };
   R.drawStatics = function (sky, eye) { const g = CM.game, fl = g && g.floor; if (!fl || !CM.plants || !this.index || this.index["pal:plants"] === undefined) return; this.plantInstances(g, fl); if (!groups.size) return; const gl = this.gl;
     gl.uniform1f(this.loc.uStatic, 1); gl.uniform1f(this.loc.uBump, 0); let drawn = 0;
@@ -46168,6 +46218,56 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
     for (let i = 4; i < 8; i++) { gl.vertexAttribDivisor(i, 0); gl.disableVertexAttribArray(i); gl.vertexAttrib4f(i, 0, 0, 0, 0); } gl.uniform1f(this.loc.uStatic, 0); gl.uniform3fv(this.loc.uTint, [1, 1, 1]); this.plantsDrawn = drawn; };
   // the reach, by the Detail setting and the pack's presence (the floor's mesh key reads it: the far pictures change with it)
   const bf0 = CM.beforeFrame; CM.beforeFrame = (game, r, dt, now) => { if (bf0) bf0(game, r, dt, now); const want = CM.plants && !CM.plantsOff ? CM.PLANTS.reach(r.density === undefined ? 1 : r.density) : 0; if (r.plantReach !== want) r.plantReach = want; };
+}
+
+// ---- 76zzzzzzzzzzr-clutter.js ----
+"use strict";
+// The clutter below ground - the window's side (UPGRADE_PLAN_63.md set 4, release 1): the stalagmites and the
+// stalactites go into the plants' models as they load (69zzt-clutter.js makes them) and are drawn by the plants'
+// instanced path; the wall decals - drainage ports and grates, pipe mouths, spiderwebs - are pictures made here and
+// laid on the walls as decals (CM.lifeSprites); a pipe mouth drips; bugs crawl on the floor about the party and
+// scatter from its feet; and a few rats sit at the corridors' edges and scurry off two squares when the party comes
+// within two, never fought, never in the way.
+{ const r = Math.random, S = 64;
+  // the cones ride with the plants
+  { const p0 = CM.Plants.parse; CM.Plants.parse = (bytes, manifest) => { const out = p0(bytes, manifest); if (CM.clutterModels) Object.assign(out.models, CM.clutterModels()); return out; }; }
+  // the pictures
+  const PICS = {
+    "clut:port": (p) => { p.fillStyle = "#3A3632"; p.beginPath(); p.arc(S / 2, S / 2, S * 0.4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#141210"; p.beginPath(); p.arc(S / 2, S / 2, S * 0.3, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#5A544C"; p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S / 2, S * 0.38, 0, Math.PI * 2); p.stroke(); p.fillStyle = "rgba(60,80,70,0.5)"; p.fillRect(S * 0.42, S * 0.72, S * 0.16, S * 0.28); },
+    "clut:grate": (p) => { p.fillStyle = "#1A1816"; p.fillRect(S * 0.08, S * 0.2, S * 0.84, S * 0.6); p.strokeStyle = "#4A4640"; p.lineWidth = 4; p.strokeRect(S * 0.08, S * 0.2, S * 0.84, S * 0.6); for (let i = 1; i < 6; i++) { p.beginPath(); p.moveTo(S * (0.08 + 0.84 * i / 6), S * 0.2); p.lineTo(S * (0.08 + 0.84 * i / 6), S * 0.8); p.stroke(); } p.fillStyle = "rgba(40,60,50,0.5)"; p.fillRect(S * 0.3, S * 0.8, S * 0.4, S * 0.2); },
+    "clut:pipe": (p) => { p.fillStyle = "#4A4034"; p.beginPath(); p.arc(S / 2, S * 0.45, S * 0.3, 0, Math.PI * 2); p.fill(); p.fillStyle = "#100E0C"; p.beginPath(); p.arc(S / 2, S * 0.45, S * 0.2, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#6A5C48"; p.lineWidth = 3; p.beginPath(); p.arc(S / 2, S * 0.45, S * 0.28, 0, Math.PI * 2); p.stroke(); p.fillStyle = "rgba(80,110,100,0.55)"; p.fillRect(S * 0.44, S * 0.62, S * 0.12, S * 0.38); },
+    "clut:web": (p) => { p.strokeStyle = "rgba(230,230,235,0.75)"; p.lineWidth = 1.2; const cx = S * 0.06, cy = S * 0.06; for (let i = 0; i <= 5; i++) { const a = i / 5 * Math.PI / 2; p.beginPath(); p.moveTo(cx, cy); p.lineTo(cx + Math.cos(a) * S * 0.92, cy + Math.sin(a) * S * 0.92); p.stroke(); } for (let k = 1; k <= 5; k++) { const rr = S * 0.18 * k; p.beginPath(); for (let i = 0; i <= 10; i++) { const a = i / 10 * Math.PI / 2, sag = 1 - 0.06 * Math.sin(i / 10 * Math.PI * 5); const X = cx + Math.cos(a) * rr * sag, Y = cy + Math.sin(a) * rr * sag; if (i === 0) p.moveTo(X, Y); else p.lineTo(X, Y); } p.stroke(); } },
+    "air:bug": (p) => { p.fillStyle = "#1A1612"; p.beginPath(); p.ellipse(S / 2, S / 2, S * 0.16, S * 0.22, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#2A2420"; p.lineWidth = 3; for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { p.beginPath(); p.moveTo(S / 2, S * (0.4 + i * 0.1)); p.lineTo(S / 2 + s * S * 0.3, S * (0.3 + i * 0.14)); p.stroke(); } } };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) { if (name.startsWith("air:") || set.index[name] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; PICS[name](c.getContext("2d")); set.index[name] = set.layers.length; set.layers.push(c); } return set; }; }
+  { CM.art.AIR = CM.art.AIR || []; if (!CM.art.AIR.includes("bug")) CM.art.AIR.push("bug"); const ap0 = CM.art.airPicture; CM.art.airPicture = function (id) { if (id !== "bug") return ap0.call(this, id); const c = document.createElement("canvas"); c.width = c.height = S; PICS["air:bug"](c.getContext("2d")); return c; }; }
+  // the decals and the rats, as life sprites
+  const rats = new Map();   // id -> { x, z, hx, hz, tx, tz, t }
+  const ratStep = (game, fl, R0, now) => { const out = [], [px, py] = fl.pos, open = (x, y) => fl.grid[y] && fl.grid[y][x] === 0;
+    for (const home of CM.clutterRats(fl)) { if (Math.abs(home.x - px) + Math.abs(home.y - py) > 12) continue; let st = rats.get(home.id); if (!st) { st = { x: home.x + 0.5, z: home.y + 0.5, hx: home.x + 0.5, hz: home.y + 0.5, tx: null, tz: null, t: 0, yaw: 0 }; rats.set(home.id, st); }
+      const d = Math.abs(st.x - px - 0.5) + Math.abs(st.z - py - 0.5);
+      if (st.tx === null && d <= 2.2) {   // scurry: two squares along the corridor, away from the party
+        const away = CM.DIRS.map(([dx, dy]) => [dx, dy]).filter(([dx, dy]) => open(Math.floor(st.x) + dx, Math.floor(st.z) + dy) && open(Math.floor(st.x) + dx * 2, Math.floor(st.z) + dy * 2)).sort((a, b) => (Math.abs(st.x + b[0] * 2 - px - 0.5) + Math.abs(st.z + b[1] * 2 - py - 0.5)) - (Math.abs(st.x + a[0] * 2 - px - 0.5) + Math.abs(st.z + a[1] * 2 - py - 0.5)))[0];
+        if (away) { st.tx = st.x + away[0] * 2; st.tz = st.z + away[1] * 2; st.squeak = now; } }
+      if (st.tx !== null) { const dx = st.tx - st.x, dz = st.tz - st.z, len = Math.hypot(dx, dz), step = 3.2 * 0.016; if (len < step) { st.x = st.tx; st.z = st.tz; st.tx = null; } else { st.x += dx / len * step; st.z += dz / len * step; } st.yaw = Math.atan2(dx, dz); }
+      else if (d > 6 && (Math.abs(st.x - st.hx) > 0.1 || Math.abs(st.z - st.hz) > 0.1)) { st.x = st.hx; st.z = st.hz; }   // (home again when the party is far)
+      const cx = Math.floor(st.x), cz = Math.floor(st.z); out.push({ x: cx, y: cz, dx: st.x - cx - 0.5, dz: st.z - cz - 0.5, layer: "monster:Giant Rat", w: 0.3, h: 0.26, id: home.id, walking: st.tx !== null, shade: 0.8 }); }
+    return out; };
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || !CM.clutterDecals || game.mode === "title") return out; const R0 = CM.renderer; if (!R0 || R0.index["clut:port"] === undefined) return out;
+      for (const d of CM.clutterDecals(fl, fl.pos, 10)) out.push({ x: d.x, y: d.y, face: d.face, layer: `clut:${d.kind}`, w: d.w, h: d.h, lift: d.lift, mirror: d.along === -1, shade: d.kind === "web" ? 1.1 : 0.9, alpha: d.kind === "web" ? 0.85 : 1 });
+      if (CM.figures && !CM.ratsOff) for (const s of ratStep(game, fl, R0, now)) out.push(s); return out; }; }
+  // the bugs on the floor, and the pipes' drips
+  { const k0 = CM.airKinds; CM.airKinds = function (env) { const out = k0.call(this, env); const g = CM.game, fl = g && g.floor; if (env.surface || !fl || !(fl.number >= 1) || g.mode === "title") return out; const band = CM.themeIndex(fl.number);
+      const bugs = { 0: 5, 5: 7, 8: 6, 1: 3, 9: 4 }[band]; if (bugs) out.push({ id: "bug", rate: bugs });
+      const pipes = CM.clutterDecals ? CM.clutterDecals(fl, fl.pos, 8).filter((d) => d.kind === "pipe").length : 0; if (pipes) out.push({ id: "pipedrip", rate: 1.2 * pipes }); return out; }; }
+  { const sp0 = CM.Air.prototype.spawn; CM.Air.prototype.spawn = function (k, eye, R, env) { const g = CM.game;
+      if (k.id === "bug") { const a = r() * Math.PI * 2, d = 1 + r() * 4, x = eye[0] + Math.cos(a) * d, z = eye[2] + Math.sin(a) * d; if (env.open && !env.open(Math.floor(x), Math.floor(z))) return null; const va = r() * Math.PI * 2;
+        return { kind: "bug", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: Math.cos(va) * 0.12, vy: 0, vz: Math.sin(va) * 0.12, life: 6 + r() * 6, size: 0.035 + r() * 0.015, glow: 0, alpha: 1, x, z, y: 0.012, top: 0.5, layer: "air:bug", bug: true }; }
+      if (k.id === "pipedrip") { const fl = g.floor, P = CM.clutterDecals(fl, fl.pos, 8).filter((d) => d.kind === "pipe"); if (!P.length) return null; const d = P[Math.floor(r() * P.length)], [dx, dy] = CM.DIRS[d.face];
+        return { kind: "pipedrip", age: 0.4, seed: r() * 10, sway: 0, swayAmp: 0, windy: 0, vx: 0, vy: -1.6, vz: 0, life: 1.0, size: 0.025, h: 0.07, glow: 1.3, alpha: 0.8, x: d.x + 0.5 + dx * 0.42, z: d.y + 0.5 + dy * 0.42, y: 0.5 + d.lift - 0.08, top: 1.2, layer: "air:drip" }; }
+      return sp0.call(this, k, eye, R, env); }; }
+  { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); const eye = env.eye;
+      for (const p of this.parts) { if (!p.bug) continue; const dx = p.x - eye[0], dz = p.z - eye[2], d = Math.hypot(dx, dz); if (d < 1.3 && d > 0.001) { p.vx = dx / d * 0.9; p.vz = dz / d * 0.9; } else if (r() < dt * 0.8) { const a = r() * Math.PI * 2; p.vx = Math.cos(a) * 0.12; p.vz = Math.sin(a) * 0.12; }
+        if (env.open && !env.open(Math.floor(p.x), Math.floor(p.z))) { p.vx = -p.vx; p.vz = -p.vz; p.x += p.vx * 2 * dt; p.z += p.vz * 2 * dt; } } return out; }; }
 }
 
 // ---- 77-splash.js ----
@@ -46362,7 +46462,7 @@ window.addEventListener("DOMContentLoaded", () => {
   const lookNow = () => { const want = CM.LOOKS[game.settings.look] ? game.settings.look : "stone"; return CM.art.hasLook(want) ? want : "drawn"; };   // (v44.6: any look not on the list is Stone)   // (a pack still decoding: the drawn art stands in)
   // a set, built once and kept (half a dozen at a time)
   function setFor(key, special, i, look) {
-    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { artCache[key] = pre; cacheOrder.push(key); } }   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
+    if (!artCache[key] && CM.artTake) { const pre = CM.artTake(key); if (pre && (!pre.partial || renderer._split(pre).sharedKey === renderer.sharedKey)) { CM.art._prebuilt = pre; try { artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look); } finally { CM.art._prebuilt = null; } cacheOrder.push(key); } }   // (plan 63: through build, so the hooks add their pictures)   // (v26.3: painted ahead in the worker - left aside if it counted on shared pictures no longer up)
     if (!artCache[key]) {
       artCache[key] = CM.art.build(special ? special : game.dream ? CM.dreamTheme(CM.THEMES[i]) : CM.THEMES[i], look);
       cacheOrder.push(key);
@@ -46387,6 +46487,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const look = lookNow(), season = CM.season ? CM.season(game) : "summer", key = `${look}:${CM.TOWN_THEME.name}:${season}`; if (townReady === key) return;
     const was = CM.art.season; CM.art.season = season; try { renderer.prepare(setFor(key, CM.TOWN_THEME, 0, look)); townReady = key; } finally { CM.art.season = was; }
   }
+  CM.rebuildArt = () => { artCache = {}; cacheOrder = []; themeOn = -99; if (game.floor && game.mode !== "title") useTheme(game.floor.number); };   // (plan 62: the plants' palette arrived after the set was built)
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";

@@ -11,7 +11,7 @@
   CM.plantsReady = (async () => { try { const P = CM.plantsPack; if (!P || !P.data || typeof DecompressionStream === "undefined") return false;
       const t0 = performance.now(), ds = new DecompressionStream("deflate-raw"), stream = new Blob([b64(P.data)]).stream().pipeThrough(ds), bytes = new Uint8Array(await new Response(stream).arrayBuffer());
       CM.plants = CM.Plants.parse(bytes, P.manifest); CM.plants.loadedMs = Math.round(performance.now() - t0); atlas = CM.Plants.atlas(CM.plants.models); CM.plants.atlas = atlas;
-      if (CM.renderer && CM.renderer.index && CM.renderer.index["pal:plants"] === undefined && CM.renderer.art && CM.renderer.setTextures) { try { CM.renderer.setTextures(CM.art.build(CM.renderer.art.theme, CM.renderer.art.look), false); } catch (e) { /* (the next floor's build has it) */ } }
+      if (CM.rebuildArt && CM.renderer && CM.renderer.index && CM.renderer.index["pal:plants"] === undefined) CM.rebuildArt();   // (the floor's set was built before the pack arrived: again, with the palette)
       return true; } catch (e) { console.warn("plants: not loaded -", e && e.message); CM.plants = null; return false; } })();
   // the palette picture: every model's colours, a cell each
   const SIDE = 128;
@@ -29,7 +29,7 @@
   const groups = new Map(); let built = { key: null, at: null, version: -1 };
   R.plantInstances = function (game, fl) { const reach = this.plantReach || 0; if (!reach || !CM.plants) { groups.clear(); return; } const at = fl.pos, key = `${fl.number}|${this.floorKey}|${this.season}|${this.turnK}|${reach}`, v = (game.treesVersion || 0) + (game.plantsVersion || 0) * 1000;
     if (built.key === key && built.version === v && built.at && Math.abs(built.at[0] - at[0]) + Math.abs(built.at[1] - at[1]) < 4) return; built = { key, at: at.slice(), version: v };
-    const by = new Map(); for (const p of CM.plantInstancesOf(game, fl, at, reach, this.density === undefined ? 1 : this.density)) { let a = by.get(p.model); if (!a) by.set(p.model, (a = [])); a.push(p.x, p.y, p.z, p.yaw, p.scale, p.sway || 0, p.small ? Math.min(reach, CM.PLANTS.smallReach) : reach, p.height, 0, 0, 0, 0, p.shade === undefined ? 1 : p.shade, 1, 0, 0); }
+    const by = new Map(); for (const p of CM.plantInstancesOf(game, fl, at, reach, this.density === undefined ? 1 : this.density)) { if (!CM.plants.models[p.model]) continue; let a = by.get(p.model); if (!a) by.set(p.model, (a = [])); const base = p.raw ? p.y : p.y; a.push(p.x, base, p.z, p.yaw, p.scale, p.sway || 0, p.small ? Math.min(reach, CM.PLANTS.smallReach) : reach, p.height, 0, 0, 0, 0, p.shade === undefined ? 1 : p.shade, 1, 0, 0); }
     groups.clear(); const gl = this.gl; for (const [model, arr] of by) { const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW); groups.set(model, { buf, n: arr.length / 16, tint: CM.plantTintOf ? CM.plantTintOf(game, fl, model) : null }); } this.plantsDrawn = 0; };
   R.drawStatics = function (sky, eye) { const g = CM.game, fl = g && g.floor; if (!fl || !CM.plants || !this.index || this.index["pal:plants"] === undefined) return; this.plantInstances(g, fl); if (!groups.size) return; const gl = this.gl;
     gl.uniform1f(this.loc.uStatic, 1); gl.uniform1f(this.loc.uBump, 0); let drawn = 0;

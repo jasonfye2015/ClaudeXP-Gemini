@@ -31,7 +31,7 @@
     return two && has(`${kind}2`) ? `${kind}2` : kind; };
   // one instance: the model placed on its square (dx, dz in the square, 0..1), sized to `target` metres tall (or wide, for the flat)
   const place = (out, name, x, y, dx, dz, target, hh, opts = {}) => { const m = measure(name); if (!m) return; const scale = target / (opts.wide ? m.width : m.height), yaw = ((hh >> 8) % 360) * Math.PI / 180;
-    out.push({ model: name, x: x + dx - m.cx * scale, y: (opts.y || 0) - m.foot * scale, z: y + dz - m.cz * scale, yaw, scale, sway: opts.sway || 0, height: m.height * scale, shade: opts.shade === undefined ? 1 : opts.shade, kind: opts.kind || "plant", small: Boolean(opts.small) }); };
+    out.push({ model: name, x: x + dx - m.cx * scale, y: opts.raw ? opts.y || 0 : (opts.y || 0) - m.foot * scale, z: y + dz - m.cz * scale, yaw, scale, sway: opts.sway || 0, height: m.height * scale, shade: opts.shade === undefined ? 1 : opts.shade, kind: opts.kind || "plant", small: Boolean(opts.small), raw: Boolean(opts.raw) }); };
   const trees = (game, fl, ax, ay, reach, out) => { const M = models(), wet = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`)), S = game && game.ext ? CM.treeStateMap(game, fl) : {};
     for (const key of CM.treeSquares(fl)) { const [x, y] = key.split(",").map(Number); if (Math.abs(x - ax) + Math.abs(y - ay) > reach + 2) continue;
       const v = CM.hashSeed(`${fl.number}:tree:${key}`) % 3, byWater = CM.DIRS.some(([dx, dy]) => wet.has(`${x + dx},${y + dy}`)), kind = byWater && M.willow && h(fl, "willow", key) % 3 === 0 ? "willow" : KIND[v], state = S[key] || null;
@@ -71,7 +71,7 @@
         const dx = w ? 0.5 + w[0] * 0.3 + (roll(10 + i) - 0.5) * 0.3 : 0.2 + roll(10 + i) * 0.6, dz = w ? 0.5 + w[1] * 0.3 + (roll(20 + i) - 0.5) * 0.3 : 0.2 + roll(20 + i) * 0.6;
         place(out, name, x, y, dx, dz, name.startsWith("bush") ? 0.35 + roll(30 + i) * 0.2 : name.startsWith("log") ? 0.45 : name.startsWith("stump") ? 0.28 : 0.22 + roll(30 + i) * 0.18, hh + i * 211, { sway: 0, kind: "fungus", small: true, wide: name.startsWith("log") }); } } };
   CM.plantInstancesOf = (game, fl, at, reach, density = 1) => { const out = []; if (!fl || !reach || !models() || !fl.grid) return out; const [ax, ay] = at || fl.pos;
-    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) below(game, fl, ax, ay, reach, density, out);
+    if ((fl.number === 0 || fl.number === -1) && (!fl.special || fl.special === "wood" || fl.special === "town")) { if (CM.treeSquares) trees(game, fl, ax, ay, reach, out); above(game, fl, ax, ay, reach, density, out); }   /* (not in a cave or a house) */ else if (fl.number >= 1 && !(["joker", "interior", "cave"].includes(fl.special))) { below(game, fl, ax, ay, reach, density, out); if (CM.clutterOf) for (const p of CM.clutterOf(game, fl, [ax, ay], reach, density)) out.push(p); }   /* (plan 63: the stalagmites and the stalactites) */
     return out; };
-  CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const B = P.bands[CM.themeIndex(fl.number)]; return B ? B.tint : null; };
+  CM.plantTintOf = (game, fl, model) => { if (!fl || !(fl.number >= 1)) return null; const band = CM.themeIndex(fl.number); if (/^stala[cg]/.test(model)) return CM.CLUTTER ? (band === 6 ? CM.CLUTTER.crystal : CM.CLUTTER.stone) : null; const B = P.bands[band]; return B ? B.tint : null; };   /* (the stone: grey, crystal-blue in the Crystal Caverns) */
 }

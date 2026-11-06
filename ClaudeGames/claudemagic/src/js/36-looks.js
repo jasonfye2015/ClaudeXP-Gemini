@@ -176,7 +176,8 @@ CM.art.buildStone = function (theme) {
 };
 
 // the whole set for a depth, in the look asked for (the drawn one when a pack isn't there)
-CM.art.build = function (theme, look = "drawn") {
+CM.art.build = function (theme, look = "drawn") { return CM.art._prebuilt || CM.art._build(theme, look); };   // (plan 63: a set painted ahead in the worker is handed through here as _prebuilt, so the window files' hooks on build - the extra pictures they add - run on it too)
+CM.art._build = function (theme, look = "drawn") {
   const set = look === "pixel" && CM.art.hasLook("pixel") ? CM.art.buildPixel(theme) : look === "stone" && CM.art.hasLook("stone") ? CM.art.buildStone(theme) : CM.art.buildDrawn(theme);
   return Object.assign(set, { theme, sharedKey: `${look}:${CM.art.hasLook(look) ? look : "drawn"}` });
 };
