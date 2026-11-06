@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Now loading (v103.0, the game's start)
+  (src/index.html, src/js/77e-loading.js)
+  - Now loading: the window is no longer blank while the game is read. The moment it opens, a small screen shows an
+    ember flickering over the game's name, a moving bar and "Now loading...", drawn by the browser before a line of
+    the game runs, and it fades as the title card comes up. Then a slim line at the foot of the title card, and of
+    the title screen, tells the real progress of what the dungeon still needs - the heroes, the stone, the trees,
+    the figures - and goes when all is there. A party that goes down before the stone's textures are ready sees
+    "Lighting the torches..." over the view, with the same line, until they are.
+
 The title screen on one page (v102.0, UPGRADE_PLAN_69.md)
   (src/js/77d-titlepages.js, UPGRADE_PLAN_69.md)
   - The title screen on one page (plan 69): the screen after the title card had grown to four screens of scrolling,

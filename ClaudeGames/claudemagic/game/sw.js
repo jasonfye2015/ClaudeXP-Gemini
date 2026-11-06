@@ -1,6 +1,6 @@
-// Claude and Magic v102.0: the service worker keeps the game's file so it opens without the network.
-const CACHE = "claudemagic-v102.0";
-const FILES = ["./Claude%20and%20Magic%20v102.0.html", "./manifest.webmanifest", "./icon.svg"];
+// Claude and Magic v103.0: the service worker keeps the game's file so it opens without the network.
+const CACHE = "claudemagic-v103.0";
+const FILES = ["./Claude%20and%20Magic%20v103.0.html", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {
