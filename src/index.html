@@ -10,9 +10,22 @@
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
 -->
+<style>
+/* the boot screen (77e-loading.js takes it away): shown by the browser at once, before the game's script is read */
+#boot { position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #120D08; color: #D9A441; font: 600 28px Georgia, serif; letter-spacing: 2px; transition: opacity 0.5s; }
+#boot.gone { opacity: 0; pointer-events: none; }
+#boot .ember { width: 18px; height: 26px; border-radius: 50% 50% 45% 45% / 60% 60% 40% 40%; background: radial-gradient(circle at 50% 70%, #FFE6A0 0%, #FFB040 35%, #D0541A 70%, rgba(160,40,10,0) 100%); box-shadow: 0 0 22px 6px rgba(255,140,40,0.45); animation: bootFlicker 0.9s ease-in-out infinite alternate; }
+#boot .bar { width: 220px; height: 3px; background: #2A1E12; border-radius: 2px; overflow: hidden; }
+#boot .bar i { display: block; width: 40%; height: 100%; background: linear-gradient(90deg, rgba(217,164,65,0), #D9A441, rgba(217,164,65,0)); animation: bootSlide 1.3s ease-in-out infinite; }
+#boot small { font: italic 13px Georgia, serif; color: #8A7A62; letter-spacing: 1px; }
+@keyframes bootFlicker { from { transform: scale(1) rotate(-2deg); opacity: 0.85; } to { transform: scale(1.08, 1.14) rotate(2deg); opacity: 1; } }
+@keyframes bootSlide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { #boot .ember, #boot .bar i { animation: none; } }
+</style>
 <!-- @css -->
 </head>
 <body>
+<div id="boot"><div class="ember"></div><div>Claude and Magic</div><div class="bar"><i></i></div><small>Now loading...</small></div>
 <div id="app"></div>
 <!-- @js -->
 </body>
