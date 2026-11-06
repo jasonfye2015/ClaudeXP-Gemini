@@ -569,7 +569,7 @@ Object.assign(CM.Game.prototype, {
       f.open = true;
       f.locked = false;
       this.sound("unlock");
-      const xp = 15 * this.floor.number;
+      const xp = 15 * CM.storyOf(this.floor.number);   /* (plan 66: by story floor) */
       for (const h of this.alive()) h.xp += xp;
       this.say(`The runes fade, and the door swings open. (${xp} experience each.)`);
       this.remember("riddle", `A door on floor ${this.floor.number} asked: ${r.q} The answer was: ${r.a.toLowerCase()}.`);

@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The first five trials (v93.0, UPGRADE_PLAN_65.md release 3)
+  (src/js/69zzzf-trials.js, src/js/76zzzzzzzzzzza-trials.js, src/js/64-meta.js, UPGRADE_PLAN_65.md)
+  - The trials, the first five (plan 65, release 3): the Hourglass Room, where turning the glass lifts the bars on
+    four chests for twelve steps and no more, once a day; the Riddle Gallery, three statues standing in three doors,
+    each with one of the carvings' own riddles - a wrong answer wakes the statue; the Pendulum Hall, one flag wide
+    between two pits with blades sweeping it on a beat - cross on the off-beat, or take a cut and a square back, and
+    Space waits a beat; the Dark Room, where no torch will burn and only a light of the party's own making shows the
+    walls, with shadows asleep in the middle of it and the way on at the far wall; and the Frozen Pond, ice wall to
+    wall and a step that keeps going till a wall, a chest or dry stone stops it. The riddles' reward of experience
+    now follows the story floor, as the rest of the loot does. Forty-five rooms now.
+
 Six more stage pieces (v92.0, UPGRADE_PLAN_65.md release 2)
   (src/js/69zzze-stage2.js, src/js/76zzzzzzzzzzz-stage2.js, UPGRADE_PLAN_65.md)
   - Six more stage pieces (plan 65, release 2): the Fallen Star, a crater in the floor and the star itself, a lump of
