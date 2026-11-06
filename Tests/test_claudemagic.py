@@ -118,13 +118,13 @@ def test_a_run_saves_and_comes_back():
     """A run saves as it goes: after the page reloads it's there to continue, where it was; and it travels as text"""
     run(f"""const g = CM.game; CM.store.remove('run'); g.lastRun = null; g.newGame({json.dumps(SEED)});
       const open = []; g.floor.grid.forEach((row, y) => row.forEach((c, x) => {{ if (!c) open.push([x, y]); }}));
-      g.floor.pos = open[Math.floor(open.length / 2)]; g.floor.facing = 3; g.gold = 777; g.look(); g.saveRun()""")
+      g.floor.pos = open[Math.floor(open.length / 2)]; g.floor.facing = 3; g.gold = 777; g.look(); g.saveRun()""", timeout=90)   # a new game paints its art and plants: slow in software WebGL
     pos = ask("CM.game.floor.pos")
     support.pump(0.3)
     load(_page["view"], reload=True)
     assert ask("CM.game.mode") == "title" and ask("CM.game.canContinue()"), "the run wasn't there after a reload"
     assert ask("CM.game.lastRun.gold") == 777 and ask("CM.game.lastRun.seed") == SEED
-    assert ask("CM.game.continueRun()") and ask("CM.game.mode") == "explore"
+    assert ask("CM.game.continueRun()", timeout=90) and ask("CM.game.mode") == "explore"
     assert ask("CM.game.floor.pos") == pos and ask("CM.game.floor.facing") == 3 and ask("CM.game.gold") == 777
     assert ask("CM.game.floor.seen.length") > 0, "what the party had seen was forgotten"
     assert ask("CM.game.floor.number === CM.runFloor(CM.game.lastRun) && CM.game.light.kind === 'torch'"), "the floor, or the light, were forgotten"
