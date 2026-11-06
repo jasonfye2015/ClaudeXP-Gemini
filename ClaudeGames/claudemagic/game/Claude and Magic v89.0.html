@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v88.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v89.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "88.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "89.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -31636,6 +31636,124 @@ Object.assign(CM.Game.prototype, {
   { const ar0 = P.arrive; P.arrive = function (f, k) { if (f && f.type === "chair") { if (f.known) { this.say("The chair. You stand well clear of it this time."); return; } f.known = true; let bit = 0; for (const h of this.alive()) if (h.hp > 2) { h.hp = Math.max(1, h.hp - 2); bit++; } this.sound("trap"); this.say(bit ? "The chair is a trap: a shock runs up through the floor and every one of you (-2). He did not like visitors." : "The chair is a trap, and it snaps at nothing."); return; } return ar0.call(this, f, k); }; }
 }
 
+// ---- 69zzzc-rooms4.js ----
+"use strict";
+// Set-piece rooms, the last seven (UPGRADE_PLAN_64.md, release 4): the Mirror Hall, the Cold Store, the Tilting Floor,
+// the Puzzle of Lamps, the Spider Hollow, the Kennel and the Hall of Fame Annex - templates for 69zzz-setpieces.js
+// with letters of their own: i a mirror (Space looks, Space again strikes it: a shard to carry, and the party's own
+// shades step out of the glass), f a hook with a meal on it (free; the last one taken wakes what sleeps in the ice),
+// l the wraith in the ice (a sight till then), a a tilting plate (stepped, the floor leans; stepped in the carving's
+// order the chest's bar draws back; stepped wrong, a pit opens under the plate across the room for one turn), k a
+// carving (the room's rule, read), g a lamp (Space lights or douses it; the carving's pattern opens the secret door,
+// the wrong set of the same count puts them all out and wakes a wraith, once), j a cocoon (cut: a bound adventurer
+// in one, and the egg sacs hatch), 1 an egg sac, 7 the spider's ledge (a sight), 2 an iron cage (a hound in every
+// other one), 3 the kennel's lever (every cage at once: one fight), 4 a hook with the kennel-master's whistle (a
+// trinket), 5 a plaque with a name from the memorial, 6 the bell rung for them (and the chest's lid lifts), 9 a chest
+// sealed till the room's rule is met. Every hazard is bounded, nothing is solid, and every room keeps its plain door.
+{ CM.TRINKETS.whistle = { name: "The Kennel-master's Whistle", what: "+1 Luck: the hounds know its note, and so does your own dog", props: { stats: { luck: 1 } } };
+  CM.BASES[CM.TRINKETS.whistle.name] = { id: CM.TRINKETS.whistle.name, kind: "trinket", slot: "trinket", tier: Object.keys(CM.TRINKETS).length, group: "trinket", trinket: "whistle" };
+  const SP4 = [
+    { name: "the Mirror Hall", min: 8, bands: [3, 6], line: "Two rows of pillars down a long room, and at the far end a mirror taller than a man in a black frame. Your own lights come down the hall to meet you in it.",
+      rows: ["#######", "#..i..#", "#.....#", "#.#.#.#", "#.....#", "#.#.#.#", "#.....#", "#.#.#.#", "#.....#", "#.#.#.#", "#.....#", "#.....#", "###D###"] },
+    { name: "the Cold Store", min: 2, line: "The cold comes out to meet you at the door. Frost on every wall, meat on hooks along them, and at the back, on a step of ice, something that was put here to keep too.",
+      rows: ["########", "#f.RR.f#", "#..Rl..#", "#......#", "#......#", "#f....f#", "#......#", "###D####"] },
+    { name: "the Tilting Floor", min: 5, line: "A square room with a chest in the middle of it, and four plates in the floor about the chest, worn by feet. The whole floor rings hollow underfoot.",
+      rows: ["#########", "#.......#", "#...a...#", "#.......#", "#.a.9.a.#", "#.......#", "#...a...#", "#...k...#", "###D#####"], sealed: "held down by a stone bar, till the plates are stepped in their order" },
+    { name: "the Puzzle of Lamps", min: 4, line: "Five lamps on the far wall, all of them out, and a carving under them in the old hand. There is a draught from somewhere that is not the door.",
+      rows: ["###########", "#g.g.g.g.g#", "#.........#", "S....k....#", "#.........#", "#.........#", "#####D#####"] },
+    { name: "the Spider Hollow", min: 3, bands: [0, 5, 8], line: "Webs from floor to roof in every corner, thick as sailcloth. Shapes hang in them, wrapped; round sacs, grey and soft, stand along the floor; and up on a ledge, something waits with its legs drawn in.",
+      rows: ["##########", "#j......j#", "#..1..1..#", "#...RR...#", "#...R7...#", "#.1....1.#", "#........#", "#j..1...j#", "#........#", "###D######"] },
+    { name: "the Kennel", min: 6, bands: [2, 7], line: "Iron cages along both walls, and the smell of iron and dog. Half the cages have something in them, and it has heard you. A lever stands by the far wall, and a hook beside it.",
+      rows: ["########", "#2....2#", "#......#", "#2....2#", "#......#", "#2....2#", "#......#", "#..3.4.#", "#......#", "###D####"] },
+    { name: "the Hall of Fame Annex", min: 6, line: "Plaques on the walls of a small square room, a bell in the middle, and a chest at the far end. The names on the plaques are names you know, because you gave them.",
+      rows: ["#########", "#5.5.5.5#", "#.......#", "#5..6..5#", "#.......#", "#5..9..5#", "#.......#", "#5.5.5.5#", "###D#####"], sealed: "its lid held fast, till the bell is rung for them" },
+  ];
+  for (const r of SP4) { r.ownDice = true; if (!CM.SETPIECES.some((t) => t.name === r.name)) CM.SETPIECES.push(r); }
+  const roomKey = (fl, T) => `${fl.number}:${T.name}`, H = (fl, salt) => CM.hashSeed(`${fl.number}:${salt}`) >>> 0;
+  const nth = (fl, type, room, where = "things") => Object.values(fl[where] || {}).filter((t) => t.type === type && t.room === room).length;
+  const raise = (fl, k) => { fl.levels = fl.levels || {}; fl.levels[k] = [CM.LEVELS ? CM.LEVELS.dais : 0.3, 1]; };
+  const kind = (...names) => { for (const n of names) { const k = CM.monsterKind(n); if (k) return k; } return CM.MONSTERS[0]; };
+  CM.SETPIECE_LETTERS = Object.assign(CM.SETPIECE_LETTERS || {}, {
+    i: (fl, x, y, k) => { fl.things[k] = { type: "mirror" }; },
+    f: (fl, x, y, k, T, R) => { fl.things[k] = { type: "meathook", room: roomKey(fl, T), meat: CM.meat(R.pick(["Deer", "Boar", "Mutton", "Goose"])) }; },
+    l: (fl, x, y, k, T) => { raise(fl, k); fl.things[k] = { type: "icewraith", room: roomKey(fl, T) }; },
+    a: (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.features[k] = { type: "tiltplate", known: true, room, n: nth(fl, "tiltplate", room, "features") }; },
+    k: (fl, x, y, k, T) => { fl.things[k] = { type: "carving", room: roomKey(fl, T), of: T.name }; },
+    g: (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.things[k] = { type: "brazier", lit: false, lamp: nth(fl, "brazier", room), room }; },
+    j: (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cocoon", room), who = H(fl, "cocoon") % 4; fl.things[k] = { type: "cocoon", room, n, hero: n === who ? CM.makeRecruit(Math.max(1, Math.floor(fl.number / 2)), R) : null, gear: n === (who + 2) % 4 ? CM.makeItem(fl.number, R, undefined, 2) : null }; },
+    "1": (fl, x, y, k, T) => { fl.things[k] = { type: "eggsac", room: roomKey(fl, T) }; },
+    "7": (fl, x, y, k) => { raise(fl, k); fl.things[k] = { type: "spiderperch" }; },
+    "2": (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cage", room); fl.things[k] = { type: "cage", room, n, hound: (H(fl, "cages") + n) % 2 === 0 ? CM.makeMonster(kind("Iron Hound", "Wolf", "Giant Rat"), Math.max(1, fl.number), R) : null }; },
+    "3": (fl, x, y, k, T) => { fl.things[k] = { type: "kennellever", room: roomKey(fl, T) }; },
+    "4": (fl, x, y, k) => { fl.things[k] = { type: "hook", item: CM.trinket("whistle") }; },
+    "5": (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.things[k] = { type: "plaque", room, n: nth(fl, "plaque", room) }; },
+    "6": (fl, x, y, k, T) => { fl.things[k] = { type: "memorialbell", room: roomKey(fl, T) }; },
+    "9": (fl, x, y, k, T, R) => { fl.things[k] = { type: "chest", gold: R.int(30, 70) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 2)], trap: null, sealed: T.name, note: T.sealed || "sealed" }; },
+  });
+  const P = CM.Game.prototype;
+  const groupAt = (game, fl, group) => { const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; const was = fl.things[sq]; fl.things[sq] = th; game.startCombat(sq, th); if (fl.things[sq] === th) { if (was) fl.things[sq] = was; else delete fl.things[sq]; } };
+  const inRoom = (fl, room, type, where = "things") => Object.entries(fl[where] || {}).filter(([, t]) => t.type === type && t.room === room);
+  const ORD = ["first", "second", "third", "fourth", "fifth"], pop = (n) => { let c = 0; for (let i = 0; i < 5; i++) if (n & (1 << i)) c++; return c; };
+  const lampPattern = (fl) => { let p = H(fl, "lamps") % 32; while (pop(p) < 2 || pop(p) > 4) p = (p * 7 + 3) % 32; return p; };
+  const lampsOf = (fl, room) => inRoom(fl, room, "brazier").filter(([, t]) => t.lamp !== undefined).sort(([a], [b]) => Number(a.split(",")[0]) - Number(b.split(",")[0]));
+  const andList = (words) => words.join(", ").replace(/, ([^,]*)$/, " and $1");
+  const lampWords = (p) => { const w = []; for (let i = 0; i < 5; i++) if (p & (1 << i)) w.push(ORD[i]); return andList(w); };
+  const chestOf = (fl, room) => Object.entries(fl.things).find(([, t]) => t.type === "chest" && t.sealed === room.split(":").slice(1).join(":")) || null;
+  const platesOf = (fl, room) => inRoom(fl, room, "tiltplate", "features").map(([k, f]) => ({ k, f, x: Number(k.split(",")[0]), y: Number(k.split(",")[1]) }));
+  const plateWord = (p, c) => (p.y < c[1] ? "north" : p.y > c[1] ? "south" : p.x < c[0] ? "west" : "east");
+  const tiltOrder = (fl, room) => { const plates = platesOf(fl, room).sort((a, b) => a.f.n - b.f.n), R = new CM.Random(H(fl, "tiltorder")), order = plates.map((p) => p.f.n); for (let i = order.length - 1; i > 0; i--) { const j = R.int(0, i); const t = order[i]; order[i] = order[j]; order[j] = t; } return order; };
+  const centreOf = (fl, room) => { const ch = chestOf(fl, room); if (ch) return ch[0].split(",").map(Number); const ps = platesOf(fl, room); return [Math.round(ps.reduce((s, p) => s + p.x, 0) / Math.max(1, ps.length)), Math.round(ps.reduce((s, p) => s + p.y, 0) / Math.max(1, ps.length))]; };
+  CM.tiltOrderOf = tiltOrder; CM.lampPatternOf = lampPattern;   // (for the tests)
+  const LINES = { mirror: (t) => (t.broken ? "The frame, and black glass in splinters on the floor." : "A mirror taller than a man, in a black frame. Your own faces look back, a half-breath late. (Space to look closer)"),
+    meathook: (t) => `${t.meat.name}, hung on an iron hook, hard with frost and good as the day it was hung. (Space to take it)`, icewraith: () => "Something stands in the ice at the back, grey and still, a long way behind its own face. It does not stir.",
+    carving: (t) => `A carving in the wall${t.of === "the Tilting Floor" ? ": four plates, and an order to them" : ": five lamps, some of them burning"}. (Space to read it)`, cocoon: (t) => (t.cut ? "A cocoon, cut open and empty." : "A shape wrapped in web, hung from the roof, the size of a person. (Space to cut it)"),
+    eggsac: () => "A round grey sac, soft, as high as your knee. Something in it shifts when your light comes near.", spiderperch: () => "A ledge, high up, and a shape on it with eight legs drawn in. It has not moved since you came in, and you would like to keep it that way.",
+    cage: (t) => (t.hound ? "An iron cage, and in it a hound of iron and sinew, watching you with its head low. The bars hold it. (The lever by the far wall works them)" : t.open ? "An iron cage, its door swung open." : "An iron cage with old bones in it. Empty, but for those."),
+    kennellever: (t) => (t.thrown ? "The lever, thrown, and the cages open." : "An iron lever, waist high, that works every cage at once. (Space to throw it)"), hook: (t) => (t.item ? `A hook by the lever, and on it ${t.item.name}. (Space to take it)` : "An empty hook."),
+    plaque: () => "A plaque on the wall, with a name cut in it. (Space to read it)", memorialbell: () => "A bell on a stand, with a rope. It is rung for the dead. (Space to ring it)" };
+  { const l0 = P.look; P.look = function (...a) { const out = l0.apply(this, a); const fl = this.floor; if (fl && this.mode === "explore" && !this.perch && fl.things) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`;
+        for (const k of [here, ahead]) { const t = fl.things[k]; if (!t) continue; if (t.type === "chest" && t.sealed && k === here) { this.say(`A chest, ${t.note}.`); break; } if (LINES[t.type]) { const line = LINES[t.type](t); if (line) this.say(line); break; } } } return out; }; }
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`;
+        { const t = fl.things[here]; if (t && t.type === "chest" && t.sealed) { this.sound("bump"); this.say(`The chest is ${t.note}.`); return true; } }
+        for (const k of [here, ahead]) { const t = fl.things[k]; if (!t) continue;
+          if (t.type === "mirror") { if (t.broken) { this.say("The frame, and black glass in splinters."); return true; } if (!t.seen) { t.seen = true; this.say("You come close. Four faces look back at you out of the glass, and a half-breath late - and behind them, in the mirror's hall, the lights are not yours. (Space again to strike it)"); return true; }
+            t.broken = true; this.bag.push(CM.trinket("mirrorshard")); const R = new CM.Random(CM.hashSeed(`${this.seed}:mirror:${fl.number}`)), group = this.alive().map((h) => { const m = CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R); m.name = `Shade of ${h.name}`; return m; }); this.sound("shatter"); this.say("The glass goes in a ring of cracks from the blow, and comes down. One shard you keep. The faces do not come down with it: they step out of the frame, grey, and yours."); this.emit("change"); groupAt(this, fl, group); return true; }
+          if (t.type === "meathook") { this.bag.push(t.meat); const room = t.room; delete fl.things[k]; this.sound("coin"); const left = inRoom(fl, room, "meathook").length; if (left) { this.say(`You lift ${t.meat.name} off its hook. ${left} more hang${left === 1 ? "s" : ""} along the walls.`); this.emit("change"); return true; }
+            const W = inRoom(fl, room, "icewraith"); if (W.length) { for (const [wk] of W) delete fl.things[wk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:icewraith:${fl.number}`)); this.say("You lift the last of the meat off its hook, and the ice at the back cracks like a shot. The thing in it has been waiting for the larder to be empty."); this.emit("change"); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R)]); return true; } this.say(`You lift ${t.meat.name} off its hook, the last of them.`); this.emit("change"); return true; }
+          if (t.type === "icewraith") { this.say("The ice is a hand thick over it, and cold enough to burn. It does not stir. Yet."); return true; }
+          if (t.type === "carving") { if (t.of === "the Tilting Floor") { const c = centreOf(fl, t.room), plates = platesOf(fl, t.room), order = tiltOrder(fl, t.room), words = order.map((n) => { const p = plates.find((q) => q.f.n === n); return p ? plateWord(p, c) : "?"; }); this.say(`The carving: four plates about a chest, and an order cut under them - ${words.join(", ")}. Step them so, and the bar draws back; step them wrong, and the floor remembers.`); }
+            else { const p = lampPattern(fl); this.say(`The carving: five lamps in a row, and under them the ${lampWords(p)} burning, counted from the west, the rest dark. "So the wall opens. Light them otherwise, and the cold comes in."`); } if (this.markRead) this.markRead(`carving.${t.of}`); return true; }
+          if (t.type === "brazier" && t.lamp !== undefined) { const E = this.ext("lamps"), S = (E[t.room] = E[t.room] || {}); t.lit = !t.lit; this.sound(t.lit ? "fire" : "snuff"); const lamps = lampsOf(fl, t.room), lit = lamps.reduce((m, [, q], i) => m | (q.lit ? 1 << i : 0), 0), want = lampPattern(fl); this.emit("change");
+            if (lit === want) { if (S.solved) { this.say(`The lamp ${t.lit ? "lights" : "goes out"}. The wall stands open already.`); return true; } S.solved = true; const r = CM.setPieceOf(fl, fl.pos[0], fl.pos[1]); let opened = 0; if (r) for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) { const f = fl.features[`${x},${y}`]; if (f && f.type === "secret" && !f.found) { f.found = true; fl.grid[y][x] = 0; opened++; } } this.sound("grind"); this.dirty = true; this.say(opened ? "The last lamp takes, and the five burn as the carving says - and in the wall a line of dark opens and widens: a door, where there was none." : "The five burn as the carving says. Somewhere in the stone something draws back, and the draught stops."); return true; }
+            if (pop(lit) === pop(want) && !S.failed) { S.failed = true; for (const [, q] of lamps) q.lit = false; this.sound("snuff"); this.say("The lamps go out together, all five, as if a breath had crossed them, and the cold that comes in behind it has a shape."); const R = new CM.Random(CM.hashSeed(`${this.seed}:lampwraith:${fl.number}`)); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R)]); return true; }
+            const which = ORD[lamps.findIndex(([q]) => q === k)] || ""; this.say(t.lit ? `The ${which} lamp takes the flame.` : `The ${which} lamp goes out.`); return true; }
+          if (t.type === "cocoon") { if (t.cut) { this.say("The cocoon, cut open and empty."); return true; } t.cut = true; const E = this.ext("hollow"), room = t.room; let said;
+            if (t.hero) { fl.things[k] = { type: "adventurer", hero: t.hero, freed: false }; said = "The web parts under the knife, and someone breathes inside it - alive, and bound hand and foot. (Space to cut them loose)"; } else if (t.gear) { this.bag.push(t.gear); said = `The web parts under the knife. A husk, dry as paper - and in its hands, ${t.gear.name}. You take it.`; t.gear = null; } else said = "The web parts under the knife. A husk, dry as paper, and nothing in it that was ever yours to want.";
+            const sacs = inRoom(fl, room, "eggsac"); if (sacs.length && !E[room]) { E[room] = true; for (const [sk] of sacs) delete fl.things[sk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:hatch:${fl.number}`)), group = []; for (let i = 0; i < Math.min(3, sacs.length); i++) group.push(CM.makeMonster(kind("Sporeling", "Giant Rat"), Math.max(1, fl.number), R)); this.say(`${said} And all round the room, at the sound, the sacs split.`); this.emit("change"); groupAt(this, fl, group); return true; }
+            this.sound("coin"); this.say(said); this.emit("change"); return true; }
+          if (t.type === "eggsac") { this.say("Soft, grey, and warm to the hand. Better left."); return true; }
+          if (t.type === "spiderperch") { this.say("It has not moved. You do not make it."); return true; }
+          if (t.type === "cage") { this.say(LINES.cage(t)); return true; }
+          if (t.type === "kennellever") { if (t.thrown) { this.say("The lever, thrown already; the cages stand open."); return true; } t.thrown = true; const cages = inRoom(fl, t.room, "cage"), group = cages.map(([, c]) => c.hound).filter(Boolean); for (const [, c] of cages) { c.open = true; c.hound = null; } this.sound("lever"); if (this.count) this.count("kennelsOpened", 1); this.emit("change");
+            if (!group.length) { this.say("The lever goes over with a clang, and every cage door swings. Nothing comes out of them but the smell."); return true; } this.say(`The lever goes over with a clang, and every cage door swings at once. ${group.length} hound${group.length === 1 ? "" : "s"} of iron and sinew come out of them low and fast, and together.`); groupAt(this, fl, group); return true; }
+          if (t.type === "hook") { if (!t.item) { this.say("An empty hook."); return true; } this.bag.push(t.item); this.sound("coin"); this.say(`You take ${t.item.name} off its hook.${t.item.trinket === "whistle" ? " A short bone whistle on a cord, the kind a kennel-master wears: the hounds know its note, and so will your own dog." : ""}`); t.item = null; this.emit("change"); return true; }
+          if (t.type === "plaque") { const m = (this.memorial || [])[t.n]; this.say(m ? `${m.name} the ${m.cls || "adventurer"}${m.level ? `, level ${m.level}` : ""}: fell on floor ${m.floor || "?"}${m.date ? `, ${m.date}` : ""}.${m.epitaph ? ` "${m.epitaph}"` : ""}` : "A plaque with no name on it yet. The stone is smooth and waiting."); return true; }
+          if (t.type === "memorialbell") { const plaques = inRoom(fl, t.room, "plaque").length || 12, names = (this.memorial || []).slice(0, plaques); this.sound("lever"); const ch = chestOf(fl, t.room);
+            if (names.length) this.say(`You ring the bell, once for each name: ${andList(names.map((m) => m.name))}. The note goes down the hall and does not come back.`); else this.say("You ring the bell, and it rings for no one yet. May it stay so a while.");
+            if (ch && ch[1].sealed) { delete ch[1].sealed; ch[1].note = "opened by the bell"; this.say("At the far end, the chest's lid lifts a finger's width and settles: it is open."); } if (this.count) this.count("bellsRung", 1); this.emit("change"); return true; } } }
+      return u0.apply(this, a); }; }
+  // the plates that tilt, and the pit that opens across the room for a turn
+  { const ar0 = P.arrive; P.arrive = function (f, k) { const fl = this.floor;
+      if (f && f.type === "tiltpit") { fl.features[k] = f.under; delete fl.tiltPit; let hurt = 0; for (const h of this.alive()) if (h.hp > 2) { h.hp = Math.max(1, h.hp - 2); hurt++; } this.sound("trap"); this.say(hurt ? "The pit is still open under the plate when you step on it: a short drop onto stone, and a hard one (-2), and the floor comes up again behind you." : "The pit is still open under the plate: a short drop, and the floor comes up again behind you."); return; }
+      if (f && f.type === "tiltplate") { const room = f.room, c = centreOf(fl, room), plates = platesOf(fl, room), me = plates.find((p) => p.k === k), E = this.ext("tilting"), S = (E[room] = E[room] || { seq: [] }), dir = me ? plateWord(me, c) : "north"; this.emit("tilt", { dir, dx: Math.sign((me ? me.x : 0) - c[0]), dy: Math.sign((me ? me.y : 0) - c[1]) }); this.sound("grind");
+        const ch = chestOf(fl, room); if (!ch || !ch[1].sealed) { this.say("The plate sinks, and the floor leans with it a moment, and comes back. The bar is drawn; it is only a floor now."); return; }
+        const order = tiltOrder(fl, room), next = order[S.seq.length]; if (me && me.f.n === next) { S.seq.push(me.f.n); if (S.seq.length >= order.length) { delete ch[1].sealed; ch[1].note = "its bar drawn back"; this.sound("unlock"); this.say(`The ${dir} plate sinks, the floor leans and comes back - and under the chest a stone bar draws back with a sound like a long breath. It is open.`); this.emit("change"); } else this.say(`The ${dir} plate sinks under you, and the whole floor leans toward it a moment, and comes level. Something under the chest clicks, once.`); return; }
+        S.seq = []; const across = plates.filter((p) => p !== me).sort((a, b) => (Math.abs(b.x - (me ? me.x : 0)) + Math.abs(b.y - (me ? me.y : 0))) - (Math.abs(a.x - (me ? me.x : 0)) + Math.abs(a.y - (me ? me.y : 0))))[0];
+        if (across && across.f.type === "tiltplate") { fl.features[across.k] = { type: "tiltpit", under: across.f, room, fresh: true }; fl.tiltPit = across.k; } this.say(`The ${dir} plate sinks, and the floor leans hard - and across the room the ${across ? plateWord(across, c) : "far"} plate drops away into a pit. The floor remembers. Whatever had clicked under the chest clicks back.`); return; }
+      return ar0.call(this, f, k); }; }
+  { const m0 = P.move; P.move = function (rel) { const fl = this.floor, out = m0.call(this, rel); if (fl && this.floor === fl && fl.tiltPit) { const k = fl.tiltPit, f = fl.features[k]; if (f && f.type === "tiltpit" && f.fresh) delete f.fresh;   /* (opened by this very step: it stays through the next) */ else if (f && f.type === "tiltpit" && k !== `${fl.pos[0]},${fl.pos[1]}`) { fl.features[k] = f.under; this.say("Behind you, the pit's floor comes up again with a grinding, and the plate lies flat."); } if (!fl.features[k] || fl.features[k].type !== "tiltpit") delete fl.tiltPit; } return out; }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -46794,6 +46912,65 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
   { const st0 = CM.Air.prototype.step; CM.Air.prototype.step = function (dt, env) { const out = st0.call(this, dt, env); for (const p of this.parts) { if (!p.fish) continue; const cx = p.home[0] + 0.5, cz = p.home[1] + 0.5; if (Math.abs(p.x - cx) > 0.42 || Math.abs(p.z - cz) > 0.42) { p.vx = (cx - p.x) * 0.9; p.vz = (cz - p.z) * 0.9; } } return out; }; }
   // the look line: a chest's note
   { const d0 = CM.UI.prototype.drawSky; if (d0) CM.UI.prototype.drawSky = function (...a) { const out = d0.apply(this, a); try { const g = this.game, fl = g && g.floor; if (!fl) return out; const t = fl.things[`${fl.pos[0]},${fl.pos[1]}`], el = this.$ && this.$("#view .sky .wxtext"); if (el && t && t.type === "chest" && t.note && !el.textContent.includes(t.note)) el.textContent += ` - a chest ${t.note}`; } catch (e) { /* (quiet) */ } return out; }; }
+}
+
+// ---- 76zzzzzzzzzzx-rooms4.js ----
+"use strict";
+// Set-piece rooms - the window's side, release 4 (UPGRADE_PLAN_64.md): pictures for every room thing that had none
+// (the map table, the nest, the bell, the scale, the coffin, the troll, the painter, the orrery, the desk - and the
+// new mirror, meat hooks, the wraith in the ice, the carving, cocoons, egg sacs, the spider on its ledge, the cages
+// with their hounds, the lever, the hook, the plaques and the memorial bell), painted small here and added to every
+// art set; the floor's lean when a plate tilts (the camera's roll); frost on the Cold Store's walls and thick webs in
+// the Spider Hollow's corners, as decals.
+{ const S = 64, r = Math.random;
+  const stone = (p, x, y, w, h, c = "#6A645C") => { p.fillStyle = c; p.fillRect(x, y, w, h); p.strokeStyle = "rgba(0,0,0,0.45)"; p.lineWidth = 2; p.strokeRect(x, y, w, h); };
+  const PICS = {
+    "sp:mirror": (p) => { stone(p, 8, 2, 48, 60, "#1C1A1E"); p.fillStyle = "#8EA0B8"; p.fillRect(13, 7, 38, 50); const g = p.createLinearGradient(13, 7, 51, 57); g.addColorStop(0, "rgba(255,255,255,0.55)"); g.addColorStop(0.5, "rgba(255,255,255,0.05)"); g.addColorStop(1, "rgba(200,220,255,0.4)"); p.fillStyle = g; p.fillRect(13, 7, 38, 50); p.strokeStyle = "rgba(255,255,255,0.6)"; p.lineWidth = 2; p.beginPath(); p.moveTo(18, 50); p.lineTo(44, 12); p.stroke(); },
+    "sp:meat": (p) => { p.strokeStyle = "#3A3632"; p.lineWidth = 3; p.beginPath(); p.moveTo(32, 0); p.lineTo(32, 14); p.arc(36, 14, 4, Math.PI, 0, true); p.stroke(); p.fillStyle = "#8A3A3A"; p.beginPath(); p.ellipse(32, 38, 14, 22, 0.1, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C86A5A"; p.beginPath(); p.ellipse(28, 34, 6, 12, 0.2, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(220,235,255,0.55)"; p.beginPath(); p.ellipse(32, 24, 12, 5, 0, 0, Math.PI * 2); p.fill(); },
+    "sp:ice": (p) => { const g = p.createLinearGradient(0, 0, 0, S); g.addColorStop(0, "rgba(200,230,255,0.75)"); g.addColorStop(1, "rgba(120,170,220,0.85)"); p.fillStyle = g; p.beginPath(); p.moveTo(10, 62); p.lineTo(6, 20); p.lineTo(22, 4); p.lineTo(44, 2); p.lineTo(58, 22); p.lineTo(54, 62); p.closePath(); p.fill(); p.strokeStyle = "rgba(255,255,255,0.8)"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(20, 10); p.lineTo(28, 40); p.lineTo(24, 58); p.moveTo(40, 8); p.lineTo(36, 30); p.lineTo(44, 52); p.stroke(); },
+    "sp:carving": (p) => { stone(p, 6, 6, 52, 52, "#5A5650"); p.fillStyle = "#2A2824"; for (let i = 0; i < 5; i++) p.fillRect(14 + i * 8, 20, 4, 10); p.fillRect(14, 38, 36, 3); p.fillRect(14, 46, 24, 3); },
+    "sp:cocoon": (p) => { p.strokeStyle = "rgba(230,230,235,0.8)"; p.lineWidth = 2; p.beginPath(); p.moveTo(32, 0); p.lineTo(32, 8); p.stroke(); p.fillStyle = "#D8D8D2"; p.beginPath(); p.ellipse(32, 36, 14, 26, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(120,120,125,0.7)"; p.lineWidth = 1.5; for (let i = 0; i < 7; i++) { p.beginPath(); p.moveTo(18, 14 + i * 7); p.quadraticCurveTo(32, 18 + i * 7, 46, 14 + i * 7); p.stroke(); } },
+    "sp:eggsac": (p) => { p.fillStyle = "#B8B4A8"; p.beginPath(); p.ellipse(32, 40, 20, 22, 0, 0, Math.PI * 2); p.fill(); p.fillStyle = "rgba(255,255,255,0.35)"; p.beginPath(); p.ellipse(26, 32, 7, 9, -0.4, 0, Math.PI * 2); p.fill(); p.strokeStyle = "rgba(90,90,80,0.6)"; p.lineWidth = 1.5; p.beginPath(); p.moveTo(32, 18); p.lineTo(34, 60); p.stroke(); },
+    "sp:spider": (p) => { p.fillStyle = "#1A1612"; p.beginPath(); p.ellipse(32, 36, 11, 14, 0, 0, Math.PI * 2); p.fill(); p.beginPath(); p.arc(32, 20, 6, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#1A1612"; p.lineWidth = 3; for (const s of [-1, 1]) for (let i = 0; i < 4; i++) { p.beginPath(); p.moveTo(32, 26 + i * 5); p.lineTo(32 + s * (18 + i * 2), 14 + i * 9); p.lineTo(32 + s * (26 - i), 30 + i * 8); p.stroke(); } p.fillStyle = "#FF6050"; p.fillRect(28, 18, 3, 3); p.fillRect(33, 18, 3, 3); },
+    "sp:cage": (p) => { p.fillStyle = "rgba(20,18,16,0.35)"; p.fillRect(8, 6, 48, 56); p.strokeStyle = "#4A4640"; p.lineWidth = 3; p.strokeRect(8, 6, 48, 56); for (let i = 1; i < 6; i++) { p.beginPath(); p.moveTo(8 + i * 8, 6); p.lineTo(8 + i * 8, 62); p.stroke(); } p.beginPath(); p.moveTo(8, 34); p.lineTo(56, 34); p.stroke(); },
+    "sp:lever": (p) => { stone(p, 20, 44, 24, 18, "#4A4640"); p.strokeStyle = "#8A8070"; p.lineWidth = 5; p.beginPath(); p.moveTo(32, 46); p.lineTo(44, 8); p.stroke(); p.fillStyle = "#A83030"; p.beginPath(); p.arc(44, 8, 5, 0, Math.PI * 2); p.fill(); },
+    "sp:hook": (p) => { p.strokeStyle = "#3A3632"; p.lineWidth = 3; p.beginPath(); p.moveTo(32, 4); p.lineTo(32, 20); p.arc(36, 20, 4, Math.PI, 0, true); p.stroke(); p.strokeStyle = "#D8C8A0"; p.lineWidth = 2; p.beginPath(); p.moveTo(40, 24); p.quadraticCurveTo(48, 40, 36, 50); p.stroke(); p.fillStyle = "#E8DCC0"; p.fillRect(30, 46, 14, 5); },
+    "sp:plaque": (p) => { stone(p, 8, 16, 48, 32, "#8A7A5A"); p.fillStyle = "#3A3024"; p.fillRect(14, 24, 28, 3); p.fillRect(14, 31, 36, 3); p.fillRect(14, 38, 20, 3); },
+    "sp:bell": (p) => { p.strokeStyle = "#5A4A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(32, 0); p.lineTo(32, 12); p.stroke(); p.fillStyle = "#B08A3A"; p.beginPath(); p.moveTo(18, 48); p.quadraticCurveTo(20, 14, 32, 12); p.quadraticCurveTo(44, 14, 46, 48); p.closePath(); p.fill(); p.fillStyle = "#6A5020"; p.fillRect(16, 46, 32, 5); p.beginPath(); p.arc(32, 56, 4, 0, Math.PI * 2); p.fill(); },
+    "sp:scale": (p) => { p.strokeStyle = "#B08A3A"; p.lineWidth = 3; p.beginPath(); p.moveTo(32, 60); p.lineTo(32, 10); p.moveTo(8, 18); p.lineTo(56, 14); p.moveTo(8, 18); p.lineTo(8, 40); p.moveTo(56, 14); p.lineTo(56, 44); p.stroke(); p.fillStyle = "#B08A3A"; p.beginPath(); p.ellipse(8, 42, 10, 3, 0, 0, Math.PI * 2); p.ellipse(56, 46, 10, 3, 0, 0, Math.PI * 2); p.fill(); p.fillRect(20, 58, 24, 4); p.fillStyle = "#F0E080"; p.beginPath(); p.arc(56, 42, 3, 0, Math.PI * 2); p.fill(); },
+    "sp:coffin": (p) => { stone(p, 6, 18, 52, 40, "#6A645C"); stone(p, 4, 12, 56, 10, "#7A746C"); p.fillStyle = "#3A3632"; p.fillRect(14, 30, 36, 3); p.fillRect(14, 38, 24, 3); p.fillRect(14, 46, 30, 3); },
+    "sp:orrery": (p) => { p.strokeStyle = "#B08A3A"; p.lineWidth = 2; for (const rr of [10, 18, 26]) { p.beginPath(); p.ellipse(32, 30, rr, rr * 0.45, 0, 0, Math.PI * 2); p.stroke(); } p.beginPath(); p.moveTo(32, 62); p.lineTo(32, 30); p.stroke(); p.fillStyle = "#F0D060"; p.beginPath(); p.arc(32, 30, 4, 0, Math.PI * 2); p.fill(); p.fillStyle = "#C0C8E0"; p.beginPath(); p.arc(50, 34, 2.5, 0, Math.PI * 2); p.arc(20, 22, 2, 0, Math.PI * 2); p.fill(); p.fillStyle = "#6A5020"; p.fillRect(20, 58, 24, 5); },
+    "sp:desk": (p) => { stone(p, 6, 26, 52, 8, "#5A4030"); p.fillStyle = "#4A3020"; p.fillRect(10, 34, 6, 26); p.fillRect(48, 34, 6, 26); p.fillStyle = "#E8E0C8"; p.fillRect(18, 22, 14, 10); p.fillRect(34, 20, 12, 10); p.fillStyle = "#2A2420"; p.fillRect(21, 25, 8, 1); p.fillRect(21, 28, 6, 1); },
+    "sp:table": (p) => { stone(p, 4, 24, 56, 8, "#5A4030"); p.fillStyle = "#4A3020"; p.fillRect(8, 32, 6, 28); p.fillRect(50, 32, 6, 28); p.fillStyle = "#D8CCA8"; p.fillRect(10, 18, 44, 8); p.strokeStyle = "#6A4A30"; p.lineWidth = 1; p.beginPath(); p.moveTo(14, 22); p.lineTo(26, 20); p.lineTo(38, 24); p.lineTo(50, 21); p.stroke(); },
+    "sp:nest": (p) => { p.fillStyle = "#6A5030"; p.beginPath(); p.ellipse(32, 44, 24, 12, 0, 0, Math.PI * 2); p.fill(); p.strokeStyle = "#3A2A18"; p.lineWidth = 1.5; for (let i = 0; i < 9; i++) { p.beginPath(); p.moveTo(10 + i * 5, 50); p.lineTo(16 + i * 5, 34); p.stroke(); } p.fillStyle = "#E8E0C8"; p.beginPath(); p.ellipse(28, 38, 5, 6, 0, 0, Math.PI * 2); p.ellipse(37, 39, 5, 6, 0, 0, Math.PI * 2); p.fill(); },
+  };
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look); for (const name of Object.keys(PICS)) { if (set.index[name] !== undefined) continue; const c = document.createElement("canvas"); c.width = c.height = S; PICS[name](c.getContext("2d")); set.index[name] = set.layers.length; set.layers.push(c); } return set; }; }
+  const has = (L) => { const R0 = CM.renderer; return R0 && R0.index && R0.index[L] !== undefined; };
+  const mon = (name, fallback) => (has(`monster:${name}`) ? `monster:${name}` : fallback);
+  CM.thingSprites = Object.assign(CM.thingSprites || {}, {
+    maptable: (t, x, y) => [{ x, y, layer: "sp:table", w: 0.9, h: 0.6 }], nest: (t, x, y) => [{ x, y, layer: "sp:nest", w: 0.7, h: 0.45 }],
+    bell: (t, x, y, now) => [{ x, y, layer: "sp:bell", w: 0.5, h: 0.8, lift: 0.1, dx: Math.sin(now / 700) * 0.01 }], scale: (t, x, y) => [{ x, y, layer: "sp:scale", w: 0.8, h: 0.8, glow: t.taken ? 0 : 0.2 }],
+    sarcophagus: (t, x, y) => [{ x, y, layer: "sp:coffin", w: 0.95, h: 0.6, shade: t.opened ? 0.7 : 1 }], troll: (t, x, y) => [{ x, y, layer: mon("Troll", "npc:hermit"), w: 1.0, h: 1.15 }],
+    painter: (t, x, y, now) => [{ x, y, layer: "npc:ghost", w: 0.75, h: 0.85, alpha: t.done ? 0 : 0.7, glow: 0.3, lift: 0.03 + Math.sin(now / 1100 + x) * 0.02 }, { x, y, layer: "sp:carving", w: 0.5, h: 0.6, dx: 0.3, dz: -0.2 }],
+    orrery: (t, x, y, now) => [{ x, y, layer: "sp:orrery", w: 0.9, h: 0.9, glow: 0.2 + 0.1 * Math.sin(now / 900) }], desk: (t, x, y) => [{ x, y, layer: "sp:desk", w: 0.9, h: 0.6 }],
+    mirror: (t, x, y, now) => (t.broken ? [{ x, y, layer: "fx:shard", w: 0.6, h: 0.3, flat: true, shade: 0.6 }] : [{ x, y, layer: "sp:mirror", w: 0.8, h: 1.1, glow: 0.25 + 0.1 * Math.sin(now / 800) }]),
+    meathook: (t, x, y) => [{ x, y, layer: "sp:meat", w: 0.45, h: 0.75, lift: 0.2 }], icewraith: (t, x, y) => [{ x, y, layer: mon("Wraith", "npc:ghost"), w: 0.75, h: 0.9, alpha: 0.55, shade: 0.8 }, { x, y, layer: "sp:ice", w: 0.95, h: 1.0, alpha: 0.8, glow: 0.15 }],
+    carving: (t, x, y) => [{ x, y, layer: "sp:carving", w: 0.6, h: 0.7 }], cocoon: (t, x, y, now) => (t.cut ? [{ x, y, layer: "sp:cocoon", w: 0.35, h: 0.5, alpha: 0.5, lift: 0.3 }] : [{ x, y, layer: "sp:cocoon", w: 0.55, h: 1.0, lift: 0.05, dx: Math.sin(now / 1500 + x) * 0.015 }]),
+    eggsac: (t, x, y, now) => [{ x, y, layer: "sp:eggsac", w: 0.5 + 0.01 * Math.sin(now / 600 + y), h: 0.5 }], spiderperch: (t, x, y, now) => [{ x, y, layer: "sp:spider", w: 0.8, h: 0.7, lift: 0.05 + 0.005 * Math.sin(now / 400) }],
+    cage: (t, x, y, now) => { const out = []; if (t.hound) out.push({ x, y, layer: mon(t.hound.kind || "Iron Hound", "monster:Giant Rat"), w: 0.6, h: 0.55, lift: 0.0, dx: Math.sin(now / 500 + x) * 0.03 }); else if (!t.open) out.push({ x, y, layer: "bones", w: 0.4, h: 0.3, shade: 0.7 }); out.push({ x, y, layer: "sp:cage", w: 0.9, h: 0.95, alpha: t.open ? 0.35 : 0.9 }); return out; },
+    kennellever: (t, x, y) => [{ x, y, layer: "sp:lever", w: 0.5, h: 0.7, shade: t.thrown ? 0.75 : 1 }], hook: (t, x, y) => [{ x, y, layer: "sp:hook", w: 0.45, h: 0.6, lift: 0.25, alpha: t.item ? 1 : 0.6 }],
+    plaque: (t, x, y) => [{ x, y, layer: "sp:plaque", w: 0.55, h: 0.4, lift: 0.3 }], memorialbell: (t, x, y, now) => [{ x, y, layer: "sp:bell", w: 0.55, h: 0.85, lift: 0.1, dx: Math.sin(now / 900) * 0.008 }],
+  });
+  // the floor leans when a plate tilts
+  { const hook = () => { const g = CM.game; if (!g || !g.on || g._tiltHooked) return; g._tiltHooked = true; g.on("tilt", (ev) => { const ren = CM.renderer; if (!ren || !ren.rollTo) return; const fl = g.floor, f = fl ? fl.facing : 0, right = CM.DIRS[(f + 1) % 4], side = (ev.dx || 0) * right[0] + (ev.dy || 0) * right[1]; ren.rollTo((side || 0.6) * 0.06, 260); if (ren.shake) ren.shake(0.25); setTimeout(() => ren.rollTo(0, 800), 420); }); };
+    hook(); if (!CM.game) { const i0 = setInterval(() => { if (CM.game) { hook(); clearInterval(i0); } }, 500); } }
+  // frost on the Cold Store's walls, thick webs in the Spider Hollow's corners
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || !(fl.number >= 1) || game.mode === "title" || !CM.SETPIECES || !fl.rooms) return out; const N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0;
+      for (const r of fl.rooms) { if (r.name !== "the Cold Store" && r.name !== "the Spider Hollow") continue; if (Math.abs((r.x0 + r.x1) / 2 - fl.pos[0]) + Math.abs((r.y0 + r.y1) / 2 - fl.pos[1]) > 14) continue; const frost = r.name === "the Cold Store";
+        for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { if (!open(x, y)) continue; for (let f = 0; f < 4; f++) { const [dx, dy] = CM.DIRS[f]; if (open(x + dx, y + dy)) continue; const h = (x * 31 + y * 17 + f * 7) % 10;
+            if (frost) { if (has("fx:frost")) out.push({ x, y, face: f, layer: "fx:frost", w: 0.9, h: 0.9, lift: 0.1 + h * 0.03, alpha: 0.45, glow: 0.1 }); }
+            else { const corner = !open(x + CM.DIRS[(f + 1) % 4][0], y + CM.DIRS[(f + 1) % 4][1]) || !open(x + CM.DIRS[(f + 3) % 4][0], y + CM.DIRS[(f + 3) % 4][1]); if (has("clut:web") && (corner || h < 4)) out.push({ x, y, face: f, layer: "clut:web", w: 0.7, h: 0.7, lift: 0.3, along: !open(x + CM.DIRS[(f + 1) % 4][0], y + CM.DIRS[(f + 1) % 4][1]) ? 1 : -1, alpha: 0.9 }); } } } }
+      return out; }; }
 }
 
 // ---- 77-splash.js ----

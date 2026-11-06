@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The last seven rooms (v89.0, UPGRADE_PLAN_64.md release 4)
+  (src/js/69zzzc-rooms4.js, src/js/76zzzzzzzzzzx-rooms4.js, UPGRADE_PLAN_64.md)
+  - The last seven rooms (plan 64, release 4): the Mirror Hall, where the party's own faces look back a half-breath
+    late and step out of the glass as shades when it is struck, a shard of it to keep; the Cold Store, meat on
+    hooks and frost on the walls, and in the ice at the back something that wakes when the larder is empty; the
+    Tilting Floor, four plates about a barred chest - step them in the carving's order and the bar draws back,
+    step them wrong and the floor leans and a pit opens across the room for a turn; the Puzzle of Lamps, five lamps
+    to light in the carving's pattern for a door that was not there, and a cold that comes in if they are lit
+    wrong; the Spider Hollow, cocoons from the roof with someone alive in one, egg sacs that split when it is cut,
+    and the spider on its ledge that never comes down; the Kennel, iron hounds in every other cage, a lever that
+    looses them all at once, and the kennel-master's whistle on a hook; and the Hall of Fame Annex, plaques with
+    your own dead's names on them, a bell rung once for each, and a chest the bell opens. Every room thing now has
+    a picture, the earlier rooms' included; the view leans when a plate tilts. Thirty rooms: plan 64 is complete.
+
 Ten more rooms (v88.0, UPGRADE_PLAN_64.md release 3)
   (src/js/69zzzb-rooms3.js, src/js/69zzz-setpieces.js, src/js/69zzt-clutter.js)
   - Ten more rooms (plan 64, release 3): the Echo Chamber, where a bell on a frayed rope brings the floor's
