@@ -7172,6 +7172,40 @@ test("the teller of the tale: the run opens in Claude's voice; a chapter for eac
   const was = g.settings.fourthWall; CM.claudeActs.plain(g, k); g.choose(k, g.claudeMenu.findIndex((o) => o[0] === "fourth")); assert.notStrictEqual(g.settings.fourthWall || "asked", was || "asked", "the leave to step outside");
 });
 
+test("red ink: the pot under the desk found by Space three times; damage off, one blow, the torch that lasts, every floor seen, the wanderers still; gold, healing, levels, names, any floor, the walls read, the hour; every calling and kit for the village, asked twice; and a red-ink run earns no achievement, renown or rung, and says so", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("ink-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.vext("claude").met = 1; g.returnToClaude(); g.clock = 6 * 60; const k = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude");
+  g.claudeTalk(k); assert.ok(!g.claudeMenu.some((o) => o[0] === "redink"), "hidden at first");
+  g.floor.pos = [7, 4]; g.floor.facing = 0; g.use(); g.use(); assert.ok(!g.vext("claude").redink); g.use(); assert.ok(g.vext("claude").redink, "found the third time");
+  g.claudeTalk(k); assert.ok(g.claudeMenu.some((o) => o[0] === "redink")); assert.ok(!g.redInk().used, "finding it isn't using it");
+  // one-offs
+  const gold = g.gold; g.redInkDo("gold100k"); assert.strictEqual(g.gold, gold + 100000); assert.ok(g.redInk().used, "and now the run is in red");
+  g.party[0].hp = 1; g.party[0].status = { poison: 3 }; g.redInkDo("heal"); assert.strictEqual(g.party[0].hp, g.party[0].max); assert.strictEqual(Object.keys(g.party[0].status).length, 0);
+  const lv = g.party[1].level; g.redInkDo("level"); assert.ok(g.party[1].level > lv, "a level");
+  g.bag.push({ name: "Odd ring", kind: "trinket", unknown: true, props: {} }); g.redInkDo("named"); assert.ok(!g.bag.some((i) => i.unknown));
+  g.redInkDo("read"); assert.ok(Object.keys(CM.LORE_TEXT).filter((x) => /^carving\./.test(x)).every((x) => g.story.read[x] !== undefined), "every wall read");
+  const c = g.clock; g.redInkDo("hour"); assert.strictEqual(g.clock - c, 360);
+  // toggles
+  g.redInkDo("nodamage"); const h = g.party[0]; g.mode = "combat"; g.combat = g.combat || {}; g.hurt(h, 50, { name: "Orc" }); assert.strictEqual(h.hp, h.max, "no damage"); h.hp = 3; g.emit("change"); assert.strictEqual(h.hp, h.max, "and nothing else wears them down"); g.mode = "explore";
+  g.redInkDo("lit"); g.light = { kind: "torch", left: 50 }; g.lightOut = false; g.steps = 9; g.burn(); assert.strictEqual(g.light.left, 50, "the torch lasts");
+  g.redInkDo("seen"); g.redInkDo("down", 5); assert.strictEqual(g.floor.number, 5, "any floor"); const N = g.floor.grid.length; assert.strictEqual(g.floor.seen.length >= N * N, true, "seen on arrival");
+  g.redInkDo("quiet"); const before = JSON.stringify(Object.keys(g.floor.things)); g.wanderMonsters(); assert.strictEqual(JSON.stringify(Object.keys(g.floor.things)), before, "the wanderers stay");
+  // one blow
+  g.redInkDo("oneblow"); const foe = { name: "Ogre", kind: "Ogre", hp: 400, max: 400, df: 0, atk: 1 }; g.foes = [foe]; assert.ok(g.redInk().oneblow);
+  // put it all back: the toggles off, the mark stays
+  g.claudeLeave && g.enterFloor(0, "rope", CM.TOWN_AT.well.slice()); g.mode = "explore"; g.returnToClaude(); CM.claudeActs.inkback(g, k, () => {}); assert.ok(!g.redInk().nodamage && !g.redInk().lit && g.redInk().used);
+  // what red ink doesn't earn
+  assert.strictEqual(g.achieve("delver"), false, "no achievement"); assert.strictEqual(CM.renownFor({ floor: 30, won: false, tally: {} }, g), 0, "no renown");
+  const entry = { name: "x", floor: 5, won: false, date: "d", daily: true, tally: {} }; g.payChapters(entry); assert.ok(entry.redink && !entry.daily, "marked, and off the daily board");
+  // the village's: every calling and kit, asked twice
+  const k2 = Object.keys(g.floor.things).find((kk) => g.floor.things[kk].type === "claude"); CM.claudeActs.ink_open(g, k2); assert.ok(g.claudeMenu.some((o) => o[0] === "inkopenyes")); assert.ok(!CM.store.get("redinkOpen", false)); g.choose(k2, 0); assert.ok(CM.store.get("redinkOpen", false));
+  assert.strictEqual(CM.unlocked([]).length, Object.keys(CM.KITS).length); assert.ok(CM.ALL_CLASSES.every((cl) => g.classUnlocked(cl)));
+  CM.store.set("redinkOpen", false);
+  // a clean run is untouched
+  const clean = new CM.Game(); clean.newGame("ink-2", fixedParty(CM)); assert.ok(!clean.redInk().used); assert.notStrictEqual(CM.renownFor({ floor: 30, won: false, tally: {} }, clean), 0);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

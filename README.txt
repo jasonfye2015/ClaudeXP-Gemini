@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Red ink (v110.0, UPGRADE_PLAN_71.md)
+  (src/js/69zzzs-redink.js, src/js/76zzzzzzzzzzzzl-redink.js, src/js/71-title.js, tools/headless.js, tests/run.js)
+  - Red ink (plan 71, release 4): under the edge of Claude's desk sits a pot of red ink nobody mentions. Press
+    Space at it three times and he sighs, turns round, and speaks as himself: corrections, from now on "Red ink..."
+    in his menu. Toggles: damage off (the party takes none), one blow (every hit kills), a torch that never burns
+    down, every floor mapped as you arrive, the wanderers kept still. One-offs: 1,000 or 100,000 gold, the party
+    healed and cured, a level each, everything in the pack named, any floor, every carving read, the hour moved on
+    six. Asked twice and kept for the village: every calling and every kit opened. "Put it all back" turns the
+    toggles off. He says the cost before anything is done: a run with red ink on it is marked in red in the Hall of
+    Fame and in his account, and earns no achievement, no renown and no ladder rung, and the daily and weekly boards
+    don't take it.
+
 The teller of the tale (v109.0, UPGRADE_PLAN_71.md)
   (src/js/69zzzr-teller.js, src/js/76zzzzzzzzzzzzk-teller.js, tools/headless.js, tests/run.js)
   - The teller of the tale (plan 71, release 3): the account you are playing is Claude's. A run opens with him
