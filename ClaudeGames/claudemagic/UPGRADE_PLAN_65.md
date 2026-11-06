@@ -173,6 +173,14 @@ on one square.
 - Decisions taken (release 5): the egg is a thing of value, not a pet (the farm's pets are a plan of their own); the
   golem never fights for the party (no follower slot for a golem); the vampire's bargain is two presses of Space,
   not a choice dialog.
+- v96.0 - release 6, the memory rooms 27-30: 69zzzi-memory.js - the Chronicle Wall (ten panels reading the
+  ledger's runs; a rubbing is a new trinket, +1 to the party's least stat, once a floor), the Old Camp (a dead
+  hero's note from the memorial, an hour at the fire mends 30%, once), the Festival Hall (dressed on entering by
+  CM.MEMORY_ROOMS.festivalOf - the run's festival, else the real month's - and the chest opens on the festival's own
+  day), the Smuggler's Drop (a false-door niche with three things worth double). Letters [ ] : ;. Plan 65 complete:
+  sixty curated rooms with plan 64's.
+- Decisions taken (release 6): the smugglers' goods are gear with doubled worth, with no question asked in the
+  Square; the old camp is this house's memorial, not a camps record by seed (none is kept).
 - Decisions taken (release 1): the chasm is solid, not a fall (the soft-lock rule); the bridge sways in the view,
   the planks never give; the ship's Drowned come down only at the bell; the mushroom's cap is a dome round the
   party's feet on the raised disc, not a climb through the mesh.
