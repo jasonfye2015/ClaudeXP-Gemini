@@ -150,6 +150,13 @@ on one square.
   instances stand still and grey - a fountain, and a chest whose Gargoyle guard carries a basilisk's gaze: one hero
   stone for two turns, the fountain undoes it), the Throne of the Hollow One (the crown is the band's relic; held
   three turns when the roots burn). Letters + | @ ^ & % ! F Y.
+- v93.0 - release 3, the trials 11-15: 69zzzf-trials.js - the Hourglass Room (the glass turned once a day, four
+  sealed chests open for twelve steps), the Riddle Gallery (three riddle doors across the hall with statues in them,
+  a wrong answer wakes a Gargoyle once each), the Pendulum Hall (one flag wide between two pits, blades on a beat,
+  a bounded cut and a square back on the beat, Space waits a beat), the Dark Room (the torch guts inside it; shadows
+  asleep; the far door the way on), the Frozen Pond (ice slides the party till a wall, a thing or dry stone; the
+  slide's own steps unlogged so a replay slides again). Letters I ? J Z O. The riddles' experience follows the story
+  floor now.
 - Decisions taken (release 1): the chasm is solid, not a fall (the soft-lock rule); the bridge sways in the view,
   the planks never give; the ship's Drowned come down only at the bell; the mushroom's cap is a dome round the
   party's feet on the raised disc, not a climb through the mesh.
