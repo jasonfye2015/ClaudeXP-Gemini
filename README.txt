@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The account, presentation (v117.0, UPGRADE_PLAN_74.md)
+  (src/js/77i-presentation.js, tests/run.js, UPGRADE_PLAN_74.md)
+  - The account, presentation (plan 74, release 1, from the visual review): the art direction is now "the account" -
+    what Claude writes is parchment and ink, the world is stone and torchlight. The view is decluttered: the sky card
+    is a compact dial and the hour (the date, the weather and the moon on hover, or always with Settings > Sky card:
+    Full), and it steps out of the way in a fight; the view's edges are a little darker below ground. Health reads at
+    a glance - green when whole, amber when hurt, red and slowly pulsing when low - and ailments are coloured chips
+    with their mark; a badly hurt hero's portrait dims, and in a fight the hero whose turn it is has a lit frame.
+    Going down, the floor and its band appear across the view for a moment in Claude's hand, and a band's first
+    floor is a chapter, with his line under it (Settings > Chapter cards; never under Automatic).
+
 A great many more curiosities (v116.0, UPGRADE_PLAN_73.md)
   (src/js/69zzzy-curios3.js, src/js/77h-curios2.js, tools/headless.js, tests/run.js)
   - Curiosities (plan 73, part three): a great many more things to find - more than the first two parts together,
