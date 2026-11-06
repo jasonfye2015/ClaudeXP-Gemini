@@ -191,6 +191,18 @@ a way always stands, every block clears, no hazard unseen or unbounded).
   and a chest's fixed item (CM.setPieceItem) and sunk flag. The Cistern's floodwater is plan 63's. Not done: the
   Mirror Hall and the Cold Store (rooms 6 and 7: the mirror's shades and the hanging meat want pictures of their
   own).
+- v88.0 - release 3, the third ten: 69zzzb-rooms3.js - the Echo Chamber (a bell that calls the floor's two nearest
+  wandering groups to one fight), the Gauntlet (vents every other flag, a chest at the end), the Weighing Room (a
+  relic of the band on a scale: paid by weight, or taken and cursed), the Barrow (steps up to a sarcophagus:
+  opened, a third chest and the barrow's king - a Wraith and two Skeletons), the Wolf Den (trees, three wolves
+  asleep - struck before they wake, or walked round - and the venison of their kill), the Troll Bridge (a troll
+  who bars the bridge till his toll is paid or he is fought), the Painter's Room (a ghost painter: stand a while for
+  a painted likeness, a new trinket, +1 Luck), the Orrery (the next three days' weather and the next star's night),
+  the Lich's Study (a trap chair, a bounded shock once; a desk with his letter), the Kitchen (the cook's knives, a
+  cold oven, rats in the flour - the clutter's rats, 69zzt-clutter.js). 69zzz-setpieces.js makes a chest of any
+  letter a room names. Not done from the list: the Tilting Floor, the Puzzle of Lamps, the Spider Hollow, the
+  Kennel, the Mirror Hall, the Cold Store, the Hall of Fame Annex (each wants a mechanic of its own - plates that
+  tilt, lamps in order, cocoons, cages, reflections, hanging meat, plaques).
 
 ## 4. Order (when asked)
 

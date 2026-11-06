@@ -47,7 +47,7 @@
         else if (c === "*") fl.things[k] = { type: "brazier", lit: true };
         else if (c === "G") fl.things[k] = { type: "glowcap", at: 0, permanent: true };
         else if (CM.SETPIECE_LETTERS && CM.SETPIECE_LETTERS[c]) CM.SETPIECE_LETTERS[c](fl, x, y, k, T, R);   /* (a later file's letters: 69zzza-rooms2.js) */
-        else if (c === "c") { const spec = C.c || {}; fl.things[k] = { type: "chest", gold: R.int(25, 60) * Math.max(1, fl.number), items: spec.item && CM.setPieceItem ? [CM.setPieceItem(spec.item, fl.number)] : [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 2)], trap: null, guard: spec.guard ? spec.guard.slice() : null, note: spec.note || null, sunk: Boolean(spec.sunk) }; } }
+        else if (C[c]) { const spec = C[c] || {};   /* (any letter the room names a chest by: c, d...) */ fl.things[k] = { type: "chest", gold: R.int(25, 60) * Math.max(1, fl.number), items: spec.item && CM.setPieceItem ? [CM.setPieceItem(spec.item, fl.number)] : [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 2)], trap: null, guard: spec.guard ? spec.guard.slice() : null, note: spec.note || null, sunk: Boolean(spec.sunk) }; } }
       if (T.sunk && T.sunk.pond) { const pond = fill.filter(([, , c]) => c === "~"); if (pond.length) { const [px, py] = pond[Math.floor(pond.length / 2)]; fl.things[`${px},${py}`] = { type: "chest", gold: R.int(30, 80) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 3)], trap: null, sunk: true, water: true }; } } } };
   CM.dressSetPieces = dress;
   { const mf0 = CM.makeFloor; CM.makeFloor = function (number, seed, gen) { const fl = mf0.call(this, number, seed, gen); if (fl && fl.number === number && number >= 1) dress(fl, seed); return fl; }; }

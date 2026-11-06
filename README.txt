@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Ten more rooms (v88.0, UPGRADE_PLAN_64.md release 3)
+  (src/js/69zzzb-rooms3.js, src/js/69zzz-setpieces.js, src/js/69zzt-clutter.js)
+  - Ten more rooms (plan 64, release 3): the Echo Chamber, where a bell on a frayed rope brings the floor's
+    nearest two bands of foes to one fight; the Gauntlet, a long run of vents that breathe in turn, a chest at the
+    far end; the Weighing Room, a relic of the band on a brass scale - count out its weight in gold, or take it and
+    carry a curse till it is lifted; the Barrow, steps up a mound to a stone coffin whose lid opens on grave goods
+    and the one buried with them; the Wolf Den, trees come down through the roof and a ring of wolves asleep round
+    their kill - strike them before they wake, or walk round; the Troll Bridge, one narrow way over black water and
+    a troll halfway who takes a toll in gold or a fight, and remembers; the Painter's Room, where a ghost finishes
+    the party's portrait if they stand still a while - a painted likeness to carry, a little luck in it; the
+    Orrery, brass rings that turn with the sky and tell the next three days' weather and the next falling star;
+    the Lich's Study on the last floors, his desk, his letter, and a chair that was never meant for visitors; and
+    the Kitchen, the cook's knives on the wall and rats in the flour. Twenty-three rooms now, one floor in three.
+
 Nine more rooms (v87.0, UPGRADE_PLAN_64.md release 2)
   (src/js/69zzza-rooms2.js, src/js/69zzz-setpieces.js, src/js/69zzs-plants.js, src/js/76zzzzzzzzzzw-setpieces.js)
   - Nine more rooms (plan 64, release 2): the Garden Gone Wild - raised beds, a well, glowcaps, the plants grown

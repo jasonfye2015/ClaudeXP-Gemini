@@ -43,5 +43,7 @@
     return out; };
   CM.clutterRats = (fl) => { const out = []; if (!okFloor(fl)) return out; const N = fl.grid.length, open = (x, y) => x >= 0 && y >= 0 && x < N && y < N && fl.grid[y][x] === 0, want = C.ratsPerFloor, inRoom = new Set(); for (const r of fl.rooms || []) for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) inRoom.add(`${x},${y}`);
     const cands = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) { const k = `${x},${y}`; if (!open(x, y) || inRoom.has(k) || fl.things[k] || (fl.features || {})[k]) continue; const ns = CM.DIRS.filter(([dx, dy]) => open(x + dx, y + dy)).length; if (ns === 2) cands.push([x, y]); }
-    for (let i = 0; i < want && cands.length; i++) { const j = h(fl, "rat", String(i)) % cands.length; const [x, y] = cands.splice(j, 1)[0]; out.push({ x, y, id: `rat:${fl.number}:${i}` }); } return out; };
+    for (let i = 0; i < want && cands.length; i++) { const j = h(fl, "rat", String(i)) % cands.length; const [x, y] = cands.splice(j, 1)[0]; out.push({ x, y, id: `rat:${fl.number}:${i}` }); }
+    if (CM.SETPIECES) for (const r of fl.rooms || []) { const T = CM.SETPIECES.find((t) => t.name === r.name); if (!T || !T.rats) continue; let n = 0; for (let y = r.y0; y <= r.y1 && n < 4; y++) for (let x = r.x0; x <= r.x1 && n < 4; x++) { const k = `${x},${y}`; if (!open(x, y) || fl.things[k] || (fl.features || {})[k] || (h(fl, "kr", k) % 100) >= 12) continue; out.push({ x, y, id: `rat:${fl.number}:k${n++}` }); } }   /* (plan 64: a kitchen's rats) */
+    return out; };
 }
