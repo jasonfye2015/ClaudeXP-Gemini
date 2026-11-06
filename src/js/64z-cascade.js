@@ -75,7 +75,7 @@ Object.assign(CM.Game.prototype, {
     for (const o of off) { if (o.where !== "front") continue; const d = o.d;
       if (d.k === "coin" || d.k === "nugget") gold += d.v;
       else if (d.k === "card") { const R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:card:${d.id}:${this.csStore().n}`)), card = this.cgCard(R.chance(0.2), "The Gilded Cascade drops a card token!", R); if (card) got.push({ card }); }
-      else if (d.k === "item") { const depth = Math.max(2, Math.min(CM.BOTTOM || 50, (this.trail || []).reduce((m, x) => Math.max(m, x[0] || 0), 0) || 5)), R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:item:${d.id}:${this.csStore().n}`)); let it = CM.makeItem(depth, R); if (R.chance(0.4) && CM.affix) it = CM.affix(it, depth, R) || it; this.gain([it], "casino"); got.push({ item: it }); } }
+      else if (d.k === "item") { const depth = Math.max(2, Math.min(CM.STORY_BOTTOM || 50, (this.trail || []).reduce((m, x) => Math.max(m, x[0] || 0), 0) || 5)), R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:item:${d.id}:${this.csStore().n}`)); let it = CM.makeItem(depth, R); if (R.chance(0.4) && CM.affix) it = CM.affix(it, depth, R) || it; this.gain([it], "casino"); got.push({ item: it }); } }
     if (gold) { this.cgPay("cascade", gold); this.csStore().won += gold; }
     if (gold || got.length) { this.csKeep(); this.emit("change"); }
     return { gold, got };

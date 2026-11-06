@@ -96,7 +96,7 @@ Object.assign(CM.Game.prototype, {
   followerAtCamp() {
     const f = this.follower;
     if (!f || f.id !== "adventurer" || !f.leaving) return;
-    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:gift:${this.floor.number}`)), gift = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "ring", "amulet"])), this.floor.number + 6, rnd);
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:gift:${this.floor.number}`)), gift = CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd, rnd.pick(["weapon", "armor", "ring", "amulet"])), this.floor.number + 6, rnd);
     gift.unknown = false; this.bag.push(gift);
     this.say(`${f.name} shoulders a pack at the camp and goes her own way, up. She leaves you ${gift.name} (${CM.itemLabel(gift)}).`);
     this.village = this.village || {}; this.village.followerTales = (this.village.followerTales || []).concat({ name: f.name, floor: this.floor.number, date: new Date().toLocaleDateString() }).slice(-12); if (this.saveVillage) this.saveVillage();

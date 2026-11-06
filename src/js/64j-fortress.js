@@ -16,7 +16,7 @@ CM.FT = {
 };
 CM.FORT_FIGHTERS = ["Knight", "Paladin", "Rogue", "Monk"];
 CM.FORT_MARSHAL = { name: "The Iron Marshal", colour: "#3A3A46", body: "tall", head: "helm", eyes: "#FF4020", extras: ["sword", "shield"], speed: 9, ability: "charge" };
-CM.fortDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 2)));
+CM.fortDepth = (n) => Math.min(CM.STORY_BOTTOM || 50, Math.max(1, Math.round(n * 2)));
 CM.fortFloorName = (n) => (n === CM.FORT_FLOORS ? "The Fortress, the Marshal's hall" : `The Fortress, floor ${n}`);
 // who may go in: a fighter (Knight, Paladin, Rogue, Monk), or a Ranger with a blade instead of a bow
 CM.fortWhyNot = (h) => {

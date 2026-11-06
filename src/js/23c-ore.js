@@ -30,5 +30,6 @@ for (const id of Object.keys(CM.PICKS)) CM.BASES[CM.PICKS[id].name] = { id: CM.P
 CM.BASES.Charcoal = { id: "Charcoal", kind: "charcoal", slot: null, tier: 0, group: "stuff" };
 Object.assign(CM.WEIGHTS, { ore: 2, bar: 3, charcoal: 1, pick: 3 });
 // which ores a floor has veins of, and how many: by the ore's floors (the Dwarven Halls' silver gives two a swing)
+for (const O of Object.values(CM.ORES)) O.floors = [CM.realOf(O.floors[0] - 1) + 1, CM.realOf(O.floors[1])];   // (plan 66: real floors)
 CM.veinsFor = (number) => { const out = []; for (const [id, O] of Object.entries(CM.ORES)) if (number >= O.floors[0] && number <= O.floors[1]) out.push(id); return out; };
 CM.bestPick = (bag, ore) => { let best = -1; bag.forEach((it, i) => { if (it.kind === "pick" && (it.points || 0) > 0 && CM.PICKS[it.pick] && CM.PICKS[it.pick].mines.includes(ore) && (best < 0 || CM.PICKS[it.pick].points > CM.PICKS[bag[best].pick].points)) best = i; }); return best; };

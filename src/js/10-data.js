@@ -6,9 +6,19 @@ CM.DIR_NAMES = "NESW";
 // a monster's name in a sentence: "the Orc", but "the Lich King" (whose name carries its own The)
 CM.the = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? "t" + n.slice(1) : "the " + n; };
 CM.The = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? n : "The " + n; };
-CM.LAST_FLOOR = 20;                                        // the Lich King's floor: the story's end, and the Deep's door
-CM.BOTTOM = 50;                                            // the bottom of the world
-CM.CAMP_AFTER = [5, 10, 15, 25, 30, 35, 40, 45];           // a merchant's camp waits below these floors
+CM.LAST_FLOOR = 70;                                        // the Lich King's floor: the story's end, and the Deep's door
+CM.BOTTOM = 100;                                            // the bottom of the world
+CM.CAMP_AFTER = [5, 10, 15, 25, 30, 35, 40, 45];           // a merchant's camp waits below these floors (story floors: CM.CAMP_FLOORS has the real ones)
+// plan 66: the old fifty floors are the story floors - every table below is written in them - and the shaft is stretched over
+// a hundred real floors: three or four to a story floor above the Lich King (real 1-70 -> story 1-20), one to one below him
+// (real 71-100 -> story 21-50), and on below the bottom. A story floor's key floor is the last real floor of it: the guardians,
+// the camps and the Lich King stand there; the other real floors are ordinary floors of the band.
+CM.STORY_LAST = 20; CM.STORY_BOTTOM = 50;
+CM.storyOf = (n) => (n >= 1 && n <= CM.LAST_FLOOR ? Math.ceil(n * CM.STORY_LAST / CM.LAST_FLOOR) : n > CM.LAST_FLOOR ? n - (CM.LAST_FLOOR - CM.STORY_LAST) : n);
+CM.realOf = (s) => (s >= 1 && s <= CM.STORY_LAST ? Math.floor(s * CM.LAST_FLOOR / CM.STORY_LAST) : s > CM.STORY_LAST ? s + (CM.LAST_FLOOR - CM.STORY_LAST) : s);
+CM.isKeyFloor = (n) => n >= 1 && (n > CM.LAST_FLOOR || CM.realOf(CM.storyOf(n)) === n);
+CM.CAMP_FLOORS = CM.CAMP_AFTER.map(CM.realOf);
+CM.xpScale = (n) => (n >= 1 && n <= CM.LAST_FLOOR ? 0.45 : 1);     // (three and a half times the fights to the Lich King: each gives less)
 
 // the six stats a hero is rolled with (3-18, plus what the class brings)
 CM.STATS = ["str", "dex", "con", "int", "wis", "luck"];
@@ -209,12 +219,12 @@ CM.DOOR_BREAK = 3;
 // kits earned between runs: what the deepest run so far has unlocked
 CM.KITS = {
   pauper: { name: "Pauper's kit", need: 0, what: "30 gold, two potions, two torches. Where everyone starts." },
-  veteran: { name: "Veteran's kit", need: 5, what: "60 gold more, and a lantern that never runs out." },
-  delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
-  heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
-  legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
-  scholar: { name: "Scholar's kit", need: 8, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 8.)" },
-  abyss: { name: "Abyss kit", need: 30, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 30 of the Deep.)" },
+  veteran: { name: "Veteran's kit", need: 17, what: "60 gold more, and a lantern that never runs out." },
+  delver: { name: "Delver's kit", need: 35, what: "Two Scrolls of Mapping, three torches, two antidotes." },
+  heir: { name: "Heir's kit", need: 52, what: "Every hero's own weapon, well made: +2 to start." },
+  legend: { name: "Legend's kit", need: -1, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+  scholar: { name: "Scholar's kit", need: 28, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 28.)" },
+  abyss: { name: "Abyss kit", need: 80, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 80 of the Deep.)" },
 };
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
@@ -549,7 +559,7 @@ CM.QUIRKS = {
 CM.SECOND_AT = 20;
 CM.SECOND_COST = 200;                                                  // renown, at a camp, with a guildhall of level 2
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
-CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
+CM.monsterLevel = (floor) => { const s = CM.storyOf(floor); return s <= CM.STORY_LAST ? s : CM.STORY_LAST + Math.round((s - CM.STORY_LAST) * 0.5); };   // (the Deep climbs more slowly; plan 66: by story floor)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
 
 // now and then a group has a leader out of the ordinary
@@ -862,8 +872,8 @@ CM.ACHIEVEMENTS = {
   tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },
   tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
   champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
-  beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
-  bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
+  beyond: { name: "Beyond the Dream", what: "Reach floor 150 in an Endless expedition", title: "Beyond the Dream" },
+  bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the hundredth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
@@ -887,19 +897,19 @@ CM.ACHIEVEMENTS = {
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
-  abyss: { name: "Of the Deep", what: "Reach floor 30, in the Deep", title: "of the Deep" },
-  endless: { name: "Without End", what: "Reach floor 60 in an Endless expedition", title: "Without End" },
-  deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
+  abyss: { name: "Of the Deep", what: "Reach floor 80, in the Deep", title: "of the Deep" },
+  endless: { name: "Without End", what: "Reach floor 110 in an Endless expedition", title: "Without End" },
+  deeper: { name: "Of the Halls", what: "Reach floor 52", title: "of the Halls" },
   labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
   untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
-  deep: { name: "Of the Vaults", what: "Reach floor 10", title: "of the Vaults" },
-  daily: { name: "Of the Day", what: "Reach floor 10 in Today's dungeon", title: "of the Day" },
+  deep: { name: "Of the Vaults", what: "Reach floor 35", title: "of the Vaults" },
+  daily: { name: "Of the Day", what: "Reach floor 35 in Today's dungeon", title: "of the Day" },
   smith: { name: "Tempered", what: "Have the smith work a piece of gear to +3", title: "the Tempered" },
   hoarder: { name: "Rich", what: "Hold 2,000 gold at once", title: "the Rich" },
   scholar: { name: "Learned", what: "Fill the journal with ten entries", title: "the Learned" },
   friend: { name: "Kind", what: "Cut a lost adventurer loose", title: "the Kind" },
   restful: { name: "Gentle", what: "Lay a ghost to rest", title: "the Gentle" },
-  delver: { name: "Delver", what: "Reach floor 5", title: "the Delver" },
+  delver: { name: "Delver", what: "Reach floor 17", title: "the Delver" },
 };
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
@@ -1061,7 +1071,8 @@ CM.PILLARED = Object.values(CM.GUARDIANS).filter((G) => G.lair.rows.slice(1, -1)
 CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
 CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
 CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)
-  : Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null);
+  : floor < 1 ? Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null
+  : CM.isKeyFloor(floor) ? Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === CM.storyOf(floor)) || null : null);   // (plan 66: on a story floor's key floor)
 CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
 // below the bottom (Endless) the carvings are not the story any more: they are the dream, still dreaming
@@ -1106,6 +1117,7 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
+for (const t of CM.THEMES) t.floors = [CM.realOf(t.floors[0] - 1) + 1, CM.realOf(t.floors[1])];   // (plan 66: the bands' real floors)
 CM.themeFor = (number) => (CM.isTowerFloor && CM.isTowerFloor(number) ? CM.TOWER_THEME : number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
   : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 // a slight colour grade per band, multiplied into the view (1, 1, 1 is none)

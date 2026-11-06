@@ -413,6 +413,7 @@ CM.RUMOURS = {
   hermit: { what: "a hermit sits on floor {n}", floors: [3, 14] },
   telling: { what: "floor {n}'s carving is in the other hand", floors: [1, 15] },
 };
+for (const R of Object.values(CM.RUMOURS)) if (R.floors) R.floors = [CM.realOf(R.floors[0] - 1) + 1, CM.realOf(R.floors[1])];   // (plan 66: real floors)
 CM.activeRumours = [];                                                    // (set by the game from the village: {kind, floor, seed})
 CM.rumourAt = (seed, number, kind) => CM.activeRumours.find((r) => r.seed === seed && r.floor === number && (!kind || r.kind === kind));
 // the Book of Caer Duin: every crowned party of this browser's, written as the carvings would write it

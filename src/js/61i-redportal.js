@@ -15,7 +15,7 @@ CM.abloClass = (h) => (["Knight", "Paladin", "Monk"].includes(h.cls) ? "warrior"
 // a thing from Claudeablo, as one of the party's own: the same slot, its depth from the item's level, its name kept
 CM.abloToItem = function (it, seed) {
   const AB = CM.AB, slot = AB.slot(it); if (!slot) return null;
-  const rnd = new CM.Random(CM.hashSeed(`${seed}:${JSON.stringify(it)}`)), depth = Math.max(1, Math.min(CM.BOTTOM || 50, it.ilvl));
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:${JSON.stringify(it)}`)), depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, it.ilvl));
   const kind = { weapon: "weapon", armor: "armor", helm: "helm", shield: "shield", ring: "ring", amulet: "amulet" }[slot];
   let item = CM.makeItem(depth, rnd, kind);
   if (["weapon", "armor", "helm", "shield"].includes(kind)) { if (it.rarity === "magic" || it.rarity === "rare") item = CM.affix(item, Math.max(8, depth + (it.rarity === "rare" ? 6 : 2)), rnd); }

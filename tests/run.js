@@ -441,7 +441,7 @@ test("the hoard: affixes by the seed, a unique a band, and what the words mean",
   const a = JSON.stringify(CM.makeFloor(12, "hoard")), b = JSON.stringify(CM.makeFloor(12, "hoard"));
   assert.strictEqual(a, b, "the same seed, the same affixes");
   let fine = 0, rare = 0, uniques = {};
-  for (let f = 1; f <= 50; f++) for (const t of Object.values(CM.makeFloor(f, "hoard").things)) if (t.type === "chest") for (const it of t.items) {
+  for (let f = 1; f <= CM.BOTTOM; f++) for (const t of Object.values(CM.makeFloor(f, "hoard").things)) if (t.type === "chest") for (const it of t.items) {
     const r = (it.props || {}).rarity; if (r === "fine") fine++; if (r === "rare") rare++;
     if (it.props && it.props.unique) uniques[it.props.unique] = f;
   }
@@ -600,35 +600,35 @@ test("the bands' hazards: spores, vents, bone piles, the tide, the mirror walls"
   const CM = load(), game = new CM.Game();
   game.newGame("hazard-1", fixedParty(CM));
   for (const h of game.party) { h.max = 500; h.hp = 500; }
-  const bands = { 21: "tide", 26: "spores", 31: "mirror", 36: "vents", 41: "bonepiles" };
+  const bands = { [CM.realOf(21)]: "tide", [CM.realOf(26)]: "spores", [CM.realOf(31)]: "mirror", [CM.realOf(36)]: "vents", [CM.realOf(41)]: "bonepiles" };
   for (const [f, id] of Object.entries(bands)) { const fl = CM.makeFloor(Number(f), "hazard-1"); assert.strictEqual(fl.hazard, id, "floor " + f); }
-  game.enterFloor(26, "down");
+  game.enterFloor(CM.realOf(26), "down");
   assert.ok(game.messages.some((m) => m.includes("Spore clouds")), "the hazard is named on arrival");
   const fl = game.floor, k = Object.keys(fl.features).find((x) => fl.features[x].type === "spores");
   assert.ok(k);
   game.rnd = new CM.Random(1);
   game.arrive(fl.features[k], k);
   assert.ok(fl.features[k].known);
-  game.enterFloor(36, "down");
+  game.enterFloor(CM.realOf(36), "down");
   const vk = Object.keys(game.floor.features).find((x) => game.floor.features[x].type === "vents");
   game.steps = 3; const hp = game.party[0].hp;
   game.arrive(game.floor.features[vk], vk);
   assert.ok(game.party[0].hp < hp, "the vent breathes on the beat");
-  game.enterFloor(41, "down");
+  game.enterFloor(CM.realOf(41), "down");
   const bk = Object.keys(game.floor.features).find((x) => game.floor.features[x].type === "bonepiles");
   game.rnd = new CM.Random(2);
   let fights = 0;
   for (let i = 0; i < 1; i++) { game.floor.features[bk].spent = false; game.arrive(game.floor.features[bk], bk); if (game.mode === "combat") { fights++; for (const m of game.foes) m.hp = 0; game.afterBlows(); } }
   assert.ok(game.floor.features[bk].spent);
-  game.enterFloor(21, "down");
+  game.enterFloor(CM.realOf(21), "down");
   const tideFloor = game.floor; game.steps = CM.TIDE_STEPS - 1;
   const open = CM.DIRS.findIndex(([dx, dy]) => CM.passable(tideFloor, tideFloor.pos[0] + dx, tideFloor.pos[1] + dy));
   tideFloor.facing = open; game.light = { kind: "torch", left: 100 };
   game.move(0);
   assert.strictEqual(tideFloor.tide, true, "the tide turns on the thirtieth step");
-  game.move(2);
-  assert.ok(game.light.left <= 96, "at high tide the torch burns double");
-  game.enterFloor(31, "down");
+  const lit = game.light.left; game.move(2);
+  assert.strictEqual(lit - game.light.left, 2, "at high tide the torch burns double");
+  game.enterFloor(CM.realOf(31), "down");
   const rnd = new CM.Random(3), a = CM.makeMonster(CM.monsterKind("Crystal Golem"), 25, rnd), b = CM.makeMonster(CM.monsterKind("Shard Wisp"), 25, rnd);
   game.floor.things["2,2"] = { type: "monsters", group: [a, b] };
   game.startCombat("2,2", game.floor.things["2,2"]);
@@ -835,7 +835,7 @@ test("the ground of a fight: water holds frost and halves fire, pillars limit th
   const CM = load(), game = new CM.Game();
   game.newGame("ground-1", fixedParty(CM));
   const mage = game.party.find((h) => h.cls === "Mage"); mage.mp = 99; mage.level = 10;
-  game.enterFloor(10, "down");                                           // (the Drowned Hall: water and pillars)
+  game.enterFloor(CM.realOf(10), "down");                                           // (the Drowned Hall: water and pillars)
   const fl = game.floor, gk = Object.keys(fl.things).find((k) => fl.things[k].type === "guardian");
   const [gx, gy] = gk.split(",").map(Number); fl.pos = [gx, gy + 1];
   assert.ok(game.terrain().includes("water") && game.terrain().includes("pillars"), game.terrain().join(","));
@@ -1110,7 +1110,7 @@ test("the ladder: a Hard rung, Grim's slower cold, Ascension's rules, Iron saves
 test("the dungeon, branched: wings and their stairs, a secret stair in a wall, the new rooms, the dungeon that shifts behind you", () => {
   const CM = load();
   let wings = 0, secret = 0, pieces = new Set();
-  for (let s = 0; s < 8; s++) for (let n = 1; n <= 50; n++) { const fl = CM.makeFloor(n, "branch-" + s, 2); for (const t of Object.values(fl.things)) if (t.type === "wingstair") wings++; for (const f of Object.values(fl.features)) if (f.type === "secretstair") secret++; for (const r of fl.rooms) if (r.name) pieces.add(r.name); assert.ok(!Object.values(CM.makeFloor(n, "branch-" + s, 1).things).some((t) => t.type === "wingstair"), "generator 1 has no wings"); }
+  for (let s = 0; s < 8; s++) for (let n = 1; n <= CM.BOTTOM; n++) { const fl = CM.makeFloor(n, "branch-" + s, 2); for (const t of Object.values(fl.things)) if (t.type === "wingstair") wings++; for (const f of Object.values(fl.features)) if (f.type === "secretstair") secret++; for (const r of fl.rooms) if (r.name) pieces.add(r.name); assert.ok(!Object.values(CM.makeFloor(n, "branch-" + s, 1).things).some((t) => t.type === "wingstair"), "generator 1 has no wings"); }
   assert.ok(wings >= 8 * 5 && secret >= 8 * 5, `about one a band: wings ${wings}, secret stairs ${secret}`);
   assert.ok(["Great Hall", "Drowned Chapel", "Charnel Pit", "Crystal Gallery"].some((n) => pieces.has(n)), "the new rooms are laid: " + [...pieces].join(", "));
   const game = new CM.Game();
@@ -1327,11 +1327,11 @@ test("the spine of the story: fifty carvings in ten chapters, each on a wall the
     assert.ok(CM.CHAPTERS[l.chapter], `${l.key}: chapter ${l.chapter}`);
     if (l.contradicts) { assert.ok(CM.LORE_TEXT[l.contradicts], `${l.key} contradicts ${l.contradicts}`); assert.ok(CM.LORE_TEXT[l.contradicts].floor < l.floor, "the truth lies deeper than the lie"); }
   }
-  for (let s = 0; s < 12; s++) for (let n = 1; n <= 50; n++) {
+  for (let s = 0; s < 12; s++) for (let n = 1; n <= CM.BOTTOM; n++) {
     const fl = CM.makeFloor(n, `spine-${s}`, s % 2 ? 2 : 1), reach = CM.distances(fl.grid, fl.pos);   // (the walls' own ways: a riddle door or a gate is still a way)
-    const walls = Object.entries(fl.features).filter(([, f]) => f.type === "carving" && CM.loreKey(f.text) === CM.LORE_KEYS[n - 1]);
+    const walls = Object.entries(fl.features).filter(([, f]) => f.type === "carving" && CM.loreKey(f.text) === CM.LORE_KEYS[CM.storyOf(n) - 1]);
     assert.ok(walls.length === 1 && reach.has(walls[0][0]), `floor ${n} of spine-${s}: the floor's carving, once, where the party can stand`);
-    assert.strictEqual(CM.LORE_TEXT[CM.LORE_KEYS[n - 1]].chapter, Object.keys(CM.CHAPTERS)[Math.floor((n - 1) / 5)]);
+    assert.strictEqual(CM.LORE_TEXT[CM.LORE_KEYS[CM.storyOf(n) - 1]].chapter, Object.keys(CM.CHAPTERS)[Math.floor((CM.storyOf(n) - 1) / 5)]);
   }
   assert.strictEqual(CM.loreKey("g:rat"), "guardian.rat"); assert.strictEqual(CM.loreKey("e:9"), "endless.2"); assert.strictEqual(CM.loreKey(-3), "odd.3");
   const a = CM.loreText(4, "seed-a"), b = CM.loreText(4, "seed-b"), c = CM.loreText(4, "seed-a");
@@ -1369,13 +1369,13 @@ test("the people of Caer Duin: twelve ghosts on their three floors, the bell, a 
   assert.strictEqual(CM.PEOPLE.length, 12); assert.strictEqual(CM.GHOSTS.length, 6, "the generators roll among six");
   for (const p of CM.PEOPLE) {
     assert.ok(p.floors[0] < p.floors[1] && p.floors[1] < p.floors[2] && p.floors[2] <= 45, p.name);
-    assert.ok(p.floors.every((f) => !CM.guardianFor(f) && f !== CM.LAST_FLOOR), `${p.name}: never a guardian's floor`);
+    assert.ok(p.floors.every((f) => !CM.guardianFor(CM.realOf(f)) && f !== CM.STORY_LAST), `${p.name}: never a guardian's floor`);
     assert.ok(p.tale && p.first && p.second && p.again && p.request.ask && p.request.wait && p.request.done, `${p.name}: every word written`);
     if (p.request.kind === "witness") { assert.ok(CM.LORE_TEXT[p.request.key], `${p.name}: a real key`); }
     assert.ok(CM.LORE_TEXT[`ghost.${CM.PEOPLE.indexOf(p) + 1}`].chapter === "people");
   }
   for (const seed of ["people-1", "people-2", "people-3"]) for (let n = 2; n <= 45; n++) {
-    const fl = CM.makeFloor(n, seed, 2);
+    const fl = CM.makeFloor(CM.realOf(n), seed, 2);
     for (const [i, p] of CM.PEOPLE.entries()) {
       const arc = p.floors.indexOf(n);
       if (arc < 0) continue;
@@ -1388,23 +1388,23 @@ test("the people of Caer Duin: twelve ghosts on their three floors, the bell, a 
   }
   // a word with Hal on floor 3, the journal, the story; later, his witness request, granted when the Drowned Town's wall is read
   const game = new CM.Game(); game.newGame("people-1", fixedParty(CM));
-  game.enterFloor(3, "down");
+  game.enterFloor(CM.realOf(3), "down");
   let [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 1 && x.who === 0);
   game.floor.pos = k.split(",").map(Number); game.talk(t, k);
-  assert.strictEqual(game.story.read["people.1.1"], 3); assert.ok(game.journal.some((e) => e.key === "people.1.1")); assert.ok(game.village.ghostsMet.includes("Hal of the lower watch"));
-  game.enterFloor(23, "down");
+  assert.strictEqual(game.story.read["people.1.1"], CM.realOf(3)); assert.ok(game.journal.some((e) => e.key === "people.1.1")); assert.ok(game.village.ghostsMet.includes("Hal of the lower watch"));
+  game.enterFloor(CM.realOf(23), "down");
   [k, t] = Object.entries(game.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 3 && x.who === 0);
   game.floor.pos = k.split(",").map(Number); game.talk(t, k); game.talk(t, k);
   assert.ok(game.floor.things[k], "not yet: the town's wall is unread");
   game.markRead("carving.drowned.2"); const bag = game.bag.length; game.talk(t, k);
-  assert.ok(!game.floor.things[k] && game.bag.length === bag + 1 && game.story.read["ghost.1"] === 23, "Hal rests, and leaves a gift");
+  assert.ok(!game.floor.things[k] && game.bag.length === bag + 1 && game.story.read["ghost.1"] === CM.realOf(23), "Hal rests, and leaves a gift");
   // the bell: picked up on the fourth floor, rung by Cael on the forty-first
   const g2 = new CM.Game(); g2.newGame("people-2", fixedParty(CM));
-  g2.enterFloor(4, "down");
+  g2.enterFloor(CM.realOf(4), "down");
   const bellAt = Object.keys(g2.floor.things).find((kk) => g2.floor.things[kk].bell);
   { const [bx, by] = bellAt.split(",").map(Number), d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g2.floor, bx - dx, by - dy)); g2.floor.pos = [bx - CM.DIRS[d][0], by - CM.DIRS[d][1]]; g2.floor.facing = d; g2.move(0); }   // (bones are taken by walking onto them)
-  assert.ok(g2.hasItem("bell") >= 0 && g2.story.read["thing.bell"] === 4, "the bell in the pack");
-  g2.enterFloor(41, "down");
+  assert.ok(g2.hasItem("bell") >= 0 && g2.story.read["thing.bell"] === CM.realOf(4), "the bell in the pack");
+  g2.enterFloor(CM.realOf(41), "down");
   [k, t] = Object.entries(g2.floor.things).find(([, x]) => x.type === "ghost" && x.arc === 3 && x.who === 2);
   g2.floor.pos = k.split(",").map(Number); g2.talk(t, k); g2.talk(t, k);
   assert.ok(g2.story.bell && g2.hasItem("bell") < 0 && g2.achievements.bellringer, "rung");
@@ -1429,7 +1429,7 @@ test("the people of Caer Duin: twelve ghosts on their three floors, the bell, a 
   assert.ok(CM.codex(g4)[0].complete, "the codex counts it whole");
   // the bot talks to the people it passes
   const g5 = new CM.Game(); g5.newGame("people-1", fixedParty(CM));
-  playRun(CM, g5, { maxFloor: 4 });
+  playRun(CM, g5, { maxFloor: CM.realOf(3) + 1 });   /* (past Hal's floor) */
   assert.ok(Object.keys(g5.story.read).some((key) => key.startsWith("people.")), `the bot met ${Object.keys(g5.story.read).join(", ")}`);
 });
 
@@ -1448,7 +1448,7 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
   const game = new CM.Game(); game.newGame("parley-1", fixedParty(CM));
   let asked = null; game.on("choice", (c) => { asked = c; });
   game.bag = game.bag.filter((i) => i.kind !== "ration");
-  let [k, t] = atDoor(game, 5);
+  let [k, t] = atDoor(game, CM.realOf(5));
   game.move(0);
   assert.ok(asked && asked.parley && asked.options.length === 2 && game.mode === "explore", "it speaks first: fight or speak");
   game.parley(k, 1);
@@ -1457,12 +1457,12 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
   assert.ok(game.runLog.filter((l) => l[0] === "parley").length === 4, "every word logged");
   // worse terms: three wrong answers, and it is enraged
   const g2 = new CM.Game(); g2.newGame("parley-2", fixedParty(CM)); g2.bag = g2.bag.filter((i) => i.kind !== "ration");
-  [k, t] = atDoor(g2, 5); g2.move(0); g2.parley(k, 1);
+  [k, t] = atDoor(g2, CM.realOf(5)); g2.move(0); g2.parley(k, 1);
   for (let step = 0; step < 3; step++) g2.parley(k, CM.PARLEY.rat.speak[step].replies.findIndex((r) => !r.good));
   assert.strictEqual(t.terms, "bad"); assert.ok(g2.foes.find((m) => m.guardian).enraged);
   // the gate: rations for the Rat King - passed, not slain; the way open, the crown left, half the gold, no trophy
   const g3 = new CM.Game(); g3.newGame("parley-3", fixedParty(CM)); g3.bag.push(CM.ration());
-  [k, t] = atDoor(g3, 5); asked = null; g3.on("choice", (c) => { asked = c; }); g3.move(0);
+  [k, t] = atDoor(g3, CM.realOf(5)); asked = null; g3.on("choice", (c) => { asked = c; }); g3.move(0);
   assert.strictEqual(asked.options.length, 3, "the gate is open: rations in the pack");
   const gold = g3.gold; g3.parley(k, 2);
   assert.strictEqual(g3.floor.things[k].type, "ladder"); assert.ok(g3.bag.some((i) => i.name === "Rat King's Crown")); assert.ok(g3.gold > gold); assert.ok(!g3.trophies.rat); assert.deepStrictEqual(JSON.parse(JSON.stringify(g3.tally.spoken)), ["rat"]);
@@ -1473,7 +1473,7 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
   // the Drowned Knight's gate wants a line from below him; the Forge-Warden's, one from above
   const g4 = new CM.Game(); g4.newGame("parley-4", fixedParty(CM));
   assert.ok(!CM.gateOpen(g4, CM.PARLEY.knight.gate)); g4.markRead("carving.drowned.2"); assert.ok(CM.gateOpen(g4, CM.PARLEY.knight.gate));
-  g4.markRead("carving.halls.1"); [k, t] = atDoor(g4, 15); asked = null; g4.on("choice", (c) => { asked = c; }); g4.move(0); g4.parley(k, 2);
+  g4.markRead("carving.halls.1"); [k, t] = atDoor(g4, CM.realOf(15)); asked = null; g4.on("choice", (c) => { asked = c; }); g4.move(0); g4.parley(k, 2);
   assert.strictEqual(g4.floor.things[k].type, "ladder"); assert.ok(!g4.floor.decor.some((d) => d.kind === "ember"), "the embers are out");
   // a replay plays the same words: the bot walks down to the Rat King's floor, then the party goes to its door and talks it round
   const goTo = (game, x, y) => {                                        // (travel stops for every monster seen and every door: start it again until the party is there)
@@ -1484,9 +1484,11 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
     }
   };
   const faceTo = (game, d) => { let guard = 0; while (game.floor.facing !== d && guard++ < 4) game.turn(1); };
+  const kept = new Map(CM.storage.map);   /* (a replayed run assumes the village store as it was when the run began: kept, and put back before the replay) */
+  let wxr = new CM.Random(5); CM.wxRandom = () => wxr.next();   /* (the weather's dice, seeded: the sky must roll the same in the replay) */
   const g6 = new CM.Game(); g6.newGame("parley-6", fixedParty(CM));
-  playRun(CM, g6, { maxFloor: 4 });
-  if (g6.mode === "explore" && g6.floor.number === 5) {
+  playRun(CM, g6, { maxFloor: CM.realOf(5) - 1 });
+  if (g6.mode === "explore" && g6.floor.number === CM.realOf(5)) {
     g6.mapAll();
     const [gk] = Object.entries(g6.floor.things).find(([, x]) => x.type === "guardian"); const [gx, gy] = gk.split(",").map(Number);
     const d = CM.DIRS.findIndex(([dx, dy]) => CM.passable(g6.floor, gx - dx, gy - dy)), door = [gx - CM.DIRS[d][0], gy - CM.DIRS[d][1]];
@@ -1498,13 +1500,14 @@ test("the guardians speak: three exchanges and a gate each, better and worse ter
       for (let step = 0; step < 3; step++) if (g6.mode === "explore") g6.parley(gk, CM.PARLEY.rat.speak[step].replies.findIndex((r) => r.good));
       assert.strictEqual(g6.mode, "combat", `the talk ends in a fight on the party's terms (${acts.join(" / ")})`);
       autoplayFight(CM, g6);
+      CM.storage.map.clear(); for (const [k, v] of kept) CM.storage.map.set(k, v); wxr = new CM.Random(5);
       const again = CM.replayRun(g6.replaySpec());
       assert.strictEqual(again.gold, g6.gold); assert.strictEqual(again.mode, g6.mode); assert.deepStrictEqual(JSON.parse(JSON.stringify(again.tally)), JSON.parse(JSON.stringify(g6.tally)), "the replay says the same words and fights the same fight");
     } else console.log("       (the way to the Rat King's door was blocked this seed: the replay check was skipped)");
   } else console.log(`       (the bot did not reach floor 5 this seed - ${g6.mode}, floor ${g6.floor && g6.floor.number}: the replay check was skipped)`);
   // the bot answers the door
   const g5 = new CM.Game(); g5.newGame("parley-1", fixedParty(CM));
-  playRun(CM, g5, { maxFloor: 6 });
+  playRun(CM, g5, { maxFloor: CM.realOf(5) + 1 });
   assert.ok((g5.tally.guardians || []).includes("rat") || (g5.tally.spoken || []).includes("rat") || g5.mode === "title", "the bot got past the Rat King, or fell trying");
 });
 
@@ -1514,25 +1517,25 @@ test("the court of the Lich King: the seated dead on 16-19, three clues and the 
   assert.strictEqual(CM.REMIND.length, 5); for (const r of CM.REMIND) assert.ok(CM.LORE_TEXT[r.key] && r.ask && r.say && r.back, r.key);
   for (const seed of ["court-1", "court-2"]) {
     let pages = 0;
-    for (let n = 16; n <= 19; n++) {
+    for (const n of [16, 17, 18, 19].map(CM.realOf)) {
       const fl = CM.makeFloor(n, seed, 2);
-      for (const [i, c] of CM.COURT.entries()) if (c.floor === n) assert.ok(Object.values(fl.things).some((t) => t.type === "ghost" && t.courtier === i), `${c.name} sits on floor ${n} of ${seed}`);
+      for (const [i, c] of CM.COURT.entries()) if (CM.realOf(c.floor) === n) assert.ok(Object.values(fl.things).some((t) => t.type === "ghost" && t.courtier === i), `${c.name} sits on floor ${n} of ${seed}`);
       pages += Object.values(fl.things).filter((t) => t.type === "chest" && t.items.some((i) => i.kind === "page")).length;
     }
     assert.strictEqual(pages, 1, `${seed}: the physician's page in one chest of the palace`);
   }
   // the heart hunt: a word from the Chancellor, the wall on 18, the page - and the box is marked on the throne room's map
   const game = new CM.Game(); game.newGame("court-1", fixedParty(CM));
-  game.enterFloor(16, "down");
+  game.enterFloor(CM.realOf(16), "down");
   const [ck, ct] = Object.entries(game.floor.things).find(([, t]) => t.type === "ghost" && t.courtier === 0);
   game.floor.pos = ck.split(",").map(Number); game.talk(ct, ck);
-  assert.strictEqual(game.story.read["court.1"], 16); assert.ok(!game.story.heartKnown);
+  assert.strictEqual(game.story.read["court.1"], CM.realOf(16)); assert.ok(!game.story.heartKnown);
   game.markRead("carving.palace.3"); game.bag.push(Object.assign({}, CM.PAGE)); game.markRead("carving.palace.5");
   assert.ok(game.story.heartKnown, "three clues: known"); assert.ok(game.journal.some((e) => e.key === "heart.known"));
-  game.enterFloor(19, "down");
+  game.enterFloor(CM.LAST_FLOOR - 1, "down");
   const [pk] = Object.entries(game.floor.things).find(([, t]) => t.type === "phylactery");
   assert.ok(game.floor.seen.some(([x, y]) => `${x},${y}` === pk), "the box is on the map before it is seen");
-  game.enterFloor(20, "down");
+  game.enterFloor(CM.LAST_FLOOR, "down");
   // the king's door: without the chapter and the smashed heart, fight is all there is; with them, remind him - and a gap means he draws
   let asked = null; game.on("choice", (c) => { asked = c; });
   const [bk, bt] = Object.entries(game.floor.things).find(([, t]) => t.type === "boss");
@@ -1548,7 +1551,7 @@ test("the court of the Lich King: the seated dead on 16-19, three clues and the 
   game.parley(bk, 0);
   assert.strictEqual(game.mode, "combat", "a gap, and he draws");
   // and with every line read, the quiet ending
-  const g2 = new CM.Game(); g2.newGame("court-2", fixedParty(CM)); g2.enterFloor(20, "down");
+  const g2 = new CM.Game(); g2.newGame("court-2", fixedParty(CM)); g2.enterFloor(CM.LAST_FLOOR, "down");
   for (const k of ["carving.palace.1", "carving.palace.2", "carving.palace.3", "carving.palace.4", "carving.palace.5"].concat(CM.REMIND.map((r) => r.key))) g2.markRead(k);
   g2.phylactery = true;
   asked = null; g2.on("choice", (c) => { asked = c; });
@@ -1580,8 +1583,8 @@ test("the village has people: the chronicler pays for chapters and sells rumours
   const ghostR = game.village.rumours.find((r) => r.kind === "ghostbones"), tellR = game.village.rumours.find((r) => r.kind === "telling");
   const flG = CM.makeFloor(ghostR.floor, "rumour-1", 2);
   assert.ok(Object.values(flG.things).some((t) => t.type === "ghost" && t.request === "bones" && !t.courtier) && Object.values(flG.things).some((t) => t.type === "bones"), `a ghost who wants its bones on floor ${ghostR.floor}`);
-  const flT = CM.makeFloor(tellR.floor, "rumour-1", 2), wall = Object.values(flT.features).find((f) => f.type === "carving" && f.text === tellR.floor - 1);
-  assert.strictEqual(wall.telling, 1, `floor ${tellR.floor}: the other telling`); assert.strictEqual(CM.loreText(wall.text, "rumour-1", wall.telling), CM.LORE_TEXT[CM.LORE_KEYS[tellR.floor - 1]].tellings[1], "the other hand");
+  const flT = CM.makeFloor(tellR.floor, "rumour-1", 2), wall = Object.values(flT.features).find((f) => f.type === "carving" && f.text === CM.storyOf(tellR.floor) - 1);
+  assert.strictEqual(wall.telling, 1, `floor ${tellR.floor}: the other telling`); assert.strictEqual(CM.loreText(wall.text, "rumour-1", wall.telling), CM.LORE_TEXT[CM.LORE_KEYS[CM.storyOf(tellR.floor) - 1]].tellings[1], "the other hand");
   // chapters copied fair: paid once, at the run's end
   for (const k of ["carving.catacombs.1", "carving.catacombs.2", "carving.catacombs.3", "carving.catacombs.4", "carving.catacombs.5", "guardian.rat"]) game.markRead(k);
   for (const h of game.party) h.hp = 0;
@@ -1622,7 +1625,7 @@ test("heroes with pasts: six origins with their touches and their words at the w
   const g0 = new CM.Game(); g0.newGame("origin-1", fixedParty(CM)); assert.strictEqual(game.gold, g0.gold + 20, "from the east: twenty gold more");
   assert.strictEqual(game.startParty[0].origin, "caerduin", "the origin rides in the run's spec");
   // a word at the wall: the floor-3 carving is Caer Duin's grandchild's
-  game.enterFloor(3, "down");
+  game.enterFloor(CM.realOf(3), "down");
   const [k, f] = Object.entries(game.floor.features).find(([, x]) => x.type === "carving" && x.text === 2);
   game.floor.pos = k.split(",").map(Number); game.floor.facing = f.face; game.use();
   assert.ok(game.messages.some((m) => m.includes(`${game.party[0].name}: "The bells.`)), game.messages.slice(-4).join(" | "));
@@ -1676,8 +1679,8 @@ test("the telling: four hands, the motifs a line calls up, the camp fire's tale,
 
 test("around the story: the Scholar's kit, the story's contracts, the simulator's story report and the word budget, the film bar's scenes", () => {
   const CM = load();
-  assert.ok(CM.KITS.scholar && CM.unlocked([{ floor: 8 }]).includes("scholar") && !CM.unlocked([{ floor: 7 }]).includes("scholar"));
-  CM.store.set("fame", [{ name: "x", floor: 9, won: false, gold: 0, date: "01/01/2026", party: [], tally: {} }]);   // (the kit wants floor 8 reached)
+  assert.ok(CM.KITS.scholar && CM.unlocked([{ floor: 28 }]).includes("scholar") && !CM.unlocked([{ floor: 27 }]).includes("scholar"));
+  CM.store.set("fame", [{ name: "x", floor: 28, won: false, gold: 0, date: "01/01/2026", party: [], tally: {} }]);   // (the kit wants floor 28 reached)
   const game = new CM.Game(); game.newGame("scholar-1", fixedParty(CM), "scholar");
   assert.ok(CM.LORE_KEYS.slice(0, 5).every((k) => game.story.read[k] !== undefined) && game.bag.some((i) => i.kind === "tome"), "the Catacombs known, a tome in the pack");
   for (const id of ["bellgrim", "knightspoken", "ownrest", "chapter3"]) assert.ok(CM.CONTRACTS[id] && typeof CM.CONTRACTS[id].check === "function", id);
@@ -1700,7 +1703,7 @@ test("the Root and the three endings: its voice knows the party, wake it or leav
   assert.ok(CM.PARLEY.root.gate && CM.PARLEY.root.gate.crown && CM.CHAPTERS.dream && CM.LORE_TEXT["dream.3"]);
   // the Root's voice on floor 46: the party's names and descents in it
   const game = new CM.Game(); game.newGame("root-1", fixedParty(CM));
-  game.enterFloor(46, "down");
+  game.enterFloor(CM.realOf(46), "down");
   const [k, f] = Object.entries(game.floor.features).find(([, x]) => x.type === "carving" && x.text === 45);
   game.floor.pos = k.split(",").map(Number); game.floor.facing = f.face;
   let shown = null; game.on("lore", (t) => { shown = t; }); game.use();
@@ -1711,7 +1714,7 @@ test("the Root and the three endings: its voice knows the party, wake it or leav
   const g2 = new CM.Game(); g2.newGame("root-2", fixedParty(CM)); g2.crowned = true;
   for (const h of g2.party) { h.level = 40; CM.recompute(h); h.hp = h.max; h.atk += 500; }
   let asked = null; g2.on("choice", (c) => { asked = c; });
-  let [gk] = atDoor(g2, 50); g2.move(0); assert.ok(asked.parley && asked.options.length === 2, "the Root speaks: fight or speak"); g2.parley(gk, 0);
+  let [gk] = atDoor(g2, CM.realOf(50)); g2.move(0); assert.ok(asked.parley && asked.options.length === 2, "the Root speaks: fight or speak"); g2.parley(gk, 0);
   autoplayFight(CM, g2);
   assert.ok(g2.rootPending && asked.ending && asked.options.length === 2 && g2.mode === "explore", "beaten, and waiting");
   const renown = g2.village.renown || 0; g2.ending(1);
@@ -1724,7 +1727,7 @@ test("the Root and the three endings: its voice knows the party, wake it or leav
   // the crown given: the gate at the Root's door wants the crown, the five carvings and the Merciful; passed, the Other Dream opens
   const g5 = new CM.Game(); g5.newGame("root-5", fixedParty(CM)); g5.crowned = true; g5.achievements.merciful = { date: "x" }; for (const kk of CM.LORE_KEYS.slice(45, 50)) g5.markRead(kk);
   asked = null; g5.on("choice", (c) => { asked = c; });
-  [gk] = atDoor(g5, 50); g5.move(0); assert.strictEqual(asked.options.length, 3, "give it the crown"); g5.parley(gk, 2);
+  [gk] = atDoor(g5, CM.realOf(50)); g5.move(0); assert.strictEqual(asked.options.length, 3, "give it the crown"); g5.parley(gk, 2);
   const e5 = g5.fame.find((e) => e.seed === "root-5");
   assert.ok(g5.mode === "title" && e5.dreamed && e5.bottom && g5.achievements.dreamer && g5.titleNote === CM.ENDINGS.dreamed.note, "the other dream");
   assert.ok(g5.fame.length >= 1 && !g5.runLog.some((l) => l[0] === "act"), "no blow struck");
@@ -1737,7 +1740,7 @@ test("the Root and the three endings: its voice knows the party, wake it or leav
   const [k6, f6] = Object.entries(g6.floor.features).find(([, x]) => x.type === "carving" && x.text === 0);
   g6.floor.pos = k6.split(",").map(Number); g6.floor.facing = f6.face; g6.use();
   assert.strictEqual(g6.journal[0].text, CM.DREAM.lore[0]); assert.strictEqual(g6.story.read["carving.catacombs.1"], 1, "read counts for the codex all the same");
-  [gk] = atDoor(g6, 5); g6.move(0); g6.parley(gk, 0);
+  [gk] = atDoor(g6, CM.realOf(5)); g6.move(0); g6.parley(gk, 0);
   assert.strictEqual(g6.foes.find((m) => m.guardian).name, "The King's Ratter"); assert.ok(g6.foes.find((m) => m.guardian).max > CM.GUARDIANS.rat.hp, "the Awakened numbers");
   // the ending's log line replays (the run above was cheated to the bottom, so only the line is checked, not the descent)
   const g7 = new CM.Game(); g7.newGame("root-7", fixedParty(CM)); g7.crowned = true; g7.rootPending = true; g7.replaying = 1;
@@ -1899,7 +1902,7 @@ test("affixes that grow: tiers by depth, the new words bite, implicits, cursed t
   const pieces = [0, 1, 2].map((i) => Object.assign(CM.makeSetPiece("masons", i, 1), { unknown: false }));
   for (const [i, it] of pieces.entries()) { game.bag.push(it); assert.strictEqual(game.equip(rogue, game.bag.length - 1), "", `piece ${i}`); }
   assert.strictEqual(CM.setWorn(rogue), "masons"); const df = rogue.df; rogue.boots = null; CM.recompute(rogue); assert.strictEqual(df - rogue.df, 3, "+3 defence from the three");
-  let dropped = 0; for (let s = 0; s < 12; s++) for (let n = 6; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, `set-${s}`, 2).things)) if (t.type === "chest" && t.items.some((i) => CM.setOf(i))) dropped++;
+  let dropped = 0; for (let s = 0; s < 12; s++) for (let s0 = 6; s0 <= 20; s0++) for (const t of Object.values(CM.makeFloor(CM.realOf(s0), `set-${s}`, 2).things)) if (t.type === "chest" && t.items.some((i) => CM.setOf(i))) dropped++;
   assert.ok(dropped >= 3 && dropped < 60, `set pieces in the chests of twelve seeds: ${dropped}`);
   assert.ok(CM.compendium({}).some((g) => g.id === "set" && g.total === 9));
   // essence from the fire, and a word moved
@@ -2263,9 +2266,9 @@ test("wounds, weight and the economy: a wound on rising and a grave one, healed 
   assert.ok(over === burnt() && fedOver === game.fed, `the weight only slows - no torch or hunger for it: heavy ${over}, ${fedOver}; light ${burnt()}, ${game.fed}`);
   while (game.overweight() < CM.OVERWEIGHT_RUN) game.bag.push(heavy()); assert.strictEqual(game.weightWord(), "Overloaded"); const goal = CM.goalOf(fl).split(",").map(Number); game.travelTo(goal[0], goal[1]); assert.ok(!game.messages.some((x) => x.includes("too heavy to run")), "overloaded, the party still walks (slowly)"); game.travel = null;
   mage.trinket = CM.makeUnique("holding"); assert.strictEqual(CM.carryCap(game.party), cap * 2); assert.ok(game.overweight() < 1, "the bag of holding carries it"); mage.trinket = null; game.bag = lightBag;
-  let holdingAt = 0; for (let n = 16; n <= 20; n++) for (const t of Object.values(CM.makeFloor(n, "econ-1", 2).things)) if (t.type === "chest" && (t.items || []).some((i) => i.props && i.props.unique === "holding")) holdingAt = n; assert.ok(holdingAt, "the Bag of Holding lies in the palace");
+  let holdingAt = 0; for (let n = CM.THEMES[3].floors[0]; n <= CM.THEMES[3].floors[1]; n++) for (const t of Object.values(CM.makeFloor(n, "econ-1", 2).things)) if (t.type === "chest" && (t.items || []).some((i) => i.props && i.props.unique === "holding")) holdingAt = n; assert.ok(holdingAt, "the Bag of Holding lies in the palace");
   // the economy: prices a tenth more a band; the stock rotates by the camp; an order delivered at the next camp; insurance paid to the vault
-  assert.strictEqual(CM.priceAt(100, 1), 100); assert.strictEqual(CM.priceAt(100, 7), 110); assert.strictEqual(CM.priceAt(100, 22), 140);
+  assert.strictEqual(CM.priceAt(100, 1), 100); assert.strictEqual(CM.priceAt(100, CM.realOf(7)), 110); assert.strictEqual(CM.priceAt(100, CM.realOf(22)), 140);
   const g3 = new CM.Game(); g3.newGame("econ-2", fixedParty(CM)); g3.enterFloor(5, "down"); g3.mode = "camp"; g3.stock = null; g3.openBag(true); const s5 = g3.stock.map((i) => i.kind + ":" + i.value); const heal5 = g3.stock.find((i) => i.kind === "heal" || i.kind === "greaterheal");
   g3.closeBag(); g3.enterFloor(10, "down"); g3.mode = "camp"; g3.stock = null; g3.openBag(true); const s10 = g3.stock.map((i) => i.kind + ":" + i.value), heal10 = g3.stock.find((i) => i.kind === "heal" || i.kind === "greaterheal");
   assert.ok(heal5 && heal10 && heal10.value > heal5.value * 1.05, `dearer a band down: ${heal5.value} -> ${heal10.value}`); assert.ok(s5.filter((k) => k.startsWith("heal") || k.startsWith("torch") || k.startsWith("ration")).length >= 3, "the staples are always there");
@@ -2382,10 +2385,10 @@ test("the town above: floor 0 is hand-laid and the same for a seed, a run begins
   fl.pos = CM.TOWN_AT.home.slice(); const [sx, sy] = CM.TOWN_AT.shaft; assert.ok(game.travelTo(sx, sy)); let guard = 0; while (game.travel && guard++ < 60) game.travelStep(); assert.strictEqual(game.floor.pos.join(), `${sx},${sy}`, "the party walked to the shaft");
   game.use(); assert.strictEqual(game.floor.number, 1); assert.strictEqual(game.mode, "explore");
   // the camps: back to town, and the shaft goes down again to the deepest camp reached
-  game.enterFloor(5, "down"); game.floor.things[game.floor.pos.join(",")] = { type: "ladder" }; game.use(); assert.strictEqual(game.mode, "camp"); assert.ok((game.camps || []).includes(5));
+  game.enterFloor(CM.CAMP_FLOORS[0], "down"); game.floor.things[game.floor.pos.join(",")] = { type: "ladder" }; game.use(); assert.strictEqual(game.mode, "camp"); assert.ok((game.camps || []).includes(CM.CAMP_FLOORS[0]));
   assert.strictEqual(game.goHome(), ""); assert.strictEqual(game.floor.number, 0); assert.strictEqual(game.mode, "explore"); assert.strictEqual(game.floor.pos.join(), `${sx},${sy}`, "at the shaft's mouth");
-  game.use(); assert.strictEqual(game.mode, "camp"); assert.strictEqual(game.floor.number, 5, "down to the deepest camp");
-  assert.ok(game.goHome() === "" && game.floor.number === 0); game.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.floor.number, 0); assert.ok(g3.camps.includes(5));
+  game.use(); assert.strictEqual(game.mode, "camp"); assert.strictEqual(game.floor.number, CM.CAMP_FLOORS[0], "down to the deepest camp");
+  assert.ok(game.goHome() === "" && game.floor.number === 0); game.saveRun(); const g3 = new CM.Game(); g3.continueRun(); assert.strictEqual(g3.floor.number, 0); assert.ok(g3.camps.includes(CM.CAMP_FLOORS[0]));
   // a replay of a run that began in town begins in town, and an old film's spec (no town) begins at the shaft
   const g4 = new CM.Game(); g4.newGame("town-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); const r = playRun(CM, g4, { maxFloor: 3 });
   assert.ok(g4.floor.number >= 3 || g4.mode === "title", `the bot walked the town and went down: floor ${g4.floor.number} ${r.log.join("|")}`); assert.ok(g4.trail[0][0] === 0, "the trail begins at home");
@@ -2454,7 +2457,7 @@ test("the tavern, the merchant and the smith in town: the full stock at the part
   assert.strictEqual(g.gossip(), ""); assert.ok(/floor \d+/.test(g.messages.slice(-1)[0]) && g.messages.slice(-1)[0].includes("palace")); assert.ok(g.gossip().includes("told you"));
   assert.strictEqual(g.takeBounty(), ""); assert.ok(g.bounty && g.bounty.floor === 0); g.bounty = null;
   // down to the first camp: the order and the commission are waiting; the fence is not at the camp's bench
-  g.enterFloor(5, "down"); g.floor.things[g.floor.pos.join(",")] = { type: "ladder" }; g.use(); assert.strictEqual(g.mode, "camp");
+  g.enterFloor(CM.CAMP_FLOORS[0], "down"); g.floor.things[g.floor.pos.join(",")] = { type: "ladder" }; g.use(); assert.strictEqual(g.mode, "camp");
   const before = g.bag.length; g.openBag(true); assert.ok(g.bag.some((i) => i.base === "Maul") && g.bag.some((i) => i.kind === "lampoil") && g.bag.length >= before + 2, "delivered at the first camp"); assert.strictEqual(g.orders.length, 0); g.closeBag();
   g.bag.push(Object.assign(CM.makeItem(5, new CM.Random(2), "ring"), { unknown: true })); assert.ok(g.fence(g.bag.length - 1).includes("in town")); assert.ok(g.fenceRumour().includes("in town")); assert.ok(g.drink().includes("in town"));
   assert.ok(g.smith("enchant", 0, "weapon") !== "The smith works at the camp, and at the forge in town.", "the camp's smith still works"); assert.ok(g.reforgeBase(0, "weapon", "Bastard Sword").includes("in town"));
@@ -2620,7 +2623,7 @@ test("scrolls of Homecoming: found in a chest in twenty from floor 3 and dropped
   g3.mode = "combat"; g3.floor = g3.floorAt(5); assert.ok(g3.useMagicInBattle ? true : true); g3.mode = "explore";
   // sold only in town, dearer the deeper the run has been
   const g4 = new CM.Game(); g4.newGame("home-scroll-3", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g4.openBag(true); const s0 = g4.stock.find((i) => i.spell === "homecoming"); assert.ok(s0, "on the Merchant's House's table"); assert.strictEqual(s0.value, CM.HOMECOMING.price); g4.closeBag();
-  g4.enterFloor(5, "down"); g4.floor.things[g4.floor.pos.join(",")] = { type: "ladder" }; g4.use(); assert.strictEqual(g4.mode, "camp"); g4.openBag(true); assert.ok(!g4.stock.some((i) => i.spell === "homecoming"), "never at a camp"); g4.closeBag();
+  g4.enterFloor(CM.CAMP_FLOORS[0], "down"); g4.floor.things[g4.floor.pos.join(",")] = { type: "ladder" }; g4.use(); assert.strictEqual(g4.mode, "camp"); g4.openBag(true); assert.ok(!g4.stock.some((i) => i.spell === "homecoming"), "never at a camp"); g4.closeBag();
   assert.strictEqual(g4.goHome(), ""); g4.openBag(true); assert.strictEqual(g4.stock.find((i) => i.spell === "homecoming").value, CM.HOMECOMING.price + 5 * CM.HOMECOMING.perFloor, "the price climbs with the deepest floor"); g4.closeBag();
   // Automatic: out of potions below ten with gold and a scroll, it goes home, shops, and comes back to the square
   const g5 = new CM.Game(); g5.newGame("home-scroll-4", fixedParty(CM)); g5.enterFloor(10, "down"); g5.bag = g5.bag.filter((i) => !["heal", "greaterheal"].includes(i.kind)); g5.bag.push(CM.scroll("homecoming")); g5.gold = 500; const sq = g5.floor.pos.join();
@@ -2669,7 +2672,7 @@ test("mining: veins by the ore's floors, placed last by hash (no fingerprint mov
   const CM = load();
   assert.strictEqual(CM.ORE_ORDER.length, 5); assert.strictEqual(Object.keys(CM.ALLOYS).length, 4);
   const veinsOf = (n, seed = "ore-1") => Object.values(CM.makeFloor(n, seed, 2).things).filter((t) => t.type === "vein");
-  assert.ok(veinsOf(2).every((v) => v.ore === "copper") && veinsOf(2).length >= 1, "copper near the top"); assert.ok(veinsOf(13).some((v) => v.ore === "silver"), "silver in the halls"); assert.ok(veinsOf(38).some((v) => v.ore === "stariron"), "star-iron in the Foundry"); assert.ok(!veinsOf(3).some((v) => v.ore === "gold"));
+  assert.ok(veinsOf(2).every((v) => v.ore === "copper") && veinsOf(2).length >= 1, "copper near the top"); assert.ok(veinsOf(CM.realOf(13)).some((v) => v.ore === "silver"), "silver in the halls"); assert.ok(veinsOf(CM.realOf(38)).some((v) => v.ore === "stariron"), "star-iron in the Foundry"); assert.ok(!veinsOf(3).some((v) => v.ore === "gold"));
   assert.strictEqual(veinsOf(8).map((v) => v.ore).sort().join(), veinsOf(8).map((v) => v.ore).sort().join()); const fp = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "gen1.json"), "utf8")); const first = Object.keys(fp)[0]; assert.ok(first, "the gen-1 fixtures stand (the frozen-floor test runs them)");
   for (const [k, v] of Object.entries(CM.makeFloor(8, "ore-1", 2).things).filter(([, t]) => t.type === "vein")) { const f = CM.makeFloor(8, "ore-1", 2), [x, y] = k.split(",").map(Number); assert.ok(CM.isOpen(f, x, y) && CM.DIRS.some(([dx, dy]) => !CM.inBounds(f, x + dx, y + dy) || f.grid[y + dy][x + dx] === 1), `${v.ore} at ${k} is beside the rock`); }
   const cave = CM.makeFloor(CM.caveNumber(2), "ore-1", 2); assert.ok(Object.values(cave.things).some((t) => t.type === "vein" && t.ore === "gold"), "gold at the deepest cave");
@@ -3041,7 +3044,7 @@ test("the dungeon's debris: each band its own palette and not another's; the nam
   const PALETTE = { 0: ["coffinlid", "candle", "dust"], 1: ["puddle", "slime"], 2: ["rubble", "rails"], 3: ["candelabra", "frost", "glass"], 4: ["shells", "weed"], 5: ["fungi"], 6: ["shard"], 7: ["slag", "cogs"], 8: ["bonepile"], 9: ["roots"] };
   const OWN = { coffinlid: [0], candelabra: [3], frost: [3], shells: [4], fungi: [5], shard: [6], slag: [7], cogs: [7], bonepile: [8], roots: [9], rails: [2] };
   const seen = {};
-  for (let n = 1; n <= 50; n++) for (const seed of ["debris-1", "debris-2"]) {
+  for (let n = 1; n <= CM.BOTTOM; n++) for (const seed of ["debris-1", "debris-2"]) {
     const fl = CM.makeFloor(n, seed), band = CM.themeIndex(n), fp = CM.floorPrint(fl);
     for (const p of CM.scatter(fl, seed, 1)) {
       (seen[band] = seen[band] || new Set()).add(p.id);
@@ -3117,9 +3120,9 @@ test("walls, floors and ceilings with variation: squares turned by hash, corners
   const shades = v3.filter((v) => v[5] === index.floor).map((v) => v[6]); assert.ok(Math.min(...shades) < 0.7 && Math.max(...shades) > 0.9, `${Math.min(...shades)}..${Math.max(...shades)}`);
   // decals by band, and overhead
   let decals = 0, beams = 0, stalactites = 0;
-  for (const [num, seed] of [[3, "vary-1"], [8, "vary-1"], [13, "vary-1"], [18, "vary-1"], [33, "vary-1"], [48, "vary-1"]]) {
+  for (const [num, seed] of [[3, "vary-1"], [8, "vary-1"], [CM.realOf(13), "vary-1"], [18, "vary-1"], [CM.realOf(33), "vary-1"], [48, "vary-1"]]) {
     const fl = CM.makeFloor(num, seed), m = CM.floorMesh(fl, CM.themeFor(num), index); decals += m.decals;
-    if (num === 13) beams = m.overhead; if (num === 33) stalactites = m.overhead;
+    if (num === CM.realOf(13)) beams = m.overhead; if (num === CM.realOf(33)) stalactites = m.overhead;
     // never on a secret door's wall, a lever's or a carving's: walk every decal quad back to its square and face
     const vs = verts(m).filter((v) => decalLayers.has(v[5]));
     for (let i = 0; i < vs.length; i += 6) {
@@ -5664,11 +5667,11 @@ test("the pony's gear: fitted at the farm; saddlebags carry more on the land, th
 
 test("a follower's fear: on the dark floors with the party's heart low a hired follower may bolt for good, never with the heart steady, and a veteran is steadier", () => {
   const CM = load(), g = new CM.Game(); g.newGame("fear-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true });
-  g.follower = { id: "torchbearer", name: "Wren", hp: 14, max: 14, floors: 0 }; g.morale = 70; assert.strictEqual(g.fearChance(17), 0, "steady: no fear");
-  g.morale = 10; assert.ok(g.fearChance(17) > 0); assert.strictEqual(g.fearChance(3), 0, "not on the bright floors"); const c0 = g.fearChance(17);
-  g.follower.deep = 10; assert.ok(g.fearChance(17) < c0, "a veteran is steadier");
-  g.follower.deep = 0; let fled = false; for (let n = 16; n <= 40 && !fled; n++) { g.morale = 0; g.enterFloor(n, "down"); if (!g.follower) fled = true; } assert.ok(fled, "bolted at last");
-  g.follower = { id: "dog", name: "Grip", hp: 18, max: 18, floors: 0 }; g.morale = 0; assert.strictEqual(g.fearChance(17), 0, "the dog never runs");
+  g.follower = { id: "torchbearer", name: "Wren", hp: 14, max: 14, floors: 0 }; g.morale = 70; assert.strictEqual(g.fearChance(CM.realOf(17)), 0, "steady: no fear");
+  g.morale = 10; assert.ok(g.fearChance(CM.realOf(17)) > 0); assert.strictEqual(g.fearChance(3), 0, "not on the bright floors"); const c0 = g.fearChance(CM.realOf(17));
+  g.follower.deep = 10; assert.ok(g.fearChance(CM.realOf(17)) < c0, "a veteran is steadier");
+  g.follower.deep = 0; let fled = false; for (let n = CM.THEMES[3].floors[0]; n <= CM.BOTTOM && !fled; n++) { g.morale = 0; g.enterFloor(n, "down"); if (!g.follower) fled = true; } assert.ok(fled, "bolted at last");
+  g.follower = { id: "dog", name: "Grip", hp: 18, max: 18, floors: 0 }; g.morale = 0; assert.strictEqual(g.fearChance(CM.realOf(17)), 0, "the dog never runs");
 });
 
 test("the kennel and the stable: in town by the Keep-yard; the animals fed once a day for the party's heart, named again, and taught and fitted there as at the farm", () => {
@@ -6464,7 +6467,7 @@ test("the plants' places (plan 62, phases 3-4): the grass carries tufts and flow
   // below ground
   g.enterFloor(1, "down"); const f1 = g.floor, I1 = CM.plantInstancesOf(g, f1, f1.pos, 12, 1); assert.ok(I1.length > 3, `the Catacombs' moss (${I1.length})`); assert.ok(I1.every((p) => p.kind === "fungus" || p.kind === "water" || p.kind === "stone"));
   for (const p of I1) { const x = Math.floor(p.x + 0.001), y = Math.floor(p.z + 0.001); assert.strictEqual(f1.grid[y][x], 0, "on an open square"); } assert.deepStrictEqual(JSON.stringify(CM.plantTintOf(g, f1, "plant2")), JSON.stringify(CM.PLANTS.bands[CM.themeIndex(1)].tint), "tinted by the band");
-  const deep = [...Array(60).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 5), foundry = [...Array(60).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 7); assert.ok(deep && foundry, `the Fungal Deep (${deep}) and the Foundry (${foundry})`);
+  const deep = [...Array(101).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 5), foundry = [...Array(101).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 7); assert.ok(deep && foundry, `the Fungal Deep (${deep}) and the Foundry (${foundry})`);
   g.enterFloor(deep, "down"); const Id = CM.plantInstancesOf(g, g.floor, g.floor.pos, 12, 1); assert.ok(Id.length > I1.length, `the Fungal Deep thick (${Id.length} over ${I1.length})`);
   g.enterFloor(foundry, "down"); assert.strictEqual(CM.plantInstancesOf(g, g.floor, g.floor.pos, 12, 1).length, 0, "nothing grows in the Foundry"); assert.strictEqual(CM.plantTintOf(g, g.floor, "plant1"), null);
 });
@@ -6480,7 +6483,7 @@ test("the clutter below ground (plan 63, set 4): the stalagmite and stalactite c
   const all = CM.plantInstancesOf(g, fl, fl.pos, 12, 1); assert.ok(all.some((p) => p.kind === "stone"), "merged with the plants");
   const D = CM.clutterDecals(fl, fl.pos, 10); assert.ok(D.length > 2, `decals (${D.length})`); for (const d of D) { assert.ok(open(d.x, d.y), "from an open square"); const [dx, dy] = CM.DIRS[d.face]; assert.ok(!open(d.x + dx, d.y + dy), "on a wall"); if (d.kind === "web") { assert.ok(!open(d.x + CM.DIRS[(d.face + 1) % 4][0], d.y + CM.DIRS[(d.face + 1) % 4][1]) || !open(d.x + CM.DIRS[(d.face + 3) % 4][0], d.y + CM.DIRS[(d.face + 3) % 4][1]), "a web in a corner"); } }
   const R = CM.clutterRats(fl); assert.ok(R.length >= 1 && R.length <= CM.CLUTTER.ratsPerFloor, `rats (${R.length})`); for (const rt of R) { assert.ok(open(rt.x, rt.y) && !fl.things[`${rt.x},${rt.y}`], "a rat's home is open and bare"); assert.strictEqual(CM.DIRS.filter(([dx, dy]) => open(rt.x + dx, rt.y + dy)).length, 2, "in a corridor"); }
-  const crystal = [...Array(60).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 6); if (crystal) { g.enterFloor(crystal, "down"); const T = CM.plantTintOf(g, g.floor, "stalagmite_m"); assert.ok(T && T[2] > T[0], "the Crystal Caverns tint the stone blue"); }
+  const crystal = [...Array(101).keys()].find((n) => n >= 1 && CM.themeIndex(n) === 6); if (crystal) { g.enterFloor(crystal, "down"); const T = CM.plantTintOf(g, g.floor, "stalagmite_m"); assert.ok(T && T[2] > T[0], "the Crystal Caverns tint the stone blue"); }
   g.enterFloor(1, "down"); fl.special = "joker"; assert.strictEqual(CM.clutterOf(g, fl, fl.pos, 12, 1).length, 0, "none in the Joker's hall"); assert.strictEqual(CM.clutterRats(fl).length, 0); delete fl.special;
   const win = fs.readFileSync(path.join(__dirname, "..", "src", "js", "76zzzzzzzzzzr-clutter.js"), "utf-8"); for (const w of ["clut:port", "clut:grate", "clut:pipe", "clut:web", "air:bug", "pipedrip", "monster:Giant Rat", "CM.clutterRats", "scurry"]) assert.ok(win.includes(w), w);
 });
@@ -6563,7 +6566,7 @@ test("the blooms and the drafts (plan 63, release 4): rain above over the last d
 test("steam, the dry roots and the fog pools (plan 63, release 5): in a fire band, water under a cold sky is steam - the fight's terrain, a bow at three quarters, the sight a square; in a heat event above the Root of the World's roots are dry and a fire spell bites a quarter harder and sets them alight for a quarter hour, a sight; a magical fog lies at full strength in a sunken room and half in a raised one, and is said when the party steps down into it", () => {
   const CM = load(); CM.wxRandom = () => 0.5; const S = CM.STEAM, g = new CM.Game(); g.newGame("steam-1", fixedParty(CM));
   const force = (kind, strength = 1) => { const W = g.ext("wx"); W.cur = { kind, strength, from: g.clock - 60, until: g.clock + 300 }; W.next = { kind: "clear", strength: 1, from: W.cur.until, until: W.cur.until + 200 }; };
-  const foundry = [...Array(60).keys()].find((n) => n >= 1 && (CM.themeFor(n) || {}).name === "The Foundry"), root = [...Array(60).keys()].find((n) => n >= 1 && (CM.themeFor(n) || {}).name === "The Root of the World"); assert.ok(foundry && root, `the Foundry (${foundry}) and the Root (${root})`);
+  const foundry = [...Array(101).keys()].find((n) => n >= 1 && (CM.themeFor(n) || {}).name === "The Foundry"), root = [...Array(101).keys()].find((n) => n >= 1 && (CM.themeFor(n) || {}).name === "The Root of the World"); assert.ok(foundry && root, `the Foundry (${foundry}) and the Root (${root})`);
   g.enterFloor(foundry, "down"); const fl = g.floor; g.season = "winter"; force("clear"); assert.ok(!CM.steamHere(g), "dry: no steam");
   // floodwater in the Foundry under a winter sky: steam (the flood is made by hand - the Foundry is deep)
   const open = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[`${x},${y}`]) open.push([x, y]); fl.levels = fl.levels || {}; fl.levels[`${open[2][0]},${open[2][1]}`] = [CM.LEVELS.pit, 1]; fl.pos = open[2];
@@ -6651,7 +6654,7 @@ test("set-piece rooms, the second nine (plan 64, release 2): every room's rows a
   const CM = load(); const names = ["the Garden Gone Wild", "the Chapel of Candles", "the Map Room", "the Rookery", "the Cistern", "the Dripping Gallery", "the Storm Drain", "the Steam Room", "the Lightning Rod"]; for (const n of names) assert.ok(CM.SETPIECES.some((t) => t.name === n), n);
   for (const T of CM.SETPIECES) { const w = T.rows[0].length; assert.ok(T.rows.every((row) => row.length === w), `${T.name}: square`); let ok = false; T.rows.forEach((row, ry) => [...row].forEach((c, rx) => { if (!"DLGS".includes(c)) return; const onSide = ry === 0 || ry === T.rows.length - 1; if ((onSide && rx % 2 === 1) || (!onSide && ry % 2 === 1)) ok = true; })); assert.ok(ok, `${T.name}: a door the maze can reach`); }
   // bands and depths in the plan
-  let cistern = 0, steam = 0, rod = 0, any = 0; for (const seed of ["r2-a", "r2-b", "r2-c", "r2-d"]) for (let n = 1; n <= 45; n++) { const plan = CM.planFloor(n, seed, new CM.Random(1), null, null); for (const p of plan.pieces) { if (!CM.SETPIECES.includes(p)) continue; any++; if (p.name === "the Cistern") { cistern++; assert.ok(n <= 4 && [0, 1, 4].includes(CM.themeIndex(n)), `the Cistern on floor ${n}`); } if (p.name === "the Steam Room") { steam++; assert.ok([7, 9].includes(CM.themeIndex(n)), `the Steam Room on floor ${n}`); } if (p.name === "the Lightning Rod") { rod++; assert.ok(n <= 3, `the Rod on floor ${n}`); } } }
+  let cistern = 0, steam = 0, rod = 0, any = 0; for (const seed of ["r2-a", "r2-b", "r2-c", "r2-d"]) for (let n = 1; n <= CM.BOTTOM; n++) { const plan = CM.planFloor(n, seed, new CM.Random(1), null, null); for (const p of plan.pieces) { if (!CM.SETPIECES.includes(p)) continue; any++; if (p.name === "the Cistern") { cistern++; assert.ok(CM.storyOf(n) <= 4 && [0, 1, 4].includes(CM.themeIndex(n)), `the Cistern on floor ${n}`); } if (p.name === "the Steam Room") { steam++; assert.ok([7, 9].includes(CM.themeIndex(n)), `the Steam Room on floor ${n}`); } if (p.name === "the Lightning Rod") { rod++; assert.ok(CM.storyOf(n) <= 3, `the Rod on floor ${n}`); } } }
   assert.ok(any >= 30, `set pieces planned (${any})`);
   // a floor dressed by hand with each of the mechanical rooms
   const g = new CM.Game(); g.newGame("r2-1", fixedParty(CM));
@@ -6737,6 +6740,37 @@ test("set-piece rooms, the last seven (plan 64, release 4): every room is square
   // the annex
   { const { fl, all, at } = build(T("the Hall of Fame Annex"), 9); const plaques = all("5"); assert.strictEqual(plaques.length, 12); g.memorial = [{ name: "Ada", cls: "Mage", level: 3, floor: 4, date: "the 2nd of Thaw", epitaph: "She read the last page." }, { name: "Bram", cls: "Fighter", level: 2, floor: 2 }]; const [p0x, p0y] = plaques[0]; fl.pos = [p0x, p0y]; g.messages = []; g.use(); assert.ok(g.messages[0].startsWith("Ada the Mage") && g.messages[0].includes("floor 4") && g.messages[0].includes("last page"), g.messages[0]); const [p3x, p3y] = plaques[3]; fl.pos = [p3x, p3y]; g.messages = []; g.use(); assert.ok(g.messages[0].includes("no name"));
     const [cx, cy] = at("9"); assert.ok(fl.things[`${cx},${cy}`].sealed); fl.pos = [cx, cy]; const gold0 = g.gold; g.use(); assert.strictEqual(g.gold, gold0, "sealed till the bell"); const [bx, by] = at("6"); fl.pos = [bx, by]; g.messages = []; g.use(); assert.ok(g.messages[0].includes("Ada and Bram"), g.messages[0]); assert.ok(!fl.things[`${cx},${cy}`].sealed, "the bell opens it"); fl.pos = [cx, cy]; g.use(); assert.ok(g.gold > gold0); }
+  g.floor = null;
+});
+
+test("the shaft is a hundred floors deep (plan 66): story floors and real floors map both ways, the bands stretch over them, the guardians and the camps stand on key floors only, the Lich King on 70 and the Root on 100, the levels and the loot keep the old curve, the kits and the achievements ask their real floors, the carvings read the story floor's chapter, Endless deepens below the hundredth floor", () => {
+  const CM = load();
+  assert.strictEqual(CM.LAST_FLOOR, 70); assert.strictEqual(CM.BOTTOM, 100); assert.strictEqual(CM.STORY_LAST, 20); assert.strictEqual(CM.STORY_BOTTOM, 50);
+  // the mapping, both ways
+  for (let n = 1; n <= 150; n++) { const s = CM.storyOf(n); assert.ok(s >= 1 && (n > CM.LAST_FLOOR ? s === n - 50 : s <= 20), `story of ${n}: ${s}`); if (n <= CM.BOTTOM) assert.ok(CM.realOf(s) >= n && CM.storyOf(CM.realOf(s)) === s, `real of ${s} holds ${n}`); }
+  for (let s = 1; s <= 50; s++) { const r = CM.realOf(s); assert.strictEqual(CM.storyOf(r), s); assert.ok(CM.isKeyFloor(r), `${r} is story ${s}'s key floor`); assert.ok(!CM.isKeyFloor(r - 1) || CM.storyOf(r - 1) !== s, "one key floor a story floor"); }
+  assert.deepStrictEqual([1, 2, 3, 4, 5, 20, 21, 50].map(CM.realOf), [3, 7, 10, 14, 17, 70, 71, 100]); assert.strictEqual(CM.storyOf(0), 0); assert.strictEqual(CM.storyOf(-1), -1); assert.strictEqual(CM.storyOf(1000 + 5), 955, "the tower's floors are not stretched by this");
+  // the bands
+  assert.strictEqual(JSON.stringify(CM.THEMES.map((t) => t.floors)), JSON.stringify([[1, 17], [18, 35], [36, 52], [53, 70], [71, 75], [76, 80], [81, 85], [86, 90], [91, 95], [96, 100]]));
+  assert.strictEqual(CM.themeFor(70).name, "The Lich King's Palace"); assert.strictEqual(CM.themeFor(71).name, "The Drowned Town"); assert.strictEqual(CM.themeFor(100).name, "The Root of the World"); assert.strictEqual(CM.themeIndex(104), 0, "Endless: the bands come round again");
+  // the guardians and the camps on key floors only
+  const guarded = []; for (let n = 1; n <= 150; n++) if (CM.guardianFor(n)) guarded.push(n + ":" + CM.guardianFor(n));
+  assert.deepStrictEqual(guarded, ["17:rat", "35:knight", "52:forge", "75:queen", "80:mind", "85:tyrant", "90:master", "95:patriarch", "100:root", "110:rat", "120:knight", "130:forge", "140:queen", "150:mind"]);
+  assert.strictEqual(JSON.stringify(CM.CAMP_FLOORS), JSON.stringify([17, 35, 52, 75, 80, 85, 90, 95])); assert.ok(!CM.guardianFor(5) && !CM.guardianFor(20) && !CM.guardianFor(50), "the old floors are ordinary now");
+  { const fl = CM.makeFloor(70, "deep-1", 2); assert.ok(Object.values(fl.things).some((t) => t.type === "boss"), "the Lich King on 70"); const f69 = CM.makeFloor(69, "deep-1", 2); assert.ok(Object.values(f69.things).some((t) => t.type === "phylactery"), "his heart on 69"); const f20 = CM.makeFloor(20, "deep-1", 2); assert.ok(!Object.values(f20.things).some((t) => t.type === "boss"), "not on 20"); }
+  // the curve
+  assert.deepStrictEqual([1, 17, 35, 52, 70, 71, 100, 150].map(CM.monsterLevel), [1, 5, 10, 15, 20, 21, 35, 60]);
+  assert.ok(CM.xpScale(10) < 1 && CM.xpScale(70) < 1 && CM.xpScale(71) === 1 && CM.xpScale(0) === 1);
+  { const R = new CM.Random(7); const a = CM.makeFloor(60, "loot-1", 2), chest = Object.values(a.things).find((t) => t.type === "chest" && t.items && t.items.length); assert.ok(chest, "a chest on 60"); for (const it of chest.items) if (["weapon", "armor", "helm", "shield"].includes(it.kind)) assert.ok(it.power <= 40, `loot on 60 is the palace's, not a sixtieth floor's: ${it.name} ${it.power}`); void R; }
+  // the kits and the achievements
+  assert.strictEqual(JSON.stringify(CM.unlocked([{ floor: 17 }])), JSON.stringify(["pauper", "veteran"])); assert.ok(CM.unlocked([{ floor: 80 }]).includes("abyss") && !CM.unlocked([{ floor: 79 }]).includes("abyss")); assert.ok(CM.unlocked([{ floor: 21, won: true }]).includes("legend") && !CM.unlocked([{ floor: 99, won: false }]).includes("legend"));
+  assert.ok(CM.ACHIEVEMENTS.endless.what.includes("110") && CM.ACHIEVEMENTS.beyond.what.includes("150") && CM.ACHIEVEMENTS.delver.what.includes("17") && CM.ACHIEVEMENTS.bottom.what.includes("hundredth"));
+  // the carvings read the story floor's chapter; the people and the court sit on key floors
+  for (const n of [1, 2, 3, 4, 17, 18, 70]) { const fl = CM.makeFloor(n, "spine-x", 2), wall = Object.values(fl.features).find((f) => f.type === "carving" && typeof f.text === "number"); assert.ok(wall && wall.text === CM.storyOf(n) - 1, `floor ${n} reads chapter ${CM.storyOf(n)}`); }   /* (a guardian's floor has its own carving too) */
+  { let ghosts = 0; for (let n = 1; n <= 17; n++) for (const t of Object.values(CM.makeFloor(n, "people-x", 2).things)) if (t.type === "ghost" && t.arc) ghosts++; assert.ok(ghosts >= 1 && ghosts <= 6, `the Catacombs' ghosts on key floors (${ghosts})`); }
+  // Endless below the bottom
+  const g = new CM.Game(); g.newGame("deep-2", fixedParty(CM), "pauper", "fair", [], "endless"); assert.ok(g.endless); g.enterFloor(101, "down"); assert.ok(g.messages.some((m) => m.includes("Below the Root")), "the stair goes on below 100");
+  assert.ok(g.campBelow(100) && g.campBelow(105) && !g.campBelow(103)); assert.strictEqual(CM.echoOf(110), 1); assert.strictEqual(CM.echoOf(100), 0);
   g.floor = null;
 });
 
@@ -6857,7 +6891,7 @@ test("one name across the world: every part of the world adds renown once from i
 test("the tongue of the last bell: one story through every place - a making found in each by a deed there, kept with the village; cast at the smith; given to the Boy in the bell-yard; then the Lich King rises a fifth short", () => {
   const CM = load(), TH = CM.THREAD, g = new CM.Game(); g.newGame("th-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
   let I = g.thInfo(); assert.strictEqual(I.chapter, 0); assert.strictEqual(I.all, 10); assert.strictEqual(g.thSync().length, 0, "nothing yet");
-  g.trail = (g.trail || []).concat([[TH.yard, 0], [15, 0]]); assert.deepStrictEqual([...g.thSync()].sort(), ["ropes", "yard"]); assert.strictEqual(g.thInfo().chapter, 1); assert.strictEqual(g.thSync().length, 0, "once");
+  g.trail = (g.trail || []).concat([[TH.yard, 0], [CM.realOf(15), 0]]); assert.deepStrictEqual([...g.thSync()].sort(), ["ropes", "yard"]); assert.strictEqual(g.thInfo().chapter, 1); assert.strictEqual(g.thSync().length, 0, "once");
   g.tower = { cleared: 10, best: 10 }; g.fort = { cleared: 5, best: 5 }; g.abloStore().heroes.x = { maxDepth: 8 }; g.achievements.homestead = { date: 1 }; g.caveStore().bosses = 1; g.tally.brosBest = 4; g.cards().beaten = { a: 1, b: 1, c: 1 };
   assert.ok(/found: 9 of 10|9 of 10/.test(g.thForgeWhy()) || g.thSync().length === 7);
   const JK = CM.JOKER || CM.JK, J = g.jkStore(); if (JK && JK.need) { J.jxp = 0; for (let L = 1; L < 10; L++) J.jxp += JK.need(L); }

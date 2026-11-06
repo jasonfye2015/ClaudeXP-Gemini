@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v89.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v90.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1538,7 +1538,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "89.0", built: "2026-11-05", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "90.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -1605,9 +1605,19 @@ CM.DIR_NAMES = "NESW";
 // a monster's name in a sentence: "the Orc", but "the Lich King" (whose name carries its own The)
 CM.the = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? "t" + n.slice(1) : "the " + n; };
 CM.The = (m) => { const n = typeof m === "string" ? m : m.name; return /^The /.test(n) ? n : "The " + n; };
-CM.LAST_FLOOR = 20;                                        // the Lich King's floor: the story's end, and the Deep's door
-CM.BOTTOM = 50;                                            // the bottom of the world
-CM.CAMP_AFTER = [5, 10, 15, 25, 30, 35, 40, 45];           // a merchant's camp waits below these floors
+CM.LAST_FLOOR = 70;                                        // the Lich King's floor: the story's end, and the Deep's door
+CM.BOTTOM = 100;                                            // the bottom of the world
+CM.CAMP_AFTER = [5, 10, 15, 25, 30, 35, 40, 45];           // a merchant's camp waits below these floors (story floors: CM.CAMP_FLOORS has the real ones)
+// plan 66: the old fifty floors are the story floors - every table below is written in them - and the shaft is stretched over
+// a hundred real floors: three or four to a story floor above the Lich King (real 1-70 -> story 1-20), one to one below him
+// (real 71-100 -> story 21-50), and on below the bottom. A story floor's key floor is the last real floor of it: the guardians,
+// the camps and the Lich King stand there; the other real floors are ordinary floors of the band.
+CM.STORY_LAST = 20; CM.STORY_BOTTOM = 50;
+CM.storyOf = (n) => (n >= 1 && n <= CM.LAST_FLOOR ? Math.ceil(n * CM.STORY_LAST / CM.LAST_FLOOR) : n > CM.LAST_FLOOR ? n - (CM.LAST_FLOOR - CM.STORY_LAST) : n);
+CM.realOf = (s) => (s >= 1 && s <= CM.STORY_LAST ? Math.floor(s * CM.LAST_FLOOR / CM.STORY_LAST) : s > CM.STORY_LAST ? s + (CM.LAST_FLOOR - CM.STORY_LAST) : s);
+CM.isKeyFloor = (n) => n >= 1 && (n > CM.LAST_FLOOR || CM.realOf(CM.storyOf(n)) === n);
+CM.CAMP_FLOORS = CM.CAMP_AFTER.map(CM.realOf);
+CM.xpScale = (n) => (n >= 1 && n <= CM.LAST_FLOOR ? 0.45 : 1);     // (three and a half times the fights to the Lich King: each gives less)
 
 // the six stats a hero is rolled with (3-18, plus what the class brings)
 CM.STATS = ["str", "dex", "con", "int", "wis", "luck"];
@@ -1808,12 +1818,12 @@ CM.DOOR_BREAK = 3;
 // kits earned between runs: what the deepest run so far has unlocked
 CM.KITS = {
   pauper: { name: "Pauper's kit", need: 0, what: "30 gold, two potions, two torches. Where everyone starts." },
-  veteran: { name: "Veteran's kit", need: 5, what: "60 gold more, and a lantern that never runs out." },
-  delver: { name: "Delver's kit", need: 10, what: "Two Scrolls of Mapping, three torches, two antidotes." },
-  heir: { name: "Heir's kit", need: 15, what: "Every hero's own weapon, well made: +2 to start." },
-  legend: { name: "Legend's kit", need: 21, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
-  scholar: { name: "Scholar's kit", need: 8, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 8.)" },
-  abyss: { name: "Abyss kit", need: 30, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 30 of the Deep.)" },
+  veteran: { name: "Veteran's kit", need: 17, what: "60 gold more, and a lantern that never runs out." },
+  delver: { name: "Delver's kit", need: 35, what: "Two Scrolls of Mapping, three torches, two antidotes." },
+  heir: { name: "Heir's kit", need: 52, what: "Every hero's own weapon, well made: +2 to start." },
+  legend: { name: "Legend's kit", need: -1, what: "Every hero sets out at level 2, with a boon to choose. (For slaying the Lich King.)" },
+  scholar: { name: "Scholar's kit", need: 28, what: "The Catacombs' chapter known before the stair, and a tome in the pack. (For reading as far as floor 28.)" },
+  abyss: { name: "Abyss kit", need: 80, what: "Every hero sets out at level 3 with a boon, and the party with 150 gold more, a rope, a diamond and a Scroll of Mapping. (For reaching floor 80 of the Deep.)" },
 };
 
 // each monster, with how it's painted: body (beast, biped, small, wide, tall, ghost), head, eyes, and what it carries
@@ -2148,7 +2158,7 @@ CM.QUIRKS = {
 CM.SECOND_AT = 20;
 CM.SECOND_COST = 200;                                                  // renown, at a camp, with a guildhall of level 2
 CM.SHALLOW = 16;                                                        // the kinds of the first twenty floors: the first sixteen rows (the Deep's come after)
-CM.monsterLevel = (floor) => (floor <= CM.LAST_FLOOR ? floor : CM.LAST_FLOOR + Math.round((floor - CM.LAST_FLOOR) * 0.5));   // (the Deep climbs more slowly)
+CM.monsterLevel = (floor) => { const s = CM.storyOf(floor); return s <= CM.STORY_LAST ? s : CM.STORY_LAST + Math.round((s - CM.STORY_LAST) * 0.5); };   // (the Deep climbs more slowly; plan 66: by story floor)
 CM.monsterKind = (name) => CM.MONSTERS.find((m) => m.name === name) || CM.MONSTERS.find((m) => name && name.endsWith(m.name)) || null;
 
 // now and then a group has a leader out of the ordinary
@@ -2461,8 +2471,8 @@ CM.ACHIEVEMENTS = {
   tower10: { name: "Ten Stories Up", what: "Clear the tenth floor of the Mage Tower", title: "of the Tower" },
   tower: { name: "The View from the Tower", what: "Watch the sun go down from a gate tower", title: "the Watchful" },
   champions: { name: "Champion-breaker", what: "Slay five champions in one expedition", title: "the Champion-breaker" },
-  beyond: { name: "Beyond the Dream", what: "Reach floor 100 in an Endless expedition", title: "Beyond the Dream" },
-  bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the fiftieth floor", title: "of the Bottom" },
+  beyond: { name: "Beyond the Dream", what: "Reach floor 150 in an Endless expedition", title: "Beyond the Dream" },
+  bottom: { name: "To the Bottom", what: "Reach the bottom of the world, below the hundredth floor", title: "of the Bottom" },
   crown: { name: "Crownbreaker", what: "Slay the Lich King", title: "Crownbreaker" },
   distilled: { name: "Distilled", what: "Brew an elixir at the camp's still", title: "the Distilled" },
   rivals: { name: "No Rivals", what: "Best a rival party for the floor", title: "the Unrivalled" },
@@ -2486,19 +2496,19 @@ CM.ACHIEVEMENTS = {
   ironman: { name: "Unfallen", what: "Slay the Lich King with no hero ever fallen", title: "the Unfallen" },
   grim: { name: "Grim", what: "Slay the Lich King on Grim", title: "the Grim" },
   swift: { name: "Swift", what: "Slay the Lich King in under 1,500 steps", title: "the Swift" },
-  abyss: { name: "Of the Deep", what: "Reach floor 30, in the Deep", title: "of the Deep" },
-  endless: { name: "Without End", what: "Reach floor 60 in an Endless expedition", title: "Without End" },
-  deeper: { name: "Of the Halls", what: "Reach floor 15", title: "of the Halls" },
+  abyss: { name: "Of the Deep", what: "Reach floor 80, in the Deep", title: "of the Deep" },
+  endless: { name: "Without End", what: "Reach floor 110 in an Endless expedition", title: "Without End" },
+  deeper: { name: "Of the Halls", what: "Reach floor 52", title: "of the Halls" },
   labyrinth: { name: "Minotaur's Bane", what: "Slay the Minotaur of the Labyrinth", title: "the Minotaur's Bane" },
   untouched: { name: "Unbowed", what: "Slay a guardian with no one falling in the fight", title: "the Unbowed" },
-  deep: { name: "Of the Vaults", what: "Reach floor 10", title: "of the Vaults" },
-  daily: { name: "Of the Day", what: "Reach floor 10 in Today's dungeon", title: "of the Day" },
+  deep: { name: "Of the Vaults", what: "Reach floor 35", title: "of the Vaults" },
+  daily: { name: "Of the Day", what: "Reach floor 35 in Today's dungeon", title: "of the Day" },
   smith: { name: "Tempered", what: "Have the smith work a piece of gear to +3", title: "the Tempered" },
   hoarder: { name: "Rich", what: "Hold 2,000 gold at once", title: "the Rich" },
   scholar: { name: "Learned", what: "Fill the journal with ten entries", title: "the Learned" },
   friend: { name: "Kind", what: "Cut a lost adventurer loose", title: "the Kind" },
   restful: { name: "Gentle", what: "Lay a ghost to rest", title: "the Gentle" },
-  delver: { name: "Delver", what: "Reach floor 5", title: "the Delver" },
+  delver: { name: "Delver", what: "Reach floor 17", title: "the Delver" },
 };
 CM.titleFor = (achievements) => { const id = Object.keys(CM.ACHIEVEMENTS).find((a) => achievements && achievements[a]); return id ? CM.ACHIEVEMENTS[id].title : ""; };
 // the keys, as the player may set them (Settings > Keys); the arrows always move as well
@@ -2660,7 +2670,8 @@ CM.PILLARED = Object.values(CM.GUARDIANS).filter((G) => G.lair.rows.slice(1, -1)
 CM.GUARDIAN_ORDER = ["rat", "knight", "forge", "queen", "mind", "tyrant", "master", "patriarch", "root"];
 CM.echoOf = (floor) => (floor > CM.BOTTOM && floor % 10 === 0 ? Math.floor((floor - CM.BOTTOM) / 10) : 0);     // Endless: 60 -> 1, 70 -> 2 ... which echo (0: none)
 CM.guardianFor = (floor) => (floor > CM.BOTTOM ? (CM.echoOf(floor) ? CM.GUARDIAN_ORDER[(CM.echoOf(floor) - 1) % CM.GUARDIAN_ORDER.length] : null)
-  : Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null);
+  : floor < 1 ? Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === floor) || null
+  : CM.isKeyFloor(floor) ? Object.keys(CM.GUARDIANS).find((id) => CM.GUARDIANS[id].floor === CM.storyOf(floor)) || null : null);   // (plan 66: on a story floor's key floor)
 CM.guardianHas = (m, passive) => Boolean(m && m.guardian && CM.GUARDIANS[m.guardian] && (CM.GUARDIANS[m.guardian].passives || []).includes(passive));
 CM.unmoved = (m) => Boolean(m && (m.boss || m.guardian));          // the Lich King and the guardians: not held, not put to sleep, not routed
 // below the bottom (Endless) the carvings are not the story any more: they are the dream, still dreaming
@@ -2705,6 +2716,7 @@ CM.THEMES = [
     moss: [140, 40, 40], fog: [0.05, 0.015, 0.015], torch: [1.0, 0.6, 0.5], reach: 4.0, bones: 0.3, photos: "t1" },
 ];
 CM.AMBIENCE_OF = [0, 1, 2, 3, 1, 0, 3, 2, 0, 3];                      // which of the four ambiences (and footfalls) each band uses
+for (const t of CM.THEMES) t.floors = [CM.realOf(t.floors[0] - 1) + 1, CM.realOf(t.floors[1])];   // (plan 66: the bands' real floors)
 CM.themeFor = (number) => (CM.isTowerFloor && CM.isTowerFloor(number) ? CM.TOWER_THEME : number === 0 && CM.TOWN_THEME ? CM.TOWN_THEME : CM.isUndercroft && CM.isUndercroft(number) ? CM.UNDERCROFT_THEME : number < 0 ? (number % 1 === 0 && CM.WOOD_THEME ? CM.WOOD_THEME : CM.THEMES[0]) : number > CM.BOTTOM ? CM.THEMES[Math.floor((number - CM.BOTTOM - 1) / 5) % CM.THEMES.length]      // (Endless: below the bottom the bands come round again, five floors each)
   : CM.THEMES.find((t) => number >= t.floors[0] && number <= t.floors[1]) || CM.THEMES[CM.THEMES.length - 1]);
 // a slight colour grade per band, multiplied into the view (1, 1, 1 is none)
@@ -3212,6 +3224,7 @@ CM.RUMOURS = {
   hermit: { what: "a hermit sits on floor {n}", floors: [3, 14] },
   telling: { what: "floor {n}'s carving is in the other hand", floors: [1, 15] },
 };
+for (const R of Object.values(CM.RUMOURS)) if (R.floors) R.floors = [CM.realOf(R.floors[0] - 1) + 1, CM.realOf(R.floors[1])];   // (plan 66: real floors)
 CM.activeRumours = [];                                                    // (set by the game from the village: {kind, floor, seed})
 CM.rumourAt = (seed, number, kind) => CM.activeRumours.find((r) => r.seed === seed && r.floor === number && (!kind || r.kind === kind));
 // the Book of Caer Duin: every crowned party of this browser's, written as the carvings would write it
@@ -3665,7 +3678,7 @@ CM.dwarfPick = () => ({ name: "Dwarven Pick", kind: "pick", power: 0, value: 150
 // a lock's grade, by the seed and where it is: common above floor 6; iron two in five below; dwarven one in four from the palace down
 CM.lockGrade = (seed, floor, k) => { if (floor < 6) return "common"; const r = CM.hashSeed(`${seed}:lock:${floor}:${k}`) % 100; return floor >= 16 && r < 25 ? "dwarven" : r < 65 ? "iron" : "common"; };
 CM.HOMECOMING = { chest: 20, drop: 40, elite: 10, price: 60, perFloor: 10 };   // one chest in twenty from floor 3; the dead one in forty, an elite one in ten; the Merchant's House's price climbs with the deepest floor
-CM.homecomingPrice = (game) => CM.HOMECOMING.price + CM.HOMECOMING.perFloor * Math.max(0, ...((game && game.trail) || []).map((t) => t[0]), ...((game && game.camps) || []));
+CM.homecomingPrice = (game) => CM.HOMECOMING.price + CM.HOMECOMING.perFloor * CM.storyOf(Math.max(0, ...((game && game.trail) || []).map((t) => t[0]), ...((game && game.camps) || [])));   // (plan 66: by story floor)
 CM.MARK_KILLS = 100;
 CM.MARKS_TO_NAME = 3;
 
@@ -3742,7 +3755,7 @@ CM.affix = function (item, floor, rnd) {
   const roll = rnd.next();
   const n = (item.props || {}).cursed ? Math.max(1, roll < rare ? 2 : roll < rare + fine ? 1 : 0) : roll < rare ? 2 : roll < rare + fine ? 1 : 0;   // (a cursed thing always has its word)
   if (!n) return item;
-  const deep = floor > CM.LAST_FLOOR, p = item.props = item.props || {}, tier = p.cursed ? 3 : CM.affixTier(floor);
+  const deep = floor > CM.STORY_LAST, p = item.props = item.props || {}, tier = p.cursed ? 3 : CM.affixTier(floor);
   const pool = (table) => Object.entries(table).filter(([, a]) => (!a.deep || deep) && (!a.weapon || item.kind === "weapon") && !(a.element && p.element));
   const kinds = n === 2 ? ["prefix", "suffix"] : [rnd.chance(0.5) ? "prefix" : "suffix"];
   const words = [];
@@ -4015,7 +4028,7 @@ CM.deepGroup = function (floor, rnd, gen) {
   const here = CM.MONSTERS.filter((m) => m.deep === band && known(m)), above = CM.MONSTERS.filter((m) => m.deep === band - 1 && known(m));
   const shallow = floor > CM.BOTTOM && !here.length ? CM.MONSTERS.slice(band * 4, Math.min(CM.SHALLOW, band * 4 + 5)) : [];   // (Endless: the first bands come round with their own kinds)
   const kinds = here.length ? here : shallow.length ? shallow : CM.MONSTERS.filter((m) => m.deep && known(m));
-  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (floor >= 36 ? 1 : 0) + (floor > CM.BOTTOM ? 1 : 0));
+  const kind = rnd.pick(kinds), count = rnd.int(2, 4 + (CM.storyOf(floor) >= 36 ? 1 : 0) + (floor > CM.BOTTOM ? 1 : 0));
   const group = [];
   for (let i = 0; i < count; i++) group.push(CM.makeMonster(kind, level, rnd));
   if (count >= 3 && rnd.chance(0.4)) {
@@ -4052,12 +4065,12 @@ CM.skeleton = (level, rnd) => CM.makeMonster(CM.MONSTERS[2], level, rnd);
 // a guardian over its shaft - or, below the bottom (Endless), its echo: the same thing, grown to the depth (this floor's
 // monster level against its own floor's), that leaves nothing behind when it falls
 CM.guardianMonster = function (id, floor) {
-  const G = CM.GUARDIANS[id], echo = floor ? CM.echoOf(floor) : 0, k = echo ? CM.monsterLevel(floor) / CM.monsterLevel(G.floor) : 1;
+  const G = CM.GUARDIANS[id], echo = floor ? CM.echoOf(floor) : 0, k = echo ? CM.monsterLevel(floor) / CM.monsterLevel(CM.realOf(G.floor)) : 1;
   return { name: echo ? `${G.name}'s Echo` : G.name, kind: G.name, colour: G.colour, hp: Math.round(G.hp * k), max: Math.round(G.hp * k), atk: Math.round(G.atk * k), df: Math.round(G.df * Math.sqrt(k)),
     xp: Math.round(G.xp * k), gold: Math.round(G.gold * k), guardian: id, echo, speed: G.speed, undead: Boolean(G.undead), ability: null, touch: G.touch ? Object.assign({}, G.touch) : null, turns: 0 };
 };
 CM.guardianGroup = function (id, floor, rnd) {
-  const group = [CM.guardianMonster(id, floor)], level = floor > CM.BOTTOM ? CM.monsterLevel(floor) : floor;
+  const group = [CM.guardianMonster(id, floor)], level = CM.monsterLevel(floor);
   for (const name of CM.GUARDIANS[id].escorts || []) group.push(CM.makeMonster(CM.monsterKind(name), level, rnd));
   return group;
 };
@@ -4204,7 +4217,7 @@ CM.deepest = function (fame) {
 };
 CM.unlocked = function (fame) {
   const d = CM.deepest(fame);
-  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need === 21 ? d.won : d.floor >= CM.KITS[id].need));
+  return Object.keys(CM.KITS).filter((id) => CM.KITS[id].need === 0 || (CM.KITS[id].need === -1 ? d.won : d.floor >= CM.KITS[id].need));
 };
 // this week's dungeon: the same seed for everyone all week, three mutators, and a party the seed rolls (CM.weeklyParty)
 CM.weeklySeed = (date) => {
@@ -4400,12 +4413,12 @@ CM.furnish = function (floor, seed, gen) {
   // the hoard, deeper: an affix or two on the chests' gear, and one unique a band, in a chest on one of its floors
   for (const [k, t] of Object.entries(floor.things)) {
     if (t.type !== "chest") continue;
-    t.items.forEach((it, i) => CM.affix(it, number, new CM.Random(CM.hashSeed(`${seed}:affix:${number}:${k}:${i}`))));
+    t.items.forEach((it, i) => CM.affix(it, CM.storyOf(number), new CM.Random(CM.hashSeed(`${seed}:affix:${number}:${k}:${i}`))));
   }
   const band = CM.themeIndex(number), uniqueId = Object.keys(CM.UNIQUES).find((id) => CM.UNIQUES[id].band === band);
   if (uniqueId && number <= CM.BOTTOM && !CM.guardianFor(number)) {
-    const first = band === 0 ? 2 : band * 5 + 1, floorsOfBand = [];
-    for (let n = first; n <= band * 5 + 5; n++) if (!CM.guardianFor(n)) floorsOfBand.push(n);
+    const [lo, hi] = CM.THEMES[band].floors, first = band === 0 ? 2 : lo, floorsOfBand = [];
+    for (let n = first; n <= hi; n++) if (!CM.guardianFor(n)) floorsOfBand.push(n);
     if (floorsOfBand[CM.hashSeed(`${seed}:unique:${band}`) % floorsOfBand.length] === number) {
       const chests = Object.keys(floor.things).filter((k) => floor.things[k].type === "chest").sort();
       if (chests.length) floor.things[chests[CM.hashSeed(`${seed}:unique:${band}:chest`) % chests.length]].items.push(CM.makeUnique(uniqueId));
@@ -4448,9 +4461,9 @@ CM.furnish = function (floor, seed, gen) {
   }
   // the second generator's wings: a second stair down into a short floor of the band's own, one a band now and then;
   // a secret stair in a wall, once a band, to a hidden one (CM.WINGS)
-  if (gen >= 2 && number >= 3 && number < CM.BOTTOM - 1 && !CM.guardianFor(number) && !CM.guardianFor(number + 1) && !CM.CAMP_AFTER.includes(number) && number !== CM.LAST_FLOOR - 1 && number !== CM.LAST_FLOOR && special !== "maze") {
-    const band = CM.themeIndex(number), first = band * 5 + 1, floors = [];
-    for (let n = Math.max(3, first); n <= band * 5 + 5; n++) if (!CM.guardianFor(n) && !CM.guardianFor(n + 1) && !CM.CAMP_AFTER.includes(n) && n !== CM.LAST_FLOOR - 1 && n !== CM.LAST_FLOOR && n < CM.BOTTOM - 1) floors.push(n);
+  if (gen >= 2 && number >= 3 && number < CM.BOTTOM - 1 && !CM.guardianFor(number) && !CM.guardianFor(number + 1) && !CM.CAMP_FLOORS.includes(number) && number !== CM.LAST_FLOOR - 1 && number !== CM.LAST_FLOOR && special !== "maze") {
+    const band = CM.themeIndex(number), [lo, hi] = CM.THEMES[band].floors, first = lo, floors = [];
+    for (let n = Math.max(3, first); n <= hi; n++) if (!CM.guardianFor(n) && !CM.guardianFor(n + 1) && !CM.CAMP_FLOORS.includes(n) && n !== CM.LAST_FLOOR - 1 && n !== CM.LAST_FLOOR && n < CM.BOTTOM - 1) floors.push(n);
     const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1, secretAt = floors.length > 1 ? floors.filter((n) => n !== wingAt)[CM.hashSeed(`${seed}:secretwing:${band}`) % (floors.length - 1)] : -1;
     if (number === wingAt) { const k = pickCell("wingstair", (c) => !roomCells.has(c)); if (k) floor.things[k] = { type: "wingstair", wing: band }; }
     if (number === secretAt) {                                           // (a wall beside a corridor cell, searched: Space before it)
@@ -4475,7 +4488,7 @@ CM.furnish = function (floor, seed, gen) {
   // bell they dropped on the fourth; a request's bones far from the ghost, its quarry marked among the floor's bands
   if (number < CM.BOTTOM && !CM.guardianFor(number) && number !== CM.LAST_FLOOR) {
     CM.PEOPLE.forEach((p, i) => {
-      const arc = p.floors.indexOf(number);
+      const arc = CM.isKeyFloor(number) ? p.floors.indexOf(CM.storyOf(number)) : -1;   // (plan 66: a story floor's key floor)
       if (arc < 0) return;
       const twin = Object.keys(floor.things).find((c) => floor.things[c].type === "ghost" && !floor.things[c].arc && floor.things[c].who === i);
       if (twin) {                                                        // (the generator rolled the same soul here: it stands in their place, and its errand goes)
@@ -4499,9 +4512,9 @@ CM.furnish = function (floor, seed, gen) {
         if (!m.elite) { m.name = `Hulking ${m.name}`; m.elite = "hulking"; m.max = Math.round(m.max * 1.5); m.hp = m.max; m.atk += 2; m.xp = Math.round(m.xp * 1.5); m.gold *= 2; }
       }
     });
-    if (number === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
+    if (CM.isKeyFloor(number) && CM.storyOf(number) === CM.BELL_FLOOR) { const k = pickCell("bell", (c) => !roomCells.has(c)) || pickCell("bell"); if (k) floor.things[k] = { type: "bones", bell: true }; }
     // the chronicler's rumours, kept: a ghost who wants its bones, a hermit, the other telling of the floor's carving
-    if (CM.rumourAt(seed, number, "telling")) for (const f of Object.values(floor.features)) if (f.type === "carving" && f.text === number - 1) f.telling = 1;
+    if (CM.rumourAt(seed, number, "telling")) for (const f of Object.values(floor.features)) if (f.type === "carving" && f.text === CM.storyOf(number) - 1) f.telling = 1;
     if (CM.rumourAt(seed, number, "hermit") && !Object.values(floor.things).some((t) => t.type === "hermit")) { const k = pickCell("rumour:hermit", (c) => roomCells.has(c)) || pickCell("rumour:hermit"); if (k) floor.things[k] = { type: "hermit", heard: 0, greeted: false }; }
     if (CM.rumourAt(seed, number, "ghostbones") && !Object.values(floor.things).some((t) => t.type === "ghost" && t.request === "bones")) {
       const k = pickCell("rumour:ghost", (c) => roomCells.has(c)) || pickCell("rumour:ghost");
@@ -4526,7 +4539,7 @@ CM.furnish = function (floor, seed, gen) {
       for (const c of chests) if (h(`mimic:${c}`) % 12 === 0) { floor.things[c].mimic = true; break; }
     }
     if (CM.themeIndex(number) === 3 && number <= CM.BOTTOM) {           // the Bag of Holding: in one chest of the palace's floors, by the seed
-      const first = 16, floors = []; for (let n = first; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
+      const [lo, hi] = CM.THEMES[3].floors, floors = []; for (let n = lo; n <= hi; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
       if (floors[CM.hashSeed(`${seed}:holding`) % floors.length] === number) { const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest" && floor.things[c].items).sort(); if (chests.length) floor.things[chests[h("holding:chest") % chests.length]].items.push(CM.makeUnique("holding")); }
     }
     if (number >= 4 && (CM.namedWeapons || []).length && h("named") % 100 < 12) {   // a weapon a party of this browser's named, found again, in a chest
@@ -4534,11 +4547,11 @@ CM.furnish = function (floor, seed, gen) {
       if (chests.length) floor.things[chests[h("named:chest") % chests.length]].items.push(CM.legendWeapon(CM.namedWeapons[h("named:which") % CM.namedWeapons.length], number));
     }
     CM.COURT.forEach((c, i) => {                                        // the seated dead of the palace, and the physician's page in one of its chests
-      if (c.floor !== number) return;
+      if (!CM.isKeyFloor(number) || c.floor !== CM.storyOf(number)) return;   // (plan 66)
       const k = pickCell(`court:${i}`, (cell) => roomCells.has(cell)) || pickCell(`court:${i}`);
       if (k) floor.things[k] = { type: "ghost", courtier: i, asked: false };
     });
-    if (number === CM.LAST_FLOOR - 4 + (CM.hashSeed(`${seed}:page`) % 3)) {   // (one floor of the three, by the seed alone)
+    if (CM.isKeyFloor(number) && CM.storyOf(number) === CM.STORY_LAST - 4 + (CM.hashSeed(`${seed}:page`) % 3)) {   // (plan 66: a key floor of the palace)   // (one floor of the three, by the seed alone)
       const chests = Object.keys(floor.things).filter((c) => floor.things[c].type === "chest").sort();
       if (chests.length) floor.things[chests[h("page:chest") % chests.length]].items.push(Object.assign({}, CM.PAGE));
     }
@@ -4568,10 +4581,10 @@ CM.makeFloor = function (number, seed, gen) {
 // a wing of - no way down but the exit to the main stair a floor below, no people, its own hazard; a secret one richer
 CM.makeWing = function (number, seed, gen) {
   const n = Math.floor(number), band = CM.themeIndex(n), W = CM.WINGS[band] || CM.WINGS[0];
-  const secret = CM.hashSeed(`${seed}:secretwing:${band}`) !== CM.hashSeed(`${seed}:wing:${band}`) && (() => { const first = band * 5 + 1, floors = []; for (let f = Math.max(3, first); f <= band * 5 + 5; f++) if (!CM.guardianFor(f) && !CM.guardianFor(f + 1) && !CM.CAMP_AFTER.includes(f) && f !== CM.LAST_FLOOR - 1 && f !== CM.LAST_FLOOR && f < CM.BOTTOM - 1) floors.push(f); const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1; return n !== wingAt; })();
+  const hiddenWing = CM.hashSeed(`${seed}:secretwing:${band}`) !== CM.hashSeed(`${seed}:wing:${band}`) && (() => { const [lo, hi] = CM.THEMES[band].floors, first = lo, floors = []; for (let f = Math.max(3, first); f <= hi; f++) if (!CM.guardianFor(f) && !CM.guardianFor(f + 1) && !CM.CAMP_FLOORS.includes(f) && f !== CM.LAST_FLOOR - 1 && f !== CM.LAST_FLOOR && f < CM.BOTTOM - 1) floors.push(f); const wingAt = floors.length ? floors[CM.hashSeed(`${seed}:wing:${band}`) % floors.length] : -1; return n !== wingAt; })();
   const make = CM.generators[gen || CM.GEN] || CM.generators[1];
   const fl = make(n, `${seed}:wing:${n}`);
-  fl.number = number; fl.wing = band; fl.wingName = secret ? W.secret : W.name; fl.secretWing = secret; fl.special = null;
+  fl.number = number; fl.wing = band; fl.wingName = (hiddenWing && W.secret) || W.name; fl.secretWing = hiddenWing; fl.special = null;
   for (const [k, t] of Object.entries(fl.things)) {
     if (t.type === "ladder" || t.type === "boss" || t.type === "guardian") fl.things[k] = { type: "wingexit" };
     else if (t.type === "stairs_up") fl.things[k] = { type: "wingstair_up" };
@@ -4580,8 +4593,8 @@ CM.makeWing = function (number, seed, gen) {
   for (const [k, f] of Object.entries(fl.features)) if (["carving", "teleporter", "spinner", "trapdoor"].includes(f.type)) delete fl.features[k];
   if (!Object.values(fl.things).some((t) => t.type === "wingstair_up")) fl.things[CM.keyOf(fl.pos[0], fl.pos[1])] = { type: "wingstair_up" };
   const rnd = new CM.Random(CM.hashSeed(`${seed}:wingloot:${n}`));
-  for (const t of Object.values(fl.things)) if (t.type === "chest") { t.gold = Math.floor(t.gold * (secret ? 2.5 : 1.3)); if (secret) t.items.push(CM.affix(CM.makeItem(n + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd)); }
-  if (secret) { let i = 0; for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && i++ > 0) delete fl.things[k]; }   // (a secret floor: one band, a lot of chests)
+  for (const t of Object.values(fl.things)) if (t.type === "chest") { t.gold = Math.floor(t.gold * (hiddenWing ? 2.5 : 1.3)); if (hiddenWing) t.items.push(CM.affix(CM.makeItem(n + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd)); }
+  if (hiddenWing) { let i = 0; for (const [k, t] of Object.entries(fl.things)) if (t.type === "monsters" && i++ > 0) delete fl.things[k]; }   // (a secret floor: one band, a lot of chests)
   fl.hazard = W.hazard;
   if (W.hazard !== "tide" && W.hazard !== "mirror") { const cells = []; for (let y = 1; y < fl.grid.length - 1; y++) for (let x = 1; x < fl.grid.length - 1; x++) { const k = CM.keyOf(x, y); if (fl.grid[y][x] === 0 && !fl.things[k] && !fl.features[k] && !(x === fl.pos[0] && y === fl.pos[1])) cells.push(k); } for (let i = 0; i < 3 && cells.length; i++) fl.features[cells[CM.hashSeed(`${seed}:winghazard:${n}:${i}`) % cells.length]] = { type: W.hazard, known: false, spent: false }; }
   for (const t of Object.values(fl.things)) if (t.type === "chest") t.items.forEach((it, i) => CM.affix(it, n, new CM.Random(CM.hashSeed(`${seed}:wingaffix:${n}:${i}`))));
@@ -4814,7 +4827,7 @@ CM.generators[1] = function (number, seed) {
   const stillGroups = [];
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
-    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd), CM.makeItem(number, rnd)], trap: trap() };
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(CM.storyOf(number), rnd), CM.makeItem(CM.storyOf(number), rnd)], trap: trap() };
     else if (c === "M") { const g = CM.monsterGroup(number, rnd); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
@@ -4905,7 +4918,7 @@ CM.generators[1] = function (number, seed) {
   // the carving for this floor, on a wall the party can stand before
   const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
   if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
-    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : CM.storyOf(number) - 1, read: false };   // (below the bottom: the dream, still dreaming)
   // keys: one for every locked door, somewhere before it
   for (const [dk, f] of Object.entries(floor.features)) {
     if (f.type !== "door" || !f.locked) continue;
@@ -4921,7 +4934,7 @@ CM.generators[1] = function (number, seed) {
     const [x, y] = spare.pop();
     const items = [];
     const n = rnd.int(1, 2);
-    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd));
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(CM.storyOf(number), rnd));
     floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
   for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
@@ -4929,7 +4942,7 @@ CM.generators[1] = function (number, seed) {
     floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd) };
   }
   if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
-    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
+    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), CM.storyOf(number) + 3, rnd);
     Object.assign(m, { name: "Minotaur of the Labyrinth", elite: "hulking", max: Math.round(m.max * 1.5), atk: m.atk + 3, xp: m.xp * 3, gold: m.gold * 4 });
     m.hp = m.max;
     floor.things[key(x, y)] = { type: "monsters", group: [m], hunter: true };
@@ -4979,7 +4992,7 @@ CM.generators[1] = function (number, seed) {
       if (spot) floor.things[key(spot[0], spot[1])] = { type: "hermit", heard: 0, greeted: false };
     } else if (roll < 0.5 && number >= 3) {
       const spot = freeCells(room)[0];
-      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(number / 2)), rnd), freed: false };
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(CM.storyOf(number) / 2)), rnd), freed: false };
     }
   }
   if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
@@ -5205,7 +5218,7 @@ CM.generators[2] = function (number, seed) {
   const stillGroups = [];
   for (const r of rooms) if (r.template) for (const [x, y, c] of r.fill) {
     const k = key(x, y);
-    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(number, rnd, undefined, 2), CM.makeItem(number, rnd, undefined, 2)], trap: trap() };
+    if (c === "C") floor.things[k] = { type: "chest", gold: rnd.int(15, 40) * number, items: [CM.makeItem(CM.storyOf(number), rnd, undefined, 2), CM.makeItem(CM.storyOf(number), rnd, undefined, 2)], trap: trap() };
     else if (c === "M") { const g = CM.monsterGroup(number, rnd, 2); stillGroups.push(k); floor.things[k] = { type: "monsters", group: g, still: true }; }
     else if (c === "F") floor.features[k] = { type: "fountain", kind: rnd.pick(["heal", "heal", "mana", "poison"]), used: false, known: false };
     else if (c === "A") floor.features[k] = { type: "altar", used: false };
@@ -5296,7 +5309,7 @@ CM.generators[2] = function (number, seed) {
   // the carving for this floor, on a wall the party can stand before
   const carve_at = freeCells((x, y) => wallFace(x, y) >= 0)[0];
   if (carve_at) floor.features[key(carve_at[0], carve_at[1])] = { type: "carving", face: wallFace(carve_at[0], carve_at[1]),
-    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : number - 1, read: false };   // (below the bottom: the dream, still dreaming)
+    text: number > CM.BOTTOM ? `e:${CM.hashSeed(`${seed}:endless:${number}`) % CM.LORE_ENDLESS.length}` : CM.storyOf(number) - 1, read: false };   // (below the bottom: the dream, still dreaming)
   // keys: one for every locked door, somewhere before it
   for (const [dk, f] of Object.entries(floor.features)) {
     if (f.type !== "door" || !f.locked) continue;
@@ -5312,7 +5325,7 @@ CM.generators[2] = function (number, seed) {
     const [x, y] = spare.pop();
     const items = [];
     const n = rnd.int(1, 2);
-    for (let j = 0; j < n; j++) items.push(CM.makeItem(number, rnd, undefined, 2));
+    for (let j = 0; j < n; j++) items.push(CM.makeItem(CM.storyOf(number), rnd, undefined, 2));
     floor.things[key(x, y)] = { type: "chest", gold: rnd.int(10, 30) * number, items, trap: trap() };
   }
   for (let i = 0; i < (special === "maze" ? 3 : Math.min(14, 5 + Math.floor(number / 2))) && spare.length; i++) {
@@ -5320,7 +5333,7 @@ CM.generators[2] = function (number, seed) {
     floor.things[key(x, y)] = { type: "monsters", group: CM.monsterGroup(number, rnd, 2) };
   }
   if (special === "maze" && spare.length) {                      // the thing in the labyrinth: a great minotaur that hunts the party wherever it goes
-    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), number + 3, rnd);
+    const [x, y] = spare.pop(), m = CM.makeMonster(CM.monsterKind("Minotaur"), CM.storyOf(number) + 3, rnd);
     Object.assign(m, { name: "Minotaur of the Labyrinth", elite: "hulking", max: Math.round(m.max * 1.5), atk: m.atk + 3, xp: m.xp * 3, gold: m.gold * 4 });
     m.hp = m.max;
     floor.things[key(x, y)] = { type: "monsters", group: [m], hunter: true };
@@ -5370,7 +5383,7 @@ CM.generators[2] = function (number, seed) {
       if (spot) floor.things[key(spot[0], spot[1])] = { type: "hermit", heard: 0, greeted: false };
     } else if (roll < 0.5 && number >= 3) {
       const spot = freeCells(room)[0];
-      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(number / 2)), rnd), freed: false };
+      if (spot) floor.things[key(spot[0], spot[1])] = { type: "adventurer", hero: CM.makeRecruit(Math.max(1, Math.floor(CM.storyOf(number) / 2)), rnd), freed: false };
     }
   }
   if (special === "wading") for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0) floor.decor.push({ x, y, kind: "water" });
@@ -5718,6 +5731,7 @@ for (const id of Object.keys(CM.PICKS)) CM.BASES[CM.PICKS[id].name] = { id: CM.P
 CM.BASES.Charcoal = { id: "Charcoal", kind: "charcoal", slot: null, tier: 0, group: "stuff" };
 Object.assign(CM.WEIGHTS, { ore: 2, bar: 3, charcoal: 1, pick: 3 });
 // which ores a floor has veins of, and how many: by the ore's floors (the Dwarven Halls' silver gives two a swing)
+for (const O of Object.values(CM.ORES)) O.floors = [CM.realOf(O.floors[0] - 1) + 1, CM.realOf(O.floors[1])];   // (plan 66: real floors)
 CM.veinsFor = (number) => { const out = []; for (const [id, O] of Object.entries(CM.ORES)) if (number >= O.floors[0] && number <= O.floors[1]) out.push(id); return out; };
 CM.bestPick = (bag, ore) => { let best = -1; bag.forEach((it, i) => { if (it.kind === "pick" && (it.points || 0) > 0 && CM.PICKS[it.pick] && CM.PICKS[it.pick].mines.includes(ore) && (best < 0 || CM.PICKS[it.pick].points > CM.PICKS[bag[best].pick].points)) best = i; }); return best; };
 
@@ -6159,7 +6173,7 @@ CM.replayStep = function (game, line) {
       case "chooseFamiliar": game.chooseFamiliar(game.party[args[0]], args[1]); break;
       case "secondCalling": game.secondCalling(args[0], args[1]); break;
       case "talk": { const t = game.floor.things[args[0]]; if (t) game.talk(t, args[0]); break; }
-      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.drink(f); break; }
+      case "drink": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; game.drink(f); break; }   // (a fountain under the party, or the Hanged Lantern's round in town - plan 66: the round was skipped in a replay)
       case "kneel": { const f = game.floor.features[CM.keyOf(...game.floor.pos)]; if (f) game.kneel(f); break; }
       case "openBag": game.openBag(Boolean(args[0])); break;
       case "autoFight": game.autoFight(Boolean(args[0])); break;
@@ -11835,7 +11849,7 @@ CM.Game = class {
     this.ironAllow = false;
     this.say((town ? CM.t("town.open") : "Four adventurers climb down into the dark. Somewhere below, the Lich King stirs.") + (this.kit !== "pauper" ? ` (${CM.KITS[this.kit].name}.)` : "")
       + (this.difficulty !== "fair" ? ` ${CM.DIFFICULTIES[this.difficulty].name}: ${CM.DIFFICULTIES[this.difficulty].what}.` : "")
-      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the fiftieth floor the dark deepens every ten." : "")
+      + (this.endless ? " An Endless expedition: this shaft has no bottom, and below the hundredth floor the dark deepens every ten." : "")
       + (this.ascension ? ` Ascension ${this.ascension}: ${CM.ASCENSION.slice(0, this.ascension).map((r) => r.name).join(", ")}.` : "") + (this.iron ? " Iron: the run is saved only at the camps." : "")
       + (this.awakened ? " Awakened: the Root remembers you. Every floor is the mirror of itself, the monsters a band deeper, the uniques awake." : "")
       + (this.dream ? " The Other Dream: the Root dreams otherwise. The floors are the floors; the walls are not; the monsters are the Awakened ones." : ""));
@@ -11969,7 +11983,7 @@ CM.Game = class {
 
   // ---- Endless: no bottom - the bands come round again, the guardians echo, and the dark deepens ----
   get allFame() { return this.fame.concat(this.fameEndless || []); }   // (both boards: what has been reached, ever, unlocks the kits)
-  campBelow(n) { return CM.CAMP_AFTER.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
+  campBelow(n) { return CM.CAMP_FLOORS.includes(n) || Boolean(this.endless && n >= CM.BOTTOM && n % 5 === 0); }
 };
 
 // ---- 61-explore.js ----
@@ -12395,7 +12409,7 @@ Object.assign(CM.Game.prototype, {
       return;
     }
     if (thing && thing.type === "chest" && thing.mimic) {               // a chest that isn't: it has teeth, and the hoard is in it
-      const L = fl.number > CM.LAST_FLOOR ? CM.monsterLevel(fl.number) : fl.number, rnd = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${fl.number}:${k}`));
+      const L = CM.monsterLevel(fl.number), rnd = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${fl.number}:${k}`));
       const group = [this.tune(CM.makeMonster(CM.MIMIC, L, rnd))];
       fl.things[k] = { type: "monsters", group, mimicOf: { gold: thing.gold || 0, items: thing.items || [] }, still: true };
       this.sound("roar"); this.say("The lid lifts by itself, and the chest is all mouth.");
@@ -13059,7 +13073,7 @@ Object.assign(CM.Game.prototype, {
     } else this.bag.splice(row, 1);
     thing.opened = true;
     const rnd = new CM.Random(CM.hashSeed(`${this.seed}:strongbox:${this.floor.number}`)), gold = 60 * this.floor.number;
-    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
+    const it = rnd.chance(0.4) ? CM.trinket(rnd.pick(Object.keys(CM.TRINKETS))) : CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd, rnd.pick(["weapon", "armor", "helm", "shield", "ring", "amulet"])), 99, rnd);
     it.unknown = false;
     this.gold += gold; this.count("goldFound", gold); this.gain([it], "strongbox");
     this.sound("chest");
@@ -13423,7 +13437,7 @@ CM.TOWER_THEME = Object.assign({}, CM.THEMES[3], {
 });
 CM.towerFloorName = (n) => (n === CM.TOWER_FLOORS ? "The Mage Tower, the King's hall" : `The Mage Tower, floor ${n}`);
 // the dungeon floor whose kinds and strength a tower floor borrows: the first bands low, the Deep high
-CM.towerDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 1.2)));
+CM.towerDepth = (n) => Math.min(CM.STORY_BOTTOM || 50, Math.max(1, Math.round(n * 1.2)));
 
 CM.makeTowerFloor = function (n, seed) {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:magetower:${n}`)), size = n === CM.TOWER_FLOORS ? 31 : 33 + 2 * Math.min(3, Math.floor(n / 10));
@@ -13836,7 +13850,7 @@ CM.abloClass = (h) => (["Knight", "Paladin", "Monk"].includes(h.cls) ? "warrior"
 // a thing from Claudeablo, as one of the party's own: the same slot, its depth from the item's level, its name kept
 CM.abloToItem = function (it, seed) {
   const AB = CM.AB, slot = AB.slot(it); if (!slot) return null;
-  const rnd = new CM.Random(CM.hashSeed(`${seed}:${JSON.stringify(it)}`)), depth = Math.max(1, Math.min(CM.BOTTOM || 50, it.ilvl));
+  const rnd = new CM.Random(CM.hashSeed(`${seed}:${JSON.stringify(it)}`)), depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, it.ilvl));
   const kind = { weapon: "weapon", armor: "armor", helm: "helm", shield: "shield", ring: "ring", amulet: "amulet" }[slot];
   let item = CM.makeItem(depth, rnd, kind);
   if (["weapon", "armor", "helm", "shield"].includes(kind)) { if (it.rarity === "magic" || it.rarity === "rare") item = CM.affix(item, Math.max(8, depth + (it.rarity === "rare" ? 6 : 2)), rnd); }
@@ -14750,7 +14764,7 @@ Object.assign(CM.Game.prototype, {
 
   summonSkeletons(n) {
     for (let i = 0; i < n; i++) {
-      const s = CM.skeleton(CM.LAST_FLOOR, this.rnd);
+      const s = CM.skeleton(CM.STORY_LAST, this.rnd);
       Object.assign(s, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
       this.foes.push(this.tune(s));
     }
@@ -14847,7 +14861,7 @@ Object.assign(CM.Game.prototype, {
   summonFor(m, mv, n) {
     const kind = CM.monsterKind(mv.what);
     if (!kind) return;
-    const level = mv.level === "deep" ? CM.monsterLevel(this.floor ? this.floor.number : CM.LAST_FLOOR) : (this.floor ? this.floor.number : 5);
+    const level = mv.level === "deep" ? CM.monsterLevel(this.floor ? this.floor.number : CM.LAST_FLOOR) : (this.floor ? CM.storyOf(this.floor.number) : 5);
     for (let i = 0; i < n; i++) {
       const r = CM.makeMonster(kind, level, this.rnd);
       Object.assign(r, { summoned: true, held: 0, asleep: 0, blind: 0, marked: false, charged: false, fled: false, dead: false });
@@ -15563,15 +15577,15 @@ Object.assign(CM.Game.prototype, {
     if (slain.some((m) => m.name === "Minotaur of the Labyrinth")) this.achieve("labyrinth");
     const fought0 = this.floor.things[this.foeKey];
     if (fought0 && fought0.rivalsFight) {                                 // the rivals' best thing, and their purse, on top
-      const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(this.floor.number + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
-      best.unknown = false; this.gain([best], "rivals"); gold += 30 * this.floor.number;
+      const rnd0 = new CM.Random(CM.hashSeed(`${this.seed}:rivals:${this.floor.number}`)), best = CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd0, rnd0.pick(["weapon", "armor", "helm"])), 99, rnd0);
+      best.unknown = false; this.gain([best], "rivals"); gold += 30 * CM.storyOf(this.floor.number);
       this.achieve("rivals");
       this.say(`The rivals are beaten, and the one in front yields: their purse, and ${best.name} (${CM.itemLabel(best)}).`);
     }
-    const loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd)] : [];
+    const D = CM.storyOf(this.floor.number), loot = rnd.chance(0.45) ? [CM.affix(CM.makeItem(D, rnd), D, rnd)] : [];
     for (const m of slain) if (m.champion && !m.summoned) {               // a champion: its own thing, a hoarder its hoard; counted for the card
-      loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd));
-      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(this.floor.number + 2, rnd), this.floor.number + 4, rnd), CM.affix(CM.makeItem(this.floor.number, rnd), this.floor.number, rnd));
+      loot.push(CM.affix(CM.makeItem(D + 2, rnd), D + 4, rnd));
+      if (m.champion === "hoarder") loot.push(CM.affix(CM.makeItem(D + 2, rnd), D + 4, rnd), CM.affix(CM.makeItem(D, rnd), D, rnd));
       this.tally.champions = (this.tally.champions || 0) + 1;
       if (this.findCard) this.findCard(`champion:${this.floor.number}:${this.tally.champions}`, CM.CARD_FIND.champion, "common", `On ${CM.the(m)}:`);
       if (this.tally.champions >= 5) this.achieve("champions");
@@ -15612,7 +15626,7 @@ Object.assign(CM.Game.prototype, {
     this.cheer(guardian ? 10 : 3);
     this.say(`Victory! ${xp} experience and ${gold} gold` + (loot.length ? `, and ${loot.map((i) => (i.kind === "ingredient" ? "some " : "a ") + (i.unknown ? CM.baseName(i) + " (unknown)" : i.name)).join(" and ")}.` : "."));
     for (const hero of this.alive()) {
-      hero.xp += Math.floor(xp / 2 * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
+      hero.xp += Math.floor(xp / 2 * CM.xpScale(this.floor ? this.floor.number : 0) * (1 + CM.gearProp(hero, "xpBonus") + (this.jkMul ? this.jkMul("xp") - 1 : 0)));   // everyone standing learns from the fight (a scholar's thing, a little more)
       while (hero.xp >= CM.xpForLevel(hero.level + 1)) {
         hero.level += 1;
         CM.upgradeHero(hero);
@@ -15787,7 +15801,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
-      const rnd = this.rnd, depth = (this.floor.number === 0 || this.floor.special === "interior") ? Math.max(3, this.partyLevel() + 1) : this.floor.number + 3;
+      const rnd = this.rnd, depth = (this.floor.number === 0 || this.floor.special === "interior") ? Math.max(3, this.partyLevel() + 1) : CM.storyOf(this.floor.number) + 3;
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),
@@ -16925,11 +16939,11 @@ Object.assign(CM.Game.prototype, {
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
       kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };
     const fl = this.floor.number, steps = (this.tally || {}).steps || 0;
-    if (fl >= 5 || won) this.achieve("delver");
-    if (fl >= 10 || won) this.achieve("deep");
-    if (fl >= 15 || won) this.achieve("deeper");
-    if ((fl >= 10 || won) && entry.daily) this.achieve("daily");
-    if (fl >= 30) this.achieve("abyss");
+    if (fl >= 17 || won) this.achieve("delver");
+    if (fl >= 35 || won) this.achieve("deep");
+    if (fl >= 52 || won) this.achieve("deeper");
+    if ((fl >= 35 || won) && entry.daily) this.achieve("daily");
+    if (fl >= 80) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
     entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
@@ -16943,8 +16957,8 @@ Object.assign(CM.Game.prototype, {
     }
     if (this.endless) {
       entry.endless = true;
-      if (fl >= 60) this.achieve("endless");
-      if (fl >= 100) this.achieve("beyond");
+      if (fl >= 110) this.achieve("endless");
+      if (fl >= 150) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
@@ -17789,7 +17803,7 @@ Object.assign(CM.Game.prototype, {
   followerAtCamp() {
     const f = this.follower;
     if (!f || f.id !== "adventurer" || !f.leaving) return;
-    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:gift:${this.floor.number}`)), gift = CM.affix(CM.makeItem(this.floor.number + 3, rnd, rnd.pick(["weapon", "armor", "ring", "amulet"])), this.floor.number + 6, rnd);
+    const rnd = new CM.Random(CM.hashSeed(`${this.seed}:gift:${this.floor.number}`)), gift = CM.affix(CM.makeItem(CM.storyOf(this.floor.number) + 3, rnd, rnd.pick(["weapon", "armor", "ring", "amulet"])), this.floor.number + 6, rnd);
     gift.unknown = false; this.bag.push(gift);
     this.say(`${f.name} shoulders a pack at the camp and goes her own way, up. She leaves you ${gift.name} (${CM.itemLabel(gift)}).`);
     this.village = this.village || {}; this.village.followerTales = (this.village.followerTales || []).concat({ name: f.name, floor: this.floor.number, date: new Date().toLocaleDateString() }).slice(-12); if (this.saveVillage) this.saveVillage();
@@ -19431,7 +19445,7 @@ CM.FT = {
 };
 CM.FORT_FIGHTERS = ["Knight", "Paladin", "Rogue", "Monk"];
 CM.FORT_MARSHAL = { name: "The Iron Marshal", colour: "#3A3A46", body: "tall", head: "helm", eyes: "#FF4020", extras: ["sword", "shield"], speed: 9, ability: "charge" };
-CM.fortDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 2)));
+CM.fortDepth = (n) => Math.min(CM.STORY_BOTTOM || 50, Math.max(1, Math.round(n * 2)));
 CM.fortFloorName = (n) => (n === CM.FORT_FLOORS ? "The Fortress, the Marshal's hall" : `The Fortress, floor ${n}`);
 // who may go in: a fighter (Knight, Paladin, Rogue, Monk), or a Ranger with a blade instead of a bow
 CM.fortWhyNot = (h) => {
@@ -21519,7 +21533,7 @@ Object.assign(CM.Game.prototype, {
     const bits = [`+${xp} experience`];
     if (CM.CL.GOLD.includes(o.kind)) { const gold = Math.max(1, Math.round(o.m.gold * CM.CL.goldShare)); L.gold += gold; bits.push(`${gold} gold`); }
     if (o.K.flees || o.kind === "Boar") { const meat = o.kind === "Boar" ? 109 : 108; if (cr.satchel.add(meat, CM.CL.wildMeat)) bits.push(CM.CC.NAMES[meat].toLowerCase()); }
-    else if (L.rnd.chance(CM.CL.lootChance)) { const depth = Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(o.level * 1.5))), it = CM.makeItem(depth, L.rnd); L.loot.push(it); bits.push(`${it.unknown ? "something" : it.name}!`); }
+    else if (L.rnd.chance(CM.CL.lootChance)) { const depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, Math.round(o.level * 1.5))), it = CM.makeItem(depth, L.rnd); L.loot.push(it); bits.push(`${it.unknown ? "something" : it.name}!`); }
     this.craftSay(`${o.kind}: ${bits.join(", ")}`); L.events.push({ kind: "die", mob: o });
   },
   // a monster's blow or shot on the hero: the main game's sum against their defence, scaled as the Fortress scales it
@@ -22698,7 +22712,7 @@ Object.assign(CM.Game.prototype, {
     for (const o of off) { if (o.where !== "front") continue; const d = o.d;
       if (d.k === "coin" || d.k === "nugget") gold += d.v;
       else if (d.k === "card") { const R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:card:${d.id}:${this.csStore().n}`)), card = this.cgCard(R.chance(0.2), "The Gilded Cascade drops a card token!", R); if (card) got.push({ card }); }
-      else if (d.k === "item") { const depth = Math.max(2, Math.min(CM.BOTTOM || 50, (this.trail || []).reduce((m, x) => Math.max(m, x[0] || 0), 0) || 5)), R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:item:${d.id}:${this.csStore().n}`)); let it = CM.makeItem(depth, R); if (R.chance(0.4) && CM.affix) it = CM.affix(it, depth, R) || it; this.gain([it], "casino"); got.push({ item: it }); } }
+      else if (d.k === "item") { const depth = Math.max(2, Math.min(CM.STORY_BOTTOM || 50, (this.trail || []).reduce((m, x) => Math.max(m, x[0] || 0), 0) || 5)), R = new CM.Random(CM.hashSeed(`${this.seed}:cascade:item:${d.id}:${this.csStore().n}`)); let it = CM.makeItem(depth, R); if (R.chance(0.4) && CM.affix) it = CM.affix(it, depth, R) || it; this.gain([it], "casino"); got.push({ item: it }); } }
     if (gold) { this.cgPay("cascade", gold); this.csStore().won += gold; }
     if (gold || got.length) { this.csKeep(); this.emit("change"); }
     return { gold, got };
@@ -26388,7 +26402,7 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
       if (S.at) S.bucket = Math.min(SP.cap, S.bucket + ((now - S.at) / 60000) * SP.rate); S.at = now; const use = Math.min(k, Math.floor(S.bucket)); if (use <= 0) return null; S.bucket -= use;
       const L = this.spLevel(), xp = Math.max(1, Math.round(use * SP.xp(L))), heroes = (this.alive ? this.alive() : this.party || []), out = { xp, items: [] };
       for (const h of heroes) h.xp = (h.xp || 0) + xp; S.xp += xp; if (heroes.length && this.checkLevels) this.checkLevels();
-      S.tk += use; while (S.tk >= SP.per) { S.tk -= SP.per; S.n += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:spoils:${S.n}`)), depth = Math.max(1, Math.min(CM.BOTTOM || 50, L));
+      S.tk += use; while (S.tk >= SP.per) { S.tk -= SP.per; S.n += 1; const R = new CM.Random(CM.hashSeed(`${this.seed}:spoils:${S.n}`)), depth = Math.max(1, Math.min(CM.STORY_BOTTOM || 50, L));
         let it = CM.makeItem(depth, R, R.pick(SP.GEAR)); if (it && CM.affix && R.chance(SP.enchant)) it = CM.affix(it, depth + 2, R) || it;
         if (it) { this.gain([it], "casino"); out.items.push(it); S.items += 1; } }
       const res = this.cgRes = this.cgRes || { gold: 0, tickets: 0, cards: [] }; res.xp = (res.xp || 0) + xp; res.items = (res.items || []).concat(out.items);
@@ -26568,7 +26582,7 @@ CM.ODDS = {"made":"2026-11-01","tkRun":3.6,"rows":[{"id":"slots","how":"10 gold 
   GD.colourOf = (it) => ({ weapon: "#C0C8D0", armor: "#B09070", shield: "#B09070", helm: "#B09070", ring: "#F0D040", amulet: "#F0A040", heal: "#F06060", mana: "#6080FF", ration: "#C08040", seed: "#80D060", gscroll: "#F0F0C0", gcard: "#E080E0", gtickets: "#F0C040", ggold: "#F0D040" })[it.kind] || "#FFFFFF";
   GD.SCROLLS = { mapping: "magic mapping", teleport: "teleportation", fire: "fire", enchantWeapon: "enchant weapon", enchantArmour: "enchant armour" };
   GD.scroll = (sub) => ({ name: `Scroll of ${GD.SCROLLS[sub]}`, kind: "gscroll", sub, power: 0, value: 15 });
-  GD.depthOf = (L) => Math.max(1, Math.min(CM.BOTTOM || 50, Math.round(L * 2.4)));
+  GD.depthOf = (L) => Math.max(1, Math.min(CM.STORY_BOTTOM || 50, Math.round(L * 2.4)));
   const DIRS8 = [[0, -1], [1, 0], [0, 1], [-1, 0], [1, -1], [1, 1], [-1, 1], [-1, -1]];
   const key = (x, y) => `${x},${y}`;
 
@@ -27566,7 +27580,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < fee) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
     this.logAct("gossip");
     this.gold -= fee; if (fee) this.spend("tavern", fee); this.gossiped = true;
-    const seed = this.seed, floors = []; for (let n = 16; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
+    const seed = this.seed, floors = []; for (let n = CM.THEMES[3].floors[0]; n <= CM.THEMES[3].floors[1]; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
     const holding = floors[CM.hashSeed(`${seed}:holding`) % floors.length];
     const first = [2, 3, 4]; const unique0 = first[CM.hashSeed(`${seed}:unique:0`) % first.length];
     this.say(`The regular leans in: "The sexton's helm is in a chest on floor ${unique0}, they say. And the dwarves' bottomless sack - the palace, floor ${holding}. Don't ask me how I know."`);
@@ -28456,7 +28470,7 @@ Object.assign(CM.Game.prototype, {
   TH.NOTES = [
     ["yard", "The Undercroft", "shaft", "Find the Bell-Founder's Boy, in the bell-yard under the Wood's third cave", (g) => (g.trail || []).some(([n]) => n === TH.yard) || ((g.tally || {}).guardians || []).includes("bell") || CM.undercroftDoorOpen(g),
       "He swings the bell and it makes no sound, and he swings it again. Round the cross: WE WILL LISTEN FOR IT. Whoever cut that was sure someone would come. The bell has a socket where the tongue should hang. It is the size of a man's fist, and empty, and polished by two hundred years of waiting."],
-    ["ropes", "The dungeon", "shaft", "Go down past the fifteenth floor, or bring Brother Cael his bell", (g) => deepest(g) >= 15 || Boolean(g.story && g.story.bell),
+    ["ropes", "The dungeon", "shaft", "Go down past the fifty-second floor, or bring Brother Cael his bell", (g) => deepest(g) >= CM.realOf(15) || Boolean(g.story && g.story.bell),
       "Low in the shaft, grooves worn into the stone where the bell-ropes ran down from the hill - the town rang for the lower town, once, and the ropes hung all the way. They stop at a line cut level, clean. Someone above took a knife to them. A thread of the old rope is still in the groove: tarred, and good."],
     ["tower", "The Mage Tower", "yard", "Clear the Mage Tower's tenth floor", (g) => ((g.tower || {}).cleared || 0) >= 10,
       "A ledger on a lectern, in a mage's square hand: every portal in the Keep-yard, who opened it, and when. Each of them had stood at the shaft first and listened. The last line, underlined twice: THEY DO NOT OPEN ON OTHER PLACES. THEY OPEN ON WHAT IT DREAMS. He took the ledger's clasp off to use as a bookmark. It is bell-metal."],
@@ -29553,7 +29567,7 @@ Object.assign(CM.Game.prototype, {
       const roll = (CM.hashSeed(`${this.seed}:towerroll:${it.name}:${p.towerTries}:${this.clock || 0}`) % 1000) / 1000;
       if (roll < chance) {
         const where = how === "add" ? whereOf(word) : null, base = tableFor(it, whereOf(word))[word];
-        if (how === "add") { const tier = CM.affixTier(Math.max(1, this.deepestReached())); CM.applyProps(it, CM.scaledAffix(base, tier)); p.affixes = wordsOf(it).concat(word); (p.wordTiers = p.wordTiers || {})[word] = tier; it.value += (where === "prefix" ? 60 : 90) * tier; }
+        if (how === "add") { const tier = CM.affixTier(Math.max(1, CM.storyOf(this.deepestReached()))); CM.applyProps(it, CM.scaledAffix(base, tier)); p.affixes = wordsOf(it).concat(word); (p.wordTiers = p.wordTiers || {})[word] = tier; it.value += (where === "prefix" ? 60 : 90) * tier; }
         else { const t0 = tierOf(it, word), t1 = t0 + 1; CM.applyProps(it, negate(CM.scaledAffix(base, t0))); CM.applyProps(it, CM.scaledAffix(base, t1)); strip(p); (p.wordTiers = p.wordTiers || {})[word] = t1; it.value += 60; }
         p.towerDone = (p.towerDone || 0) + 1; rename(it); this.sound("spell"); this.tally.enchanted = (this.tally.enchanted || 0) + 1;
         this.say(`The enchanter's hands go still over it, and the light in the shards goes into the ${CM.baseName(it).toLowerCase()}: ${it.name}.`);
@@ -29697,8 +29711,8 @@ Object.assign(CM.Game.prototype, {
   add("allguard", "Every Keeper", "Slay all nine guardians in one expedition", "the Unkept", (g) => new Set(T(g).guardians || []).size >= 9);
   add("champ10", "Champion's Bane", "Slay ten champions in one expedition", "the Champion's Bane", (g) => (T(g).champions || 0) >= 10);
   add("rich10k", "Treasury", "Hold 10,000 gold at once", "the Treasurer", (g) => (g.gold || 0) >= 10000);
-  add("floor20", "Of the Palace", "Reach floor 20", "of the Palace", (g) => g.deepestReached && g.deepestReached() >= 20);
-  add("floor40", "Of the Foundry", "Reach floor 40", "of the Foundry", (g) => g.deepestReached && g.deepestReached() >= 40);
+  add("floor20", "Of the Palace", "Reach floor 70", "of the Palace", (g) => g.deepestReached && g.deepestReached() >= CM.LAST_FLOOR);
+  add("floor40", "Of the Foundry", "Reach floor 90", "of the Foundry", (g) => g.deepestReached && g.deepestReached() >= CM.realOf(40));
   add("enchant3", "Thrice Inscribed", "Have three words put on things at the Tower in one expedition", "the Thrice-inscribed", (g) => (T(g).enchanted || 0) >= 3);
   add("stilled5", "The Still Runs", "Brew five things at the fields' still in one expedition", "the Stiller", (g) => (T(g).stilled || 0) >= 5);
   add("trophywall", "A Wall of Trophies", "Mount four trophies on the house's wall", "the Trophied", (g) => g.mounted && g.mounted().length >= 4);
@@ -30409,7 +30423,7 @@ Object.assign(CM.Game.prototype, {
   G.beamPath = function () { return this.floor ? CM.beamOf(this.floor) : { cells: [], hit: false }; };
   G.puzzleCheck = function () { const fl = this.floor, P = fl && fl.puzzle; if (!P || P.solved) return false;
     const ok = P.kind === "statues" ? Object.values(fl.things).filter((t) => t.type === "statue").every((t) => t.face === t.want) : CM.beamOf(fl).hit; if (!ok) return false;
-    P.solved = true; const n = fl.number, rnd = new CM.Random(CM.hashSeed(`${this.seed}:puzzlechest:${n}`)), items = [CM.affix(CM.makeItem(n + 4, rnd), n + 8, rnd), CM.affix(CM.makeItem(n + 2, rnd), n + 5, rnd)];
+    P.solved = true; const n = CM.storyOf(fl.number), rnd = new CM.Random(CM.hashSeed(`${this.seed}:puzzlechest:${fl.number}`)), items = [CM.affix(CM.makeItem(n + 4, rnd), n + 8, rnd), CM.affix(CM.makeItem(n + 2, rnd), n + 5, rnd)];
     if (P.kind === "beam") fl.things[P.chestAt] = { type: "chest", gold: 40 * n, items, puzzle: true }; else fl.things[P.chestAt] = { type: "chest", gold: 40 * n, items, puzzle: true };
     this.sound && this.sound("chest"); this.say(P.kind === "statues" ? "The last statue grinds round to face the altar - and the floor beside it sinks, and comes up again carrying a chest." : "The beam leaps from mirror to mirror and falls full on the sun-plate. It glows, and with a sound like a held breath let go, a chest rises where it lay.");
     this.tally.puzzles = (this.tally.puzzles || 0) + 1; if (this.achieve) this.achieve("puzzler"); this.saveRun && this.saveRun(); this.emit("change"); return true; };
@@ -31423,7 +31437,7 @@ Object.assign(CM.Game.prototype, {
 { const skyOn = (game) => Boolean(game && game.tally && game.tally.ext && game.tally.ext.wx && game.tally.ext.wx.cur);   // (the sky is read only once the clock has made it: a fight's rules must not roll the weather's dice, or a run and its replay part)
   const M = CM.MIGRATE = { floors: [1, 2], bands: [["Wolf", "Wolf"], ["Wolf", "Wolf", "Wolf"], ["Boar"], ["Bear"], ["Sellsword", "Sellsword"]], waterKinds: ["Drowned", "Weed Hag", "Rootling"], stirSure: 1 / 3, apart: 2 };
   CM.migrationNow = (game) => { if (!game || !game.ext || !skyOn(game)) return false; const W = CM.aboveNow(game); return (W.kind === "storm" || W.kind === "tornado") && W.strength > 0.3; };
-  const beasts = (fl, n, seed) => { const rnd = new CM.Random(CM.hashSeed(`${seed}:migrate:${fl.number}:${n}`)), band = M.bands[rnd.int(0, M.bands.length - 1)].filter((k) => CM.monsterKind(k)), out = []; for (let i = 0; i < Math.max(1, Math.min(n, band.length)); i++) out.push(CM.makeMonster(CM.monsterKind(band[i % band.length]), Math.max(1, fl.number), rnd)); return out; };
+  const beasts = (fl, n, seed) => { const rnd = new CM.Random(CM.hashSeed(`${seed}:migrate:${fl.number}:${n}`)), band = M.bands[rnd.int(0, M.bands.length - 1)].filter((k) => CM.monsterKind(k)), out = []; for (let i = 0; i < Math.max(1, Math.min(n, band.length)); i++) out.push(CM.makeMonster(CM.monsterKind(band[i % band.length]), Math.max(1, CM.storyOf(fl.number)), rnd)); return out; };
   CM.migrateStep = (game, minutes = 1) => { if (!game || !game.ext || !game.floor || game.mode !== "explore") return; const fl = game.floor; if (!M.floors.includes(fl.number)) return; const E = game.ext("migrate"), on = CM.migrationNow(game), W = CM.aboveNow(game), key = on ? `${fl.number}:${W.from}` : null;
     if (on && E[fl.number] !== key) { E[fl.number] = key; let n = 0; for (const [k, t] of Object.entries(fl.things)) { if (t.type !== "monsters" || t.still || t.migrated || !t.group || !t.group.length || t.group.some((m) => m.boss || m.guardian)) continue; const [x, y] = k.split(",").map(Number); if (Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) <= M.apart) continue;
         t.was = t.group; t.group = beasts(fl, t.group.length, game.seed + ":" + k); t.migrated = true; n++; }
@@ -31464,7 +31478,7 @@ Object.assign(CM.Game.prototype, {
   // one floor in three from the third (never a maze, never the last) takes one of them, chosen by a hash of its own and placed with its own dice (22-gen2.js), so the floor's other rooms stand where they stood
   CM.SETPIECE_EVERY = 3;
   { const pf0 = CM.planFloor; if (pf0) CM.planFloor = function (number, seed, rnd, special, lair) { const plan = pf0.call(this, number, seed, rnd, special, lair); if (special === "maze" || number < 3 || number === CM.LAST_FLOOR || number === CM.BOTTOM || !(number >= 1)) return plan;
-      const h = CM.hashSeed(`${seed}:setpiece:${number}`) >>> 0; if (h % CM.SETPIECE_EVERY !== 0) return plan; const fit = SP.filter((r) => number >= r.min && (!r.max || number <= r.max) && (!r.bands || r.bands.includes(CM.themeIndex(number)))); if (!fit.length) return plan; const sp = fit[(h >>> 8) % fit.length]; delete sp._dice; plan.pieces.push(sp); return plan; }; }
+      const h = CM.hashSeed(`${seed}:setpiece:${number}`) >>> 0; if (h % CM.SETPIECE_EVERY !== 0) return plan; const fit = SP.filter((r) => CM.storyOf(number) >= r.min && (!r.max || CM.storyOf(number) <= r.max) && (!r.bands || r.bands.includes(CM.themeIndex(number)))); if (!fit.length) return plan; const sp = fit[(h >>> 8) % fit.length]; delete sp._dice; plan.pieces.push(sp); return plan; }; }
   const rnd = () => (CM.wxRandom ? CM.wxRandom() : Math.random());
   CM.treesIn = (fl) => Object.keys((fl && fl.treesIn) || {});   // (an object, not a Set: the floor is saved as JSON)
   const pieceOf = (r) => SP.find((t) => t.name === r.name) || null;   // (a floor's rooms keep bounds and the template's name only)
@@ -31477,17 +31491,17 @@ Object.assign(CM.Game.prototype, {
         if (c === "T") { fl.treesIn[k] = true; }
         else if (c === "~") { fl.decor = fl.decor || []; if (!fl.decor.some((d) => d.kind === "water" && d.x === x && d.y === y)) fl.decor.push({ kind: "water", x, y, fish: Boolean(T.fish) }); }
         else if (c === "B") fl.things[k] = { type: "boneheap" };
-        else if (c === "b") fl.things[k] = { type: "boneheap", chest: { type: "chest", gold: R.int(20, 50) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 2), CM.makeItem(fl.number, R, undefined, 3)], trap: null }, stir: T.stir ? T.stir.slice() : null };
+        else if (c === "b") fl.things[k] = { type: "boneheap", chest: { type: "chest", gold: R.int(20, 50) * Math.max(1, CM.storyOf(fl.number)), items: [CM.makeItem(CM.storyOf(fl.number), R, undefined, 2), CM.makeItem(CM.storyOf(fl.number), R, undefined, 3)], trap: null }, stir: T.stir ? T.stir.slice() : null };
         else if (c === "H") fl.features[k] = { type: "falsedoor", how: R.pick(["painted", "nailed", "painted", "bricked"]) };
-        else if (c === "h") { const what = (T.niches && T.niches.h) ? T.niches.h[niches++ % T.niches.h.length] : "key"; fl.features[k] = { type: "falsedoor", niche: what === "chest" ? { type: "chest", gold: R.int(10, 30) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 2)], trap: null } : { type: what } }; }
+        else if (c === "h") { const what = (T.niches && T.niches.h) ? T.niches.h[niches++ % T.niches.h.length] : "key"; fl.features[k] = { type: "falsedoor", niche: what === "chest" ? { type: "chest", gold: R.int(10, 30) * Math.max(1, CM.storyOf(fl.number)), items: [CM.makeItem(CM.storyOf(fl.number), R, undefined, 2)], trap: null } : { type: what } }; }
         else if (c === "m") fl.features[k] = { type: "falsedoor", mimic: true };
         else if (c === "R") { fl.levels = fl.levels || {}; fl.levels[k] = [CM.LEVELS ? CM.LEVELS.dais : 0.3, 1]; }
         else if (c === "V") { fl.levels = fl.levels || {}; fl.levels[k] = [CM.LEVELS ? CM.LEVELS.pit : -0.3, 1]; }
         else if (c === "*") fl.things[k] = { type: "brazier", lit: true };
         else if (c === "G") fl.things[k] = { type: "glowcap", at: 0, permanent: true };
         else if (CM.SETPIECE_LETTERS && CM.SETPIECE_LETTERS[c]) CM.SETPIECE_LETTERS[c](fl, x, y, k, T, R);   /* (a later file's letters: 69zzza-rooms2.js) */
-        else if (C[c]) { const spec = C[c] || {};   /* (any letter the room names a chest by: c, d...) */ fl.things[k] = { type: "chest", gold: R.int(25, 60) * Math.max(1, fl.number), items: spec.item && CM.setPieceItem ? [CM.setPieceItem(spec.item, fl.number)] : [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 2)], trap: null, guard: spec.guard ? spec.guard.slice() : null, note: spec.note || null, sunk: Boolean(spec.sunk) }; } }
-      if (T.sunk && T.sunk.pond) { const pond = fill.filter(([, , c]) => c === "~"); if (pond.length) { const [px, py] = pond[Math.floor(pond.length / 2)]; fl.things[`${px},${py}`] = { type: "chest", gold: R.int(30, 80) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 3)], trap: null, sunk: true, water: true }; } } } };
+        else if (C[c]) { const spec = C[c] || {};   /* (any letter the room names a chest by: c, d...) */ fl.things[k] = { type: "chest", gold: R.int(25, 60) * Math.max(1, CM.storyOf(fl.number)), items: spec.item && CM.setPieceItem ? [CM.setPieceItem(spec.item, fl.number)] : [CM.makeItem(CM.storyOf(fl.number), R, undefined, 3), CM.makeItem(CM.storyOf(fl.number), R, undefined, 2)], trap: null, guard: spec.guard ? spec.guard.slice() : null, note: spec.note || null, sunk: Boolean(spec.sunk) }; } }
+      if (T.sunk && T.sunk.pond) { const pond = fill.filter(([, , c]) => c === "~"); if (pond.length) { const [px, py] = pond[Math.floor(pond.length / 2)]; fl.things[`${px},${py}`] = { type: "chest", gold: R.int(30, 80) * Math.max(1, CM.storyOf(fl.number)), items: [CM.makeItem(CM.storyOf(fl.number), R, undefined, 3)], trap: null, sunk: true, water: true }; } } } };
   CM.dressSetPieces = dress;
   { const mf0 = CM.makeFloor; CM.makeFloor = function (number, seed, gen) { const fl = mf0.call(this, number, seed, gen); if (fl && fl.number === number && number >= 1) dress(fl, seed); return fl; }; }
   // the trees bar the walk (the square is open stone under them)
@@ -31495,17 +31509,17 @@ Object.assign(CM.Game.prototype, {
   const P = CM.Game.prototype;
   { const m0 = P.move; P.move = function (rel) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const [dx, dy] = CM.DIRS[(fl.facing + rel) % 4], x = fl.pos[0] + dx, y = fl.pos[1] + dy, k = `${x},${y}`;
         if (fl.treesIn && fl.treesIn[k]) { this.sound("bump"); this.say("The trees stand too close here to push between."); return false; }
-        const f = fl.features[k]; if (f && f.type === "falsedoor") { this.sound("bump"); if (f.mimic) { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${k}`)); const m = CM.makeMonster(CM.monsterKind("Mimic") || CM.monsterKind("Orc"), fl.number, rnd2); delete f.mimic; f.how = "bricked"; this.say("The door's handle is warm, and wet, and the door has teeth."); const th = { type: "monsters", group: [m] }; fl.things[k] = th; this.startCombat(k, th); delete fl.things[k]; return false; }
+        const f = fl.features[k]; if (f && f.type === "falsedoor") { this.sound("bump"); if (f.mimic) { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:mimic:${k}`)); const m = CM.makeMonster(CM.monsterKind("Mimic") || CM.monsterKind("Orc"), CM.storyOf(fl.number), rnd2); delete f.mimic; f.how = "bricked"; this.say("The door's handle is warm, and wet, and the door has teeth."); const th = { type: "monsters", group: [m] }; fl.things[k] = th; this.startCombat(k, th); delete fl.things[k]; return false; }
           if (f.niche) { const n = f.niche; delete f.niche; f.how = "niche"; if (n.type === "key") { this.bag.push(CM.key()); this.sound("coin"); this.say("The door opens on a niche a single step deep, and in it, on a nail: an iron key. You take it."); } else if (n.type === "chest") { fl.things[`${fl.pos[0]},${fl.pos[1]}`] = fl.things[`${fl.pos[0]},${fl.pos[1]}`] || n; this.say("The door opens on a niche a single step deep, and a small chest in it, pulled out onto the floor at your feet. (Space to open it)"); } else this.say("The door opens on a niche a single step deep, and nothing in it but dust."); return false; }
           this.say(f.how === "painted" ? "A door - painted on the stone, hinges and all, by someone with time and no way out." : f.how === "bricked" ? "A door, bricked up behind its frame long ago." : f.how === "niche" ? "The niche door, open on its empty niche." : "A door, nailed shut from the other side, and the nails rusted into the wood."); return false; } }
       const out = m0.call(this, rel); if (out && fl && this.floor === fl) { const r = CM.setPieceOf(fl, fl.pos[0], fl.pos[1]); if (r && this.ext) { const E = this.ext("setpieces"), key = `${fl.number}:${r.x0},${r.y0}:${r.template.name}`; if (!E[key]) { E[key] = true; this.say(`${r.template.name[0].toUpperCase() + r.template.name.slice(1)}. ${r.template.line}`); } } } return out; }; }
   // the bone heaps: looked at, turned over; the chest under one, and the stir
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, k = fl.things[here] && fl.things[here].type === "boneheap" ? here : fl.things[ahead] && fl.things[ahead].type === "boneheap" ? ahead : null;
-        if (k) { const h = fl.things[k]; if (h.chest) { const chest = h.chest, stir = h.stir; fl.things[k] = chest; this.sound("coin"); this.say("You turn the bones over - and under them, iron-bound and whole, a chest. The heaps about you shift."); if (stir && stir.length) { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:stir:${k}`)), group = stir.map((n) => CM.makeMonster(CM.monsterKind(n) || CM.monsterKind("Skeleton"), fl.number, rnd2)); const th = { type: "monsters", group }; const sq = CM.DIRS.map(([ex, ey]) => `${fl.pos[0] + ex},${fl.pos[1] + ey}`).find((q) => { const [qx, qy] = q.split(",").map(Number); return CM.passable(fl, qx, qy) && !fl.things[q]; }) || ahead; fl.things[sq] = th; this.say("The bones stand up."); this.startCombat(sq, th); if (fl.things[sq] === th) delete fl.things[sq]; } return true; }
+        if (k) { const h = fl.things[k]; if (h.chest) { const chest = h.chest, stir = h.stir; fl.things[k] = chest; this.sound("coin"); this.say("You turn the bones over - and under them, iron-bound and whole, a chest. The heaps about you shift."); if (stir && stir.length) { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:stir:${k}`)), group = stir.map((n) => CM.makeMonster(CM.monsterKind(n) || CM.monsterKind("Skeleton"), CM.storyOf(fl.number), rnd2)); const th = { type: "monsters", group }; const sq = CM.DIRS.map(([ex, ey]) => `${fl.pos[0] + ex},${fl.pos[1] + ey}`).find((q) => { const [qx, qy] = q.split(",").map(Number); return CM.passable(fl, qx, qy) && !fl.things[q]; }) || ahead; fl.things[sq] = th; this.say("The bones stand up."); this.startCombat(sq, th); if (fl.things[sq] === th) delete fl.things[sq]; } return true; }
           this.say(h.looked ? "Bones, turned over already: nothing under them but more bones." : "A heap of bones, old and dry: ribs, a jaw, a hand still holding nothing. You turn a few over. Nothing under them."); h.looked = true; return true; } }
       // a chest's guard rises when it is opened
       const before = fl && fl.pos ? fl.things[`${fl.pos[0]},${fl.pos[1]}`] : null, guard = before && before.type === "chest" && before.guard ? before.guard.slice() : null, out = u0.apply(this, a);
-      if (guard && fl && this.floor === fl && fl.things[`${fl.pos[0]},${fl.pos[1]}`] !== before && this.mode === "explore") { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:guard:${fl.number}:${fl.pos.join(",")}`)), group = guard.map((n) => CM.makeMonster(CM.monsterKind(n) || CM.monsterKind("Orc"), Math.max(1, fl.number), rnd2)); const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; this.say(guard[0] === "Wolf" ? "Out of the trees, low and quick: the wolves that drink here." : guard[0] === "Drowned" ? "The water heaves, and the Drowned come up out of it for what was theirs." : "Something was guarding that."); fl.things[sq] = th; this.startCombat(sq, th); if (fl.things[sq] === th) delete fl.things[sq]; }
+      if (guard && fl && this.floor === fl && fl.things[`${fl.pos[0]},${fl.pos[1]}`] !== before && this.mode === "explore") { const rnd2 = new CM.Random(CM.hashSeed(`${this.seed}:guard:${fl.number}:${fl.pos.join(",")}`)), group = guard.map((n) => CM.makeMonster(CM.monsterKind(n) || CM.monsterKind("Orc"), Math.max(1, CM.storyOf(fl.number)), rnd2)); const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; this.say(guard[0] === "Wolf" ? "Out of the trees, low and quick: the wolves that drink here." : guard[0] === "Drowned" ? "The water heaves, and the Drowned come up out of it for what was theirs." : "Something was guarding that."); fl.things[sq] = th; this.startCombat(sq, th); if (fl.things[sq] === th) delete fl.things[sq]; }
       return out; }; }
 }
 
@@ -31547,7 +31561,7 @@ Object.assign(CM.Game.prototype, {
     r: (fl, x, y, k) => { fl.things[k] = { type: "rod" }; },
   });
   // the fixed things a chest may hold
-  CM.setPieceItem = (what, number) => { if (what === "mapping") return CM.scroll("mapping"); if (what === "shears") return { name: "Gardener's Shears", base: "Knife", kind: "weapon", slot: "weapon", power: 4 + Math.floor(Math.max(1, number) / 3), value: 90, props: { crit: 0.12, bleed: 0.15 } }; return CM.makeItem(number, new CM.Random(CM.hashSeed(`${what}:${number}`))); };
+  CM.setPieceItem = (what, number) => { if (what === "mapping") return CM.scroll("mapping"); if (what === "shears") return { name: "Gardener's Shears", base: "Knife", kind: "weapon", slot: "weapon", power: 4 + Math.floor(Math.max(1, number) / 3), value: 90, props: { crit: 0.12, bleed: 0.15 } }; return CM.makeItem(CM.storyOf(number), new CM.Random(CM.hashSeed(`${what}:${number}`))); };
   const P = CM.Game.prototype;
   // the map table and the nest
   { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (fl && this.mode === "explore" && !this.perch) { const here = `${fl.pos[0]},${fl.pos[1]}`, [dx, dy] = CM.DIRS[fl.facing], ahead = `${fl.pos[0] + dx},${fl.pos[1] + dy}`;
@@ -31602,10 +31616,10 @@ Object.assign(CM.Game.prototype, {
   CM.SETPIECE_LETTERS = Object.assign(CM.SETPIECE_LETTERS || {}, {
     e: (fl, x, y, k) => { fl.things[k] = { type: "bell" }; },
     v: (fl, x, y, k) => { fl.features[k] = { type: "vents", known: true }; },
-    w: (fl, x, y, k) => { fl.things[k] = { type: "scale", unique: uniqueFor(fl), price: 120 + 20 * Math.max(1, fl.number) }; },
+    w: (fl, x, y, k) => { fl.things[k] = { type: "scale", unique: uniqueFor(fl), price: 120 + 20 * Math.max(1, CM.storyOf(fl.number)) }; },
     s: (fl, x, y, k) => { fl.things[k] = { type: "sarcophagus" }; },
-    z: (fl, x, y, k, T, R) => { const group = []; for (let i = 0; i < 3; i++) group.push(CM.makeMonster(CM.monsterKind("Wolf") || CM.monsterKind("Giant Rat"), Math.max(1, fl.number), R)); fl.things[k] = { type: "monsters", group, asleep: true, still: true }; },
-    y: (fl, x, y, k) => { fl.things[k] = { type: "troll", toll: 15 * Math.max(1, fl.number) }; },
+    z: (fl, x, y, k, T, R) => { const group = []; for (let i = 0; i < 3; i++) group.push(CM.makeMonster(CM.monsterKind("Wolf") || CM.monsterKind("Giant Rat"), Math.max(1, CM.storyOf(fl.number)), R)); fl.things[k] = { type: "monsters", group, asleep: true, still: true }; },
+    y: (fl, x, y, k) => { fl.things[k] = { type: "troll", toll: 15 * Math.max(1, CM.storyOf(fl.number)) }; },
     p: (fl, x, y, k) => { fl.things[k] = { type: "painter" }; },
     o: (fl, x, y, k) => { fl.things[k] = { type: "orrery" }; },
     x: (fl, x, y, k) => { fl.features[k] = { type: "chair", known: false }; },
@@ -31623,10 +31637,10 @@ Object.assign(CM.Game.prototype, {
             this.sound("lever"); if (!groups.length) { this.say("You ring the bell, and the note goes through the whole floor and comes back twice. Nothing answers it."); return true; } const group = groups.flatMap((g) => g.th.group); for (const g of groups) delete fl.things[g.q]; this.say("You ring the bell. The note goes through the whole floor and comes back twice - and the floor comes to it."); groupAt(this, fl, group); return true; }
           if (t.type === "scale") { if (t.taken) { this.say("The scale, its pans empty now, still rocking a little."); return true; } const relic = CM.makeUnique(t.unique); if (this.gold >= t.price) { this.gold -= t.price; this.spend && this.spend("scale", t.price); t.taken = true; this.bag.push(relic); this.sound("coin"); this.say(`You count ${t.price} gold onto the empty pan, and the pans level: ${relic.name} is yours by weight.`); }
             else { t.taken = true; this.bag.push(relic); const h = this.alive()[0]; if (h) { h.status = h.status || {}; h.status.curse = 999; } this.sound("ailment"); this.say(`You have not the gold, and you take ${relic.name} anyway. The empty pan drops with a clang, and something settles on ${h ? h.name : "the party"} like a cold hand: cursed, till it is lifted.`); } this.emit("change"); return true; }
-          if (t.type === "sarcophagus") { if (t.opened) { this.say("The coffin, open, and empty now."); return true; } t.opened = true; const R = new CM.Random(CM.hashSeed(`${this.seed}:barrow:${fl.number}`)); fl.things[k] = { type: "chest", gold: R.int(40, 90) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 3)], trap: null, note: "in the coffin" }; this.sound("grind"); this.say("The lid grinds aside. Grave goods in the coffin - and the one who was buried with them sits up.");
-            const group = [CM.makeMonster(CM.monsterKind("Wraith") || CM.monsterKind("Skeleton"), fl.number, R), CM.makeMonster(CM.monsterKind("Skeleton"), fl.number, R), CM.makeMonster(CM.monsterKind("Skeleton"), fl.number, R)]; groupAt(this, fl, group); return true; }
+          if (t.type === "sarcophagus") { if (t.opened) { this.say("The coffin, open, and empty now."); return true; } t.opened = true; const R = new CM.Random(CM.hashSeed(`${this.seed}:barrow:${fl.number}`)); fl.things[k] = { type: "chest", gold: R.int(40, 90) * Math.max(1, CM.storyOf(fl.number)), items: [CM.makeItem(CM.storyOf(fl.number), R, undefined, 3), CM.makeItem(CM.storyOf(fl.number), R, undefined, 3)], trap: null, note: "in the coffin" }; this.sound("grind"); this.say("The lid grinds aside. Grave goods in the coffin - and the one who was buried with them sits up.");
+            const group = [CM.makeMonster(CM.monsterKind("Wraith") || CM.monsterKind("Skeleton"), CM.storyOf(fl.number), R), CM.makeMonster(CM.monsterKind("Skeleton"), CM.storyOf(fl.number), R), CM.makeMonster(CM.monsterKind("Skeleton"), CM.storyOf(fl.number), R)]; groupAt(this, fl, group); return true; }
           if (t.type === "troll") { if (this.gold >= t.toll) { this.gold -= t.toll; this.spend && this.spend("toll", t.toll); delete fl.things[k]; this.sound("coin"); this.say(`"Toll," says the troll, and holds out a hand the size of a shield. ${t.toll} gold goes into it, and he shifts his feet aside and waves you on. He will remember your faces.`); if (this.count) this.count("tollsPaid", 1); this.emit("change"); return true; }
-            delete fl.things[k]; this.say(`"Toll," says the troll. You have not got it, and he stands up, all of him, which takes a while.`); const R = new CM.Random(CM.hashSeed(`${this.seed}:troll:${fl.number}`)); groupAt(this, fl, [CM.makeMonster(CM.monsterKind("Troll") || CM.monsterKind("Ogre"), Math.max(1, fl.number), R)]); return true; }
+            delete fl.things[k]; this.say(`"Toll," says the troll. You have not got it, and he stands up, all of him, which takes a while.`); const R = new CM.Random(CM.hashSeed(`${this.seed}:troll:${fl.number}`)); groupAt(this, fl, [CM.makeMonster(CM.monsterKind("Troll") || CM.monsterKind("Ogre"), Math.max(1, CM.storyOf(fl.number)), R)]); return true; }
           if (t.type === "painter") { if (t.done) { this.say("The painting is finished, and the painter has gone with the light."); return true; } t.done = true; this.clock = (this.clock || 0) + 10; this.bag.push(CM.trinket("likeness")); this.sound("coin"); this.say("You stand still, as the brush asks, while the light goes grey and comes back. When you look again the painting is done - the four of you, as he saw you - and small enough to carry. The painter is not there."); this.emit("change"); return true; }
           if (t.type === "orrery") { const season = CM.season ? CM.season(this) : "summer", day = CM.dayOf ? CM.dayOf(this) : 0, words = [1, 2, 3].map((i) => CM.weatherOf ? CM.weatherOf(this.seed, day + i, season) : "clear"); const M = this.ext ? this.ext("meteors") : null; let star = ""; if (M && M.next) { const d = Math.max(0, Math.ceil((M.next - CM.clockOf(this)) / (24 * 60))); star = d === 0 ? " A star falls tonight." : ` A star falls in ${d} day${d === 1 ? "" : "s"}.`; }
             this.say(`The rings turn as you watch, and the arms with them. Tomorrow: ${words[0]}. The day after: ${words[1]}. The day after that: ${words[2]}.${star}`); return true; }
@@ -31680,15 +31694,15 @@ Object.assign(CM.Game.prototype, {
     a: (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.features[k] = { type: "tiltplate", known: true, room, n: nth(fl, "tiltplate", room, "features") }; },
     k: (fl, x, y, k, T) => { fl.things[k] = { type: "carving", room: roomKey(fl, T), of: T.name }; },
     g: (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.things[k] = { type: "brazier", lit: false, lamp: nth(fl, "brazier", room), room }; },
-    j: (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cocoon", room), who = H(fl, "cocoon") % 4; fl.things[k] = { type: "cocoon", room, n, hero: n === who ? CM.makeRecruit(Math.max(1, Math.floor(fl.number / 2)), R) : null, gear: n === (who + 2) % 4 ? CM.makeItem(fl.number, R, undefined, 2) : null }; },
+    j: (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cocoon", room), who = H(fl, "cocoon") % 4; fl.things[k] = { type: "cocoon", room, n, hero: n === who ? CM.makeRecruit(Math.max(1, Math.floor(CM.storyOf(fl.number) / 2)), R) : null, gear: n === (who + 2) % 4 ? CM.makeItem(CM.storyOf(fl.number), R, undefined, 2) : null }; },
     "1": (fl, x, y, k, T) => { fl.things[k] = { type: "eggsac", room: roomKey(fl, T) }; },
     "7": (fl, x, y, k) => { raise(fl, k); fl.things[k] = { type: "spiderperch" }; },
-    "2": (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cage", room); fl.things[k] = { type: "cage", room, n, hound: (H(fl, "cages") + n) % 2 === 0 ? CM.makeMonster(kind("Iron Hound", "Wolf", "Giant Rat"), Math.max(1, fl.number), R) : null }; },
+    "2": (fl, x, y, k, T, R) => { const room = roomKey(fl, T), n = nth(fl, "cage", room); fl.things[k] = { type: "cage", room, n, hound: (H(fl, "cages") + n) % 2 === 0 ? CM.makeMonster(kind("Iron Hound", "Wolf", "Giant Rat"), Math.max(1, CM.storyOf(fl.number)), R) : null }; },
     "3": (fl, x, y, k, T) => { fl.things[k] = { type: "kennellever", room: roomKey(fl, T) }; },
     "4": (fl, x, y, k) => { fl.things[k] = { type: "hook", item: CM.trinket("whistle") }; },
     "5": (fl, x, y, k, T) => { const room = roomKey(fl, T); fl.things[k] = { type: "plaque", room, n: nth(fl, "plaque", room) }; },
     "6": (fl, x, y, k, T) => { fl.things[k] = { type: "memorialbell", room: roomKey(fl, T) }; },
-    "9": (fl, x, y, k, T, R) => { fl.things[k] = { type: "chest", gold: R.int(30, 70) * Math.max(1, fl.number), items: [CM.makeItem(fl.number, R, undefined, 3), CM.makeItem(fl.number, R, undefined, 2)], trap: null, sealed: T.name, note: T.sealed || "sealed" }; },
+    "9": (fl, x, y, k, T, R) => { fl.things[k] = { type: "chest", gold: R.int(30, 70) * Math.max(1, CM.storyOf(fl.number)), items: [CM.makeItem(CM.storyOf(fl.number), R, undefined, 3), CM.makeItem(CM.storyOf(fl.number), R, undefined, 2)], trap: null, sealed: T.name, note: T.sealed || "sealed" }; },
   });
   const P = CM.Game.prototype;
   const groupAt = (game, fl, group) => { const [dx, dy] = CM.DIRS[fl.facing], sq = `${fl.pos[0] + dx},${fl.pos[1] + dy}`, th = { type: "monsters", group }; const was = fl.things[sq]; fl.things[sq] = th; game.startCombat(sq, th); if (fl.things[sq] === th) { if (was) fl.things[sq] = was; else delete fl.things[sq]; } };
@@ -31717,19 +31731,19 @@ Object.assign(CM.Game.prototype, {
         { const t = fl.things[here]; if (t && t.type === "chest" && t.sealed) { this.sound("bump"); this.say(`The chest is ${t.note}.`); return true; } }
         for (const k of [here, ahead]) { const t = fl.things[k]; if (!t) continue;
           if (t.type === "mirror") { if (t.broken) { this.say("The frame, and black glass in splinters."); return true; } if (!t.seen) { t.seen = true; this.say("You come close. Four faces look back at you out of the glass, and a half-breath late - and behind them, in the mirror's hall, the lights are not yours. (Space again to strike it)"); return true; }
-            t.broken = true; this.bag.push(CM.trinket("mirrorshard")); const R = new CM.Random(CM.hashSeed(`${this.seed}:mirror:${fl.number}`)), group = this.alive().map((h) => { const m = CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R); m.name = `Shade of ${h.name}`; return m; }); this.sound("shatter"); this.say("The glass goes in a ring of cracks from the blow, and comes down. One shard you keep. The faces do not come down with it: they step out of the frame, grey, and yours."); this.emit("change"); groupAt(this, fl, group); return true; }
+            t.broken = true; this.bag.push(CM.trinket("mirrorshard")); const R = new CM.Random(CM.hashSeed(`${this.seed}:mirror:${fl.number}`)), group = this.alive().map((h) => { const m = CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, CM.storyOf(fl.number)), R); m.name = `Shade of ${h.name}`; return m; }); this.sound("shatter"); this.say("The glass goes in a ring of cracks from the blow, and comes down. One shard you keep. The faces do not come down with it: they step out of the frame, grey, and yours."); this.emit("change"); groupAt(this, fl, group); return true; }
           if (t.type === "meathook") { this.bag.push(t.meat); const room = t.room; delete fl.things[k]; this.sound("coin"); const left = inRoom(fl, room, "meathook").length; if (left) { this.say(`You lift ${t.meat.name} off its hook. ${left} more hang${left === 1 ? "s" : ""} along the walls.`); this.emit("change"); return true; }
-            const W = inRoom(fl, room, "icewraith"); if (W.length) { for (const [wk] of W) delete fl.things[wk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:icewraith:${fl.number}`)); this.say("You lift the last of the meat off its hook, and the ice at the back cracks like a shot. The thing in it has been waiting for the larder to be empty."); this.emit("change"); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R)]); return true; } this.say(`You lift ${t.meat.name} off its hook, the last of them.`); this.emit("change"); return true; }
+            const W = inRoom(fl, room, "icewraith"); if (W.length) { for (const [wk] of W) delete fl.things[wk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:icewraith:${fl.number}`)); this.say("You lift the last of the meat off its hook, and the ice at the back cracks like a shot. The thing in it has been waiting for the larder to be empty."); this.emit("change"); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, CM.storyOf(fl.number)), R)]); return true; } this.say(`You lift ${t.meat.name} off its hook, the last of them.`); this.emit("change"); return true; }
           if (t.type === "icewraith") { this.say("The ice is a hand thick over it, and cold enough to burn. It does not stir. Yet."); return true; }
           if (t.type === "carving") { if (t.of === "the Tilting Floor") { const c = centreOf(fl, t.room), plates = platesOf(fl, t.room), order = tiltOrder(fl, t.room), words = order.map((n) => { const p = plates.find((q) => q.f.n === n); return p ? plateWord(p, c) : "?"; }); this.say(`The carving: four plates about a chest, and an order cut under them - ${words.join(", ")}. Step them so, and the bar draws back; step them wrong, and the floor remembers.`); }
             else { const p = lampPattern(fl); this.say(`The carving: five lamps in a row, and under them the ${lampWords(p)} burning, counted from the west, the rest dark. "So the wall opens. Light them otherwise, and the cold comes in."`); } if (this.markRead) this.markRead(`carving.${t.of}`); return true; }
           if (t.type === "brazier" && t.lamp !== undefined) { const E = this.ext("lamps"), S = (E[t.room] = E[t.room] || {}); t.lit = !t.lit; this.sound(t.lit ? "fire" : "snuff"); const lamps = lampsOf(fl, t.room), lit = lamps.reduce((m, [, q], i) => m | (q.lit ? 1 << i : 0), 0), want = lampPattern(fl); this.emit("change");
             if (lit === want) { if (S.solved) { this.say(`The lamp ${t.lit ? "lights" : "goes out"}. The wall stands open already.`); return true; } S.solved = true; const r = CM.setPieceOf(fl, fl.pos[0], fl.pos[1]); let opened = 0; if (r) for (let y = r.y0 - 1; y <= r.y1 + 1; y++) for (let x = r.x0 - 1; x <= r.x1 + 1; x++) { const f = fl.features[`${x},${y}`]; if (f && f.type === "secret" && !f.found) { f.found = true; fl.grid[y][x] = 0; opened++; } } this.sound("grind"); this.dirty = true; this.say(opened ? "The last lamp takes, and the five burn as the carving says - and in the wall a line of dark opens and widens: a door, where there was none." : "The five burn as the carving says. Somewhere in the stone something draws back, and the draught stops."); return true; }
-            if (pop(lit) === pop(want) && !S.failed) { S.failed = true; for (const [, q] of lamps) q.lit = false; this.sound("snuff"); this.say("The lamps go out together, all five, as if a breath had crossed them, and the cold that comes in behind it has a shape."); const R = new CM.Random(CM.hashSeed(`${this.seed}:lampwraith:${fl.number}`)); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, fl.number), R)]); return true; }
+            if (pop(lit) === pop(want) && !S.failed) { S.failed = true; for (const [, q] of lamps) q.lit = false; this.sound("snuff"); this.say("The lamps go out together, all five, as if a breath had crossed them, and the cold that comes in behind it has a shape."); const R = new CM.Random(CM.hashSeed(`${this.seed}:lampwraith:${fl.number}`)); groupAt(this, fl, [CM.makeMonster(kind("Wraith", "Skeleton"), Math.max(1, CM.storyOf(fl.number)), R)]); return true; }
             const which = ORD[lamps.findIndex(([q]) => q === k)] || ""; this.say(t.lit ? `The ${which} lamp takes the flame.` : `The ${which} lamp goes out.`); return true; }
           if (t.type === "cocoon") { if (t.cut) { this.say("The cocoon, cut open and empty."); return true; } t.cut = true; const E = this.ext("hollow"), room = t.room; let said;
             if (t.hero) { fl.things[k] = { type: "adventurer", hero: t.hero, freed: false }; said = "The web parts under the knife, and someone breathes inside it - alive, and bound hand and foot. (Space to cut them loose)"; } else if (t.gear) { this.bag.push(t.gear); said = `The web parts under the knife. A husk, dry as paper - and in its hands, ${t.gear.name}. You take it.`; t.gear = null; } else said = "The web parts under the knife. A husk, dry as paper, and nothing in it that was ever yours to want.";
-            const sacs = inRoom(fl, room, "eggsac"); if (sacs.length && !E[room]) { E[room] = true; for (const [sk] of sacs) delete fl.things[sk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:hatch:${fl.number}`)), group = []; for (let i = 0; i < Math.min(3, sacs.length); i++) group.push(CM.makeMonster(kind("Sporeling", "Giant Rat"), Math.max(1, fl.number), R)); this.say(`${said} And all round the room, at the sound, the sacs split.`); this.emit("change"); groupAt(this, fl, group); return true; }
+            const sacs = inRoom(fl, room, "eggsac"); if (sacs.length && !E[room]) { E[room] = true; for (const [sk] of sacs) delete fl.things[sk]; const R = new CM.Random(CM.hashSeed(`${this.seed}:hatch:${fl.number}`)), group = []; for (let i = 0; i < Math.min(3, sacs.length); i++) group.push(CM.makeMonster(kind("Sporeling", "Giant Rat"), Math.max(1, CM.storyOf(fl.number)), R)); this.say(`${said} And all round the room, at the sound, the sacs split.`); this.emit("change"); groupAt(this, fl, group); return true; }
             this.sound("coin"); this.say(said); this.emit("change"); return true; }
           if (t.type === "eggsac") { this.say("Soft, grey, and warm to the hand. Better left."); return true; }
           if (t.type === "spiderperch") { this.say("It has not moved. You do not make it."); return true; }
@@ -31770,7 +31784,7 @@ CM.UI = class {
   <div class="backdrop-slot"></div><div class="shade"></div>
   <div class="sheet">
     <h1><span class="emblem-slot"></span>Claude and Magic</h1>
-    <div class="tagline">Twenty floors down, the Lich King waits - and below him, the Deep. Four go in together.</div>
+    <div class="tagline">Seventy floors down, the Lich King waits - and below him, the Deep. Four go in together.</div>
     <div class="note" id="title-note"></div>
     <div class="honours" id="honours"></div>
     <div class="card" id="expedition">
@@ -33066,8 +33080,8 @@ Object.assign(CM.UI.prototype, {
     const mem = g.memorial || [];
     this.$("#memorial").innerHTML = mem.length ? mem.slice(0, 8).map((m) => `<div class="unlock got"><b>${this.esc(m.name)}</b> <small>${this.esc(m.cls)}, level ${m.level}, laid to rest on floor ${m.floor} - ${this.esc(m.date)}${m.seed ? `, seed ${this.esc(m.seed)}` : ""}</small></div>`).join("") + (mem.length > 8 ? `<div class="small">...and ${mem.length - 8} more.</div>` : "") : `<div class="unlock"><small>No hero has been laid to rest at a camp fire yet.</small></div>`;
     const trophies = g.trophies || {};
-    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.LAST_FLOOR && G.floor > 0).map(([id, G]) => [id, G.name, G.floor, G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
-      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.LAST_FLOOR || G.floor < 0).map(([id, G]) => [id, G.name, G.floor, G.lair.name])].map(([id, name, floor, where]) => {
+    this.$("#trophies").innerHTML = [...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor < CM.STORY_LAST && G.floor > 0).map(([id, G]) => [id, G.name, CM.realOf(G.floor), G.lair.name]), ["lich", CM.BOSS.name, CM.LAST_FLOOR, "his palace"],
+      ...Object.entries(CM.GUARDIANS).filter(([, G]) => G.floor > CM.STORY_LAST || G.floor < 0).map(([id, G]) => [id, G.name, G.floor > 0 ? CM.realOf(G.floor) : G.floor, G.lair.name])].map(([id, name, floor, where]) => {
       const t = trophies[id];
       return `<div class="unlock ${t ? "got" : ""}"><b>${t ? "✓" : "○"} ${name}</b> <small>${t ? `slain ${this.esc(t.date)} by ${this.esc(t.name)}'s party` : `<i>floor ${floor}: ${where}</i>`}</small></div>`;
     }).join("");

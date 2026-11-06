@@ -18,8 +18,8 @@
   add("allguard", "Every Keeper", "Slay all nine guardians in one expedition", "the Unkept", (g) => new Set(T(g).guardians || []).size >= 9);
   add("champ10", "Champion's Bane", "Slay ten champions in one expedition", "the Champion's Bane", (g) => (T(g).champions || 0) >= 10);
   add("rich10k", "Treasury", "Hold 10,000 gold at once", "the Treasurer", (g) => (g.gold || 0) >= 10000);
-  add("floor20", "Of the Palace", "Reach floor 20", "of the Palace", (g) => g.deepestReached && g.deepestReached() >= 20);
-  add("floor40", "Of the Foundry", "Reach floor 40", "of the Foundry", (g) => g.deepestReached && g.deepestReached() >= 40);
+  add("floor20", "Of the Palace", "Reach floor 70", "of the Palace", (g) => g.deepestReached && g.deepestReached() >= CM.LAST_FLOOR);
+  add("floor40", "Of the Foundry", "Reach floor 90", "of the Foundry", (g) => g.deepestReached && g.deepestReached() >= CM.realOf(40));
   add("enchant3", "Thrice Inscribed", "Have three words put on things at the Tower in one expedition", "the Thrice-inscribed", (g) => (T(g).enchanted || 0) >= 3);
   add("stilled5", "The Still Runs", "Brew five things at the fields' still in one expedition", "the Stiller", (g) => (T(g).stilled || 0) >= 5);
   add("trophywall", "A Wall of Trophies", "Mount four trophies on the house's wall", "the Trophied", (g) => g.mounted && g.mounted().length >= 4);

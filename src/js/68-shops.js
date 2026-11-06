@@ -65,7 +65,7 @@ Object.assign(CM.Game.prototype, {
     if (this.gold < fee) return `The regular talks for ${CM.GOSSIP_PRICE} gold.`;
     this.logAct("gossip");
     this.gold -= fee; if (fee) this.spend("tavern", fee); this.gossiped = true;
-    const seed = this.seed, floors = []; for (let n = 16; n <= 20; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
+    const seed = this.seed, floors = []; for (let n = CM.THEMES[3].floors[0]; n <= CM.THEMES[3].floors[1]; n++) if (!CM.guardianFor(n) && n !== CM.LAST_FLOOR) floors.push(n);
     const holding = floors[CM.hashSeed(`${seed}:holding`) % floors.length];
     const first = [2, 3, 4]; const unique0 = first[CM.hashSeed(`${seed}:unique:0`) % first.length];
     this.say(`The regular leans in: "The sexton's helm is in a chest on floor ${unique0}, they say. And the dwarves' bottomless sack - the palace, floor ${holding}. Don't ask me how I know."`);

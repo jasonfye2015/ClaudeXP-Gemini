@@ -15,7 +15,7 @@ CM.TOWER_THEME = Object.assign({}, CM.THEMES[3], {
 });
 CM.towerFloorName = (n) => (n === CM.TOWER_FLOORS ? "The Mage Tower, the King's hall" : `The Mage Tower, floor ${n}`);
 // the dungeon floor whose kinds and strength a tower floor borrows: the first bands low, the Deep high
-CM.towerDepth = (n) => Math.min(CM.BOTTOM || 50, Math.max(1, Math.round(n * 1.2)));
+CM.towerDepth = (n) => Math.min(CM.STORY_BOTTOM || 50, Math.max(1, Math.round(n * 1.2)));
 
 CM.makeTowerFloor = function (n, seed) {
   const rnd = new CM.Random(CM.hashSeed(`${seed}:magetower:${n}`)), size = n === CM.TOWER_FLOORS ? 31 : 33 + 2 * Math.min(3, Math.floor(n / 10));

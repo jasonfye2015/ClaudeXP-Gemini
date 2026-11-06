@@ -9,7 +9,7 @@ Object.assign(CM.Game.prototype, {
     if (!this.peddling) this.logAct("openBag", shop ? 1 : 0);
     this.shopping = shop;
     if (shop && !this.stock) {
-      const rnd = this.rnd, depth = (this.floor.number === 0 || this.floor.special === "interior") ? Math.max(3, this.partyLevel() + 1) : this.floor.number + 3;
+      const rnd = this.rnd, depth = (this.floor.number === 0 || this.floor.special === "interior") ? Math.max(3, this.partyLevel() + 1) : CM.storyOf(this.floor.number) + 3;
       this.stock = ["weapon", "weapon", "weapon", "armor", "armor", "armor", "shield", "helm"].map((k) => { const it = CM.makeItem(depth, rnd, k); it.unknown = false; return it; });
       const heal = CM.healPotion(depth); if (heal.kind === "greaterheal" && this.asc("nogreater")) { heal.kind = "heal"; heal.name = "Healing Potion"; heal.power = 20 + depth * 3; heal.value = 20; }
       this.stock.push(heal, CM.manaPotion(depth), CM.lesserFeather(),

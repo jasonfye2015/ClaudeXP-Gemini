@@ -12,11 +12,11 @@ Object.assign(CM.Game.prototype, {
       daily: String(this.seed).startsWith("daily-"), party: this.party.map((h) => `${h.name} the ${h.cls} ${h.level}`),
       kit: this.kit || "pauper", tally: Object.assign(this.freshTally(), this.tally || {}), difficulty: this.difficulty || "fair", mutators: this.mutators || [] };
     const fl = this.floor.number, steps = (this.tally || {}).steps || 0;
-    if (fl >= 5 || won) this.achieve("delver");
-    if (fl >= 10 || won) this.achieve("deep");
-    if (fl >= 15 || won) this.achieve("deeper");
-    if ((fl >= 10 || won) && entry.daily) this.achieve("daily");
-    if (fl >= 30) this.achieve("abyss");
+    if (fl >= 17 || won) this.achieve("delver");
+    if (fl >= 35 || won) this.achieve("deep");
+    if (fl >= 52 || won) this.achieve("deeper");
+    if ((fl >= 35 || won) && entry.daily) this.achieve("daily");
+    if (fl >= 80) this.achieve("abyss");
     if (this.bottom) this.achieve("bottom");
     if (won) { this.achieve("crown"); if (!this.everFell) this.achieve("ironman"); if (steps < 1500) this.achieve("swift"); if (this.difficulty === "grim") this.achieve("grim"); if (this.iron) this.achieve("ironwill"); if ((this.ascension || 0) >= 5) this.achieve("ascended"); }
     entry.ascension = this.ascension || 0; entry.iron = Boolean(this.iron); entry.awakened = Boolean(this.awakened); entry.reminded = Boolean(this.reminded);
@@ -30,8 +30,8 @@ Object.assign(CM.Game.prototype, {
     }
     if (this.endless) {
       entry.endless = true;
-      if (fl >= 60) this.achieve("endless");
-      if (fl >= 100) this.achieve("beyond");
+      if (fl >= 110) this.achieve("endless");
+      if (fl >= 150) this.achieve("beyond");
     }
     entry.titles = (this.earned || []).slice();
     entry.renown = CM.renownFor(entry, this);
