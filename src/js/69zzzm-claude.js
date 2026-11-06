@@ -115,11 +115,13 @@
     "\"Thank you for walking out here. People mostly don't. The path is swept every morning anyway - it seemed rude not to.\""];
   const OPENERS = { desk: ["Claude looks up from the desk and smiles, and caps the ink. \"There you are. Sit, if you can find somewhere. What can I do?\"", "\"Oh - good. I was hoping someone would come. I've been talking to the cat, and the cat is a poor listener.\""],
     hearth: ["Claude moves a stack of books off the other chair by the fire. \"Evening. The kettle's on. What's on your mind?\""], bed: ["A heap of blankets sits up, and becomes Claude. \"Mm? No - no, I'm awake. I'm awake. What is it?\""] };
-  P.claudeTalk = function (k, menu = "main") { const fl = this.floor, t = fl.things[k]; if (!t) return; this.logAct && this.logAct("claudeTalk", k, menu); const V = this.vext("claude"), today = day(this);
+  CM.claudeTopics = CM.claudeTopics || []; CM.claudeActs = CM.claudeActs || {};
+  P.claudeTalk = function (k, menu = "main", given, givenText) { const fl = this.floor, t = fl.things[k]; if (!t) return; this.logAct && this.logAct("claudeTalk", k, menu); const V = this.vext("claude"), today = day(this);
     t.menu = menu; let text, opts;
     if (menu === "main") { const s = spotNow(this), O = OPENERS[s]; text = V.talked ? O[(V.talked || 0) % O.length] : "Claude: a little ink on the fingers, a pencil behind one ear, a smile that arrives a moment before the words. \"Hello. I'm Claude. You walked all the way out here - that deserves tea, at the least. What can I do?\"";
       V.talked = (V.talked || 0) + 1;
-      opts = [["read", "How are we doing?"], ["below", "What's down there?"], ["lore", "Tell me about something we've read"], ["tea", V.tea === today ? "Tea (you've had today's)" : "A cup of tea"], ["look", V.look === today ? "A second opinion (tomorrow)" : "Would you look at something?"], ["rest", V.rest === today ? "Rest by the fire (tomorrow)" : "Rest by the fire"], ["who", "Who are you?"], ["bye", "Goodbye"]]; }
+      opts = [["read", "How are we doing?"], ["below", "What's down there?"], ["lore", "Tell me about something we've read"], ["tea", V.tea === today ? "Tea (you've had today's)" : "A cup of tea"], ["look", V.look === today ? "A second opinion (tomorrow)" : "Would you look at something?"], ["rest", V.rest === today ? "Rest by the fire (tomorrow)" : "Rest by the fire"], ...CM.claudeTopics.flatMap((f) => f(this) || []), ["who", "Who are you?"], ["bye", "Goodbye"]]; }
+    else if (given) { text = givenText || "\"Which?\""; opts = given; }
     else if (menu === "lore") { const read = Object.keys(Object.assign({}, (this.village && this.village.loreRead) || {}, (this.story && this.story.read) || {})).filter((key2) => CM.LORE_TEXT[key2] && /^carving\./.test(key2)).slice(-6);
       if (!read.length) { this.say("\"You haven't read any of the walls yet. Go down a floor or two - they're cut into the stone, mostly where nobody looks. Bring me what they say.\""); return; }
       text = "\"Which one? I've read them all, but I like hearing what people made of them first.\""; opts = read.map((key2) => ["tell", `"${CM.LORE_TEXT[key2].text.slice(0, 54).trim()}..."`, key2]).concat([["main", "Something else"]]); }
@@ -129,6 +131,7 @@
     this.claudeMenu = opts; this.emit("choice", { k, title: "Claude", text, options: opts.map((o) => o[1]), claude: true }); };
   { const ch0 = P.choose; P.choose = function (k, i) { const fl = this.floor, t = fl && fl.things[k]; if (!t || t.type !== "claude") return ch0.call(this, k, i); const opt = (this.claudeMenu || [])[i]; if (!opt) return false; this.logAct && this.logAct("choose", k, i); return this.claudeAnswer(k, opt); }; }
   P.claudeAnswer = function (k, [act, , arg]) { const V = this.vext("claude"), today = day(this), say = (s) => { this.emit("talk", { title: "Claude", text: s }); this.say(s); };
+    if (CM.claudeActs[act]) { CM.claudeActs[act](this, k, say, arg); return true; }
     if (act === "bye") { say(["\"Go carefully. Come back and tell me how it went - I mean that.\"", "\"Mind the third step down on the path; it wobbles. Everything else is sound.\""][(V.talked || 0) % 2]); return true; }
     if (act === "main") { this.claudeTalk(k, "main"); return true; }
     if (act === "read") { say(`"${CM.claudeRead(this)}"`); return true; }
@@ -140,12 +143,16 @@
       say(`"That one's from ${CM.CHAPTERS && CM.CHAPTERS[L.chapter] ? CM.CHAPTERS[L.chapter].name || L.chapter : "the walls"}${L.floor ? `, floor ${CM.realOf(L.floor)} or near it` : ""}. ${kin.length ? `It's the same hand as ${plural(kin.length, "other wall")} you've read - you can tell by how it never finishes a list. Read them together and it stops being a story about a king and starts being one about the people who worked for him.` : "It's the first you've found of its hand. There'll be more like it further down; the same mason never stopped at one wall."}"`); return true; }
     if (act === "judge") { const it = (this.bag || [])[arg]; if (!it || !it.unknown) { say("\"That one's already known.\""); return true; } V.look = today; if (this.reveal) this.reveal(it); else it.unknown = false; const name = it.name, cursed = it.props && it.props.cursed;
       say(cursed ? `"${name}. And I'm sorry - it's cursed. I'm quite sure of that part. Don't put it on until the temple's had a look at it."` : `"${name}. I'm sure of that. ${it.props && Object.keys(it.props).length > 1 ? "It's better than it looks, too." : "Plain, but honest."}"`); this.emit("change"); return true; }
-    if (act === "tea") { if (V.tea === today) { say("\"You've had today's. Any more and you'd float down the shaft.\""); return true; } V.tea = today; if (this.cheer) this.cheer(15); this.ext("claude").tea = true; this.sound && this.sound("heal");
-      say("\"Here.\" The tea is too hot and very good. Something in it tastes of the woods after rain. \"For the next floor down. You'll be harder to surprise.\""); this.emit("change"); return true; }
+    if (act === "tea") { if (V.tea === today) { say("\"You've had today's. Any more and you'd float down the shaft.\""); return true; } V.tea = today; if (this.cheer) this.cheer(15); this.ext("claude").tea = V.cup ? 2 : 1; delete this.ext("claude").teaOn; this.sound && this.sound("heal");
+      say(`"Here." The tea is too hot and very good. Something in it tastes of the woods after rain. "${V.cup ? "In the green cup - it'll see you two floors down." : "For the next floor down."} You'll be harder to surprise."`); this.emit("change"); return true; }
     if (act === "rest") { if (V.rest === today) { say("\"Tomorrow. The fire's for sitting by, not for hiding behind.\""); return true; } V.rest = today; for (const h of this.alive()) { h.hp = Math.min(h.max, h.hp + Math.ceil(h.max / 4)); h.mp = Math.min(h.maxmp || 0, (h.mp || 0) + Math.ceil((h.maxmp || 0) / 4)); }
       this.clock = (this.clock || 0) + 30; this.sound && this.sound("heal"); say("Half an hour by Claude's fire, saying not very much. It helps more than it should."); this.emit("change"); return true; }
     return false; };
-  // the tea: the next floor's first fight finds the party awake
-  { const sc0 = P.startCombat; P.startCombat = function (key2, thing, theyCame) { const E = this.ext ? this.ext("claude") : null, warm = E && E.tea && this.floor && this.floor.number >= 1, B = this.buffs = this.buffs || {}, had = B.night !== undefined;
-      if (warm) { delete E.tea; if (!had) B.night = 0; } try { return sc0.call(this, key2, thing, theyCame); } finally { if (warm && !had) delete this.buffs.night; } }; }
+  // what Claude remembers is the village's: kept the moment it changes
+  { const keep = (g) => { if (!g.replaying && !g.film && g.saveVillage) g.saveVillage(); }; const ca0 = P.claudeAnswer; P.claudeAnswer = function (...a) { const out = ca0.apply(this, a); keep(this); return out; }; const ce0 = P.claudeEnter; P.claudeEnter = function (...a) { const out = ce0.apply(this, a); keep(this); return out; }; }
+  // the tea: the first fight of each floor it lasts (one, or two from the green cup) finds the party awake
+  { const sc0 = P.startCombat; P.startCombat = function (key2, thing, theyCame) { const E = this.ext ? this.ext("claude") : null, fl = this.floor;
+      if (!(E && E.tea && fl && fl.number >= 1 && E.teaOn !== fl.number)) return sc0.call(this, key2, thing, theyCame);
+      const B = this.buffs = this.buffs || {}, had = B.night !== undefined; E.teaOn = fl.number; E.tea = (E.tea === true ? 1 : E.tea) - 1; if (!E.tea) delete E.tea; if (!had) B.night = 0;
+      try { return sc0.call(this, key2, thing, theyCame); } finally { if (!had) delete this.buffs.night; } }; }
 }
