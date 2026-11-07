@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The south of the Wood, and the deer (v127.0, UPGRADE_PLAN_78.md)
+  (src/js/23b-wood.js, src/js/23d-southwood.js, src/js/25-saves.js, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/77r-deerherd.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_78.md)
+  - The south of the Wood (UPGRADE_PLAN_78.md): the Deep Wood runs twenty rows further south now, old forest with the
+    river going on through it, and nothing in the old Wood has moved by a square. In it: the South Meadow, reached by
+    a track south from Claude's clearing, and the Long Meadow west of the river over a second, shallow ford, with a
+    deer track north through the trees to the wolf den. A save made in the smaller Wood keeps its map.
+  - The deer: a herd of ten - a stag, six does in a few shades, three fawns about half their size - grazing the South
+    Meadow by day, heads down, now and then one standing to look; at dusk they bed down among the trees at the
+    meadow's edge, and they're back out after dawn. They move between the trees like the wolves. Come too near, or let
+    one of the den's wolves come near, and the whole herd bolts at a gallop, and drifts back when it's quiet.
+
 The wolf den (v126.0, UPGRADE_PLAN_77.md)
   (src/js/69zzzzd-wolfden.js, src/js/77q-wolfpack.js, src/js/76zzzzzzzzzze-figures2.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_77.md)
   - The wolf den (UPGRADE_PLAN_77.md): west of the river, south of the west glade, a low outcrop of mottled boulders

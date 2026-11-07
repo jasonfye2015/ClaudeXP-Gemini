@@ -8,7 +8,8 @@
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
-CM.WOOD_SIZE = 61;
+CM.WOOD_SIZE = 81;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill)
+CM.WOOD_EAST = 58;   // where the cliffs at the hill's foot begin, whatever the land's size: the old land's east edge, kept
 CM.WOOD_GATE = [59, 30];                                                 // the land's end of the West Gate: the town is east, up the hill; the land lies west
 CM.LAND_ROAD = [[44, 30, 59, 30], [44, 30, 44, 33], [24, 33, 44, 33]];   // the road from the gate, bending south at the farm, to the ford
 CM.FIELDS = [40, 20, 57, 42];                                            // the fields between the hill and the river
@@ -38,7 +39,7 @@ CM.makeWood = function (seed) {
   const carve = (cx, cy, rx, ry, g) => { for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) if (((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 <= 1) open(x, y, g); };
   const path = (a, b, g = "dirt") => { let [x, y] = a; while (x !== b[0] || y !== b[1]) { open(x, y, g); if (x !== b[0] && (y === b[1] || rnd.chance(0.6))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y, g); };
   // the hill's foot: cliffs along the east edge, the gate in them, the road running out of it
-  for (let y = 0; y < size; y++) for (let x = size - 3; x < size; x++) solid(x, y, "cliff");
+  for (let y = 0; y < size; y++) for (let x = CM.WOOD_EAST; x < size; x++) solid(x, y, "cliff");
   // the fields: grass between the hill and the river, hedged pastures, the farm's tilled rows inside a fence by the road's bend, copses in the corners
   rect(CM.FIELDS, (x, y) => open(x, y, "grass"));
   for (const r of [[41, 22, 48, 22], [41, 22, 41, 27], [50, 36, 56, 36], [50, 36, 50, 41]]) rect(r, (x, y) => solid(x, y, "hedge"));
@@ -46,7 +47,7 @@ CM.makeWood = function (seed) {
   for (const r of [[44, 34, 44, 38], [50, 34, 50, 38], [44, 38, 50, 38]]) rect(r, (x, y) => solid(x, y, "fence"));
   for (const [cx, cy] of [[43, 25], [55, 24], [54, 40], [42, 40]]) for (let i = 0; i < 5; i++) { const x = cx + rnd.int(-2, 2), y = cy + rnd.int(-2, 2); if (grid[y][x] === 0 && ground[key(x, y)] === "grass") solid(x, y, "tree"); }
   for (const r of CM.LAND_ROAD) rect(r, (x, y) => open(x, y, "dirt"));
-  open(CM.WOOD_GATE[0], CM.WOOD_GATE[1], "dirt"); open(size - 1, CM.WOOD_GATE[1], "dirt");
+  open(CM.WOOD_GATE[0], CM.WOOD_GATE[1], "dirt"); open(CM.WOOD_EAST + 2, CM.WOOD_GATE[1], "dirt");
   things[key(...CM.WOOD_GATE)] = { type: "woodgate" };
   // the river, with the ford where the road meets it and a plank bridge to the north
   const fordY = 33, bridgeY = 26;
@@ -66,7 +67,7 @@ CM.makeWood = function (seed) {
   path([CM.riverX(bridgeY) - 1, bridgeY], first);                       // from the bridge too
   path([CM.riverX(bridgeY) + 1, bridgeY], [44, 30]);                    // and the bridge's track east through the trees to the road's bend
   // deep in the forest, far from the ford: the hut, the shrine, the burner, three cave mouths; things to gather along the ways
-  const cells = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !features[key(x, y)] && !things[key(x, y)] && (ground[key(x, y)] === "grass" || ground[key(x, y)] === "dirt")) cells.push([x, y]);
+  const old = Math.min(size, 61), cells = []; for (let y = 1; y < old - 1; y++) for (let x = 1; x < old - 1; x++) if (grid[y][x] === 0 && !features[key(x, y)] && !things[key(x, y)] && (ground[key(x, y)] === "grass" || ground[key(x, y)] === "dirt")) cells.push([x, y]);
   const deep = (c) => c[0] < CM.riverX(c[1]) - 1 && Math.abs(c[0] - first[0]) + Math.abs(c[1] - first[1]) >= 9;
   const take = (ok) => { for (let g = 0; g < 400; g++) { const c = cells[rnd.int(0, cells.length - 1)], k = key(c[0], c[1]); if (!things[k] && (!ok || ok(c))) return k; } return null; };
   for (let n = 0; n < 3; n++) { const k = take(deep); if (k) things[k] = { type: "cave", n }; }
@@ -78,6 +79,7 @@ CM.makeWood = function (seed) {
     if (grid[at[1]] && grid[at[1]][at[0]] === 0 && !things[key(...at)] && !features[key(...at)]) things[key(...at)] = { type: "signpost", text };
   }
   { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
+  if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],

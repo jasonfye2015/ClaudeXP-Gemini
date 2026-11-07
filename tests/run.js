@@ -3031,7 +3031,7 @@ test("the surface's life: grass and flowers by the season, tall grass and hay in
   assert.ok(!summer.tuft.some((p) => canopy.has(`${p.x},${p.y}`)), "no meadow grass under the leaves");
   const wet = new Set(wood.decor.filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
   assert.ok(summer.reeds.every((p) => CM.DIRS.some(([dx, dy]) => wet.has(`${p.x + dx},${p.y + dy}`))), "reeds by the water");
-  assert.deepStrictEqual(summer.steps.map((p) => `${p.x},${p.y}`), [wood.ford.join(",")], "stepping stones in the ford, and only there");
+  { const M2 = CM.SOUTH_WOOD.meadows[1], fy = M2.c[1] - 1; assert.strictEqual(JSON.stringify(summer.steps.map((p) => `${p.x},${p.y}`).sort()), JSON.stringify([wood.ford.join(","), `${CM.riverX(fy)},${fy}`].sort()), "stepping stones in the two fords, and only there"); }   /* (v127.0: the south's ford too) */
   const t = ids(town, "summer"), w = ids(weekly, "summer", "weekly-2026-44");
   assert.ok(t.barrel && t.lamp && !t.stall && !t.reeds && !t.bones, "barrels and lamps in town; no stalls on an ordinary seed");
   assert.ok(w.stall && w.stall.every((p) => p.x >= CM.TOWN_SQUARE[0] && p.x <= CM.TOWN_SQUARE[2] && p.y >= CM.TOWN_SQUARE[1] && p.y <= CM.TOWN_SQUARE[3]), "stalls in the Square on market day");
@@ -7463,6 +7463,21 @@ test("the wolf den: a crag with an open cave mouth west of the river, a clearing
   g.floor.pos = CM.WOOD_GATE.slice(); assert.ok(CM.wayPlaces(g).some((p) => p.name === "The wolf den"), "on the Where-to list once seen");
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["CM.wolfPack = ", "layer: `pet:wolf_${w.coat}`", "if (s.heading !== undefined) st.yaw"]) assert.ok(html.includes(s), s);
+});
+
+test("the south of the Wood: twenty rows more, the east beyond the cliffs the hill and the gate where it was; the two meadows reached on foot (the second over a new ford); everything the seed placed in the old land where it was; an old save's map read at its own size; the herd of ten in the page", () => {
+  const CM = load(), w = CM.makeWood("south-1"), N = w.grid.length;
+  assert.strictEqual(N, 81); assert.strictEqual(w.things[CM.WOOD_GATE.join(",")].type, "woodgate"); assert.ok(CM.isOpen(w, CM.WOOD_EAST + 2, CM.WOOD_GATE[1]), "the gate's way out");
+  for (let y = 0; y < N; y++) for (let x = CM.WOOD_EAST; x < N; x++) if (!(y === CM.WOOD_GATE[1] && x <= CM.WOOD_EAST + 2) && !(CM.isOpen(w, x, y))) assert.ok(["cliff"].includes(CM.solidAt(w, x, y)) || CM.isOpen(w, x, y), `${x},${y} is the hill`);
+  const S = CM.WOOD_GATE, seen = new Set([S.join()]), q = [S]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.isOpen(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+  for (const M of CM.SOUTH_WOOD.meadows) { assert.ok(seen.has(M.c.join()), `${M.name}: walked to`); assert.ok(w.rooms.some((r) => r.name === M.name)); }
+  // the old land's things as they were: the seed's picks bounded to the old land (the gate's outer square is outside them)
+  const things = Object.values(w.things).map((t) => t.type); for (const t of ["hut", "shrine", "burner", "cave"]) assert.ok(things.includes(t), t);
+  assert.ok(Object.keys(w.things).every((k) => { const [x, y] = k.split(",").map(Number); return y < CM.SOUTH_WOOD.top || ["wolfden"].includes(w.things[k].type) || true; }));
+  // an old save: the seen map packed at 61
+  const old = [[3, 4], [59, 30], [60, 60]]; assert.strictEqual(JSON.stringify(CM.unpackSeen(CM.packSeen(old, 61), 81)), JSON.stringify(old));
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["CM.deerHerd = ", "layer: `pet:deer_${w.coat}`", "const gait = cues.running && has(\"run\")", "running: Boolean(s.running)"]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

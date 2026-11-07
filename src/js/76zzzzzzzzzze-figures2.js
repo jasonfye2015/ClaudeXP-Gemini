@@ -49,7 +49,7 @@
         if (moving) st.moved = true; st.x = x; st.z = z; st.seen = now;
         const flash = s.flash || 0, hit = flash > st.flash + 0.25; st.flash = flash;
         const foe = s.m || null, dead = Boolean(foe && foe.hp <= 0) || Boolean(s.dying), kind = CM.monsterKind ? CM.monsterKind(parts[1]) : null;
-        const cues = { moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
+        const cues = { running: Boolean(s.running), moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
         const play = CM.Figures.step(m, st, cues, now); if (!play) { keep.push(s); continue; }
         const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
         let wear = fig.wear || []; if (foe && foe.gear && foe.gear.weapon) { const g = CM.Figures.gearFor(CM.itemName ? CM.itemName(foe.gear.weapon) : foe.gear.weapon.name); if (g && F.models[`gear:${g}`] && F.models[`gear:${g}`].skeleton.n === m.skeleton.n) wear = [g].concat(wear.filter((w) => !["sword", "greatsword", "axe", "greataxe", "knife", "staff", "crossbow"].includes(w))); }   // (v69.0: what it carries is in its hand)
