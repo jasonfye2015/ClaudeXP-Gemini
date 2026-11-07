@@ -356,7 +356,7 @@ class Renderer:
         self._proj_cache = proj
         eye = g.eye
         moving = abs(getattr(g, "_speed_seen", 0)) > 0.1
-        self.bob += dt * (9.0 if moving else 0.0)
+        self.bob += dt * ((13.0 if getattr(g, "running", False) else 9.0) if moving else 0.0)
         bob_y = math.sin(self.bob) * 0.025 if moving else 0.0
         view = gl.view_matrix((eye[0], eye[1] + bob_y, eye[2]), g.yaw, g.pitch)
         self.proj_view = proj @ view
@@ -476,6 +476,10 @@ class Renderer:
             lay = get(s["name"])
             if lay is not None:
                 things.append((s["x"], s["y"], s["z"], s["w"], s["h"], lay, 1.5 if s.get("glow") else 1.0))
+        coins = get("sp.coins")
+        for pk in L.pickups:
+            if pk["kind"] == "gold" and coins is not None:
+                things.append((pk["x"], pk["y"], pk["z"], 0.42, 0.3, coins, 1.25))
         wood = get("fu.table")
         for f in g.fx:                                                  # (splinters of what broke)
             if f.get("kind") == "debris":
@@ -705,6 +709,14 @@ class Renderer:
             else:
                 k2 = (ph - 0.8) / 0.2
                 bill(dx, dfloor + 0.02, dz, 0.05 + k2 * 0.12, (0.5, 0.65, 0.85), (1 - k2) * 0.9)
+        for pk in getattr(L, "pickups", ()):                         # (potions, scrolls and finds, glowing)
+            if pk["kind"] == "gold" or (pk["x"] - ex) ** 2 + (pk["z"] - ez) ** 2 > 600:
+                continue
+            c = {"health": (1.0, 0.25, 0.2), "mana": (0.3, 0.45, 1.0), "scroll": (0.9, 0.8, 0.5), "item": (1.0, 0.85, 0.4)}[pk["kind"]]
+            bobh = pk["y"] + 0.25 + 0.06 * math.sin(now * 2.5 + pk["phase"])
+            bill(pk["x"], bobh, pk["z"], 0.14, c, 1.4)
+            if pk["kind"] == "item":
+                bill(pk["x"], bobh, pk["z"], 0.3 + 0.05 * math.sin(now * 5 + pk["phase"]), c, 0.35)
         if L.stairs and not L.outdoor:
             sx, sz = L.stairs
             sealed = L.guardian and not g.guardian_down

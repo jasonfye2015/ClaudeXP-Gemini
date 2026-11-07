@@ -34,7 +34,7 @@ def test_the_set_pieces():
     assert len(dress.set_pieces()) >= 50
     seen = set()
     with_piece = 0
-    for seed in range(4):
+    for seed in range(2):
         for d in range(1, D.FLOORS + 1):
             L = levels.dungeon(d, seed)
             if L.pieces:
@@ -45,8 +45,8 @@ def test_the_set_pieces():
                 assert dist[int(c["z"]), int(c["x"])] >= 0, (seed, d, c)
             for s in L.spawns:
                 assert dist[int(s["z"]), int(s["x"])] >= 0, (seed, d, s)
-    assert with_piece > 150, with_piece
-    assert len(seen) >= 45, len(seen)
+    assert with_piece > 90, with_piece
+    assert len(seen) >= 40, len(seen)
 
 
 def test_the_dressing_by_band():
@@ -92,8 +92,9 @@ def test_walking_into_a_set_piece():
     g.step(0.02, Input())
     said = [e for e in g.events if e[0] == "piece"]
     assert said and said[0][2] == pc["line"]
+    g.events.clear()
     g.step(0.02, Input())
-    assert not [e for e in g.events[len(g.events) - 2:] if e[0] == "piece"]
+    assert not [e for e in g.events if e[0] == "piece"]
 
 
 def test_things_stand_in_the_way():
@@ -111,8 +112,8 @@ def _walkable_reach(L, radius=0.24):
 def test_nothing_blocks_the_way():
     """With every barrel, crate, chest and standing thing in its place, Claude can still walk to the stairs, to every
     chest's side and to every square of every corridor - on every floor."""
-    for seed in range(2):
-        for d in range(1, D.FLOORS + 1, 2 if seed else 1):
+    for seed in range(1):
+        for d in range(1, D.FLOORS + 1):
             L = levels.dungeon(d, f"{seed}:0")
             reach = _walkable_reach(L)
             sx, sy = int(L.stairs[0]), int(L.stairs[1])

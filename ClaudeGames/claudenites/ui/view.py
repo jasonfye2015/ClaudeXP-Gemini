@@ -126,6 +126,7 @@ class GameView(QOpenGLWidget):
             k = self.keys
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
+            self.inp.run = Qt.Key_Shift in k
             if Qt.Key_Left in k:
                 self.inp.yaw -= 2.2 * dt
             if Qt.Key_Right in k:
@@ -210,6 +211,8 @@ class GameView(QOpenGLWidget):
                     self.toasts.append((line, (0.85, 0.82, 0.74), now + 0.3))
             elif kind == "chest":
                 snd.play("coin", 0.7)
+            elif kind == "pickup":
+                snd.play("coin" if e[1] == "gold" else "drink" if e[1] in ("health", "mana") else "levelup", 0.45)
             elif kind == "lightning":
                 if self.renderer:
                     self.renderer.lightning(1.0)

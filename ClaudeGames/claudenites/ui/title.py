@@ -385,7 +385,7 @@ class TitleScreen(QWidget):
         h.setObjectName("h2")
         lay.addWidget(h)
         grid = QGridLayout()
-        keys = [("W A S D", "walk"), ("Mouse", "look (click to take it, Esc gives it back)"), ("Left button", "cast"),
+        keys = [("W A S D", "walk"), ("Shift", "run (and jump higher and further)"), ("Mouse", "look (click to take it, Esc gives it back)"), ("Left button", "cast"),
                 ("Space", "jump"), ("F", "talk, open, take the stairs"), ("Q / E", "health / mana potion"),
                 ("T", "read a Scroll of Return"), ("1-4, wheel", "change wand"), ("Tab", "the pack"), ("M", "the big map"),
                 ("Esc", "the menu")]

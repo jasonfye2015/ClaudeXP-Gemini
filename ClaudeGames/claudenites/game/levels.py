@@ -53,6 +53,8 @@ class Level:
         # the dressing (game/dress.py says what each is)
         self.decals, self.flats, self.webs, self.hangs, self.sprites, self.drips, self.chests = [], [], [], [], [], [], []
         self.water, self.pieces, self.gold_squares = set(), [], set()
+        self.pickups = []                                # things lying about: {x, z, y, kind (gold/health/mana/item/scroll)}
+        self.caches = []
         self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 
     def tex(self, name):
@@ -201,7 +203,7 @@ class Room:
                 yield xx, yy
 
 
-ROOM_KINDS = ["plain", "plain", "pillars", "dais", "pit", "hall", "plain", "cross"]
+ROOM_KINDS = ["plain", "plain", "pillars", "dais", "pit", "hall", "plain", "cross", "L", "ring", "split", "steps", "L"]
 BAND_PROPS = [                                       # what lies about in each band's rooms (plant pack names)
     ["barrel", "crate", "rock1", "rock2"], ["stump_moss", "log_moss", "plant1", "plant3", "rock1"],
     ["barrel", "rock2", "lilypad", "rock1"], ["rock1", "rock2", "stump", "crate"], ["rock1", "rock2"],
@@ -211,11 +213,38 @@ BAND_PROPS = [                                       # what lies about in each b
 
 
 def dungeon(depth, seed):
+    """A floor: rooms at their own heights joined by corridors that climb and fall between them; if the heights
+    happen to cut anything off, the same floor is made again level."""
+    for heights in (2, 1, 0):                                        # (high and low; gentler; level)
+        L = _dungeon(depth, seed, heights)
+        if heights == 0 or _whole(L):
+            return L
+    return L
+
+
+def _whole(L):
+    sx, sy = int(L.start[0]), int(L.start[1])
+    dist = L.distances(sx, sy)
+    for r in L.rooms:
+        cells = [(x, y) for x, y in r.cells() if L.open_at(x, y)]
+        if cells and not any(dist[y, x] >= 0 for x, y in cells):
+            return False
+    if dist[int(L.stairs[1]), int(L.stairs[0])] < 0:
+        return False
+    reach = walkable_reach(L)
+    B = L.blockers()
+    for (x, y) in L.open_squares():                                  # (every square he could stand on, he can reach)
+        if (x, y) not in reach and L.floor[y, x] > -0.5 and not B.get((x, y)):
+            return False
+    return True
+
+
+def _dungeon(depth, seed, varied):
     rng = random.Random(f"{seed}:floor:{depth}")
     band = D.band_of(depth)
     bi = D.BANDS.index(band)
     guardian = depth % 10 == 0
-    size = 44 + min(36, depth // 3) + (6 if guardian else 0)
+    size = 64 + min(44, depth // 2) + (8 if guardian else 0)            # (twice the floor it was)
     L = Level(size, size, depth)
     L.seed = seed
     L.name, L.line = band["name"], band["line"]
@@ -224,7 +253,7 @@ def dungeon(depth, seed):
     L.wtex[:], L.ftex[:], L.ctex[:] = wt, ft, ct
     alt_floor = L.tex("ground.flags" if band["tex"][1] != "ground.flags" else "ground.cobbles")
     # the rooms
-    want = 8 + min(14, depth // 6)
+    want = 16 + min(20, depth // 5)
     rooms = []
     if guardian:                                       # the guardian's hall: big, high, at the far side
         rooms.append(Room(size - 22, size - 22, 17, 17, "arena"))
@@ -245,7 +274,7 @@ def dungeon(depth, seed):
     for _ in range(600):
         if len(rooms) >= want:
             break
-        w, h = rng.randint(5, 11), rng.randint(5, 11)
+        w, h = rng.randint(5, 13), rng.randint(5, 13)
         r = Room(rng.randint(2, size - w - 3), rng.randint(2, size - h - 3), w, h, rng.choice(ROOM_KINDS))
         if all(not r.overlaps(o) for o in rooms):
             rooms.append(r)
@@ -255,7 +284,9 @@ def dungeon(depth, seed):
         pr = next(r for r in rooms if r.kind == "piece")
         rooms.remove(pr)
         rooms.insert(min(len(rooms), 2), pr)
-    for r in rooms:
+    for k, r in enumerate(rooms):
+        # each room at its own height (Claude comes in on level ground; the guardian's hall and set pieces too)
+        r.base = 0.0
         ceil = {"hall": rng.uniform(3.0, 3.8), "arena": 4.2, "pillars": rng.uniform(2.4, 3.0)}.get(r.kind, rng.uniform(1.9, 2.6))
         for x, y in r.cells():
             L.solid[y, x] = False
@@ -275,17 +306,52 @@ def dungeon(depth, seed):
                     best = (d, a, b)
         edges.append(best[1:])
         joined.add(best[2])
-    for _ in range(max(1, len(rooms) // 4)):
+    # each room at its own height, a step or two from the room it's joined to (along the tree from the first)
+    if varied:
+        steps = [-0.3, 0.0, 0.3, 0.3, -0.3] if varied == 2 else [-0.3, 0.0, 0.0, 0.3]
+        limit = 1.2 if varied == 2 else 0.6
+        kids = {}
+        for a, b in edges:
+            kids.setdefault(a, []).append(b)
+        todo = [0]
+        while todo:
+            a = todo.pop()
+            for b in kids.get(a, []):
+                rb = rooms[b]
+                if rb.kind not in ("arena", "piece"):
+                    rb.base = max(-limit, min(limit, rooms[a].base + rng.choice(steps)))
+                else:
+                    rb.base = 0.0
+                todo.append(b)
+        for r in rooms:
+            r.base = round(r.base, 1)
+    for _ in range(max(2, len(rooms) // 3)):                      # (loops: more than one way round)
         a, b = rng.sample(range(len(rooms)), 2)
         edges.append((a, b))
     for a, b in edges:
-        _corridor(L, centres[a], centres[b], rng, wide=rng.random() < 0.25)
+        if rng.random() < 0.3:
+            _winding(L, centres[a], centres[b], rng)
+        else:
+            _corridor(L, centres[a], centres[b], rng, wide=rng.random() < 0.25)
+    caches = _alcoves(L, rooms, rng, 3 + depth % 4)                  # (dead ends, with something at the end)
+    # the heights: rooms raised and sunk, the corridors between them climbing in gentle steps
+    in_room = {}
+    for r in rooms:
+        for x, y in r.cells():
+            in_room[(x, y)] = r
+    for r in rooms:
+        if r.base:
+            for x, y in r.cells():
+                L.floor[y, x] += r.base
+                L.ceil[y, x] += r.base
     # the rooms' shapes (after the corridors, which only cut through rock), and the set piece's letters
     for r in rooms:
         if r.kind == "piece":
             dress.place_piece(L, r, r.piece, rng)
         else:
             _shape(L, r, rng, alt_floor)
+    _relax(L, in_room, caches)
+    L.caches = caches
     L.rooms = rooms
     # where Claude comes in, and the way down: the room furthest from it
     start = rooms[0] if not guardian else rooms[0]
@@ -325,8 +391,13 @@ def dungeon(depth, seed):
                         break
     if guardian:
         L.spawns.append({"monster": band["guardian"], "x": tx + 0.5, "z": ty - 3.5, "guardian": True})
-    # chests: one or two a floor, against a wall in a room
-    for r in rng.sample(rooms[1:], k=min(len(rooms) - 1, rng.randint(1, 2))):
+    # chests: two to five a floor, against a wall in a room; and one at the end of most dead ends
+    for (x, y) in caches:
+        if rng.random() < 0.6:
+            dress.chest(L, x, y, rng, rich=1.3)
+        else:
+            _pickup(L, x, y, rng, depth, "item")
+    for r in rng.sample(rooms[1:], k=min(len(rooms) - 1, rng.randint(2, 5))):
         if r.kind == "piece":
             continue
         for _ in range(20):
@@ -335,10 +406,18 @@ def dungeon(depth, seed):
                     any(not L.open_at(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 dress.chest(L, x, y, rng)
                 break
-    # the clutter, and the torches
+    # things lying about: gold, potions, scrolls, and now and then something that glints
+    for r in rooms[1:]:
+        if r.kind == "piece":
+            continue
+        for _ in range(rng.randint(0, 2) + (1 if r.w * r.h > 60 else 0)):
+            x, y = rng.randint(r.x, r.x + r.w - 1), rng.randint(r.y, r.y + r.h - 1)
+            if L.open_at(x, y) and not clear_way(L, x, y) and not _near(L, x, y, L.stairs):
+                _pickup(L, x, y, rng, depth)
+    # the clutter (more of it: barrels and crates in clusters), and the torches
     props = BAND_PROPS[bi]
     for r in rooms:
-        for _ in range(rng.randint(0, 3)):
+        for _ in range(rng.randint(1, 5)):
             x, y = rng.randint(r.x, r.x + r.w - 1), rng.randint(r.y, r.y + r.h - 1)
             if not L.open_at(x, y) or _near(L, x, y, L.stairs) or _near(L, x, y, L.portal) or clear_way(L, x, y):
                 continue
@@ -409,25 +488,114 @@ def _span(a, b):
     return range(a, b + 1) if b >= a else range(a, b - 1, -1)
 
 
+def _pickup(L, x, y, rng, depth, kind=None):
+    kind = kind or rng.choices(["gold", "gold", "gold", "health", "mana", "item", "scroll"], [5, 3, 2, 2, 2, 1.2, 0.3])[0]
+    L.pickups.append({"x": x + rng.uniform(0.3, 0.7), "z": y + rng.uniform(0.3, 0.7), "y": float(L.floor[y, x]), "kind": kind,
+                      "phase": rng.uniform(0, 6.28)})
+
+
+def _winding(L, a, b, rng):
+    """A corridor that wanders: a few doglegs between the rooms."""
+    (x0, y0), (x1, y1) = a, b
+    pts = [(x0, y0)]
+    for _ in range(rng.randint(1, 3)):
+        px, py = pts[-1]
+        pts.append((max(2, min(L.w - 3, (px + x1) // 2 + rng.randint(-6, 6))), max(2, min(L.h - 3, (py + y1) // 2 + rng.randint(-6, 6)))))
+    pts.append((x1, y1))
+    for p, q in zip(pts, pts[1:]):
+        _corridor(L, p, q, rng)
+
+
+def _alcoves(L, rooms, rng, n):
+    """Short dead-end passages off rooms' walls, a little alcove at their end: -> the alcoves' squares."""
+    out = []
+    for _ in range(n * 6):
+        if len(out) >= n:
+            break
+        r = rng.choice(rooms[1:]) if len(rooms) > 1 else rooms[0]
+        if r.kind not in ("plain", "hall", "dais", "pit", "split", "steps"):      # (not where a shape cuts rock away)
+            continue
+        side = rng.randrange(4)
+        dx, dy = ((1, 0), (-1, 0), (0, 1), (0, -1))[side]
+        sx = r.x + r.w if dx == 1 else r.x - 1 if dx == -1 else rng.randint(r.x + 1, r.x + r.w - 2)
+        sy = r.y + r.h if dy == 1 else r.y - 1 if dy == -1 else rng.randint(r.y + 1, r.y + r.h - 2)
+        length = rng.randint(3, 6)
+        cells = [(sx + dx * k, sy + dy * k) for k in range(length)]
+        ex, ey = cells[-1]
+        ok = all(2 <= cx < L.w - 2 and 2 <= cy < L.h - 2 and L.solid[cy, cx] and
+                 all(L.solid[cy + oy, cx + ox] for ox, oy in ((-dy, -dx), (dy, dx)) if (cx, cy) != cells[0]) for cx, cy in cells)
+        ok = ok and all(L.solid[ey + oy, ex + ox] for ox in (-1, 0, 1) for oy in (-1, 0, 1) if (ox, oy) != (-dx, -dy))
+        if not ok:
+            continue
+        ceil = rng.uniform(1.4, 1.8)
+        for cx, cy in cells:
+            L.solid[cy, cx] = False
+            L.floor[cy, cx] = 0.0
+            L.ceil[cy, cx] = ceil
+            L.paths.add((cx, cy))
+        L.paths.discard((ex, ey))
+        L.paths.add((sx - dx, sy - dy))                     # (the room's square at its mouth stays open)
+        out.append((ex, ey))
+    return out
+
+
+def _relax(L, in_room, extra=()):
+    """The corridors' heights between the rooms' fixed ones: each square the mean of its neighbours, many times
+    over, then cut to steps a tenth high - so a corridor climbs or falls between rooms in gentle steps."""
+    cor = [(x, y) for (x, y) in list(L.paths) + list(extra) if L.open_at(x, y) and (x, y) not in in_room]
+    if not cor:
+        return
+    ceil_h = {(x, y): float(L.ceil[y, x] - L.floor[y, x]) for (x, y) in cor}
+    for _ in range(90):
+        for (x, y) in cor:
+            hs = [float(L.floor[y + dy, x + dx]) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if L.open_at(x + dx, y + dy)]
+            if hs:
+                L.floor[y, x] = sum(hs) / len(hs)
+    for (x, y) in cor:
+        L.floor[y, x] = round(float(L.floor[y, x]) * 10) / 10
+        L.ceil[y, x] = L.floor[y, x] + ceil_h[(x, y)]
+
+
 def _shape(L, r, rng, alt_floor):
     x0, y0, x1, y1 = r.x, r.y, r.x + r.w, r.y + r.h
+    b = getattr(r, "base", 0.0)
     if r.kind == "pillars" and r.w >= 7 and r.h >= 7:
         for y in range(y0 + 2, y1 - 1, 3):
             for x in range(x0 + 2, x1 - 1, 3):
                 if (x, y) not in L.paths:
                     L.solid[y, x] = True
     elif r.kind == "dais" and r.w >= 7 and r.h >= 7:
-        L.floor[y0 + 2:y1 - 2, x0 + 2:x1 - 2] = 0.3
-        L.floor[y0 + 3:y1 - 3, x0 + 3:x1 - 3] = 0.6
+        L.floor[y0 + 2:y1 - 2, x0 + 2:x1 - 2] = b + 0.3
+        L.floor[y0 + 3:y1 - 3, x0 + 3:x1 - 3] = b + 0.6
         L.ftex[y0 + 2:y1 - 2, x0 + 2:x1 - 2] = alt_floor
     elif r.kind == "pit" and r.w >= 7 and r.h >= 7:
-        L.floor[y0 + 2:y1 - 2, x0 + 2:x1 - 2] = -0.35
-        L.floor[y0 + 3:y1 - 3, x0 + 3:x1 - 3] = -0.7
+        L.floor[y0 + 2:y1 - 2, x0 + 2:x1 - 2] = b - 0.35
+        L.floor[y0 + 3:y1 - 3, x0 + 3:x1 - 3] = b - 0.7
     elif r.kind == "cross" and r.w >= 7 and r.h >= 7:      # four blocks of rock in the corners: a cross-shaped room
         for x, y in list(r.cells()):
             if (x < x0 + 2 or x >= x1 - 2) and (y < y0 + 2 or y >= y1 - 2):
                 if not _corridor_mouth(L, x, y, r) and (x, y) not in L.paths:
                     L.solid[y, x] = True
+    elif r.kind == "L" and r.w >= 7 and r.h >= 7:           # a corner of rock taken out of it
+        cx, cy = (x0, y0) if rng.random() < 0.5 else (x1 - r.w // 2, y1 - r.h // 2)
+        for y in range(cy, cy + r.h // 2):
+            for x in range(cx, cx + r.w // 2):
+                if (x, y) not in L.paths and not _corridor_mouth(L, x, y, r):
+                    L.solid[y, x] = True
+    elif r.kind == "ring" and r.w >= 8 and r.h >= 8:        # a block of rock in the middle: a walk round it
+        for y in range(y0 + 2, y1 - 2):
+            for x in range(x0 + 2, x1 - 2):
+                if (x, y) not in L.paths:
+                    L.solid[y, x] = True
+    elif r.kind == "split":                                 # one half a step up
+        if r.w >= r.h:
+            L.floor[y0:y1, x0 + r.w // 2:x1] = b + 0.35
+        else:
+            L.floor[y0 + r.h // 2:y1, x0:x1] = b + 0.35
+    elif r.kind == "steps":                                 # climbing across the room
+        for k, x in enumerate(range(x0, x1)):
+            L.floor[y0:y1, x] = b + 0.2 * (k // 2)
+            L.ceil[y0:y1, x] = max(L.ceil[y0, x], L.floor[y0, x] + 1.9)
     elif r.kind == "arena":
         L.floor[y0 + 3:y1 - 3, x0 + 3:x1 - 3] = -0.3
         for x, y in ((x0 + 3, y0 + 3), (x1 - 4, y0 + 3), (x0 + 3, y1 - 4), (x1 - 4, y1 - 4)):

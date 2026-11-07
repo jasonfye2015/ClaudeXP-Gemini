@@ -171,7 +171,7 @@ class PausePanel(QFrame):
         talk.clicked.connect(lambda: (shell.set_setting("speech", not on), shell.pause(), shell.pause()))
         lay.addWidget(talk)
         lay.addSpacing(8)
-        lay.addWidget(_label("WASD move, mouse look, left button cast, Space jump, F talk or use, Q health potion, "
+        lay.addWidget(_label("WASD move, Shift run, mouse look, left button cast, Space jump (higher running), F talk or use, Q health potion, "
                              "E mana potion, T Scroll of Return, 1-4 or the wheel change wand, Tab the pack, M the map.",
                              "small"))
 
