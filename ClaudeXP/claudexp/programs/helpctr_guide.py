@@ -169,7 +169,9 @@ CATALOG = {
                              "learned. With a language model installed (LLM Models), the townsfolk speak through llama.cpp - in character, "
                              "knowing how deep Claude has been - and answer what he says to them. Each floor is dressed with Claude "
                              "and Magic's things (pipes that drip, grates, webs, glowcaps, crystals) and most hold one of its sixty "
-                             "set pieces. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "set pieces. Round the town a great forest: trails to eight glades (the Mossy Pond, the Old Shrine, the "
+                             "Woodcutter's Camp, the Fairy Ring, the Hollow Oak, the Wolf Hollow, the Bandits' Camp, the Stream) and "
+                             "creatures as strong as Claude that never come into the town. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
                              "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, left button to cast, "
                              "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
