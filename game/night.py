@@ -11,6 +11,7 @@ import math
 import random
 
 from . import tree as T
+from .den import Den
 
 EYE = 0.62
 RADIUS = 0.24
@@ -43,6 +44,7 @@ class Input:
 class Night:
     def __init__(self, seed=None):
         self.tree = T.Tree()
+        self.den = Den(self.tree)
         self.rng = random.Random(seed)
         sx, sz, facing = self.tree.start
         self.x, self.z = sx, sz
@@ -61,6 +63,11 @@ class Night:
         self.perch = 0
         self.eye_alpha = 0.0
         self.eye_gone_until = 0.0
+        # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
+        spots = list(range(len(self.den.lurks)))
+        self.rng.shuffle(spots)
+        self.lurkers = [{"spot": k, "alpha": 0.0, "hidden_until": self.rng.uniform(0, 6), "blink_at": self.rng.uniform(1, 6),
+                         "eyes": self.rng.choice((2, 2, 4, 6)), "seed": self.rng.random()} for k in spots[:6]]
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
@@ -102,6 +109,45 @@ class Night:
                 name, line = PLACES[p]
                 self.events.append(("place", name, line))
         self._watch(dt)
+        self._lurk(dt)
+
+    def _lurk(self, dt):
+        """The small eyes near the ground: they show in the dark, a way off; they blink; and when he comes near - or
+        his lantern finds them - they're gone, and turn up again somewhere else in a while."""
+        ex, ey, ez = self.eye
+        reach, _k = self.lantern_reach() if self.lantern else (0.0, 0.0)
+        taken = {l["spot"] for l in self.lurkers}
+        for l in self.lurkers:
+            x, y, z = self.den.lurks[l["spot"]]
+            d = math.dist((x, y, z), (ex, ey, ez))
+            if self.time < l["hidden_until"]:
+                l["alpha"] = max(0.0, l["alpha"] - dt * 4)
+                continue
+            if d < max(2.6, reach * 0.6) or d > 15:
+                l["alpha"] = max(0.0, l["alpha"] - dt * (6 if d < 6 else 1))
+                if l["alpha"] == 0.0 and d < 6:                       # (scattered: somewhere else, later)
+                    free = [k for k in range(len(self.den.lurks)) if k not in taken and
+                            math.dist(self.den.lurks[k], (ex, ey, ez)) > 6]
+                    if free:
+                        taken.discard(l["spot"])
+                        l["spot"] = self.rng.choice(free)
+                        taken.add(l["spot"])
+                    l["hidden_until"] = self.time + self.rng.uniform(4, 11)
+                    self.events.append(("scatter", (x, y, z)))
+                continue
+            l["alpha"] = min(1.0, l["alpha"] + dt * 0.5)
+            if self.time > l["blink_at"] + 0.16:
+                l["blink_at"] = self.time + self.rng.uniform(1.5, 7.0)
+
+    def lurking(self):
+        """The small eyes showing now: [(position, alpha, how many eyes, seed)] - shut for a moment as they blink."""
+        out = []
+        for l in self.lurkers:
+            if l["alpha"] <= 0.01:
+                continue
+            shut = l["blink_at"] <= self.time <= l["blink_at"] + 0.16
+            out.append((self.den.lurks[l["spot"]], l["alpha"] * (0.08 if shut else 1.0), l["eyes"], l["seed"]))
+        return out
 
     def _move(self, dt, inp):
         t = self.tree

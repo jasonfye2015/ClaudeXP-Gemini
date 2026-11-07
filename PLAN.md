@@ -27,6 +27,16 @@ The design document (Claude Docs): https://claude.ai/artifact/JtQZ3J468Lqh9E8Qqo
 - The sky darker, the stars twinkling, and a faint aurora: two wavering curtains strung across the sky, each in layers
   (green low, violet high) with rays shimmering along them, slowly breathing - seen through the crown.
 
+## Phase 1d - the den dressed - done
+
+- game/den.py: water dripping from the ledge's edge and the knot-holes into puddles; vines hanging down the wall from
+  under the ledge and from the crown; roots snaking from the wall's foot, knotted, half buried; leaf litter on the
+  floor, the ledge and the tunnel; low dark places where small eyes watch.
+- The world shader: damp earth in patches, puddles (dark, flat, catching the lantern, the fungus and the moon) pooled
+  in the bowl and under every drip; the wall damp at its foot. Drips falling and ringing where they land.
+- night.py: six sets of small eyes in the dark near the ground, blinking; gone when he comes near or his lantern
+  reaches them, turning up somewhere else in a while.
+
 ## Phase 2 - webs and movement
 
 Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.
