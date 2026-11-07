@@ -53,9 +53,30 @@ tools/export_wand.py), held out low from the right and swinging as he walks, thr
 the den goes darker still (the faint bounce of its light goes with it; only an ember is left). Each patch of glowing
 fungus breathes on its own slow cycle (6 to 15 seconds), fading almost out and growing back, and its light with it.
 
-## Phase 2 - webs and movement
+## Phase 2 - webs and movement - done
 
-Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.
+game/web.py: three strands across the hollow, each from one turn of the ledge to a higher one (four cables woven
+together, sagging; walkable only out over the hollow, so the ledge stays the ledge); her loom across the hollow at 4.5,
+meeting the ledge where it passes; the crown web at the crown landing. His weight dips whatever he stands on. The
+dressing: webs over three knot-holes, tangles under the ledge and at the chambers' backs, low sheets among the roots,
+threads hanging into the dark, the first strands in the root tunnel.
+
+game/night.py: the floor is the tree's or the silk's, whichever is higher. On a strand he goes along it only, and sways
+- a lean sprung back by his balance, pushed by the strand's bounce (more when hurrying or turning hard); A and D lean
+against it; past the limit he slips off the side and falls (into the loom, if it's below). The silk sense:
+night.silk (gentle and hurried distance, slips, falls into the web), night.tremor (how hard it shakes now) and
+night.manner() (-1 prey to 1 careful) - for her moods in phase 3. A hard shake brings her eyes sooner.
+
+game/brood.py: 24 of her small ones on the wall, the floor, the loom and crown web and the strands, resting and
+scurrying, bolting from him (sooner when he hurries, or his lantern finds them); strays turn up again about him.
+Drawn from Quaternius's Spider, baked to frames (tools/export_spider.py -> assets/spider.npz).
+
+engine/silkmesh.py + render.py: silk as camera-facing ribbons (never thinner than a pixel - fainter instead), lit as
+threads (bright only where a light glints along them; silver under the moon at the crown), shivering with the tremor,
+dipping under him; the view leans with his sway. engine/sound.py + ui/audio.py: wind, the silk's hum, creaks, the
+catch, skittering, the lantern's rattle and puff, a thud - synthesized, following the computer's mute.
+
+Tests: test_web.py (strands, loom, a gentle crossing, hurrying and leaning, what she feels), test_brood.py.
 
 ## Phase 3 - Ysmeine
 

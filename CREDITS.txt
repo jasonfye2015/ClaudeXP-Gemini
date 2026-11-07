@@ -6,7 +6,11 @@ ScatteredLeaves001 (the dry leaves); colour and normal maps, resized to 512, tin
 Claude's wand (assets/wand.npz, wand.png): Kay Lousberg's KayKit Adventurers pack (CC0), https://kaylousberg.com -
 its shape and colours copied out once by tools/export_wand.py.
 
-To come (phase 3): the spider, Ysmeine and her small ones - Quaternius's animated Spider (CC0), https://quaternius.com.
+Her small ones (assets/spider.npz): Quaternius's animated Spider (the Easy Enemy pack, CC0), https://quaternius.com -
+its walk and its stillness baked into frames once by tools/export_spider.py. Ysmeine herself (phase 3) will be the same
+spider, much larger.
+
+The sound: made as it plays (engine/sound.py) - no recordings.
 
 The code, the tree, its light and its words: written for this game. The small OpenGL layer (engine/gl.py) is the one the
 Timeline's other first-person games use, copied here so the game stands on its own.

@@ -120,7 +120,7 @@ def hold(night, now):
     _parts, tip = wand_parts()
     crook = grip + wx * tip[0] + wy * tip[1] + wz * tip[2]
     # the lantern: a pendulum from the crook - swung across his view and fore and aft by his steps, flung by a shake
-    side = 0.08 * math.sin(step * 1.4) + 0.03 * math.sin(now * 0.8) + 0.55 * jolt
+    side = 0.08 * math.sin(step * 1.4) + 0.03 * math.sin(now * 0.8) + 0.55 * jolt - 0.45 * getattr(night, "sway", 0.0)
     fore = 0.05 * math.sin(step * 2.8 + 0.6) + 0.15 * jolt * math.sin(sh * 11)
     flat_r = right
     flat_f = np.array((math.sin(yaw), 0.0, -math.cos(yaw)))

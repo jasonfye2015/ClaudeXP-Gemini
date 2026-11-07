@@ -1,7 +1,9 @@
 """The Hollow Oak: one night as the guest of Ysmeine, the Weaver Below - an ancient spider who lives inside the Hollow
 Oak - played in first person from dusk to dawn. A serious, eerie romance; the absurdity is never winked at.
 
-This is phase 1 of the build: the tree itself, inside - the root tunnel, the great hollow, the ledge winding up its
+This is phases 1 and 2 of the build: her silk to walk (strands across the hollow, her loom, the crown web), his
+balance on it, what she feels through it, her small ones about the den, and the den's sound; and the tree itself,
+inside - the root tunnel, the great hollow, the ledge winding up its
 wall past the chambers to the broken crown, glowing fungus, moonlight through the knot-holes, fog pooled at the
 bottom - walked by lantern-light, and something watching from high in the dark. (The design: "The Hollow Oak - Design
 Document", in Claude Docs.)

@@ -116,3 +116,5 @@ class Shell(QWidget):
 
     def close_down(self):
         self.view.release()
+        if self.view.audio is not None:
+            self.view.audio.stop()

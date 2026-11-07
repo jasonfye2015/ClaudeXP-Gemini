@@ -10,7 +10,7 @@ Timeline's other games.
 
 The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/artifact/JtQZ3J468Lqh9E8QqoVXfS
 
-Playing (phase 1: the tree)
+Playing (phases 1 and 2: the tree, and her silk)
   Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift hurries (never a run, in here).
   E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.
@@ -20,6 +20,15 @@ Playing (phase 1: the tree)
   sky - a deep night, its stars twinkling, a faint aurora wavering across it. Glowing fungus in pockets, each breathing slowly in and out, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
   over the floor of the hollow, and wisps of mist hanging in the air, catching the lantern's light. And high
   in the dark, something watching: eight small lights that are gone when you come close.
+
+  Her silk: three strands thrown across the hollow from one turn of the ledge to a higher one - a shorter way up, and a
+  test of nerve - her loom, a great web across the hollow low down, and a web across the crown under the moon. On a
+  strand you sway, more the faster you go; A and D lean against it. Lean too far and you're off. Every step on silk
+  hums through the whole web, and she feels it: careful steps, or hurried ones, slips and falls. Her small ones are
+  everywhere - on the wall, among the roots, out on the silk - and gone in a scurry when you come near.
+
+  Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
+  rattle. It follows the computer's mute.
 
 Running it
   In the Timeline: the launcher's Apps, or Games on any of the computers.

@@ -1,5 +1,9 @@
 """The night: Claude inside the Hollow Oak, from dusk on - where he stands, where he looks, his lantern, the clock, and
-(for now) the only sign of her: eyes, high in the dark, watching him climb.
+(for now) the only signs of her: eyes, high in the dark, watching him climb; her small ones; and her silk, which
+carries every step he takes on it to her.
+
+On a strand he sways: the faster he goes, the more; A and D lean against it. Lean too far and he slips off. What she
+feels through the silk is kept in `silk` - gentle steps, hurried ones, slips, falls into her web - for her to judge.
 
     night = Night()
     night.step(dt, inp)            (inp: an Input - forward, strafe, yaw, pitch, hurry)
@@ -12,7 +16,9 @@ import random
 
 from . import tree as T
 from .den import Den
+from .brood import Brood
 from .lantern import Lantern
+from .web import BRIDGE_HALF, Bridge, Web
 
 EYE = 0.62
 RADIUS = 0.24
@@ -22,6 +28,12 @@ GRAVITY = 16.0
 DUSK = 19 * 60.0               # (the clock: minutes from midnight)
 DAWN = 30 * 60.0 + 30.0        # (half past six in the morning)
 CLOCK_RATE = 0.07              # (minutes of the night a real second: dusk to dawn in about two and three-quarter hours)
+# his balance on a strand: a lean that springs back, pushed about by the strand's bounce - the more, the faster he goes
+SWAY_SPRING = 2.4
+SWAY_DAMP = 1.5
+SWAY_LEAN = 2.6                # (how hard A or D leans him back)
+SWAY_TEETER = 0.65
+STEP_SILK = 0.55               # (a step, on silk: the creak she hears, the tremor she feels)
 
 PLACES = {
     "tunnel": ("The roots", "A way in through the roots of the Hollow Oak. Dry leaves, and something that isn't wind."),
@@ -46,6 +58,7 @@ class Night:
     def __init__(self, seed=None):
         self.tree = T.Tree()
         self.den = Den(self.tree)
+        self.web = Web(self.tree)
         self.rng = random.Random(seed)
         sx, sz, facing = self.tree.start
         self.x, self.z = sx, sz
@@ -70,11 +83,41 @@ class Night:
         self.rng.shuffle(spots)
         self.lurkers = [{"spot": k, "alpha": 0.0, "hidden_until": self.rng.uniform(0, 6), "blink_at": self.rng.uniform(1, 6),
                          "eyes": self.rng.choice((2, 2, 4, 6)), "seed": self.rng.random()} for k in spots[:6]]
+        # the silk: what he stands on (None, or a piece of her web), his balance, and what she has felt
+        self.on = None
+        self.sway, self.sway_v, self.push = 0.0, 0.0, 0.0
+        self.teetering = False
+        self.tremor = 0.0                    # (how hard the silk is shaking now: it dies away)
+        self.silk = {"gentle": 0.0, "hurried": 0.0, "slips": 0, "falls": 0, "touched": False}
+        self._silk_step = 0.0
+        self._fall_from = self.y
+        self.inp_hurry = False
+        self.brood = Brood(self.tree, self.web, random.Random(self.rng.random()))
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
     def eye(self):
         return (self.x, self.y + EYE, self.z)
+
+    def floor_at(self, x, z, feet):
+        """The highest thing he can stand on under (x, z): the tree, or her silk."""
+        f = self.tree.floor_at(x, z, feet)
+        w = self.web.floor_at(x, z, feet)
+        return w[0] if w is not None and w[0] > f else f
+
+    def _support(self):
+        """The piece of silk he stands on, if it's silk that holds him up."""
+        w = self.web.floor_at(self.x, self.z, self.y)
+        if w is None or abs(w[0] - self.y) > 0.02 or w[0] < self.tree.floor_at(self.x, self.z, self.y) + 0.02:
+            return None
+        return w[1]
+
+    def manner(self):
+        """How he has gone on her silk, as she'd read it: -1 (prey: scrambling, falling) to 1 (careful, unhurried)."""
+        s = self.silk
+        good = s["gentle"]
+        bad = s["hurried"] * 2.0 + s["slips"] * 4.0 + s["falls"] * 6.0
+        return 0.0 if good + bad < 1e-6 else (good - bad) / (good + bad)
 
     def where(self):
         t = self.tree
@@ -102,8 +145,13 @@ class Night:
         dt = min(dt, 0.05)
         self.time += dt
         self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
+        turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         self._move(dt, inp)
+        self._balance(dt, inp, turn)
+        self.tremor *= math.exp(-dt / 1.3)
+        if self.tremor > 2.2 and self.time < self.eye_gone_until:       # (she felt that: her eyes come sooner)
+            self.eye_gone_until = min(self.eye_gone_until, self.time + 1.5)
         p = self.where()
         if p != self.place:
             self.place = p
@@ -115,6 +163,48 @@ class Night:
             self.events.append(("lantern", e))
         self._watch(dt)
         self._lurk(dt)
+        self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
+
+    # ---- on her silk -------------------------------------------------------------------------------------------
+    def _balance(self, dt, inp, turn):
+        """His lean on a strand: pushed by the strand's bounce (more the faster he goes, and when he turns sharply),
+        sprung back by his own sense of balance, and leant against with A and D. Too far, and he's off."""
+        if not isinstance(self.on, Bridge):
+            self.sway *= math.exp(-dt * 4)
+            self.sway_v = 0.0
+            self.teetering = False
+            return
+        moving = abs(inp.forward) > 0.01
+        agit = 0.35 + (0.7 if moving else 0.0) + (3.2 if moving and inp.hurry else 0.0) + min(1.5, abs(turn) * 0.35)
+        agit += min(1.0, self.tremor * 0.15)
+        self.push += (self.rng.gauss(0.0, 1.0) * 5.0 - self.push * 2.5) * dt          # (the bounce: wandering)
+        force = self.push * agit - SWAY_SPRING * self.sway - SWAY_DAMP * self.sway_v + inp.strafe * SWAY_LEAN
+        self.sway_v += force * dt
+        self.sway += self.sway_v * dt
+        if abs(self.sway) > SWAY_TEETER and not self.teetering:
+            self.teetering = True
+            self.events.append(("silk", "teeter"))
+        elif abs(self.sway) < SWAY_TEETER * 0.6:
+            self.teetering = False
+        if abs(self.sway) >= 1.0:                                     # (he's off: over the side of the strand)
+            b = self.on
+            u, _across = b.locate(self.x, self.z)
+            off = (1.0 if self.sway > 0 else -1.0) * (BRIDGE_HALF + RADIUS + 0.05)
+            self.x = b.a[0] + b.dir[0] * b.length * u + b.side[0] * off
+            self.z = b.a[2] + b.dir[1] * b.length * u + b.side[1] * off
+            self.silk["slips"] += 1
+            self.tremor += 4.0
+            self.events.append(("silk", "slip"))
+            self.sway, self.sway_v, self.on = 0.0, 0.0, None
+
+    def _on_silk(self, dist, hurry):
+        """A step's worth of him on her silk: the tremor, and what she makes of it."""
+        self.tremor += dist * (1.6 if hurry else 0.45)
+        self.silk["hurried" if hurry else "gentle"] += dist
+        self._silk_step += dist
+        if self._silk_step >= STEP_SILK:
+            self._silk_step -= STEP_SILK
+            self.events.append(("silk", "step", hurry))
 
     def _lurk(self, dt):
         """The small eyes near the ground: they show in the dark, a way off; they blink; and when he comes near - or
@@ -156,7 +246,11 @@ class Night:
 
     def _move(self, dt, inp):
         t = self.tree
+        self.inp_hurry = inp.hurry
         fwd, side = inp.forward, inp.strafe
+        bridge = self.on if isinstance(self.on, Bridge) else None
+        if bridge is not None:
+            side = 0.0                                         # (on a strand, A and D are for balance)
         n = math.hypot(fwd, side)
         if n > 1:
             fwd, side = fwd / n, side / n
@@ -164,28 +258,50 @@ class Night:
         sy, cy = math.sin(self.yaw), math.cos(self.yaw)
         dx = (sy * fwd + cy * side) * speed * dt
         dz = (-cy * fwd + sy * side) * speed * dt
-        on_ground = self.y <= t.floor_at(self.x, self.z, self.y) + 0.01
+        if bridge is not None:                                 # (along it, and only along it: he keeps to it)
+            along = dx * bridge.dir[0] + dz * bridge.dir[1]
+            _u, across = bridge.locate(self.x, self.z)
+            pull = -across * min(1.0, dt * 3.0)                # (his feet find the middle of it)
+            dx = bridge.dir[0] * along + bridge.side[0] * pull
+            dz = bridge.dir[1] * along + bridge.side[1] * pull
+        on_ground = self.y <= self.floor_at(self.x, self.z, self.y) + 0.01
         for mx, mz in ((dx, dz), (dx, 0.0), (0.0, dz)):        # (straight on, or sliding along what's in the way)
             if not (mx or mz):
                 continue
             nx, nz = self.x + mx, self.z + mz
-            f = t.floor_at(nx, nz, self.y)
+            f = self.floor_at(nx, nz, self.y)
             if f > self.y + T.STEP:
                 continue
             if t.can_stand(nx, nz, max(self.y, f) if on_ground else self.y, RADIUS):
                 self.x, self.z = nx, nz
-                self.moved += math.hypot(mx, mz)
+                d = math.hypot(mx, mz)
+                self.moved += d
+                if self.on is not None and on_ground:
+                    self._on_silk(d, inp.hurry)
                 break
-        f = t.floor_at(self.x, self.z, self.y)
-        if self.y > f + 0.01:                                 # (falling: off the ledge's edge)
+        f = self.floor_at(self.x, self.z, self.y)
+        if self.y > f + 0.01:                                 # (falling: off the ledge's edge, or a strand)
+            if self.vy == 0.0:
+                self._fall_from = self.y
+            self.on = None
             self.vy -= GRAVITY * dt
             self.y = max(f, self.y + self.vy * dt)
             if self.y == f:
                 if self.vy < -9:
                     self.events.append(("fall", -self.vy))
                 self.vy = 0.0
+                self.on = self._support()
+                if self.on is not None and self._fall_from - self.y > 0.8:     # (caught in her web: she felt that)
+                    self.silk["falls"] += 1
+                    self.tremor += 3.0 + (self._fall_from - self.y) * 0.4
+                    self.events.append(("silk", "caught", self.on.name))
         else:
             self.y, self.vy = f, 0.0
+            was = self.on
+            self.on = self._support()
+            if self.on is not None and was is None and not self.silk["touched"]:
+                self.silk["touched"] = True
+                self.events.append(("silk", "first", self.on.name))
 
     # ---- her eyes ----------------------------------------------------------------------------------------------
     def _perches(self):
