@@ -34,6 +34,12 @@ def _wrap(text, width):
     return lines
 
 
+def _hms(sec):
+    sec = int(sec)
+    h, m, s = sec // 3600, sec % 3600 // 60, sec % 60
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
 class GameView(QOpenGLWidget):
     def __init__(self, shell):
         super().__init__(shell)
@@ -142,6 +148,7 @@ class GameView(QOpenGLWidget):
                     break
                 self.bot.drive(g, self.inp, dt)
                 g.step(dt, self.inp)
+                self.bot.stepped(g)
             g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt * self.speed, 1e-4)
             self._explore()
             self._music(g)
@@ -373,6 +380,13 @@ class GameView(QOpenGLWidget):
         """The speed button, beside it."""
         return QRectF(156, self.height() - 168, 104, 26)
 
+    def stats_rect(self):
+        """The stats panel's button, beside the speed."""
+        return QRectF(266, self.height() - 168, 96, 26)
+
+    def toggle_stats(self):
+        self.shell.set_setting("auto_stats", not self.shell.settings.get("auto_stats", False))
+
     def cycle_speed(self):
         self.speed = self.SPEEDS[(self.SPEEDS.index(self.speed) + 1) % len(self.SPEEDS)]
         self.toasts.append((f"Auto-play speed x{self.speed}" + ("" if self.auto else " (when auto-play is on)"),
@@ -398,6 +412,9 @@ class GameView(QOpenGLWidget):
                 return
             if self.speed_rect().contains(at):
                 self.cycle_speed()
+                return
+            if self.stats_rect().contains(at):
+                self.toggle_stats()
                 return
             if self.auto:                                        # (playing himself: a click elsewhere leaves the mouse be)
                 return
@@ -465,6 +482,8 @@ class GameView(QOpenGLWidget):
             self.toggle_auto()
         elif k == Qt.Key_F10:
             self.cycle_speed()
+        elif k == Qt.Key_F11:
+            self.toggle_stats()
         elif k == Qt.Key_K:
             self.release()
             self.shell.open_dialog(("calendar",))
@@ -584,6 +603,13 @@ class GameView(QOpenGLWidget):
             p.drawRoundedRect(r2, 8, 8)
         T.outlined(p, r2.center().x(), r2.y() + 18, f"Speed x{self.speed}  (F10)", QFont(T.BODY, 10, QFont.Bold),
                    QColor("#FFD890") if self.speed > 1 else QColor("#E8D8B8"), centre=True, width=2.5)
+        r3 = self.stats_rect()
+        shown = self.shell.settings.get("auto_stats", False)
+        T.plate(p, r3, 8, 210)
+        T.outlined(p, r3.center().x(), r3.y() + 18, "Stats  (F11)", QFont(T.BODY, 10, QFont.Bold),
+                   QColor("#B8F0C0") if shown else QColor("#E8D8B8"), centre=True, width=2.5)
+        if shown:
+            self._auto_stats(p, W, H, now)
         # life and mana, in their orbs at the plate's ends
         T.orb(p, 78, H - 78, 56, pl.life / max(1, pl.max_life()), QColor("#C8242A"),
               f"{int(pl.life)}/{pl.max_life()}", now, warn=pl.life < pl.max_life() * 0.3)
@@ -718,6 +744,79 @@ class GameView(QOpenGLWidget):
         if not self.captured and not self.shell.panel_open():
             T.outlined(p, W / 2, H / 2 + 44, "Click to take the mouse  (Esc gives it back)", QFont(T.HEAD, 12),
                        QColor(255, 248, 230), 220, centre=True, width=2.5)
+
+    def _auto_stats(self, p, W, H, now):
+        """Auto-play's progress: what he's doing, how far the run's got, this session's count and all of it."""
+        T = theme
+        g = self.game
+        bot = self.bot
+        r = QRectF(W - 352, 330, 336, min(H - 470, 470))
+        if r.height() < 200:
+            return
+        T.plate(p, r, 12, 222)
+        x, y = r.x() + 16, r.y() + 26
+        head = QFont(T.HEAD, 13, QFont.Bold)
+        body = QFont(T.BODY, 9)
+        bold = QFont(T.BODY, 9, QFont.Bold)
+        gold, pale, dim = QColor("#F6D98A"), QColor("#E8DCC0"), QColor("#A89878")
+
+        def line(text, col=pale, font=body, dx=0, step=17):
+            nonlocal y
+            T.outlined(p, x + dx, y, text, font, col, width=2)
+            y += step
+
+        def pair(a, b, c=None, d=None):
+            nonlocal y
+            T.outlined(p, x, y, a, body, dim, width=2)
+            T.outlined(p, x + 92, y, b, bold, pale, width=2)
+            if c:
+                T.outlined(p, x + 162, y, c, body, dim, width=2)
+                T.outlined(p, x + 250, y, d, bold, pale, width=2)
+            y += 17
+
+        line("Auto-play", gold, head, step=22)
+        on = self.auto and bot is not None
+        line(("On, x%d - " % self.speed if on else "Off - ") + (bot.status if bot else "not run yet this time"),
+             QColor("#9EE6FF") if on else dim, bold, step=22)
+        # the run: how far down
+        endless = g.endless()
+        frac = 1.0 if endless else min(1.0, (g.run_floor - 1) / D.FLOORS)
+        T.bar(p, QRectF(x, y - 9, r.width() - 32, 8), frac, QColor("#7A4CC8"), QColor("#C8A8FF"), now)
+        y += 12
+        line(f"The run: floor {g.run_floor}" + (" - endless" if endless else f" of {D.FLOORS}") +
+             f"   (deepest {g.player.stats['deepest']})", pale, body, step=22)
+        if bot is None or bot.tally is None:
+            tot = g.player.stats.get("autoplay", {})
+            line("All auto-play so far", gold, bold, step=19)
+            pair("Floors", f"{tot.get('floors', 0)}", "Deaths", f"{tot.get('deaths', 0)}")
+            pair("Kills", f"{tot.get('kills', 0)}", "Gold", f"{tot.get('gold', 0):,}")
+            pair("Played", _hms(tot.get("seconds", 0)))
+            return
+        sm = bot.tally.summary(g)
+        line("This session", gold, bold, step=19)
+        pair("Floors", f"{sm['floors']}", "Per hour", f"{sm['per_hour']:.1f}")
+        pair("Avg floor", _hms(sm["avg"]) if sm["avg"] else "-", "Deaths", f"{sm['deaths']}")
+        pair("Kills", f"{sm['kills']}", "Guardians", f"{sm['guardians']}")
+        pair("Gold", f"{sm['gold']:,}", "Chests", f"{sm['chests']}")
+        pair("Levels", f"+{sm['levels']} (now {g.player.level})", "Potions", f"{sm['potions']}")
+        pair("Game time", _hms(sm["played"]), "Real time", _hms(sm["real"]))
+        # what was found, by rarity: a little bar of each colour
+        T.outlined(p, x, y, f"Found {sm['items']}:", body, dim, width=2)
+        bx = x + 92
+        for k, n in enumerate(sm["rarity"]):
+            c = QColor.fromRgbF(*D.RARITIES[k][2])
+            T.outlined(p, bx, y, str(n), bold, c, width=2)
+            bx += 44
+        y += 22
+        if sm["recent"]:
+            line("The last floors", gold, bold, step=18)
+            for rec in sm["recent"][-5:][::-1]:
+                col = {"cleared": QColor("#B8F0C0"), "fell": QColor("#FF9A8A")}.get(rec["how"], QColor("#F0D890"))
+                line(f"Floor {rec['floor']}: {rec['how']} in {_hms(rec['secs'])}, {rec['kills']} kills", col, body, step=16)
+        tot = sm["total"]
+        y = r.bottom() - 12
+        T.outlined(p, x, y, f"All auto-play: {tot.get('floors', 0)} floors, {tot.get('kills', 0)} kills, "
+                   f"{_hms(tot.get('seconds', 0))} played", body, dim, width=2)
 
     def _buffs(self, p, pl):
         import time as _t

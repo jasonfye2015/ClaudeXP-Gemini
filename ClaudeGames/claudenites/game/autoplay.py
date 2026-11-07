@@ -12,6 +12,7 @@ It uses nothing a player couldn't: the floor's squares, what's in sight, the map
 import heapq
 import math
 import random
+import time
 
 from . import data as D
 from . import food as F
@@ -31,15 +32,105 @@ WEIGHTS = {"life": 0.5, "mana": 0.35, "armour": 0.9, "regen": 5.0, "power": 3.0,
            "crit": 2.0, "life%": 2.0, "mana%": 1.5}
 
 
+class Tally:
+    """What auto-play has done: this session's count, and (in the save: player.stats["autoplay"]) all of it."""
+    KEYS = ("floors", "deaths", "kills", "guardians", "gold", "chests", "items", "legendary", "secrets", "potions", "seconds")
+
+    def __init__(self, g):
+        self.wall0 = time.time()
+        self.n = {k: 0 for k in self.KEYS}
+        self.rarity = [0] * len(D.RARITIES)
+        self.recent = []                  # (the last floors: {floor, secs, kills, how})
+        self.level0 = g.player.level
+        self.deaths0 = g.player.stats["deaths"]
+        self._ev, self._i = None, 0
+        self.floor_t, self.floor_kills = 0.0, 0
+        self.last_depth = g.depth
+
+    def add(self, g, key, v=1):
+        self.n[key] += v
+        tot = g.player.stats.setdefault("autoplay", {})
+        tot[key] = tot.get(key, 0) + v
+
+    def observe(self, g, dt):
+        self.add(g, "seconds", dt)
+        self.floor_t += dt
+        self.scan(g)
+
+    def scan(self, g):
+        """The game's news since last looked at (called after each step too: the view takes the list each frame)."""
+        d = g.player.stats["deaths"] - self.deaths0
+        if d > self.n["deaths"]:
+            self.recent = (self.recent + [{"floor": self.last_depth, "secs": self.floor_t, "kills": self.floor_kills,
+                                           "how": "fell"}])[-8:]
+            self.add(g, "deaths", d - self.n["deaths"])
+        if g.events is not self._ev or len(g.events) < self._i:   # (the view takes the list each frame; tests clear it)
+            self._ev, self._i = g.events, 0
+        for e in g.events[self._i:]:
+            k = e[0]
+            if k == "kill":
+                self.add(g, "kills")
+                self.floor_kills += 1
+                if getattr(e[1], "guardian", False):
+                    self.add(g, "guardians")
+            elif k == "found" and isinstance(e[1], dict):
+                r = min(int(e[1].get("rarity", 0)), len(self.rarity) - 1)
+                self.rarity[r] += 1
+                self.add(g, "items")
+                if r >= 4:
+                    self.add(g, "legendary")
+            elif k == "chest":
+                self.add(g, "chests")
+            elif k == "drink":
+                self.add(g, "potions")
+            elif k == "secret":
+                self.add(g, "secrets")
+            elif k == "loot":
+                for line in e[2]:
+                    if line.startswith("+") and line.endswith(" gold"):
+                        try:
+                            self.add(g, "gold", int(line[1:-5]))
+                        except ValueError:
+                            pass
+        self._i = len(g.events)
+        if g.depth:
+            self.last_depth = g.depth
+
+    def left_floor(self, g, how):
+        self.recent = (self.recent + [{"floor": g.depth, "secs": self.floor_t, "kills": self.floor_kills, "how": how}])[-8:]
+        if how == "cleared":
+            self.add(g, "floors")
+
+    def new_floor(self):
+        self.floor_t, self.floor_kills = 0.0, 0
+
+    def summary(self, g):
+        """-> what the stats panel shows."""
+        n, p = self.n, g.player
+        done = [r["secs"] for r in self.recent if r["how"] == "cleared"]
+        return {"floors": n["floors"], "per_hour": n["floors"] / max(1e-6, n["seconds"] / 3600),
+                "avg": sum(done) / len(done) if done else 0.0, "deaths": n["deaths"], "kills": n["kills"],
+                "guardians": n["guardians"], "gold": n["gold"], "chests": n["chests"], "items": n["items"],
+                "rarity": list(self.rarity), "potions": n["potions"], "secrets": n["secrets"],
+                "levels": p.level - self.level0, "played": n["seconds"], "real": time.time() - self.wall0,
+                "recent": list(self.recent), "total": dict(p.stats.get("autoplay", {}))}
+
+
 class Autopilot:
     def __init__(self):
         self.level = None
         self.say = []                     # (what it's doing, for the HUD: the newest last)
+        self.tally = None
+        self.status = "Getting ready"
 
     # ---- every frame ---------------------------------------------------------------------------------------------
     def drive(self, g, inp, dt):
+        if self.tally is None:
+            self.tally = Tally(g)
+        self.tally.observe(g, dt)
         if g.level is not self.level:
             self._new_level(g)
+            self.tally.new_floor()
         if g.depth == 0:
             self._town(g, inp, dt)
             return
@@ -51,19 +142,35 @@ class Autopilot:
         self._potions(g)
         foe = self._foe(g)
         if foe is not None:
+            self.status = f"Fighting {'the guardian, ' if foe.guardian else 'a '}{foe.name}"
             self._fight(g, inp, foe, dt)
             return
         if self._puzzles_at_hand(g, inp):
             return
         if self.t > GIVE_UP:
             self._note(g, "Auto-play: this floor's had long enough - home.")
+            self.tally.left_floor(g, "timed out")
             g.stairs_home()
             return
         self.replan -= dt
         if self.goal is None or self.replan <= 0 or not self.path:
             self.replan = 0.6
             self._choose(g)
+        self.status = self._goal_words()
         self._follow(g, inp, dt)
+
+    def stepped(self, g):
+        """After each game step: count what happened in it."""
+        if self.tally is not None:
+            self.tally.scan(g)
+
+    def _goal_words(self):
+        k = self.goal
+        if not k:
+            return "Looking about"
+        return {"pk": "Picking something up", "chest": "Going to a chest", "door": "Unlocking a door",
+                "lever": "Going to a lever", "trial": "Taking on the brazier trial", "crack": "Breaking a cracked wall",
+                "m": "Hunting down the last monsters", "explore": "Exploring", "stairs": "Heading for the stairs"}.get(k[0], "Busy")
 
     def _new_level(self, g):
         L = self.level = g.level
@@ -140,6 +247,7 @@ class Autopilot:
             g.drink("mana")
         if p.life < p.max_life() * 0.18 and p.potions.get("health", 0) == 0 and p.potions.get("return", 0) > 0:
             self._note(g, "Auto-play: too hurt - a Scroll of Return.")
+            self.tally.left_floor(g, "fled")
             g.read_return()
 
     # ---- the puzzles' moments: things to do where he stands -------------------------------------------------------
@@ -280,6 +388,7 @@ class Autopilot:
             self.goal, self.path = None, []
             if self.t > FLOOR_TIME + 30:
                 self._note(g, "Auto-play: no way to the stairs - home by the long way.")
+                self.tally.left_floor(g, "no way on")
                 g.stairs_home()
             return
         cands.sort(key=lambda c: (c[0], c[1]))
@@ -326,6 +435,7 @@ class Autopilot:
             if L.guardian and not g.guardian_down:
                 return                                     # (sealed: the Gauntlet wakes as he stands in its hall)
             self._note(g, f"Auto-play: floor {g.depth} done - home to see to things.")
+            self.tally.left_floor(g, "cleared")
             g.stairs_home()
         elif key:                                          # (there, and it's still there: leave it a while)
             self.blocked[key] = self.t + (8 if key[0] == "m" else 45)
@@ -351,6 +461,7 @@ class Autopilot:
         inp.forward = inp.strafe = 0.0
         inp.fire = inp.jump = False
         self.town_t += dt
+        self.status = "At home, seeing to his things" if not self.town_done else f"At home - off to floor {g.run_floor}"
         if not self.town_done and self.town_t > 1.0:
             self.town_done = True
             for line in housekeeping(g, random.Random(g.player.stats["kills"])):

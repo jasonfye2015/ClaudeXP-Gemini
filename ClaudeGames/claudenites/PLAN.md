@@ -144,6 +144,12 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   button over the life orb, and P. Endless: data.band_of cycles; world.endless() once the hundredth floor's
   guardian falls (stats["won"]).
 
+## v0.18-v0.19 - auto-play's speed, hotkeys and stats - done
+
+- F9/P on-off, F10 speed (x1-x8: the game stepped several times a frame), the mouse let go while it plays; F11 the
+  stats panel (autoplay.Tally: the session's count and player.stats["autoplay"], read from the game's events after
+  every step).
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the
