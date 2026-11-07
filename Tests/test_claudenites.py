@@ -55,10 +55,11 @@ def test_the_window():
     pack.pick(("wand", 2))
     assert g.player.wands[2] is a and a not in g.player.inventory
     pack.pick(("pack", b))
+    support.pump(0.2)
     from PySide6.QtWidgets import QPushButton
     four = [w for w in pack.findChildren(QPushButton) if w.text() == "4" and w.isVisible()]
     assert four, "no Ready-in-slot-4 button"
-    four[0].click()
+    four[-1].click()                                      # (the newest: the panel was built again)
     support.pump(0.1)
     assert g.player.wands[3] is b and g.player.active == 3
     shell.close_panel()
