@@ -250,7 +250,10 @@ class Plants:
         return cls._loaded
 
     def names(self):
-        return list(self.manifest["models"])
+        return list(self.manifest["models"]) + list(CONES)
+
+    def has(self, name):
+        return name in self.manifest["models"] or name in CONES
 
     def tags(self, name):
         return self.manifest["models"][name].get("tags", [])
@@ -261,6 +264,9 @@ class Plants:
 
     def mesh(self, name):
         if name in self._cache:
+            return self._cache[name]
+        if name in CONES:
+            self._cache[name] = _cone(*CONES[name])
             return self._cache[name]
         m = self.manifest["models"][name]
         b, o = self.data, m["offset"]
@@ -279,3 +285,25 @@ class Plants:
         assert o == m["offset"] + m["length"], f"plant {name}: read {o - m['offset']} of {m['length']}"
         self._cache[name] = (pos, pal[np.minimum(ci, len(pal) - 1)], idx)
         return self._cache[name]
+
+
+# Claude and Magic's stalagmites and stalactites (its 69zzt-clutter.js): cones of stone, made here
+CONES = {"stalagmite_s": (0.3, 0.09, 8, False), "stalagmite_m": (0.55, 0.14, 8, False),
+         "stalagmite_l": (0.85, 0.2, 10, False), "stalactite_s": (0.3, 0.07, 8, True), "stalactite_m": (0.5, 0.1, 8, True)}
+
+
+def _cone(h, r, n, down):
+    pos = [(0.0, 0.0, 0.0)]
+    cols = [(150, 146, 140)]
+    for i in range(n):
+        a = i / n * np.pi * 2
+        rr = r * (0.85 + 0.15 * np.sin(i * 2.3))
+        pos.append((np.cos(a) * rr, 0.0, np.sin(a) * rr))
+        cols.append((128, 124, 118) if i % 2 else (162, 158, 150))
+    pos.append((0.0, -h if down else h, 0.0))
+    cols.append((176, 172, 166))
+    idx = []
+    for i in range(n):
+        a, b = 1 + i, 1 + (i + 1) % n
+        idx += [0, b, a, a, b, n + 1]
+    return (np.array(pos, np.float32), np.array(cols, np.float32) / 255, np.array(idx, np.uint32))

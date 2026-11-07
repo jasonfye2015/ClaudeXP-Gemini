@@ -12,6 +12,7 @@ import random
 import numpy as np
 
 from . import data as D
+from . import dress
 
 STEP = 0.42                          # the highest step a walker takes without a jump
 INVISIBLE = 255                      # a wall texture that draws nothing (the forest's edge: trees stand there instead)
@@ -44,6 +45,10 @@ class Level:
         self.guardian = None
         self.seed = 0
         self.houses = []                                 # (x0, y0, x1, y1, wall top, roof texture, door side (dx, dy))
+        self.paths = set()                               # every square a corridor runs through (rooms keep them open)
+        # the dressing (game/dress.py says what each is)
+        self.decals, self.flats, self.webs, self.hangs, self.sprites, self.drips, self.chests = [], [], [], [], [], [], []
+        self.water, self.pieces, self.gold_squares = set(), [], set()
 
     def tex(self, name):
         if name not in self.textures:
@@ -69,8 +74,28 @@ class Level:
             return -99.0
         return 99.0 if self.outdoor else float(self.ceil[cy, cx])
 
+    def blockers(self):
+        """Things that stand in the way, by square: [(x, z, r)] (solid sprites, chests, solid props)."""
+        if getattr(self, "_blockers", None) is None:
+            b = {}
+            things = [(s["x"], s["z"], s["solid"]) for s in self.sprites if s.get("solid")]
+            things += [(c["x"], c["z"], 0.3) for c in self.chests]
+            things += [(p["x"], p["z"], 0.28 * p.get("scale", 1) / 0.4 if p["scale"] < 0.6 else 0.3) for p in self.props
+                       if p.get("solid")]
+            for x, z, r in things:
+                b.setdefault((int(x), int(z)), []).append((x, z, min(0.45, r)))
+            self._blockers = b
+        return self._blockers
+
     def can_stand(self, x, z, radius, foot):
         """Whether a walker of this radius, feet at height foot, fits here (walls, steps too high, low ceilings)."""
+        B = self.blockers()
+        if B:
+            for cx in (int(x) - 1, int(x), int(x) + 1):
+                for cy in (int(z) - 1, int(z), int(z) + 1):
+                    for bx, bz, r in B.get((cx, cy), ()):
+                        if (x - bx) ** 2 + (z - bz) ** 2 < (r + radius) ** 2:
+                            return False
         for cx in range(int(math.floor(x - radius)), int(math.floor(x + radius)) + 1):
             for cy in range(int(math.floor(z - radius)), int(math.floor(z + radius)) + 1):
                 if not self.open_at(cx, cy):
@@ -160,7 +185,6 @@ def dungeon(depth, seed):
     size = 44 + min(36, depth // 3) + (6 if guardian else 0)
     L = Level(size, size, depth)
     L.seed = seed
-    L.paths = set()                                    # every square a corridor runs through (rooms keep them open)
     L.name, L.line = band["name"], band["line"]
     L.tint, L.fog, L.ambient = band["tint"], band["fog"], band["light"]
     wt, ft, ct = (L.tex(n) for n in band["tex"])
@@ -171,6 +195,20 @@ def dungeon(depth, seed):
     rooms = []
     if guardian:                                       # the guardian's hall: big, high, at the far side
         rooms.append(Room(size - 22, size - 22, 17, 17, "arena"))
+    # a set piece - one of Claude and Magic's unique rooms - on most floors, in a room made to its size
+    piece = None
+    fits = dress.pieces_for(depth)
+    if fits and rng.random() < 0.6:
+        piece = rng.choice(fits)
+        pw, ph = dress.size_of(piece)
+        for _ in range(400):
+            r = Room(rng.randint(2, size - pw - 3), rng.randint(2, size - ph - 3), pw, ph, "piece")
+            if all(not r.overlaps(o) for o in rooms):
+                r.piece = piece
+                rooms.append(r)
+                break
+        else:
+            piece = None
     for _ in range(600):
         if len(rooms) >= want:
             break
@@ -180,6 +218,10 @@ def dungeon(depth, seed):
             rooms.append(r)
     if guardian:                                       # (the hall first in the list: it's placed, then moved last)
         rooms.append(rooms.pop(0))
+    if piece is not None:                              # (never the room Claude comes in by)
+        pr = next(r for r in rooms if r.kind == "piece")
+        rooms.remove(pr)
+        rooms.insert(min(len(rooms), 2), pr)
     for r in rooms:
         ceil = {"hall": rng.uniform(3.0, 3.8), "arena": 4.2, "pillars": rng.uniform(2.4, 3.0)}.get(r.kind, rng.uniform(1.9, 2.6))
         for x, y in r.cells():
@@ -205,15 +247,19 @@ def dungeon(depth, seed):
         edges.append((a, b))
     for a, b in edges:
         _corridor(L, centres[a], centres[b], rng, wide=rng.random() < 0.25)
-    # the rooms' shapes (after the corridors, which only cut through rock)
+    # the rooms' shapes (after the corridors, which only cut through rock), and the set piece's letters
     for r in rooms:
-        _shape(L, r, rng, alt_floor)
+        if r.kind == "piece":
+            dress.place_piece(L, r, r.piece, rng)
+        else:
+            _shape(L, r, rng, alt_floor)
     L.rooms = rooms
     # where Claude comes in, and the way down: the room furthest from it
     start = rooms[0] if not guardian else rooms[0]
     sx, sy = start.centre
     dist = L.distances(sx, sy)
-    far = rooms[-1] if guardian else max(rooms[1:], key=lambda r: dist[r.centre[1], r.centre[0]])
+    far = rooms[-1] if guardian else max((r for r in rooms[1:] if r.kind != "piece"),
+                                          key=lambda r: dist[r.centre[1], r.centre[0]])
     L.start = (sx + 0.5, sy + 0.5, rng.uniform(0, math.tau))
     L.portal = (sx + 0.5, sy + 0.5)
     tx, ty = far.centre
@@ -232,6 +278,8 @@ def dungeon(depth, seed):
             continue
         if guardian and r is far:
             continue
+        if r.kind == "piece":
+            continue
         groups = rng.randint(1, 2) + (1 if depth > 30 and rng.random() < 0.4 else 0)
         for _ in range(groups):
             name = rng.choice(kinds)
@@ -244,6 +292,16 @@ def dungeon(depth, seed):
                         break
     if guardian:
         L.spawns.append({"monster": band["guardian"], "x": tx + 0.5, "z": ty - 3.5, "guardian": True})
+    # chests: one or two a floor, against a wall in a room
+    for r in rng.sample(rooms[1:], k=min(len(rooms) - 1, rng.randint(1, 2))):
+        if r.kind == "piece":
+            continue
+        for _ in range(20):
+            x, y = rng.randint(r.x, r.x + r.w - 1), rng.randint(r.y, r.y + r.h - 1)
+            if L.open_at(x, y) and not _near(L, x, y, L.stairs, 2) and \
+                    any(not L.open_at(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                dress.chest(L, x, y, rng)
+                break
     # the clutter, and the torches
     props = BAND_PROPS[bi]
     for r in rooms:
@@ -259,6 +317,7 @@ def dungeon(depth, seed):
             spot = _wall_spot(L, r, rng)
             if spot:
                 L.lights.append(spot)
+    dress.dress(L, rng, bi)
     return L
 
 
@@ -330,6 +389,8 @@ def _wall_spot(L, r, rng):
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             if L.open_at(x, y) and not L.open_at(x + dx, y + dy):
                 px, pz = x + 0.5 + dx * 0.42, y + 0.5 + dy * 0.42
+                L.decals.append((x + 0.5 + dx * 0.495, float(L.floor[y, x]) + 0.75, y + 0.5 + dy * 0.495, -dx, -dy,
+                                 0.5, 0.6, f"t{dress.CM_THEME_OF_BAND[min(9, (L.depth - 1) // 10)]}.torch0"))
                 return (px, float(L.floor[y, x]) + 1.15, pz, 1.0, 0.62, 0.28, 5.5)
     return None
 

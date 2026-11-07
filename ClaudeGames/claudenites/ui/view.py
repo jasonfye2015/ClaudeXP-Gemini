@@ -19,6 +19,19 @@ from ..game.world import Input
 SENS = 0.0024
 
 
+def _wrap(text, width):
+    words, lines, cur = text.split(), [], ""
+    for w in words:
+        if len(cur) + len(w) + 1 > width and cur:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = f"{cur} {w}".strip()
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 class GameView(QOpenGLWidget):
     def __init__(self, shell):
         super().__init__(shell)
@@ -60,6 +73,7 @@ class GameView(QOpenGLWidget):
             traceback.print_exc()
 
     def paintGL(self):
+        self.paints = getattr(self, "paints", 0) + 1
         dt = getattr(self, "_frame_dt", 0.016)
         if self.renderer and self.game:
             try:
@@ -163,6 +177,12 @@ class GameView(QOpenGLWidget):
                     self.toasts.append((f"Found: {I.item_name(it)}", D.RARITIES[it["rarity"]][2], now))
             elif kind == "kill":
                 snd.play("kill", 0.5)
+            elif kind == "piece":
+                self.toasts.append((e[1], (1.0, 0.86, 0.55), now))
+                for line in _wrap(e[2], 90):
+                    self.toasts.append((line, (0.85, 0.82, 0.74), now + 0.3))
+            elif kind == "chest":
+                snd.play("coin", 0.7)
             elif kind == "cast":
                 snd.play("cast_" + e[1], 0.32)
                 if self.renderer:
@@ -190,7 +210,7 @@ class GameView(QOpenGLWidget):
                 self.shell.on_death(e[1])
             elif kind == "victory":
                 self.shell.on_victory()
-        self.toasts = [t for t in self.toasts if now - t[2] < 5.0][-6:]
+        self.toasts = [t for t in self.toasts if now - t[2] < 7.0][-7:]
         self.floaters = [f for f in self.floaters if now - f[3] < 1.4]
         if g.dialog:
             what, g.dialog = g.dialog, None
