@@ -9,7 +9,7 @@
 //   CM.ducksOut(game) -> bool                        by day, not when the river is frozen
 //   CM.dragonfliesNow(game) -> 0..1                  summer and late spring, by day, not in rain or wind
 //   CM.lilyNow(game) -> 0..1                         the pads by season: full in summer, some in spring and autumn, none in winter
-{ CM.riverSquares = (fl) => (fl && fl.number === -1 ? (fl.decor || []).filter((d) => d.kind === "water").map((d) => [d.x, d.y]) : []);
+{ CM.riverSquares = (fl) => (fl && fl.number === -1 ? (fl.decor || []).filter((d) => d.kind === "water" && d.x === CM.riverX(d.y)).map((d) => [d.x, d.y]) : []);   /* (v128.0: the river itself - not the Scarp's tarn and stream) */
   CM.ducksOf = (fl) => { const R = CM.riverSquares(fl); if (R.length < 12) return []; const isRiver = ([x, y]) => Boolean(fl.features && fl.features[`${x},${y}`] && fl.features[`${x},${y}`].type === "river"), ford = R.find((sq) => !isRiver(sq)) || null;   // (the ford: the one water square that isn't the river's deep)
     const fy = ford ? ford[1] : -99, rows = R.filter(([, y]) => Math.abs(y - fy) > 4).sort((a, b) => a[1] - b[1]), out = [];
     for (const from of [0.18, 0.7]) { const i0 = Math.floor(rows.length * from), stretch = rows.slice(i0, i0 + 4); if (stretch.length === 4 && !out.some((g) => g.stretch[0][1] === stretch[0][1])) out.push({ stretch, n: 2 }); }

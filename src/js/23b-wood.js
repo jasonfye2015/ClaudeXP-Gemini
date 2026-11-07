@@ -80,10 +80,11 @@ CM.makeWood = function (seed) {
   }
   { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
   if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
+  const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y))) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
-    solidDefault: "tree", kinds, ground,
+    solidDefault: "tree", kinds, ground, ...(Object.keys(levels).length ? { levels } : {}),
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
   if (CM.layMageTower) CM.layMageTower(fl);
   if (CM.layCabin) CM.layCabin(fl);

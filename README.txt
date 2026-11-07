@@ -1392,6 +1392,18 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Scarp and the falls (v128.0, UPGRADE_PLAN_79.md)
+  (src/js/23b-wood.js, src/js/23e-scarp.js, src/js/26-surface.js, src/js/69zzl-waterlife.js, src/js/69zzzzf-scarp.js, src/js/76zzzzs-placeamb.js, src/js/77s-scarp.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_79.md)
+  - The Scarp (UPGRADE_PLAN_79.md): in the south-east of the Deep Wood, against the hill's cliffs, the land rises
+    into a high heath as high as the cliff tops, heather and bare rock, walled all round in its own layered grey
+    stone. One stair is cut into its west face, a step a square, from the foot of the rock east of the South Meadow;
+    there's no other way up or down. On the heath: a tarn and the cold spring that fills it, two weathered tors,
+    stones lying in the heather, and at its south edge the Lookout, a cairn looking out over the tops of the Wood.
+  - The falls: a stream runs from the tarn across the heath, under a plank bridge, and goes over the west edge in a
+    white fall into a pool among the trees - spray, foam, mist rising off the water, and a roar you hear before you
+    see it. In snow it freezes into a curtain of ice. From the pool the stream runs on west through the forest to
+    the river. A little bank by the pool is the place to stand and look; nothing the seed placed in the Wood moved.
+
 The south of the Wood, and the deer (v127.0, UPGRADE_PLAN_78.md)
   (src/js/23b-wood.js, src/js/23d-southwood.js, src/js/25-saves.js, src/js/37-figures.js, src/js/76zzzzzzzzzze-figures2.js, src/js/77r-deerherd.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_78.md)
   - The south of the Wood (UPGRADE_PLAN_78.md): the Deep Wood runs twenty rows further south now, old forest with the
