@@ -110,15 +110,19 @@ def test_a_fight_on_the_first_floor():
     p = g.player
     p.potions["health"] = 50
     p.potions["mana"] = 50
+    L = g.level
     for _ in range(60 * 90):
         if _aim(g, inp) is None:
             break
         m = min((m for m in g.monsters if not m.dead), key=lambda m: (m.x - g.x) ** 2 + (m.z - g.z) ** 2)
-        if math.hypot(m.x - g.x, m.z - g.z) > 9:                    # (walk toward it: the bot is simple)
-            g.x += (m.x - g.x) * 0.002
-            g.z += (m.z - g.z) * 0.002
-            if not g.level.can_stand(g.x, g.z, 0.24, g.y):
-                g.x, g.z = m.x + 1.5, m.z
+        if not L.line_of_sight(g.x, g.z, g.eye[1], m.x, m.z, m.centre_y) or math.hypot(m.x - g.x, m.z - g.z) > 8:
+            # (the bot doesn't find its way: it stands somewhere in sight of the nearest one)
+            for (x, y) in L.open_squares():
+                d = math.hypot(x + 0.5 - m.x, y + 0.5 - m.z)
+                if 2.5 < d < 5 and L.line_of_sight(x + 0.5, y + 0.5, 0.6 + L.floor[y, x], m.x, m.z, m.centre_y):
+                    g.x, g.z, g.y = x + 0.5, y + 0.5, float(L.floor[y, x])
+                    break
+            _aim(g, inp)
         inp.fire = True
         if p.life < p.max_life() * 0.4:
             g.drink("health")

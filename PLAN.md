@@ -25,14 +25,21 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
 - HUD: life and mana orbs, the wands, potions, experience, the map (M for the big one), floating damage and loot,
   the guardian's bar. Sounds made at start.
 
-## Phase 2 - Claude and Magic's Deep, dressed
+## Phase 2 - Claude and Magic's Deep, dressed (v0.2) - done
 
-- Claude and Magic's dressings by band: leaking pipes and drips, grates, plants, bones, cobwebs, banners, braziers
-  (its art exported from the running game into textures and props).
-- Its unique rooms ("set pieces"), each band its own few: the Great Mushroom, the crawl rooms, the shrines and the
-  rest - with what they hold.
-- Doors, secret walls, chests (the loot rolled when opened), traps, breakable barrels.
-- Each band's own textures (Claude and Magic's ten themes), its own music (synthesized), its own ambient sounds.
+- Its painted art exported from the running game (tools/export_cm_art.py into assets/cm): the dressings by band -
+  pipe mouths that drip into puddles, barred grates, drain ports, webs, moss, roots, vines, chains, sconces, niches,
+  banners, soot; beams, ribs, stalactites and hanging roots overhead; its stone cones; each band's floor things
+  (glowcaps, crystals, braziers, crucibles, sarcophagi, skulls, candles) with their light; wall torches.
+- Its sixty set pieces, laid into rooms made to their size by their letters, with their lines (said once, on the
+  first step in), their chests and guards, their monsters, water, raised and sunken squares, trees and lights.
+- Chests (F), guarded or not; wading water; floors of coin; things that stand in the way.
+
+## Phase 2b - more of the Deep
+
+- Doors, secret walls, traps (the Gauntlet's vents, the Pendulum Hall's blades), breakable barrels.
+- The set pieces' own workings (the Hourglass, the Weighing Room, the Puzzle of Lamps...).
+- Each band's own music (synthesized) and ambient sounds (drips, wind, the forge).
 
 ## Phase 3 - the deep end
 

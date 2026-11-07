@@ -153,6 +153,7 @@ class Game:
         self._flow = None
         self.dialog = None
         self.guardian_down = False
+        self.pieces_seen = set()
         rng = random.Random(f"{self.seed}:spawns:{level.depth}")
         for s in level.spawns:
             m = Monster(s["monster"], s["x"], s["z"], level.depth, rng, s.get("guardian", False))
@@ -226,6 +227,9 @@ class Game:
                 return ("vendor", n["vendor"]), f"Talk to {v['name']}, {v['title']}"
         if self.depth == 0 and L.portal and math.hypot(L.portal[0] - self.x, L.portal[1] - self.z) < 2.0:
             return ("mouth",), "Go down into the Deep"
+        for i, c in enumerate(L.chests):
+            if not c["opened"] and math.hypot(c["x"] - self.x, c["z"] - self.z) < 1.3:
+                return ("chest", i), "Open the chest"
         if self.depth and L.stairs and math.hypot(L.stairs[0] - self.x, L.stairs[1] - self.z) < 1.4:
             if L.guardian and not self.guardian_down:
                 return ("sealed",), f"The stairs are sealed while {L.guardian} lives"
@@ -234,9 +238,46 @@ class Game:
 
     def interact(self):
         what, _label = self.near()
-        if what and what[0] != "sealed":
+        if what and what[0] == "chest":
+            self.open_chest(what[1])
+        elif what and what[0] != "sealed":
             self.dialog = what
         return what
+
+    def open_chest(self, i):
+        """Its gold and its things straight into the pack - and whatever was set to guard it, up and about."""
+        c = self.level.chests[i]
+        if c["opened"]:
+            return
+        c["opened"] = True
+        p, rng, depth = self.player, self.rng, max(1, self.depth)
+        find = p.bonus().get("find", 0)
+        gold = int(I.gold_for(depth, rng, find) * 5 * c.get("rich", 1.0))
+        p.gold += gold
+        got = [f"+{gold} gold"]
+        for _ in range(1 + (1 if c.get("rich", 1) > 1.2 or rng.random() < 0.3 else 0)):
+            it = I.roll_item(rng, depth + 1, find / 300)
+            kept = p.give(it)
+            got.append(I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)")
+            self.events.append(("found", it))
+        if rng.random() < 0.35:
+            k = rng.choice(["health", "mana"])
+            p.potions[k] += 1
+            got.append("a Health Potion" if k == "health" else "a Mana Potion")
+        self.events.append(("loot", (c["x"], c["y"] + 0.6, c["z"]), got))
+        self.events.append(("chest", c))
+        srng = random.Random(f"{self.seed}:guard:{depth}:{i}")
+        for k, name in enumerate(c.get("guard") or []):
+            a = k / max(1, len(c["guard"])) * math.tau
+            x, z = c["x"] + math.cos(a) * 1.2, c["z"] + math.sin(a) * 1.2
+            if not self.level.can_stand(x, z, 0.2, c["y"]):
+                x, z = c["x"], c["z"] + 0.9
+            m = Monster(name, x, z, depth, srng)
+            m.y = self.level.floor_at(x, z)
+            m.awake = True
+            self.monsters.append(m)
+        if c.get("guard"):
+            self.events.append(("toast", "The chest was not unguarded.", (1.0, 0.6, 0.45)))
 
     # ---- the step ----------------------------------------------------------------------------------------------
     def step(self, dt, inp):
@@ -247,6 +288,7 @@ class Game:
         p = self.player
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         self._move(dt, inp)
+        self._places()
         # mana and life come back
         p.mana = min(p.max_mana(), p.mana + p.mana_regen() * dt)
         if self.heal_over > 0:
@@ -267,6 +309,21 @@ class Game:
             self.dead = True
             self.die()
 
+    def _places(self):
+        """Stepping into a set piece (its line, once), onto a floor of coin, into water."""
+        L = self.level
+        cx, cy = int(self.x), int(self.z)
+        for k, pc in enumerate(L.pieces):
+            if k not in self.pieces_seen and pc["x0"] <= cx <= pc["x1"] and pc["y0"] <= cy <= pc["y1"]:
+                self.pieces_seen.add(k)
+                name = pc["name"][0].upper() + pc["name"][1:]
+                self.events.append(("piece", name, pc["line"]))
+        if (cx, cy) in L.gold_squares:
+            L.gold_squares.discard((cx, cy))
+            n = max(1, I.gold_for(max(1, self.depth), self.rng) // 2)
+            self.player.gold += n
+            self.events.append(("loot", (self.x, self.y + 0.3, self.z), [f"+{n} gold"]))
+
     def _move(self, dt, inp):
         p, L = self.player, self.level
         fwd = (math.sin(self.yaw), -math.cos(self.yaw))
@@ -276,7 +333,7 @@ class Game:
         ln = math.hypot(mx, mz)
         if ln > 1:
             mx, mz = mx / ln, mz / ln
-        sp = p.speed()
+        sp = p.speed() * (0.6 if (int(self.x), int(self.z)) in L.water else 1.0)
         step_x, step_z = mx * sp * dt, mz * sp * dt
         foot = self.y
         if L.can_stand(self.x + step_x, self.z, RADIUS, foot):
@@ -583,6 +640,11 @@ class Game:
             dx, dz = self.x - m.x, self.z - m.z
             dist = math.hypot(dx, dz)
             if not m.awake:
+                if dist > 24:
+                    if self.time - getattr(m, "idle_at", 0) > 0.5:     # (far off and asleep: it wanders now and then)
+                        m.idle_at = self.time
+                        self._wander(m, 0.5)
+                    continue
                 if dist < 11 and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey):
                     m.awake = True
                     self.events.append(("notice", m))
@@ -591,7 +653,10 @@ class Game:
                 else:
                     self._wander(m, dt)
                     continue
-            sees = dist < 16 and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey)
+            if self.time >= getattr(m, "los_at", 0):          # (sight is looked at five times a second, not every frame)
+                m.los_at = self.time + 0.2
+                m.los = dist < 16 and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey)
+            sees = m.los and dist < 16
             m.yaw = math.atan2(-dx, dz) if sees or dist < 2 else m.yaw
             m.cool -= dt
             # striking

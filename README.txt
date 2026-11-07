@@ -24,6 +24,12 @@ Playing
   a Rebounding Band (bounces) and a Piercing Thorn (passes through). Fire burns, Frost slows, Storm leaps to the
   next foe, Venom stacks; Arcane hits harder. Four wands ready at once.
 
+  The Deep is dressed as Claude and Magic's is: pipe mouths that drip, barred grates and drain ports, webs in the
+  corners, moss, roots, chains, sconces and banners, beams and hanging roots overhead, stalagmites, and each band's
+  own things - glowcaps, crystals, braziers, sarcophagi, candles. Most floors hold one of Claude and Magic's sixty
+  set pieces (the Bone Room, the Chapel of Candles, the Cold Store, the Wolf Den, the Fallen Star...), which says its
+  line when he steps in. Chests open with F (some are guarded); water slows him.
+
   Three save slots. Saves live in the Timeline's ClaudeGames/Saves/claudenites/ (slot1.json .. slot3.json).
 
 How it's made
@@ -33,11 +39,13 @@ How it's made
     engine/   gl (programs, meshes, textures), render (the frame), levelmesh, figures (Claude and Magic's figures and
               plants, read with numpy and skinned on the card), sound (made at start)
     ui/       shell (the window's content), view (the loop, the input, the HUD), panels, icons, skills_panel
-    assets/   imported from Claude and Magic by tools/import_cm.py (see CREDITS.txt)
+    assets/   imported from Claude and Magic by tools/import_cm.py (figures, plants, stone) and tools/export_cm_art.py
+              (assets/cm: its painted art and its set pieces, exported from the running game; see CREDITS.txt)
     tests/    python tests/run.py - the rules, played headless (no Qt needed)
 
   python tools/play.py        play this copy on its own (with the Timeline's Python)
-  python tools/import_cm.py   bring Claude and Magic's art across again
+  python tools/import_cm.py      bring Claude and Magic's figures, plants and stone across again
+  python tools/export_cm_art.py  export its painted art and set pieces again (runs it in Qt WebEngine)
 
 In the Timeline it's ClaudeGames/claudenites (a subtree of this repo): in the launcher's Apps, and in each
 computer's Games.

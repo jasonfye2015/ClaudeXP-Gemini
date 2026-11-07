@@ -11,11 +11,13 @@ from PIL import Image
 
 from ..game import data as D
 
+from . import dressmesh
 from . import gl
 from . import levelmesh
 from .figures import Pack, Plants
 
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
+ART = Path(__file__).resolve().parents[1] / "assets" / "cm"
 MAX_LIGHTS = 24
 MAX_JOINTS = 64
 
@@ -60,6 +62,22 @@ out vec4 frag;
 """ + LIGHTING + """
 void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint * vShade;
               frag = outColour(lit(vPos, normalize(vNrm), base), 1.0); }"""
+
+# Claude and Magic's painted things: on the walls, the floors, hanging, standing - cut out by their alpha, lit like
+# the walls, and glowing (shade above 1) when they're braziers, glowcaps, crystals
+ART_FS = """#version 330 core
+in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in float vShade;
+uniform sampler2DArray uArt; uniform vec3 uTint; uniform float uAlphaCut; uniform float uWaterAlpha; uniform float uTime;
+out vec4 frag;
+""" + LIGHTING + """
+void main() {
+    vec2 uv = vUV;
+    if (uWaterAlpha > 0.0) uv += vec2(sin(uTime * 0.3 + vPos.z) * 0.03, uTime * 0.04);
+    vec4 t = texture(uArt, vec3(uv, vLayer));
+    if (uWaterAlpha <= 0.0 && t.a < uAlphaCut) discard;
+    vec3 base = t.rgb * uTint * min(vShade, 1.0);
+    vec3 c = lit(vPos, normalize(vNrm), base) + base * max(vShade - 1.0, 0.0);
+    frag = outColour(c, uWaterAlpha > 0.0 ? uWaterAlpha : 1.0); }"""
 
 FIG_VS = """#version 330 core
 layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUV; layout(location=2) in vec3 aCol;
@@ -169,6 +187,7 @@ class GpuFigure:
 class Renderer:
     def __init__(self):
         self.world = gl.Program(WORLD_VS, WORLD_FS)
+        self.art = gl.Program(WORLD_VS, ART_FS)
         self.fig = gl.Program(FIG_VS, FIG_FS)
         self.plant = gl.Program(PLANT_VS, PLANT_FS)
         self.glow = gl.Program(GLOW_VS, GLOW_FS)
@@ -181,6 +200,12 @@ class Renderer:
         self.layers = {n: i for i, n in enumerate(names)}
         self.tex_array = gl.texture_array([Image.open(TEXTURES / f"{n}.jpg") for n in names], 512)
         self.level_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
+        art_names = sorted(p.stem for p in ART.glob("*.png"))
+        self.art_layers = {n: i for i, n in enumerate(art_names)}
+        self.art_array = gl.texture_array([Image.open(ART / f"{n}.png") for n in art_names], 256) if art_names else None
+        self.dress_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
+        self.water_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
+        self.bill_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)], dynamic=True)
         self.glow_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
         self.sky_mesh = gl.Mesh([(0, 2)], np.array([[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]], np.float32))
         self.inst = {}                                       # plant name -> (instance buffer, count)
@@ -197,6 +222,10 @@ class Renderer:
         self.level = L
         layer_of = lambda i: self.layers.get(L.textures[int(i)], 0) if int(i) < len(L.textures) else 0   # noqa: E731
         self.level_mesh.upload(levelmesh.build(L, layer_of))
+        self.dress_mesh.upload(dressmesh.static(L, self.art_layers.get))
+        from ..game import dress as _dress
+        theme = _dress.CM_THEME_OF_BAND[min(9, max(0, (L.depth - 1) // 10))]
+        self.water_mesh.upload(dressmesh.water(L, self.art_layers.get(f"t{theme}.water0", 0)))
         for buf, _n, _mesh in self.inst.values():
             GL.glDeleteBuffers(1, [buf])
         self.inst = {}
@@ -204,7 +233,7 @@ class Renderer:
         for p in L.props:
             groups.setdefault(p["model"], []).append(p)
         for name, ps in groups.items():
-            if name not in self.plants.manifest["models"]:
+            if not self.plants.has(name):
                 continue
             mesh = self._plant_mesh(name)
             arr = np.array([[p["x"], p.get("y", 0.0), p["z"], p["yaw"], p["scale"], p.get("bright", 1.0)] for p in ps],
@@ -266,7 +295,7 @@ class Renderer:
                   "uFogDensity": fogd, "uSunDir": sun_dir, "uSunCol": (0.95, 0.88, 0.75) if outdoor else (0, 0, 0)}
         if outdoor:
             self._sky(proj, view, sun_dir, fogc)
-        progs = (self.world, self.fig, self.plant)
+        progs = (self.world, self.fig, self.plant, self.art)
         for p in progs:
             p.use()
             p.mat4("uProj", proj)
@@ -294,6 +323,9 @@ class Renderer:
             GL.glBindVertexArray(mesh.vao)
             GL.glDrawElementsInstanced(GL.GL_TRIANGLES, mesh.count, GL.GL_UNSIGNED_INT, None, n)
         GL.glBindVertexArray(0)
+        # Claude and Magic's things: on the walls and floors, hanging, standing
+        if self.art_array is not None:
+            self._dressing(g, L, now)
         # the figures
         self.fig.use()
         self.fig.int("uTex", 0)
@@ -301,12 +333,59 @@ class Renderer:
             v = D.VENDORS[n["vendor"]]
             self._figure(v["figure"], {"tint": v.get("tint"), "scale": 1.0}, n["x"], n.get("y", L.floor_at(n["x"], n["z"])),
                          n["z"], n["yaw"], 1.0, n.setdefault("anim", {}), "idle", 0, False, 1.0, (0, 0, 0))
+        fx, fz = math.sin(g.yaw), -math.cos(g.yaw)
         for m in g.monsters:
+            dx, dz = m.x - g.x, m.z - g.z
+            d2 = dx * dx + dz * dz
+            if d2 > 32 * 32 or (d2 > 4 and dx * fx + dz * fz < -0.2 * math.sqrt(d2)):
+                continue                                                # (behind him, or lost in the dark)
             self._monster(g, m)
+        # the water's surface
+        if self.art_array is not None and self.water_mesh.count:
+            self.art.use()
+            GL.glActiveTexture(GL.GL_TEXTURE1)
+            GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.art_array)
+            self.art.int("uArt", 1)
+            self.art.float("uWaterAlpha", 0.72)
+            self.art.float("uTime", now)
+            GL.glEnable(GL.GL_BLEND)
+            GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+            GL.glDepthMask(GL.GL_FALSE)
+            self.water_mesh.draw()
+            GL.glDepthMask(GL.GL_TRUE)
+            GL.glDisable(GL.GL_BLEND)
+            self.art.float("uWaterAlpha", 0.0)
+            GL.glActiveTexture(GL.GL_TEXTURE0)
         # glows: bolts, sparks, torches, the stairs' rune circle, the Deep's mouth
         self._glows(g, view, now)
         # the wand in his hand
         self._wand(g, proj, view, now, dt, lights, common)
+
+    def _dressing(self, g, L, now):
+        self.art.use()
+        GL.glActiveTexture(GL.GL_TEXTURE1)
+        GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.art_array)
+        self.art.int("uArt", 1)
+        self.art.vec("uTint", tuple(min(1.0, t) for t in L.tint))
+        self.art.float("uAlphaCut", 0.45)
+        self.art.float("uWaterAlpha", 0.0)
+        self.art.float("uTime", now)
+        self.dress_mesh.draw()
+        things = []
+        get = self.art_layers.get
+        for s in L.sprites:
+            lay = get(s["name"])
+            if lay is not None:
+                things.append((s["x"], s["y"], s["z"], s["w"], s["h"], lay, 1.5 if s.get("glow") else 1.0))
+        chest = get("chest")
+        if chest is not None:
+            for c in L.chests:
+                things.append((c["x"], c["y"], c["z"], 0.62, 0.55, chest, 0.45 if c["opened"] else 1.15))
+        data = dressmesh.billboards(things, g.eye, g.yaw)
+        if len(data):
+            self.bill_mesh.upload(data)
+            self.bill_mesh.draw()
+        GL.glActiveTexture(GL.GL_TEXTURE0)
 
     def _sky(self, proj, view, sun_dir, fogc):
         GL.glDepthMask(GL.GL_FALSE)
@@ -449,8 +528,24 @@ class Renderer:
             k = (g.time - f["t"]) / f.get("life", 0.5)
             if k < 1:
                 bill(f["x"], f["y"], f["z"], 0.15 + k * 0.45, f["c"], (1 - k) * 1.4)
+        ex, ez = g.x, g.z
         for t in L.lights:
-            bill(t[0], t[1] + 0.05, t[2], 0.13, (1.0, 0.6, 0.25), 1.6, 3.0, 1.6)
+            if (t[0] - ex) ** 2 + (t[2] - ez) ** 2 > 900:
+                continue
+            if t[3] > 0.9 and t[4] < 0.7 and t[6] > 5:                     # (a torch: its flame)
+                bill(t[0], t[1] + 0.05, t[2], 0.13, (1.0, 0.6, 0.25), 1.6, 3.0, 1.6)
+            else:                                                       # (a glowing thing: its halo)
+                bill(t[0], t[1], t[2], 0.35, (t[3], t[4], t[5]), 0.35)
+        for k, (dx, dtop, dz, dfloor) in enumerate(getattr(L, "drips", ())):
+            if (dx - ex) ** 2 + (dz - ez) ** 2 > 225:
+                continue
+            ph = (now * 0.75 + k * 0.618) % 1.0                         # (a drop falls, then a splash)
+            if ph < 0.8:
+                t = ph / 0.8
+                bill(dx, dtop - (dtop - dfloor) * t * t, dz, 0.035, (0.55, 0.7, 0.9), 1.4, 0.0, 1.8)
+            else:
+                k2 = (ph - 0.8) / 0.2
+                bill(dx, dfloor + 0.02, dz, 0.05 + k2 * 0.12, (0.5, 0.65, 0.85), (1 - k2) * 0.9)
         if L.stairs and not L.outdoor:
             sx, sz = L.stairs
             sealed = L.guardian and not g.guardian_down
