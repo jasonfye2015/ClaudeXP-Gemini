@@ -61,7 +61,8 @@ FLOORS = 100
 
 
 def band_of(depth):
-    return BANDS[max(0, min(len(BANDS) - 1, (depth - 1) // 10))]
+    """The band a floor is in; past the hundredth (endless), the bands come round again."""
+    return BANDS[((max(1, depth) - 1) // 10) % len(BANDS)]
 
 
 # ---- the monsters --------------------------------------------------------------------------------------------------

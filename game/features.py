@@ -294,12 +294,12 @@ def _braziers(L, rng, depth):
         if not L.open_at(x, y) or dress.clear_way(L, x, y) or _taken(L, x, y):
             continue
         f = float(L.floor[y, x])
-        L.braziers.append({"x": x + 0.5, "z": y + 0.5, "y": f, "lit": False, "sprite": len(L.sprites)})
-        L.sprites.append({"x": x + 0.5, "z": y + 0.5, "y": f, "w": 0.8, "h": 1.05, "name": "nx.brazier_cold", "glow": None,
-                          "solid": 0.25})
+        spr = {"x": x + 0.5, "z": y + 0.5, "y": f, "w": 0.8, "h": 1.05, "name": "nx.brazier_cold", "glow": None, "solid": 0.25}
+        L.braziers.append({"x": x + 0.5, "z": y + 0.5, "y": f, "lit": False, "spr": spr})   # (its sprite itself: the list shifts)
+        L.sprites.append(spr)
     if len(L.braziers) < 3:
         for b in reversed(L.braziers):
-            L.sprites.pop(b["sprite"])
+            L.sprites.remove(b["spr"])
         L.braziers.clear()
         return
     cx, cy = room.centre

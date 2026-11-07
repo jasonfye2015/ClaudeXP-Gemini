@@ -16,7 +16,7 @@ from ..game import data as D
 from . import theme
 from .icons import icon
 
-VERSION = "v0.16"
+VERSION = "v0.17"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
 CSS = theme.CSS + """
@@ -400,7 +400,7 @@ class TitleScreen(QWidget):
         keys = [("W A S D", "walk"), ("Shift", "run (and jump higher and further)"), ("Mouse", "look (click to take it, Esc gives it back)"), ("Left button", "cast"),
                 ("Space", "jump"), ("F", "talk, open, take the stairs"), ("Q / E", "health / mana potion"),
                 ("T", "read a Scroll of Return"), ("1-4, wheel", "change wand"), ("Tab", "the pack"), ("M", "the big map"),
-                ("Esc", "the menu")]
+                ("K", "the Calendar"), ("P", "auto-play on/off (or the button over the life orb)"), ("Esc", "the menu")]
         for i, (k, what) in enumerate(keys):
             a = QLabel(f"<b>{k}</b>")
             a.setTextFormat(Qt.RichText)

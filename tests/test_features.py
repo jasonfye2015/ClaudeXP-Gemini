@@ -108,7 +108,7 @@ def test_the_brazier_trial():
     chests = len(L.chests)
     # too slow: they go out
     g._light_brazier(L.braziers[0])
-    assert L.trial["until"] and L.sprites[L.braziers[0]["sprite"]]["name"] == "brazier"
+    assert L.trial["until"] and L.braziers[0]["spr"]["name"] == "brazier"
     g.time += 20
     g._trial()
     assert not any(b["lit"] for b in L.braziers) and len(L.chests) == chests

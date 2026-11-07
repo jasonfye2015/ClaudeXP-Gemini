@@ -236,8 +236,12 @@ class Game:
         self.depth = 0
         self._enter(levels.town(self.seed))
 
+    def endless(self):
+        """Past the bottom: once the hundredth floor's guardian has fallen, the Deep goes on."""
+        return bool(self.player.stats.get("won"))
+
     def go_floor(self, n):
-        n = max(1, min(D.FLOORS, n))
+        n = max(1, n if self.endless() else min(D.FLOORS, n))
         self.depth = n
         # a floor is the same floor each time the run reaches it, and a new one each run (the run counts deaths)
         L = levels.dungeon(n, f"{self.seed}:{self.player.stats['deaths']}")
@@ -250,7 +254,7 @@ class Game:
 
     def descend(self):
         """Down the stairs (the run reaches the next floor; the stairs take an hour)."""
-        if self.depth >= D.FLOORS:
+        if self.depth >= D.FLOORS and not self.endless():
             return
         self._sky_events(self.sky.tick(60))
         self.run_floor = max(self.run_floor, self.depth + 1)
@@ -258,7 +262,7 @@ class Game:
 
     def stairs_home(self):
         """Up and home from the stairs: the run waits at the next floor down."""
-        self.run_floor = max(self.run_floor, min(D.FLOORS, self.depth + 1))
+        self.run_floor = max(self.run_floor, self.depth + 1 if self.endless() else min(D.FLOORS, self.depth + 1))
         self.go_town()
         self.events.append(("toast", f"Home to {D.TOWN_NAME}. The way down waits at floor {self.run_floor}.", (0.8, 0.9, 1.0)))
         self.events.append(("save",))
@@ -420,7 +424,7 @@ class Game:
             T["until"] = 0.0
             for b in L.braziers:
                 b["lit"] = False
-                L.sprites[b["sprite"]].update(name="nx.brazier_cold", glow=None)
+                b["spr"].update(name="nx.brazier_cold", glow=None)
             self.events.append(("trial", False))
             self.events.append(("toast", "The flames gutter and die. Light them all, and quickly.", (0.9, 0.6, 0.5)))
 
@@ -429,7 +433,7 @@ class Game:
         if b["lit"] or (L.trial and L.trial["done"]):
             return False
         b["lit"] = True
-        L.sprites[b["sprite"]].update(name="brazier", glow=(1.0, 0.55, 0.2))
+        b["spr"].update(name="brazier", glow=(1.0, 0.55, 0.2))
         if not L.trial["until"]:
             from .features import BRAZIER_TIME
             L.trial["until"] = self.time + BRAZIER_TIME
@@ -1088,7 +1092,8 @@ class Game:
             if m.name not in p.stats["guardians"]:
                 p.stats["guardians"].append(m.name)
             self.events.append(("toast", f"{m.name} falls. The stairs are open.", (1.0, 0.8, 0.4)))
-            if self.depth >= D.FLOORS:
+            if self.depth == D.FLOORS and not self.endless():
+                p.stats["won"] = True                           # (and from now on, the Deep goes on: endless)
                 self.events.append(("victory",))
 
     def _loot(self, m):
