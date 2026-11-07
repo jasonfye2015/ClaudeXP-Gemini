@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The boat and the sea chart (v133.0, UPGRADE_PLAN_80.md phase 4)
+  (src/js/35d-plants.js, src/js/69zzzzk-boat.js, src/js/77x-boat.js, src/models/plants.json, src/models/CREDITS.txt, tools/plants.py, tools/headless.js, tests/run.js)
+  - The boat (UPGRADE_PLAN_80.md): the Wren lies along the dock's south face, riding the swell, a gangplank down to
+    her deck. Space on the dock's south edge goes aboard, and Captain Morra Vane unrolls her sea chart.
+  - The sea chart: this island in the middle of the Grey Sea; Gull Rock to the north-west, the Fenholm to the
+    south-west, smoking Emberreach to the south-east, and the coast of the Mainland - a whole continent - with the port
+    of Harrowgate. Point at a place for what the captain knows of it, its fare and how long the crossing takes; click
+    to sail. Those waters aren't charted yet - the passages open as each place is (they're next) - but a sail round
+    the island is: out past the lighthouse, along the south coast, up the west and along the north, the coast going
+    by from her afterdeck, and home to the dock two hours later. Any key cuts the voyage short.
+  - She won't put out at night unless the lighthouse is lit.
+  - The ship is Kenney's (Pirate Kit, CC0), baked like the trees from its colour map.
+
 The lighthouse (v132.0, UPGRADE_PLAN_80.md phase 3)
   (src/js/23b-wood.js, src/js/23i-lighthouse.js, src/js/40-render.js, src/js/69zzzzj-lighthouse.js, src/js/77u-harbour.js, src/js/77w-lighthouse.js, src/js/80-main.js, tools/headless.js, tests/run.js)
   - The lighthouse (UPGRADE_PLAN_80.md): off the east end of the dock, on a shoulder of rock walked onto from the

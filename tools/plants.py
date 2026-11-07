@@ -43,9 +43,58 @@ def world_of(nodes, parent, nid, cache):
     return m
 
 
+_png_cache = {}
+
+
+def read_png(path):
+    """An 8-bit RGB or RGBA PNG, not interlaced, read with the standard library: (width, height, channels, rows)."""
+    if path in _png_cache:
+        return _png_cache[path]
+    data = Path(path).read_bytes()
+    assert data[:8] == bytes([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), path
+    pos, idat, w = 8, b"", 0
+    while pos < len(data):
+        ln, = struct.unpack(">I", data[pos:pos + 4]); typ = data[pos + 4:pos + 8]; body = data[pos + 8:pos + 8 + ln]; pos += 12 + ln
+        if typ == b"IHDR":
+            w, h, depth, ctype, _, _, inter = struct.unpack(">IIBBBBB", body)
+            assert depth == 8 and ctype in (2, 6) and inter == 0, (path, depth, ctype, inter)
+        elif typ == b"IDAT":
+            idat += body
+    raw, bpp = zlib.decompress(idat), (4 if ctype == 6 else 3)
+    stride, rows, prev, i = w * bpp, [], bytearray(w * bpp), 0
+    for _ in range(h):
+        f = raw[i]; i += 1; line = bytearray(raw[i:i + stride]); i += stride
+        for x in range(stride):
+            a = line[x - bpp] if x >= bpp else 0; b = prev[x]; c = prev[x - bpp] if x >= bpp else 0
+            if f == 1: line[x] = (line[x] + a) & 255
+            elif f == 2: line[x] = (line[x] + b) & 255
+            elif f == 3: line[x] = (line[x] + (a + b) // 2) & 255
+            elif f == 4:
+                pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        rows.append(bytes(line)); prev = line
+    _png_cache[path] = (w, h, bpp, rows)
+    return _png_cache[path]
+
+
+def texture_colours(g, j, glb, mat, prim):
+    """(v133.0) a model painted from a colour-map texture (Kenney's kits): each vertex takes the texel under its uv."""
+    t = mat.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+    if t is None or "TEXCOORD_0" not in prim["attributes"]:
+        return None
+    img = j["images"][j["textures"][t["index"]]["source"]]
+    w, h, bpp, rows = read_png(Path(glb).parent / img["uri"])
+    out = []
+    for u, v in g.accessor(prim["attributes"]["TEXCOORD_0"]):
+        x = min(w - 1, max(0, int((u % 1.0) * w))); y = min(h - 1, max(0, int((v % 1.0) * h)))
+        out.append(tuple(rows[y][x * bpp:x * bpp + 3]))
+    return out
+
+
 def bake_model(name, spec, mapping):
     pack = mapping["packs"][spec["pack"]]
-    g = Gltf(SOURCES / pack["dir"] / spec["file"])
+    glb = SOURCES / pack["dir"] / spec["file"]
+    g = Gltf(glb)
     j = g.j
     nodes = j["nodes"]
     parent = {}
@@ -72,7 +121,15 @@ def bake_model(name, spec, mapping):
             ci = at[c]
             base = len(pos)
             pos.extend(P)
-            col.extend([ci] * len(P))
+            tex = texture_colours(g, j, glb, mat, prim)
+            if tex is None:
+                col.extend([ci] * len(P))
+            else:
+                for t in tex:
+                    if t not in at:
+                        at[t] = len(palette)
+                        palette.append(list(t))
+                    col.append(at[t])
             I = g.accessor(prim["indices"]) if "indices" in prim else list(range(len(P)))
             idx.extend(base + i for i in I)
     assert pos, f"{name}: no mesh"
