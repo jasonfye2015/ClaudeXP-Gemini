@@ -17,6 +17,7 @@ from . import forest
 
 # what breaks: props (radius and height at scale 0.4) and sprites by picture
 BREAK_PROPS = {"barrel": (0.27, 0.5), "crate": (0.26, 0.32)}
+CHEST_SIZE = (0.33, 0.55)                # a chest's reach and height (the 3D chest, engine/render.py), for bolts
 BREAK_SPRITES = {"fu.rack", "fu.shelf", "fu.table", "fu.bench", "sp.eggsac", "sp.cocoon", "sp.egg", "fungus", "sp.cage"}
 STEP = 0.42                          # the highest step a walker takes without a jump
 INVISIBLE = 255                      # a wall texture that draws nothing (the forest's edge: trees stand there instead)
@@ -90,6 +91,9 @@ class Level:
                 if p["model"] in BREAK_PROPS:
                     r, h = BREAK_PROPS[p["model"]]
                     out.setdefault((int(p["x"]), int(p["z"])), []).append((p, p["x"], p["z"], p.get("y", 0.0), r * p["scale"] / 0.4, h * p["scale"] / 0.4))
+            for c in self.chests:                             # (a chest: shot open, or shot to pieces once empty)
+                if not c.get("broken"):
+                    out.setdefault((int(c["x"]), int(c["z"])), []).append((c, c["x"], c["z"], c["y"], *CHEST_SIZE))
             for s in self.sprites:
                 if s["name"] in BREAK_SPRITES:
                     out.setdefault((int(s["x"]), int(s["z"])), []).append((s, s["x"], s["z"], s["y"], max(0.2, s["w"] * 0.4), s["h"]))
@@ -102,6 +106,9 @@ class Level:
             self.props.remove(thing)
         elif thing in self.sprites:
             self.sprites.remove(thing)
+        elif any(thing is c for c in self.chests):
+            thing["broken"] = True
+            thing["opened"] = True
         self._breakables = None
         self._blockers = None
         self.version = getattr(self, "version", 0) + 1
@@ -111,7 +118,7 @@ class Level:
         if getattr(self, "_blockers", None) is None:
             b = {}
             things = [(s["x"], s["z"], s["solid"]) for s in self.sprites if s.get("solid")]
-            things += [(c["x"], c["z"], 0.3) for c in self.chests]
+            things += [(c["x"], c["z"], 0.3) for c in self.chests if not c.get("broken")]
             things = [(x, z, min(0.45, r)) for x, z, r in things]
             things += [(p["x"], p["z"], p.get("trunk") or (0.26 if p.get("scale", 1) < 0.5 else 0.32)) for p in self.props
                        if p.get("solid")]

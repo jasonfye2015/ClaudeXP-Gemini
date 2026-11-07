@@ -123,6 +123,12 @@ out vec3 vPos; out vec3 vCol;
 void main() { float c = cos(aInst.w), s = sin(aInst.w), k = aInst2.x;
     vec3 p = vec3(c * aPos.x + s * aPos.z, aPos.y, -s * aPos.x + c * aPos.z) * k + aInst.xyz;
     vPos = p; vCol = aCol * aInst2.y; gl_Position = uProj * uView * vec4(p, 1.0); }"""
+# things already placed in the world (the chests, posed on the card each frame): position and colour
+SOLID_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aCol;
+uniform mat4 uProj; uniform mat4 uView;
+out vec3 vPos; out vec3 vCol;
+void main() { vPos = aPos; vCol = aCol; gl_Position = uProj * uView * vec4(aPos, 1.0); }"""
 PLANT_FS = """#version 330 core
 in vec3 vPos; in vec3 vCol;
 uniform vec3 uTint; uniform float uSnow;
@@ -235,6 +241,12 @@ class Renderer:
         self.art = gl.Program(WORLD_VS, ART_FS)
         self.fig = gl.Program(FIG_VS, FIG_FS)
         self.plant = gl.Program(PLANT_VS, PLANT_FS)
+        self.solid = gl.Program(SOLID_VS, PLANT_FS)
+        try:
+            self.chest = np.load(Path(__file__).resolve().parents[1] / "assets" / "figures" / "chest.npz")
+        except OSError:
+            self.chest = None
+        self.chest_mesh = None
         self.glow = gl.Program(GLOW_VS, GLOW_FS)
         self.sky = gl.Program(SKY_VS, SKY_FS)
         self.pack = Pack.load()
@@ -384,7 +396,7 @@ class Renderer:
         self.atm = atm
         if outdoor:
             self._sky(proj, view, sun_dir, fogc, atm, now)
-        progs = (self.world, self.fig, self.plant, self.art)
+        progs = (self.world, self.fig, self.plant, self.art, self.solid)
         for p in progs:
             p.use()
             p.mat4("uProj", proj)
@@ -421,6 +433,8 @@ class Renderer:
             GL.glBindVertexArray(vao)
             GL.glDrawElementsInstanced(GL.GL_TRIANGLES, mesh.count, GL.GL_UNSIGNED_INT, None, n)
         GL.glBindVertexArray(0)
+        # the chests, in the round
+        self._chests(g, L, outdoor, atm)
         # Claude and Magic's things: on the walls and floors, hanging, standing
         if self.art_array is not None:
             self._dressing(g, L, now)
@@ -506,10 +520,6 @@ class Renderer:
                 lay = lay if lay is not None and f.get("pic", "").startswith(("fu.", "sp.", "fungus")) else wood
                 if lay is not None:
                     things.append((f["x"], f["y"], f["z"], f["size"] * 2, f["size"] * 2, lay, 0.9))
-        chest = get("chest")
-        if chest is not None:
-            for c in L.chests:
-                things.append((c["x"], c["y"], c["z"], 0.62, 0.55, chest, 0.45 if c["opened"] else 1.15))
         data = dressmesh.billboards(things, g.eye, g.yaw)
         if len(data):
             self.bill_mesh.upload(data)
@@ -543,6 +553,47 @@ class Renderer:
 
     def lightning(self, strength=1.0):
         self.flash = max(self.flash, strength)
+
+    CHEST_SCALE = 0.5
+    CHEST_OPEN = 1.95                      # (radians: the lid thrown back)
+
+    def _chests(self, g, L, outdoor, atm):
+        """Kenney's chest (assets/figures/chest.npz): the body, and the lid swinging back on its hinge when opened."""
+        if self.chest is None or not L.chests:
+            return
+        C = self.chest
+        bp, bc, bi = C["body_pos"], C["body_col"], C["body_idx"]
+        lp, lc, li, hinge = C["lid_pos"], C["lid_col"], C["lid_idx"], C["hinge"]
+        pos, col, idx = [], [], []
+        n = 0
+        for c in L.chests:
+            if c.get("broken") or (c["x"] - g.x) ** 2 + (c["z"] - g.z) ** 2 > 40 * 40:
+                continue
+            M = gl.model_matrix(c["x"], c["y"], c["z"], c.get("yaw", 0.0), self.CHEST_SCALE)
+            if c["opened"]:
+                k = min(1.0, (g.time - c.get("opened_at", -99)) / 0.5)
+                a = -self.CHEST_OPEN * (1 - (1 - k) ** 3)
+            else:
+                a = 0.0
+            T = np.identity(4, np.float32)
+            T[:3, 3] = hinge
+            Ml = M @ T @ _rot_x(a)
+            for P, Cc, Ii, Mm in ((bp, bc, bi, M), (lp, lc, li, Ml)):
+                w = (np.concatenate([P, np.ones((len(P), 1), np.float32)], 1) @ Mm.T)[:, :3]
+                pos.append(w)
+                col.append(Cc)
+                idx.append(Ii + n)
+                n += len(P)
+        if not pos:
+            return
+        if self.chest_mesh is None:
+            self.chest_mesh = gl.Mesh([(0, 3), (1, 3)], np.zeros((0, 6), np.float32), np.zeros(0, np.uint32), dynamic=True)
+        self.chest_mesh.upload(np.concatenate([np.concatenate(pos), np.concatenate(col)], 1).astype(np.float32),
+                               np.concatenate(idx).astype(np.uint32))
+        self.solid.use()
+        self.solid.vec("uTint", (1, 1, 1) if outdoor else tuple(min(1.0, t) for t in L.tint))
+        self.solid.float("uSnow", 0.0)
+        self.chest_mesh.draw()
 
     def _sky(self, proj, view, sun_dir, fogc, atm, now):
         GL.glDepthMask(GL.GL_FALSE)

@@ -69,7 +69,9 @@ Playing
   corners, moss, roots, chains, sconces and banners, beams and hanging roots overhead, stalagmites, and each band's
   own things - glowcaps, crystals, braziers, sarcophagi, candles. Most floors hold one of Claude and Magic's sixty
   set pieces (the Bone Room, the Chapel of Candles, the Cold Store, the Wolf Den, the Fallen Star...), which says its
-  line when he steps in. Chests open with F (some are guarded); water slows him.
+  line when he steps in. Chests open with F (some are guarded) and stand in the round - Kenney's chest, its lid swinging back on its hinge. A
+  bolt breaks them too: shot before it's opened, a chest gives its things all the same (its guards wake), and an
+  emptied one shot only breaks. Water slows him.
 
   The townsfolk speak: with a language model in the Timeline's Local Storage\LLM Models (llama.cpp, through the
   Timeline's own engine - Qwen3 4B Instruct when it's there), Hesper, Old Tamsin, Bramwell and Mother Wren greet
@@ -93,6 +95,7 @@ How it's made
   python tools/play.py        play this copy on its own (with the Timeline's Python)
   python tools/import_cm.py      bring Claude and Magic's figures, plants and stone across again
   python tools/export_cm_art.py  export its painted art and set pieces again (runs it in Qt WebEngine)
+  python tools/bake_chest.py     the 3D chest again (Kenney's Pirate Kit, CC0)
   python tools/import_icons.py   the item pictures again (Dungeon Crawl's tiles and 7Soul1's icons, both CC0)
 
 In the Timeline it's ClaudeGames/claudenites (a subtree of this repo): in the launcher's Apps, and in each

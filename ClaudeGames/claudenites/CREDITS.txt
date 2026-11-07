@@ -9,7 +9,8 @@ The figures (assets/figures/figures.bin): rigged, animated low-poly bodies, as C
 
 The plants and props (assets/figures/plants.bin): static vertex-coloured meshes.
 - Quaternius - Ultimate Nature Pack (CC0): https://quaternius.com/packs/ultimatenature.html
-- Kenney - Pirate Kit (CC0; the barrels and crates): https://kenney.nl/assets/pirate-kit
+- Kenney - Pirate Kit (CC0; the barrels, the crates and the chest - assets/figures/chest.npz, by tools/bake_chest.py):
+  https://kenney.nl/assets/pirate-kit
 
 The textures (assets/textures): ambientCG (CC0), https://ambientcg.com - Bricks089, PavingStones141, Rock035, Rock037,
 Rock020, Bricks058, Bricks100, PavingStones128, Planks039, Marble006, Tiles074, Onyx013, Grass001, Grass005,
