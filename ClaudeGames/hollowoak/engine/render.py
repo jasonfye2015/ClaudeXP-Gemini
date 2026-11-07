@@ -148,16 +148,41 @@ void main() {
 SKY_VS = """#version 330 core
 layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
-in vec2 vP; uniform mat4 uInvPV; uniform vec3 uMoon; out vec4 frag;
+in vec2 vP; uniform mat4 uInvPV; uniform vec3 uMoon; uniform float uTime; out vec4 frag;
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
+vec3 aurora(vec3 d, float t) {
+    // curtains of light strung across the sky: each a wavering line on the sky's plane, drawn as several layers one
+    // above another (green low, violet high) so it has height; rays shimmering along it; slow, faint, breathing
+    if (d.y < 0.08) return vec3(0.0);
+    vec3 c = vec3(0.0);
+    for (int k = 0; k < 2; k++) {
+        float off = float(k) * 1.15 - 0.35;
+        for (int i = 0; i < 6; i++) {
+            float f = float(i);
+            vec2 uv = d.xz / d.y / (1.0 + f * 0.1);                        // (a plane higher for each layer)
+            float x = uv.x;
+            float line = off + 0.55 * sin(x * 0.32 + t * 0.028 + float(k) * 2.0) + 0.22 * sin(x * 0.85 - t * 0.045)
+                       + 0.06 * sin(x * 2.3 + t * 0.09);
+            float dist = abs(uv.y - line);
+            float band = exp(-pow(dist / (0.05 + f * 0.012), 2.0));
+            float rays = 0.45 + 0.55 * pow(0.5 + 0.5 * sin(x * 26.0 + sin(x * 2.7 + t * 0.17) * 2.5 + t * 0.23), 2.0);
+            float breathe = 0.6 + 0.4 * sin(t * 0.08 + x * 0.4 + float(k) * 2.4);
+            vec3 tint = mix(vec3(0.12, 0.95, 0.5), vec3(0.6, 0.22, 0.85), smoothstep(0.0, 5.0, f));
+            c += tint * band * rays * breathe * 0.021 * (1.0 - f * 0.11);
+        }
+    }
+    return c * smoothstep(0.08, 0.35, d.y) * exp(-length(d.xz / d.y) * 0.12);
+}
 void main() {
     vec4 a = uInvPV * vec4(vP, -1.0, 1.0), b = uInvPV * vec4(vP, 1.0, 1.0);
     vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
-    vec3 col = mix(vec3(0.012, 0.016, 0.03), vec3(0.03, 0.045, 0.09), smoothstep(0.0, 1.0, d.y));
+    vec3 col = mix(vec3(0.0015, 0.002, 0.004), vec3(0.003, 0.0045, 0.01), smoothstep(0.0, 1.0, d.y));
     vec3 q = floor(d * 380.0); float s = hash(q);
-    col += vec3(0.7, 0.75, 0.9) * step(0.9975, s) * smoothstep(0.1, 0.5, d.y) * (0.5 + 0.5 * hash(q + 3.0));
+    col += vec3(0.55, 0.6, 0.75) * step(0.9975, s) * smoothstep(0.1, 0.5, d.y) * (0.4 + 0.6 * hash(q + 3.0))
+         * (0.75 + 0.25 * sin(uTime * (1.0 + 3.0 * hash(q + 7.0)) + hash(q) * 30.0));      // (the stars, twinkling)
+    col += aurora(d, uTime);
     float m = dot(d, normalize(uMoon));
-    col += vec3(0.85, 0.88, 1.0) * smoothstep(0.9994, 0.9997, m) + vec3(0.18, 0.2, 0.3) * pow(max(m, 0.0), 220.0);
+    col += vec3(0.75, 0.78, 0.9) * smoothstep(0.9994, 0.9997, m) + vec3(0.08, 0.09, 0.14) * pow(max(m, 0.0), 260.0);
     frag = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }"""
 
@@ -209,6 +234,7 @@ class Renderer:
         self.sky.use()
         self.sky.mat4("uInvPV", np.linalg.inv(pv))
         self.sky.vec("uMoon", self.moon)
+        self.sky.float("uTime", now)
         self.sky_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
         lights = self._lights(night, now)
@@ -248,7 +274,8 @@ class Renderer:
         if night.lantern:                                     # (his lantern: warm, a little unsteady)
             fl = 0.9 + 0.06 * math.sin(now * 9.1) + 0.04 * math.sin(now * 23.7)
             fx, fz = math.sin(night.yaw) * 0.3, -math.cos(night.yaw) * 0.3
-            out.append(((ex + fx + 0.12, ey - 0.15, ez + fz, 6.5), (0.95 * fl, 0.62 * fl, 0.36 * fl, 1)))
+            reach, k = night.lantern_reach()
+            out.append(((ex + fx + 0.12, ey - 0.15, ez + fz, reach), (0.95 * fl * k, 0.62 * fl * k, 0.36 * fl * k, 1)))
         near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
         for l in near[:MAX_LIGHTS - len(out) - 3]:
             k = 0.85 + 0.15 * math.sin(now * 0.7 + l[1] * 1.3 + l[0])

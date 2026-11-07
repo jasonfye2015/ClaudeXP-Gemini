@@ -148,15 +148,15 @@ def _tunnel(tree, out):
         c0, c1 = f0 + T.TUNNEL_CEIL + wob(a0), f1 + T.TUNNEL_CEIL + wob(a1)
         u0, u1 = a0 * UV, a1 * UV
         _quad(out, (x00, f0, z00), (x10, f1, z10), (x11, f1, z11), (x01, f0, z01), LEAVES,
-              ((u0 * 2.2, 0), (u1 * 2.2, 0), (u1 * 2.2, 1.7), (u0 * 2.2, 1.7)), (0.7, 0.7, 0.7, 0.7))
+              ((u0 * 2.2, 0), (u1 * 2.2, 0), (u1 * 2.2, 1.7), (u0 * 2.2, 1.7)), (0.42, 0.42, 0.42, 0.42))
         _quad(out, (x01, c0, z01), (x11, c1, z11), (x10, c1, z10), (x00, c0, z00), BARK,
-              ((u0, 0), (u1, 0), (u1, 0.8), (u0, 0.8)), (0.45, 0.45, 0.45, 0.45))
+              ((u0, 0), (u1, 0), (u1, 0.8), (u0, 0.8)), (0.24, 0.24, 0.24, 0.24))
         for (xa, za), (xb, zb) in (((x00, z00), (x10, z10)), ((x11, z11), (x01, z01))):
             first = (xa, za) == (x00, z00)
             fa, fb = (f0, f1) if first else (f1, f0)
             ca, cb = (c0, c1) if first else (c1, c0)
             _quad(out, (xa, fa, za), (xa, ca, za), (xb, cb, zb), (xb, fb, zb), BARK,
-                  ((u0, 0), (u0, 0.85), (u1, 0.85), (u1, 0)), (0.5, 0.6, 0.6, 0.5))
+                  ((u0, 0), (u0, 0.85), (u1, 0.85), (u1, 0)), (0.3, 0.36, 0.36, 0.3))
     # its far end: earth and roots, the night beyond showing through a gap (drawn as a glow)
     (xa, za), (xb, zb) = tree.tunnel_point(L, -W), tree.tunnel_point(L, W)
     f = tree.tunnel_floor(L)
