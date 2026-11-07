@@ -445,6 +445,7 @@ GREETINGS = {
     "apothecary": "\"Red for the bleeding, blue for the empty head, and the scroll for when you've had enough. Pay first.\"",
     "wandwright": "\"A wand's only a stick until you set something in it. Mind the slots - more slots, more trouble.\"",
     "outfitter": "\"Cloth won't stop a claw, but the right cloth makes the claw think twice. Try it on.\"",
+    "woodcutter": "\"Sit by the fire a while. The wood's quiet today.\"",
     "sage": "\"Three schools, child: Evocation, Warding and Arcana. What you learn of them stays learned, whatever the Deep does to you.\"",
 }
 
@@ -500,7 +501,8 @@ class VendorPanel(QFrame):
         body = QHBoxLayout()
         # what's for sale
         sale = QVBoxLayout()
-        sale.addWidget(_label("Her teaching" if self.key == "sage" else "For sale", "heading"))
+        if self.key != "woodcutter":
+            sale.addWidget(_label("Her teaching" if self.key == "sage" else "For sale", "heading"))
         if self.key == "apothecary":
             for kind, c in D.CONSUMABLES.items():
                 row = QHBoxLayout()
@@ -518,6 +520,8 @@ class VendorPanel(QFrame):
             sale.addWidget(_label(f"Claude has {P.skill_points} skill points to spend.", None))
             from . import skills_panel
             sale.addWidget(skills_panel.SkillsWidget(self.shell, self.build))
+        elif self.key == "woodcutter":
+            sale.addWidget(_label("Rook sells nothing. He cuts wood, and talks to whoever comes by his fire.", "sub"))
         else:
             grid = QGridLayout()
             for k, it in enumerate(self.stock):
@@ -532,7 +536,7 @@ class VendorPanel(QFrame):
         sw.setLayout(sale)
         body.addWidget(sw, 1)
         # the pack, to sell from
-        if self.key != "sage":
+        if self.key not in ("sage", "woodcutter"):
             pack = QVBoxLayout()
             pack.addWidget(_label(f"Sell from the pack ({len(P.inventory)}/48)", "heading"))
             grid = QGridLayout()

@@ -3,7 +3,11 @@ import ctypes
 import io
 
 import numpy as np
-from OpenGL import GL
+import OpenGL
+
+OpenGL.ERROR_CHECKING = False            # (PyOpenGL checks every call by default: far too slow for a frame's draws)
+OpenGL.ERROR_LOGGING = False
+from OpenGL import GL  # noqa: E402
 
 from PIL import Image
 

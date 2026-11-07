@@ -15,7 +15,13 @@ Playing
   Mother Wren the Sage (the three skill trees) - and the Deep's mouth in the middle. At the stairs on every floor,
   go deeper or go home; the way down waits at the floor reached. A Scroll of Return brings him home from anywhere.
 
-  If Claude falls he wakes in Thornwick with everything: his gold, his pack, his gear, his levels and his skills.
+  The forest: Thornwick's clearing sits in a great wood, and trails wind out from its four ways to the glades - the
+  Mossy Pond, the Old Shrine, the Woodcutter's Camp (Rook, who talks), the Fairy Ring, the Hollow Oak, the Wolf
+  Hollow, the Bandits' Camp and the Stream. Its creatures (deer that run, boar, wolves, bears, bandits) are as strong
+  as Claude is, come back each time he comes home, and never come into the town. Falling in the forest costs nothing
+  but pride: he wakes in the clearing and the Deep is as he left it.
+
+  If Claude falls in the Deep he wakes in Thornwick with everything: his gold, his pack, his gear, his levels and his skills.
   Only the run is lost - the Deep starts again at floor 1, and its floors are new.
 
   Wands: a body (its shots a second, bolt speed, base damage, mana a shot and how many slots) and the parts set in
@@ -23,6 +29,8 @@ Playing
   bolts, wider), a Focusing Ring (tighter, faster), a Quickening Rune (faster casting), a Seeker's Eye (homing),
   a Rebounding Band (bounces) and a Piercing Thorn (passes through). Fire burns, Frost slows, Storm leaps to the
   next foe, Venom stacks; Arcane hits harder. Four wands ready at once.
+
+  The dead flip over: a thing that stood falls flat on its back, a beast or a blob rolls belly-up.
 
   The Deep is dressed as Claude and Magic's is: pipe mouths that drip, barred grates and drain ports, webs in the
   corners, moss, roots, chains, sconces and banners, beams and hanging roots overhead, stalagmites, and each band's

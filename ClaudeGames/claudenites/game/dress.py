@@ -22,6 +22,11 @@ from pathlib import Path
 
 from . import data as D
 
+
+def clear_way(L, x, y):
+    from .levels import clear_way as cw
+    return cw(L, x, y)
+
 ASSETS = Path(__file__).resolve().parents[1] / "assets" / "cm"
 # Claude and Magic's ten themes, as its set pieces name them by index, for each of our bands
 CM_THEME_OF_BAND = [0, 5, 1, 8, 6, 7, 9, 2, 3, 4]
@@ -88,8 +93,8 @@ LETTERS = {
     "_": {"floor": -0.7}, "+": {"sprite": ("sp.seastone", 1.0, 0.8, (1.0, 0.6, 0.3), 0.45)}, "|": {"drip": True, "water": True},
     "@": {"light": (1.0, 0.8, 0.5)}, "^": {"sprite": ("rope", 0.4, 1.6, None, 0.1)}, "&": {"sprite": ("lm.altar", 1.0, 0.9, None, 0.4), "water": True},
     "!": {"plant": "willow_dead"}, "%": {"plant": "common_dead"}, "Y": {"sprite": ("lm.throne", 1.2, 1.6, None, 0.45)},
-    "I": {"sprite": ("sp.hourglass", 0.8, 1.6, None, 0.35)}, "?": {"sprite": ("lm.saint", 0.8, 1.5, None, 0.3)},
-    "J": {"sprite": ("sp.blade", 0.9, 1.4, None, 0.0)}, "Z": {"dark": True}, "O": {"sprite": ("sp.ice", 0.8, 1.0, (0.6, 0.85, 1.0), 0.35)},
+    "I": {"sprite": ("sp.hourglass", 0.8, 1.6, None, 0.35)}, "?": {"sprite": ("lm.saint", 0.8, 1.5, None, 0)},
+    "J": {"sprite": ("sp.blade", 0.9, 1.4, None, 0.0)}, "Z": {"dark": True}, "O": {"flat": "decal.frost"},
     "E": {}, "$": {"flat": "sp.coins", "gold": True}, "N": {"sprite": ("lm.altar", 1.0, 0.9, (1.0, 0.85, 0.4), 0.4), "chest": True},
     "U": {"sprite": ("gate", 1.0, 1.4, None, 0.0)}, "Q": {"low": 1.15}, "K": {"sprite": ("sp.scale", 0.9, 1.1, (1.0, 0.9, 0.6), 0.35)},
     ",": {"sprite": ("sp.die", 0.7, 0.7, None, 0.3)}, "P": {"sprite": ("nest", 1.0, 0.6, None, 0.35), "spawn": ["Giant Rat"] * 3},
@@ -177,7 +182,7 @@ def dress(L, rng, band_index):
             L.hangs.append((x + 0.5, c, y + 0.5, 0.9 if name in ("over.beam", "over.rib") else 0.7,
                             0.35 if name in ("over.beam", "over.rib") else 0.6, name))
         # on the floor
-        if (x, y) in taken or near_stairs(x, y) or piece:
+        if (x, y) in taken or near_stairs(x, y) or piece or clear_way(L, x, y):
             continue
         if walls and rng.random() < 0.035 and B["floor"]:
             name, w, h, glow, solid = rng.choice(B["floor"])
@@ -228,7 +233,7 @@ def place_piece(L, room, piece, rng):
                 continue
             spec = LETTERS.get(ch, {})
             if (x, y) in L.paths:                          # (a corridor runs through: it stays level and clear)
-                spec = {k: v for k, v in spec.items() if k not in ("floor", "water", "low", "tree", "plant", "sprite")}
+                spec = {k: v for k, v in spec.items() if k not in ("floor", "water", "low", "tree", "plant", "sprite", "chest")}
             f = float(L.floor[y, x])
             if "floor" in spec:
                 f = spec["floor"]

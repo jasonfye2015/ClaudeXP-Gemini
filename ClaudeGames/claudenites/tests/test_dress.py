@@ -102,3 +102,23 @@ def test_things_stand_in_the_way():
     assert not L.can_stand(s["x"], s["z"], 0.24, s["y"])
     c = L.chests[0]
     assert not L.can_stand(c["x"], c["z"], 0.24, c["y"])
+
+
+def _walkable_reach(L, radius=0.24):
+    return levels.walkable_reach(L, radius)
+
+
+def test_nothing_blocks_the_way():
+    """With every barrel, crate, chest and standing thing in its place, Claude can still walk to the stairs, to every
+    chest's side and to every square of every corridor - on every floor."""
+    for seed in range(2):
+        for d in range(1, D.FLOORS + 1, 2 if seed else 1):
+            L = levels.dungeon(d, f"{seed}:0")
+            reach = _walkable_reach(L)
+            sx, sy = int(L.stairs[0]), int(L.stairs[1])
+            assert (sx, sy) in reach, f"floor {d}: the stairs are blocked off"
+            for c in L.chests:
+                cx, cy = int(c["x"]), int(c["z"])
+                assert any((cx + dx, cy + dy) in reach for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))), (d, c)
+            cut = [p for p in L.paths if L.open_at(*p) and p not in reach and L.floor[p[1], p[0]] > -0.5]
+            assert not cut, f"floor {d}: corridor squares cut off {cut[:5]}"

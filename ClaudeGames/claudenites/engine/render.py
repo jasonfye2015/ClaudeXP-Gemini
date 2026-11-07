@@ -1,6 +1,7 @@
 """Drawing a Game: the level's mesh, its props (instanced plants), the figures (skinned on the card), the bolts, sparks,
 torch flames and rune circles (glowing billboards), the sky outdoors, and the wand in Claude's hand. Lighting is per
 pixel: an ambient, the sun outdoors, Claude's own light, the torches and every bolt in the air."""
+import ctypes
 import math
 import time
 from pathlib import Path
@@ -19,6 +20,7 @@ from .figures import Pack, Plants
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
 ART = Path(__file__).resolve().parents[1] / "assets" / "cm"
 MAX_LIGHTS = 24
+CHUNK = 24
 MAX_JOINTS = 64
 
 LIGHTING = """
@@ -226,23 +228,32 @@ class Renderer:
         from ..game import dress as _dress
         theme = _dress.CM_THEME_OF_BAND[min(9, max(0, (L.depth - 1) // 10))]
         self.water_mesh.upload(dressmesh.water(L, self.art_layers.get(f"t{theme}.water0", 0)))
-        for buf, _n, _mesh in self.inst.values():
+        for vao, buf, _n, _mesh in self.inst.values():
             GL.glDeleteBuffers(1, [buf])
+            GL.glDeleteVertexArrays(1, [vao])
         self.inst = {}
         groups = {}
-        for p in L.props:
-            groups.setdefault(p["model"], []).append(p)
-        for name, ps in groups.items():
+        for p in L.props:                               # (by model and by a chunk of 16 squares: far chunks aren't drawn)
+            groups.setdefault((p["model"], int(p["x"]) // CHUNK, int(p["z"]) // CHUNK), []).append(p)
+        for key, ps in groups.items():
+            name = key[0]
             if not self.plants.has(name):
                 continue
             mesh = self._plant_mesh(name)
             arr = np.array([[p["x"], p.get("y", 0.0), p["z"], p["yaw"], p["scale"], p.get("bright", 1.0)] for p in ps],
                            np.float32)
+            # (a vertex array of its own: the model's vertices and indices, and this chunk's instances)
+            vao = GL.glGenVertexArrays(1)
+            GL.glBindVertexArray(vao)
+            GL.glBindBuffer(GL.GL_ARRAY_BUFFER, mesh.vbo)
+            GL.glEnableVertexAttribArray(0)
+            GL.glVertexAttribPointer(0, 3, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(0))
+            GL.glEnableVertexAttribArray(1)
+            GL.glVertexAttribPointer(1, 3, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(12))
+            GL.glBindBuffer(GL.GL_ELEMENT_ARRAY_BUFFER, mesh.ebo)
             buf = GL.glGenBuffers(1)
-            GL.glBindVertexArray(mesh.vao)
             GL.glBindBuffer(GL.GL_ARRAY_BUFFER, buf)
             GL.glBufferData(GL.GL_ARRAY_BUFFER, arr.nbytes, arr, GL.GL_STATIC_DRAW)
-            import ctypes
             GL.glEnableVertexAttribArray(2)
             GL.glVertexAttribPointer(2, 4, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(0))
             GL.glVertexAttribDivisor(2, 1)
@@ -250,7 +261,7 @@ class Renderer:
             GL.glVertexAttribPointer(3, 2, GL.GL_FLOAT, GL.GL_FALSE, 24, ctypes.c_void_p(16))
             GL.glVertexAttribDivisor(3, 1)
             GL.glBindVertexArray(0)
-            self.inst[name] = (buf, len(ps), mesh)
+            self.inst[key] = (vao, buf, len(ps), mesh)
 
     def _plant_mesh(self, name):
         if name not in self.plant_meshes:
@@ -319,8 +330,14 @@ class Renderer:
         # the props
         self.plant.use()
         self.plant.vec("uTint", (1, 1, 1) if outdoor else tuple(min(1.0, t) * 0.9 for t in L.tint))
-        for _buf, n, mesh in self.inst.values():
-            GL.glBindVertexArray(mesh.vao)
+        fx, fz = math.sin(g.yaw), -math.cos(g.yaw)
+        reach = 70.0 if outdoor else 40.0
+        for (name, chx, chz), (vao, _buf, n, mesh) in self.inst.items():
+            dx, dz = (chx + 0.5) * CHUNK - g.x, (chz + 0.5) * CHUNK - g.z
+            d = math.hypot(dx, dz)
+            if d > reach + CHUNK or (d > CHUNK * 1.2 and (dx * fx + dz * fz) / d < -0.45):
+                continue                                                # (too far, or well behind him)
+            GL.glBindVertexArray(vao)
             GL.glDrawElementsInstanced(GL.GL_TRIANGLES, mesh.count, GL.GL_UNSIGNED_INT, None, n)
         GL.glBindVertexArray(0)
         # Claude and Magic's things: on the walls and floors, hanging, standing
@@ -445,10 +462,12 @@ class Renderer:
             glow = (0.0, 0.08, 0.2)
         elif m.status.get("venom"):
             glow = (0.03, 0.15, 0.0)
-        self._figure(fig["model"], fig, m.x, m.y + m.lift, m.z, m.yaw, m.size, m.anim, cue, m.hit_flash, m.dead, alpha, glow,
+        flip = min(1.0, (g.time - m.dead_time) / FLIP_TIME) if m.dead else 0.0
+        self._figure(fig["model"], fig, m.x, m.y + (m.lift * (1 - flip)), m.z, m.yaw, m.size, m.anim, cue, m.hit_flash,
+                     m.dead, alpha, glow, flip=flip,
                      speed=1.0 if "chill" not in m.status else 0.55)
 
-    def _figure(self, model_name, fig, x, y, z, yaw, size, st, cue, flash, dead, alpha, glow, speed=1.0):
+    def _figure(self, model_name, fig, x, y, z, yaw, size, st, cue, flash, dead, alpha, glow, speed=1.0, flip=0.0):
         try:
             G = self.gpu_figure(model_name)
         except KeyError:
@@ -467,10 +486,15 @@ class Renderer:
         t = (self.anim_now - st.get("since", 0)) * (1.0 if once else speed)
         if st.get("once") and clip and t > M.clips[clip].length and not dead:
             st["clip"] = None                                   # (done: back to walking or idling next frame)
-        J = M.skin_matrices(clip, t, once=bool(st.get("once")))
+        if dead:                                       # (the dead go stiff: they keep their standing pose, and flip)
+            J = M.skin_matrices("idle" if M.has("idle") else None, 0.0)
+        else:
+            J = M.skin_matrices(clip, t, once=bool(st.get("once")))
         model = gl.model_matrix(x, y, z, yaw, s)
         offset = np.identity(4, np.float32)
         offset[:3, 3] = (-G.centre[0], -float(G.lo[1]), -G.centre[1])
+        if flip > 0:
+            model = model @ _flip_matrix(G, flip)
         self.fig.mat4("uModel", model @ offset)
         self.fig.mat4("uJoints", J, len(J))
         tint = fig.get("tint")
@@ -659,6 +683,33 @@ class Renderer:
 def _rot_x(a):
     c, s = math.cos(a), math.sin(a)
     return np.array([[1, 0, 0, 0], [0, c, -s, 0], [0, s, c, 0], [0, 0, 0, 1]], np.float32)
+
+
+FLIP_TIME = 0.45
+
+
+def _flip_matrix(G, k):
+    """A dead figure flipping over, k from 0 to 1, in its own units (feet at 0, centred): one that stands tall falls
+    flat on its back; one that's long or round (a rat, a wolf, a blob) rolls over belly-up - with a little hop."""
+    lo, hi = G.lo, G.hi
+    h = float(hi[1] - lo[1])
+    depth = float(hi[2] - lo[2])
+    e = 1 - (1 - k) ** 3                                  # (quick, then settling)
+    hop = math.sin(min(1.0, k) * math.pi) * h * 0.25
+    if h > depth * 1.15:                                  # a biped: onto its back
+        a = -math.pi / 2 * e
+        R = _rot_x(a)
+        T = np.identity(4, np.float32)
+        T[1, 3] = depth / 2 * e + hop
+        return T @ R
+    a = math.pi * e                                       # four legs or none: belly-up, rolled about its length
+    pivot = np.identity(4, np.float32)
+    pivot[1, 3] = h / 2
+    back = np.identity(4, np.float32)
+    back[1, 3] = -h / 2
+    T = np.identity(4, np.float32)
+    T[1, 3] = hop
+    return T @ pivot @ _rot_z(a) @ back
 
 
 def _rot_y(a):
