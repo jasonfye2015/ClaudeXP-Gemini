@@ -258,7 +258,7 @@ class Game:
         if self.depth == 0 and L.portal and math.hypot(L.portal[0] - self.x, L.portal[1] - self.z) < 2.0:
             return ("mouth",), "Go down into the Deep"
         for i, c in enumerate(L.chests):
-            if not c["opened"] and math.hypot(c["x"] - self.x, c["z"] - self.z) < 1.3:
+            if not c["opened"] and not c.get("broken") and math.hypot(c["x"] - self.x, c["z"] - self.z) < 1.3:
                 return ("chest", i), "Open the chest"
         if self.depth and L.stairs and math.hypot(L.stairs[0] - self.x, L.stairs[1] - self.z) < 1.4:
             if L.guardian and not self.guardian_down:
@@ -280,6 +280,7 @@ class Game:
         if c["opened"]:
             return
         c["opened"] = True
+        c["opened_at"] = self.time                          # (its lid swings back from now)
         mark = len(self.events)
         p, rng, depth = self.player, self.rng, max(1, self.depth)
         find = p.bonus().get("find", 0)
@@ -614,7 +615,8 @@ class Game:
                     if (b.x - x) ** 2 + (b.z - z) ** 2 < (r + b.radius) ** 2 and y - 0.05 < b.y < y + h + 0.05:
                         thing["hurt"] = thing.get("hurt", 0) + b.dmg
                         self._spark(b.x, b.y, b.z, b.element, "impact")
-                        if thing["hurt"] >= 8 + 3 * max(1, self.depth) ** 0.5:
+                        tough = 1.6 if "opened" in thing else 1.0      # (a chest is stouter than a barrel)
+                        if thing["hurt"] >= (8 + 3 * max(1, self.depth) ** 0.5) * tough:
                             self.smash(thing, x, y, z, h)
                         else:
                             self.events.append(("thud", (x, y + h * 0.5, z)))
@@ -623,8 +625,11 @@ class Game:
 
     def smash(self, thing, x, y, z, h):
         L = self.level
+        chest = "opened" in thing
+        if chest and not thing["opened"]:                   # (shot open before it was opened: its things all the same)
+            self.open_chest(next(i for i, c in enumerate(L.chests) if c is thing))
         L.smash(thing)
-        name = thing.get("model") or thing.get("name")
+        name = "fu.table" if chest else (thing.get("model") or thing.get("name"))
         self.events.append(("break", (x, y, z), name, h))
         for _ in range(9):                                       # (the splinters)
             a = self.rng.uniform(0, math.tau)
@@ -634,6 +639,8 @@ class Game:
                             "floor": y, "size": self.rng.uniform(0.05, 0.11), "pic": name})
         p, rng = self.player, self.rng
         got = []
+        if chest:
+            return
         if rng.random() < 0.3:
             n = max(1, I.gold_for(max(1, self.depth), rng, p.bonus().get("find", 0)) // 2)
             p.gold += n

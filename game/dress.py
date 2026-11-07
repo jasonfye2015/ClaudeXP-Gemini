@@ -211,8 +211,14 @@ def _wall(L, x, y, dx, dy, y0, w, h, name):
 
 
 def chest(L, x, y, rng, guard=None, note=None, rich=1.0):
-    L.chests.append({"x": x + 0.5, "z": y + 0.5, "y": float(L.floor[y, x]), "opened": False,
-                     "guard": [g for g in (guard or []) if g in D.MONSTERS], "rich": rich, "note": note})
+    """A chest on square (x, y), its lid's front turned away from the wall behind it (if there is one)."""
+    yaw = rng.choice([0.0, 1.5708, 3.1416, -1.5708])
+    for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+        if not L.open_at(x + dx, y + dy):
+            yaw = math.atan2(dx, -dy)                        # (its front, +z in the model, faces away from the wall)
+            break
+    L.chests.append({"x": x + 0.5, "z": y + 0.5, "y": float(L.floor[y, x]), "opened": False, "broken": False,
+                     "yaw": yaw, "guard": [g for g in (guard or []) if g in D.MONSTERS], "rich": rich, "note": note})
 
 
 def place_piece(L, room, piece, rng):

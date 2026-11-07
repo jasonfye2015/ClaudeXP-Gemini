@@ -147,3 +147,39 @@ def test_every_item_has_its_picture():
     names += [M["other"][k] for k in ("potion:health", "potion:mana", "scroll", "gold_pile", "coin")]
     missing = [n for n in names if not (folder / n).exists()]
     assert not missing, missing
+
+
+def test_a_chest_shot_open_and_shot_to_pieces():
+    """Shot before it's opened, a chest gives its things as if opened (and its guards wake); shot after, it only
+    breaks. Either way it stands in the way no longer."""
+    from claudenites.game.world import Bolt
+
+    def shoot(g, c):
+        L = g.level
+        dx, dz = next((dx, dz) for dx, dz in ((-1, 0), (1, 0), (0, -1), (0, 1)) if L.open_at(int(c["x"]) + dx, int(c["z"]) + dz))
+        for _ in range(40):
+            g.bolts = [Bolt(c["x"] + dx * 0.7, c["y"] + 0.3, c["z"] + dz * 0.7, -dx * 12, 0, -dz * 12, 12, "arcane")]
+            for _ in range(8):
+                g._bolts(1 / 60)
+            if c.get("broken"):
+                return True
+        return False
+    g = Game.new(seed=31)
+    g.go_floor(4)
+    L = g.level
+    c = L.chests[0]
+    c["guard"] = ["Skeleton"]
+    gold, things, n = g.player.gold, len(g.player.inventory), len(g.monsters)
+    assert not L.can_stand(c["x"], c["z"], 0.24, c["y"])
+    assert shoot(g, c)
+    assert c["opened"] and c["broken"] and g.player.gold > gold and len(g.player.inventory) > things
+    assert len(g.monsters) == n + 1 and g.drops
+    assert L.can_stand(c["x"], c["z"], 0.24, c["y"])
+    assert g.near()[0] != ("chest", 0)
+    d = L.chests[1]
+    g.x, g.z = d["x"] + 0.9, d["z"]
+    g.interact()
+    assert d["opened"] and not d.get("broken")
+    gold = g.player.gold
+    assert shoot(g, d)
+    assert d["broken"] and g.player.gold == gold                     # (emptied already: nothing more in it)
