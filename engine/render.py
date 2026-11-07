@@ -63,9 +63,88 @@ void main() { vec3 p = aPos + vec3(0.0, uLift, 0.0); vPos = p; vNrm = aNrm; vUV 
 WORLD_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in float vShade;
 uniform sampler2DArray uTex; uniform vec3 uTint; uniform float uSnow; uniform float uWet;
+uniform sampler2D uMap; uniform vec2 uMapN; uniform float uGBlend; uniform float uGrassL; uniform float uDirtL;
+uniform float uTime; uniform float uDapple; uniform float uMud; uniform float uAutumn;
 out vec4 frag;
 """ + LIGHTING + """
-void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint * vShade;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y); }
+vec4 cellAt(vec2 c) { return texture(uMap, (c + 0.5) / uMapN); }
+float kindAt(vec2 c) { return floor(cellAt(c).b * 255.0 + 0.5); }
+// the ground, blended as Claude and Magic's is (its uGBlend): the neighbour's ground fading in at a square's edge along a
+// line the noise breaks; big soft patches so the tiling doesn't show; the grass worn to earth where the feet go; dark mud
+// at the water's banks; the sun dappled under the trees; autumn's leaves drifted at the walls; the earth muddied by rain
+vec3 ground(vec3 t) {
+    vec2 cw = vPos.xz, cell = floor(cw), f = cw - cell;
+    vec4 here = cellAt(cell);
+    float me = floor(here.b * 255.0 + 0.5);
+    if (me < 0.5 || here.g > 0.5) return t;
+    if (abs(me - 1.0 - vLayer) > 0.5) t = texture(uTex, vec3(vUV, me - 1.0)).rgb * uTint;   // (the forest floor: drawn as the map says)
+    float n = (vnoise(cw * 2.3) - 0.5) * 0.55 + (vnoise(cw * 7.0) - 0.5) * 0.25;
+    float bestW = 0.0, bestL = -1.0;
+    for (int k = 0; k < 8; k++) {
+        vec2 off = k == 0 ? vec2(-1.0, 0.0) : k == 1 ? vec2(1.0, 0.0) : k == 2 ? vec2(0.0, -1.0) : k == 3 ? vec2(0.0, 1.0) :
+                   k == 4 ? vec2(-1.0, -1.0) : k == 5 ? vec2(1.0, -1.0) : k == 6 ? vec2(-1.0, 1.0) : vec2(1.0, 1.0);
+        float other = kindAt(cell + off);
+        if (other < 0.5 || other == me) continue;
+        vec2 e = vec2(off.x > 0.0 ? 1.0 - f.x : f.x, off.y > 0.0 ? 1.0 - f.y : f.y);
+        float dist = off.x != 0.0 && off.y != 0.0 ? length(e) : off.x != 0.0 ? e.x : e.y;
+        float w = (1.0 - smoothstep(0.0, 0.34, dist + n * 0.8 - 0.06)) * 0.5;   // (each side gives half: half and half at the line)
+        if (w > bestW) { bestW = w; bestL = other - 1.0; }
+    }
+    if (bestL >= 0.0) t = mix(t, texture(uTex, vec3(vUV, bestL)).rgb * uTint, bestW * 0.95);
+    float big = vnoise(cw * 0.13) * 0.65 + vnoise(cw * 0.37 + 7.0) * 0.35, hue = vnoise(cw * 0.21 + 3.0);
+    t *= 0.84 + 0.32 * big;
+    bool grass = abs(me - 1.0 - uGrassL) < 0.5, earth = abs(me - 1.0 - uDirtL) < 0.5;
+    if (grass) t = mix(t, t * vec3(1.08, 1.05, 0.82), smoothstep(0.55, 0.85, hue) * 0.6);
+    float worn = here.a;
+    if (worn > 0.02 && grass && uDirtL >= 0.0) {
+        float wn = vnoise(cw * 3.7) * 0.6 + vnoise(cw * 11.0) * 0.4;
+        float k = smoothstep(0.5, 0.85, worn * 1.1 - wn * 0.6 + 0.1);
+        t = mix(t, texture(uTex, vec3(vUV, uDirtL)).rgb * uTint * (0.84 + 0.32 * big), k * 0.85);
+    }
+    vec2 wq = cw / uMapN;
+    {   // the banks: wet mud from the water's edge, fading into the grass in a ragged line
+        vec2 o = 0.55 / uMapN;
+        float wn = max(max(texture(uMap, wq + vec2(o.x, 0.0)).g, texture(uMap, wq - vec2(o.x, 0.0)).g),
+                       max(texture(uMap, wq + vec2(0.0, o.y)).g, texture(uMap, wq - vec2(0.0, o.y)).g));
+        wn = max(wn, 0.8 * max(max(texture(uMap, wq + o).g, texture(uMap, wq - o).g),
+                               max(texture(uMap, wq + vec2(o.x, -o.y)).g, texture(uMap, wq + vec2(-o.x, o.y)).g)));
+        float bank = smoothstep(0.2, 0.48, wn + (vnoise(cw * 4.5) - 0.5) * 0.2);
+        if (bank > 0.0) t = mix(t, mix(vec3(0.2, 0.16, 0.11), vec3(0.33, 0.27, 0.19), vnoise(cw * 11.0)), bank * 0.88);
+    }
+    vec2 o4 = 0.4 / uMapN;
+    float edge = step(0.7, texture(uMap, wq + vec2(o4.x, 0.0)).r) + step(0.7, texture(uMap, wq - vec2(o4.x, 0.0)).r) +
+                 step(0.7, texture(uMap, wq + vec2(0.0, o4.y)).r) + step(0.7, texture(uMap, wq - vec2(0.0, o4.y)).r);
+    if (uAutumn > 0.0) {   // leaves drifted against the walls and the trunks: scattered, turned, leaf-shaped
+        float lf = smoothstep(0.45, 0.8, min(edge, 1.0) * 0.8 + vnoise(cw * 4.0) * 0.5 - 0.1) * uAutumn
+                   + smoothstep(0.78, 0.95, vnoise(cw * 0.9 + 3.0)) * 0.5 * uAutumn;   // (and a few blown into drifts)
+        vec2 lq = cw * 16.0 + vec2(vnoise(cw * 5.0), vnoise(cw * 5.0 + 9.0)) * 1.6, lc = floor(lq);
+        float lh = hash(lc), la = hash(lc + 3.3) * 6.28;
+        vec2 lp = fract(lq) - 0.5 - (vec2(hash(lc + 1.1), hash(lc + 2.2)) - 0.5) * 0.4;
+        lp = mat2(cos(la), sin(la), -sin(la), cos(la)) * lp;
+        float ld = length(lp * vec2(1.0, 1.9)) + step(hash(lc + 4.4), 0.45);
+        vec3 lcol = lh < 0.33 ? vec3(0.62, 0.28, 0.08) : lh < 0.66 ? vec3(0.78, 0.52, 0.12) : vec3(0.45, 0.2, 0.08);
+        t = mix(t, lcol * (0.75 + 0.3 * hash(lc + 5.5)), min(lf, 1.0) * (1.0 - smoothstep(0.28, 0.34, ld)) * 0.85);
+    }
+    if (uMud > 0.0 && (earth || grass)) {   // after rain: the earth and the worn grass muddied, in patches
+        float md = earth ? 0.55 + 0.45 * vnoise(cw * 4.6) : smoothstep(0.4, 0.75, vnoise(cw * 1.7) + worn * 0.4);
+        t = mix(t, t * vec3(0.55, 0.5, 0.45), md * uMud * 0.75);
+    }
+    if (uDapple > 0.0) {   // the sun broken by the leaves into soft patches that drift in the breeze, under and beside the trees
+        vec2 o = 1.3 / uMapN, j = (vec2(vnoise(cw * 1.1), vnoise(cw * 1.1 + 5.0)) - 0.5) * 1.2 / uMapN;
+        float cover = 0.0;
+        for (int k = 0; k < 8; k++) { float a = float(k) * 0.785; cover += min(1.0, texture(uMap, wq + j + vec2(cos(a), sin(a)) * o).r * 2.0); }
+        cover = cover / 8.0 + (vnoise(cw * 0.45) - 0.5) * 0.5;
+        float tm = uTime * 0.05, sp = vnoise(cw * 3.4 + vec2(tm, tm * 0.6)) * 0.55 + vnoise(cw * 8.5 - vec2(tm * 1.7, tm)) * 0.45;
+        t *= mix(1.0, mix(0.8, 1.3, smoothstep(0.46, 0.62, sp)), uDapple * smoothstep(0.0, 0.6, cover));
+    }
+    return t;
+}
+void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint;
+              if (uGBlend > 0.0 && uMapN.x > 0.0 && vNrm.y > 0.9 && vPos.y < 0.6) base = mix(base, ground(base), uGBlend);
+              base *= vShade;
               float up = smoothstep(0.5, 0.9, vNrm.y);
               base = mix(base, vec3(0.86, 0.89, 0.95) * vShade, uSnow * up * (0.75 + 0.25 * texture(uTex, vec3(vUV * 3.0, vLayer)).g));
               base *= 1.0 - uWet * 0.3 * up;
@@ -288,12 +367,23 @@ class Renderer:
         self.arcs = []
         self._version = 0
         self.proj_view = np.identity(4, np.float32)
+        self.map_tex, self.map_n = None, (0.0, 0.0)
+        self.ground_blend = True                             # (the ground's blending: Options, on/off)
 
     # ---- the level ---------------------------------------------------------------------------------------------
     def set_level(self, L):
         self.level = L
         layer_of = lambda i: self.layers.get(L.textures[int(i)], 0) if int(i) < len(L.textures) else 0   # noqa: E731
         self.level_mesh.upload(levelmesh.build(L, layer_of))
+        if getattr(self, "map_tex", None):
+            GL.glDeleteTextures(1, [self.map_tex])
+            self.map_tex = None
+        self.map_n = (0.0, 0.0)
+        if L.outdoor:                                      # (the ground's map, for it to blend: engine/groundmap.py)
+            from . import groundmap
+            M = groundmap.build(L, layer_of)
+            self.map_tex = gl.texture_2d(Image.fromarray(M, "RGBA"), srgb=False, repeat=False, mip=False)
+            self.map_n = (float(L.w), float(L.h))
         self.dress_mesh.upload(dressmesh.static(L, self.art_layers.get))
         from ..game import dress as _dress
         theme = _dress.CM_THEME_OF_BAND[min(9, max(0, (L.depth - 1) // 10))]
@@ -420,6 +510,18 @@ class Renderer:
         self.world.vec("uTint", L.tint)
         self.world.float("uSnow", min(1.0, (atm["snow"] * 0.9 + atm["frost"] * 0.35)) if atm else 0.0)
         self.world.float("uWet", min(1.0, atm["rain"] + 0.0) if atm else 0.0)
+        blend = 1.0 if outdoor and self.map_tex and self.ground_blend else 0.0
+        self.world.float("uGBlend", blend)
+        self.world.vec("uMapN", self.map_n if blend else (0.0, 0.0))
+        self.world.float("uGrassL", float(self.layers.get("ground.grass", -1)))
+        self.world.float("uDirtL", float(self.layers.get("ground.dirt", -1)))
+        self.world.float("uTime", now)
+        self.world.float("uDapple", min(1.0, atm["sun_disc"]) * 0.9 if atm and blend else 0.0)
+        self.world.float("uMud", atm.get("mud", 0.0) if atm and blend else 0.0)
+        self.world.float("uAutumn", atm.get("autumn", 0.0) if atm and blend else 0.0)
+        GL.glActiveTexture(GL.GL_TEXTURE3)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, self.map_tex or 0)
+        self.world.int("uMap", 3)
         GL.glActiveTexture(GL.GL_TEXTURE0)
         GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.tex_array)
         self.world.int("uTex", 0)

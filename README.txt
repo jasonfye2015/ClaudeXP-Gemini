@@ -51,6 +51,14 @@ Playing
   (draining over a day), its lightning flickers down and its thunder rolls. The dial under the map shows the hour,
   the day, the season, the weather (above, in the Deep) and the moon; K opens the Calendar.
 
+  The ground blends as Claude and Magic's does (engine/groundmap.py and the level shader): grass, earth, cobbles,
+  flags, needles, moss and litter don't meet in straight lines - each square's neighbour fades into it along a
+  ragged edge - and big soft patches, lighter and darker, greener and yellower, hide the tiling. The ways people walk
+  between the stalls, the Deep's mouth and the cabin are worn to earth in patches; under close trees the grass gives
+  way to moss and leaf litter; the pond and the stream have dark wet banks; the sun comes through the leaves in
+  dappled patches that drift in the breeze; in autumn the leaves drift against the walls; after rain the earth is
+  muddy. (Options: Ground blending, on/off.)
+
   The title: a title card - the name over Thornwick at dusk, the camera circling the Deep's mouth - and then one page
   with Play (the three slots as cards), Records, Options, Keys and Credits.
 

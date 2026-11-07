@@ -85,3 +85,23 @@ def test_falling_in_the_forest():
     p.life = 0
     g.step(0.02, Input())
     assert g.depth == 0 and g.in_town() and g.run_floor == 9 and p.stats["deaths"] == 0 and p.life == p.max_life()
+
+
+def test_the_ground_blends():
+    """The ground's map (engine/groundmap.py): each open square's ground for the shader, none on a wall; the water;
+    the trunks and walls as cover; the forest floor under close trees; the ways people walk worn."""
+    from claudenites.engine import groundmap as G
+    T = levels.town(3)
+    M = G.build(T, lambda i: i)
+    assert M.shape == (T.h, T.w, 4)
+    assert (M[..., 2][T.solid] == 0).all() and (M[..., 2][~T.solid] > 0).all()
+    for x, y in list(T.water)[:20]:
+        assert M[y, x, 1] == 255
+    assert (M[..., 0][T.solid] == 255).all() and (M[..., 0] == 128).any()
+    ff = G.forest_floor(T, G._trees(T))
+    assert any(v == "ground.litter" for v in ff.values()) and any(v == "ground.moss" for v in ff.values())
+    for (x, y), name in ff.items():
+        assert M[y, x, 2] == T.textures.index(name) + 1
+    n = T.npcs[0]
+    assert M[int(n["z"]), int(n["x"]), 3] > 150                          # (where a vendor stands is well trodden)
+    assert (M[..., 3] > 60).sum() > 100                                  # (and the ways between)

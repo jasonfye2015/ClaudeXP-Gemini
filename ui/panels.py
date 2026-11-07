@@ -231,7 +231,7 @@ class PausePanel(theme.Ornate):
             b = QPushButton(text)
             b.clicked.connect(fn)
             lay.addWidget(b)
-        for key, name in (("music", "Music"), ("sound", "Sound")):
+        for key, name in (("music", "Music"), ("sound", "Sound"), ("blend", "Ground blending")):
             on_ = shell.settings.get(key, True)
             b = QPushButton(f"{name}: {'on' if on_ else 'off'}")
             b.clicked.connect(lambda _=False, k=key, v=on_: (shell.set_setting(k, not v), shell.pause(), shell.pause()))

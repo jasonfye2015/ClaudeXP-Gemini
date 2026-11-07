@@ -22,6 +22,9 @@ The painted art and the set pieces (assets/cm): Claude and Magic's own, as it dr
 furniture, landmarks and set-piece things) and writes them (its sixty set-piece rooms and their lines), exported from
 the running game by tools/export_cm_art.py.
 
+The ground's blending (engine/groundmap.py, engine/render.py's WORLD_FS): Claude and Magic's own, carried over from its
+shader and its ground's wear and forest floor.
+
 The music: ClaudeRPG's own - its sound engine (SND) and its worlds' music styles (MSTY), by Kithylin, MIT licence
 (ClaudeGames/clauderpg/game/LICENSE) - carried over into Python in engine/music.py, note for note.
 
