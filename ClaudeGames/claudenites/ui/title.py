@@ -13,29 +13,28 @@ from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QStackedLayout, QVBoxLayout, QWidget
 
 from ..game import data as D
+from . import theme
 from .icons import icon
 
 VERSION = "v0.5"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
-CSS = """
+CSS = theme.CSS + """
 QWidget#title { background: transparent; }
-QFrame#sheet { background: rgba(18, 14, 11, 228); border: 2px solid #6A5638; border-radius: 12px; }
-QFrame#slot { background: rgba(34, 28, 22, 235); border: 2px solid #4A3C2A; border-radius: 10px; }
-QFrame#slot[on="true"] { border: 2px solid #E8C060; background: rgba(52, 40, 26, 240); }
-QLabel { color: #E8DCC0; font-family: Georgia; font-size: 14px; background: transparent; }
-QLabel#where { color: #F2D68A; font-size: 19px; font-weight: bold; }
-QLabel#slotn { color: #A89878; font-size: 12px; letter-spacing: 2px; }
-QLabel#dim { color: #B8A888; font-size: 13px; }
-QLabel#head { color: #F2D68A; font-size: 30px; font-weight: bold; }
-QLabel#h2 { color: #F2D68A; font-size: 18px; font-weight: bold; }
-QPushButton { background: #3A2E20; color: #F0E4C8; border: 1px solid #7A6440; border-radius: 6px; padding: 7px 16px;
-              font-family: Georgia; font-size: 14px; }
-QPushButton:hover { background: #4E3E2A; border-color: #C8A860; }
+QFrame#slot { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(50,38,26,235), stop:1 rgba(24,18,12,235));
+              border: 2px solid #5A4630; border-radius: 10px; }
+QFrame#slot[on="true"] { border: 2px solid #F0C868;
+              background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 rgba(84,62,34,240), stop:1 rgba(36,26,14,240)); }
+QFrame#slot:hover { border-color: #B89048; }
+QLabel#where { color: #F6D98A; font-size: 19px; font-weight: bold; }
+QLabel#slotn { color: #B8A078; font-size: 12px; letter-spacing: 2px; }
+QLabel#dim { color: #C0B090; font-size: 13px; }
+QLabel#h2 { color: #F6D98A; font-size: 19px; font-weight: bold; }
 QPushButton#tab { min-width: 110px; }
-QPushButton#tab[on="true"] { border-color: #E8C060; color: #F2D68A; background: #4A321A; }
-QPushButton#big { font-size: 18px; padding: 9px 28px; background: #5A4020; border-color: #C8A060; }
-QPushButton#danger { background: #4A2018; border-color: #8A4030; }
+QPushButton#tab[on="true"] { border-color: #FFD878; color: #FFF0C0;
+              background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #9A7438, stop:1 #4A3218); }
+QPushButton#big { font-size: 19px; padding: 10px 34px; border-color: #F0C868;
+              background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A07838, stop:0.5 #6A4A20, stop:1 #3A2810); }
 """
 
 
@@ -199,8 +198,7 @@ class TitleScreen(QWidget):
             tabs.addWidget(b)
         tabs.addStretch(1)
         self.page_lay.addLayout(tabs)
-        sheet = QFrame()
-        sheet.setObjectName("sheet")
+        sheet = theme.Ornate()
         lay = QVBoxLayout(sheet)
         lay.setContentsMargins(26, 20, 26, 20)
         getattr(self, "_" + self.tab)(lay)

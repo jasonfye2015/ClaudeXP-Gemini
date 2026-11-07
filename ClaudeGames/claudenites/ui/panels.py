@@ -1,7 +1,9 @@
 """The panels laid over the view: the title (three save slots), the pause menu, Claude's pack (gear, wands and the
 parts in them), the vendors, and the choices at the stairs and the Deep's mouth."""
-from PySide6.QtCore import QRectF, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+import math
+
+from PySide6.QtCore import QEasingCurve, QPointF, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPen, QRadialGradient
 from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
 
 from shiboken6 import isValid
@@ -10,26 +12,10 @@ from ..game import data as D
 from ..game import items as I
 from ..game import shop
 
+from . import theme
 from .icons import icon, rarity_colour
 
-CSS = """
-QWidget#overlay { background: rgba(6, 6, 10, 165); }
-QFrame#panel { background: #17130F; border: 2px solid #6A5638; border-radius: 10px; }
-QFrame#card { background: #221C16; border: 1px solid #4A3C2A; border-radius: 8px; }
-QLabel { color: #E8DCC0; font-family: Georgia; font-size: 14px; }
-QLabel#title { color: #F2D68A; font-size: 34px; font-weight: bold; }
-QLabel#heading { color: #F2D68A; font-size: 20px; font-weight: bold; }
-QLabel#sub { color: #B8A888; font-size: 13px; font-style: italic; }
-QLabel#small { color: #C8BCA0; font-size: 12px; font-family: 'Segoe UI'; }
-QPushButton { background: #3A2E20; color: #F0E4C8; border: 1px solid #7A6440; border-radius: 6px; padding: 7px 16px;
-              font-family: Georgia; font-size: 14px; }
-QPushButton:hover { background: #4E3E2A; border-color: #C8A860; }
-QPushButton:disabled { color: #7A7060; border-color: #4A4030; background: #2A2418; }
-QPushButton#danger { background: #4A2018; border-color: #8A4030; }
-QScrollArea { background: transparent; border: none; }
-QScrollArea > QWidget > QWidget { background: transparent; }
-QToolTip { background: #1E1912; color: #F0E4C8; border: 1px solid #8A7048; font-family: 'Segoe UI'; font-size: 12px; }
-"""
+CSS = theme.CSS
 
 
 def tooltip(it, player=None):
@@ -61,38 +47,99 @@ def tooltip(it, player=None):
 
 
 class Tile(QPushButton):
-    """An item's square: its picture in its rarity's frame (or an empty slot's word)."""
+    """An item's square: a sunken slot, the item's rarity glowing behind its picture, a light when the mouse is on it,
+    a pulsing gold edge when chosen (and a pulsing blue one where a chosen thing can go)."""
+    _pulse = None
 
     def __init__(self, item=None, empty="", size=60, parent=None):
         super().__init__(parent)
         self.item, self.empty, self.size_ = item, empty, size
         self.selected = False
         self.hot = False
+        self.hover = 0.0
         self.setFixedSize(size, size)
         self.setCursor(Qt.PointingHandCursor)
+        self.setAttribute(Qt.WA_Hover, True)
+        self._anim = QVariantAnimation(self)
+        self._anim.setDuration(140)
+        self._anim.valueChanged.connect(self._set_hover)
+
+    def _set_hover(self, v):
+        self.hover = float(v)
+        self.update()
+
+    def enterEvent(self, e):
+        self._anim.stop()
+        self._anim.setStartValue(self.hover)
+        self._anim.setEndValue(1.0)
+        self._anim.start()
+        super().enterEvent(e)
+
+    def leaveEvent(self, e):
+        self._anim.stop()
+        self._anim.setStartValue(self.hover)
+        self._anim.setEndValue(0.0)
+        self._anim.start()
+        super().leaveEvent(e)
 
     def sizeHint(self):
         return QSize(self.size_, self.size_)
 
+    def showEvent(self, e):
+        if (self.selected or self.hot) and not getattr(self, "_t", None):
+            self._t = QTimer(self)
+            self._t.timeout.connect(self.update)
+            self._t.start(50)
+        super().showEvent(e)
+
     def paintEvent(self, _e):
+        import time as _time
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
-        r = QRectF(1, 1, self.width() - 2, self.height() - 2)
-        p.setBrush(QColor("#2A221A") if not self.underMouse() else QColor("#3A3024"))
-        frame = rarity_colour(self.item) if self.item else QColor("#4A3C2A")
-        if self.hot:
-            frame = QColor("#80E0FF")
+        r = QRectF(1.5, 1.5, self.width() - 3, self.height() - 3)
+        g = QLinearGradient(r.topLeft(), r.bottomLeft())
+        g.setColorAt(0, QColor(12, 9, 6))
+        g.setColorAt(1, QColor(40, 31, 22))
+        p.setPen(Qt.NoPen)
+        p.setBrush(g)
+        p.drawRoundedRect(r, 7, 7)
+        rc = rarity_colour(self.item) if self.item else QColor(90, 72, 50)
+        if self.item:                                           # (its rarity, glowing behind it)
+            glow = QRadialGradient(r.center(), r.width() * 0.62)
+            c0 = QColor(rc)
+            c0.setAlpha(int(70 + 60 * self.hover))
+            c1 = QColor(rc)
+            c1.setAlpha(0)
+            glow.setColorAt(0, c0)
+            glow.setColorAt(1, c1)
+            p.setBrush(glow)
+            p.drawRoundedRect(r, 7, 7)
+        if self.hover > 0:
+            hl = QColor(255, 230, 170, int(40 * self.hover))
+            p.setBrush(hl)
+            p.drawRoundedRect(r, 7, 7)
+        pulse = 0.5 + 0.5 * math.sin(_time.perf_counter() * 5)
         if self.selected:
-            frame = QColor("#FFFFFF")
-        p.setPen(QPen(frame, 2 if (self.item or self.hot) else 1))
-        p.drawRoundedRect(r, 6, 6)
+            frame, width = QColor(255, 236, 170, int(170 + 85 * pulse)), 2.5
+        elif self.hot:
+            frame, width = QColor(110, 210, 255, int(140 + 115 * pulse)), 2.2
+        elif self.item:
+            frame, width = rc, 1.6
+        else:
+            frame, width = QColor(90, 72, 50), 1.0
+        p.setBrush(Qt.NoBrush)
+        p.setPen(QPen(QColor(6, 4, 2, 200), 3))
+        p.drawRoundedRect(r, 7, 7)
+        p.setPen(QPen(frame, width))
+        p.drawRoundedRect(r.adjusted(1, 1, -1, -1), 6, 6)
         if self.item:
-            s = self.size_ - 10
-            p.drawPixmap(5, 5, icon(self.item, s))
+            sz = self.size_ - 10
+            lift = int(round(self.hover * 2))
+            p.drawPixmap(5, 5 - lift, icon(self.item, sz))
         elif self.empty:
-            p.setPen(QColor("#7A6A50"))
-            f = p.font()
-            f.setPointSize(7)
+            p.setPen(QColor(150, 128, 96))
+            f = QFont(theme.HEAD, 8)
+            f.setItalic(True)
             p.setFont(f)
             p.drawText(r, Qt.AlignCenter | Qt.TextWordWrap, self.empty)
         p.end()
@@ -115,21 +162,21 @@ def _label(text, name=None, wrap=True):
 
 
 class Overlay(QWidget):
-    """The dimmed layer over the view, holding one panel in its middle (or, full, a panel that is the whole screen:
-    the title)."""
+    """The layer over the view: a vignette darkening in, and one panel in its middle, fading and rising in (or, full,
+    a panel that is the whole screen: the title)."""
 
     def __init__(self, parent, panel, full=False):
         super().__init__(parent)
         self.setObjectName("overlayfull" if full else "overlay")
-        self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(CSS)
         self.panel = panel
+        self.full = full
+        self.dark = 0.0
+        lay = QVBoxLayout(self)
         if full:
-            lay = QVBoxLayout(self)
             lay.setContentsMargins(0, 0, 0, 0)
             lay.addWidget(panel)
             return
-        lay = QVBoxLayout(self)
         lay.addStretch(1)
         row = QHBoxLayout()
         row.addStretch(1)
@@ -137,14 +184,35 @@ class Overlay(QWidget):
         row.addStretch(1)
         lay.addLayout(row)
         lay.addStretch(1)
-        self.panel = panel
+        self._a = QVariantAnimation(self)
+        self._a.setDuration(260)
+        self._a.setStartValue(0.0)
+        self._a.setEndValue(1.0)
+        self._a.setEasingCurve(QEasingCurve.OutCubic)
+        self._a.valueChanged.connect(self._step)
+        self._a.start()
+        theme.fade_in(panel, 240)
+
+    def _step(self, v):
+        self.dark = float(v)
+        self.update()
+
+    def paintEvent(self, e):
+        if self.full:
+            return
+        p = QPainter(self)
+        W, H = self.width(), self.height()
+        g = QRadialGradient(QPointF(W / 2, H / 2), max(W, H) * 0.7)
+        g.setColorAt(0, QColor(8, 6, 4, int(120 * self.dark)))
+        g.setColorAt(1, QColor(0, 0, 0, int(225 * self.dark)))
+        p.fillRect(self.rect(), g)
+        p.end()
 
 
 # ---- the menu -------------------------------------------------------------------------------------------------
-class PausePanel(QFrame):
+class PausePanel(theme.Ornate):
     def __init__(self, shell):
         super().__init__()
-        self.setObjectName("panel")
         self.setFixedWidth(420)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(30, 24, 30, 24)
@@ -176,10 +244,9 @@ class PausePanel(QFrame):
                              "small"))
 
 
-class ChoicePanel(QFrame):
+class ChoicePanel(theme.Ornate):
     def __init__(self, title, text, choices, width=480):
         super().__init__()
-        self.setObjectName("panel")
         self.setFixedWidth(width)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(30, 24, 30, 24)
@@ -194,12 +261,11 @@ class ChoicePanel(QFrame):
 
 
 # ---- the pack -------------------------------------------------------------------------------------------------
-class PackPanel(QFrame):
+class PackPanel(theme.Ornate):
     changed = Signal()
 
     def __init__(self, shell):
         super().__init__()
-        self.setObjectName("panel")
         self.setFixedSize(1040, 660)
         self.shell = shell
         self.player = shell.view.game.player
@@ -222,6 +288,7 @@ class PackPanel(QFrame):
         for k, slot in enumerate(D.GEAR_SLOTS):
             t = Tile(P.gear[slot], slot.title())
             t.selected = self.sel == ("gear", slot)
+            t.hot = bool(self.sel and self.sel[0] == "pack" and self.sel[1].get("slot") == slot and self.sel[1].get("type") == "gear")
             if P.gear[slot]:
                 t.setToolTip(tooltip(P.gear[slot], P))
             t.clicked.connect(lambda _=False, s=slot: self.pick(("gear", s)))
@@ -234,6 +301,8 @@ class PackPanel(QFrame):
             row = QHBoxLayout()
             t = Tile(w, f"Wand {i + 1}")
             t.selected = self.sel == ("wand", i)
+            t.hot = bool(self.sel and ((self.sel[0] == "pack" and self.sel[1].get("type") == "wand") or
+                                       (self.sel[0] == "wand" and self.sel[1] != i)))
             if w:
                 t.setToolTip(tooltip(w, P))
             t.clicked.connect(lambda _=False, i=i: self.pick(("wand", i)))
@@ -308,7 +377,8 @@ class PackPanel(QFrame):
         P = self.player
         it = self._selected_item()
         if it is None:
-            hint = "Choose a thing to see it. Choose a wand part, then a wand's empty slot, to set it."
+            hint = ("Choose a thing to see it. A wand, then a wand slot (1-4), readies it there; a ready wand, then "
+                    "another slot, swaps them; a part, then a wand's empty socket, sets it; gear, then its slot, wears it.")
             if self.sel and self.sel[0] == "socket":
                 hint = "An empty slot: choose a part in the pack, then this slot."
             lay.addWidget(_label(hint, "sub"))
@@ -323,8 +393,13 @@ class PackPanel(QFrame):
         if kind == "pack" and t == "gear":
             self._button(row, "Wear it", lambda: (P.equip(it), self.pick(None)))
         if kind == "pack" and t == "wand":
+            row.addWidget(_label("Ready in slot", "small", False))
             for i in range(D.WAND_SLOTS):
-                self._button(row, f"Ready as {i + 1}", lambda i=i: (P.ready_wand(it, i), self.pick(None)))
+                b = QPushButton(str(i + 1))
+                b.setFixedWidth(40)
+                b.setStyleSheet("padding: 6px 0px;")
+                b.clicked.connect(lambda _=False, i=i: (P.ready_wand(it, i), setattr(P, "active", i), self.pick(None)))
+                row.addWidget(b)
         if kind == "pack" and t == "part":
             row.addWidget(_label("Now choose a wand's slot (lit blue).", "small"))
         if kind == "pack":
@@ -377,6 +452,34 @@ class PackPanel(QFrame):
 
     def pick(self, sel):
         P = self.player
+        cur = self.sel
+        # a wand from the pack, then a wand's slot: ready it there (what was there goes back to the pack)
+        if sel and sel[0] == "wand" and cur and cur[0] == "pack" and cur[1].get("type") == "wand":
+            P.ready_wand(cur[1], sel[1])
+            P.active = sel[1]
+            self.shell.sounds.play("click", 0.5)
+            self.sel = None
+            self.build()
+            return
+        # one ready wand, then another slot: they change places (an empty slot: it moves there)
+        if sel and sel[0] == "wand" and cur and cur[0] == "wand" and cur[1] != sel[1] and P.wands[cur[1]] is not None:
+            a, b = cur[1], sel[1]
+            P.wands[a], P.wands[b] = P.wands[b], P.wands[a]
+            if P.active in (a, b):
+                P.active = b if P.active == a else a
+            if P.wands[P.active] is None:
+                P.active = next(k for k, w in enumerate(P.wands) if w)
+            self.shell.sounds.play("click", 0.5)
+            self.sel = None
+            self.build()
+            return
+        # a piece of gear from the pack, then its slot: wear it
+        if sel and sel[0] == "gear" and cur and cur[0] == "pack" and cur[1].get("type") == "gear" and cur[1]["slot"] == sel[1]:
+            P.equip(cur[1])
+            self.shell.sounds.play("click", 0.5)
+            self.sel = None
+            self.build()
+            return
         # a part chosen, then a slot: set it
         if sel and sel[0] == "socket" and self.sel and self.sel[0] == "pack" and self.sel[1].get("type") == "part":
             w = P.wands[sel[1]]
@@ -407,10 +510,9 @@ GREETINGS = {
 }
 
 
-class VendorPanel(QFrame):
+class VendorPanel(theme.Ornate):
     def __init__(self, shell, key):
         super().__init__()
-        self.setObjectName("panel")
         self.setFixedSize(1040, 700 if key == "sage" else 640)
         self.shell, self.key = shell, key
         self.g = shell.view.game
