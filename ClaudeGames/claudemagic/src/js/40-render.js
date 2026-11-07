@@ -162,11 +162,13 @@ void main() {
     if (uBankTint.w > 0.0 && uMapN > 0.0) {   // (v62.0) the banks in the water: what stands over it - the trees, a wall - is mirrored, darker than the sky
       vec2 bq = vWorld.xz / uMapN; float ob = 1.0 / uMapN, over = 0.0;
       for (int k = 0; k < 4; k++) { vec2 od = k == 0 ? vec2(ob, 0.0) : k == 1 ? vec2(-ob, 0.0) : k == 2 ? vec2(0.0, ob) : vec2(0.0, -ob); over = max(over, texture(uMap, bq + od).r); }
+      if (bq.x < 0.0 || bq.y < 0.0 || bq.x > 1.0 || bq.y > 1.0) over = 0.0;   // (v130.0: nothing stands over the open sea)
       float bank = smoothstep(0.2, 0.75, over) * uBankTint.w * (0.5 + 0.5 * fr) * (uSunK > 0.0 ? 1.0 : 0.4);
       seen = mix(seen, uBankTint.rgb * max(uAmbient, 0.25) * uTorch, bank); }
     vec3 wc = mix(base, seen, fr) + glint * mix(vec3(1.0, 0.95, 0.82), uSunCol.rgb, 0.6);   // (v59.0: the glint in the sun's colour)
     if (uMapN > 0.0) {                                                        // (v30.8) shallows to see into, a fish now and then, foam at the banks
       vec2 wq = vWorld.xz / uMapN; float o = 0.9 / uMapN, mS = min(texture(uMap, wq).g, min(min(texture(uMap, wq + vec2(o, 0.0)).g, texture(uMap, wq - vec2(o, 0.0)).g), min(texture(uMap, wq + vec2(0.0, o)).g, texture(uMap, wq - vec2(0.0, o)).g)));
+      bool offMap = wq.x < 0.0 || wq.y < 0.0 || wq.x > 1.0 || wq.y > 1.0; if (offMap) mS = 1.0;   // (v130.0: past the land's edge the water is the open sea - deep)
       float shallow = 1.0 - smoothstep(0.08, 0.85, mS), lk = uSunK > 0.0 ? 0.35 + 0.75 * uSunK * max(uAmbient, 0.2) : lw;
       vec2 bp = vWorld.xz * 6.0 + wn.xz * 0.35, bid = floor(bp), bf = fract(bp) - 0.5 - (vec2(hash(bid + 1.7), hash(bid + 4.2)) - 0.5) * 0.4;
       float stone = smoothstep(0.42, 0.22, length(bf)), weed = smoothstep(0.62, 0.8, vnoise(vWorld.xz * 2.2 + vec2(sin(tm * 0.6) * 0.15, 0.0)));
@@ -183,7 +185,7 @@ void main() {
         float weed = smoothstep(0.55, 0.8, vnoise(vWorld.xz * 6.0 + vec2(tm * 0.02, 0.0))) * shallow * uLily * 0.5;
         vec3 padCol = vec3(0.16, 0.36, 0.12) * (0.75 + 0.5 * hash(lid + 1.1)) * lk * uTorch * uGrade, weedCol = vec3(0.3, 0.5, 0.14) * lk * uTorch * uGrade;
         wc = mix(wc, weedCol, weed * 0.6); wc = mix(wc, padCol, clamp(pad, 0.0, 1.0) * 0.95); }
-      float edge = 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
+      float edge = offMap ? 0.0 : 1.0 - smoothstep(0.58, 0.8, texture(uMap, wq).g), fn = vnoise(vWorld.xz * 9.0 + vec2(tm * 0.3, -tm * 0.9 * (0.3 + flow)));
       wc = mix(wc, vec3(0.93, 0.95, 0.97) * (uSunK > 0.0 ? 0.55 + 0.4 * uAmbient : lw * 0.8) * uTorch, edge * smoothstep(0.5, 0.75, fn) * (0.35 + 0.35 * flow) * 0.7); }
     if (uWaterMist > 0.0) { float dr = 0.55 + 0.45 * vnoise(vWorld.xz * 0.7 + vec2(uTime * 0.04, uTime * 0.02)), wm = uWaterMist * smoothstep(0.4, 3.0, d) * dr;   // (v59.0) the dawn's mist on the water
       wc = mix(wc, mix(uFog, vec3(0.9, 0.92, 0.95), 0.6) * max(uAmbient, 0.3), clamp(wm, 0.0, 0.85)); }
@@ -636,6 +638,7 @@ CM.Renderer = class {
     const gl = this.gl, g = floor.grid, N = g.length, px = new Uint8Array(N * N * 4), wet = CM.waterCells ? CM.waterCells(floor) : [];
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const i = (y * N + x) * 4; px[i] = g[y][x] === 0 ? 0 : 255; px[i + 3] = 0; }
     for (const [x, y] of wet) if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 1] = 255;
+    if (CM.seaCells) for (const [x, y] of CM.seaCells(floor)) { const i = (y * N + x) * 4; px[i] = 0; px[i + 1] = 255; }   // (v130.0: the sea's squares are water, not wall - 69zzzzg-island.js)
     if (CM.groundAt && (floor.number === 0 || floor.number === -1)) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (g[y][x] !== 0) continue; const gi = (CM.GROUNDS || []).indexOf(CM.blendGroundAt ? CM.blendGroundAt(floor, x, y) : CM.groundAt(floor, x, y)); if (gi >= 0) px[(y * N + x) * 4 + 2] = gi + 1; }   // (v54.0: the ground's kind, for the blend)
     if (CM.wearOf && (floor.number === 0 || floor.number === -1)) { const W = CM.wearOf(floor); for (const [k, v] of W) { const [x, y] = k.split(",").map(Number); if (x >= 0 && y >= 0 && x < N && y < N) px[(y * N + x) * 4 + 3] = Math.round(Math.min(1, v) * 255); } }   // (v54.1: how worn - the map's alpha)
     if (!this.mapTex) this.mapTex = gl.createTexture();
