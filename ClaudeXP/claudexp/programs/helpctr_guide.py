@@ -176,6 +176,8 @@ CATALOG = {
                              "and options. Claude and Magic's sky and weather run over it all: a day, a season and a moon, and live "
                              "weather (rain, storms, mist, wind, snow, heat, aurora, tornadoes) that changes the fight and floods the "
                              "first floors in a storm; a dial shows the hour and the weather, and K the Calendar. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "The ground blends as Claude and Magic's does - grounds meeting in ragged edges, worn ways, moss and leaf litter under "
+                             "the trees, muddy banks, dappled light (Options: Ground blending). "
                              "Home is his cabin in Thornwick: a bed (sleep until morning, mended), a hearth for cooking and a chest that "
                              "keeps things through death; outside, a farm of up to twenty plots run from its sign - plant, water, harvest, "
                              "and buy a sprinkler, a farmhand and more plots - growing fourteen crops from seeds that monsters and chests "
