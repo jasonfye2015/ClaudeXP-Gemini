@@ -37,6 +37,7 @@ class Shell(QWidget):
                            volume=lambda: self.settings.get("music_volume", 0.8), muted=muted)
         self.speech = Speech(enabled=self.settings.get("speech", True))
         self.talk = {}                                       # vendor -> [(who, text)] this visit
+        self.rng = random.Random()
         self._bridge = _Bridge()
         self._bridge.got.connect(lambda fn, text: fn(text))
         self.view = GameView(self)
@@ -108,6 +109,8 @@ class Shell(QWidget):
 
     def quit_to_title(self):
         self.save()
+        for name in ("rain", "wind"):
+            self.sounds.loop(name, 0)
         self.show_title()
 
     # ---- what the game asks for --------------------------------------------------------------------------------
@@ -126,6 +129,9 @@ class Shell(QWidget):
         kind = what[0]
         if kind == "pack":
             self.set_panel(panels.PackPanel(self))
+        elif kind == "calendar":
+            from .dial import CalendarPanel
+            self.set_panel(CalendarPanel(self))
         elif kind == "vendor":
             self.set_panel(panels.VendorPanel(self, what[1]))
         elif kind == "stairs":
@@ -238,5 +244,7 @@ class Shell(QWidget):
     def closeEvent(self, e):
         self.save()
         self.music.stop()
+        for name in ("rain", "wind"):
+            self.sounds.loop(name, 0)
         super().closeEvent(e)
 

@@ -8,7 +8,7 @@ thing the town is built over.
 Playing
   WASD move, mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
   F talk / use (the vendors, the stairs, the Deep's mouth), Q health potion, E mana potion, T Scroll of Return,
-  1-4 or the wheel: change wand, Tab the pack, M the big map, Esc the menu.
+  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, Esc the menu.
 
   Thornwick is home: four vendors round the square - Hesper the Apothecary (potions, Scrolls of Return), Old Tamsin
   the Wandwright (wands and wand parts), Bramwell the Outfitter (hats, robes, gloves, boots, rings, amulets) and
@@ -38,6 +38,18 @@ Playing
   its own, the forest in its Crystal Grotto's, and each band of the Deep in one of its worlds' (the Undercroft, the
   Sunken Halls, the Frozen Caverns, the Clockwork City's waltz, the Burning Heart's drums), turning to its battle
   music when a guardian wakes. Options on the title: music on/off and volume, sound, the townsfolk's voices, the mouse.
+
+  The sky is Claude and Magic's (game/sky.py, engine/atmosphere.py, engine/weatherfx.py, ui/dial.py): a day of
+  twenty-four hours (a minute of it a second of play; the stairs take an hour), the real season with its daylight,
+  a twenty-nine day moon, and the weather as live events - clear, cloud, rain, storm, mist, wind, snow, heat, an
+  aurora, a tornado - two to six hours each, coming in and going out. Over Thornwick and the wood: the sky of the
+  hour, the sun and the moon in its phase, clouds, stars, the aurora, a rainbow in a sun-shower, lightning; rain,
+  snow and leaves falling; snow lying and frost on the ground; mist closing in; a twister crossing the wood. In
+  play: rain dulls fire and feeds storm, snow feeds frost and slows him, heat feeds fire, mist hides him, a storm's
+  lightning strikes in the wood, the wood is fiercer at night, and a tornado flings everything. Below, on the first
+  floors: rain drips from the ceilings, a storm pours through the grates and floods the sunken rooms of floors 1-3
+  (draining over a day), its lightning flickers down and its thunder rolls. The dial under the map shows the hour,
+  the day, the season, the weather (above, in the Deep) and the moon; K opens the Calendar.
 
   The title: a title card - the name over Thornwick at dusk, the camera circling the Deep's mouth - and then one page
   with Play (the three slots as cards), Records, Options, Keys and Credits.

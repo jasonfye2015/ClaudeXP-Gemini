@@ -73,6 +73,14 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   (ui/audio.py), following the town, the forest, the band and a guardian's fight; music/sound options.
 - The title (ui/title.py): a title card over Thornwick, then Play / Records / Options / Keys / Credits.
 
+## v0.6 - Claude and Magic's sky and weather - done
+
+- Its clock, seasons, daylight and moon; its weather as live events (its odds, ramps, day leaning, aurora,
+  tornado), carried over into game/sky.py; its look (engine/atmosphere.py: sky colours by the hour, sun, moon in its
+  phase, clouds, stars, aurora, rainbow, lightning, fog; snow and frost on the ground); the falling weather and the
+  below (engine/weatherfx.py); its dial and Calendar (ui/dial.py); rain and wind heard, thunder after lightning.
+- The weather in play, outdoors and in the first floors (its flood: floors 1-3, a day to drain).
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

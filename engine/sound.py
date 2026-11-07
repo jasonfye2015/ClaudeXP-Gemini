@@ -55,6 +55,23 @@ def _make():
     s["break"] = crack * 0.5
     x = t(0.12)
     s["thud"] = (np.sin(2 * math.pi * 110 * x) * 0.6 + _noise(len(x), 17) * 0.3) * _env(len(x), 0.001, 0.1) * 0.35
+    # the weather's loops (they join end to end) and the thunder
+    x = t(3.0)
+    hiss = np.convolve(_noise(len(x), 31), [1, -0.85], "same")
+    pat = np.zeros(len(x))
+    prng = np.random.default_rng(5)
+    for at in prng.integers(0, len(x) - 400, 260):
+        pat[at:at + 300] += prng.uniform(-1, 1, 300) * np.exp(-np.arange(300) / 40) * 0.6
+    s["rain"] = (hiss * 0.35 + pat * 0.4) * 0.5
+    x = t(6.0)
+    wn = np.cumsum(_noise(len(x), 41)) * 0.02
+    wn = wn - np.convolve(wn, np.ones(400) / 400, "same")
+    s["wind"] = wn / (np.abs(wn).max() or 1) * (0.55 + 0.45 * np.sin(2 * math.pi * x / 6.0 * 2)) * 0.6
+    x = t(3.2)
+    rum = np.cumsum(_noise(len(x), 51)) * 0.01
+    rum = rum - np.convolve(rum, np.ones(300) / 300, "same")
+    crack = _noise(len(x), 52) * np.exp(-x * 9)
+    s["thunder"] = (rum / (np.abs(rum).max() or 1) * np.exp(-x * 0.9) * 0.9 + crack * 0.4) * _env(len(x), 0.01, 1.4) * 0.8
     x = t(0.1)
     s["click"] = np.sin(2 * math.pi * 700 * x) * _env(len(x), 0.001, 0.08) * 0.15
     x = t(0.2)
@@ -91,6 +108,22 @@ class Sounds:
                 e.setVolume(0.7)
                 pool.append(e)
             self.effects[name] = [pool, 0]
+
+    def loop(self, name, volume):
+        """A sound that goes on (the rain, the wind), at this volume now (0: stopped)."""
+        slot = self.effects.get(name)
+        if not slot:
+            return
+        e = slot[0][0]
+        v = 0.0 if self.muted() else max(0.0, min(1.0, volume))
+        if v < 0.01:
+            if e.isPlaying():
+                e.stop()
+            return
+        e.setVolume(v)
+        if not e.isPlaying():
+            e.setLoopCount(-2)
+            e.play()
 
     def play(self, name, volume=0.7):
         if self.muted():

@@ -135,6 +135,7 @@ class GameView(QOpenGLWidget):
             g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt, 1e-4)
             self._explore()
             self._music(g)
+            self._sound_of_weather(g)
         elif g and not self.running:                       # (the title's backdrop: Thornwick, the camera circling the square)
             g.time += dt
             a = g.time * 0.045
@@ -146,6 +147,15 @@ class GameView(QOpenGLWidget):
         if g:
             self._events()
         self.update()
+
+    def _sound_of_weather(self, g):
+        w = g.sky.now()
+        out = g.level.outdoor
+        kb = 0.0 if out else max(0.0, 1 - (g.depth - 1) / 10) * 0.25          # (below: heard far off, the first floors only)
+        rain = w["strength"] if w["kind"] in ("rain", "storm") else 0.0
+        wind = max(w["wind"][0] - 0.2, 0.0) * 0.9 if w["kind"] != "clear" else 0.0
+        self.shell.sounds.loop("rain", rain * (0.55 if out else kb))
+        self.shell.sounds.loop("wind", wind * (0.5 if out else kb))
 
     def _music(self, g):
         """The music follows him: the town, the forest, the band he's in, and a guardian's fight."""
@@ -200,6 +210,16 @@ class GameView(QOpenGLWidget):
                     self.toasts.append((line, (0.85, 0.82, 0.74), now + 0.3))
             elif kind == "chest":
                 snd.play("coin", 0.7)
+            elif kind == "lightning":
+                if self.renderer:
+                    self.renderer.lightning(1.0)
+                QTimer.singleShot(int(400 + 1200 * self.shell.rng.random()), lambda: self.shell.sounds.play("thunder", 0.8))
+            elif kind == "lightning_below":
+                if self.renderer:
+                    self.renderer.lightning(0.35 * e[1])
+                QTimer.singleShot(900, lambda v=e[1]: self.shell.sounds.play("thunder", 0.35 * v))
+            elif kind == "weather":
+                pass
             elif kind == "break":
                 snd.play("break", 0.7)
             elif kind == "thud":
@@ -335,6 +355,9 @@ class GameView(QOpenGLWidget):
             self.shell.open_dialog(("pack",))
         elif k == Qt.Key_M:
             self.show_map = not self.show_map
+        elif k == Qt.Key_K:
+            self.release()
+            self.shell.open_dialog(("calendar",))
 
     def keyReleaseEvent(self, e):
         if not e.isAutoRepeat():
@@ -482,8 +505,11 @@ class GameView(QOpenGLWidget):
             p.drawRoundedRect(r, 6, 6)
             p.setPen(QColor("#F8E8B0"))
             p.drawText(r, Qt.AlignCenter, text)
-        # the map
+        # the map, and the dial under it
         self._minimap(p, W, H, big=self.show_map)
+        if not self.show_map:
+            from .dial import paint_dial
+            paint_dial(p, QRectF(W - 196, 204, 180, 112), g.sky, g.level.outdoor, g.depth)
         if not self.captured and not self.shell.panel_open():
             p.setFont(QFont("Segoe UI", 11))
             text = "Click to take the mouse (Esc gives it back)"
