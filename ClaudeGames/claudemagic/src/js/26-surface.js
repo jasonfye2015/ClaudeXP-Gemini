@@ -368,14 +368,14 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   if (sky && only !== "props") {                                                       // past the edge: a skirt of grass, and the far ring standing on it
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
-    const isle = fl.number === -1 && CM.LAND_ISLE && size > CM.SHORE.sea;   // (v129.0: the land is an island - past its edges the sea, 77t-island.js; only the hill's side, east, runs on as land)
-    if (!isle) { band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); } band(size, 0, size + E, isle ? CM.SHORE.strand[0] : size);
+    const isle = CM.seaGirt ? CM.seaGirt(fl) : false, land = isle && fl.number === -1;   // (v129.0: the land is an island - past its edges the sea, 77t-island.js; only the hill's side, east, runs on as land)
+    if (!isle) { band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); } if (!isle || land) band(size, 0, size + E, isle ? CM.SHORE.strand[0] : size);   // (v134.0: an island's landing is sea all round)
     const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), RW = 8, H = 7;   // (from the land, the town's hill stands in the east; v51.1: RW, not W - W is the windows pass, and shadowing it kept every far view out)
     for (let t = -E; t < size + E; t += RW) {
       const t1 = Math.min(t + RW, size + E);
       if (!isle) quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
       if (!isle) quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
-      if (!isle || (t >= 0 && t < CM.SHORE.strand[0])) quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
+      if (!isle || (land && t >= 0 && t < CM.SHORE.strand[0])) quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
       if (!isle) quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
       ring += 4;
     }

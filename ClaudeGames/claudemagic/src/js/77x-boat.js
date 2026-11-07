@@ -6,9 +6,11 @@
 { const S = CM.SHIP, H = CM.HARBOUR;
   // the ship: one moving static, drawn after the plants each frame (76zzzzzzzzzzq-plants.js has the pipeline)
   let voyage = null;
-  CM.movingStatics = (game) => { const fl = game && game.floor; if (!fl || fl.number !== -1 || !CM.plants || !CM.plants.models.ship || fl.grid.length <= H.head[3] + 1 || game.mode === "title") return [];
+  const berthOf = (fl) => { if (!fl) return null; if (fl.number === -1 && fl.grid.length > H.head[3] + 1) return { x: S.at[0], z: S.at[1], yaw: -Math.PI / 2 }; const o = CM.isleOf && CM.isleOf(fl.number); return o && !o.depth ? { x: o.isle.ship[0], z: o.isle.ship[1], yaw: o.isle.shipYaw } : null; };   // (v134.0: at home, or at an island's jetty)
+  CM.berthOf = berthOf;
+  CM.movingStatics = (game) => { const fl = game && game.floor, B = berthOf(fl); if (!B || !CM.plants || !CM.plants.models.ship || game.mode === "title") return [];
     const t = CM.reducedMotion ? 0 : performance.now() / 1000, M = CM.plantsPack.manifest.models.ship, lo = M.box[0], hi = M.box[1], sc = S.scale;
-    let x = S.at[0], z = S.at[1], yaw = -Math.PI / 2; if (voyage) { const v = voyagePos(performance.now()); x = v.x; z = v.z; yaw = v.yaw; }
+    let x = B.x, z = B.z, yaw = B.yaw; if (voyage) { const v = voyagePos(performance.now()); x = v.x; z = v.z; yaw = v.yaw; }
     const bob = Math.sin(t * 1.1) * 0.05 + (voyage ? Math.sin(t * 2.3) * 0.04 : 0), c = Math.cos(yaw), s = Math.sin(yaw), ox = (lo[0] + hi[0]) / 2 * sc, oz = (lo[2] + hi[2]) / 2 * sc;
     return [{ model: "ship", x: x - (ox * c - oz * s), y: -0.42 + bob - lo[1] * sc, z: z - (ox * s + oz * c), yaw: yaw + Math.sin(t * 0.7) * 0.015, scale: sc, height: (hi[1] - lo[1]) * sc, shade: 0.74 }]; };
   { const R = CM.Renderer.prototype, ds0 = R.drawStatics; R.drawStatics = function (sky, eye) { ds0.call(this, sky, eye); const g = CM.game, list = CM.movingStatics(g); if (!list.length || !this.index || this.index["pal:plants"] === undefined) return; const gl = this.gl;
@@ -24,6 +26,7 @@
       out.push({ x: H.pier[0], y: H.head[3], quad: [[x0, y1, z1], [x1, y1, z1], [x1, y0, z0], [x0, y0, z0]], layer: "solid:timber", shade: 0.9 });
       return out; }; }
   // the voyage: a path at sea, a camera on the deck
+  const arrival = (g) => { const B = berthOf(g.floor) || { x: S.at[0], z: S.at[1] }; return [[B.x + 4, B.z + 46], [B.x + 7, B.z + 24], [B.x + 2, B.z + 9], [B.x, B.z + 1]]; };   // (v134.0: in from the open sea to wherever she ties up)
   const ROUTES = { round: [[S.at[0], S.at[1]], [S.at[0] - 6, S.at[1] + 4], [20, 106], [-4, 104], [-8, 80], [-8, 40], [-8, 6], [-4, -6], [10, -8], [30, -9], [50, -8], [57, -9]] };
   const lenOf = (pts) => { let L = 0; for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return L; };
   const voyagePos = (now) => { const pts = voyage.pts, k = Math.min(1, (now - voyage.t0) / voyage.ms), want = k * voyage.len; let d = 0;
@@ -35,7 +38,7 @@
       game.perch = { tower: [v.x - 0.5 - Math.sin(v.look) * 2.3, v.z - 0.5 + Math.cos(v.look) * 2.3], h: 1.75, voyage: true }; r.perch = { x: game.perch.tower[0], y: game.perch.tower[1], h: 1.75 };   // (on the afterdeck, over the waist)
       r.yaw = v.look + 0.6; r.turn = null; if (v.k >= 1) endVoyage(game); }; }   // (the island off the starboard bow)
   { const cd0 = CM.Game.prototype.climbDown; CM.Game.prototype.climbDown = function () { if (this.perch && this.perch.voyage) return false; return cd0.call(this); }; }   // (no stepping off a ship at sea)
-  CM.startVoyage = (g, id, done) => { const pts = ROUTES[id] || ROUTES.round, len = lenOf(pts); if (CM.reducedMotion) { if (done) done(); return; }
+  CM.startVoyage = (g, id, done) => { const pts = id === "round" ? ROUTES.round : arrival(g), len = lenOf(pts); if (CM.reducedMotion) { if (done) done(); return; }
     voyage = { pts, len, ms: len / 6.5 * 1000, t0: performance.now(), done, skip: (e) => { e.preventDefault(); e.stopPropagation(); endVoyage(g); } };
     setTimeout(() => { if (voyage) document.addEventListener("keydown", voyage.skip, true); }, 400); };
   CM.inVoyage = () => Boolean(voyage);

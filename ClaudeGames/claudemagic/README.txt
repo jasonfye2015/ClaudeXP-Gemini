@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Gull Rock and the Drowned Light (v134.0, UPGRADE_PLAN_81.md)
+  (src/js/35c-figures.js, src/js/26-surface.js, src/js/69zzzzg-island.js, src/js/69zzzzk-boat.js, src/js/69zzzzl-isles.js, src/js/69zzzzm-gullrock.js, src/js/71-title.js, src/js/76zzzzzzzzz1-farhills.js, src/js/76zzzzzzzzzze-figures2.js, src/js/77t-island.js, src/js/77x-boat.js, src/js/77y-isles.js, src/js/80-main.js, src/models/figures.json, src/models/CREDITS.txt, tools/models.py, tools/headless.js, tests/run.js, UPGRADE_PLAN_81.md)
+  - Gull Rock (UPGRADE_PLAN_81.md): the Wren's sea chart has its first charted island. She sails out from the dock
+    and in under the rock to tie up at its jetty, and waits there to take you home. On the rock: gulls, wind, the
+    stump of an old light, and the keeper's stair going down into the sound of the sea.
+  - The Drowned Light: forty floors in four bands of ten, each its own look - the green, wet Sea Caves; the Wreck
+    Galleries, with ships' timbers in the rock; the blue, half-flooded Pearl Deeps; the dark red Leviathan's Throat.
+    Crabs, glubs, squidles and the drowned; wreckers and salt wights; reef sharks, mantas, sea winds and fishfolk.
+    The Crab Queen on floor 10, Captain Saltbones on 20, the Pearl Warden on 30, and the Old Leviathan on 40, each
+    with a relic.
+  - At the head of each band below the first stands a stone: touch it to go back up to the open air, and from then on
+    the keeper's stair can take you straight down to that band.
+  - New creatures: Quaternius's Ultimate Monsters, his animated fish and his crab (all CC0) are in the game, animated -
+    the first of about fifty new figures for the island dungeons to come.
+
 The boat and the sea chart (v133.0, UPGRADE_PLAN_80.md phase 4)
   (src/js/35d-plants.js, src/js/69zzzzk-boat.js, src/js/77x-boat.js, src/models/plants.json, src/models/CREDITS.txt, tools/plants.py, tools/headless.js, tests/run.js)
   - The boat (UPGRADE_PLAN_80.md): the Wren lies along the dock's south face, riding the swell, a gangplank down to

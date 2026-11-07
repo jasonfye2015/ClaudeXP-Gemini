@@ -51,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   // (v26.3) the sets the party will want next, painted ahead in the worker: the next band's, the town's and the Wood's
   const keyOfFloor = (number) => { const i = CM.themeIndex(number), look = lookNow(), season = CM.season ? CM.season(game) : "summer", T = CM.themeOfFloor ? CM.themeOfFloor(number, game.dream) : null;
-    const special = number === 0 || number === -1 || CM.isUndercroft(number) || CM.isTowerFloor(number) || (CM.isJokerFloor && CM.isJokerFloor(number)) || (CM.isInterior && CM.isInterior(number));
+    const special = number === 0 || number === -1 || CM.isUndercroft(number) || CM.isTowerFloor(number) || (CM.isJokerFloor && CM.isJokerFloor(number)) || (CM.isInterior && CM.isInterior(number)) || Boolean(CM.isleOf && CM.isleOf(number));   /* (v134.0: the islands' floors and landings, sets of their own) */
     return special && T ? `${look}:${T.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`; };
   const paintAhead = () => { if (!CM.artAhead || !game.floor || game.mode === "title") return; const n = game.floor.number, want = [];
     if (n >= 1 && n % 1 === 0) want.push(n + 1, 0, -1); else if (n === 0) want.push(1, -1); else if (n === -1) want.push(0, 1);
@@ -70,7 +70,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function useTheme(number) {
     const i = CM.themeIndex(number), look = lookNow();
     const season = CM.season ? CM.season(game) : "summer";
-    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), ins = Boolean(CM.isInterior && CM.isInterior(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk || ins;   // (v24.6: a room in town, its own set)   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
+    const jk = Boolean(CM.isJokerFloor && CM.isJokerFloor(number)), ins = Boolean(CM.isInterior && CM.isInterior(number)) || Boolean(CM.isleOf && CM.isleOf(number)), uc = CM.isUndercroft(number) || CM.isTowerFloor(number) || jk || ins;   // (v24.6: a room in town, its own set)   // (the Undercroft, the Mage Tower and the Joker: sets of their own)
     if (((number === 0 ? -2 : number === -1 ? -3 : uc ? (jk ? -9 : ins ? number : CM.isTowerFloor(number) ? -5 : -4) : i) === themeOn && look === lookOn && Boolean(game.dream) === dreamOn && (number > 0 || season === seasonOn)) || !renderer.ok) return;
     const special = number === 0 ? CM.TOWN_THEME : number === -1 ? CM.WOOD_THEME : CM.isTowerFloor(number) ? CM.TOWER_THEME : jk ? CM.JOKER_THEME : ins ? CM.themeFor(number) : uc ? CM.UNDERCROFT_THEME : null, key = special ? `${look}:${special.name}:${season}` : `${look}:${i}${game.dream ? ":dream" : ""}`;   // (the surface's set is the season's)
     CM.art.season = season; seasonOn = season;

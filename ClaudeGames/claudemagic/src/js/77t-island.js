@@ -6,9 +6,10 @@
 // known, the sea round the land.
 { const H = CM.SHORE;
   // past the edge: the sea, the shingle, the hill's ends
-  { const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, put) => { const n = fv0 ? fv0(fl, size, index, night, put) : 0; if (!fl || fl.number !== -1 || !CM.LAND_ISLE || fl.grid.length <= H.sea) return n;
+  { const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, put) => { const n = fv0 ? fv0(fl, size, index, night, put) : 0; if (!fl || !CM.seaGirt || !CM.seaGirt(fl)) return n;
       const water = index.water0, shingle = index["ground:rock"], cliff = index["solid:cliff"], R = 230, y = -0.04;
       if (water !== undefined) put([-R, y, size + R], [size + R, y, size + R], [size + R, y, -R], [-R, y, -R], water, 0.92, 4);   // (the sea: under all the land, and out to the haze)
+      if (fl.number !== -1) return n + 1;   // (an island's landing: the sea and nothing else)
       if (shingle !== undefined) { const B = 1.6, E = CM.WOOD_EAST, band = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 4) for (let x = x0; x < x1; x += 4) { const xe = Math.min(x + 4, x1), ze = Math.min(z + 4, z1); put([x, 0, ze], [xe, 0, ze], [xe, 0, z], [x, 0, z], shingle, 0.78, 0); } };
         band(-B, -B, E, 0); band(-B, 0, 0, H.strand[0]); }   // (grey shingle between the last trees and the water)
       if (cliff !== undefined) { const E = CM.WOOD_EAST; for (let x = E; x < size; x += 2) put([Math.min(x + 2, size), y, 0], [x, y, 0], [x, 2.2, 0], [Math.min(x + 2, size), 2.2, 0], cliff, 0.7, 0);   // (the hill falls to the sea: its north face, and its east end)

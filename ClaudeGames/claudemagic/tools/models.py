@@ -268,9 +268,9 @@ def bake_model(name, spec, mapping, report):
                 uv.append(U[k] if U else (0.0, 0.0))
                 col.append((255, 255, 255) if has_tex else tuple(min(255, int(round((c ** (1 / 2.2)) * 255))) for c in bc[:3]))   # (linear to sRGB, as the paints are)
                 jn.append(tuple(int(x) for x in J[k]))
-                ws = tuple(float(x) for x in W[k])
-                s = sum(ws) or 1.0
-                wt.append(tuple(w / s for w in ws))
+                ws = tuple((0.0 if math.isnan(float(x)) else float(x)) for x in W[k])   # (v134.0: some packs carry NaN weights)
+                s = sum(ws)
+                wt.append(tuple(w / s for w in ws) if s > 0 else (1.0, 0.0, 0.0, 0.0))
             I = g.accessor(prim["indices"]) if "indices" in prim else list(range(len(P)))
             idx.extend(base + i for i in I)
     assert pos, f"{name}: no parts matched {wanted}"
