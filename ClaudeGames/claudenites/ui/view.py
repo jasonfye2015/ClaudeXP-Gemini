@@ -271,6 +271,19 @@ class GameView(QOpenGLWidget):
             elif kind == "sleep":
                 self.sleep_fade = now
                 snd.play("levelup", 0.35)
+            elif kind == "trap":
+                snd.play({"spikes": "hit", "darts": "foecast", "fire": "cast_fire"}[e[1]], 0.6)
+                if e[1] == "spikes":
+                    self.toasts.append(("Spikes!", (1.0, 0.5, 0.45), now))
+            elif kind == "rush":
+                if e[1]:
+                    self.banner = (f"CHAMPION {e[1]} OF {e[2]}", now, e[3])
+                    snd.play("levelup", 0.5)
+                else:
+                    self.banner = ("THE GAUNTLET IS RUN", now, "A Legendary waits in the hall")
+            elif kind == "secret":
+                self.toasts.append((f"A secret! ({e[2]} of {e[3]} found)", (0.85, 0.75, 1.0), now))
+                snd.play("levelup", 0.45)
             elif kind == "door":
                 snd.play("break", 0.5)
                 snd.play("levelup", 0.3)

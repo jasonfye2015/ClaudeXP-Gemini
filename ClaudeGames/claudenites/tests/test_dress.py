@@ -43,7 +43,8 @@ def test_the_set_pieces():
                 seen.add(L.pieces[0]["name"])
             dist = L.distances(int(L.start[0]), int(L.start[1]))
             for c in L.chests:
-                assert dist[int(c["z"]), int(c["x"])] >= 0, (seed, d, c)
+                if not c.get("secret"):                            # (a hidden room's: behind its cracked wall)
+                    assert dist[int(c["z"]), int(c["x"])] >= 0, (seed, d, c)
             for s in L.spawns:
                 assert dist[int(s["z"]), int(s["x"])] >= 0, (seed, d, s)
     assert with_piece > 90, with_piece
@@ -119,7 +120,7 @@ def test_nothing_blocks_the_way():
             reach = _walkable_reach(L)
             sx, sy = int(L.stairs[0]), int(L.stairs[1])
             assert (sx, sy) in reach, f"floor {d}: the stairs are blocked off"
-            for c in L.chests:
+            for c in [c for c in L.chests if not c.get("secret")]:
                 cx, cy = int(c["x"]), int(c["z"])
                 assert any((cx + dx, cy + dy) in reach for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))), (d, c)
             cut = [p for p in L.paths if L.open_at(*p) and p not in reach and L.floor[p[1], p[0]] > -0.5]

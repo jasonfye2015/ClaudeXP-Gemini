@@ -71,6 +71,7 @@ class Monster:
         self.anim = {}                       # the renderer's: its clip player state
         self.wander = 0.0
         self.lift = 0.0
+        self.los = False                     # (whether it sees him: looked at five times a second)
 
     @property
     def centre_y(self):
@@ -195,6 +196,8 @@ class Game:
             m.hue = rng.random()
             self.ghosts.append(m)
         self.keys = set()                                               # (the keys found on this floor)
+        self.rush_wave, self.rush_next, self.rush_boss = -1, 0.0, None   # (the Gauntlet's champions, one by one)
+        self.moon_hits = 0
         self.events.append(("level", level))
 
     def go_cabin(self):
@@ -335,6 +338,8 @@ class Game:
                 return ("chest", i), "Open the chest"
         if self.depth and L.stairs and math.hypot(L.stairs[0] - self.x, L.stairs[1] - self.z) < 1.4:
             if L.guardian and not self.guardian_down:
+                if L.rush:
+                    return ("sealed",), "The stairs are sealed until the Gauntlet is run"
                 return ("sealed",), f"The stairs are sealed while {L.guardian} lives"
             return ("stairs",), "Take the stairs"
         return None, ""
@@ -432,6 +437,101 @@ class Game:
         self.events.append(("brazier",))
         return True
 
+    # ---- traps -------------------------------------------------------------------------------------------------
+    def _traps(self, dt):
+        """A plate underfoot springs its spikes or its darts; a vent breathes fire on its beat (and burns whatever
+        stands in it, monsters too)."""
+        from .features import FIRE_CYCLE, FIRE_ON
+        L, p = self.level, self.player
+        cx, cy = int(self.x), int(self.z)
+        for t in L.traps:
+            here = (cx, cy) == (t["x"], t["y"]) and self.y < t["f"] + 0.35
+            if t["kind"] == "fire":
+                on = (self.time + t["phase"]) % FIRE_CYCLE < FIRE_ON
+                t["on"] = on
+                if on and self.time - t["at"] > 0.5:
+                    if here:
+                        t["at"] = self.time
+                        self._hurt_player(p.max_life() * 0.07, "fire")
+                        self.events.append(("trap", "fire"))
+                    for m in self.monsters:
+                        if not m.dead and (int(m.x), int(m.z)) == (t["x"], t["y"]):
+                            t["at"] = self.time
+                            self._hit(m, m.max_hp * 0.1, "fire", chained=True)
+                continue
+            if not here or self.time - t["at"] < (2.0 if t["kind"] == "spikes" else 2.5):
+                continue
+            t["at"] = self.time
+            if t["kind"] == "spikes":
+                self._hurt_player(p.max_life() * 0.12, "arcane")
+                self.events.append(("trap", "spikes"))
+            else:
+                fx, fy, fz = t["from"]
+                ex, ey, ez = self.eye
+                dx, dy, dz = ex - fx, (ey - 0.3) - fy, ez - fz
+                n = math.sqrt(dx * dx + dy * dy + dz * dz) or 1
+                b = Bolt(fx, fy, fz, dx / n * 11, dy / n * 11, dz / n * 11, p.max_life() * 0.08, "venom", foe=True)
+                b.radius = 0.06
+                self.bolts.append(b)
+                self.events.append(("trap", "darts"))
+
+    # ---- the Gauntlet --------------------------------------------------------------------------------------------
+    def _gauntlet(self):
+        L = self.level
+        ax, ay, aw, ah = L.arena
+        inside = ax <= self.x < ax + aw and ay <= self.z < ay + ah
+        if self.rush_wave == -1 and inside:
+            self.rush_wave = 0
+            self.events.append(("toast", "The doors of memory open. Here they come - one at a time.", (1.0, 0.5, 0.4)))
+            self._champion()
+        elif 0 <= self.rush_wave < len(L.rush) and self.rush_boss is not None and self.rush_boss.dead and \
+                self.rush_next and self.time >= self.rush_next:
+            self.rush_next = 0.0
+            self._champion()
+
+    def _champion(self):
+        from .features import RUSH_DMG, RUSH_HP
+        L = self.level
+        ax, ay, aw, ah = L.arena
+        x, z = ax + aw / 2, ay + ah / 2
+        if not L.can_stand(x, z, 0.4, L.floor_at(x, z)):
+            x, z = L.stairs[0], L.stairs[1] - 1.5
+        name = L.rush[self.rush_wave]
+        m = Monster(name, x, z, self.depth, random.Random(f"{self.seed}:rush:{self.depth}:{self.rush_wave}"), guardian=True)
+        m.max_hp = m.hp = m.max_hp * RUSH_HP
+        m.dmg *= RUSH_DMG
+        m.y = L.floor_at(x, z)
+        m.awake = True
+        m.home = (x, z)
+        self.monsters.append(m)
+        self.rush_boss = m
+        self.events.append(("rush", self.rush_wave + 1, len(L.rush), name))
+        for k in range(16):
+            self.fx.append({"x": x + self.rng.uniform(-0.6, 0.6), "y": m.y + self.rng.uniform(0, 1.6),
+                            "z": z + self.rng.uniform(-0.6, 0.6), "t": self.time + k * 0.03, "c": (1.0, 0.35, 0.3), "life": 0.8})
+
+    # ---- secrets -------------------------------------------------------------------------------------------------
+    def _crack(self, cx, cy):
+        """A bolt meets a cracked wall: it comes down, and the room behind it is open."""
+        L = self.level
+        sw = L.secret_walls.get((cx, cy))
+        if not sw or sw["open"]:
+            return False
+        sw["open"] = True
+        L.solid[cy, cx] = False
+        L.floor[cy, cx] = sw["f"]
+        L.ceil[cy, cx] = min(sw["c"], sw["f"] + 2.4)
+        L._blockers = None
+        L.mesh_version += 1
+        self._flow = None
+        for k in range(14):
+            self.fx.append({"x": cx + self.rng.uniform(0.1, 0.9), "y": sw["f"] + self.rng.uniform(0.1, 1.8),
+                            "z": cy + self.rng.uniform(0.1, 0.9), "t": self.time + k * 0.02, "c": (0.75, 0.68, 0.58),
+                            "life": 0.6})
+        self.events.append(("break",))
+        self.events.append(("toast", "The cracked wall gives way - there's a room behind it!", (1.0, 0.88, 0.6)))
+        return True
+
     def _ghosts(self, dt):
         """The Dreaming's ghosts: drifting, and drawn to him a little - they pass through everything, him included."""
         for m in self.ghosts:
@@ -464,8 +564,12 @@ class Game:
         gold = int(I.gold_for(depth, rng, find) * 5 * c.get("rich", 1.0))
         p.gold += gold
         got = [f"+{gold} gold"]
-        for _ in range(1 + (1 if c.get("rich", 1) > 1.2 or rng.random() < 0.3 else 0)):
+        for k in range(1 + (1 if c.get("rich", 1) > 1.2 or rng.random() < 0.3 else 0)):
             it = I.roll_item(rng, depth + 1, find / 300)
+            if k == 0 and c.get("legendary"):
+                it = I.make_gear(it["slot"], it["level"], 4, rng) if it["type"] == "gear" else dict(it, rarity=4)
+                if it["type"] == "wand" and len(it["parts"]) == D.WAND_BODIES[it["body"]]["slots"]:
+                    it["parts"].append(None)
             kept = p.give(it)
             got.append(I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)")
             self.events.append(("found", it))
@@ -534,6 +638,10 @@ class Game:
         if self.ghosts:
             self._ghosts(dt)
         self._trial()
+        if self.level.traps:
+            self._traps(dt)
+        if self.level.rush:
+            self._gauntlet()
         self.fx = [f for f in self.fx if self.time - f["t"] < f.get("life", 0.5)]
         self._fly_drops(dt)
         for f in self.fx:                                        # (splinters fly and fall)
@@ -626,6 +734,9 @@ class Game:
                 self.pieces_seen.add(k)
                 name = pc["name"][0].upper() + pc["name"][1:]
                 self.events.append(("piece", name, pc["line"]))
+                if pc.get("egg"):
+                    from . import eggs
+                    eggs.found(self, pc["egg"])
         for pk in list(L.pickups):
             if (pk["x"] - self.x) ** 2 + (pk["z"] - self.z) ** 2 < 0.55 ** 2 and abs(pk["y"] - self.y) < 0.8:
                 L.pickups.remove(pk)
@@ -649,6 +760,12 @@ class Game:
         elif k == "scroll":
             p.potions["return"] += 1
             got = ["a Scroll of Return"]
+        elif k == "egg":
+            from . import eggs
+            it = eggs.towel(p.level)
+            kept = p.give(it)
+            got = [I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)"]
+            self.events.append(("found", it))
         elif k == "key":
             self.keys.add(pk["colour"])
             got = [f"the {pk['colour']} key"]
@@ -723,6 +840,17 @@ class Game:
             return
         p.mana -= s["mana"]
         self.cool = 1.0 / s["rate"]
+        if self.depth == 0 and self.level.outdoor and self.sky.night:
+            from . import eggs
+            mv, a = eggs.moon_vector(self.sky), self.aim()
+            if sum(x * y for x, y in zip(mv, a)) > 0.996:
+                self.moon_hits += 1
+                if self.moon_hits >= 3 and eggs.found(self, "moon"):
+                    it = eggs.moon_band(p.level)
+                    p.give(it)
+                    self.events.append(("found", it))
+                    self.events.append(("toast", "The moon winks. Something small and silver falls into your hand.",
+                                        (0.8, 0.85, 1.0)))
         ex, ey, ez = self.eye
         right = (math.cos(self.yaw), 0, math.sin(self.yaw))
         ox, oy, oz = ex + right[0] * 0.12, ey - 0.1, ez + right[2] * 0.12     # (from the wand's tip, low and right)
@@ -763,6 +891,10 @@ class Game:
             for _ in range(n):
                 nx, ny, nz = b.x + b.vx * dt / n, b.y + b.vy * dt / n, b.z + b.vz * dt / n
                 if ny < L.floor_at(nx, nz) or ny > L.ceil_at(nx, nz):
+                    if not b.foe and L.secret_walls and self._crack(int(nx), int(nz)):
+                        self._spark(b.x, b.y, b.z, b.element, "impact")
+                        alive = False
+                        break
                     if b.bounce > 0:
                         b.bounce -= 1
                         self._reflect(b, nx, ny, nz)
@@ -934,6 +1066,23 @@ class Game:
             self.events.append(("toast", f"Claude is level {p.level}. A skill point to spend with Mother Wren.", (1.0, 0.9, 0.4)))
             self.events.append(("levelup", p.level))
         self._loot(m)
+        L = self.level
+        if m.guardian and L.rush and self.rush_wave >= 0:
+            self.rush_wave += 1
+            if self.rush_wave < len(L.rush):
+                self.rush_next = self.time + 3.0
+                self.events.append(("toast", f"{m.name} falls. Another stirs...", (1.0, 0.7, 0.45)))
+                return
+            self.guardian_down = True
+            from . import dress
+            ax, ay, aw, ah = L.arena
+            x, y = ax + aw // 2, ay + ah // 2
+            dress.chest(L, x, y, self.rng, rich=3.0)
+            L.chests[-1]["legendary"] = True
+            self.events.append(("toast", "The Gauntlet is run. A chest of the old champions' hoard stands in the hall.",
+                                (1.0, 0.75, 0.3)))
+            self.events.append(("rush", 0, len(L.rush), ""))
+            return
         if m.guardian:
             self.guardian_down = True
             if m.name not in p.stats["guardians"]:

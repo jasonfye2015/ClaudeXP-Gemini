@@ -422,6 +422,7 @@ class Renderer:
     # ---- the level ---------------------------------------------------------------------------------------------
     def set_level(self, L):
         self.level = L
+        self._mesh_v = getattr(L, "mesh_version", 0)
         layer_of = lambda i: self.layers.get(L.textures[int(i)], 0) if int(i) < len(L.textures) else 0   # noqa: E731
         self.level_mesh.upload(levelmesh.build(L, layer_of))
         self.door_meshes = []
@@ -507,8 +508,8 @@ class Renderer:
     # ---- the frame ---------------------------------------------------------------------------------------------
     def draw(self, g, w, h, dt):
         L = g.level
-        if L is not self.level:
-            self.set_level(L)
+        if L is not self.level or getattr(L, "mesh_version", 0) != getattr(self, "_mesh_v", 0):
+            self.set_level(L)                                         # (a new floor - or a wall come down on this one)
         elif getattr(L, "version", 0) != self._version:            # (something broke: the props again)
             self._props(L)
         self._version = getattr(L, "version", 0)
@@ -719,6 +720,15 @@ class Renderer:
                         x, y = L.farm_cells[i]
                         h = 1.05 if farm.stage(i) else 0.8
                         things.append((x + 0.5, L.floor[y, x] - 0.02, y + 0.5, h, h, lay, 1.0))
+        spikes = get("nx.spikes")
+        for t in getattr(L, "traps", ()):                              # (a sprung spike plate: up, then down again)
+            if t["kind"] == "spikes" and spikes is not None:
+                age = g.time - t["at"]
+                if age < 1.0:
+                    k = min(1.0, age / 0.06) * (1.0 if age < 0.7 else max(0.0, 1 - (age - 0.7) / 0.3))
+                    for ang in (0.0, 1.5708):
+                        things.append((t["x"] + 0.5 + math.cos(ang) * 0.001, t["f"] - 0.62 * (1 - k), t["y"] + 0.5,
+                                       0.78, 0.62, spikes, 1.1))
         wood = get("fu.table")
         for f in g.fx:                                                  # (splinters of what broke)
             if f.get("kind") == "debris":
@@ -865,6 +875,8 @@ class Renderer:
             out.append(((L.stairs[0], L.floor_at(*L.stairs) + 0.4, L.stairs[1], 4.0), (0.35, 0.5, 1.0, 1)))
         from ..game.features import DOOR_COLOURS
         extra = [((b["x"], b["y"] + 0.9, b["z"], 5.0), (1.8, 1.0, 0.4, 1)) for b in getattr(L, "braziers", ()) if b["lit"]]
+        extra += [((t["x"] + 0.5, t["f"] + 0.8, t["y"] + 0.5, 4.0), (2.0, 0.8, 0.25, 1)) for t in getattr(L, "traps", ())
+                  if t.get("on")]
         extra += [((d["x"] + 0.5, L.floor_at(d["x"] + 0.5, d["y"] + 0.5) + 1.0, d["y"] + 0.5, 3.0),
                    (*[c * 0.9 for c in DOOR_COLOURS[d["colour"]]], 1)) for d in getattr(L, "doors", ()) if not d["open"]]
         extra.sort(key=lambda e: (e[0][0] - ex) ** 2 + (e[0][2] - ez) ** 2)
@@ -1061,6 +1073,22 @@ class Renderer:
             bill(pk["x"], bobh, pk["z"], 0.14, c, 1.4)
             if pk["kind"] == "item":
                 bill(pk["x"], bobh, pk["z"], 0.3 + 0.05 * math.sin(now * 5 + pk["phase"]), c, 0.35)
+        from ..game.features import FIRE_CYCLE, FIRE_ON
+        for t in getattr(L, "traps", ()):                              # (a vent: a column of flame on its beat)
+            if t["kind"] != "fire" or (t["x"] - ex) ** 2 + (t["y"] - ez) ** 2 > 500:
+                continue
+            ph = (g.time + t["phase"]) % FIRE_CYCLE
+            x, z = t["x"] + 0.5, t["y"] + 0.5
+            if ph < FIRE_ON:
+                k = min(1.0, ph / 0.12) * min(1.0, (FIRE_ON - ph) / 0.2)
+                for j in range(5):
+                    h = 0.2 + j * 0.32
+                    bill(x + math.sin(now * 9 + j) * 0.05, t["f"] + h, z, (0.42 - j * 0.05) * k, (1.0, 0.5 - j * 0.06, 0.15), 1.6, 3.0, 1.5)
+                flat(x, t["f"] + 0.02, z, 0.6 * k, (1.0, 0.45, 0.15), 1.2, 0.0)
+            elif ph > FIRE_CYCLE - 0.7:                                 # (the warning: embers, and a breath of heat)
+                for j in range(4):
+                    q = (now * 2 + j * 0.25) % 1.0
+                    bill(x + math.sin(j * 2.1) * 0.15, t["f"] + q * 0.6, z + math.cos(j * 2.1) * 0.15, 0.04, (1.0, 0.55, 0.2), 1.2 * (1 - q))
         from ..game.features import DOOR_COLOURS
         for d in getattr(L, "doors", ()):                              # (a closed door: its rune, glowing on both faces)
             if d["open"] or (d["x"] + 0.5 - ex) ** 2 + (d["y"] + 0.5 - ez) ** 2 > 400:
