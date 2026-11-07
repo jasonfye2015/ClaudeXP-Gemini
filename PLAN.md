@@ -37,6 +37,15 @@ The design document (Claude Docs): https://claude.ai/artifact/JtQZ3J468Lqh9E8Qqo
 - night.py: six sets of small eyes in the dark near the ground, blinking; gone when he comes near or his lantern
   reaches them, turning up somewhere else in a while.
 
+## Phase 1e - the lantern in his hand; darker - done
+
+- game/lantern.py: an old lantern low on oil - always flickering, sputtering every few seconds, guttering out every
+  minute or two (the first time within the first minute); a shake (E, or L) brings it back about two times in three.
+- engine/held.py: the lantern drawn in his hand at the lower right - iron posts, a brass foot and cap, a ring - bobbing
+  and swinging as he walks, thrown about by a shake; the light comes from its flame, as bright as the lamp allows.
+- Everything about a third darker or more: the lantern's light (and its reach, more so in the roots), the ambient,
+  the fungus's light, the moon.
+
 ## Phase 2 - webs and movement
 
 Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.

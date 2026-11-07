@@ -12,6 +12,7 @@ import random
 
 from . import tree as T
 from .den import Den
+from .lantern import Lantern
 
 EYE = 0.62
 RADIUS = 0.24
@@ -54,7 +55,8 @@ class Night:
         self.vy = 0.0
         self.time = 0.0
         self.clock = DUSK
-        self.lantern = True
+        self.lantern = True                  # (he carries it: whether it gives any light is the lamp's affair)
+        self.lamp = Lantern(self.rng)
         self.events = []
         self.seen = set()
         self.place = None
@@ -82,12 +84,13 @@ class Night:
 
     def lantern_reach(self):
         """How far his lantern's light reaches, and how bright it is: a short, dim throw in the close dark of the
-        root tunnel, opening out as he comes into the hollow. -> (reach, strength)"""
+        root tunnel, opening out as he comes into the hollow - and all of it as the lamp allows (flickering,
+        sputtering, out). -> (reach, strength)"""
+        lvl = self.lamp.level
         tun = self.tree.in_tunnel(self.x, self.z)
-        if not tun:
-            return 6.5, 1.0
-        k = max(0.0, min(1.0, (tun[0] - 0.2) / 2.5))           # (0 at the hollow's edge, 1 a few steps into the roots)
-        return 6.5 - 4.3 * k, 1.0 - 0.62 * k
+        k = max(0.0, min(1.0, (tun[0] - 0.2) / 2.5)) if tun else 0.0     # (0 in the hollow, 1 a few steps into the roots)
+        reach = (6.0 - 4.2 * k) * (0.35 + 0.65 * min(1.0, lvl))
+        return reach, (1.0 - 0.72 * k) * lvl
 
     def clock_words(self):
         m = int(self.clock + 1e-6) % (24 * 60)
@@ -108,6 +111,8 @@ class Night:
                 self.seen.add(p)
                 name, line = PLACES[p]
                 self.events.append(("place", name, line))
+        for e in self.lamp.step(dt):
+            self.events.append(("lantern", e))
         self._watch(dt)
         self._lurk(dt)
 
