@@ -89,7 +89,8 @@
         const atk = cues.attackClip && has(cues.attackClip) ? cues.attackClip : "attack";
         if (cues.attack && !st.attackHeld && has(atk)) { start(atk, true); st.attackHeld = true; } else if (!cues.attack) st.attackHeld = false;
         const rest = cues.act && has(cues.act) ? cues.act : "idle";   // (v68.0: standing at work - the forge, a stall - or sitting, the loop is that instead of the idle)
-        if (!st.clip || (st.once && done()) || (!st.once && st.clip !== (cues.moving ? "walk" : rest))) { if (!(st.once && !done())) start(cues.moving && has("walk") ? "walk" : rest, false); } }
+        const gait = cues.running && has("run") ? "run" : "walk";   /* (v127.0: a runner gallops) */
+        if (!st.clip || (st.once && done()) || (!st.once && st.clip !== (cues.moving ? gait : rest))) { if (!(st.once && !done())) start(cues.moving && has(gait) ? gait : rest, false); } }
       if (!st.clip) return null;
       const L = len(st.clip); let t = timeIn(); if (st.once && t >= L) t = L - 1e-3;
       const k = st.from && (now - st.since) < BLEND ? (now - st.since) / BLEND : 1; if (k >= 1) st.from = null;

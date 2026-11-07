@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v126.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v127.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "126.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "127.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5550,7 +5550,8 @@ CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, M
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
-CM.WOOD_SIZE = 61;
+CM.WOOD_SIZE = 81;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill)
+CM.WOOD_EAST = 58;   // where the cliffs at the hill's foot begin, whatever the land's size: the old land's east edge, kept
 CM.WOOD_GATE = [59, 30];                                                 // the land's end of the West Gate: the town is east, up the hill; the land lies west
 CM.LAND_ROAD = [[44, 30, 59, 30], [44, 30, 44, 33], [24, 33, 44, 33]];   // the road from the gate, bending south at the farm, to the ford
 CM.FIELDS = [40, 20, 57, 42];                                            // the fields between the hill and the river
@@ -5580,7 +5581,7 @@ CM.makeWood = function (seed) {
   const carve = (cx, cy, rx, ry, g) => { for (let y = cy - ry; y <= cy + ry; y++) for (let x = cx - rx; x <= cx + rx; x++) if (((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 <= 1) open(x, y, g); };
   const path = (a, b, g = "dirt") => { let [x, y] = a; while (x !== b[0] || y !== b[1]) { open(x, y, g); if (x !== b[0] && (y === b[1] || rnd.chance(0.6))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y, g); };
   // the hill's foot: cliffs along the east edge, the gate in them, the road running out of it
-  for (let y = 0; y < size; y++) for (let x = size - 3; x < size; x++) solid(x, y, "cliff");
+  for (let y = 0; y < size; y++) for (let x = CM.WOOD_EAST; x < size; x++) solid(x, y, "cliff");
   // the fields: grass between the hill and the river, hedged pastures, the farm's tilled rows inside a fence by the road's bend, copses in the corners
   rect(CM.FIELDS, (x, y) => open(x, y, "grass"));
   for (const r of [[41, 22, 48, 22], [41, 22, 41, 27], [50, 36, 56, 36], [50, 36, 50, 41]]) rect(r, (x, y) => solid(x, y, "hedge"));
@@ -5588,7 +5589,7 @@ CM.makeWood = function (seed) {
   for (const r of [[44, 34, 44, 38], [50, 34, 50, 38], [44, 38, 50, 38]]) rect(r, (x, y) => solid(x, y, "fence"));
   for (const [cx, cy] of [[43, 25], [55, 24], [54, 40], [42, 40]]) for (let i = 0; i < 5; i++) { const x = cx + rnd.int(-2, 2), y = cy + rnd.int(-2, 2); if (grid[y][x] === 0 && ground[key(x, y)] === "grass") solid(x, y, "tree"); }
   for (const r of CM.LAND_ROAD) rect(r, (x, y) => open(x, y, "dirt"));
-  open(CM.WOOD_GATE[0], CM.WOOD_GATE[1], "dirt"); open(size - 1, CM.WOOD_GATE[1], "dirt");
+  open(CM.WOOD_GATE[0], CM.WOOD_GATE[1], "dirt"); open(CM.WOOD_EAST + 2, CM.WOOD_GATE[1], "dirt");
   things[key(...CM.WOOD_GATE)] = { type: "woodgate" };
   // the river, with the ford where the road meets it and a plank bridge to the north
   const fordY = 33, bridgeY = 26;
@@ -5608,7 +5609,7 @@ CM.makeWood = function (seed) {
   path([CM.riverX(bridgeY) - 1, bridgeY], first);                       // from the bridge too
   path([CM.riverX(bridgeY) + 1, bridgeY], [44, 30]);                    // and the bridge's track east through the trees to the road's bend
   // deep in the forest, far from the ford: the hut, the shrine, the burner, three cave mouths; things to gather along the ways
-  const cells = []; for (let y = 1; y < size - 1; y++) for (let x = 1; x < size - 1; x++) if (grid[y][x] === 0 && !features[key(x, y)] && !things[key(x, y)] && (ground[key(x, y)] === "grass" || ground[key(x, y)] === "dirt")) cells.push([x, y]);
+  const old = Math.min(size, 61), cells = []; for (let y = 1; y < old - 1; y++) for (let x = 1; x < old - 1; x++) if (grid[y][x] === 0 && !features[key(x, y)] && !things[key(x, y)] && (ground[key(x, y)] === "grass" || ground[key(x, y)] === "dirt")) cells.push([x, y]);
   const deep = (c) => c[0] < CM.riverX(c[1]) - 1 && Math.abs(c[0] - first[0]) + Math.abs(c[1] - first[1]) >= 9;
   const take = (ok) => { for (let g = 0; g < 400; g++) { const c = cells[rnd.int(0, cells.length - 1)], k = key(c[0], c[1]); if (!things[k] && (!ok || ok(c))) return k; } return null; };
   for (let n = 0; n < 3; n++) { const k = take(deep); if (k) things[k] = { type: "cave", n }; }
@@ -5620,6 +5621,7 @@ CM.makeWood = function (seed) {
     if (grid[at[1]] && grid[at[1]][at[0]] === 0 && !things[key(...at)] && !features[key(...at)]) things[key(...at)] = { type: "signpost", text };
   }
   { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
+  if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y)) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
@@ -5747,6 +5749,33 @@ Object.assign(CM.WEIGHTS, { ore: 2, bar: 3, charcoal: 1, pick: 3 });
 for (const O of Object.values(CM.ORES)) O.floors = [CM.realOf(O.floors[0] - 1) + 1, CM.realOf(O.floors[1])];   // (plan 66: real floors)
 CM.veinsFor = (number) => { const out = []; for (const [id, O] of Object.entries(CM.ORES)) if (number >= O.floors[0] && number <= O.floors[1]) out.push(id); return out; };
 CM.bestPick = (bag, ore) => { let best = -1; bag.forEach((it, i) => { if (it.kind === "pick" && (it.points || 0) > 0 && CM.PICKS[it.pick] && CM.PICKS[it.pick].mines.includes(ore) && (best < 0 || CM.PICKS[it.pick].points > CM.PICKS[bag[best].pick].points)) best = i; }); return best; };
+
+// ---- 23d-southwood.js ----
+"use strict";
+// The south of the Deep Wood (UPGRADE_PLAN_78.md): the Wood runs twenty rows further south than it did - old forest,
+// the river going on through it - and in it two meadows where the deer graze: the South Meadow east of the river,
+// reached by a track south from Claude's clearing, and the Long Meadow west of it, over a shallow ford, with a deer
+// track north through the trees to the wolf den. Laid after everything the seed placed in the old land, by dice of its
+// own, so nothing there moves by a cell; the east beyond the cliffs is the hill (23b-wood.js, CM.WOOD_EAST).
+//   CM.SOUTH_WOOD; CM.laySouthWood(parts, seed)
+CM.SOUTH_WOOD = { top: 61, meadows: [{ name: "The South Meadow", c: [36, 68], r: [6, 3] }, { name: "The Long Meadow", c: [10, 72], r: [7, 3] }], track: [33, 50], denTrack: [2, 44] };
+CM.laySouthWood = function (P, seed) {
+  const { grid, kinds, ground, features, size } = P, S = CM.SOUTH_WOOD, key = (x, y) => `${x},${y}`, rnd = new CM.Random(CM.hashSeed(`${seed}:southwood`));
+  if (size <= S.top) return;
+  const open = (x, y, g) => { if (x < 1 || y < 1 || x >= CM.WOOD_EAST || y >= size - 1) return; if (features[key(x, y)] && features[key(x, y)].type === "river") return; grid[y][x] = 0; delete kinds[key(x, y)]; if (g) ground[key(x, y)] = g; };
+  const carve = ([cx, cy], [rx, ry], g) => { for (let y = cy - ry - 1; y <= cy + ry + 1; y++) for (let x = cx - rx - 1; x <= cx + rx + 1; x++) { const w = ((x - cx) / (rx + 0.5)) ** 2 + ((y - cy) / (ry + 0.5)) ** 2 + (rnd.next() - 0.5) * 0.3; if (w <= 1) open(x, y, g); } };
+  const walk = (a, b, g = "dirt") => { let [x, y] = a; let guard = 0; while ((x !== b[0] || y !== b[1]) && guard++ < 400) { open(x, y, g); if (x !== b[0] && (y === b[1] || rnd.chance(0.45))) x += Math.sign(b[0] - x); else y += Math.sign(b[1] - y); } open(x, y, g); };
+  // the meadows, a few trees standing in them
+  for (const M of S.meadows) { carve(M.c, M.r, "grass"); for (let i = 0; i < 3; i++) { const x = M.c[0] + rnd.int(-M.r[0] + 1, M.r[0] - 1), y = M.c[1] + rnd.int(-M.r[1] + 1, M.r[1] - 1); if (grid[y] && grid[y][x] === 0 && (Math.abs(x - M.c[0]) > 1 || Math.abs(y - M.c[1]) > 1)) { grid[y][x] = 1; delete ground[key(x, y)]; } } }
+  // the tracks: south from Claude's clearing; west over a shallow ford to the Long Meadow; north to the den
+  const [m1, m2] = S.meadows; walk(S.track, [m1.c[0] - 2, m1.c[1] - m1.r[1]]);
+  const fy = m2.c[1] - 1, fx = CM.riverX(fy); delete features[key(fx, fy)]; ground[key(fx, fy)] = "dirt";   // (the second ford: the water shallow enough here)
+  walk([m1.c[0] - m1.r[0], m1.c[1]], [fx + 1, fy]); walk([fx - 1, fy], [m2.c[0] + m2.r[0], m2.c[1]]);
+  { const [dx, dy] = S.denTrack; for (let y = dy; y <= m2.c[1]; y++) open(dx, y, "dirt"); walk([dx, m2.c[1]], [m2.c[0] - m2.r[0], m2.c[1]]); }
+  P.rooms = S.meadows.map((M) => ({ x0: M.c[0] - M.r[0] - 1, y0: M.c[1] - M.r[1] - 1, x1: M.c[0] + M.r[0] + 1, y1: M.c[1] + M.r[1] + 1, name: M.name }));
+};
+// the meadows by name, on the map
+{ const mw0 = CM.makeWood; CM.makeWood = function (seed) { const fl = mw0.call(this, seed); if (fl && !fl.rooms.some((r) => r.name === "The South Meadow") && fl.grid.length > CM.SOUTH_WOOD.top) fl.rooms = fl.rooms.concat(CM.SOUTH_WOOD.meadows.map((M) => ({ x0: M.c[0] - M.r[0] - 1, y0: M.c[1] - M.r[1] - 1, x1: M.c[0] + M.r[0] + 1, y1: M.c[1] + M.r[1] + 1, name: M.name }))); return fl; }; }
 
 // ---- 24-clock.js ----
 "use strict";
@@ -6027,6 +6056,7 @@ CM.unpackSeen = function (text, size) {
   const out = [];
   if (!text) return out;
   const s = atob(text);
+  if (s.length !== Math.ceil((size * size) / 8)) { for (let n = size; n > 0; n--) if (Math.ceil((n * n) / 8) === s.length) { size = n; break; } }   // (v127.0: a map seen when the land was smaller - the Wood was 61 - read at its own size)
   for (let i = 0; i < size * size; i++) if (s.charCodeAt(i >> 3) & (1 << (i & 7))) out.push([i % size, Math.floor(i / size)]);
   return out;
 };
@@ -9785,7 +9815,8 @@ CM.art.credits = function () {
         const atk = cues.attackClip && has(cues.attackClip) ? cues.attackClip : "attack";
         if (cues.attack && !st.attackHeld && has(atk)) { start(atk, true); st.attackHeld = true; } else if (!cues.attack) st.attackHeld = false;
         const rest = cues.act && has(cues.act) ? cues.act : "idle";   // (v68.0: standing at work - the forge, a stall - or sitting, the loop is that instead of the idle)
-        if (!st.clip || (st.once && done()) || (!st.once && st.clip !== (cues.moving ? "walk" : rest))) { if (!(st.once && !done())) start(cues.moving && has("walk") ? "walk" : rest, false); } }
+        const gait = cues.running && has("run") ? "run" : "walk";   /* (v127.0: a runner gallops) */
+        if (!st.clip || (st.once && done()) || (!st.once && st.clip !== (cues.moving ? gait : rest))) { if (!(st.once && !done())) start(cues.moving && has(gait) ? gait : rest, false); } }
       if (!st.clip) return null;
       const L = len(st.clip); let t = timeIn(); if (st.once && t >= L) t = L - 1e-3;
       const k = st.from && (now - st.since) < BLEND ? (now - st.since) / BLEND : 1; if (k >= 1) st.from = null;
@@ -48019,7 +48050,7 @@ button.primary { background: linear-gradient(#5A4428, #3C2C1A); border-color: #1
         if (moving) st.moved = true; st.x = x; st.z = z; st.seen = now;
         const flash = s.flash || 0, hit = flash > st.flash + 0.25; st.flash = flash;
         const foe = s.m || null, dead = Boolean(foe && foe.hp <= 0) || Boolean(s.dying), kind = CM.monsterKind ? CM.monsterKind(parts[1]) : null;
-        const cues = { moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
+        const cues = { running: Boolean(s.running), moving: moving && !dead, act: s.act || null, attack: pose === "attack" && !dead, attackClip: fig.attack || "attack", hit: hit && !dead, dead, speed: kind && kind.speed ? 0.7 + 0.3 * kind.speed : 1 };
         const play = CM.Figures.step(m, st, cues, now); if (!play) { keep.push(s); continue; }
         const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
         let wear = fig.wear || []; if (foe && foe.gear && foe.gear.weapon) { const g = CM.Figures.gearFor(CM.itemName ? CM.itemName(foe.gear.weapon) : foe.gear.weapon.name); if (g && F.models[`gear:${g}`] && F.models[`gear:${g}`].skeleton.n === m.skeleton.n) wear = [g].concat(wear.filter((w) => !["sword", "greatsword", "axe", "greataxe", "knife", "staff", "crossbow"].includes(w))); }   // (v69.0: what it carries is in its hand)
@@ -50133,6 +50164,55 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
       if (pack.every((w) => !w.out) && Math.hypot(fl.pos[0] - D.front[0], fl.pos[1] - D.front[1]) <= 3 && now > breath && CM.audio && CM.audio.play) { CM.audio.play("snore", 0.14, 0, 0.8); breath = now + R(3500, 6000); }
       return out; }; }
   CM.wolfPack = () => pack;   // (for the harness and the curious)
+  }
+}
+
+// ---- 77r-deerherd.js ----
+"use strict";
+// The deer of the South Meadow (UPGRADE_PLAN_78.md) - the window's side, as the wolves are: a herd of ten - a stag, six
+// does, three fawns about half their size - grazing the South Meadow by day, heads down, now and then one standing to
+// look; bedding down at dusk among the trees at the meadow's edge, and back out to graze after dawn. They move as the
+// wolves do, freely between the trees, never through rock, walls or water. And they are deer: if the party comes near,
+// or one of the den's wolves, the one that sees it bolts and the whole herd goes with it at a gallop, away from it, and
+// drifts back to the meadow when all is quiet again.
+{ const COAT = { doe: [196, 158, 120], doe2: [176, 138, 104], doe3: [214, 182, 146], fawn: [226, 180, 132] };
+  if (CM.figuresPack && CM.figuresPack.figures) { CM.figuresPack.figures["pet:deer_stag"] = { model: "stag", scale: 1, tint: null, wear: [] }; for (const [c, tint] of Object.entries(COAT)) CM.figuresPack.figures[`pet:deer_${c}`] = { model: "deer", scale: 1, tint, wear: [] }; }
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), D = set.index["monster:Deer"]; if (D !== undefined) for (const c of ["stag", ...Object.keys(COAT)]) if (set.index[`pet:deer_${c}`] === undefined) set.index[`pet:deer_${c}`] = D; return set; }; }
+  const S = CM.SOUTH_WOOD; if (S) {
+  const HERD = [{ role: "stag", coat: "stag", size: 1.25 }, { role: "doe", coat: "doe", size: 1.0 }, { role: "doe", coat: "doe2", size: 0.97 }, { role: "doe", coat: "doe3", size: 1.0 }, { role: "doe", coat: "doe", size: 0.95 },
+    { role: "doe", coat: "doe2", size: 0.98 }, { role: "doe", coat: "doe3", size: 0.96 }, { role: "fawn", coat: "fawn", size: 0.55 }, { role: "fawn", coat: "fawn", size: 0.5 }, { role: "fawn", coat: "fawn", size: 0.52 }];
+  CM.DEER_HERD = HERD;
+  const R = (a, b) => a + Math.random() * (b - a), key = (x, y) => `${x},${y}`, M = S.meadows[0];
+  const water = (fl) => { if (fl._deerWater) return fl._deerWater; const s = new Set((fl.decor || []).filter((d) => d.kind === "water").map((d) => key(d.x, d.y))); fl._deerWater = s; return s; };
+  const cellOk = (fl, cx, cy) => fl.grid[cy] && fl.grid[cy][cx] !== undefined && !water(fl).has(key(cx, cy)) && (fl.grid[cy][cx] === 0 || CM.solidAt(fl, cx, cy) === "tree");
+  const ok = (fl, x, y) => { for (const [ox, oy] of [[0.26, 0], [-0.26, 0], [0, 0.26], [0, -0.26]]) if (!cellOk(fl, Math.floor(x + ox), Math.floor(y + oy))) return false; const cx = Math.floor(x), cy = Math.floor(y); if (fl.grid[cy][cx] === 0) return true; return Math.hypot(x - (cx + 0.5), y - (cy + 0.5)) > 0.27; };
+  const inMeadow = (x, y, pad = 0) => ((x - M.c[0] - 0.5) / (M.r[0] + 0.5 + pad)) ** 2 + ((y - M.c[1] - 0.5) / (M.r[1] + 0.5 + pad)) ** 2 <= 1;
+  const pick = (fl, test, near, r) => { for (let i = 0; i < 40; i++) { const x = near[0] + R(-r, r), y = near[1] + R(-r, r); if (ok(fl, x, y) && test(x, y)) return [x, y]; } return null; };
+  const centre = [M.c[0] + 0.5, M.c[1] + 0.5];
+  const graze = (fl, near, r = 3) => pick(fl, (x, y) => inMeadow(x, y, 0.5), near, r) || pick(fl, (x, y) => inMeadow(x, y), centre, M.r[0]) || centre.slice();
+  const bed = (fl, near) => pick(fl, (x, y) => !inMeadow(x, y, 0.3) && inMeadow(x, y, 2.5), near, 4) || pick(fl, (x, y) => !inMeadow(x, y, 0.3) && inMeadow(x, y, 3), centre, M.r[0] + 3) || centre.slice();
+  let herd = null, fl0 = null, last = 0, alarm = 0, threat = null;
+  const hour = (g) => (CM.hourOf ? CM.hourOf(g) : 12), day = (h) => h >= 6.5 && h < 19.7;
+  const make = (fl, g) => { const d = day(hour(g)); return HERD.map((H, i) => { const p = d ? graze(fl, centre, M.r[0]) : bed(fl, centre); return Object.assign({}, H, { i, x: p[0], y: p[1], tx: p[0], ty: p[1], pause: R(0, 5), act: d ? "eat" : null, heading: Math.random() * 6.28, mother: H.role === "fawn" ? 1 + (i - 7) * 2 : null }); }); };
+  const step = (fl, g, dt, now) => { const h = hour(g), d = day(h), party = [fl.pos[0] + 0.5, fl.pos[1] + 0.5], wolves = (CM.wolfPack && CM.wolfPack()) || [];
+    // who sees a threat: the party within four and a half squares, a wolf (out of the den) within five
+    if (now > alarm) { threat = null; for (const w of herd) { if (Math.hypot(w.x - party[0], w.y - party[1]) < 4.5) { threat = party; break; } const wf = wolves.find((v) => v.out && Math.hypot(v.x - w.x, v.y - w.y) < 5); if (wf) { threat = [wf.x, wf.y]; break; } } if (threat) alarm = now + 3500; }
+    for (const w of herd) { w.running = false;
+      if (threat && now < alarm) { const dx = w.x - threat[0], dy = w.y - threat[1], dd = Math.max(0.1, Math.hypot(dx, dy)); w.tx = w.x + (dx / dd) * 5; w.ty = w.y + (dy / dd) * 5; w.running = true; w.act = null; w.pause = R(2, 5); }
+      else if ((w.pause -= dt) <= 0 && Math.hypot(w.x - w.tx, w.y - w.ty) < 0.3) {
+        if (!d) { const p = w.role === "fawn" ? [herd[w.mother].x + R(-0.6, 0.6), herd[w.mother].y + R(-0.6, 0.6)] : bed(fl, [w.x, w.y]); [w.tx, w.ty] = ok(fl, p[0], p[1]) ? p : [w.x, w.y]; w.pause = R(20, 60); w.act = null; }
+        else { const near = w.role === "fawn" ? [herd[w.mother].x, herd[w.mother].y] : w.role === "stag" ? [w.x, w.y] : [herd[0].x, herd[0].y]; [w.tx, w.ty] = graze(fl, near, w.role === "fawn" ? 1.2 : 3); w.pause = w.role === "fawn" ? R(1, 4) : R(4, 12); w.act = Math.random() < 0.7 ? "eat" : "idle2"; } }
+      const dx = w.tx - w.x, dy = w.ty - w.y, dd = Math.hypot(dx, dy); w.moving = false; if (dd < 0.06) continue;
+      const sp = (w.running ? 2.2 : 0.45) * dt * (w.role === "fawn" && !w.running ? 1.3 : 1); let moved = false;
+      for (const turn of [0, 0.5, -0.5, 1.0, -1.0, 1.6, -1.6]) { const a = Math.atan2(dy, dx) + turn, nx = w.x + Math.cos(a) * Math.min(sp, dd), ny = w.y + Math.sin(a) * Math.min(sp, dd); if (ok(fl, nx, ny) || !ok(fl, w.x, w.y)) { w.x = nx; w.y = ny; w.heading = a; moved = true; break; } }
+      if (moved) { w.moving = true; w.act = null; } else { [w.tx, w.ty] = d ? graze(fl, [w.x, w.y]) : bed(fl, [w.x, w.y]); w.running = false; } } };
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== -1 || game.mode === "title" || !fl.grid || fl.grid.length <= S.top) return out;
+      if (fl0 !== fl || !herd) { herd = make(fl, game); fl0 = fl; last = now; }
+      const dt = Math.min(0.1, Math.max(0, (now - last) / 1000)); last = now; if (game.mode === "explore") step(fl, game, dt, now);
+      for (const w of herd) { const cx = Math.floor(w.x), cy = Math.floor(w.y);
+        out.push({ x: cx, y: cy, dx: w.x - cx - 0.5, dz: w.y - cy - 0.5, layer: `pet:deer_${w.coat}`, w: 0.95 * w.size, h: 0.95 * w.size, id: `deer${w.i}`, heading: Math.atan2(Math.cos(w.heading), Math.sin(w.heading)), act: w.moving ? null : w.act, walking: w.moving, running: w.running && w.moving }); }
+      return out; }; }
+  CM.deerHerd = () => herd;   // (for the harness and the curious)
   }
 }
 

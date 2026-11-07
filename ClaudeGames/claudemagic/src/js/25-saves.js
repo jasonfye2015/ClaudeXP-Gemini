@@ -26,6 +26,7 @@ CM.unpackSeen = function (text, size) {
   const out = [];
   if (!text) return out;
   const s = atob(text);
+  if (s.length !== Math.ceil((size * size) / 8)) { for (let n = size; n > 0; n--) if (Math.ceil((n * n) / 8) === s.length) { size = n; break; } }   // (v127.0: a map seen when the land was smaller - the Wood was 61 - read at its own size)
   for (let i = 0; i < size * size; i++) if (s.charCodeAt(i >> 3) & (1 << (i & 7))) out.push([i % size, Math.floor(i / size)]);
   return out;
 };
