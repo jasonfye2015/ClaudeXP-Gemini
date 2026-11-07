@@ -12,3 +12,8 @@ The plants and trees (src/models/plants.json, UPGRADE_PLAN_62.md): static vertex
 The harbour's models (v133.0): the ship, the rowing boat, the palms, barrels and crates, baked by tools/plants.py from their colour map.
 
 - Kenney - Pirate Kit (2.1), www.kenney.nl (Creative Commons Zero, CC0): https://kenney.nl/assets/pirate-kit - fetched from https://opengameart.org/content/pirate-kit (kenney_pirate-kit_2.1.zip, its License.txt kept beside the models). Kept in Local Storage/Claude and Magic models/kenney-pirate/; only the baked file (src/js/35d-plants.js) is in the repo.
+
+The island dungeons' creatures (v134.0 and on): rigged, animated, baked by tools/models.py.
+
+- Quaternius - Ultimate Monsters (the Big, Blob and Flying families), quaternius.com (CC0): https://quaternius.com/packs/ultimatemonsters.html - glTF from the pack's own download folder, made .glb (atlas inside) for the bake; its License.txt kept beside them. Kept in Local Storage/Claude and Magic models/quaternius-monsters/.
+- Quaternius - Animated Dinosaur Pack, Animated Fish Pack, Ultimate Platformer Pack (the crab and the bee) and Easy Enemy Pack (the wasp), quaternius.com (CC0) - fetched as .glb from https://github.com/trebeljahr/quaternius-showcase (LICENSES.md lists each CC0-1.0). Kept in Local Storage/Claude and Magic models/quaternius-extra/.

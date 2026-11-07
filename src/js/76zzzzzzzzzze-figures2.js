@@ -54,7 +54,7 @@
         const scale = CM.Figures.fit(fig, m, s.h, s.w), ms = CM.Figures.measure(m), worn = foe && foe.max ? Math.max(0, Math.min(1, foe.hp / foe.max)) : 1;
         let wear = fig.wear || []; if (foe && foe.gear && foe.gear.weapon) { const g = CM.Figures.gearFor(CM.itemName ? CM.itemName(foe.gear.weapon) : foe.gear.weapon.name); if (g && F.models[`gear:${g}`] && F.models[`gear:${g}`].skeleton.n === m.skeleton.n) wear = [g].concat(wear.filter((w) => !["sword", "greatsword", "axe", "greataxe", "knife", "staff", "crossbow"].includes(w))); }   // (v69.0: what it carries is in its hand)
         const lunge = play.clip === (fig.attack || "attack") && m.clips[play.clip] ? Math.sin(Math.PI * Math.min(1, play.t / (m.clips[play.clip].frames / m.clips[play.clip].fps))) * 0.22 : 0;   // (v69.0: the striker steps in and back)
-        this.figList.push({ s, fig, m, key, play, wear, lunge, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }
+        this.figList.push({ s, fig, m, key, play, wear, lunge, yaw: st.yaw, worn, x, z, y: (s.base || 0) + (s.lift || 0) + (fig.lift || 0) - ms.foot * scale, scale, centre: ms.centre }); }   // (v134.0: fig.lift - a swimmer held up off the floor)
       if (states.size > 400) for (const [id, st] of states) if (now - (st.seen || 0) > 30) states.delete(id);
       return ss0.call(this, keep); }; }
   const M16 = new Float32Array(16);
