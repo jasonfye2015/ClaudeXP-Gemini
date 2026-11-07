@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The ship whole again, and the picture kept (v138.0, UPGRADE_PLAN_81.md)
+  (src/js/40-render.js, src/js/77z-glguard.js, tests/run.js)
+  - The Wren drawn whole again: since the island releases she showed only as dark pieces in the sky - masts, yards, a
+    flag - with the pier's rails and piles floating near her, though she could still be boarded. The game keeps its
+    pictures in three arrays, and the shared one (what every place uses) had grown past the thousand it had room for:
+    the pictures past the thousandth were read from the wrong array. It has room for two thousand now.
+  - The picture kept: if the graphics card drops the 3D view's context - on a long session, a driver hiccup, a change
+    of window size - the view used to stay black. Now a word comes up over it, and when the card gives the context
+    back the page reloads (the run saves as it goes, so Continue picks it up where it was).
+
 Harrowgate and the Undercity (v137.0, UPGRADE_PLAN_81.md phase 4)
   (src/js/35c-figures.js, src/js/69zzzzp-harrowgate.js, src/models/figures.json, tools/headless.js, tests/run.js)
   - Harrowgate (UPGRADE_PLAN_81.md): the Wren's longest crossing, two days out of sight of land, to the Mainland - a

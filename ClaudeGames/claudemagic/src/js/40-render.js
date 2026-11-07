@@ -74,8 +74,8 @@ vec3 shafts(vec3 vdir, float d) {                                          // (v
 bool n0g(vec3 w) { return abs(dFdx(w.y)) + abs(dFdy(w.y)) < 1e-4; }   // (v54.0: a level surface - the ground, not a wall's foot)
 void main() {
   bool shared = vUV.z > 999.5;                                            // a layer of 1000 and up is the shared texture's (what never changes between bands)
-  bool surf = vUV.z > 1999.5 && vUV.z < 2999.5, fig = vUV.z > 2999.5;
-  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 2000.0, 0.0)));
+  bool surf = vUV.z > 5999.5, fig = vUV.z > 2999.5 && vUV.z < 5999.5;   // (v138.0: the shared pictures 1000 to 2999 - they outgrew a thousand - the figures 3000 to 5999, the surface's 6000 and up)
+  vec4 ts = texture(uShared, vec3(vUV.xy, max(vUV.z - 1000.0, 0.0))), tt = texture(uTex, vec3(vUV.xy, min(vUV.z, 999.0))), tf = texture(uSurf, vec3(vUV.xy, max(vUV.z - 6000.0, 0.0)));
   vec4 t = fig ? texture(uFig, vec3(vUV.xy, max(vUV.z - 3000.0, 0.0))) : surf ? tf : shared ? ts : tt;
   if (fig || uStatic > 0.5) t.rgb *= uTint;
   if (uGBlend > 0.0 && uMapN > 0.0 && vFx.z < 0.5 && !surf && !shared) {          // (v54.0) the grounds blend: near a square's edge, its neighbour's ground fades in, the line broken by noise
@@ -198,7 +198,7 @@ void main() {
   float spec = 0.0, cav = 0.0; vec3 n0 = n;
   if (uBump > 0.0 && vFx.z < 0.5) {                                        // (v22.1) relief: walls, floors and the ground take it from their own pictures
     vec2 px = 1.0 / vec2(surf ? textureSize(uSurf, 0).xy : shared ? textureSize(uShared, 0).xy : textureSize(uTex, 0).xy), uv = vUV.xy;
-    float lz = surf ? max(vUV.z - 2000.0, 0.0) : shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
+    float lz = surf ? max(vUV.z - 6000.0, 0.0) : shared ? max(vUV.z - 1000.0, 0.0) : min(vUV.z, 999.0);
     #define HT(o) dot((surf ? texture(uSurf, vec3(uv + (o), lz)) : shared ? texture(uShared, vec3(uv + (o), lz)) : texture(uTex, vec3(uv + (o), lz))).rgb, vec3(0.3, 0.59, 0.11))
     float hu = HT(vec2(px.x, 0.0)) - HT(vec2(-px.x, 0.0)), hv = HT(vec2(0.0, px.y)) - HT(vec2(0.0, -px.y));
     { float hc = HT(vec2(0.0)), ha = 0.25 * (HT(vec2(2.5 * px.x, 0.0)) + HT(vec2(-2.5 * px.x, 0.0)) + HT(vec2(0.0, 2.5 * px.y)) + HT(vec2(0.0, -2.5 * px.y)));   // (v48.0) the cavities - mortar, pits - darker than what's round them: the torch doesn't reach in
@@ -576,7 +576,7 @@ CM.Renderer = class {
     const pic = (name) => pics[name] || art.layers[art.index[name]], packed = new Set([...packSurf, ...packRest]);
     return (art._split = { own, surf, rest, packed, sub, pic, sizes, sharedKey: `${art.sharedKey || ""}:${rest.join("|").length}:${rest.length}:${sizes.shared}` });
   }
-  _indexOf(S) { this.texGen = (this.texGen || 0) + 1; const index = {}; S.own.forEach((n, i) => { index[n] = i; }); S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 2000 + i; });
+  _indexOf(S) { this.texGen = (this.texGen || 0) + 1; const index = {}; if (S.own.length > 1000 || S.rest.length > 2000) console.warn(`textures: an array outgrew its range (own ${S.own.length} of 1000, shared ${S.rest.length} of 2000) - the pictures past it will draw from the wrong array`); S.own.forEach((n, i) => { index[n] = i; }); S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 6000 + i; });
     for (const n of S.packed) index[n] = index[S.sub[n][0]];                     // (a packed one answers by its layer: the sprites read the corner from sub)
     return index; }
   setTextures(art, gentle) {
