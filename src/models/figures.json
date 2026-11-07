@@ -532,6 +532,88 @@
    "pack": "quaternius-extra",
    "file": "Whale.glb",
    "rig": "swim"
+  },
+  "frogbig": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Frog.glb",
+   "rig": "umbig"
+  },
+  "cactoro": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Cactoro.glb",
+   "rig": "umbig"
+  },
+  "monkroose": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Monkroose.glb",
+   "rig": "umbig"
+  },
+  "mushking": {
+   "pack": "quaternius-monsters",
+   "file": "Big/MushroomKing.glb",
+   "rig": "umbig"
+  },
+  "orcskull": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Orc_Skull.glb",
+   "rig": "umbig"
+  },
+  "mushnub": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Mushnub.glb",
+   "rig": "umblob"
+  },
+  "mushnub2": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Mushnub_Evolved.glb",
+   "rig": "umblob"
+  },
+  "greenblob": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/GreenBlob.glb",
+   "rig": "umblob"
+  },
+  "spikyblob": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/GreenSpikyBlob.glb",
+   "rig": "umblob"
+  },
+  "pinkblob": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/PinkBlob.glb",
+   "rig": "umblob"
+  },
+  "armabee": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Armabee.glb",
+   "rig": "umfly"
+  },
+  "armabee2": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Armabee_Evolved.glb",
+   "rig": "umfly"
+  },
+  "goleling": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Goleling.glb",
+   "rig": "umfly"
+  },
+  "goleling2": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Goleling_Evolved.glb",
+   "rig": "umfly"
+  },
+  "wasp": {
+   "pack": "quaternius-extra",
+   "file": "Wasp.glb",
+   "clips": {
+    "idle": "WaspArmature|Wasp_Flying",
+    "walk": "WaspArmature|Wasp_Flying",
+    "run": "WaspArmature|Wasp_Flying",
+    "attack": "WaspArmature|Wasp_Attack",
+    "hit": "WaspArmature|Wasp_Flying",
+    "die": "WaspArmature|Wasp_Death"
+   }
   }
  },
  "figures": {
@@ -1429,6 +1511,149 @@
    ],
    "wear": [],
    "lift": 0.3
+  },
+  "monster:Bog Frog": {
+   "model": "frogbig",
+   "scale": 1.0,
+   "tint": [
+    150,
+    200,
+    110
+   ],
+   "wear": []
+  },
+  "monster:Green Blob": {
+   "model": "greenblob",
+   "scale": 0.9,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Fen Adder": {
+   "model": "snake",
+   "scale": 1.0,
+   "tint": [
+    110,
+    150,
+    70
+   ],
+   "wear": []
+  },
+  "monster:Marsh Wasp": {
+   "model": "wasp",
+   "scale": 0.9,
+   "tint": null,
+   "wear": [],
+   "lift": 0.35
+  },
+  "monster:Mushnub": {
+   "model": "mushnub",
+   "scale": 0.9,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Armabee": {
+   "model": "armabee",
+   "scale": 1.0,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Bramble Blob": {
+   "model": "spikyblob",
+   "scale": 1.0,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Barrow Wight": {
+   "model": "ghost",
+   "scale": 1.0,
+   "tint": [
+    170,
+    210,
+    150
+   ],
+   "wear": []
+  },
+  "monster:Mushnub Elder": {
+   "model": "mushnub2",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Bog Goleling": {
+   "model": "goleling",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Thornback": {
+   "model": "cactoro",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Pink Blob": {
+   "model": "pinkblob",
+   "scale": 1.1,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Armoured Bee": {
+   "model": "armabee2",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Elder Goleling": {
+   "model": "goleling2",
+   "scale": 1.1,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Bog Troll": {
+   "model": "monkroose",
+   "scale": 1.1,
+   "tint": [
+    150,
+    170,
+    120
+   ],
+   "wear": []
+  },
+  "monster:The Mushroom King": {
+   "model": "mushking",
+   "scale": 0.85,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Old Gulp": {
+   "model": "frogbig",
+   "scale": 0.9,
+   "tint": [
+    110,
+    150,
+    80
+   ],
+   "wear": []
+  },
+  "monster:The Barrow-King": {
+   "model": "orcskull",
+   "scale": 0.8,
+   "tint": [
+    200,
+    210,
+    180
+   ],
+   "wear": []
+  },
+  "monster:The Mire Mother": {
+   "model": "spikyblob",
+   "scale": 1.0,
+   "tint": [
+    90,
+    140,
+    80
+   ],
+   "wear": []
   }
  }
 }

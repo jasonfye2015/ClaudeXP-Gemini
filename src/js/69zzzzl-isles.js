@@ -68,6 +68,16 @@
       for (const k of [key(...fl.pos), key(fl.pos[0] + dx, fl.pos[1] + dy)]) { const t = fl.things[k]; if (t && ["isledown", "isleup", "islestone", "islemouth"].includes(t.type)) return this.isleWay(t); } } return u0.apply(this, a); }; }
   { const l0 = P.look; P.look = function (...a) { const out = l0.apply(this, a), fl = this.floor; if (this.mode === "explore" && fl && CM.isleOf(fl.number)) { const t = fl.things[key(...fl.pos)];
       if (t) { const w = { isledown: "A stair going down into the dark. (Space)", isleup: "The stair back up. (Space)", islestone: "A standing stone, worn smooth by hands, cold as the sea. (Space: back to the open air)", islemouth: "The dungeon's mouth. (Space)" }[t.type]; if (w) this.say(w); } } return out; }; }
+  // (v135.0) the kit each island is made with: a band's theme, a kind, a guardian (its strength by its level), its relic's power, its turn at half health
+  CM.ISLE_KIT = {
+    theme: (I, name, like, o) => Object.assign({}, CM.THEMES[like], { name, like, floors: [I.base - CM.ISLE_DEPTH, I.base - 1] }, o),
+    kind: (isle, name, colour, body, head, eyes, extras, speed, o) => { const k = Object.assign({ name, colour, body, head, eyes, extras, speed, isle }, o); if (!CM.MONSTERS.some((m) => m.name === name)) CM.MONSTERS.push(k); return k; },
+    guardian: (I, id, name, colour, body, level, k, depth, o) => { CM.GUARDIANS[id] = Object.assign({ floor: I.base - depth, name, colour, body, head: "round", eyes: "#FFF0A0", extras: [], speed: 10, size: 1.0, isle: I.id,
+        hp: Math.round(44 * level * k), atk: Math.round(2.6 * level * Math.sqrt(k)), df: Math.round(1.1 * level), xp: Math.round(220 * level * k), gold: Math.round(110 * level * k), abilities: [],
+        lair: { name: `${I.name}, floor ${depth}`, rows: ["#########", "#.......#", "#...B...#", "#.......#", "####D####"] } }, o);
+      if (o.relic) CM.BASES[o.relic.name] = Object.assign({}, CM.BASES["Rat King's Crown"] || {}, { id: o.relic.name, kind: o.relic.kind, slot: o.relic.slot, tier: Math.min(9, Math.round(level / 2)), group: "relic" });
+      if (o.power && o.relic) CM.RELIC_POWERS[o.relic.name] = o.power; if (o.phase && CM.BOSS_PHASES) CM.BOSS_PHASES[id] = o.phase; },
+  };
   // the sea: an island's landing is where the Wren puts in, and where she waits
   CM.SEA_OPEN = CM.SEA_OPEN || [];
   { const sa0 = CM.seaArrive; CM.seaArrive = (g, id) => { const I = CM.ISLES[id]; if (!I) return sa0 ? sa0(g, id) : null; g.isleGo(I.base, I.jetty, I.arrive || `${CM.SHIP.name} ties up at ${I.name}.`); return { id }; }; }
