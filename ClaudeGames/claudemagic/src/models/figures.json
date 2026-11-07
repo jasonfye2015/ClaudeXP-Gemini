@@ -716,6 +716,46 @@
     "hit": "Armature|Apatosaurus_Jump",
     "die": "Armature|Stegosaurus_Death"
    }
+  },
+  "orc": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Orc.glb",
+   "rig": "umbig"
+  },
+  "ninja": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Ninja.glb",
+   "rig": "umbig"
+  },
+  "yeti": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Yeti.glb",
+   "rig": "umbig"
+  },
+  "alien": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Alien.glb",
+   "rig": "umbig"
+  },
+  "bunny": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Bunny.glb",
+   "rig": "umbig"
+  },
+  "blobninja": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Ninja.glb",
+   "rig": "umblob"
+  },
+  "blobwizard": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Wizard.glb",
+   "rig": "umblob"
+  },
+  "bloborc": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Orc.glb",
+   "rig": "umblob"
   }
  },
  "figures": {
@@ -1913,6 +1953,162 @@
    ],
    "wear": [],
    "lift": 0.25
+  },
+  "monster:Sewer Rat": {
+   "model": "rat",
+   "scale": 1.1,
+   "tint": [
+    120,
+    100,
+    90
+   ],
+   "wear": []
+  },
+  "monster:Grubling": {
+   "model": "bloborc",
+   "scale": 0.95,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Sludge": {
+   "model": "greenblob",
+   "scale": 1.1,
+   "tint": [
+    130,
+    110,
+    70
+   ],
+   "wear": []
+  },
+  "monster:Orc Raider": {
+   "model": "orc",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Shadow Blade": {
+   "model": "ninja",
+   "scale": 1.0,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Cutpurse": {
+   "model": "blobninja",
+   "scale": 0.9,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Hedge Mage": {
+   "model": "blobwizard",
+   "scale": 0.95,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Legion Bones": {
+   "model": "skeleton_warrior",
+   "scale": 1.0,
+   "tint": null,
+   "wear": [
+    "sword",
+    "shield"
+   ]
+  },
+  "monster:Tomb Mage": {
+   "model": "skeleton_mage",
+   "scale": 1.0,
+   "tint": null,
+   "wear": [
+    "staff"
+   ]
+  },
+  "monster:Menagerie Yeti": {
+   "model": "yeti",
+   "scale": 1.1,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Skull Orc": {
+   "model": "orcskull",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Star-thing": {
+   "model": "alien",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Void Blob": {
+   "model": "alienblob",
+   "scale": 1.1,
+   "tint": [
+    130,
+    90,
+    200
+   ],
+   "wear": []
+  },
+  "monster:Hollow Knight": {
+   "model": "knight",
+   "scale": 1.05,
+   "tint": [
+    90,
+    90,
+    120
+   ],
+   "wear": [
+    "sword",
+    "shield"
+   ]
+  },
+  "monster:Moon Hare": {
+   "model": "bunny",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:The Sewer King": {
+   "model": "orc",
+   "scale": 0.85,
+   "tint": [
+    150,
+    190,
+    120
+   ],
+   "wear": []
+  },
+  "monster:The Night Mistress": {
+   "model": "ninja",
+   "scale": 0.8,
+   "tint": [
+    170,
+    120,
+    200
+   ],
+   "wear": []
+  },
+  "monster:The Last Legate": {
+   "model": "skeleton_warrior",
+   "scale": 1.15,
+   "tint": [
+    240,
+    220,
+    170
+   ],
+   "wear": [
+    "greatsword"
+   ]
+  },
+  "monster:The Hollow King": {
+   "model": "alien",
+   "scale": 0.9,
+   "tint": [
+    120,
+    90,
+    200
+   ],
+   "wear": []
   }
  }
 }
