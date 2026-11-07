@@ -52,6 +52,7 @@ class GameView(QOpenGLWidget):
         self.keys = set()
         self.inp = Input()
         self.auto, self.bot = False, None             # (auto-play: game/autoplay.py drives him)
+        self.speed = 1                                # (auto-play's speed: game steps a frame)
         self.captured = False
         self.running = False
         self.last = time.perf_counter()
@@ -135,10 +136,13 @@ class GameView(QOpenGLWidget):
             if ov is not None and isinstance(getattr(ov, "panel", None), ChoicePanel):
                 self.shell.close_panel()
         if g and self.running and not self.shell.panel_open() and self.auto:
-            self.bot.drive(g, self.inp, dt)
             ox, oz = g.x, g.z
-            g.step(dt, self.inp)
-            g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt, 1e-4)
+            for _ in range(self.speed):                          # (sped up: the game's steps, several a frame)
+                if g.level is None:
+                    break
+                self.bot.drive(g, self.inp, dt)
+                g.step(dt, self.inp)
+            g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt * self.speed, 1e-4)
             self._explore()
             self._music(g)
             self._sound_of_weather(g)
@@ -359,25 +363,44 @@ class GameView(QOpenGLWidget):
         self.inp.pitch = max(-1.4, min(1.4, self.inp.pitch - dy * sens))
         self._centre()
 
+    SPEEDS = (1, 2, 4, 8)
+
     def auto_rect(self):
         """The Auto-play button, over the life orb."""
-        return QRectF(18, self.height() - 168, 122, 26)
+        return QRectF(18, self.height() - 168, 132, 26)
+
+    def speed_rect(self):
+        """The speed button, beside it."""
+        return QRectF(156, self.height() - 168, 104, 26)
+
+    def cycle_speed(self):
+        self.speed = self.SPEEDS[(self.SPEEDS.index(self.speed) + 1) % len(self.SPEEDS)]
+        self.toasts.append((f"Auto-play speed x{self.speed}" + ("" if self.auto else " (when auto-play is on)"),
+                            (0.7, 0.9, 1.0), time.perf_counter()))
 
     def toggle_auto(self):
         self.auto = not self.auto
         if self.auto:
             from ..game.autoplay import Autopilot
             self.bot = Autopilot()
+            self.release()                                       # (the mouse free: the buttons to hand)
         else:
             self.inp.forward = self.inp.strafe = 0.0
             self.inp.fire = self.inp.jump = False
-        self.toasts.append(("Auto-play on: Claude plays himself (P to stop)" if self.auto else "Auto-play off",
-                            (0.7, 0.9, 1.0), time.perf_counter()))
+        self.toasts.append(("Auto-play on: Claude plays himself (F9 to stop, F10 for speed)" if self.auto else
+                            "Auto-play off (F9 to start again)", (0.7, 0.9, 1.0), time.perf_counter()))
 
     def mousePressEvent(self, e):
-        if self.game and self.running and self.auto_rect().contains(QPointF(e.position())) and not self.captured:
-            self.toggle_auto()
-            return
+        if self.game and self.running and not self.captured:
+            at = QPointF(e.position())
+            if self.auto_rect().contains(at):
+                self.toggle_auto()
+                return
+            if self.speed_rect().contains(at):
+                self.cycle_speed()
+                return
+            if self.auto:                                        # (playing himself: a click elsewhere leaves the mouse be)
+                return
         if not self.captured:
             self.capture()
             return
@@ -438,8 +461,10 @@ class GameView(QOpenGLWidget):
             self.shell.open_dialog(("pack",))
         elif k == Qt.Key_M:
             self.show_map = not self.show_map
-        elif k == Qt.Key_P:
+        elif k in (Qt.Key_P, Qt.Key_F9):
             self.toggle_auto()
+        elif k == Qt.Key_F10:
+            self.cycle_speed()
         elif k == Qt.Key_K:
             self.release()
             self.shell.open_dialog(("calendar",))
@@ -549,8 +574,16 @@ class GameView(QOpenGLWidget):
             p.setPen(QPen(QColor(120, 220, 255, int(140 + 110 * pulse)), 2))
             p.setBrush(Qt.NoBrush)
             p.drawRoundedRect(r, 8, 8)
-        T.outlined(p, r.center().x(), r.y() + 18, f"Auto-play: {'Y' if self.auto else 'N'}", QFont(T.BODY, 10, QFont.Bold),
+        T.outlined(p, r.center().x(), r.y() + 18, f"Auto-play: {'Y' if self.auto else 'N'}  (F9)", QFont(T.BODY, 10, QFont.Bold),
                    QColor("#9EE6FF") if self.auto else QColor("#E8D8B8"), centre=True, width=2.5)
+        r2 = self.speed_rect()
+        T.plate(p, r2, 8, 210)
+        if self.speed > 1:
+            p.setPen(QPen(QColor(255, 210, 120, 200), 2))
+            p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(r2, 8, 8)
+        T.outlined(p, r2.center().x(), r2.y() + 18, f"Speed x{self.speed}  (F10)", QFont(T.BODY, 10, QFont.Bold),
+                   QColor("#FFD890") if self.speed > 1 else QColor("#E8D8B8"), centre=True, width=2.5)
         # life and mana, in their orbs at the plate's ends
         T.orb(p, 78, H - 78, 56, pl.life / max(1, pl.max_life()), QColor("#C8242A"),
               f"{int(pl.life)}/{pl.max_life()}", now, warn=pl.life < pl.max_life() * 0.3)

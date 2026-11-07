@@ -8,7 +8,7 @@ thing the town is built over.
 Playing
   WASD move, Shift run (a running jump goes higher and further), mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
   F talk / use (the vendors, the stairs, the Deep's mouth, the cabin, the bed, the hearth, the chest, the farm sign), Q health potion, E mana potion, T Scroll of Return,
-  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, P auto-play on/off, Esc the menu.
+  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, F9 (or P) auto-play on/off, F10 its speed (x1, x2, x4, x8), Esc the menu.
 
   Thornwick is home: four vendors round the square - Hesper the Apothecary (potions, Scrolls of Return), Old Tamsin
   the Wandwright (wands and wand parts), Bramwell the Outfitter (hats, robes, gloves, boots, rings, amulets) and
@@ -127,7 +127,8 @@ Playing
   until pulled) and it grinds open; and a room of cold braziers - shoot one to light it and the trial begins: light
   them all within twelve seconds (the time shows) and a chest rises from the floor, or they all go out to try again.
 
-  Auto-play (the button over the life orb, or P): Claude plays himself (game/autoplay.py). On a floor he fights
+  Auto-play (the button over the life orb, or F9 / P; F10 or the button beside it speeds it up to x2, x4 or x8 -
+  the mouse is let go while it plays, so the buttons are always to hand): Claude plays himself (game/autoplay.py). On a floor he fights
   whatever he sees (backing off from biters, potions when he needs them), takes everything lying about, opens every
   chest, unlocks the doors he has keys for, pulls the levers, runs the brazier trial, breaks the cracked walls he's
   found, hunts down every monster left and walks every square - then takes the stairs home (eight minutes on a
