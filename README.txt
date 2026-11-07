@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The wolf den (v126.0, UPGRADE_PLAN_77.md)
+  (src/js/69zzzzd-wolfden.js, src/js/77q-wolfpack.js, src/js/76zzzzzzzzzze-figures2.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_77.md)
+  - The wolf den (UPGRADE_PLAN_77.md): west of the river, south of the west glade, a low outcrop of mottled boulders
+    with a ragged, unlit cave mouth in its face - no door, just the dark and a few bones at the threshold - and a
+    trodden clearing before it, reached on foot from the glade. It's named, and on the Where-to list once you've
+    seen it; Space at the mouth tells you what's there by the hour.
+  - The pack: eleven wolves live there - two alphas, the largest; five grown wolves a little smaller; and four pups
+    at half the size - in grey, black, brown, tawny and pale coats. They come out after dawn one at a time and range
+    through the forest around the den all day in two groups, each behind its alpha, the pups at an adult's heels,
+    stopping to sniff the ground or stand and look. They walk freely between the trees, not on the paths the party
+    keeps to, and they're wary of people - they keep their distance. At dusk they find their way home and go in, one
+    after another, and at night you can hear them breathing at the mouth. They're wild, not hostile.
+
 Claude's sound and the cues (v125.0, UPGRADE_PLAN_76.md)
   (src/js/77p-soundcues.js, src/js/77n-audiomix.js, tests/run.js)
   - Claude's sound (plan 76, release 3): a quiet quill scratches under his lines in the log, and a page turns when a

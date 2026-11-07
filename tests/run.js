@@ -7449,6 +7449,22 @@ test("Claude's sound and the cues (plan 76, release 3): the built page carries e
   for (const s of ["CM.soundCue = ", "CM.mixHold = ", 'fx.kind === "intent") cue("rumble")', 'cue(v.kept ? "vowKept" : v.broken ? "vowBroken" : "vowSworn")', 'startsWith("bargain:")) cue("wax")', 'g.on("curio", () => cue("chime"))', "CM.heroBark(g, { name: m.name, cls: m.cls, level: m.level }, \"fall\")"]) assert.ok(html.includes(s), s);
 });
 
+test("the wolf den: a crag with an open cave mouth west of the river, a clearing reached on foot from the gate, named and on the Where-to list once seen; Leshy's and Claude's cabins where they were; the pack of eleven - two alphas, five grown, four pups at half size - and the window that walks them", () => {
+  const CM = load(), D = CM.WOLF_DEN;
+  for (const seed of ["den-1", "map-1", "abc"]) { const w = CM.makeWood(seed);
+    assert.strictEqual(CM.solidAt(w, ...D.mouth), "denmouth"); assert.strictEqual(w.things[D.front.join(",")].type, "wolfden");
+    const S = CM.WOOD_GATE, seen = new Set([S.join()]), q = [S]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.isOpen(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(D.front.join()), `${seed}: walked to`); assert.strictEqual(CM.woodPlace(w, ...D.front), "the wolf den");
+    assert.strictEqual(CM.solidAt(w, ...CM.CABIN.door), "cabindoor"); assert.strictEqual(CM.solidAt(w, ...CM.CLAUDE_CABIN.door), "cabindoor"); }
+  const P = CM.WOLF_PACK; assert.strictEqual(P.length, 11); assert.strictEqual(P.filter((w) => w.role === "alpha").length, 2); assert.strictEqual(P.filter((w) => w.role === "adult").length, 5); assert.strictEqual(P.filter((w) => w.role === "pup").length, 4);
+  const big = Math.min(...P.filter((w) => w.role === "alpha").map((w) => w.size)), adult = P.filter((w) => w.role === "adult").map((w) => w.size), pup = P.filter((w) => w.role === "pup").map((w) => w.size);
+  assert.ok(adult.every((s) => s < big) && pup.every((s) => Math.abs(s - 0.5) < 0.04), "alphas largest, pups half"); assert.ok(new Set(P.map((w) => w.coat)).size >= 4, "coats of several colours");
+  const g = new CM.Game(); g.newGame("den-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.enterFloor(-1, "rope", D.front.slice()); g.floor.facing = 2; assert.ok(g.use(), "the mouth answers");
+  g.floor.pos = CM.WOOD_GATE.slice(); assert.ok(CM.wayPlaces(g).some((p) => p.name === "The wolf den"), "on the Where-to list once seen");
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["CM.wolfPack = ", "layer: `pet:wolf_${w.coat}`", "if (s.heading !== undefined) st.yaw"]) assert.ok(html.includes(s), s);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

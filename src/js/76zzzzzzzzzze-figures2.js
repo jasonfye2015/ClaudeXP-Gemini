@@ -45,7 +45,7 @@
         const parts = s.layer.split(":"), pose = parts[2] || "", x = s.x + 0.5 + (s.dx || 0), z = s.y + 0.5 + (s.dz || 0);
         const id = s.m || s.id || `${key}@${Math.round(x * 2)},${Math.round(z * 2)}`; let st = states.get(id); if (!st) { st = { clip: null, x, z, yaw: Math.atan2(eye[0] - x, eye[2] - z), flash: 0 }; states.set(id, st); }
         const dx = x - st.x, dz = z - st.z, dist = Math.hypot(dx, dz), moving = Boolean(s.walking) || (!s.m && dist > 0.004 && dist < 1.5 && now - (st.seen || 0) < 0.5);   // (a step within half a second: walking, not a leap to a new square; a fight's foe sways and recoils in place - not a walk)
-        if (!s.m && dist > 0.02 && dist < 1.5) st.yaw = turnTo(st.yaw, Math.atan2(dx, dz), 0.3); else if (s.m || !st.moved) st.yaw = turnTo(st.yaw, Math.atan2(eye[0] - x, eye[2] - z), s.m ? 0.2 : 0.05);   // (a fight's foe squares up to the party; the rest keep the way they went)
+        if (s.heading !== undefined) st.yaw = turnTo(st.yaw, s.heading, 0.2); else if (!s.m && dist > 0.02 && dist < 1.5) st.yaw = turnTo(st.yaw, Math.atan2(dx, dz), 0.3); else if (s.m || !st.moved) st.yaw = turnTo(st.yaw, Math.atan2(eye[0] - x, eye[2] - z), s.m ? 0.2 : 0.05);   // (a fight's foe squares up to the party; the rest keep the way they went)
         if (moving) st.moved = true; st.x = x; st.z = z; st.seen = now;
         const flash = s.flash || 0, hit = flash > st.flash + 0.25; st.flash = flash;
         const foe = s.m || null, dead = Boolean(foe && foe.hp <= 0) || Boolean(s.dying), kind = CM.monsterKind ? CM.monsterKind(parts[1]) : null;
