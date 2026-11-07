@@ -23,4 +23,11 @@ the running game by tools/export_cm_art.py.
 The music: ClaudeRPG's own - its sound engine (SND) and its worlds' music styles (MSTY), by Kithylin, MIT licence
 (ClaudeGames/clauderpg/game/LICENSE) - carried over into Python in engine/music.py, note for note.
 
-The sounds are made by the game as it starts (engine/sound.py); the item pictures are painted (ui/icons.py).
+The item pictures (assets/items, by tools/import_icons.py), both CC0:
+- Dungeon Crawl Stone Soup's tiles (the Crawl Stone Soup team and the RLTiles project) - the robes, hats, gloves,
+  boots, rings, amulets, wands and gold piles: https://opengameart.org/content/dungeon-crawl-32x32-tiles
+- Henrique Lazarini (7Soul1), "496 pixel art icons for medieval/fantasy RPG" - the gems and runes of the wand
+  parts, the potions, the scroll and the coin: https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg
+  (kept in Local Storage/Claudenites icons/7soul-496-rpg-icons).
+
+The sounds are made by the game as it starts (engine/sound.py); the item pictures fall back to painted ones (ui/icons.py).

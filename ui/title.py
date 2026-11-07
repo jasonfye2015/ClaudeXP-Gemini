@@ -409,6 +409,7 @@ class TitleScreen(QWidget):
             ("Figures", "KayKit Adventurers and Skeletons (Kay Lousberg, CC0); Quaternius' animals, monsters, dinosaurs (CC0)"),
             ("Plants and props", "Quaternius Ultimate Nature Pack; Kenney Pirate Kit (CC0)"),
             ("Stone", "ambientCG (CC0)"),
+            ("Items", "Dungeon Crawl Stone Soup's tiles; Henrique Lazarini (7Soul1)'s 496 RPG icons (both CC0)"),
             ("Painted art, the set pieces", "Claude and Magic's own"),
             ("Voices", "llama.cpp, with a model from the Timeline's LLM Models"),
         ]

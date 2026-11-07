@@ -89,6 +89,7 @@ How it's made
   python tools/play.py        play this copy on its own (with the Timeline's Python)
   python tools/import_cm.py      bring Claude and Magic's figures, plants and stone across again
   python tools/export_cm_art.py  export its painted art and set pieces again (runs it in Qt WebEngine)
+  python tools/import_icons.py   the item pictures again (Dungeon Crawl's tiles and 7Soul1's icons, both CC0)
 
 In the Timeline it's ClaudeGames/claudenites (a subtree of this repo): in the launcher's Apps, and in each
 computer's Games.

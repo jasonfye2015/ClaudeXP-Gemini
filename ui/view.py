@@ -424,8 +424,9 @@ class GameView(QOpenGLWidget):
             p.setPen(Qt.NoPen)
             p.setBrush(QColor(10, 10, 16, 170))
             p.drawRoundedRect(r, 5, 5)
-            p.setBrush(QColor(col))
-            p.drawEllipse(QRectF(r.x() + 6, r.y() + 5, 14, 14))
+            from .icons import icon as _icon
+            pic = _icon({"type": "potion" if kind != "return" else "scroll", "kind": kind, "id": "hud:" + kind}, 22)
+            p.drawPixmap(int(r.x() + 3), int(r.y() + 1), pic)
             p.setPen(QColor("#E8E8E8"))
             p.drawText(r.adjusted(26, 0, 0, 0), Qt.AlignVCenter, f"{key}  x{pl.potions.get(kind, 0)}")
         # experience

@@ -1,0 +1,181 @@
+{
+ "gear": {
+  "hat": [
+   [
+    "dc_armor_headgear_cap_1.png",
+    "dc_armor_headgear_cap_2.png"
+   ],
+   [
+    "dc_armor_headgear_hat_1.png",
+    "dc_armor_headgear_hat_2.png"
+   ],
+   [
+    "dc_armor_headgear_wizard_hat_1.png",
+    "dc_armor_headgear_hat_3.png"
+   ],
+   [
+    "dc_armor_headgear_cornuthaum.png",
+    "dc_armor_headgear_elven_leather_helm.png"
+   ],
+   [
+    "dc_armor_headgear_wizard_hat_2.png",
+    "dc_armor_headgear_cornuthaum.png"
+   ]
+  ],
+  "robe": [
+   [
+    "dc_armor_torso_robe_1_old.png",
+    "dc_armor_torso_robe_1_new.png"
+   ],
+   [
+    "dc_armor_torso_robe_2_old.png",
+    "dc_armor_torso_robe_2_new.png"
+   ],
+   [
+    "dc_armor_torso_robe_3.png",
+    "dc_armor_torso_robe_2_new.png"
+   ],
+   [
+    "dc_armor_torso_robe_ego_1.png",
+    "dc_armor_torso_robe_ego_2.png"
+   ],
+   [
+    "dc_armor_torso_robe_art_1.png",
+    "dc_armor_torso_robe_art_2.png"
+   ]
+  ],
+  "gloves": [
+   [
+    "dc_armor_hands_glove_1_old.png",
+    "dc_armor_hands_glove_1_new.png"
+   ],
+   [
+    "dc_armor_hands_glove_2_old.png",
+    "dc_armor_hands_glove_2_new.png"
+   ],
+   [
+    "dc_armor_hands_glove_3_old.png",
+    "dc_armor_hands_glove_3_new.png"
+   ],
+   [
+    "dc_armor_hands_glove_4_old.png",
+    "dc_armor_hands_glove_4_new.png"
+   ],
+   [
+    "dc_armor_hands_glove_5.png",
+    "dc_armor_hands_glove_4_gauntlets.png"
+   ]
+  ],
+  "boots": [
+   [
+    "dc_armor_feet_low_boots.png",
+    "dc_armor_feet_boots_1_brown_old.png"
+   ],
+   [
+    "dc_armor_feet_boots_1_brown_new.png",
+    "dc_armor_feet_boots_3_stripe_old.png"
+   ],
+   [
+    "dc_armor_feet_boots_3_stripe_new.png",
+    "dc_armor_feet_boots_4_green.png"
+   ],
+   [
+    "dc_armor_feet_boots_2_jackboots.png",
+    "dc_armor_feet_boots_4_green.png"
+   ],
+   [
+    "dc_armor_feet_boots_iron_2.png",
+    "dc_armor_feet_boots_2_jackboots.png"
+   ]
+  ],
+  "ring": [
+   [
+    "dc_ring_copper.png",
+    "dc_ring_bronze.png",
+    "dc_ring_brass.png"
+   ],
+   [
+    "dc_ring_silver.png",
+    "dc_ring_ring_plain_blue.png",
+    "dc_ring_ring_plain_green.png"
+   ],
+   [
+    "dc_ring_gold.png",
+    "dc_ring_ring_ruby.png",
+    "dc_ring_ring_sapphire.png",
+    "dc_ring_ring_topaz.png"
+   ],
+   [
+    "dc_ring_moonstone.png",
+    "dc_ring_opal.png",
+    "dc_ring_pearl.png"
+   ],
+   [
+    "dc_ring_steel.png",
+    "dc_ring_diamond.png",
+    "dc_ring_ring_shiny.png",
+    "dc_ring_tourmaline.png"
+   ]
+  ],
+  "amulet": [
+   [
+    "dc_amulet_bone_gray.png",
+    "dc_amulet_cylinder_gray.png"
+   ],
+   [
+    "dc_amulet_stone_1_green.png",
+    "dc_amulet_stone_2_red.png",
+    "dc_amulet_ring_red.png"
+   ],
+   [
+    "dc_amulet_celtic_blue.png",
+    "dc_amulet_celtic_red.png",
+    "dc_amulet_cameo_blue.png"
+   ],
+   [
+    "dc_amulet_stone_3_blue.png",
+    "dc_amulet_crystal_white.png",
+    "dc_amulet_eye_cyan.png"
+   ],
+   [
+    "dc_amulet_penta_orange.png",
+    "dc_amulet_face_1_gold.png",
+    "dc_amulet_crystal_red.png"
+   ]
+  ]
+ },
+ "wands": {
+  "birch": "dc_wand_gem_wood_new.png",
+  "willow": "dc_wand_gem_wood_old.png",
+  "ash": "dc_wand_gem_bronze_new.png",
+  "yew": "dc_wand_gem_copper_new.png",
+  "bone": "dc_wand_gem_bone_new.png",
+  "ironbark": "dc_wand_gem_iron_new.png",
+  "crystal": "dc_wand_gem_glass_new.png",
+  "emberwood": "dc_wand_gem_brass_new.png",
+  "starsteel": "dc_wand_gem_silver_new.png",
+  "heartwood": "dc_wand_gem_gold_new.png"
+ },
+ "parts": {
+  "core:fire": "s7_S_Fire03.png",
+  "core:frost": "s7_S_Ice02.png",
+  "core:storm": "s7_S_Thunder03.png",
+  "core:venom": "s7_S_Poison05.png",
+  "core:arcane": "s7_S_Magic03.png",
+  "lens": "s7_I_Diamond.png",
+  "splitter": "s7_I_Crystal01.png",
+  "focus": "s7_I_Opal.png",
+  "quickener": "s7_I_Feather01.png",
+  "seeker": "s7_I_Eye.png",
+  "rebound": "s7_I_Sapphire.png",
+  "piercer": "s7_I_Amethist.png"
+ },
+ "other": {
+  "gold_pile": "dc_gold_gold_pile_10.png",
+  "potion:health": "s7_P_Red01.png",
+  "potion:mana": "s7_P_Blue01.png",
+  "scroll": "s7_I_Scroll.png",
+  "coin": "s7_I_GoldCoin.png"
+ },
+ "credits": "Item pictures: Dungeon Crawl Stone Soup tiles (CC0) and Henrique Lazarini (7Soul1)'s 496 pixel art icons for medieval/fantasy RPG (CC0)"
+}
