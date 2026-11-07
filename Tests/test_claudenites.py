@@ -1,6 +1,6 @@
 """Claudenites 3-D in the Timeline (ClaudeGames/claudenites, a subtree of jasonfye2015/claudenites-3d): its own suite
 of rules passes here as it does on GitHub; and its window opens through the stand-in host on a scratch save folder
-(the real saves are never touched, and no language model is loaded), goes from the title into Thornwick and down to a floor, draws a frame when the
+(the real saves are never touched, and no language model is loaded), goes from the title into Thornwick (readying wands into slots 3 and 4 in the pack) and down to a floor, draws a frame when the
 machine gives it OpenGL, saves the slot, and closes."""
 import importlib.util
 import json
@@ -44,6 +44,24 @@ def test_the_window():
     support.pump(0.5)
     g = shell.view.game
     assert g.depth == 0 and not shell.panel_open()
+    # the pack: a wand readied into slot 3 by choosing it, then the slot; and by its "Ready in slot 4" button
+    from claudenites.game import items as I
+    a, b = I.make_wand("ash"), I.make_wand("yew")
+    g.player.inventory += [a, b]
+    shell.open_dialog(("pack",))
+    support.pump(0.3)
+    pack = shell.overlay.panel
+    pack.pick(("pack", a))
+    pack.pick(("wand", 2))
+    assert g.player.wands[2] is a and a not in g.player.inventory
+    pack.pick(("pack", b))
+    from PySide6.QtWidgets import QPushButton
+    four = [w for w in pack.findChildren(QPushButton) if w.text() == "4" and w.isVisible()]
+    assert four, "no Ready-in-slot-4 button"
+    four[0].click()
+    support.pump(0.1)
+    assert g.player.wands[3] is b and g.player.active == 3
+    shell.close_panel()
     g.go_floor(1)
     support.pump(1.0)
     assert g.depth == 1 and g.monsters
