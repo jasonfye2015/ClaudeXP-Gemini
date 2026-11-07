@@ -1,7 +1,7 @@
 "use strict";
 // Curiosities, more of them (UPGRADE_PLAN_73.md, part two). Kept quiet on purpose. Rules: 69zzzw-curios.js (the ledger).
 { const P = CM.Game.prototype, key = (x, y) => `${x},${y}`, R = (g) => g.ext("curios"), V = (g) => g.vext("curios");
-  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
+  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y) && !(fl.number === -1 && CM.isCoastLine && CM.isCoastLine(x, y))) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
   // one small strange thing a band, deeper down, laid by the seed
   const ODD = {
     coin: { band: 2, text: "Wedged between two flagstones: a coin with a head on both sides. You check three times. Both heads are smiling.", item: { name: "A two-headed coin", kind: "trinket", slot: "trinket", power: 0, value: 1, props: { stats: { luck: 1 } }, lore: "Heads, either way." } },

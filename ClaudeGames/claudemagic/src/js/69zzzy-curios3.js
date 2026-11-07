@@ -88,7 +88,7 @@
     "A pile of skulls arranged, carefully, in order of height. The smallest one at the end has a little paper crown.",
     "A single root reaches down from the ceiling and stops a hand's width from the floor, as if it was about to touch the ground and had second thoughts.",
   ];
-  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
+  const layOn = (fl, seed, salt, thing) => { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos && fl.pos[0] === x && fl.pos[1] === y) && !(fl.number === -1 && CM.isCoastLine && CM.isCoastLine(x, y))) cells.push(key(x, y)); if (cells.length) fl.things[cells[CM.hashSeed(`${seed}:${salt}`) % cells.length]] = thing; };
   { const em1 = P.emit; P.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally && this.vext) { const fl = this.floor, n = fl.number, C = R(this); C.odd2 = C.odd2 || {};
         if (n >= 1 && n <= CM.BOTTOM && n % 1 === 0 && fl.special !== "interior" && !(this.deltas && this.deltas[n])) for (let b = 0; b < ODD2.length; b++) if (!C.odd2[b] && CM.curioFloor(this.seed, b, `odd2:${b}`) === n) { C.odd2[b] = true; layOn(fl, this.seed, `odd2at:${b}`, { type: "oddity2", band: b }); } }
       return em1.call(this, ev, ...a); }; }
