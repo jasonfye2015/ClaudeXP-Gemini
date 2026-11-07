@@ -7408,6 +7408,30 @@ test("your own dead come back: a hero on the memorial may rise in the band where
   h.enterFloor(0, "rope", [CM.MEMORIAL_WALL[0], CM.MEMORIAL_WALL[1] + 1]); h.floor.facing = 0; h.mode = "explore"; h.readMemorialWall(); assert.ok(/AT REST/.test(h.messages.slice(-1)[0]));
 });
 
+test("the king's bargains: an offer the first time floors 18, 36 and 53 are reached, the price said plainly; taken - five floors down with torches burning faster, a level each with less greatest health, one of the king's questions answered and no walk with Claude; burned - the heart lifts; never offered under the Automatic hand; all in Claude's account", () => {
+  const CM = load();
+  const g = new CM.Game(); g.newGame("barg-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  const offers = []; g.on("choice", (c) => { if (String(c.k).startsWith("bargain:")) offers.push(c); });
+  g.enterFloor(18, "down"); assert.strictEqual(offers.length, 1); assert.ok(/The price: every torch burns half again/.test(offers[0].text), "the price said plainly");
+  g.enterFloor(17, "up"); g.enterFloor(18, "down"); assert.strictEqual(offers.length, 1, "once");
+  g.choose("bargain:stair", 0); assert.strictEqual(g.floor.number, 23, "five floors down"); assert.strictEqual(g.bargains().stair, "taken");
+  g.light = { kind: "torch", left: 100 }; g.lightOut = false; for (let i = 0; i < 20; i++) { g.steps = (g.steps || 0) + 1; g.burn(); } const used = 100 - g.light.left;
+  const h = new CM.Game(); h.newGame("barg-2", fixedParty(CM)); h.mode = "explore"; h.enterFloor(23, "down"); h.light = { kind: "torch", left: 100 }; h.lightOut = false; for (let i = 0; i < 20; i++) { h.steps = (h.steps || 0) + 1; h.burn(); } const plain = 100 - h.light.left;
+  assert.ok(used >= plain * 1.4, `the torch burns faster (${used} against ${plain})`);
+  // strength
+  const lv = g.party.map((x) => x.level), mx = g.party.map((x) => x.max); g.enterFloor(36, "down"); g.choose("bargain:strength", 0);
+  assert.ok(g.party.every((x, i) => x.level > lv[i]), "a level each"); assert.ok(g.party.every((x) => x.hp <= x.max));
+  // the answer, and Claude won't walk
+  const unread = () => CM.REMIND.filter((r) => g.story.read[r.key] === undefined).length, u0 = unread(); g.enterFloor(53, "down"); g.choose("bargain:answer", 0); assert.strictEqual(unread(), u0 - 1, "one answered");
+  const said = []; CM.claudeActs.walk(g, "1,1", (s) => said.push(s)); assert.ok(/can't walk down beside that/.test(said[0]) && !g.claudeWalking(), "no Last Page with a bargain taken");
+  // burned
+  const b = new CM.Game(); b.newGame("barg-3", fixedParty(CM)); b.mode = "explore"; b.morale = 50; b.enterFloor(18, "down"); b.choose("bargain:stair", 1); assert.strictEqual(b.bargains().stair, "refused"); assert.ok(b.morale > 50, "the heart lifts"); assert.ok(b.floor.number === 18);
+  // the Automatic hand is never asked
+  const a = new CM.Game(); a.newGame("barg-4", fixedParty(CM)); a.mode = "explore"; a.autoOn = () => true; const asked = []; a.on("choice", (c) => asked.push(c)); a.enterFloor(18, "down"); assert.ok(!asked.some((c) => String(c.k).startsWith("bargain:")));
+  // the account
+  g.vext("claude").met = 1; const e = { name: "x", floor: 53, won: false, date: "d", tally: {} }; g.payChapters(e); assert.ok(/The king's letters: took the Short Stair, Strength from the Throne, the King's Answer/.test(e.claudeNote), e.claudeNote);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
