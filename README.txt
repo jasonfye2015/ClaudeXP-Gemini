@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Harrowgate and the Undercity (v137.0, UPGRADE_PLAN_81.md phase 4)
+  (src/js/35c-figures.js, src/js/69zzzzp-harrowgate.js, src/models/figures.json, tools/headless.js, tests/run.js)
+  - Harrowgate (UPGRADE_PLAN_81.md): the Wren's longest crossing, two days out of sight of land, to the Mainland - a
+    coast going away north and south as far as you can see - and Harrowgate on it: the old quay, timbered warehouses,
+    the harbour wall, and an arch in the wall older than the wall. The town itself is shut to strangers this season.
+  - The Undercity: forty floors in four bands - the brick Sewers (sewer rats, grublings, sludge, orc raiders); the
+    Thieves' Warrens, cellars knocked through into cellars (shadow blades, cutpurses, hedge mages); the marble Old
+    Empire buried under the port, its legion still in its bones, its tomb mages, its menagerie's yetis and skull orcs;
+    and the Hollow Throne, where the stone and the angles are wrong and the stars show through the floor (star-things,
+    void blobs, hollow knights, moon hares).
+  - The Sewer King on floor 10, the Night Mistress on 20, the Last Legate on 30, and the Hollow King on 40 - each with
+    a relic and its own turn at half health.
+  - All four island dungeons are open: Gull Rock, the Fenholm, Emberreach and Harrowgate, forty floors each, with
+    about sixty new creatures between them.
+
 Emberreach and the Ember Halls (v136.0, UPGRADE_PLAN_81.md phase 3)
   (src/js/35c-figures.js, src/js/69zzzzo-emberreach.js, src/models/figures.json, tools/headless.js, tests/run.js)
   - Emberreach (UPGRADE_PLAN_81.md): the Wren's third island, south-east of home: warm water that smells of eggs, a

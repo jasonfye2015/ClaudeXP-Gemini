@@ -7606,7 +7606,7 @@ test("the boat: the Wren at the dock's south face; aboard from the dock's edge, 
   g.floor.pos = [H.pier[0], H.head[3]]; g.floor.facing = 2; assert.ok(g.use(), "aboard from the dock's edge"); assert.strictEqual(chart, 1, "the chart unrolled");
   const ids = CM.SEA_PLACES.map((p) => p.id); for (const id of ["home", "round", "main"]) assert.ok(ids.includes(id), id); assert.ok(CM.SEA_PLACES.filter((p) => !p.trip && !p.here).length >= 4, "islands and the mainland on the chart");
   assert.ok(CM.SEA_PLACES.find((p) => p.id === "main").what.includes("continent"));
-  g.clock = 1440 + (11 - 6) * 60; assert.strictEqual(g.seaWhyNot("home"), "That's where you are."); assert.ok(/not yet/.test(g.seaWhyNot("main")), "not charted yet");   /* (v134.0: Gull Rock is) */
+  g.clock = 1440 + (11 - 6) * 60; assert.strictEqual(g.seaWhyNot("home"), "That's where you are."); { const i = CM.SEA_OPEN.indexOf("main"); if (i >= 0) CM.SEA_OPEN.splice(i, 1); assert.ok(/not yet/.test(g.seaWhyNot("main")), "not charted yet"); if (i >= 0) CM.SEA_OPEN.push("main"); }   /* (v137.0: every place on the chart is charted; take one off to look) */
   g.gold = 2; assert.ok(/fare/.test(g.seaWhyNot("round")), "the fare"); g.gold = 50;
   g.clock = 1440 + (22 - 6) * 60; assert.ok(/dark/.test(g.seaWhyNot("round")), "not in the dark, unlit"); g.floor.pos = CM.LIGHTHOUSE.door.slice(); g.climbLighthouse(); g.climbDown(); g.floor.pos = [H.pier[0], H.head[3]];
   assert.strictEqual(g.seaWhyNot("round"), "", "with the light lit, yes"); const gold = g.gold, clock = g.clock, seen = [];
@@ -7624,7 +7624,7 @@ test("the island dungeons and Gull Rock: the Wren sails there from the dock and 
   for (let n = 1; n <= 60; n += 7) { const fl = CM.makeFloor(n, "isle-shaft", 2); for (const t of Object.values(fl.things)) if (t.group) for (const m of t.group) assert.ok(!names.has(m.kind || m.name), `the shaft never meets ${m.name}`); }
   const g = new CM.Game(); g.newGame("isle-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.gold = 500;
   g.enterFloor(-1, "rope", [CM.HARBOUR.pier[0], CM.HARBOUR.head[3]]); g.clock = 1440 + 5 * 60;
-  assert.strictEqual(g.seaWhyNot("gull"), "", "Gull Rock is charted"); assert.ok(g.seaWhyNot("main"), "the others not yet");   /* (v135.0: the Fenholm is charted) */ g.sail("gull"); assert.strictEqual(g.floor.number, I.base, "landed");
+  assert.strictEqual(g.seaWhyNot("gull"), "", "Gull Rock is charted"); assert.ok(g.seaWhyNot("nowhere"), "nowhere else");   /* (v137.0: every place on the chart is charted) */ g.sail("gull"); assert.strictEqual(g.floor.number, I.base, "landed");
   assert.ok(CM.atBerth(g), "at the jetty"); assert.strictEqual(g.seaWhyNot("home"), ""); assert.ok(/where you are/.test(g.seaWhyNot("gull")));
   g.floor.pos = I.mouthFront.slice(); assert.ok(g.use() && g.isleMenu.length === 2, "the mouth: down, or not yet"); g.choose(I.mouthFront.join(), 0); assert.strictEqual(g.floor.number, I.base - 1);
   const ty = (fl, type) => Object.keys(fl.things).filter((k) => fl.things[k].type === type);
