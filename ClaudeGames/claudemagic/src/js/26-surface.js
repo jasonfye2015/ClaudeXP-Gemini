@@ -193,17 +193,17 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       continue;
     }
     covered.add(`${x},${y}`);
-    const LV = !sky && fl.levels ? fl.levels[`${x},${y}`] : null, F0 = LV ? LV[0] : 0, C0 = LV ? LV[1] : 1;   // (v47.0: the square's floor and ceiling - 69zzi-levels.js)
+    const LV = fl.levels ? fl.levels[`${x},${y}`] : null, F0 = LV ? LV[0] : 0, C0 = LV ? LV[1] : 1;   // (v47.0: the square's floor and ceiling - 69zzi-levels.js; v128.0: under a sky too - the Scarp, 23e-scarp.js)
     const under = sky && canopy.has(`${x},${y}`), g = CM.groundAt(fl, x, y);
     const gb = sky && CM.blendGroundAt ? CM.blendGroundAt(fl, x, y) : g, floorLayer = gb && index[`ground:${gb}`] !== undefined ? index[`ground:${gb}`] : index.floor;   // (v55.0: the forest floor under the trees)
     if (sky) {
-      quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], floorLayer, under ? 0.55 : 0.9);
+      quad([x, F0, y + 1], [x + 1, F0, y + 1], [x + 1, F0, y], [x, F0, y], floorLayer, under ? 0.55 : 0.9);
       if ((g === "cobbles" || g === "flags") && index["solid:sill"] !== undefined && opts.detail !== 0) SIDES.forEach(([ex, ey], d) => {   // (v54.2) a kerb of dressed stone where the paving meets grass or earth
         const nx = x + ex, ny = y + ey; if (!openAt(nx, ny)) return; const ng = CM.groundAt(fl, nx, ny); if (ng === "cobbles" || ng === "flags" || ng === "planks") return;
         const K = index["solid:sill"], kh = 0.045, kw = 0.09, a2 = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b2 = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
         const ia = [a2[0] - ex * kw, a2[1] - ey * kw], ib = [b2[0] - ex * kw, b2[1] - ey * kw];
         quad([ia[0], kh, ia[1]], [ib[0], kh, ib[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.95); quad([a2[0], 0, a2[1]], [b2[0], 0, b2[1]], [b2[0], kh, b2[1]], [a2[0], kh, a2[1]], K, 0.72); quad([ib[0], 0, ib[1]], [ia[0], 0, ia[1]], [ia[0], kh, ia[1]], [ib[0], kh, ib[1]], K, 0.8); });
-      if (under && index.canopy !== undefined) quad([x, 1.25, y], [x + 1, 1.25, y], [x + 1, 1.25, y + 1], [x, 1.25, y + 1], index.canopy, 0.6);
+      if (under && index.canopy !== undefined) quad([x, 1.25 + F0, y], [x + 1, 1.25 + F0, y], [x + 1, 1.25 + F0, y + 1], [x, 1.25 + F0, y + 1], index.canopy, 0.6);
     } else {
       quadVaried([x, F0, y + 1], [x + 1, F0, y + 1], [x + 1, F0, y], [x, F0, y], floorLayer, [corner(x, y + 1, 0.95), corner(x + 1, y + 1, 0.95), corner(x + 1, y, 0.95), corner(x, y, 0.95)], x, y, "f");
       quadVaried([x, C0, y], [x + 1, C0, y], [x + 1, C0, y + 1], [x, C0, y + 1], index.ceiling, [corner(x, y, 0.75), corner(x + 1, y, 0.75), corner(x + 1, y + 1, 0.75), corner(x, y + 1, 0.75)], x, y, "c");
@@ -211,10 +211,10 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
     }
     SIDES.forEach(([dx, dy, shade], d) => {
       const nx = x + dx, ny = y + dy;
-      if (!solid(nx, ny)) { if (!sky && fl.levels) { const NL = fl.levels[`${nx},${ny}`], nf = NL ? NL[0] : 0, nc = NL ? NL[1] : 1;   // (v47.0: a step up to the next square, or its lower ceiling, faced from this one)
+      if (!solid(nx, ny)) { if (fl.levels) { const NL = fl.levels[`${nx},${ny}`], nf = NL ? NL[0] : 0, nc = NL ? NL[1] : 1;   // (v47.0: a step up to the next square, or its lower ceiling, faced from this one)
           const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
-          if (nf > F0 + 1e-6) quad([a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], nf, b[1]], [a[0], nf, a[1]], pickWall(x, y, d, nx, ny), shade * 0.95);
-          if (nc < C0 - 1e-6) quad([a[0], nc, a[1]], [b[0], nc, b[1]], [b[0], C0, b[1]], [a[0], C0, a[1]], pickWall(x, y, d, nx, ny), shade * 0.7); } return; }
+          if (nf > F0 + 1e-6) quad([a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], nf, b[1]], [a[0], nf, a[1]], sky ? L(index["solid:scarp"] !== undefined ? "solid:scarp" : "solid:cliff") : pickWall(x, y, d, nx, ny), shade * 0.95);   // (under a sky: the rock of a scarp, or a stair cut in it)
+          if (!sky && nc < C0 - 1e-6) quad([a[0], nc, a[1]], [b[0], nc, b[1]], [b[0], C0, b[1]], [a[0], C0, a[1]], pickWall(x, y, d, nx, ny), shade * 0.7); } return; }
       const K = kindOf(nx, ny), key = `${nx},${ny}`;
       if (K.roof || K.tower) return;                                                  // (a building or a tower: walled and roofed below, every face)
       if (K.tree) {                                                                   // the trees: this one, and the rank behind it

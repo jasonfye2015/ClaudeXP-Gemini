@@ -17,6 +17,7 @@
       for (let c = 0; c < 6; c++) tone(rnd() * (secs - 0.5), 0.28, 160 + rnd() * 90, 140 + rnd() * 60, 0.03, 2); }
     else if (id === "hammer") { for (let t = 0.2; t < secs - 0.6; t += 1.1 + (rnd() < 0.2 ? 0.55 : 0)) { tone(t, 0.6, 620, 618, 0.11, 7); tone(t, 0.5, 1340, 1338, 0.06, 9); tone(t, 0.25, 2210, 2200, 0.03, 12); const i0 = Math.floor(t * rate); for (let i = 0; i < rate * 0.01; i++) out[i0 + i] += noise() * 0.15 * (1 - i / (rate * 0.01)); } }
     else if (id === "hiss") { for (let c = 0; c < 4; c++) { const at = rnd() * (secs - 2), m = Math.floor(rate * 1.4), i0 = Math.floor(at * rate); let y = 0; for (let i = 0; i < m; i++) { const x = noise(); y = x - y * 0.6; out[i0 + i] += y * 0.05 * Math.sin(Math.PI * i / m); } } }
+    else if (id === "falls") { let y = 0, y2 = 0, y3 = 0; for (let i = 0; i < n; i++) { const t = i / rate, w = noise(); y += 0.09 * (w - y); y2 += 0.012 * (noise() - y2); y3 += 0.35 * (w - y3); out[i] = y * 0.42 * (0.9 + 0.1 * Math.sin(2 * Math.PI * 0.21 * t)) + y2 * 0.55 + y3 * 0.07; } }   // (v128.0: the falls off the Scarp - a heavy roar and a hiss over it)
     else if (id === "bubbles") { for (let c = 0; c < 28; c++) tone(rnd() * (secs - 0.1), 0.05, 220 + rnd() * 200, 600 + rnd() * 400, 0.05, 4); }
     else if (id === "chimes") { const scale = [2093, 2349, 2637, 3136, 3520]; for (let c = 0; c < 10; c++) tone(rnd() * (secs - 2), 2.2, scale[Math.floor(rnd() * 5)], scale[Math.floor(rnd() * 5)] * 1.0, 0.03, 3); }
     else if (id === "beat") { for (let t = 0.2; t < secs - 0.5; t += 1.33) { tone(t, 0.18, 60, 45, 0.25, 5); tone(t + 0.26, 0.15, 55, 42, 0.18, 6); } }
@@ -25,7 +26,7 @@
   const want = (game) => { const fl = game.floor, out = {}; if (!fl || game.mode === "title" || game.mode === "camp") return out; const n = fl.number, [x, y] = fl.pos, day = !CM.isNight(game), h = CM.hourOf(game) % 24, wx = CM.weather(game), season = CM.season(game);
     const near = (at, r, k) => { const d = Math.hypot(at[0] - x, at[1] - y); return d < r ? [k * (1 - d / r), at] : null; };
     if (n === -1) { if (day) out.birds = [(wx === "rain" ? 0.15 : season === "winter" ? 0.25 : 0.5), null]; else if (season !== "winter" && wx !== "rain") out.crickets = [0.45, null];
-      const rx = CM.riverX ? CM.riverX(y) : -99, d = Math.abs(rx - x); if (d < 7) out.river = [0.5 * (1 - d / 7), [rx, y]]; }
+      const rx = CM.riverX ? CM.riverX(y) : -99, d = Math.abs(rx - x); if (d < 7) out.river = [0.5 * (1 - d / 7), [rx, y]]; if (CM.SCARP && fl.levels) { const f = near([CM.SCARP.falls[0] - 0.5, CM.SCARP.falls[1]], 16, 0.75); if (f) out.falls = f; } }
     else if (n === 0) { if (h >= 6 && h < 20 && CM.TOWN_AT) { const m = near(CM.TOWN_AT.market, 14, 0.4); if (m) out.murmur = m; } if (h >= 7 && h < 19 && CM.TOWN_BLOCKS && CM.TOWN_BLOCKS.smith) { const s = near(CM.TOWN_BLOCKS.smith.door, 10, 0.45); if (s) out.hammer = s; } if (day) out.birds = [0.18, null]; }
     else if (fl.special === "interior") { if (fl.interior === "smith") out.hammer = [0.4, null]; if (fl.interior === "tavern") out.murmur = [0.4, null]; }
     else if (CM.isDeep(n)) { const band = CM.isUndercroft(n) ? -1 : CM.themeIndex(n), B = { "-1": ["lapping", 0.35], 1: ["lapping", 0.35], 4: ["lapping", 0.5], 5: ["bubbles", 0.35], 6: ["chimes", 0.3], 7: ["hammer", 0.3], 9: ["beat", 0.35] }[band];

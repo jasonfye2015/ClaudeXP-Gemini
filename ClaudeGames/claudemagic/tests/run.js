@@ -5845,7 +5845,7 @@ test("levels: about one plain room in five a dais and one in nine a pit, the roo
   assert.ok(dais > rooms / 12 && dais < rooms / 2.2, `dais ${dais} of ${rooms}`);   /* (plan 64: the set pieces take room from the plain ones, so the share runs a little higher) */ assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
   assert.ok(CM.FLOOR_FIXED.includes("levels"), "made with the floor, never saved");
   assert.deepStrictEqual(JSON.stringify(CM.makeFloor(7, "lv-1").levels), JSON.stringify(CM.makeFloor(7, "lv-1").levels), "the same each time");
-  assert.ok(!CM.makeFloor(0, "lv-1").levels && !CM.makeFloor(-1, "lv-1").levels, "none above");
+  assert.ok(!CM.makeFloor(0, "lv-1").levels && Object.keys(CM.makeFloor(-1, "lv-1").levels).every((k) => CM.isScarp(...k.split(",").map(Number))), "none above but the Scarp's (v128.0)");
   // the mesh: a stepped floor has more faces than the same floor made level
   let fl = null; for (let n = 1; n <= 30 && !fl; n++) { const f = CM.makeFloor(n, "lv-1"); if (f.levels && Object.keys(f.levels).length) fl = f; }
   const index = new Proxy({}, { get: () => 0 }), stepped = CM.floorMesh(fl, CM.themeFor(fl.number), index).count, flat = CM.floorMesh(Object.assign({}, fl, { levels: null }), CM.themeFor(fl.number), index).count;
@@ -7478,6 +7478,32 @@ test("the south of the Wood: twenty rows more, the east beyond the cliffs the hi
   const old = [[3, 4], [59, 30], [60, 60]]; assert.strictEqual(JSON.stringify(CM.unpackSeen(CM.packSeen(old, 61), 81)), JSON.stringify(old));
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["CM.deerHerd = ", "layer: `pet:deer_${w.coat}`", "const gait = cues.running && has(\"run\")", "running: Boolean(s.running)"]) assert.ok(html.includes(s), s);
+});
+
+test("the Scarp: a high heath in the Wood's south-east as high as the cliffs, walled in rock, one stair up it a step a square; a tarn and a spring, tors, a stream across the heath under a bridge and over the edge in a fall into a pool, and on to the river; the Lookout; never climbed but by the stair, frozen or not; the heights the land's, made again on a load; what the seed placed where it was", () => {
+  const CM = load(), S = CM.SCARP;
+  for (const seed of ["scarp-1", "abc", "den-1"]) { const w = CM.makeWood(seed);
+    assert.strictEqual(CM.floorAt(w, S.lookout[0], S.lookout[1]), S.h); assert.strictEqual(CM.floorAt(w, ...S.spring), S.h); assert.strictEqual(CM.floorAt(w, ...S.foot), 0);
+    assert.strictEqual(CM.solidAt(w, S.x0, S.y0 + 3), "scarp"); assert.strictEqual(CM.solidAt(w, ...S.tors[0]), "tor"); assert.ok(CM.SOLID.tor.h > S.h, "a tor stands over the heath");
+    const steps = []; for (let x = S.stair.x0 - 1; x <= S.stair.x1 + 1; x++) steps.push(CM.floorAt(w, x, S.stair.y));
+    for (let i = 1; i < steps.length; i++) assert.ok(steps[i] > steps[i - 1] && steps[i] - steps[i - 1] <= 0.3, `the stair climbs a step a square: ${steps}`);
+    assert.strictEqual(CM.solidAt(w, S.stair.x0 + 2, S.stair.y - 1), "scarp"); assert.strictEqual(CM.solidAt(w, S.stair.x0 + 2, S.stair.y + 1), "scarp");
+    const wet = new Set(w.decor.filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`)); for (const at of [S.falls, [S.pool[0], S.pool[1]], S.below[0], S.below[1], [S.tarn[0], S.tarn[1]]]) assert.ok(wet.has(at.join()), `water at ${at}`);
+    assert.ok(wet.has(`${S.below[1][0] - 1},${S.below[1][1]}`), "the stream meets the river"); assert.strictEqual(w.ground[S.bridge.join()], "planks");
+    const walk = (frozen) => { w.frozen = frozen; const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; let most = 0; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const nx = x + dx, ny = y + dy, k = `${nx},${ny}`; if (!CM.passable(w, nx, ny)) continue; most = Math.max(most, Math.abs(CM.floorAt(w, x, y) - CM.floorAt(w, nx, ny))); if (!seen.has(k)) { seen.add(k); q.push([nx, ny]); } } } return { seen, most }; };
+    for (const frozen of [false, true]) { const { seen, most } = walk(frozen); assert.ok(most <= 0.3, `${seed}${frozen ? " frozen" : ""}: no climb but by the stair (${most})`); for (const at of [S.lookout, S.spring, S.bank[1], [40, 75]]) assert.ok(seen.has(at.join()), `${seed}: ${at} walked to`); }
+    w.frozen = false; assert.strictEqual(CM.passable(w, ...S.falls), false);
+    assert.strictEqual(CM.woodPlace(w, ...S.lookout), "the Lookout"); assert.strictEqual(CM.woodPlace(w, S.stair.x0 + 3, S.stair.y), "the Scarp stair"); assert.strictEqual(CM.woodPlace(w, 50, 64), "The Scarp"); assert.strictEqual(CM.woodPlace(w, 40, 75), "The Falls");
+    assert.ok(!w.seen.some(([x, y]) => CM.isScarp(x, y)), "the heath is not on the map from the gate");
+    for (const type of ["hut", "shrine", "burner"]) assert.ok(Object.values(w.things).some((t) => t.type === type), type);
+    assert.ok(Object.values(w.things).filter((t) => t.type === "cave").length >= 2, "the cave mouths"); }
+  const g = new CM.Game(); g.newGame("scarp-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.enterFloor(-1, "rope", S.spring.slice()); g.floor.facing = 2;
+  assert.ok(g.use(), "the spring answers"); g.floor.pos = S.lookout.slice(); assert.ok(g.use(), "the cairn answers"); g.floor.pos = [40, 75]; assert.ok(g.use(), "the falls, from the pool's bank");
+  g.floor.seen.push(S.lookout.slice()); g.floor.pos = S.foot.slice(); assert.ok(CM.wayPlaces(g).some((p) => p.name === "The Lookout"), "the Lookout on the Where-to list once seen");
+  const d = CM.floorDelta(g.floor, CM.snapshot(CM.makeFloor(-1, g.seed, 1))); assert.ok(!JSON.stringify(d).includes('"levels"'), "the heights are never saved: made with the land");
+  const back = CM.restoreFloor(d, g.seed, CM.GEN).floor; assert.strictEqual(CM.floorAt(back, ...S.lookout), S.h, "and made again with it on a load");
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["fx:falls${f}", "add(\"solid:scarp\", c)", "quad([x, F0, y + 1], [x + 1, F0, y + 1]", "id === \"falls\""]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
