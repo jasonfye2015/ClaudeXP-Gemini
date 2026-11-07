@@ -14,7 +14,7 @@ def test_every_picture_is_there():
     have = {p.stem for p in ART.glob("*.png")} | {"item:" + p.name for p in (ART.parent / "items").glob("*.png")}
     names = set()
     for d in range(1, D.FLOORS + 1, 3):
-        L = levels.dungeon(d, 5)
+        L = levels.dungeon(d, 99)
         names |= {x[7] for x in L.decals} | {x[4] for x in L.flats} | {x[6] for x in L.webs} | {x[5] for x in L.hangs}
         names |= {s["name"] for s in L.sprites} | {x[4] for x in L.ceils}
     for spec in dress.LETTERS.values():
@@ -35,7 +35,7 @@ def test_the_set_pieces():
     assert len(dress.set_pieces()) >= 50
     seen = set()
     with_piece = 0
-    for seed in range(2):
+    for seed in ("0:0", 99):                                       # (the floors the other slow tests walk too)
         for d in range(1, D.FLOORS + 1):
             L = levels.dungeon(d, seed)
             if L.pieces:
