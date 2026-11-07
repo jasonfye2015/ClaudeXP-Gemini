@@ -7663,6 +7663,13 @@ test("every island: charted and sailed to; a landing with a jetty the Wren lies 
     for (const d of [10, 40]) { const fl = CM.makeFloor(I.base - d, g.seed, 2), gk = Object.keys(fl.things).find((k) => fl.things[k].type === "guardian"); assert.strictEqual(fl.things[gk].group[0].guardian, I.guardians[d / 10 - 1]); } }
 });
 
+test("the pictures' arrays (v138.0): the shared pictures have room for two thousand (they outgrew a thousand with the harbour, the lighthouse and the islands, and the overflow drew the ship and the pier from the surface's pictures), the figures 3000 to 5999, the surface's 6000 and up, the same in the index and the shader; a warning if an array outgrows its range; and the 3D view's lost context caught, told, and the page reloaded when it comes back", () => {
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["S.rest.forEach((n, i) => { index[n] = 1000 + i; }); S.surf.forEach((n, i) => { index[n] = 6000 + i; });", "bool surf = vUV.z > 5999.5, fig = vUV.z > 2999.5 && vUV.z < 5999.5;", "max(vUV.z - 6000.0, 0.0)", "S.rest.length > 2000", "m.layer = 3000 + list.length",
+    "\"webglcontextlost\"", "\"webglcontextrestored\"", "location.reload()"]) assert.ok(html.includes(s), s);
+  assert.ok(!html.includes("index[n] = 2000 + i") && !html.includes("vUV.z - 2000.0"), "nothing left at the old surface range");
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
