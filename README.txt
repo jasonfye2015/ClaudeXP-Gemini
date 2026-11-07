@@ -127,6 +127,17 @@ Playing
   until pulled) and it grinds open; and a room of cold braziers - shoot one to light it and the trial begins: light
   them all within twelve seconds (the time shows) and a chest rises from the floor, or they all go out to try again.
 
+  The Gauntlet: once a guardian has fallen, a strange floor may be a boss rush - the guardians of the bands already
+  passed (up to four, the newest last), waiting in the stairs' hall. Step in and they come one at a time, each
+  announced; the stairs stay sealed until the last falls, and then a chest of the old champions' hoard, with a
+  Legendary in it, stands in the hall.
+  Traps, from the second floor (two to eight a floor, more the deeper): spike plates (an iron plate pierced with
+  holes - step on it and the spikes spring), dart plates (a rune-cut flagstone; a hole in the wall beside it spits a
+  poisoned dart), and fire vents (a grate over a red throat that breathes flame on a beat - embers warn of the next
+  burst, and monsters burn in it too). None in the first room, by the stairs, by a door or in water.
+  Cracked walls: now and then a wall has a crack in it. Shoot it.
+  And there are secrets - some down in the Deep, some not. Nobody's going to tell you where.
+
   Rarity: everything found - gear, wands and wand parts - is Common, Uncommon (green), Rare (blue), Epic (purple)
   or Legendary (orange), likelier the deeper and with luck. A wand's rarity adds damage (to +65%) and casting speed
   (to +18%), and an Epic or Legendary wand has a slot more; a part's rarity strengthens its effects (to x1.75) and

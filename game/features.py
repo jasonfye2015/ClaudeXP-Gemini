@@ -27,6 +27,7 @@ SPECIALS = {
     "hoard": ("a Hoard", "Gold. Heaps of it, spilled and stacked and glinting. Someone - something - has been collecting."),
     "den": ("a Den", "A den. The smell says one kind of thing lives here, and lots of it."),
     "drowned": ("Drowned", "Water everywhere: pouring from the pipes, standing to the knee in the rooms. Wade carefully."),
+    "rush": ("the Gauntlet", "Old roars echo from the far hall. Everything you've beaten down here wants another try."),
 }
 DOOR_COLOURS = {"red": (1.0, 0.25, 0.2), "blue": (0.3, 0.5, 1.0), "green": (0.3, 0.95, 0.4), "gold": (1.0, 0.8, 0.25),
                 "rune": (0.75, 0.45, 1.0)}
@@ -41,7 +42,8 @@ def special_of(depth, seed):
     rng = random.Random(f"{seed}:special:{depth}")
     if rng.random() > 0.2:
         return None
-    return rng.choice(list(SPECIALS))
+    kinds = [k for k in SPECIALS if k != "rush" or depth > 11]       # (the Gauntlet: once a guardian has fallen)
+    return rng.choice(kinds)
 
 
 def apply(L, depth, seed):
@@ -50,13 +52,16 @@ def apply(L, depth, seed):
     if L.special:
         name, line = SPECIALS[L.special]
         L.name, L.line = f"{L.name}: {name}", line
-        {"dream": _dream, "hoard": _hoard, "den": _den, "drowned": _drowned}[L.special](L, rng, depth)
+        {"dream": _dream, "hoard": _hoard, "den": _den, "drowned": _drowned, "rush": _rush}[L.special](L, rng, depth)
     if depth % 10 and rng.random() < 0.5:
         _locked_doors(L, rng, depth)
     if depth % 10 and rng.random() < 0.3:
         _levers(L, rng, depth)
     if rng.random() < 0.3:
         _braziers(L, rng, depth)
+    if depth >= 2:
+        _traps(L, rng, depth)
+    _secrets(L, rng, depth)
 
 
 # ---- the special floors ------------------------------------------------------------------------------------------
@@ -302,3 +307,130 @@ def _braziers(L, rng, depth):
     L.pieces.append({"name": "the cold braziers", "line": "Cold braziers stand round the room. Something waits for them "
                      "to burn together - all at once, and quickly.", "x0": room.x, "y0": room.y,
                      "x1": room.x + room.w - 1, "y1": room.y + room.h - 1})
+
+
+# ---- the Gauntlet: a boss rush ----------------------------------------------------------------------------------
+RUSH_HP, RUSH_DMG = 0.55, 0.8                              # (each champion: lighter than at its own floor - there are several)
+
+
+def _rush(L, rng, depth):
+    """The guardians of the bands already passed, the newest last, waiting in the stairs' hall - they come one at a
+    time once he steps in, and the stairs stay sealed till the last falls. A Legendary chest for the end of it."""
+    bi = (depth - 1) // 10
+    L.rush = [b["guardian"] for b in D.BANDS[:bi]][-4:]
+    sx, sy = int(L.stairs[0]), int(L.stairs[1])
+    hall = next((r for r in L.rooms if r.x <= sx < r.x + r.w and r.y <= sy < r.y + r.h), None)
+    if hall is None or not L.rush:
+        L.rush = []
+        return
+    L.arena = (hall.x, hall.y, hall.w, hall.h)
+    L.guardian = "The Gauntlet"
+    L.spawns = [s for s in L.spawns if not (hall.x <= s["x"] < hall.x + hall.w and hall.y <= s["z"] < hall.y + hall.h)]
+    L.lights += [(hall.x + 0.5, float(L.floor[hall.y, hall.x]) + 1.4, hall.y + 0.5, 1.0, 0.35, 0.25, 7.0),
+                 (hall.x + hall.w - 0.5, float(L.floor[hall.y, hall.x + hall.w - 1]) + 1.4, hall.y + hall.h - 0.5, 1.0, 0.35, 0.25, 7.0)]
+
+
+# ---- the traps ---------------------------------------------------------------------------------------------------
+TRAPS = {"spikes": "nx.spikeplate", "darts": "nx.dartplate", "fire": "nx.vent"}
+FIRE_CYCLE, FIRE_ON = 4.0, 1.4                             # (a vent: every four seconds, a second and a half of flame)
+
+
+def _traps(L, rng, depth):
+    """Spike plates, dart plates (the darts from the wall beside them) and fire vents, two to eight of them - never in
+    the first room, by the stairs, in water, by a door, on a chest."""
+    start = L.rooms[0] if L.rooms else None
+    arena = getattr(L, "arena", None)
+    doors = {(d["x"], d["y"]) for d in L.doors}
+    n = min(8, 2 + depth // 12)
+    cells = [c for c in L.open_squares()
+             if not (start and start.x - 1 <= c[0] <= start.x + start.w and start.y - 1 <= c[1] <= start.y + start.h)
+             and not (arena and arena[0] <= c[0] < arena[0] + arena[2] and arena[1] <= c[1] < arena[1] + arena[3])
+             and c not in L.water and c not in doors and not _taken(L, *c)
+             and all(abs(c[0] - dx) + abs(c[1] - dy) > 2 for dx, dy in doors)]
+    rng.shuffle(cells)
+    for x, y in cells:
+        if len(L.traps) >= n:
+            break
+        if any(abs(x - t["x"]) + abs(y - t["y"]) < 6 for t in L.traps):
+            continue
+        walls = [(dx, dy) for dx, dy in DIRS if not L.open_at(x + dx, y + dy)]
+        kind = rng.choice(["spikes", "spikes", "fire"] + (["darts", "darts"] if walls else []))
+        f = float(L.floor[y, x])
+        t = {"kind": kind, "x": x, "y": y, "f": f, "at": -99.0, "phase": rng.uniform(0, FIRE_CYCLE)}
+        if kind == "darts":
+            dx, dy = rng.choice(walls)                       # (the dart-hole: in the wall beside the plate)
+            t["from"] = (x + 0.5 + dx * 0.46, f + 0.95, y + 0.5 + dy * 0.46)
+            L.decals.append((x + 0.5 + dx * 0.495, f + 0.8, y + 0.5 + dy * 0.495, -dx, -dy, 0.32, 0.3, "clut.port"))
+        L.flats.append((x + 0.5, f + 0.014, y + 0.5, 0.42 if kind != "fire" else 0.36, TRAPS[kind], rng.choice((0.0, 1.5708))))
+        L.traps.append(t)
+
+
+# ---- secrets: rooms behind cracked walls, and two that are always where they are -----------------------------------
+EGGS = ("workshop", "answer", "moon", "xyzzy", "lich")
+
+
+def _secrets(L, rng, depth):
+    if depth == 1:
+        _hidden_room(L, rng, depth, "workshop")
+    elif depth == 42:
+        _hidden_room(L, rng, depth, "answer")
+    elif depth % 10 and rng.random() < 0.15:
+        _hidden_room(L, rng, depth, "cache")
+
+
+def _hidden_room(L, rng, depth, what):
+    """A 3x3 room carved out of the rock behind a room's wall, the wall left standing with a crack in it - a bolt
+    breaks it (L.secret_walls). -> True if there was rock enough for it."""
+    spots = []
+    for room in L.rooms[1:]:
+        if room.kind == "piece":
+            continue
+        for x, y in room.cells():
+            if not L.open_at(x, y):
+                continue
+            for dx, dy in DIRS:
+                wx, wy = x + dx, y + dy
+                if L.open_at(wx, wy) or (wx, wy) in L.paths:
+                    continue
+                # the room beyond: 3x3 from the wall on, and a square of rock all round it
+                cx, cy = wx + dx * 2, wy + dy * 2
+                box = [(cx + i, cy + j) for i in range(-2, 3) for j in range(-2, 3)]
+                if all(1 <= bx < L.w - 1 and 1 <= by < L.h - 1 and not L.open_at(bx, by) and (bx, by) not in L.paths
+                       for bx, by in box):
+                    spots.append((x, y, dx, dy))
+    if not spots:
+        return False
+    x, y, dx, dy = rng.choice(spots)
+    wx, wy = x + dx, y + dy
+    cx, cy = wx + dx * 2, wy + dy * 2
+    f, c = float(L.floor[y, x]), float(L.ceil[y, x])
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            L.solid[cy + j, cx + i] = False
+            L.floor[cy + j, cx + i] = f
+            L.ceil[cy + j, cx + i] = min(c, f + 2.4)
+    L.secret_walls[(wx, wy)] = {"open": False, "what": what, "room": (cx - 1, cy - 1, 3, 3), "f": f, "c": c}
+    L.decals.append((x + 0.5 + dx * 0.495, f + 0.15, y + 0.5 + dy * 0.495, -dx, -dy, 0.9, 1.3, "decal.crack"))
+    lines = {"workshop": ("a hidden workshop", "A tiny workshop: sawdust, candle-ends, a bench. Carved into the bench, "
+                          "in two hands: 'Made by Jason and Claude, in the Claude Timeline. Thank you for playing.'"),
+             "answer": ("a quiet room", "A small, quiet room. A towel hangs on a peg. Scratched into the wall: 'The "
+                        "answer was forty-two. Nobody remembers the question.'"),
+             "cache": ("a hidden cache", "Somebody walled this up on purpose. Somebody isn't coming back for it.")}
+    name, line = lines[what]
+    L.pieces.append({"name": name, "line": line, "x0": cx - 1, "y0": cy - 1, "x1": cx + 1, "y1": cy + 1,
+                     "egg": what if what in EGGS else None})
+    from .levels import _pickup
+    dress.chest(L, cx + dx, cy + dy, rng, rich=2.0 if what == "cache" else 2.5)
+    L.chests[-1]["secret"] = True
+    if what == "workshop":
+        L.sprites.append({"x": cx + 0.5 - dx * 0.0 + dy * 0.9, "z": cy + 0.5 + dx * 0.9, "y": f, "w": 1.0, "h": 0.7,
+                          "name": "fu.table", "glow": None, "solid": 0.35})
+        L.sprites.append({"x": cx + 0.5 - dy * 0.9, "z": cy + 0.5 - dx * 0.9, "y": f, "w": 0.6, "h": 0.6,
+                          "name": "lm.candles", "glow": (1.0, 0.75, 0.4), "solid": 0.1})
+        L.lights.append((cx + 0.5, f + 1.0, cy + 0.5, 1.0, 0.75, 0.4, 4.0))
+    elif what == "answer":
+        L.pickups.append({"x": cx + 0.5, "z": cy + 0.5, "y": f, "kind": "egg", "egg": "answer", "phase": 0.0})
+    else:
+        for _ in range(3):
+            _pickup(L, cx + rng.randint(-1, 1), cy + rng.randint(-1, 1), rng, depth, "gold")
+    return True

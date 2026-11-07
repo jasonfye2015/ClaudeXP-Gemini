@@ -46,6 +46,7 @@ these pictures stay under that licence wherever they go:
 The food (meat, fish, mushroom, the dishes) and the seed pouch are 7Soul1's and Crawl's, CC0, as above; so are the
 Deep's empty bottles and loose bones (7Soul1's I_Bottle01-04, E_Bones02-03, I_Bone), and the doors' keys (its
 I_Key03, and its I_Key02 tinted red, blue, green and violet). The cold brazier (assets/cm/nx.brazier_cold.png) is
-Claude and Magic's brazier with its fire taken out (tools/make_art.py).
+Claude and Magic's brazier with its fire taken out; the traps' pictures (assets/cm/nx.spikeplate, nx.spikes,
+nx.dartplate, nx.vent) are drawn from nothing by the same tool (tools/make_art.py).
 
 The sounds are made by the game as it starts (engine/sound.py); the item pictures fall back to painted ones (ui/icons.py).

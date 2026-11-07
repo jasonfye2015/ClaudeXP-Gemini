@@ -226,6 +226,12 @@ class Shell(QWidget):
         if not said:
             return
         hist = self.talk.setdefault(vendor, [])
+        from ..game import eggs
+        reply = eggs.phrase(self.view.game, vendor, said)
+        if reply:
+            hist.append(("claude", said))
+            hist.append(("them", reply))
+            return
         msgs = people.chat_request(vendor, self.view.game, hist, said)
         hist.append(("claude", said))
         self.speech_ask(vendor, msgs)

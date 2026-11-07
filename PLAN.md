@@ -128,6 +128,13 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   (levelmesh.door, tinted), runes, lever lights, pouring pipes, ghosts, the Dreaming's lights/tint/FOV; HUD keys,
   the trial's countdown, the Dreaming's colour wash.
 
+## v0.16 - the Gauntlet, traps, secrets - done
+
+- features: "rush" special (depth > 11): L.rush, L.arena, waves in world._gauntlet/_champion, the guardian flag
+  carried through _kill; a Legendary chest. Traps (L.traps: spikes, darts, fire; world._traps; art by
+  tools/make_art.py). Hidden rooms behind cracked walls (L.secret_walls; world._crack; L.mesh_version makes the
+  renderer build the floor again). game/eggs.py: the secrets (see it, not the README).
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

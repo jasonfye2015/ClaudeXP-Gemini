@@ -65,6 +65,8 @@ class Level:
         # what makes a floor more (game/features.py): its special, ghosts, pouring pipes, doors, levers, braziers
         self.special, self.den, self.ghosts, self.pours = None, None, [], []      # pours: (x, top, z, bottom, nx, nz)
         self.doors, self.levers, self.braziers, self.trial = [], [], [], None
+        self.rush, self.arena, self.traps, self.secret_walls = [], None, [], {}   # (the Gauntlet; traps; cracked walls)
+        self.mesh_version = 0                            # (bumped when a wall comes down: the level's mesh made again)
         self.caches = []
         self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 

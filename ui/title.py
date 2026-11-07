@@ -16,7 +16,7 @@ from ..game import data as D
 from . import theme
 from .icons import icon
 
-VERSION = "v0.15"
+VERSION = "v0.16"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
 CSS = theme.CSS + """
@@ -36,6 +36,11 @@ QPushButton#tab[on="true"] { border-color: #FFD878; color: #FFF0C0;
 QPushButton#big { font-size: 19px; padding: 10px 34px; border-color: #F0C868;
               background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A07838, stop:0.5 #6A4A20, stop:1 #3A2810); }
 """
+
+
+RAINBOW = {"on": False}                                   # (an old code, remembered: the name in every colour)
+OLD_CODE = [Qt.Key_Up, Qt.Key_Up, Qt.Key_Down, Qt.Key_Down, Qt.Key_Left, Qt.Key_Right, Qt.Key_Left, Qt.Key_Right,
+            Qt.Key_B, Qt.Key_A]
 
 
 def paint_logo(p, cx, cy, scale=1.0, t=0.0):
@@ -63,6 +68,10 @@ def paint_logo(p, cx, cy, scale=1.0, t=0.0):
     g.setColorAt(0, QColor("#FFF2C0"))
     g.setColorAt(0.45, QColor("#F2C860"))
     g.setColorAt(1, QColor("#9A6420"))
+    if RAINBOW["on"]:
+        g = QLinearGradient(br.left(), 0, br.right(), 0)
+        for k in range(7):
+            g.setColorAt(k / 6, QColor.fromHsvF(((k / 7) + t * 0.15) % 1.0, 0.65, 1.0))
     p.setPen(QPen(QColor("#5A3A12"), 1.5 * scale))
     p.setBrush(g)
     p.drawPath(path)
@@ -148,6 +157,9 @@ class TitleScreen(QWidget):
         self.setObjectName("title")
         self.setStyleSheet(CSS)
         self.shell = shell
+        RAINBOW["on"] = bool(shell.settings.get("konami"))
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance().installEventFilter(self)
         self.chosen = self._latest()
         self.tab = "play"
         self.confirm = None
@@ -423,6 +435,23 @@ class TitleScreen(QWidget):
         lay.addStretch(1)
 
     # ---- keys -----------------------------------------------------------------------------------------------
+    def old_code(self, k):
+        self._code = (getattr(self, "_code", []) + [k])[-len(OLD_CODE):]
+        if self._code == OLD_CODE:
+            self._code = []
+            RAINBOW["on"] = not RAINBOW["on"]
+            self.shell.set_setting("konami", RAINBOW["on"])
+            self.shell.sounds.play("levelup", 0.6)
+
+    def eventFilter(self, obj, e):                         # (every key pressed while the title is up, wherever it goes)
+        from PySide6.QtCore import QEvent
+        if e.type() == QEvent.KeyPress and not e.isAutoRepeat() and self.isVisible():
+            stamp = (e.timestamp(), e.key())
+            if stamp != getattr(self, "_last_key", None):          # (the same press, passed up from widget to widget)
+                self._last_key = stamp
+                self.old_code(e.key())
+        return False
+
     def keyPressEvent(self, e):
         k = e.key()
         if self.stack.currentWidget() is self.card:
