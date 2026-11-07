@@ -13,6 +13,13 @@ The design document (Claude Docs): https://claude.ai/artifact/JtQZ3J468Lqh9E8Qqo
   glowing fungus with its light, moonbeams with dust, the sky through the crown, fog pooled low.
 - ui/: the title over the slow look up the hollow, the pause, the view; in the Timeline (Apps, every computer's Games).
 
+## Phase 1b - the fog - done
+
+- engine/fogfx.py: low layers of ground fog over the hollow's floor, thinning upward, and wisps of mist hanging in the
+  air (most low, a few far up), turning slowly on air that barely moves; a little along the root tunnel. Drawn with a
+  drifting noise, thinning at the wall and when seen edge-on, fading near the eye and into the far dark, lit warm by
+  the lantern near him and pale by the moon toward the crown.
+
 ## Phase 2 - webs and movement
 
 Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.

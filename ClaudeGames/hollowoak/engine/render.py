@@ -13,7 +13,7 @@ import numpy as np
 from OpenGL import GL
 from PIL import Image
 
-from . import gl, treemesh
+from . import fogfx, gl, treemesh
 from ..game import tree as T
 
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
@@ -108,6 +108,43 @@ void main() {
     frag = vec4(vCol.rgb * a * vCol.a, 1.0);
 }"""
 
+FOG_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUV; layout(location=2) in float aAlpha;
+layout(location=3) in float aSeed; layout(location=4) in float aKind;
+uniform mat4 uPV; out vec3 vPos; out vec2 vUV; out float vAlpha; out float vSeed; flat out float vKind;
+void main() { vPos = aPos; vUV = aUV; vAlpha = aAlpha; vSeed = aSeed; vKind = aKind; gl_Position = uPV * vec4(aPos, 1.0); }"""
+
+FOG_FS = """#version 330 core
+in vec3 vPos; in vec2 vUV; in float vAlpha; in float vSeed; flat in float vKind;
+uniform float uTime; uniform vec3 uEye; uniform vec4 uLantern; uniform vec3 uLanternCol; uniform float uWallR;
+out vec4 frag;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vnoise(p); p = p * 2.03 + 17.1; a *= 0.5; } return v; }
+void main() {
+    float t = uTime, a;
+    if (vKind < 0.5) {                                      // (a layer of ground fog: drifting, thinning at the wall)
+        vec2 q = vPos.xz * 0.32 + vec2(t * 0.045, t * 0.028) + vSeed * 9.0;
+        float n = fbm(q + vec2(fbm(q * 0.7 + t * 0.02), 0.0) * 1.6);
+        a = smoothstep(0.32, 0.8, n) * vAlpha;
+        float r = length(vPos.xz);
+        a *= 1.0 - smoothstep(uWallR - 2.4, uWallR - 0.4, r);
+        float graze = abs(normalize(vPos - uEye).y);         // (seen edge-on, the layers would stack into a wall: thinned)
+        a *= mix(0.25, 1.0, smoothstep(0.02, 0.3, graze));
+    } else {                                                // (a wisp: a soft patch of mist, its edge torn by the noise)
+        vec2 p = vUV * 2.0 - 1.0;
+        float n = fbm(vUV * 2.2 + vSeed * 13.0 + vec2(t * 0.03, -t * 0.02));
+        a = (1.0 - smoothstep(0.25, 1.0, length(p) + (n - 0.5) * 0.55)) * smoothstep(0.25, 0.75, n) * vAlpha;
+    }
+    float d = distance(vPos, uEye);
+    a *= smoothstep(0.35, 2.2, d) * exp(-d * 0.028);        // (never a flat sheet across his face; lost in the far dark)
+    if (a < 0.004) discard;
+    float l = clamp(1.0 - distance(vPos, uLantern.xyz) / uLantern.w, 0.0, 1.0);
+    vec3 col = vec3(0.07, 0.08, 0.095) + uLanternCol * l * l * 0.42 + vec3(0.06, 0.07, 0.11) * smoothstep(12.0, 30.0, vPos.y);
+    frag = vec4(pow(col, vec3(1.0 / 2.2)), a);
+}"""
+
 SKY_VS = """#version 330 core
 layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
@@ -132,6 +169,10 @@ class Renderer:
         self.fung = gl.Program(GLOWY_VS, FUNGUS_FS)
         self.glow = gl.Program(GLOW_VS, GLOW_FS)
         self.sky = gl.Program(SKY_VS, SKY_FS)
+        self.fog = gl.Program(FOG_VS, FOG_FS)
+        self.fog_mesh = gl.Mesh([(0, 3), (1, 2), (2, 1), (3, 1), (4, 1)], dynamic=True)
+        self.wisps = fogfx.wisps(self.tree)
+        self.fog_on = True
         colours = [Image.open(TEXTURES / f"{n}.color.jpg") for n in LAYERS]
         normals = [Image.open(TEXTURES / f"{n}.normal.jpg") for n in LAYERS]
         self.tex = gl.texture_array(colours, 512)
@@ -198,6 +239,8 @@ class Renderer:
         self.fung.float("uTime", now)
         self.fungus.draw()
         self._glows(night, view, now)
+        if self.fog_on:
+            self._fog(night, view, now, lights)
 
     def _lights(self, night, now):
         ex, ey, ez = night.eye
@@ -213,6 +256,39 @@ class Renderer:
         for start, end, width in sorted(self.beams, key=lambda b: float(np.sum((b[1] - np.array(night.eye)) ** 2)))[:3]:
             out.append(((*end, 4.5), (0.16, 0.19, 0.27, 1)))   # (where a moonbeam falls, a little light)
         return out[:MAX_LIGHTS]
+
+    def _fog(self, night, view, now, lights):
+        """The ground fog's layers and the wisps of mist, drawn last, farthest first, over what's behind them."""
+        eye = np.array(night.eye, np.float32)
+        verts = []
+        R = T.R0 + 1.2
+        for k, (y, thick) in enumerate(fogfx.LAYERS):           # (the layers: a square over the hollow's floor)
+            corners = ((-R, y, -R), (R, y, -R), (R, y, R), (-R, y, R))
+            _fog_quad(verts, corners, thick, k * 0.37, 0.0)
+        right, up = view[0, :3], view[1, :3]
+        placed = []
+        for w in self.wisps:
+            p = np.array(fogfx.wisp_at(w, now), np.float32)
+            placed.append((float(np.sum((p - eye) ** 2)), p, w))
+        placed.sort(key=lambda x: -x[0])
+        for _d, p, w in placed:
+            r, u = right * w["size"], up * w["size"] * 0.55
+            _fog_quad(verts, (p - r - u, p + r - u, p + r + u, p - r + u), w["alpha"], w["seed"], 1.0)
+        self.fog_mesh.upload(np.array(verts, np.float32))
+        lan = lights[0] if night.lantern and lights else ((0, -99, 0, 1), (0, 0, 0, 1))
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.fog.use()
+        self.fog.mat4("uPV", self.pv)
+        self.fog.float("uTime", now)
+        self.fog.vec("uEye", eye)
+        self.fog.vec("uLantern", lan[0])
+        self.fog.vec("uLanternCol", lan[1][:3])
+        self.fog.float("uWallR", T.R0 * 0.97)
+        self.fog_mesh.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
 
     def _glows(self, night, view, now):
         verts = []
@@ -263,6 +339,11 @@ class Renderer:
         self.glow_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
         GL.glDisable(GL.GL_BLEND)
+
+
+def _fog_quad(verts, corners, alpha, seed, kind):
+    for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+        verts.append((*corners[i], *uv, alpha, seed, kind))
 
 
 def project(pv, p, w, h):
