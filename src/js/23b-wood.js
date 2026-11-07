@@ -8,7 +8,7 @@
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
-CM.WOOD_SIZE = 81;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill)
+CM.WOOD_SIZE = 89;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill; v129.0: eight more, to the sea - CM.SHORE)
 CM.WOOD_EAST = 58;   // where the cliffs at the hill's foot begin, whatever the land's size: the old land's east edge, kept
 CM.WOOD_GATE = [59, 30];                                                 // the land's end of the West Gate: the town is east, up the hill; the land lies west
 CM.LAND_ROAD = [[44, 30, 59, 30], [44, 30, 44, 33], [24, 33, 44, 33]];   // the road from the gate, bending south at the farm, to the ford
@@ -80,9 +80,10 @@ CM.makeWood = function (seed) {
   }
   { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
   if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
-  const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
+  const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};
+  if (CM.layShore) CM.layShore({ grid, kinds, ground, features, decor, things, size });   // (v129.0: the Strand and the sea - 23f-shore.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y))) seen.push([x, y]);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe)) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground, ...(Object.keys(levels).length ? { levels } : {}),
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };

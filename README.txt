@@ -1392,6 +1392,21 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The shore, the sea, and the island (v129.0, UPGRADE_PLAN_79.md)
+  (src/js/23b-wood.js, src/js/23f-shore.js, src/js/26-surface.js, src/js/69zzzzg-island.js, src/js/76zzzg-worldmap.js, src/js/76zzzzs-placeamb.js, src/js/76zzzzzzzzz1-farhills.js, src/js/77s-scarp.js, src/js/77t-island.js, tools/headless.js, tests/run.js)
+  - The shore (UPGRADE_PLAN_79.md): the Deep Wood runs on south past the Scarp to the coast - the trees thinning onto
+    the dunes, then the Strand, sand from the forest's edge to the water and on under the hill's cliffs, the river
+    wading out across it at its mouth, and the sea. Tracks go down to it from both meadows, the eastern one over the
+    falls' stream on stepping stones. Surf runs up the sand and back, and you hear the waves before you see them.
+  - The sea: past the land's edge to the north, the west and the south, the sea goes out to the edge of seeing, with
+    grey shingle between the last trees and the water and the hill's cliffs falling to it. Only the hill's side, east,
+    is land, with the town on top.
+  - The island: the first time you come out onto the sand, the sea. And the first time you stand at the Lookout on
+    the Scarp, all of it at once - the Wood, the river, the town on its hill, and water every way you turn. It's an
+    island. The village remembers it, the world map draws the sea round the land from then on, and Claude has
+    something to say once you tell him. Nothing the seed placed in the Wood moved, and a save from the smaller Wood
+    keeps its map.
+
 The Scarp and the falls (v128.0, UPGRADE_PLAN_79.md)
   (src/js/23b-wood.js, src/js/23e-scarp.js, src/js/26-surface.js, src/js/69zzl-waterlife.js, src/js/69zzzzf-scarp.js, src/js/76zzzzs-placeamb.js, src/js/77s-scarp.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_79.md)
   - The Scarp (UPGRADE_PLAN_79.md): in the south-east of the Deep Wood, against the hill's cliffs, the land rises

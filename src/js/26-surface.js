@@ -189,7 +189,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], L(`ground:${g}`), kind === "tree" ? 0.6 : 0.85); covered.add(key);
         if (kind === "tree") trees.add(key);
       } else if (K.top && index[K.top] !== undefined) { if (!tops.has(key)) { tops.add(key); quad([x, K.h, y + 1], [x + 1, K.h, y + 1], [x + 1, K.h, y], [x, K.h, y], index[K.top], 0.95); } covered.add(key); }
-      else if (K.roof || K.tower) covered.add(key);                            // (a house's square is under its roof; a tower's under its top)
+      else if (K.roof || K.tower || K.sea) covered.add(key);                   // (a house's square is under its roof; a tower's under its top; v129.0: the sea's under its own water - 77t-island.js)
       continue;
     }
     covered.add(`${x},${y}`);
@@ -368,14 +368,15 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   if (sky && only !== "props") {                                                       // past the edge: a skirt of grass, and the far ring standing on it
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
-    band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
+    const isle = fl.number === -1 && CM.LAND_ISLE && size > CM.SHORE.sea;   // (v129.0: the land is an island - past its edges the sea, 77t-island.js; only the hill's side, east, runs on as land)
+    if (!isle) { band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); } band(size, 0, size + E, isle ? CM.SHORE.strand[0] : size);
     const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), RW = 8, H = 7;   // (from the land, the town's hill stands in the east; v51.1: RW, not W - W is the windows pass, and shadowing it kept every far view out)
     for (let t = -E; t < size + E; t += RW) {
       const t1 = Math.min(t + RW, size + E);
-      quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
-      quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
-      quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
-      quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
+      if (!isle) quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
+      if (!isle) quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
+      if (!isle || (t >= 0 && t < CM.SHORE.strand[0])) quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
+      if (!isle) quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
       ring += 4;
     }
     if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { if (W !== (glow === 2)) return; const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)

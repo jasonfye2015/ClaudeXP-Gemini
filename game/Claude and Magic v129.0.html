@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v128.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v129.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "128.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "129.0", built: "2026-11-06", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5550,7 +5550,7 @@ CM.houseStage = (level, most) => (level <= 0 ? 0 : most <= 1 ? 4 : Math.max(1, M
 // give no renown and little gold: hides and meat, and the night's danger. The dungeon's floors do not change by a cell.
 CM.WOOD_THEME = { name: "The Deep Wood", floors: [-1, -1], stone: [58, 84, 46], mortar: [34, 52, 28], floor: [78, 104, 52], ceiling: [140, 170, 205],
   moss: [120, 160, 70], fog: [0.01, 0.014, 0.008], torch: [1.0, 0.95, 0.85], reach: 7.0, bones: 0, tree: true, sky: true };
-CM.WOOD_SIZE = 81;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill)
+CM.WOOD_SIZE = 89;   // (v127.0: twenty rows of forest more to the south - CM.SOUTH_WOOD - and the east beyond the cliffs is the hill; v129.0: eight more, to the sea - CM.SHORE)
 CM.WOOD_EAST = 58;   // where the cliffs at the hill's foot begin, whatever the land's size: the old land's east edge, kept
 CM.WOOD_GATE = [59, 30];                                                 // the land's end of the West Gate: the town is east, up the hill; the land lies west
 CM.LAND_ROAD = [[44, 30, 59, 30], [44, 30, 44, 33], [24, 33, 44, 33]];   // the road from the gate, bending south at the farm, to the ford
@@ -5622,9 +5622,10 @@ CM.makeWood = function (seed) {
   }
   { const [px, py0, , py1] = CM.POSTERN_PATH; for (let y = py0; y <= py1; y++) open(px, y, "dirt"); things[key(...CM.POSTERN_LAND)] = { type: "postern" }; }   // the cliff path from the postern (61c-tower.js; laid last, so nothing the seed placed moves)
   if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
-  const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
+  const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};
+  if (CM.layShore) CM.layShore({ grid, kinds, ground, features, decor, things, size });   // (v129.0: the Strand and the sea - 23f-shore.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y))) seen.push([x, y]);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe)) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground, ...(Object.keys(levels).length ? { levels } : {}),
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
@@ -5825,6 +5826,36 @@ CM.layScarp = function (P) {
   things[key(...S.spring)] = { type: "scarpspring" }; things[key(...S.lookout)] = { type: "lookout" };
   things[key(S.foot[0], S.foot[1] + 1)] = { type: "signpost", text: "THE SCARP: a stair cut in the rock, up onto the high heath. A stream comes off the top in a fall, south of here, a little way along the foot of the rock." };
   return levels;
+};
+
+// ---- 23f-shore.js ----
+"use strict";
+// The Strand (UPGRADE_PLAN_79.md, v129.0): the Wood runs on south past the Scarp to the coast - the trees thinning to
+// a fringe on the dunes, then sand from the forest's edge to the water, under the hill's cliffs as well, the river
+// crossing it shallow at its mouth, and the sea. Two tracks go down to the shore, one from each meadow, the eastern one
+// over the falls' stream on stepping stones. Laid after everything else, in rows no seed ever placed anything in.
+//   CM.SHORE; CM.layShore(parts); CM.LAND_ISLE (the sea lies round the land on every side but the hill's)
+CM.SHORE = { fringe: 81, strand: [83, 85], sea: 86, mouth: 84, tracks: [[36, 72, 83], [10, 76, 83]], streamFord: [36, 77], shore: [36, 85] };
+CM.LAND_ISLE = true;
+CM.layShore = function (P) {
+  const { grid, kinds, ground, features, decor, things, size } = P, H = CM.SHORE, key = (x, y) => `${x},${y}`;
+  if (size <= H.sea) return;
+  const river = (x, y) => Boolean(features[key(x, y)] && features[key(x, y)].type === "river");
+  const open = (x, y, g) => { grid[y][x] = 0; delete kinds[key(x, y)]; ground[key(x, y)] = g; };
+  const sea = (x, y) => { grid[y][x] = 1; kinds[key(x, y)] = "sea"; delete ground[key(x, y)]; delete features[key(x, y)]; delete things[key(x, y)]; };   // (nothing drawn on the square: the sea itself lies under the land and out past it - 77t-island.js)
+  // the fringe: the trees thinning toward the shore, sand and rough grass between them
+  for (let y = H.fringe; y < H.strand[0]; y++) for (let x = 1; x < CM.WOOD_EAST; x++) { if (river(x, y) || grid[y][x] === 0) continue; const h = CM.hashSeed(`shore:${x},${y}`) % 100; if (h < (y === H.fringe ? 22 : 58)) open(x, y, h % 3 ? "sand" : "grass"); }
+  // the Strand: sand from the trees to the water, under the cliffs too; the river shallow at its mouth
+  for (let y = H.strand[0]; y <= H.strand[1]; y++) for (let x = 1; x < size - 1; x++) if (!river(x, y)) open(x, y, "sand");
+  { const mx = CM.riverX(H.mouth); delete features[key(mx, H.mouth)]; ground[key(mx, H.mouth)] = "sand"; }
+  // the sea: every row past the sand, and the strand's two ends
+  for (let y = H.sea; y < size; y++) for (let x = 0; x < size; x++) sea(x, y);
+  for (let y = H.strand[0]; y <= H.strand[1]; y++) { sea(0, y); sea(size - 1, y); }
+  for (let i = decor.length - 1; i >= 0; i--) if (decor[i].kind === "water" && (decor[i].y >= H.sea || grid[decor[i].y][decor[i].x] !== 0)) decor.splice(i, 1);   // (the river's water ends where the sea begins)
+  // the ways down: south from each meadow; stepping stones over the falls' stream
+  for (const [x, y0, y1] of H.tracks) for (let y = y0; y <= y1; y++) if (!river(x, y) && grid[y][x] !== 0) open(x, y, "dirt");
+  { const [fx, fy] = H.streamFord; delete features[key(fx, fy)]; }
+  things[key(H.tracks[0][0] + 1, H.strand[0])] = { type: "signpost", text: "THE STRAND. North: the meadow, the falls' stream on stepping stones, the Wood. West along the sand: the river's mouth, shallow enough to wade." };
 };
 
 // ---- 24-clock.js ----
@@ -6511,7 +6542,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
         quad([x, 0, y + 1], [x + 1, 0, y + 1], [x + 1, 0, y], [x, 0, y], L(`ground:${g}`), kind === "tree" ? 0.6 : 0.85); covered.add(key);
         if (kind === "tree") trees.add(key);
       } else if (K.top && index[K.top] !== undefined) { if (!tops.has(key)) { tops.add(key); quad([x, K.h, y + 1], [x + 1, K.h, y + 1], [x + 1, K.h, y], [x, K.h, y], index[K.top], 0.95); } covered.add(key); }
-      else if (K.roof || K.tower) covered.add(key);                            // (a house's square is under its roof; a tower's under its top)
+      else if (K.roof || K.tower || K.sea) covered.add(key);                   // (a house's square is under its roof; a tower's under its top; v129.0: the sea's under its own water - 77t-island.js)
       continue;
     }
     covered.add(`${x},${y}`);
@@ -6690,14 +6721,15 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
   if (sky && only !== "props") {                                                       // past the edge: a skirt of grass, and the far ring standing on it
     const E = CM.SKIRT, B = 4, grass = L("ground:grass");
     const band = (x0, y0, x1, y1) => { for (let y = y0; y < y1; y += B) for (let x = x0; x < x1; x += B) { const xe = Math.min(x + B, x1), ye = Math.min(y + B, y1); quad([x, -0.002, ye], [xe, -0.002, ye], [xe, -0.002, y], [x, -0.002, y], grass, 0.8); skirt++; } };
-    band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); band(size, 0, size + E, size);
+    const isle = fl.number === -1 && CM.LAND_ISLE && size > CM.SHORE.sea;   // (v129.0: the land is an island - past its edges the sea, 77t-island.js; only the hill's side, east, runs on as land)
+    if (!isle) { band(-E, -E, size + E, 0); band(-E, size, size + E, size + E); band(-E, 0, 0, size); } band(size, 0, size + E, isle ? CM.SHORE.strand[0] : size);
     const far = (side) => L(fl.number === -1 && side === 1 && !CM.FARVIEW ? "far:hill" : "far:trees"), RW = 8, H = 7;   // (from the land, the town's hill stands in the east; v51.1: RW, not W - W is the windows pass, and shadowing it kept every far view out)
     for (let t = -E; t < size + E; t += RW) {
       const t1 = Math.min(t + RW, size + E);
-      quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
-      quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
-      quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
-      quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
+      if (!isle) quad([t, 0, -E], [t1, 0, -E], [t1, H, -E], [t, H, -E], far(0), 0.7);                          // north
+      if (!isle) quad([t1, 0, size + E], [t, 0, size + E], [t, H, size + E], [t1, H, size + E], far(2), 0.7);  // south
+      if (!isle || (t >= 0 && t < CM.SHORE.strand[0])) quad([size + E, 0, t], [size + E, 0, t1], [size + E, H, t1], [size + E, H, t], far(1), 0.7);  // east
+      if (!isle) quad([-E, 0, t1], [-E, 0, t], [-E, H, t], [-E, H, t1], far(3), 0.7);                          // west
       ring += 4;
     }
     if (CM.farViews) CM.farViews(fl, size, index, opts.night === true ? 0.7 : opts.night || 0, (a, b, c, d, layer, shade, glow) => { if (W !== (glow === 2)) return; const uv = [[0, 1], [1, 1], [1, 0], [0, 0]]; for (const i of [0, 1, 2, 0, 2, 3]) out.push(...[a, b, c, d][i], uv[i][0], uv[i][1], layer, shade, 0, 1, glow); });   // (v24.4: what lies beyond, where it lies - 76zzzzg-farviews.js)
@@ -33571,6 +33603,44 @@ if (CM.SOLID_COLOURS) { CM.SOLID_COLOURS.tor = "#7A7468"; CM.SOLID_COLOURS.scarp
 // the fall is never a way up or down, frozen or not
 { const p0 = CM.passable; CM.passable = function (floor, x, y) { if (floor && floor.number === -1 && floor.levels && x === CM.SCARP.falls[0] && y === CM.SCARP.falls[1]) return false; return p0.call(this, floor, x, y); }; }
 
+// ---- 69zzzzg-island.js ----
+"use strict";
+// The island (UPGRADE_PLAN_79.md, v129.0), the rules' side. The sea is a solid nothing is drawn on - the sea's own
+// surface lies there (77t-island.js); the Strand and the river's mouth are named; and the land is found to be an island - first the sea
+// itself from the sand, then the whole of it from the Lookout on the Scarp: water every way you turn but east, where
+// the hill and the town stand, and past the hill, from that height, the sea again. Kept with the village (vext land):
+// a later run knows it, the world map shows it, Claude has something to say about it.
+//   CM.islandKnown(game); CM.lookoutWords(game); game.vext("land") = { sea, island }
+{ const H = CM.SHORE, S = CM.SCARP, P = CM.Game.prototype, key = (x, y) => `${x},${y}`;
+  CM.SOLID.sea = { face: "ground:sand", h: 0.001, see: true, sea: true };   // (no wall to see, no ground: the sea itself lies there, under the land and out past it - 77t-island.js)
+  if (CM.SOLID_COLOURS) CM.SOLID_COLOURS.sea = "#4A7A9A";
+  CM.islandKnown = (g) => Boolean(g && g.vext && g.vext("land").island);
+  // names
+  { const mw0 = CM.makeWood; CM.makeWood = function (seed) { const fl = mw0.call(this, seed); if (fl && fl.grid.length > H.sea && !fl.rooms.some((r) => r.name === "The Strand")) fl.rooms = [{ x0: 0, y0: H.fringe, x1: fl.grid.length - 1, y1: fl.grid.length - 1, name: "The Strand" }].concat(fl.rooms); return fl; }; }
+  { const wp0 = CM.woodPlace; CM.woodPlace = function (fl, x, y) { if (fl && fl.number === -1 && fl.grid.length > H.sea && y >= H.strand[0]) { if (x === CM.riverX(y)) return "the river's mouth"; if (y >= H.strand[0]) return "The Strand"; } return wp0.call(this, fl, x, y); }; }
+  { const wy0 = CM.wayPlaces; CM.wayPlaces = function (game) { const out = wy0(game), fl = game.floor; if (!fl || fl.number !== -1 || fl.grid.length <= H.sea) return out; const at = H.shore;
+      if ((fl.seen || []).some(([x, y]) => x === at[0] && y === at[1]) && !(fl.pos[0] === at[0] && fl.pos[1] === at[1])) { const p = game.pathTo(...at); out.push({ name: "The Strand", x: at[0], y: at[1], steps: p ? p.length : null }); } return out; }; }
+  // the words: the sea from the sand; the island from the cairn
+  const SEA_FIRST = "The trees end, and there is sand, and past the sand there is the sea - grey-green, wrinkled, going on and on until it is the sky. Nobody in Caer Duin ever said there was a sea. The waves come up the sand a little way, and go back, and come up again.";
+  const SEA_AGAIN = ["The sea, the same as ever and never the same: the waves come up the sand and go back.", "Salt on the wind, gulls over the water, and nothing on the horizon at all.", "The tide has left a line of weed and shells along the sand, and the sea is a little further off than it was."];
+  const ISLAND_FIRST = "From the cairn you can see all of it at once: the Wood, the river winding through it to the sand, the fields, the farm, the hill with Caer Duin on its top - and all round it, every way you turn, the sea. South and west and north, the sea; and east, past the town's hill, from up here, the sea again. It is an island. The whole of the world you know is an island, and the water goes on past the edge of seeing.";
+  CM.lookoutWords = (g) => (CM.islandKnown(g) ? "From the cairn: the Wood, the river, the fields and the town on its hill - and the sea all round it, as far as there is anything to see. An island, and you on it." : CM.SCARP_WORDS.LOOKOUT);
+  CM.ISLAND_WORDS = { SEA_FIRST, SEA_AGAIN, ISLAND_FIRST };
+  const atSea = (fl) => fl.grid.length > H.sea && fl.pos[1] >= H.strand[0];
+  const atLookout = (fl) => fl.levels && fl.pos[0] === S.lookout[0] && fl.pos[1] === S.lookout[1];
+  const notice = (g) => { const fl = g.floor; if (!fl || fl.number !== -1 || g.mode !== "explore") return; const L = g.vext("land"), R = g.ext ? g.ext("land") : {}, day = CM.dayOf ? CM.dayOf(g) : 0;
+    if (atSea(fl) && !R.sea) { R.sea = true; const first = !L.sea; if (first) L.sea = day + 1; g.say(first ? SEA_FIRST : SEA_AGAIN[day % SEA_AGAIN.length]); }
+    if (atLookout(fl) && fl.grid.length > H.sea && !L.island) { L.island = day + 1; R.island = true; g.say(ISLAND_FIRST); g.emit("island"); } };
+  { const em0 = P.emit; P.emit = function (ev, ...a) { const out = em0.call(this, ev, ...a); if (ev === "moved") notice(this); return out; }; }
+  // at the water's edge
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === -1 && atSea(fl) && fl.pos[1] === H.strand[1]) { const day = CM.dayOf ? CM.dayOf(this) : 0; this.say(SEA_AGAIN[(day + fl.pos[0]) % SEA_AGAIN.length]); return true; } return u0.apply(this, a); }; }
+  // Claude, once he hears
+  const CLAUDE_TOLD = "Claude sets his cup down very carefully. \"An island.\" He looks at the window for a long time. \"I'd wondered. The way the wind comes, the gulls in a hard winter. Nobody ever went to look - why would they? Everything anyone needed was here.\" A small laugh. \"I'm going to have to redraw every map I own. Thank you. Really. That's the best thing anyone's brought me in years.\"";
+  const CLAUDE_AGAIN = ["\"Do you think anyone's ever sailed off it? There's no boat in the town's records. No word for one, even. I checked.\"", "\"I went down to the sand yesterday and stood with my feet in it. It's cold. Colder than the river. It tastes of salt - don't tell anyone I tasted it.\"", "\"Somewhere out there there's another shore, I suppose. Or there isn't. I can't decide which I'd rather.\""];
+  CM.claudeTopics = (CM.claudeTopics || []).concat([(g) => { if (!CM.islandKnown(g)) return []; const V = g.vext("claude"); return [["island", V.island ? "About the sea" : "We saw the sea from the Scarp - all round us"]]; }]);
+  CM.claudeActs = Object.assign(CM.claudeActs || {}, { island: (g, k, say) => { const V = g.vext("claude"); if (!V.island) { V.island = 1; say(CLAUDE_TOLD); } else { say(CLAUDE_AGAIN[V.island % CLAUDE_AGAIN.length]); V.island += 1; } g.emit("change"); } });
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -43067,6 +43137,11 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const paint = (p, now) => { const t = now / 1000;
     const sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#D8C8A0"); sky.addColorStop(1, "#C8B488"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
     p.strokeStyle = "rgba(90,60,20,0.15)"; for (let k = 0; k < 40; k++) { p.beginPath(); p.moveTo(0, k * 12); p.lineTo(W, k * 12 + 4); p.stroke(); }
+    if (CM.islandKnown && CM.islandKnown(CM.game)) {   // (v129.0) once the island is known: the sea round it, the land its own shape
+      p.fillStyle = "#86A8B8"; p.fillRect(0, 0, W, H); p.strokeStyle = "rgba(240,248,250,0.35)"; p.lineWidth = 1.2; for (let k = 0; k < 60; k++) { const x = (k * 137) % W, y = (k * 71) % H; p.beginPath(); p.moveTo(x, y); p.quadraticCurveTo(x + 6, y - 4 + Math.sin(t + k) * 1.5, x + 12, y); p.stroke(); } p.lineWidth = 1;
+      const land = () => { p.beginPath(); p.moveTo(6, 30); p.bezierCurveTo(200, -4, 432, 6, 534, 46); p.lineTo(556, 454); p.bezierCurveTo(380, 486, 140, 486, 6, 454); p.closePath(); p.moveTo(CX + 199, CY); p.ellipse(CX, CY, 199, 168, 0, 0, Math.PI * 2); };
+      p.fillStyle = "#D2C096"; land(); p.fill(); p.fillRect(500, 120, 120, 300); p.strokeStyle = "rgba(60,90,110,0.55)"; p.lineWidth = 2.5; land(); p.stroke(); p.lineWidth = 1;
+      p.fillStyle = "rgba(40,70,90,0.75)"; p.font = "italic 15px Georgia"; p.fillText("the Sea", 26, 476); p.fillText("the Sea", 590, 24); p.font = "italic 11px Georgia"; p.fillText("(all the way round)", 86, 476); }
     // the Wood
     p.fillStyle = "#6A8A4A"; p.beginPath(); p.moveTo(20, 40); p.bezierCurveTo(200, 10, 420, 20, 520, 60); p.lineTo(540, 440); p.bezierCurveTo(380, 470, 140, 470, 20, 440); p.closePath(); p.fill();
     const R = new CM.Random(31); for (let k = 0; k < 170; k++) { const x = 30 + R.next() * 490, y = 50 + R.next() * 390; if (Math.hypot(x - 330, y - 330) < 60 || Math.hypot(x - 260, y - 140) < 40) continue; p.fillStyle = R.chance(0.5) ? "#3E6A30" : "#4E7A38"; p.beginPath(); p.moveTo(x, y - 10); p.lineTo(x + 7, y + 5); p.lineTo(x - 7, y + 5); p.fill(); }
@@ -44614,7 +44689,7 @@ CM.drawJokerHat = (p, cx, cy, t, hat) => {
   const want = (game) => { const fl = game.floor, out = {}; if (!fl || game.mode === "title" || game.mode === "camp") return out; const n = fl.number, [x, y] = fl.pos, day = !CM.isNight(game), h = CM.hourOf(game) % 24, wx = CM.weather(game), season = CM.season(game);
     const near = (at, r, k) => { const d = Math.hypot(at[0] - x, at[1] - y); return d < r ? [k * (1 - d / r), at] : null; };
     if (n === -1) { if (day) out.birds = [(wx === "rain" ? 0.15 : season === "winter" ? 0.25 : 0.5), null]; else if (season !== "winter" && wx !== "rain") out.crickets = [0.45, null];
-      const rx = CM.riverX ? CM.riverX(y) : -99, d = Math.abs(rx - x); if (d < 7) out.river = [0.5 * (1 - d / 7), [rx, y]]; if (CM.SCARP && fl.levels) { const f = near([CM.SCARP.falls[0] - 0.5, CM.SCARP.falls[1]], 16, 0.75); if (f) out.falls = f; } }
+      const rx = CM.riverX ? CM.riverX(y) : -99, d = Math.abs(rx - x); if (d < 7) out.river = [0.5 * (1 - d / 7), [rx, y]]; if (CM.SCARP && fl.levels) { const f = near([CM.SCARP.falls[0] - 0.5, CM.SCARP.falls[1]], 16, 0.75); if (f) out.falls = f; } if (CM.shoreNear) { const d = CM.shoreNear(fl); if (d < 12) out.lapping = [0.6 * (1 - d / 12), [x, CM.SHORE.sea]]; } }
     else if (n === 0) { if (h >= 6 && h < 20 && CM.TOWN_AT) { const m = near(CM.TOWN_AT.market, 14, 0.4); if (m) out.murmur = m; } if (h >= 7 && h < 19 && CM.TOWN_BLOCKS && CM.TOWN_BLOCKS.smith) { const s = near(CM.TOWN_BLOCKS.smith.door, 10, 0.45); if (s) out.hammer = s; } if (day) out.birds = [0.18, null]; }
     else if (fl.special === "interior") { if (fl.interior === "smith") out.hammer = [0.4, null]; if (fl.interior === "tavern") out.murmur = [0.4, null]; }
     else if (CM.isDeep(n)) { const band = CM.isUndercroft(n) ? -1 : CM.themeIndex(n), B = { "-1": ["lapping", 0.35], 1: ["lapping", 0.35], 4: ["lapping", 0.5], 5: ["bubbles", 0.35], 6: ["chimes", 0.3], 7: ["hammer", 0.3], 9: ["beat", 0.35] }[band];
@@ -47542,9 +47617,9 @@ CM.journalPage("letters", "Letters", "The letters the heroes wrote home after ea
 // the air between (the sky's own haze does the rest), so the world goes back in layers to the edge of seeing, and the
 // keep, the spire and the Mage Tower (76zzzzg-farviews.js) stand against them.
 { const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, quad) => { if (fv0) fv0(fl, size, index, night, quad); const L = index["far:hill"]; if (L === undefined) return;
-    for (const [E, H, W, sh] of [[(CM.SKIRT || 24) + 22, 19, 16, 0.42], [(CM.SKIRT || 24) + 60, 34, 26, 0.34]]) for (let t = -E; t < size + E; t += W) { const t1 = Math.min(t + W, size + E), lo = -0.5;
-      quad([t, lo, -E], [t1, lo, -E], [t1, H, -E], [t, H, -E], L, sh, 0); quad([t1, lo, size + E], [t, lo, size + E], [t, H, size + E], [t1, H, size + E], L, sh, 0);
-      quad([size + E, lo, t], [size + E, lo, t1], [size + E, H, t1], [size + E, H, t], L, sh, 0); quad([-E, lo, t1], [-E, lo, t], [-E, H, t], [-E, H, t1], L, sh, 0); } };
+    for (const [E, H, W, sh] of [[(CM.SKIRT || 24) + 22, 19, 16, 0.42], [(CM.SKIRT || 24) + 60, 34, 26, 0.34]]) for (let t = -E; t < size + E; t += W) { const t1 = Math.min(t + W, size + E), lo = -0.5, isle = fl.number === -1 && CM.LAND_ISLE && size > CM.SHORE.sea;   // (v129.0: from the island, only the hill's range, east; the rest is sea)
+      if (!isle) { quad([t, lo, -E], [t1, lo, -E], [t1, H, -E], [t, H, -E], L, sh, 0); quad([t1, lo, size + E], [t, lo, size + E], [t, H, size + E], [t1, H, size + E], L, sh, 0); }
+      if (!isle || (t >= -W && t < size * 0.8)) quad([size + E, lo, t], [size + E, lo, t1], [size + E, H, t1], [size + E, H, t], L, sh, 0); if (!isle) quad([-E, lo, t1], [-E, lo, t], [-E, H, t], [-E, H, t1], L, sh, 0); } };
 }
 
 // ---- 76zzzzzzzzz2-puddles.js ----
@@ -50372,7 +50447,7 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
   // the falls, the pool, the cairn, as the hour goes
   const pool = [S.falls[0] - 1, S.falls[1]];
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== -1 || !fl.levels || game.mode === "title") return out;
-      out.push({ x: S.lookout[0], y: S.lookout[1], dx: 0.18, dz: 0.22, layer: "prop:cairn", w: 0.62, h: 0.78, shade: 0.95 });
+      out.push({ x: S.lookout[0], y: S.lookout[1] + 1, dx: -0.12, dz: -0.3, base: S.h, layer: "prop:cairn", w: 0.62, h: 0.78, shade: 0.95 });   // (at the brink, on the rock's lip)
       if (Math.abs(fl.pos[0] - pool[0]) + Math.abs(fl.pos[1] - pool[1]) > 26) return out;
       const ice = fl.frozen || (CM.weather && CM.weather(game) === "snow"), H = S.h, t = CM.reducedMotion ? 0 : now / 1000;
       if (ice) { out.push({ x: pool[0], y: pool[1], face: 1, layer: "fx:fallsice", w: 0.9, h: H, lift: H / 2 - 0.5, alpha: 0.9, glow: 0.15 }); return out; }
@@ -50385,6 +50460,33 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
       for (let i = 0; i < 6; i++) { const ph = (t * 0.22 + i / 6) % 1, sz = 0.55 + ph * 0.9;   // (mist off the pool, rising and thinning)
         out.push({ x: pool[0], y: pool[1], dx: 0.25 - ph * 0.5 + Math.sin(i * 2.3) * 0.2, dz: Math.cos(i * 1.7) * 0.35, layer: "fx:mist", w: sz, h: sz, lift: ph * 1.6, alpha: 0.32 * (1 - ph) * (ph < 0.1 ? ph * 10 : 1) }); }
       return out; }; }
+}
+
+// ---- 77t-island.js ----
+"use strict";
+// The island, seen (UPGRADE_PLAN_79.md, v129.0; the rules 69zzzzg-island.js, the shore 23f-shore.js): past the land's
+// edge on the north, the west and the south, the sea - the water's own shader, rippling, carrying the sky, glinting -
+// to the edge of seeing; a strip of grey shingle between the last trees and the water; the hill's cliffs closed where
+// they meet the sea; surf running up the sand and back along the Strand; and on the world map, once the island is
+// known, the sea round the land.
+{ const H = CM.SHORE;
+  // past the edge: the sea, the shingle, the hill's ends
+  { const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, put) => { const n = fv0 ? fv0(fl, size, index, night, put) : 0; if (!fl || fl.number !== -1 || !CM.LAND_ISLE || fl.grid.length <= H.sea) return n;
+      const water = index.water0, shingle = index["ground:rock"], cliff = index["solid:cliff"], R = 230, y = -0.04;
+      if (water !== undefined) put([-R, y, size + R], [size + R, y, size + R], [size + R, y, -R], [-R, y, -R], water, 0.92, 4);   // (the sea: under all the land, and out to the haze)
+      if (shingle !== undefined) { const B = 1.6, E = CM.WOOD_EAST, band = (x0, z0, x1, z1) => { for (let z = z0; z < z1; z += 4) for (let x = x0; x < x1; x += 4) { const xe = Math.min(x + 4, x1), ze = Math.min(z + 4, z1); put([x, 0, ze], [xe, 0, ze], [xe, 0, z], [x, 0, z], shingle, 0.78, 0); } };
+        band(-B, -B, E, 0); band(-B, 0, 0, H.strand[0]); }   // (grey shingle between the last trees and the water)
+      if (cliff !== undefined) { const E = CM.WOOD_EAST; for (let x = E; x < size; x += 2) put([Math.min(x + 2, size), y, 0], [x, y, 0], [x, 2.2, 0], [Math.min(x + 2, size), 2.2, 0], cliff, 0.7, 0);   // (the hill falls to the sea: its north face, and its east end)
+        for (let z = 0; z < H.strand[0]; z += 2) put([size, y, z], [size, y, Math.min(z + 2, H.strand[0])], [size, 2.2, Math.min(z + 2, H.strand[0])], [size, 2.2, z], cliff, 0.62, 0); }
+      return n + 1; }; }
+  // the surf: up the sand and back, along the water's edge near the party
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== -1 || game.mode === "title" || fl.grid.length <= H.sea || Math.abs(fl.pos[1] - H.sea) > 14) return out;
+      const t = CM.reducedMotion ? 0 : now / 1000, ice = fl.frozen;
+      for (let x = Math.max(1, fl.pos[0] - 14); x <= Math.min(fl.grid.length - 2, fl.pos[0] + 14); x++) { const ph = t * 0.32 + Math.sin(x * 0.7) * 0.4 + x * 0.05, k = (Math.sin(ph * Math.PI * 2) + 1) / 2;
+        if (!ice) out.push({ x, y: H.sea, dz: -0.42 - k * 0.28, flat: true, layer: `fx:foam${(x + Math.floor(t * 3)) % 3}`, w: 1.15, alpha: 0.25 + 0.4 * (1 - k) }); }
+      return out; }; }
+  // the lapping of the waves, along the shore (76zzzzs-placeamb.js plays it)
+  CM.shoreNear = (fl) => (fl && fl.number === -1 && fl.grid.length > H.sea ? Math.abs(fl.pos[1] - H.sea) : 99);
 }
 
 // ---- 79-artworker.js ----
