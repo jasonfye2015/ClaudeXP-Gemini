@@ -261,6 +261,11 @@ class Renderer:
         pics = [Image.open(ART / f"{n}.png") for n in art_names]
         for f in sorted(ITEMS.glob("*.png")):                      # (the item sprites: pixel art, enlarged crisply)
             im = Image.open(f).convert("RGBA")
+            if im.width != im.height:                              # (a tall crop: stood on a square, its feet down)
+                side = max(im.size)
+                sq = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+                sq.paste(im, ((side - im.width) // 2, side - im.height))
+                im = sq
             pics.append(im.resize((256, 256), Image.NEAREST))
             art_names.append("item:" + f.name)
         self.art_layers = {n: i for i, n in enumerate(art_names)}
@@ -513,6 +518,16 @@ class Renderer:
                 continue
             s = (0.34 if d["what"] != "gold" else 0.4) * (1 - 0.6 * d.get("fly", 0.0))
             things.append((d["x"], d["y"] - s * 0.5, d["z"], s, s, lay, 1.4))
+        farm = getattr(g, "farm", None)
+        if farm is not None and L.kind == "town":                      # (the crops in the farm's plots)
+            from .itempics import crop_picture
+            for i, p in enumerate(farm.plots):
+                if p and i < len(L.farm_cells):
+                    lay = get("item:" + (crop_picture(p["crop"], farm.stage(i)) or ""))
+                    if lay is not None:
+                        x, y = L.farm_cells[i]
+                        h = 1.05 if farm.stage(i) else 0.8
+                        things.append((x + 0.5, L.floor[y, x] - 0.02, y + 0.5, h, h, lay, 1.0))
         wood = get("fu.table")
         for f in g.fx:                                                  # (splinters of what broke)
             if f.get("kind") == "debris":

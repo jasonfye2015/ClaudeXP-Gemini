@@ -7,7 +7,7 @@ thing the town is built over.
 
 Playing
   WASD move, Shift run (a running jump goes higher and further), mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
-  F talk / use (the vendors, the stairs, the Deep's mouth), Q health potion, E mana potion, T Scroll of Return,
+  F talk / use (the vendors, the stairs, the Deep's mouth, the cabin, the bed, the hearth, the chest, the farm sign), Q health potion, E mana potion, T Scroll of Return,
   1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, Esc the menu.
 
   Thornwick is home: four vendors round the square - Hesper the Apothecary (potions, Scrolls of Return), Old Tamsin
@@ -72,6 +72,28 @@ Playing
   line when he steps in. Chests open with F (some are guarded) and stand in the round - Kenney's chest, its lid swinging back on its hinge. A
   bolt breaks them too: shot before it's opened, a chest gives its things all the same (its guards wake), and an
   emptied one shot only breaks. Water slows him.
+
+  Home: Claude's cabin stands west of the square, between the Wandwright and the Outfitter (F at its door). Inside:
+  the bed (sleep until six in the morning - the night passes, the crops grow, and he wakes with full life and mana),
+  the hearth with its cauldron (cooking), and his chest (whatever is put in it stays there, whatever the Deep does).
+  North of the cabin is the farm: eight plots of tilled earth to start, twenty in the end. The sign at its foot runs
+  it - choose a seed and a plot (or Plant all), Water all, Harvest all, and the automation: a Sprinkler (waters
+  every plot each morning), a Farmhand (harvests what's ripe into a basket, and plants again from the seeds in the
+  cabin's chest), and More plots. A crop grows only on a day it's been watered (by him, the sprinkler or the rain),
+  through four stages in one and a half to five days: radish, carrot, onion, potato, cabbage, tomato, strawberry,
+  pepper, corn, eggplant, cauliflower, squash, pumpkin and watermelon. A harvest sometimes gives seed back.
+  Seeds drop from monsters (more in the forest) and lie in chests; Hesper sells some each visit.
+
+  Food: beasts leave meat, water-things fish, the fungal ones mushrooms, the wasps honey. Anything raw can be eaten
+  as it is (a little life and mana). At the hearth, a known recipe cooks with one button; or put up to three raw
+  things in the pot - if they make a dish, it's cooked and goes into the cookbook (if not, nothing's lost). Twenty-four
+  dishes, from Roast Haunch to Dragonfire Chili and the Feast of the Deep; each one eaten is a buff for one to five
+  real hours - spell damage, crits, move or casting speed, life, mana, armour, mana a second, gold found, life
+  leech, an element's damage - three at most at once (the oldest goes), shown under the place's name with the time
+  left. The cookbook (from the hearth or the pack's Cooked tab) shows what's been found and how many are left.
+
+  The pack has tabs: Armor (the gear not worn), Wands (wands and wand parts), Seeds, Raw, Cooked and Misc (potions
+  and the scroll); food stacks with its count, and Eat it / Drink it act on it there.
 
   The townsfolk speak: with a language model in the Timeline's Local Storage\LLM Models (llama.cpp, through the
   Timeline's own engine - Qwen3 4B Instruct when it's there), Hesper, Old Tamsin, Bramwell and Mother Wren greet

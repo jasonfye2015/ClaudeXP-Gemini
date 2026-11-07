@@ -177,5 +177,129 @@
   "scroll": "s7_I_Scroll.png",
   "coin": "s7_I_GoldCoin.png"
  },
- "credits": "Item pictures: Dungeon Crawl Stone Soup tiles (CC0) and Henrique Lazarini (7Soul1)'s 496 pixel art icons for medieval/fantasy RPG (CC0)"
+ "credits": "Item pictures: Dungeon Crawl Stone Soup tiles (CC0) and Henrique Lazarini (7Soul1)'s 496 pixel art icons for medieval/fantasy RPG (CC0)",
+ "crops": {
+  "sown": "crop_sown.png",
+  "tomato": [
+   "crop_tomato_0.png",
+   "crop_tomato_1.png",
+   "crop_tomato_2.png",
+   "crop_tomato_3.png"
+  ],
+  "strawberry": [
+   "crop_strawberry_0.png",
+   "crop_strawberry_1.png",
+   "crop_strawberry_2.png",
+   "crop_strawberry_3.png"
+  ],
+  "carrot": [
+   "crop_carrot_0.png",
+   "crop_carrot_1.png",
+   "crop_carrot_2.png",
+   "crop_carrot_3.png"
+  ],
+  "pumpkin": [
+   "crop_pumpkin_0.png",
+   "crop_pumpkin_1.png",
+   "crop_pumpkin_2.png",
+   "crop_pumpkin_3.png"
+  ],
+  "watermelon": [
+   "crop_watermelon_0.png",
+   "crop_watermelon_1.png",
+   "crop_watermelon_2.png",
+   "crop_watermelon_3.png"
+  ],
+  "onion": [
+   "crop_onion_0.png",
+   "crop_onion_1.png",
+   "crop_onion_2.png",
+   "crop_onion_3.png"
+  ],
+  "cabbage": [
+   "crop_cabbage_0.png",
+   "crop_cabbage_1.png",
+   "crop_cabbage_2.png",
+   "crop_cabbage_3.png"
+  ],
+  "potato": [
+   "crop_potato_0.png",
+   "crop_potato_1.png",
+   "crop_potato_2.png",
+   "crop_potato_3.png"
+  ],
+  "pepper": [
+   "crop_pepper_0.png",
+   "crop_pepper_1.png",
+   "crop_pepper_2.png",
+   "crop_pepper_3.png"
+  ],
+  "cauliflower": [
+   "crop_cauliflower_0.png",
+   "crop_cauliflower_1.png",
+   "crop_cauliflower_2.png",
+   "crop_cauliflower_3.png"
+  ],
+  "eggplant": [
+   "crop_eggplant_0.png",
+   "crop_eggplant_1.png",
+   "crop_eggplant_2.png",
+   "crop_eggplant_3.png"
+  ],
+  "radish": [
+   "crop_radish_0.png",
+   "crop_radish_1.png",
+   "crop_radish_2.png",
+   "crop_radish_3.png"
+  ],
+  "corn": [
+   "crop_corn_0.png",
+   "crop_corn_1.png",
+   "crop_corn_2.png",
+   "crop_corn_3.png"
+  ],
+  "squash": [
+   "crop_squash_0.png",
+   "crop_squash_1.png",
+   "crop_squash_2.png",
+   "crop_squash_3.png"
+  ]
+ },
+ "produce": {
+  "tomato": "veg_tomato.png",
+  "strawberry": "veg_strawberry.png",
+  "carrot": "veg_carrot.png",
+  "pumpkin": "veg_pumpkin.png",
+  "watermelon": "veg_watermelon.png",
+  "onion": "veg_onion.png",
+  "cabbage": "veg_cabbage.png",
+  "potato": "veg_potato.png",
+  "pepper": "veg_pepper.png",
+  "cauliflower": "veg_cauliflower.png",
+  "eggplant": "veg_eggplant.png",
+  "radish": "veg_radish.png",
+  "corn": "veg_corn.png",
+  "squash": "veg_squash.png"
+ },
+ "food": {
+  "meat": "s7_I_C_RawMeat.png",
+  "fish": "s7_I_C_RawFish.png",
+  "mushroom": "s7_I_C_Mushroom.png",
+  "roast": "s7_I_C_Meat.png",
+  "grilled": "s7_I_C_Fish.png",
+  "pie": "s7_I_C_Pie.png",
+  "bread": "s7_I_C_Bread.png",
+  "seeds": "s7_I_C_Nut.png",
+  "cheese": "s7_I_C_Cheese.png",
+  "honey": "dc_food_honeycomb_new.png",
+  "sausage": "dc_food_sausage.png",
+  "jerky": "dc_food_beef_jerky_new.png",
+  "stew": "dc_food_meat_ration_new.png",
+  "pizza": "dc_food_pizza_new.png",
+  "ambrosia": "dc_food_piece_of_ambrosia_new.png",
+  "jelly": "dc_food_lump_of_royal_jelly_new.png",
+  "ration": "dc_food_bread_ration_new.png",
+  "fruit": "dc_food_fruit.png",
+  "chunk": "dc_food_chunk.png"
+ }
 }

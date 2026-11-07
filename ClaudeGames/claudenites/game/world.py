@@ -16,6 +16,8 @@ from . import items as I
 from . import levels
 from .player import Player
 from .sky import Sky
+from . import food as FOOD
+from .farm import Farm
 
 EYE = 0.62
 RADIUS = 0.24
@@ -91,6 +93,8 @@ class Bolt:
         self.trail = 0.0
 
 
+FOOD_NAMES = {FOOD.name_of(k): k for k in [f"seed:{c}" for c in FOOD.CROPS] + [f"raw:{c}" for c in FOOD.CROPS]
+              + [f"raw:{r}" for r in FOOD.RAW] + [f"cooked:{r}" for r in FOOD.RECIPES]}
 STRIKE_AT = 0.35
 STRIKE_LEN = 0.8
 
@@ -125,6 +129,8 @@ class Game:
         self.heal_over = 0.0
         self.visits = 0                      # times home: the vendors' stock changes each
         self.sky = Sky(seed)                 # the clock, the moon and the weather (game/sky.py)
+        self.farm = Farm()                   # the plot by the cabin (game/farm.py)
+        self._tended = -1
         self.wx = self.sky.effects(True, 0)
         self.storm_hit = 0.0
 
@@ -138,7 +144,7 @@ class Game:
 
     def to_json(self):
         return {"version": 1, "seed": self.seed, "run_floor": self.run_floor, "visits": self.visits,
-                "sky": self.sky.to_json(),
+                "sky": self.sky.to_json(), "farm": self.farm.to_json(),
                 "player": self.player.to_json()}
 
     @classmethod
@@ -147,6 +153,7 @@ class Game:
         g.run_floor = max(1, int(d.get("run_floor", 1)))
         g.visits = int(d.get("visits", 0))
         g.sky = Sky.from_json(g.seed, d.get("sky"))
+        g.farm = Farm.from_json(d.get("farm"))
         g.go_town()
         return g
 
@@ -179,6 +186,37 @@ class Game:
                 m.lift = 0.35
             self.monsters.append(m)
         self.events.append(("level", level))
+
+    def go_cabin(self):
+        self._enter(levels.cabin(self.seed))
+        self.events.append(("toast", "Home. The fire's still in.", (1.0, 0.85, 0.6)))
+
+    def leave_cabin(self):
+        self.depth = 0
+        self._enter(levels.town(self.seed))
+        dx, dz = self.level.spots["cabin_door"]
+        self.x, self.z, self.yaw = dx + 0.6, dz, math.pi / 2
+        self.y = self.level.floor_at(self.x, self.z)
+        self.events.append(("save",))
+
+    def sleep(self):
+        """To bed: the night passes (to the next six o'clock, the weather and the crops with it), and he wakes whole."""
+        s = self.sky
+        mins = (6 * 60 - s.minute) % 1440 or 1440
+        if mins < 6 * 60:
+            mins += 0                                       # (a nap before dawn still ends at dawn)
+        left = mins
+        while left > 0:
+            step = min(60, left)
+            self._sky_events(s.tick(step))
+            self.farm.grow(s, step)
+            left -= step
+        self.farm.tend(self.rng, self.player.stash_larder, s.day)
+        p = self.player
+        p.life, p.mana = p.max_life(), p.max_mana()
+        self.events.append(("sleep", mins))
+        self.events.append(("toast", f"Claude sleeps until dawn - day {s.day + 1}. He wakes whole.", (0.95, 0.88, 0.7)))
+        self.events.append(("save",))
 
     def go_town(self):
         self.visits += 1
@@ -224,6 +262,8 @@ class Game:
         return True
 
     def in_town(self):
+        if self.level.kind == "cabin":
+            return True
         S = self.level.safe
         return S is not None and bool(S[min(S.shape[0] - 1, max(0, int(self.z))), min(S.shape[1] - 1, max(0, int(self.x)))])
 
@@ -251,6 +291,15 @@ class Game:
     def near(self):
         """What F would do here: ("vendor", key) / ("stairs",) / ("mouth",) / None, and its label."""
         L = self.level
+        best = None                                         # (the nearest of the places to use)
+        for key, label in (("cabin_door", "Go into your cabin"), ("exit", "Go out"), ("bed", "Sleep until morning"),
+                           ("hearth", "Cook at the hearth"), ("stash", "Open your chest"), ("sign", "Read the farm sign")):
+            at = L.spots.get(key)
+            d = math.hypot(at[0] - self.x, at[1] - self.z) if at else 99
+            if d < (1.3 if key != "sign" else 1.6) and (best is None or d < best[0]):
+                best = (d, (key,), label)
+        if best:
+            return best[1], best[2]
         for n in L.npcs:
             if math.hypot(n["x"] - self.x, n["z"] - self.z) < 1.7:
                 v = D.VENDORS[n["vendor"]]
@@ -258,6 +307,8 @@ class Game:
         if self.depth == 0 and L.portal and math.hypot(L.portal[0] - self.x, L.portal[1] - self.z) < 2.0:
             return ("mouth",), "Go down into the Deep"
         for i, c in enumerate(L.chests):
+            if c.get("stash"):
+                continue
             if not c["opened"] and not c.get("broken") and math.hypot(c["x"] - self.x, c["z"] - self.z) < 1.3:
                 return ("chest", i), "Open the chest"
         if self.depth and L.stairs and math.hypot(L.stairs[0] - self.x, L.stairs[1] - self.z) < 1.4:
@@ -270,6 +321,14 @@ class Game:
         what, _label = self.near()
         if what and what[0] == "chest":
             self.open_chest(what[1])
+        elif what and what[0] == "cabin_door":
+            self.go_cabin()
+        elif what and what[0] == "exit":
+            self.leave_cabin()
+        elif what and what[0] == "bed":
+            self.sleep()
+        elif what and what[0] in ("hearth", "stash", "sign"):
+            self.dialog = what
         elif what and what[0] != "sealed":
             self.dialog = what
         return what
@@ -296,6 +355,15 @@ class Game:
             k = rng.choice(["health", "mana"])
             p.potions[k] += 1
             got.append("a Health Potion" if k == "health" else "a Mana Potion")
+        if rng.random() < 0.55:                              # (seeds, often; something to eat, sometimes)
+            for _ in range(rng.randint(1, 3)):
+                key = self._seed_key(rng, depth)
+                FOOD.add(p.larder, key, 1)
+                got.append(FOOD.name_of(key))
+        if rng.random() < 0.3:
+            key = "raw:" + rng.choice(["meat", "fish", "mushroom", "honey"])
+            FOOD.add(p.larder, key, 1)
+            got.append(FOOD.name_of(key))
         self.events.append(("loot", (c["x"], c["y"] + 0.6, c["z"]), got))
         self._drops((c["x"], c["y"] + 0.5, c["z"]), got, mark, c["y"])
         self.events.append(("chest", c))
@@ -321,6 +389,11 @@ class Game:
         p = self.player
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         self._sky_events(self.sky.tick(dt))                # (a second of play is a minute of the game's day)
+        self.farm.grow(self.sky, dt)
+        hour = int(self.sky.clock // 60)
+        if hour != self._tended:                            # (the farmhand looks in once an hour)
+            self._tended = hour
+            self.farm.tend(self.rng, self.player.stash_larder, self.sky.day)
         self.wx = self.sky.effects(self.level.outdoor, self.depth)
         self._weather(dt)
         self._move(dt, inp)
@@ -750,6 +823,15 @@ class Game:
         if rng.random() < 0.012:
             p.potions["return"] += 1
             got.append("a Scroll of Return")
+        eat = FOOD.food_of(m.name)
+        if eat and (m.guardian or rng.random() < 0.45):
+            n = 3 if m.guardian else 1
+            FOOD.add(p.larder, f"raw:{eat}", n)
+            got.append(FOOD.name_of(f"raw:{eat}") + (f" x{n}" if n > 1 else ""))
+        if rng.random() < (0.12 if self.depth == 0 else 0.07) or m.guardian:
+            key = self._seed_key(rng, depth)
+            FOOD.add(p.larder, key, 1)
+            got.append(FOOD.name_of(key))
         drops = 3 if m.guardian else (1 if rng.random() < 0.12 + (0.05 if m.kind == "brute" else 0) else 0)
         for _ in range(drops):
             it = I.roll_item(rng, depth, find / 400)
@@ -796,6 +878,12 @@ class Game:
                 keep.append(d)
         self.drops = keep
 
+    def _seed_key(self, rng, depth):
+        """A seed fit for the depth: the quick crops near the top, the slow rich ones deeper."""
+        crops = sorted(FOOD.CROPS, key=lambda k: FOOD.CROPS[k][1])
+        top = max(3, min(len(crops), 3 + depth // 6))
+        return "seed:" + rng.choice(crops[:top])
+
     def _drops(self, pos, got, mark, floor):
         """What was had, seen: each thing pops out where it came from, bounces, glints a moment, then flies to Claude
         (it's already in the pack: this is only the sight of it). got: the loot's lines; the items are the "found"
@@ -811,6 +899,8 @@ class Game:
                 whats.append("mana")
             elif "Scroll of Return" in line:
                 whats.append("scroll")
+            elif line.split(" x")[0] in FOOD_NAMES:
+                whats.append(FOOD_NAMES[line.split(" x")[0]])
             elif items:
                 whats.append(items.pop(0))
         x, y, z = pos

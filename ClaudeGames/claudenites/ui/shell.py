@@ -132,6 +132,9 @@ class Shell(QWidget):
         elif kind == "calendar":
             from .dial import CalendarPanel
             self.set_panel(CalendarPanel(self))
+        elif kind in ("hearth", "stash", "sign"):
+            from . import home
+            self.set_panel({"hearth": home.CookPanel, "stash": home.StashPanel, "sign": home.FarmPanel}[kind](self))
         elif kind == "vendor":
             self.set_panel(panels.VendorPanel(self, what[1]))
         elif kind == "stairs":

@@ -47,6 +47,26 @@ def buy_consumable(player, kind):
     return True
 
 
+def seed_stock(seed, visit, reach):
+    """Hesper's seeds this visit: the quick crops always, and a few of the slow rich ones the deeper Claude has been."""
+    from .food import CROPS
+    rng = random.Random(f"{seed}:shop:seeds:{visit}")
+    crops = sorted(CROPS, key=lambda k: CROPS[k][1])
+    quick, rest = crops[:4], crops[4:]
+    more = rng.sample(rest, min(len(rest), 2 + min(4, reach // 15)))
+    return quick + sorted(more, key=lambda k: CROPS[k][1])
+
+
+def buy_seed(player, crop):
+    from .food import CROPS, add
+    cost = CROPS[crop][4]
+    if player.gold < cost:
+        return False
+    player.gold -= cost
+    add(player.larder, f"seed:{crop}", 1)
+    return True
+
+
 def sell(player, item):
     if item not in player.inventory:
         return 0

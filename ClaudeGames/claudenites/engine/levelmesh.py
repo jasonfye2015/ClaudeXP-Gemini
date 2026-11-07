@@ -71,7 +71,24 @@ def build(L, layer_of):
                         _side(quad, x, y, dx, dy, nc, c, layer_of(L.wtex[y, x]))
     for h in getattr(L, "houses", []):
         _house(quad, h, layer_of, L)
+    for b in getattr(L, "boxes", []):
+        _box(quad, b, layer_of, L)
     return np.array(out, np.float32).reshape(-1, 10)
+
+
+def _box(quad, b, layer_of, L):
+    """A box of furniture: its top and four sides (the bottom never shows)."""
+    x0, y0, z0, x1, y1, z1, name = b
+    lay = layer_of(L.textures.index(name)) if name in L.textures else layer_of(L.tex(name))
+    U = UV_SCALE * 1.5
+    quad((x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1), (0, 1, 0),
+         ((x0 * U, z0 * U), (x1 * U, z0 * U), (x1 * U, z1 * U), (x0 * U, z1 * U)), lay, (1.0,) * 4)
+    for (ax, az, bx, bz, n) in ((x0, z1, x1, z1, (0, 0, 1)), (x1, z0, x0, z0, (0, 0, -1)),
+                                (x1, z1, x1, z0, (1, 0, 0)), (x0, z0, x0, z1, (-1, 0, 0))):
+        u0 = (ax + az) * U
+        u1 = u0 + (abs(bx - ax) + abs(bz - az)) * U
+        quad((ax, y0, az), (bx, y0, bz), (bx, y1, bz), (ax, y1, az), n,
+             ((u0, -y0 * U), (u1, -y0 * U), (u1, -y1 * U), (u0, -y1 * U)), lay, (0.8, 0.8, 0.95, 0.95))
 
 
 def _house(quad, h, layer_of, L):
