@@ -14,6 +14,7 @@ from ..game import data as D
 
 from . import dressmesh
 from . import gl
+from . import weatherfx
 from . import levelmesh
 from .figures import Pack, Plants
 
@@ -53,16 +54,19 @@ vec4 outColour(vec3 c, float a) { return vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 
 WORLD_VS = """#version 330 core
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in vec2 aUV;
 layout(location=3) in float aLayer; layout(location=4) in float aShade;
-uniform mat4 uProj; uniform mat4 uView;
+uniform mat4 uProj; uniform mat4 uView; uniform float uLift;
 out vec3 vPos; out vec3 vNrm; out vec2 vUV; flat out float vLayer; out float vShade;
-void main() { vPos = aPos; vNrm = aNrm; vUV = aUV; vLayer = aLayer; vShade = aShade;
-              gl_Position = uProj * uView * vec4(aPos, 1.0); }"""
+void main() { vec3 p = aPos + vec3(0.0, uLift, 0.0); vPos = p; vNrm = aNrm; vUV = aUV; vLayer = aLayer; vShade = aShade;
+              gl_Position = uProj * uView * vec4(p, 1.0); }"""
 WORLD_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in float vShade;
-uniform sampler2DArray uTex; uniform vec3 uTint;
+uniform sampler2DArray uTex; uniform vec3 uTint; uniform float uSnow; uniform float uWet;
 out vec4 frag;
 """ + LIGHTING + """
 void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint * vShade;
+              float up = smoothstep(0.5, 0.9, vNrm.y);
+              base = mix(base, vec3(0.86, 0.89, 0.95) * vShade, uSnow * up * (0.75 + 0.25 * texture(uTex, vec3(vUV * 3.0, vLayer)).g));
+              base *= 1.0 - uWet * 0.3 * up;
               frag = outColour(lit(vPos, normalize(vNrm), base), 1.0); }"""
 
 # Claude and Magic's painted things: on the walls, the floors, hanging, standing - cut out by their alpha, lit like
@@ -119,11 +123,13 @@ void main() { float c = cos(aInst.w), s = sin(aInst.w), k = aInst2.x;
     vPos = p; vCol = aCol * aInst2.y; gl_Position = uProj * uView * vec4(p, 1.0); }"""
 PLANT_FS = """#version 330 core
 in vec3 vPos; in vec3 vCol;
-uniform vec3 uTint;
+uniform vec3 uTint; uniform float uSnow;
 out vec4 frag;
 """ + LIGHTING + """
 void main() { vec3 n = normalize(cross(dFdx(vPos), dFdy(vPos)));
-    frag = outColour(lit(vPos, n, pow(vCol, vec3(2.2)) * uTint), 1.0); }"""
+    vec3 base = pow(vCol, vec3(2.2)) * uTint;
+    base = mix(base, vec3(0.8, 0.83, 0.9), uSnow * smoothstep(0.35, 0.8, abs(n.y)));
+    frag = outColour(lit(vPos, n, base), 1.0); }"""
 
 # billboards: glows (0), rune circles flat on the floor (1), the Deep's mouth (2), torch flames (3), bars of light (4)
 GLOW_VS = """#version 330 core
@@ -150,7 +156,9 @@ void main() {
     else if (vMode < 3.5) { float fl = sin(uTime * 13.0 + vPos.x * 7.0) * 0.08 + sin(uTime * 7.3 + vPos.z * 5.0) * 0.06;
         vec2 q = vec2(p.x * (1.4 + fl * 3.0), (p.y + 0.3) * 0.8);
         a = pow(max(0.0, 1.0 - length(q)), 1.6) * smoothstep(-1.0, -0.2, p.y); }
-    else { a = (1.0 - abs(p.y)) * pow(max(0.0, 1.0 - abs(p.x)), 0.5); }
+    else if (vMode < 4.5) { a = (1.0 - abs(p.y)) * pow(max(0.0, 1.0 - abs(p.x)), 0.5); }
+    else { if (vMode < 5.5) a = smoothstep(1.0, 0.2, length(p)); else a = (1.0 - abs(p.x)) * smoothstep(1.0, 0.6, abs(p.y));
+           if (a < 0.01) discard; frag = vec4(vCol.rgb, a * vCol.a); return; }
     if (a < 0.003) discard;
     frag = vec4(vCol.rgb * a * vCol.a, 1.0); }"""
 
@@ -159,13 +167,46 @@ layout(location=0) in vec2 aPos; out vec2 vP;
 void main() { vP = aPos; gl_Position = vec4(aPos, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
 in vec2 vP; uniform mat4 uInvPV; uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uSunDir;
+uniform vec3 uMoonV; uniform float uPhase; uniform float uSunDisc; uniform float uMoonDisc; uniform float uStars;
+uniform float uCloud; uniform vec2 uWind; uniform float uTime; uniform float uAurora; uniform float uRainbow;
+uniform float uFlash; uniform float uStorm;
 out vec4 frag;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
 void main() { vec4 w = uInvPV * vec4(vP, 1.0, 1.0); vec3 d = normalize(w.xyz / w.w);
     float h = clamp(d.y, -0.2, 1.0);
-    vec3 c = mix(uHorizon, uTop, pow(max(h, 0.0), 0.6));
+    vec3 top = pow(uTop, vec3(2.2)), hor = pow(uHorizon, vec3(2.2));
+    vec3 c = mix(hor, top, pow(max(h, 0.0), 0.55));
+    // the stars, and the moon in its phase
+    if (uStars > 0.01 && d.y > 0.0) { vec2 g = floor(d.xz / (d.y + 0.25) * 220.0); float s = hash(g);
+        if (s > 0.996) c += vec3(0.9, 0.92, 1.0) * uStars * (0.55 + 0.45 * sin(uTime * 2.0 + s * 90.0)) * smoothstep(0.0, 0.25, d.y); }
+    vec3 mv = normalize(uMoonV); float md = dot(d, mv);
+    if (uMoonDisc > 0.01 && md > 0.9985) { vec3 r = normalize(cross(mv, vec3(0, 1, 0))); float x = dot(d - mv * md, r) / 0.055;
+        float lit = uPhase <= 4.0 ? step(cos(uPhase * 0.785398), x) : step(x, cos((uPhase - 4.0) * 0.785398));
+        if (uPhase == 0.0) lit = 0.04;
+        c = mix(c, vec3(0.92, 0.92, 0.85) * (0.25 + 0.75 * lit), uMoonDisc * smoothstep(0.9985, 0.9992, md)); }
+    c += vec3(0.6, 0.65, 0.8) * pow(max(md, 0.0), 60.0) * 0.08 * uMoonDisc;
+    // the sun
     float sun = max(dot(d, -uSunDir), 0.0);
-    c += vec3(1.0, 0.85, 0.6) * (pow(sun, 400.0) * 3.0 + pow(sun, 12.0) * 0.25);
-    frag = vec4(pow(c, vec3(1.0 / 2.2)), 1.0); }"""
+    c += vec3(1.0, 0.85, 0.6) * (pow(sun, 420.0) * 3.0 * uSunDisc + pow(sun, 10.0) * 0.22 * uSunDisc);
+    // the aurora, hanging in the north
+    if (uAurora > 0.0 && d.y > 0.02) { float band = fbm(vec2(d.x * 3.0 + uTime * 0.03, uTime * 0.05)) ;
+        float curtain = smoothstep(0.05, 0.25, d.y) * smoothstep(0.7, 0.3, d.y) * smoothstep(0.1, -0.5, d.z);
+        c += vec3(0.15, 0.9, 0.5) * curtain * band * uAurora * 0.9 + vec3(0.5, 0.2, 0.8) * curtain * pow(band, 3.0) * uAurora * 0.6; }
+    // a rainbow, opposite the sun
+    if (uRainbow > 0.0) { float a = degrees(acos(clamp(dot(d, uSunDir), -1.0, 1.0)));
+        float t = (a - 40.5) / 2.2; if (t > 0.0 && t < 1.0 && d.y > 0.0) {
+        vec3 rb = clamp(abs(fract(t + vec3(0.0, 0.33, 0.67)) * 6.0 - 3.0) - 1.0, 0.0, 1.0);
+        c = mix(c, c + rb * 0.35, uRainbow * sin(t * 3.14159)); } }
+    // the clouds, drifting with the wind
+    if (d.y > 0.0) { vec2 uv = d.xz / (d.y + 0.15) * 1.4 + uWind * uTime * 0.02;
+        float n = fbm(uv); float cov = smoothstep(1.0 - uCloud * 1.15, 1.0 - uCloud * 1.15 + 0.35, n);
+        vec3 cc = mix(hor * 1.15 + vec3(0.04), top * 0.7 + hor * 0.5, 0.4) * (1.0 - 0.45 * uStorm) + vec3(1.0, 0.85, 0.7) * pow(sun, 6.0) * 0.25 * uSunDisc;
+        c = mix(c, cc, cov * smoothstep(0.0, 0.12, d.y) * 0.95); }
+    c += vec3(0.75, 0.78, 0.9) * uFlash;
+    frag = vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), 1.0); }"""
 
 
 def face_yaw(dx, dz):
@@ -208,6 +249,10 @@ class Renderer:
         self.dress_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
         self.water_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
         self.bill_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)], dynamic=True)
+        self.flood_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
+        self.wx_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
+        self.flash = 0.0
+        self.atm = None
         self.glow_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
         self.sky_mesh = gl.Mesh([(0, 2)], np.array([[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]], np.float32))
         self.inst = {}                                       # plant name -> (instance buffer, count)
@@ -229,6 +274,11 @@ class Renderer:
         from ..game import dress as _dress
         theme = _dress.CM_THEME_OF_BAND[min(9, max(0, (L.depth - 1) // 10))]
         self.water_mesh.upload(dressmesh.water(L, self.art_layers.get(f"t{theme}.water0", 0)))
+        # (the floodwater a storm above can bring into the first floors' sunken rooms)
+        sunk = {(x, y) for (x, y) in L.open_squares() if L.floor[y, x] < -0.1} if 1 <= L.depth <= 3 else set()
+        fl = type("F", (), {"water": sunk, "floor": L.floor * 0 + 0.0})()
+        self.flood_mesh.upload(dressmesh.water(fl, self.art_layers.get(f"t{theme}.water0", 0)) if sunk else np.zeros((0, 10), np.float32))
+        self.cells = weatherfx.ceiling_cells(L) if not L.outdoor else None
         self._props(L)
 
     def _props(self, L):
@@ -294,6 +344,12 @@ class Renderer:
         GL.glDisable(GL.GL_CULL_FACE)
         GL.glDisable(GL.GL_BLEND)
         fogc, fogd = L.fog
+        atm = None
+        if L.outdoor and getattr(g, "sky", None) is not None:
+            from .atmosphere import look
+            atm = look(g.sky, True, L.fog[1])
+            fogc, fogd = atm["fog"]
+        self.flash = max(0.0, getattr(self, "flash", 0.0) - dt * 4)
         GL.glClearColor(*fogc, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
         proj = gl.perspective(72.0, w / max(1, h), 0.05, 120.0)
@@ -305,14 +361,22 @@ class Renderer:
         view = gl.view_matrix((eye[0], eye[1] + bob_y, eye[2]), g.yaw, g.pitch)
         self.proj_view = proj @ view
         lights = self._lights(g, now)
-        sun_dir = np.array([0.35, -0.8, 0.45], np.float32)
-        sun_dir /= np.linalg.norm(sun_dir)
         outdoor = L.outdoor
-        amb = L.ambient
+        if atm:
+            sv = np.array(atm["sun_v"], np.float32)
+            sun_dir = -sv / np.linalg.norm(sv)
+            amb = atm["ambient"] + self.flash * 0.8
+            sun_col = atm["sun_col"]
+        else:
+            sun_dir = np.array([-0.35, -0.8, -0.45], np.float32)
+            sun_dir /= np.linalg.norm(sun_dir)
+            amb = L.ambient + self.flash * 0.25
+            sun_col = (0, 0, 0)
         common = {"uEye": eye, "uAmbient": (amb * 0.9, amb * 0.92, amb), "uFogColour": [c ** 2.2 for c in fogc],
-                  "uFogDensity": fogd, "uSunDir": sun_dir, "uSunCol": (0.95, 0.88, 0.75) if outdoor else (0, 0, 0)}
+                  "uFogDensity": fogd, "uSunDir": sun_dir, "uSunCol": sun_col}
+        self.atm = atm
         if outdoor:
-            self._sky(proj, view, sun_dir, fogc)
+            self._sky(proj, view, sun_dir, fogc, atm, now)
         progs = (self.world, self.fig, self.plant, self.art)
         for p in progs:
             p.use()
@@ -330,6 +394,8 @@ class Renderer:
         # the level
         self.world.use()
         self.world.vec("uTint", L.tint)
+        self.world.float("uSnow", min(1.0, (atm["snow"] * 0.9 + atm["frost"] * 0.35)) if atm else 0.0)
+        self.world.float("uWet", min(1.0, atm["rain"] + 0.0) if atm else 0.0)
         GL.glActiveTexture(GL.GL_TEXTURE0)
         GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.tex_array)
         self.world.int("uTex", 0)
@@ -337,6 +403,7 @@ class Renderer:
         # the props
         self.plant.use()
         self.plant.vec("uTint", (1, 1, 1) if outdoor else tuple(min(1.0, t) * 0.9 for t in L.tint))
+        self.plant.float("uSnow", atm["snow"] * 0.7 if atm else 0.0)
         fx, fz = math.sin(g.yaw), -math.cos(g.yaw)
         reach = 70.0 if outdoor else 40.0
         for (name, chx, chz), (vao, _buf, n, mesh) in self.inst.items():
@@ -365,7 +432,7 @@ class Renderer:
                 continue                                                # (behind him, or lost in the dark)
             self._monster(g, m)
         # the water's surface
-        if self.art_array is not None and self.water_mesh.count:
+        if self.art_array is not None and (self.water_mesh.count or self.flood_mesh.count):
             self.art.use()
             GL.glActiveTexture(GL.GL_TEXTURE1)
             GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.art_array)
@@ -376,12 +443,19 @@ class Renderer:
             GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
             GL.glDepthMask(GL.GL_FALSE)
             self.water_mesh.draw()
+            fd = g.wx.get("flood", 0.0) if getattr(g, "wx", None) else 0.0
+            if fd > 0 and self.flood_mesh.count:                      # (the floodwater, rising and draining)
+                self.art.float("uLift", -0.28 - (1 - fd) * 0.5)
+                self.flood_mesh.draw()
+                self.art.float("uLift", 0.0)
             GL.glDepthMask(GL.GL_TRUE)
             GL.glDisable(GL.GL_BLEND)
             self.art.float("uWaterAlpha", 0.0)
             GL.glActiveTexture(GL.GL_TEXTURE0)
         # glows: bolts, sparks, torches, the stairs' rune circle, the Deep's mouth
         self._glows(g, view, now)
+        # the weather: rain, snow, leaves, a twister; below, the drips and the grates' water
+        self._weather(g, L, view, now)
         # the wand in his hand
         if getattr(g, "hand", True):
             self._wand(g, proj, view, now, dt, lights, common)
@@ -419,14 +493,58 @@ class Renderer:
             self.bill_mesh.draw()
         GL.glActiveTexture(GL.GL_TEXTURE0)
 
-    def _sky(self, proj, view, sun_dir, fogc):
+    def _weather(self, g, L, view, now):
+        sky = getattr(g, "sky", None)
+        if sky is None:
+            return
+        right = view[0, :3]
+        if L.outdoor and self.atm:
+            data = weatherfx.surface(self.atm, g.eye, right, now, sky.twister(L.w), 0.0)
+        elif 1 <= L.depth <= 10 and self.cells is not None:
+            data = weatherfx.below(L, sky.now(), max(0.0, 1 - (L.depth - 1) / 10), g.eye, right, now, self.cells)
+        else:
+            return
+        if not len(data):
+            return
+        self.wx_mesh.upload(data)
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.glow.use()
+        self.glow.mat4("uProj", self._proj_cache)
+        self.glow.mat4("uView", view)
+        self.glow.float("uTime", now)
+        self.wx_mesh.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
+
+    def lightning(self, strength=1.0):
+        self.flash = max(self.flash, strength)
+
+    def _sky(self, proj, view, sun_dir, fogc, atm, now):
         GL.glDepthMask(GL.GL_FALSE)
         self.sky.use()
         inv = np.linalg.inv(proj @ np.block([[view[:3, :3], np.zeros((3, 1))], [np.zeros((1, 3)), np.ones((1, 1))]]))
         self.sky.mat4("uInvPV", inv)
-        self.sky.vec("uTop", (0.16, 0.30, 0.55))
-        self.sky.vec("uHorizon", [c ** 2.2 for c in fogc])
+        A = atm or {"sky_top": (0.16, 0.30, 0.55), "sky_horizon": fogc, "moon_v": (0, -1, 0), "phase": 0, "sun_disc": 1.0,
+                    "moon_disc": 0.0, "stars": 0.0, "cloud": 0.12, "wind": (0.2, (1, 0)), "aurora": 0.0, "rainbow": 0.0,
+                    "storm": 0.0}
+        self.sky.vec("uTop", A["sky_top"])
+        self.sky.vec("uHorizon", A["sky_horizon"])
         self.sky.vec("uSunDir", sun_dir)
+        self.sky.vec("uMoonV", A["moon_v"])
+        self.sky.float("uPhase", A["phase"])
+        self.sky.float("uSunDisc", A["sun_disc"])
+        self.sky.float("uMoonDisc", A["moon_disc"])
+        self.sky.float("uStars", A["stars"])
+        self.sky.float("uCloud", A["cloud"])
+        sp, (wx, wz) = A["wind"]
+        self.sky.vec("uWind", (wx * (0.3 + sp), wz * (0.3 + sp)))
+        self.sky.float("uTime", now)
+        self.sky.float("uAurora", A["aurora"])
+        self.sky.float("uRainbow", A["rainbow"])
+        self.sky.float("uFlash", self.flash * 0.6)
+        self.sky.float("uStorm", A["storm"])
         self.sky_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
 

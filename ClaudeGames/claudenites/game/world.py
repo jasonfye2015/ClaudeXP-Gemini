@@ -15,6 +15,7 @@ from . import data as D
 from . import items as I
 from . import levels
 from .player import Player
+from .sky import Sky
 
 EYE = 0.62
 RADIUS = 0.24
@@ -119,6 +120,9 @@ class Game:
         self.regen_block = 0.0
         self.heal_over = 0.0
         self.visits = 0                      # times home: the vendors' stock changes each
+        self.sky = Sky(seed)                 # the clock, the moon and the weather (game/sky.py)
+        self.wx = self.sky.effects(True, 0)
+        self.storm_hit = 0.0
 
     # ---- making one ---------------------------------------------------------------------------------------------
     @classmethod
@@ -130,6 +134,7 @@ class Game:
 
     def to_json(self):
         return {"version": 1, "seed": self.seed, "run_floor": self.run_floor, "visits": self.visits,
+                "sky": self.sky.to_json(),
                 "player": self.player.to_json()}
 
     @classmethod
@@ -137,6 +142,7 @@ class Game:
         g = cls(Player.from_json(d.get("player", {})), d.get("seed", 1), slot)
         g.run_floor = max(1, int(d.get("run_floor", 1)))
         g.visits = int(d.get("visits", 0))
+        g.sky = Sky.from_json(g.seed, d.get("sky"))
         g.go_town()
         return g
 
@@ -156,9 +162,13 @@ class Game:
         self.pieces_seen = set()
         rng = random.Random(f"{self.seed}:spawns:{level.depth}:{self.visits}")
         strength = level.depth or max(1, min(60, self.player.level))        # (the forest's creatures: as strong as he is)
+        night = level.outdoor and self.sky.night
         for s in level.spawns:
             m = Monster(s["monster"], s["x"], s["z"], strength, rng, s.get("guardian", False))
             m.home = (s["x"], s["z"])
+            if night:                                                   # (the wood by night is fiercer)
+                m.dmg *= 1.15
+                m.speed *= 1.05
             m.y = level.floor_at(m.x, m.z)
             if m.kind == "flyer":
                 m.lift = 0.35
@@ -183,9 +193,10 @@ class Game:
             self.events.append(("toast", f"{L.guardian} waits on this floor.", (1.0, 0.5, 0.4)))
 
     def descend(self):
-        """Down the stairs (the run reaches the next floor)."""
+        """Down the stairs (the run reaches the next floor; the stairs take an hour)."""
         if self.depth >= D.FLOORS:
             return
+        self._sky_events(self.sky.tick(60))
         self.run_floor = max(self.run_floor, self.depth + 1)
         self.go_floor(self.depth + 1)
 
@@ -301,6 +312,9 @@ class Game:
             return
         p = self.player
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
+        self._sky_events(self.sky.tick(dt))                # (a second of play is a minute of the game's day)
+        self.wx = self.sky.effects(self.level.outdoor, self.depth)
+        self._weather(dt)
         self._move(dt, inp)
         self._places()
         # mana and life come back
@@ -334,6 +348,72 @@ class Game:
             self.dead = True
             self.die()
 
+    # ---- the sky -------------------------------------------------------------------------------------------------
+    WEATHER_LINES = {
+        "rain": ("The rain comes on.", "Above, the rain has come on: water runs down the walls."),
+        "storm": ("A storm breaks over the wood.", "Thunder, far above: a storm has broken over Thornwick."),
+        "mist": ("A mist comes up between the trees.", None), "wind": ("The wind gets up.", "A draft moans up the stairs."),
+        "snow": ("Snow begins to fall.", None), "heat": ("The heat lies heavy on the clearing.", None),
+        "aurora": ("Lights hang in the northern sky.", None),
+        "tornado": ("A twister is coming through the wood!", "The whole Deep shudders: something is tearing at the town above."),
+        "cloud": ("Cloud comes over.", None), "clear": ("The sky clears.", None),
+    }
+
+    def _sky_events(self, said):
+        for kind, what in said:
+            if kind == "weather":
+                up, down = self.WEATHER_LINES.get(what, (None, None))
+                line = up if self.level is None or self.level.outdoor else (down if self.depth <= 10 else None)
+                if line:
+                    self.events.append(("toast", line, (0.75, 0.85, 1.0)))
+                self.events.append(("weather", what))
+            elif kind == "flood" and self.depth in range(1, 4):
+                self.events.append(("toast", "Water comes down the stairs in a sheet: the storm above is flooding the low halls."
+                                    if what else "The last of the floodwater drains away down the cracks.", (0.6, 0.8, 1.0)))
+
+    def flooded(self, cx, cy):
+        """A sunken square of the first floors standing in a storm's floodwater."""
+        L = self.level
+        return self.wx.get("flood", 0) > 0 and L.open_at(cx, cy) and L.floor[cy, cx] < -0.1
+
+    def _weather(self, dt):
+        """Lightning in a storm; a tornado crossing the wood."""
+        L = self.level
+        if not L.outdoor:
+            above = self.sky.now()
+            if above["kind"] == "storm" and 1 <= self.depth <= 10 and self.rng.random() < 0.05 * above["strength"] * dt:
+                self.events.append(("lightning_below", 1 - (self.depth - 1) / 10))
+            return
+        if self.wx["lightning"] and not self.in_town() and self.rng.random() < self.wx["lightning"] * dt * 3:
+            a = self.rng.uniform(0, math.tau)
+            d = self.rng.uniform(1.5, 9)
+            x, z = self.x + math.cos(a) * d, self.z + math.sin(a) * d
+            self.events.append(("lightning", (x, L.floor_at(x, z), z)))
+            if d < 2.5:
+                self._hurt_player(self.player.max_life() * 0.18, "storm")
+                self.events.append(("toast", "Lightning! The air smells of it.", (1.0, 1.0, 0.6)))
+            for m in self.monsters:
+                if not m.dead and (m.x - x) ** 2 + (m.z - z) ** 2 < 4:
+                    self._hit(m, m.max_hp * 0.4, "storm", chained=True)
+        tw = self.sky.twister(L.w)
+        if tw:
+            tx, tz, k = tw
+            for who in [self] + [m for m in self.monsters if not m.dead]:
+                dx, dz = who.x - tx, who.z - tz
+                d = math.hypot(dx, dz)
+                if d < 3.2 * max(0.4, k):
+                    # (round and away: the wind flings it)
+                    push = (3.2 - d) * 1.6 * dt
+                    nx, nz = who.x + (-dz / max(d, 0.1) + dx / max(d, 0.1) * 0.6) * push, who.z + (dx / max(d, 0.1) + dz / max(d, 0.1) * 0.6) * push
+                    if L.can_stand(nx, nz, 0.24, getattr(who, "y", 0.0)):
+                        who.x, who.z = nx, nz
+                    if who is self and not self.in_town():
+                        self._hurt_player(self.player.max_life() * 0.06 * dt, "storm")
+                    elif who is not self:
+                        who.hp -= who.max_hp * 0.08 * dt
+                        if who.hp <= 0:
+                            self._kill(who)
+
     def _places(self):
         """Stepping into a set piece (its line, once), onto a floor of coin, into water."""
         L = self.level
@@ -358,7 +438,8 @@ class Game:
         ln = math.hypot(mx, mz)
         if ln > 1:
             mx, mz = mx / ln, mz / ln
-        sp = p.speed() * (0.6 if (int(self.x), int(self.z)) in L.water else 1.0)
+        here = (int(self.x), int(self.z))
+        sp = p.speed() * (0.6 if here in L.water or self.flooded(*here) else 1.0) * self.wx.get("speed", 1.0)
         step_x, step_z = mx * sp * dt, mz * sp * dt
         foot = self.y
         if L.can_stand(self.x + step_x, self.z, RADIUS, foot):
@@ -552,6 +633,7 @@ class Game:
         if m.dead:
             return
         res = m.d["resist"].get(element, 0.0)
+        dmg *= self.wx.get("element", {}).get(element, 1.0)               # (the weather: rain dulls fire, feeds storm)
         if element == "arcane":
             dmg *= 1.15
         dmg *= (1 - res) * self.rng.uniform(0.9, 1.1)
@@ -717,7 +799,7 @@ class Game:
                         m.idle_at = self.time
                         self._wander(m, 0.5)
                     continue
-                if dist < 11 and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey):
+                if dist < 11 * self.wx.get("sight", 1.0) and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey):
                     m.awake = True
                     self.events.append(("notice", m))
                 elif dist < 3:
