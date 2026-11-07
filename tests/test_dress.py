@@ -9,13 +9,14 @@ ART = Path(__file__).resolve().parents[1] / "assets" / "cm"
 
 
 def test_every_picture_is_there():
-    """Every picture a floor asks for (on the walls, floors, corners, ceilings, standing) is in assets/cm."""
-    have = {p.stem for p in ART.glob("*.png")}
+    """Every picture a floor asks for (on the walls, floors, corners, ceilings, standing) is in assets/cm (or, for the
+    litter, assets/items)."""
+    have = {p.stem for p in ART.glob("*.png")} | {"item:" + p.name for p in (ART.parent / "items").glob("*.png")}
     names = set()
     for d in range(1, D.FLOORS + 1, 3):
         L = levels.dungeon(d, 5)
         names |= {x[7] for x in L.decals} | {x[4] for x in L.flats} | {x[6] for x in L.webs} | {x[5] for x in L.hangs}
-        names |= {s["name"] for s in L.sprites}
+        names |= {s["name"] for s in L.sprites} | {x[4] for x in L.ceils}
     for spec in dress.LETTERS.values():
         if "sprite" in spec:
             names.add(spec["sprite"][0])

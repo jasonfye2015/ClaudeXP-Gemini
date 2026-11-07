@@ -43,6 +43,7 @@ these pictures stay under that licence wherever they go:
   The sown-earth picture is josehzz's "Farming Crops 16x16" (CC0): https://opengameart.org/content/farming-crops-16x16
 - "Fruit and Veggie Inventory" by Joshua Taylor (CC-BY-SA 3.0 / GPL 3.0), part of the Liberated Pixel Cup:
   https://opengameart.org/content/fruit-and-veggie-inventory - the harvested produce (and the meals made of one crop).
-The food (meat, fish, mushroom, the dishes) and the seed pouch are 7Soul1's and Crawl's, CC0, as above.
+The food (meat, fish, mushroom, the dishes) and the seed pouch are 7Soul1's and Crawl's, CC0, as above; so are the
+Deep's empty bottles and loose bones (7Soul1's I_Bottle01-04, E_Bones02-03, I_Bone).
 
 The sounds are made by the game as it starts (engine/sound.py); the item pictures fall back to painted ones (ui/icons.py).

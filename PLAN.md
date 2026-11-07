@@ -110,6 +110,15 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   muddy banks, dappled light, autumn leaves at the walls, mud after rain - as C&M's 76zzzzzzzzzz0-groundblend,
   26c-wear, 26d-forestfloor and 40-render's uGBlend. An option to turn it off.
 
+## v0.14 - the Deep's detail, and rarity - done
+
+- game/detail.py: corridor light map (L.amb, in every program's lighting), corridor torches, brighter torches;
+  timber (corridor frames, skirting, beams as boxes); stains, wall streaks and grime, puddles with a sheen (the
+  dungeon's float map, engine/groundmap.deep, and WORLD_FS's deep()); bones, empty bottles (7Soul1), vines; grates
+  in the ceilings with light shafts (glow mode 7), a pool of light and motes.
+- Five rarities for gear, wands and parts (data.RARITIES, WAND_POWER, WAND_HASTE, PART_POWER); old saves migrated
+  (items.migrate); the colours and effects in the tiles, tooltips, HUD, drops, toasts and a Legendary banner.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

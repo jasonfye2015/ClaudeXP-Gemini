@@ -23,17 +23,25 @@ def tooltip(it, player=None):
     col = rarity_colour(it).name()
     lines = []
     t = it.get("type")
+    rk = I.rarity(it)
+    star = "&#10022;"
+    rline = f"<span style='color:{col}'>{star + ' ' if rk >= 3 else ''}{I.rarity_name(it)}{' ' + star if rk >= 3 else ''}</span>"
     if t == "gear":
-        lines = [f"{it['slot'].title()}, item level {it['level']}"] + I.gear_lines(it)
+        lines = [f"{rline} - {it['slot'].title()}, item level {it['level']}"] + I.gear_lines(it)
     elif t == "wand":
-        b = D.WAND_BODIES[it["body"]]
-        lines = [f"{b['slots']} slots, level {it.get('level', 1)}"] + I.wand_lines(it, player.bonus() if player else None)
+        lines = [f"{rline} wand - {len(it['parts'])} slots, level {it.get('level', 1)}"] + I.wand_lines(it, player.bonus() if player else None)
+        if rk:
+            lines.append(f"<span style='color:{col}'>Its rarity: +{(D.WAND_POWER[rk] - 1) * 100:.0f}% damage, "
+                         f"+{D.WAND_HASTE[rk] * 100:.0f}% casting{', a slot more' if rk >= 3 else ''}</span>")
         parts = [I.part_name(p) for p in it["parts"] if p]
         if parts:
             lines.append("Set with: " + ", ".join(parts))
     elif t == "part":
         e = I.part_effects(it)
-        lines = [f"A wand part ({it['kind']})"]
+        lines = [f"{rline} wand part ({it['kind']})"]
+        if rk:
+            lines.append(f"<span style='color:{col}'>Its rarity: effects x{D.PART_POWER[rk]:.2f}"
+                         f"{', and one more of what it adds' if rk >= 4 else ''}</span>")
         if it.get("element"):
             lines.append(f"Makes its bolts {D.ELEMENT_WORD[it['element']]}")
         words = {"damage": "{:+.0%} damage", "rate": "{:+.0%} shots a second", "speed": "{:+.0%} bolt speed",
@@ -87,7 +95,7 @@ class Tile(QPushButton):
         return QSize(self.size_, self.size_)
 
     def showEvent(self, e):
-        if (self.selected or self.hot) and not getattr(self, "_t", None):
+        if (self.selected or self.hot or (self.item and self.item.get("rarity", 0) >= 2)) and not getattr(self, "_t", None):
             self._t = QTimer(self)
             self._t.timeout.connect(self.update)
             self._t.start(50)
@@ -105,10 +113,25 @@ class Tile(QPushButton):
         p.setBrush(g)
         p.drawRoundedRect(r, 7, 7)
         rc = rarity_colour(self.item) if self.item else QColor(90, 72, 50)
-        if self.item:                                           # (its rarity, glowing behind it)
+        rk = int(self.item.get("rarity", 0)) if self.item and self.item.get("type") in ("gear", "wand", "part") else 0
+        now = _time.perf_counter()
+        if rk >= 4:                                             # (Legendary: rays turning slowly behind it)
+            p.save()
+            p.setClipPath(_rounded(r, 7))
+            p.translate(r.center())
+            p.rotate((now * 25) % 360)
+            ray = QColor(rc)
+            ray.setAlpha(60)
+            p.setBrush(ray)
+            p.setPen(Qt.NoPen)
+            for k in range(8):
+                p.drawPie(QRectF(-r.width(), -r.width(), r.width() * 2, r.width() * 2), k * 720, 300)
+            p.restore()
+        if self.item:                                           # (its rarity, glowing behind it: breathing from Rare up)
             glow = QRadialGradient(r.center(), r.width() * 0.62)
             c0 = QColor(rc)
-            c0.setAlpha(int(70 + 60 * self.hover))
+            breathe = (0.5 + 0.5 * math.sin(now * 2.2)) if rk >= 2 else 0.0
+            c0.setAlpha(int(min(255, 70 + 60 * self.hover + 25 * rk + 40 * breathe)))
             c1 = QColor(rc)
             c1.setAlpha(0)
             glow.setColorAt(0, c0)
@@ -119,13 +142,24 @@ class Tile(QPushButton):
             hl = QColor(255, 230, 170, int(40 * self.hover))
             p.setBrush(hl)
             p.drawRoundedRect(r, 7, 7)
+        if rk >= 3:                                             # (Epic and up: a sheen sweeping across now and then)
+            ph = (now * 0.45 + (sum(map(ord, str(self.item.get("id", "")))) % 100) / 100) % 1.0
+            if ph < 0.35:
+                sx = r.left() + (ph / 0.35) * (r.width() * 1.6) - r.width() * 0.3
+                sh = QLinearGradient(sx - 14, r.top(), sx + 14, r.bottom())
+                sh.setColorAt(0, QColor(255, 255, 255, 0))
+                sh.setColorAt(0.5, QColor(255, 250, 230, 75))
+                sh.setColorAt(1, QColor(255, 255, 255, 0))
+                p.setBrush(sh)
+                p.setPen(Qt.NoPen)
+                p.drawRoundedRect(r, 7, 7)
         pulse = 0.5 + 0.5 * math.sin(_time.perf_counter() * 5)
         if self.selected:
             frame, width = QColor(255, 236, 170, int(170 + 85 * pulse)), 2.5
         elif self.hot:
             frame, width = QColor(110, 210, 255, int(140 + 115 * pulse)), 2.2
         elif self.item:
-            frame, width = rc, 1.6
+            frame, width = rc, 1.6 + 0.35 * rk
         else:
             frame, width = QColor(90, 72, 50), 1.0
         p.setBrush(Qt.NoBrush)
@@ -149,6 +183,13 @@ class Tile(QPushButton):
             p.setFont(f)
             p.drawText(r, Qt.AlignCenter | Qt.TextWordWrap, self.empty)
         p.end()
+
+
+def _rounded(r, rad):
+    from PySide6.QtGui import QPainterPath
+    path = QPainterPath()
+    path.addRoundedRect(r, rad, rad)
+    return path
 
 
 def _panel(width=None):

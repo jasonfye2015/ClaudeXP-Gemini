@@ -204,8 +204,13 @@ class GameView(QOpenGLWidget):
                 snd.play("coin", 0.5)
             elif kind == "found":
                 it = e[1]
-                if it.get("type") == "gear" and it["rarity"] >= 2:
-                    self.toasts.append((f"Found: {I.item_name(it)}", D.RARITIES[it["rarity"]][2], now))
+                rk = int(it.get("rarity", 0))
+                if rk >= 2:                                             # (Rare and up: said; Epic and up: heard; Legendary: shown)
+                    self.toasts.append((f"{D.RARITIES[rk][0]}: {I.item_name(it)}", D.RARITIES[rk][2], now))
+                if rk >= 3:
+                    snd.play("levelup", 0.35 if rk == 3 else 0.6)
+                if rk >= 4:
+                    self.banner = ("LEGENDARY", now, I.item_name(it))
             elif kind == "kill":
                 snd.play("kill", 0.5)
             elif kind == "piece":
@@ -459,6 +464,11 @@ class GameView(QOpenGLWidget):
             p.setBrush(Qt.NoBrush)
             p.setPen(T.gold_pen(r, 2.2) if active else QPen(QColor(120, 96, 62, 160), 1.2))
             p.drawRoundedRect(r, 8, 8)
+            if w and w.get("rarity", 0) >= 1:                          # (its rarity, a line round the inside)
+                rc = QColor.fromRgbF(*D.RARITIES[w["rarity"]][2])
+                rc.setAlpha(int(150 + 80 * math.sin(now * 2.5)) if w["rarity"] >= 3 else 170)
+                p.setPen(QPen(rc, 1.6))
+                p.drawRoundedRect(r.adjusted(3, 3, -3, -3), 6, 6)
             if w:
                 p.drawPixmap(int(r.x() + 11), int(r.y() + 5), icon(w, 40))
             T.outlined(p, r.x() + 5, r.y() + 13, str(i + 1), QFont(T.BODY, 9, QFont.Bold),
@@ -617,7 +627,8 @@ class GameView(QOpenGLWidget):
                                QColor(220, 208, 184), A, centre=True, width=2.5)
         ban = getattr(self, "banner", None)
         if ban:
-            text, born = ban
+            text, born = ban[:2]
+            sub = ban[2] if len(ban) > 2 else "A skill point to spend with Mother Wren"
             age = now - born
             if age > 3.0:
                 self.banner = None
@@ -633,7 +644,7 @@ class GameView(QOpenGLWidget):
                 p.drawEllipse(QPointF(W / 2, cy - 10), 260 * scale, 120 * scale)
                 T.outlined(p, W / 2, cy, text, QFont(T.HEAD, int(30 * scale), QFont.Bold), QColor(255, 226, 130), a,
                            centre=True, width=5)
-                T.outlined(p, W / 2, cy + 30, "A skill point to spend with Mother Wren", QFont(T.HEAD, 12), QColor(240, 228, 200),
+                T.outlined(p, W / 2, cy + 30, sub, QFont(T.HEAD, 12), QColor(240, 228, 200),
                            a, centre=True, width=2.5)
 
     def _map_image(self, L):

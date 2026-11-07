@@ -33,7 +33,7 @@ CM_THEME_OF_BAND = [0, 5, 1, 8, 6, 7, 9, 2, 3, 4]
 
 # per band: wall pictures; wall-foot things; overheads; floor things (name, w, h, glow, solid); stalagmites; webs
 BANDS = [
-    {"walls": ["decal.crack", "decal.sconce", "decal.chains", "decal.niche", "decal.soot", "decal.patch"],
+    {"walls": ["decal.crack", "decal.sconce", "decal.chains", "decal.niche", "decal.stain", "decal.patch"],
      "feet": ["clut.grate", "clut.port"], "over": ["over.beam"], "webs": 0.35, "stal": 0.08,
      "floor": [("bones", 0.5, 0.3, None, 0), ("fu.shelf", 0.9, 0.9, None, 0.3), ("fu.rack", 0.8, 0.9, None, 0.3)]},
     {"walls": ["decal.moss", "decal.roots", "decal.wet", "mood.vines"], "feet": ["clut.port"], "over": ["over.hangroot"],
@@ -49,21 +49,21 @@ BANDS = [
     {"walls": ["decal.crack", "decal.frost"], "feet": [], "over": ["over.stalactite"], "webs": 0.05, "stal": 0.34,
      "floor": [("crystal", 0.6, 0.8, (0.7, 0.5, 1.0), 0.2), ("lm.crystal", 0.9, 1.3, (0.75, 0.55, 1.0), 0.3),
                ("sp.crystal", 0.5, 0.8, (0.6, 0.8, 1.0), 0.2)]},
-    {"walls": ["decal.soot", "decal.chains", "decal.crack"], "feet": ["clut.pipe", "clut.pipe", "clut.grate"],
+    {"walls": ["decal.stain", "decal.chains", "decal.crack"], "feet": ["clut.pipe", "clut.pipe", "clut.grate"],
      "over": ["over.beam"], "webs": 0.1, "stal": 0.0,
      "floor": [("anvil", 0.8, 0.6, None, 0.3), ("lm.crucible", 0.9, 0.8, (1.0, 0.5, 0.15), 0.35),
                ("brazier", 0.6, 0.8, (1.0, 0.55, 0.2), 0.25)]},
     {"walls": ["decal.roots", "decal.moss", "mood.vines", "mood.roots"], "feet": [], "over": ["over.hangroot"],
      "webs": 0.15, "stal": 0.1,
      "floor": [("root", 0.8, 0.7, None, 0.25), ("lm.root", 1.0, 1.0, None, 0.3), ("clut.glowcap", 0.5, 0.4, (0.5, 1.0, 0.5), 0)]},
-    {"walls": ["decal.soot", "decal.crack"], "feet": ["clut.pipe"], "over": ["over.stalactite"], "webs": 0.05, "stal": 0.2,
+    {"walls": ["decal.stain", "decal.crack"], "feet": ["clut.pipe"], "over": ["over.stalactite"], "webs": 0.05, "stal": 0.2,
      "floor": [("ember", 0.7, 0.4, (1.0, 0.45, 0.15), 0), ("brazier", 0.6, 0.8, (1.0, 0.55, 0.2), 0.25),
                ("lm.pour", 0.8, 1.0, (1.0, 0.5, 0.1), 0.3)]},
     {"walls": ["decal.banner", "decal.sconce", "decal.niche", "decal.chains"], "feet": ["clut.grate"], "over": ["over.rib"],
      "webs": 0.3, "stal": 0.04,
      "floor": [("lm.skulls", 0.8, 0.8, None, 0.3), ("fu.banner", 0.7, 1.2, None, 0.2), ("lm.candles", 0.7, 0.7, (1.0, 0.75, 0.4), 0.2),
                ("fu.sarc", 1.0, 0.7, None, 0.4)]},
-    {"walls": ["decal.banner", "decal.crack", "decal.soot", "decal.chains"], "feet": ["clut.grate"],
+    {"walls": ["decal.banner", "decal.crack", "decal.stain", "decal.chains"], "feet": ["clut.grate"],
      "over": ["over.rib", "over.beam"], "webs": 0.25, "stal": 0.1,
      "floor": [("lm.candles", 0.7, 0.7, (1.0, 0.75, 0.4), 0.2), ("lm.saint", 0.8, 1.4, None, 0.3), ("bones", 0.5, 0.3, None, 0)]},
 ]

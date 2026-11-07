@@ -22,16 +22,12 @@ def _sprite(name, size):
 
 
 def rarity_colour(it):
-    if it.get("type") == "gear":
-        r = D.RARITIES[it["rarity"]][2]
-    elif it.get("type") == "part":
-        r = (0.55, 0.85, 0.75)
+    if it.get("type") in ("gear", "part", "wand"):
+        r = D.RARITIES[min(4, int(it.get("rarity", 0)))][2]
     elif it.get("type") == "larder":
         r = {"seed": (0.7, 0.85, 0.45), "raw": (0.9, 0.62, 0.5), "cooked": (1.0, 0.78, 0.35)}[it["key"].split(":")[0]]
     elif it.get("type") == "crop":
         r = (0.65, 0.9, 0.45)
-    elif it.get("type") == "wand":
-        r = (0.95, 0.8, 0.55)
     else:
         r = (0.8, 0.8, 0.8)
     return QColor.fromRgbF(*r)

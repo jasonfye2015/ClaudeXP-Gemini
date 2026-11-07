@@ -36,8 +36,10 @@ uniform vec3 uSunCol;
 uniform int uLightCount;
 uniform vec4 uLightPos[24];
 uniform vec4 uLightCol[24];
+uniform sampler2D uAmbMap; uniform vec2 uAmbN;     // (a floor of the Deep: r the ambient by square, g its floor, b wet, a stained)
 vec3 lit(vec3 p, vec3 n, vec3 base) {
-    vec3 c = uAmbient + uSunCol * max(dot(n, -uSunDir), 0.0);
+    float ak = uAmbN.x > 0.0 ? texture(uAmbMap, p.xz / uAmbN).r : 1.0;
+    vec3 c = uAmbient * ak + uSunCol * max(dot(n, -uSunDir), 0.0);
     for (int i = 0; i < uLightCount; i++) {
         vec3 d = uLightPos[i].xyz - p;
         float dist = length(d);
@@ -142,13 +144,55 @@ vec3 ground(vec3 t) {
     }
     return t;
 }
+vec4 dcell(vec2 c) { return texture(uAmbMap, (c + 0.5) / uAmbN); }
+vec3 deep(vec3 t, out float wetK) {
+    wetK = 0.0;
+    vec3 n = normalize(vNrm);
+    vec2 cw = vPos.xz;
+    if (n.y > 0.9) {
+        vec4 d = dcell(floor(cw));
+        if (abs(vPos.y - d.g) > 0.03) return t;                                  // (a box's top, not the floor)
+        vec4 here = texture(uAmbMap, cw / uAmbN);
+        float st = clamp(here.a, 0.0, 1.0);
+        float s = smoothstep(0.52, 0.86, vnoise(cw * 1.3) * 0.6 + vnoise(cw * 4.3 + 3.0) * 0.4) * (0.35 + 0.65 * st);
+        t = mix(t, t * vec3(0.5, 0.45, 0.38), s * 0.8);                          // stains in blotches
+        t *= 0.88 + 0.24 * vnoise(cw * 0.35 + 5.0);                              // (and the tiling broken)
+        float w = max(here.b, 0.0);
+        float pz = smoothstep(0.44, 0.52, vnoise(cw * 1.7 + 11.0) * 0.7 + vnoise(cw * 5.1) * 0.3 + w * 0.6 - 0.5) * step(0.04, w);
+        wetK = pz;
+        t = mix(t, t * vec3(0.38, 0.42, 0.48), pz * 0.85);                       // a puddle: dark, and cold
+    } else if (abs(n.y) < 0.2) {
+        vec4 d = dcell(floor(cw + n.xz * 0.5));
+        float h = vPos.y - d.g, st = clamp(d.a, 0.0, 1.0);
+        float u = dot(cw, vec2(-n.z, n.x));
+        float streak = smoothstep(0.58, 0.9, vnoise(vec2(u * 5.5, vPos.y * 0.45)) * 0.75 + vnoise(vec2(u * 17.0, 1.0)) * 0.25);
+        t = mix(t, t * vec3(0.55, 0.55, 0.5), streak * (0.25 + 0.5 * st));    // water's long stains down the stone
+        float g = 1.0 - smoothstep(0.0, 0.6, h + (vnoise(vec2(u * 3.0, 2.0)) - 0.5) * 0.35);
+        t = mix(t, t * vec3(0.42, 0.4, 0.33), g * (0.45 + 0.35 * st));         // the grime at its foot
+    }
+    return t;
+}
+vec3 sheen(vec3 p) {                                                       // the lights caught in a puddle
+    vec3 v = normalize(uEye - p), s = vec3(0.0);
+    for (int i = 0; i < uLightCount; i++) {
+        vec3 d = uLightPos[i].xyz - p; float dist = length(d);
+        float att = clamp(1.0 - dist / (uLightPos[i].w * 1.6), 0.0, 1.0);
+        vec3 hv = normalize(d / max(dist, 1e-3) + v);
+        s += uLightCol[i].rgb * pow(max(hv.y, 0.0), 90.0) * att * 2.5;
+    }
+    return s + uAmbient * 0.12 * pow(1.0 - max(v.y, 0.0), 3.0);
+}
 void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint;
               if (uGBlend > 0.0 && uMapN.x > 0.0 && vNrm.y > 0.9 && vPos.y < 0.6) base = mix(base, ground(base), uGBlend);
+              float wetK = 0.0;
+              if (uAmbN.x > 0.0) base = deep(base, wetK);
               base *= vShade;
               float up = smoothstep(0.5, 0.9, vNrm.y);
               base = mix(base, vec3(0.86, 0.89, 0.95) * vShade, uSnow * up * (0.75 + 0.25 * texture(uTex, vec3(vUV * 3.0, vLayer)).g));
               base *= 1.0 - uWet * 0.3 * up;
-              frag = outColour(lit(vPos, normalize(vNrm), base), 1.0); }"""
+              vec3 col = lit(vPos, normalize(vNrm), base);
+              if (wetK > 0.0) col += sheen(vPos) * wetK * exp(-pow(uFogDensity * length(vPos - uEye), 1.4));
+              frag = outColour(col, 1.0); }"""
 
 # Claude and Magic's painted things: on the walls, the floors, hanging, standing - cut out by their alpha, lit like
 # the walls, and glowing (shade above 1) when they're braziers, glowcaps, crystals
@@ -244,6 +288,9 @@ void main() {
         vec2 q = vec2(p.x * (1.4 + fl * 3.0), (p.y + 0.3) * 0.8);
         a = pow(max(0.0, 1.0 - length(q)), 1.6) * smoothstep(-1.0, -0.2, p.y); }
     else if (vMode < 4.5) { a = (1.0 - abs(p.y)) * pow(max(0.0, 1.0 - abs(p.x)), 0.5); }
+    else if (vMode > 6.5) { float y = vUV.y;                                   // (0 the floor .. 1 the grate)
+        a = pow(max(0.0, 1.0 - abs(p.x)), 1.6) * smoothstep(0.0, 0.25, y) * (0.45 + 0.55 * y) * smoothstep(1.0, 0.93, y);
+        a *= 0.85 + 0.15 * sin(uTime * 0.7 + vPos.x * 3.0 + y * 4.0); }
     else { if (vMode < 5.5) a = smoothstep(1.0, 0.2, length(p)); else a = (1.0 - abs(p.x)) * smoothstep(1.0, 0.6, abs(p.y));
            if (a < 0.01) discard; frag = vec4(vCol.rgb, a * vCol.a); return; }
     if (a < 0.003) discard;
@@ -368,6 +415,7 @@ class Renderer:
         self._version = 0
         self.proj_view = np.identity(4, np.float32)
         self.map_tex, self.map_n = None, (0.0, 0.0)
+        self.amb_tex, self.amb_n = None, (0.0, 0.0)
         self.ground_blend = True                             # (the ground's blending: Options, on/off)
 
     # ---- the level ---------------------------------------------------------------------------------------------
@@ -378,6 +426,14 @@ class Renderer:
         if getattr(self, "map_tex", None):
             GL.glDeleteTextures(1, [self.map_tex])
             self.map_tex = None
+        if getattr(self, "amb_tex", None):
+            GL.glDeleteTextures(1, [self.amb_tex])
+            self.amb_tex = None
+        self.amb_n = (0.0, 0.0)
+        if getattr(L, "amb", None) is not None and not L.outdoor:
+            from . import groundmap
+            self.amb_tex = _float_texture(groundmap.deep(L))
+            self.amb_n = (float(L.w), float(L.h))
         self.map_n = (0.0, 0.0)
         if L.outdoor:                                      # (the ground's map, for it to blend: engine/groundmap.py)
             from . import groundmap
@@ -492,8 +548,13 @@ class Renderer:
         if outdoor:
             self._sky(proj, view, sun_dir, fogc, atm, now)
         progs = (self.world, self.fig, self.plant, self.art, self.solid)
+        GL.glActiveTexture(GL.GL_TEXTURE5)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, self.amb_tex or 0)
+        GL.glActiveTexture(GL.GL_TEXTURE0)
         for p in progs:
             p.use()
+            p.int("uAmbMap", 5)
+            p.vec("uAmbN", self.amb_n if self.amb_tex else (0.0, 0.0))
             p.mat4("uProj", proj)
             p.mat4("uView", view)
             for k, v in common.items():
@@ -744,7 +805,9 @@ class Renderer:
         ex, ey, ez = g.eye
         out = []
         if not L.outdoor:                                               # Claude's own light: the wand's glow
-            out.append(((ex, ey + 0.1, ez, 8.0), (0.6, 0.55, 0.46, 1)))
+            amb = getattr(L, "amb", None)                               # (dimmer down a dark corridor)
+            k = 0.5 + 0.5 * float(amb[min(L.h - 1, max(0, int(ez))), min(L.w - 1, max(0, int(ex)))]) if amb is not None else 1.0
+            out.append(((ex, ey + 0.1, ez, 6.5), (0.5 * k, 0.46 * k, 0.38 * k, 1)))
         for b in g.bolts[:10]:
             c = D.ELEMENT_COLOUR[b.element]
             out.append(((b.x, b.y, b.z, 3.2 if not b.foe else 2.6), (c[0] * 0.9, c[1] * 0.9, c[2] * 0.9, 1)))
@@ -752,13 +815,34 @@ class Renderer:
             k = max(0.0, 1 - (g.time - f["t"]) / f.get("life", 0.5))
             c = f["c"]
             out.append(((f["x"], f["y"], f["z"], 2.5), (c[0] * k * 1.4, c[1] * k * 1.4, c[2] * k * 1.4, 1)))
-        torches = sorted(L.lights, key=lambda t: (t[0] - ex) ** 2 + (t[2] - ez) ** 2)
+        above = self._above(g)
+        shafts = [(x, f + 1.0, z, above[0] * 0.9, above[1] * 0.9, above[2] * 0.9, 4.8, "shaft")
+                  for x, z, f, _c in getattr(L, "shafts", ())] if above[3] > 0.05 else []
+        torches = sorted(list(L.lights) + shafts, key=lambda t: (t[0] - ex) ** 2 + (t[2] - ez) ** 2)
         for t in torches[:MAX_LIGHTS - len(out)]:
+            if len(t) > 7:                                          # (the light through a grate: steady)
+                out.append(((t[0], t[1], t[2], t[6]), (t[3], t[4], t[5], 1)))
+                continue
             fl = 0.85 + 0.15 * math.sin(now * 11 + t[0] * 3) * math.sin(now * 7.3 + t[2])
-            out.append(((t[0], t[1], t[2], t[6]), (t[3] * fl * 1.3, t[4] * fl * 1.3, t[5] * fl * 1.3, 1)))
+            torch = t[3] > 0.9 and t[4] < 0.7 and t[6] > 5
+            k = 2.1 if torch and not L.outdoor else 1.3                 # (a torch below burns bright, and reaches)
+            out.append(((t[0], t[1], t[2], t[6] * (1.3 if torch and not L.outdoor else 1.0)), (t[3] * fl * k, t[4] * fl * k, t[5] * fl * k, 1)))
         if L.stairs and not L.outdoor:
             out.append(((L.stairs[0], L.floor_at(*L.stairs) + 0.4, L.stairs[1], 4.0), (0.35, 0.5, 1.0, 1)))
         return out[:MAX_LIGHTS]
+
+    def _above(self, g):
+        """The light coming down through a grate: the day's (warm, pale) or the moon's (cold, faint), dulled by cloud
+        -> (r, g, b, strength)."""
+        sky = getattr(g, "sky", None)
+        if sky is None:
+            return (0.0, 0.0, 0.0, 0.0)
+        kind = sky.now()["kind"]
+        dull = 0.55 if kind in ("rain", "storm", "snow", "mist") else 0.8 if kind == "cloud" else 1.0
+        if sky.night:
+            k = 0.35 * dull
+            return (0.55 * k, 0.65 * k, 0.95 * k, k)
+        return (1.0 * dull, 0.93 * dull, 0.75 * dull, dull)
 
     # ---- figures -----------------------------------------------------------------------------------------------
     def _monster(self, g, m):
@@ -872,10 +956,16 @@ class Renderer:
             for k in (1, 2, 3):                                               # its tail
                 t = k * 0.025
                 bill(b.x - b.vx * t, b.y - b.vy * t, b.z - b.vz * t, 0.12 - k * 0.025, c, 0.7 - k * 0.15)
-        for d in getattr(g, "drops", ()):                                # (a glint about what was had: gold for the rare)
+        for d in getattr(g, "drops", ()):                                # (a glint about what was had: in its rarity's colour)
             if g.time >= d["t"]:
-                c = (1.0, 0.8, 0.35) if d.get("rare") else (0.9, 0.85, 0.7)
-                bill(d["x"], d["y"], d["z"], 0.22 if d.get("rare") else 0.14, c, 0.55 if d.get("rare") else 0.3)
+                rk = d.get("rarity", -1)
+                c = D.RARITIES[rk][2] if rk >= 1 else (0.9, 0.85, 0.7)
+                bill(d["x"], d["y"], d["z"], 0.14 + 0.04 * max(0, rk), c, 0.3 + 0.12 * max(0, rk))
+                if rk >= 2:                                                # (Rare and up: a pillar of its light)
+                    fy = d.get("floor", d["y"] - 0.5)
+                    bill(d["x"], fy + 0.9, d["z"], 0.12 + 0.03 * rk, c, 0.25 + 0.1 * rk, 4.0, 9.0)
+                if rk >= 4:                                                # (Legendary: and a ring on the ground)
+                    flat(d["x"], d.get("floor", d["y"] - 0.5) + 0.03, d["z"], 0.6, c, 1.0, 1.0)
         for f in g.fx:
             if f.get("kind") == "debris":
                 continue
@@ -886,8 +976,11 @@ class Renderer:
         for t in L.lights:
             if (t[0] - ex) ** 2 + (t[2] - ez) ** 2 > 900:
                 continue
-            if t[3] > 0.9 and t[4] < 0.7 and t[6] > 5:                     # (a torch: its flame)
-                bill(t[0], t[1] + 0.05, t[2], 0.13, (1.0, 0.6, 0.25), 1.6, 3.0, 1.6)
+            if t[3] > 0.9 and t[4] < 0.7 and t[6] > 5:                     # (a torch: its flame, and the glow about it)
+                big = not L.outdoor
+                bill(t[0], t[1] + 0.05, t[2], 0.17 if big else 0.13, (1.0, 0.6, 0.25), 1.8 if big else 1.6, 3.0, 1.6)
+                if big:
+                    bill(t[0], t[1], t[2], 0.6, (1.0, 0.55, 0.22), 0.28)
             else:                                                       # (a glowing thing: its halo)
                 bill(t[0], t[1], t[2], 0.35, (t[3], t[4], t[5]), 0.35)
         for k, (dx, dtop, dz, dfloor) in enumerate(getattr(L, "drips", ())):
@@ -912,6 +1005,25 @@ class Renderer:
             bill(pk["x"], bobh, pk["z"], 0.14, c, 1.4)
             if pk["kind"] == "item":
                 bill(pk["x"], bobh, pk["z"], 0.3 + 0.05 * math.sin(now * 5 + pk["phase"]), c, 0.35)
+        above = self._above(g)
+        if above[3] > 0.05:                                             # (light through the grates, and dust in it)
+            cam_r = np.array([view[0, 0], 0.0, view[0, 2]], np.float32)
+            cam_r /= max(1e-4, float(np.linalg.norm(cam_r)))
+            col = tuple(c * 0.8 for c in above[:3])
+            for k, (x, z, f, c) in enumerate(getattr(L, "shafts", ())):
+                if (x - ex) ** 2 + (z - ez) ** 2 > 700:
+                    continue
+                bot, top = cam_r * 0.62, cam_r * 0.36
+                quad = [(x - bot[0], f, z - bot[2], 0, 0), (x + bot[0], f, z + bot[2], 1, 0),
+                        (x + top[0], c, z + top[2], 1, 1), (x - top[0], c, z - top[2], 0, 1)]
+                for i in (0, 1, 2, 0, 2, 3):
+                    q = quad[i]
+                    verts.append((q[0], q[1], q[2], q[3], q[4], *col, 1.25, 7.0))
+                flat(x, f + 0.015, z, 0.7, above[:3], 0.95 * above[3], 0.0)
+                for m in range(7):                                     # (motes, turning slowly as they sink)
+                    ph = (now * 0.05 + m * 0.143 + k * 0.37) % 1.0
+                    a = m * 2.4 + now * 0.3
+                    bill(x + math.cos(a) * 0.2, c - (c - f) * ph, z + math.sin(a) * 0.2, 0.025, above[:3], 0.9 * math.sin(ph * math.pi))
         if L.stairs and not L.outdoor:
             sx, sz = L.stairs
             sealed = L.guardian and not g.guardian_down
@@ -1020,6 +1132,18 @@ class Renderer:
 
     def arc(self, a, b):
         self.arcs.append((a, b, time.perf_counter() - self.t0))
+
+
+def _float_texture(A):
+    """A float RGBA texture (h, w, 4), filtered, held at its edges."""
+    h, w = A.shape[:2]
+    tex = GL.glGenTextures(1)
+    GL.glBindTexture(GL.GL_TEXTURE_2D, tex)
+    GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA16F, w, h, 0, GL.GL_RGBA, GL.GL_FLOAT, np.ascontiguousarray(A, np.float32))
+    for k, v in ((GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE), (GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE),
+                 (GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR), (GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)):
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, k, v)
+    return tex
 
 
 def _rot_x(a):

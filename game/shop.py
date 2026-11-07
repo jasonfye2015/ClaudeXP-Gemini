@@ -15,11 +15,12 @@ def stock(vendor, seed, visit, reach):
     if vendor == "wandwright":
         bodies = [k for k, b in D.WAND_BODIES.items() if b["tier"] <= tier and k != "birch"] or ["willow"]
         for _ in range(3):
-            out.append(I.make_wand(rng.choice(bodies), level))
+            out.append(I.make_wand(rng.choice(bodies), level, rarity=rng.choice((0, 0, 1, 1, 2))))
         kinds = list(D.PART_KINDS)
         for _ in range(6):
             k = rng.choice(kinds)
-            out.append(I.make_part(k, max(1, tier - rng.randint(0, 1)), rng.choice(D.ELEMENTS[1:]) if k == "core" else None))
+            out.append(I.make_part(k, max(1, tier - rng.randint(0, 1)), rng.choice(D.ELEMENTS[1:]) if k == "core" else None,
+                                   rng.choice((0, 0, 1, 1, 2))))
     elif vendor == "outfitter":
         for slot in D.GEAR_SLOTS:
             out.append(I.make_gear(slot, level, rng.choice((0, 0, 1, 1, 2)), rng))

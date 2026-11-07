@@ -195,6 +195,8 @@ class Player:
                 setattr(p, k, d[k])
         for s in D.GEAR_SLOTS:
             p.gear.setdefault(s, None)
+        for it in list(p.inventory) + list(p.stash) + list(p.gear.values()) + list(p.wands):   # (older saves' things)
+            I.migrate(it)
         while len(p.wands) < D.WAND_SLOTS:
             p.wands.append(None)
         if not any(p.wands):
