@@ -12,12 +12,12 @@ The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/
 
 Playing (phase 1: the tree)
   Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift hurries (never a run, in here).
-  E (or L) shakes the lantern. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
+  E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.
 
   In through the roots, into the hollow: the inside of the tree going up and up into the dark, a ledge winding up its
   wall past chambers opening into the wood - the gallery, the larder, the high hollow - to the crown, broken open to the
-  sky - a deep night, its stars twinkling, a faint aurora wavering across it. Glowing fungus in pockets, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
+  sky - a deep night, its stars twinkling, a faint aurora wavering across it. Glowing fungus in pockets, each breathing slowly in and out, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
   over the floor of the hollow, and wisps of mist hanging in the air, catching the lantern's light. And high
   in the dark, something watching: eight small lights that are gone when you come close.
 

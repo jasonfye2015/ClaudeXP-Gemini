@@ -264,10 +264,23 @@ def _crown(tree, out):
 GLOW = (0.32, 0.95, 0.78)
 
 
+def breath(k):
+    """A fungus patch's own cycle: (period in seconds, phase) - each one different, slow."""
+    return 6.0 + (k * 3.7) % 9.0, (k * 2.399) % math.tau
+
+
+def glow_level(t, period, phase):
+    """How bright a patch is at time t: it fades almost out and grows back (the same sum the shader does)."""
+    s = 0.5 + 0.5 * math.sin(t * math.tau / period + phase)
+    return 0.18 + 0.82 * s * s * (3 - 2 * s)
+
+
 def fungus(tree):
-    """Shelf fungus on the wall: a few fans to a cluster, cold blue-green; -> (vertices (n, 6), lights)."""
+    """Shelf fungus on the wall: a few fans to a cluster, cold blue-green, each cluster breathing on its own cycle.
+    -> (vertices (n, 8): position, colour, (period, phase); lights: (x, y, z, r, g, b, reach, period, phase))"""
     out, lights = [], []
     for k, (a, h, size) in enumerate(T.FUNGI):
+        period, phase = breath(k)
         r = tree.wall_r(a, h)
         for m in range(3):
             da = (m - 1) * 0.05 * size
@@ -288,13 +301,14 @@ def fungus(tree):
                     pts.append((cx + ox, y - 0.06 * math.sin(b), cz + oz))
                 rim = tuple(c * 1.25 for c in col)
                 for p, c in zip(pts, (col, rim, rim)):
-                    out.append((*p, *c))
+                    out.append((*p, *c, period, phase))
                 lo = [(p[0], p[1] - 0.09, p[2]) for p in pts[1:]]             # (its rim: a thickness, glowing)
                 for p, c in zip((pts[1], pts[2], lo[1], pts[1], lo[1], lo[0]), (rim,) * 6):
-                    out.append((*p, *tuple(v * 0.7 for v in c)))
+                    out.append((*p, *tuple(v * 0.7 for v in c), period, phase))
         r_in = r - 0.6
-        lights.append((math.cos(a) * r_in, h, math.sin(a) * r_in, GLOW[0] * 0.6, GLOW[1] * 0.6, GLOW[2] * 0.6, 4.6 + size))
-    return np.array(out, np.float32).reshape(-1, 6), lights
+        lights.append((math.cos(a) * r_in, h, math.sin(a) * r_in, GLOW[0] * 0.6, GLOW[1] * 0.6, GLOW[2] * 0.6, 4.6 + size,
+                       period, phase))
+    return np.array(out, np.float32).reshape(-1, 8), lights
 
 
 def shafts(tree):

@@ -133,13 +133,19 @@ layout(location=0) in vec3 aPos; layout(location=1) in vec3 aCol;
 uniform mat4 uPV; out vec3 vPos; out vec3 vCol;
 void main() { vPos = aPos; vCol = aCol; gl_Position = uPV * vec4(aPos, 1.0); }"""
 
+FUNGUS_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aCol; layout(location=2) in vec2 aBreath;
+uniform mat4 uPV; out vec3 vPos; out vec3 vCol; flat out vec2 vBreath;
+void main() { vPos = aPos; vCol = aCol; vBreath = aBreath; gl_Position = uPV * vec4(aPos, 1.0); }"""
+
 FUNGUS_FS = """#version 330 core
-in vec3 vPos; in vec3 vCol; uniform float uTime;
+in vec3 vPos; in vec3 vCol; flat in vec2 vBreath; uniform float uTime;
 out vec4 frag;
 """ + LIGHTING + """
 void main() {
-    float pulse = 0.85 + 0.15 * sin(uTime * 0.7 + vPos.y * 1.3 + vPos.x);
-    frag = outColour(fogged(vPos, vCol * pulse * 0.9));
+    float s = 0.5 + 0.5 * sin(uTime * 6.2831853 / vBreath.x + vBreath.y);
+    float pulse = 0.18 + 0.82 * s * s * (3.0 - 2.0 * s);              // (each patch fading almost out, and growing back)
+    frag = outColour(fogged(vPos, vCol * pulse * 0.95));
 }"""
 
 GLOW_VS = """#version 330 core
@@ -243,7 +249,7 @@ class Renderer:
     def __init__(self):
         self.tree = T.Tree()
         self.world = gl.Program(WORLD_VS, WORLD_FS)
-        self.fung = gl.Program(GLOWY_VS, FUNGUS_FS)
+        self.fung = gl.Program(FUNGUS_VS, FUNGUS_FS)
         self.glow = gl.Program(GLOW_VS, GLOW_FS)
         self.sky = gl.Program(SKY_VS, SKY_FS)
         self.fog = gl.Program(FOG_VS, FOG_FS)
@@ -260,12 +266,14 @@ class Renderer:
         self.dress_prog = gl.Program(DRESS_VS, DRESS_FS)
         self.dress = gl.Mesh([(0, 3), (1, 3), (2, 3)], treemesh.dress(self.den))
         self.held_parts = held.parts()
+        self.wand_parts, _tip = held.wand_parts()
+        self.wand_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
         self.held_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
         self._held_at = (0.0, None)
         drips = self.den.drips[:24]
         self.drip_uniform = np.array([(x, z, b) for x, _t, z, b in drips], np.float32)
         fv, self.fungus_lights = treemesh.fungus(self.tree)
-        self.fungus = gl.Mesh([(0, 3), (1, 3)], fv)
+        self.fungus = gl.Mesh([(0, 3), (1, 3), (2, 2)], fv)
         self.beams = treemesh.shafts(self.tree)
         self.glow_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
         self.sky_mesh = gl.Mesh([(0, 2)], np.array([[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]], np.float32))
@@ -306,7 +314,8 @@ class Renderer:
             prog.use()
             prog.mat4("uPV", pv)
             prog.vec("uEye", eye)
-            prog.vec("uAmbient", (0.022, 0.02, 0.026))
+            dim = 0.3 + 0.7 * min(1.0, night.lamp.level) if night.lantern else 1.0     # (the lamp's own bounce)
+            prog.vec("uAmbient", (0.022 * dim, 0.02 * dim, 0.026 * dim))
             prog.vec("uMoonDir", -self.moon)
             prog.vec("uMoonCol", (0.11, 0.13, 0.2))
             prog.vec("uFog", [c ** 2.2 for c in FOG])
@@ -342,16 +351,18 @@ class Renderer:
         now = getattr(self, "now", 0.0)
         if self._held_at[0] != now or self._held_at[1] is None:
             self._held_at = (now, held.hold(night, now))
-        return tuple(held.flame(*self._held_at[1]))
+        return tuple(held.flame(*self._held_at[1][1]))
 
     def _lantern(self, night, now):
         """The lantern in his hand, drawn over everything (it's never inside a wall), and its flame."""
         if not night.lantern:
             return
-        origin, axes = self._held_at[1] if self._held_at[1] is not None else held.hold(night, now)
+        (grip, waxes), (origin, axes) = self._held_at[1] if self._held_at[1] is not None else held.hold(night, now)
         GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.wand_mesh.upload(held.place(self.wand_parts, grip, waxes))
         self.held_mesh.upload(held.place(self.held_parts, origin, axes))
         self.dress_prog.use()
+        self.wand_mesh.draw()
         self.held_mesh.draw()
         lvl = night.lamp.level
         f = held.flame(origin, axes)
@@ -383,7 +394,7 @@ class Renderer:
             out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
         near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
         for l in near[:MAX_LIGHTS - len(out) - 3]:
-            k = (0.85 + 0.15 * math.sin(now * 0.7 + l[1] * 1.3 + l[0])) * 0.72
+            k = treemesh.glow_level(now, l[7], l[8]) * 0.8
             out.append(((l[0], l[1], l[2], l[6]), (l[3] * k, l[4] * k, l[5] * k, 1)))
         for start, end, width in sorted(self.beams, key=lambda b: float(np.sum((b[1] - np.array(night.eye)) ** 2)))[:3]:
             out.append(((*end, 4.5), (0.1, 0.12, 0.18, 1)))   # (where a moonbeam falls, a little light)
@@ -448,7 +459,7 @@ class Renderer:
                 bill(p, 0.025, (0.75, 0.8, 1.0), 0.8 * math.sin(ph * math.pi))
         # the fungus: a soft halo about each cluster
         for l in self.fungus_lights:
-            bill((l[0], l[1], l[2]), 1.3, treemesh.GLOW, 0.38)
+            bill((l[0], l[1], l[2]), 1.3, treemesh.GLOW, 0.42 * treemesh.glow_level(now, l[7], l[8]))
         # water, dripping: a drop falls, then a ring spreads where it lands
         for k, (x, top, z, bottom) in enumerate(self.den.drips):
             if (x - eye[0]) ** 2 + (z - eye[2]) ** 2 > 400:
