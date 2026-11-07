@@ -15,6 +15,11 @@
   const paint = (p, now) => { const t = now / 1000;
     const sky = p.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#D8C8A0"); sky.addColorStop(1, "#C8B488"); p.fillStyle = sky; p.fillRect(0, 0, W, H);
     p.strokeStyle = "rgba(90,60,20,0.15)"; for (let k = 0; k < 40; k++) { p.beginPath(); p.moveTo(0, k * 12); p.lineTo(W, k * 12 + 4); p.stroke(); }
+    if (CM.islandKnown && CM.islandKnown(CM.game)) {   // (v129.0) once the island is known: the sea round it, the land its own shape
+      p.fillStyle = "#86A8B8"; p.fillRect(0, 0, W, H); p.strokeStyle = "rgba(240,248,250,0.35)"; p.lineWidth = 1.2; for (let k = 0; k < 60; k++) { const x = (k * 137) % W, y = (k * 71) % H; p.beginPath(); p.moveTo(x, y); p.quadraticCurveTo(x + 6, y - 4 + Math.sin(t + k) * 1.5, x + 12, y); p.stroke(); } p.lineWidth = 1;
+      const land = () => { p.beginPath(); p.moveTo(6, 30); p.bezierCurveTo(200, -4, 432, 6, 534, 46); p.lineTo(556, 454); p.bezierCurveTo(380, 486, 140, 486, 6, 454); p.closePath(); p.moveTo(CX + 199, CY); p.ellipse(CX, CY, 199, 168, 0, 0, Math.PI * 2); };
+      p.fillStyle = "#D2C096"; land(); p.fill(); p.fillRect(500, 120, 120, 300); p.strokeStyle = "rgba(60,90,110,0.55)"; p.lineWidth = 2.5; land(); p.stroke(); p.lineWidth = 1;
+      p.fillStyle = "rgba(40,70,90,0.75)"; p.font = "italic 15px Georgia"; p.fillText("the Sea", 26, 476); p.fillText("the Sea", 590, 24); p.font = "italic 11px Georgia"; p.fillText("(all the way round)", 86, 476); }
     // the Wood
     p.fillStyle = "#6A8A4A"; p.beginPath(); p.moveTo(20, 40); p.bezierCurveTo(200, 10, 420, 20, 520, 60); p.lineTo(540, 440); p.bezierCurveTo(380, 470, 140, 470, 20, 440); p.closePath(); p.fill();
     const R = new CM.Random(31); for (let k = 0; k < 170; k++) { const x = 30 + R.next() * 490, y = 50 + R.next() * 390; if (Math.hypot(x - 330, y - 330) < 60 || Math.hypot(x - 260, y - 140) < 40) continue; p.fillStyle = R.chance(0.5) ? "#3E6A30" : "#4E7A38"; p.beginPath(); p.moveTo(x, y - 10); p.lineTo(x + 7, y + 5); p.lineTo(x - 7, y + 5); p.fill(); }

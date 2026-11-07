@@ -68,7 +68,7 @@
   // the falls, the pool, the cairn, as the hour goes
   const pool = [S.falls[0] - 1, S.falls[1]];
   { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== -1 || !fl.levels || game.mode === "title") return out;
-      out.push({ x: S.lookout[0], y: S.lookout[1], dx: 0.18, dz: 0.22, layer: "prop:cairn", w: 0.62, h: 0.78, shade: 0.95 });
+      out.push({ x: S.lookout[0], y: S.lookout[1] + 1, dx: -0.12, dz: -0.3, base: S.h, layer: "prop:cairn", w: 0.62, h: 0.78, shade: 0.95 });   // (at the brink, on the rock's lip)
       if (Math.abs(fl.pos[0] - pool[0]) + Math.abs(fl.pos[1] - pool[1]) > 26) return out;
       const ice = fl.frozen || (CM.weather && CM.weather(game) === "snow"), H = S.h, t = CM.reducedMotion ? 0 : now / 1000;
       if (ice) { out.push({ x: pool[0], y: pool[1], face: 1, layer: "fx:fallsice", w: 0.9, h: H, lift: H / 2 - 0.5, alpha: 0.9, glow: 0.15 }); return out; }

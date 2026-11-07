@@ -2964,7 +2964,7 @@ test("ground everywhere: on the surface every square has ground, a top or a roof
   for (const [fl, theme] of [[CM.makeTown("ground-1"), CM.TOWN_THEME], [CM.makeWood("ground-1"), CM.WOOD_THEME]]) {
     const m = CM.floorMesh(fl, theme, index), size = fl.grid.length, l = layersOf(m);
     assert.strictEqual(m.covered, size * size, `floor ${fl.number}: every square covered (${m.covered} of ${size * size})`);
-    assert.ok(m.skirt > 0 && m.ring > 0, "a skirt and a far ring"); assert.ok(l.has(index["far:trees"]));
+    assert.ok(m.skirt > 0 && m.ring > 0, "a skirt and a far ring"); assert.ok(l.has(index["far:trees"]) || (fl.number === -1 && CM.LAND_ISLE && l.has(index["far:hill"])), "the far ring (on the island, only the hill's side: v129.0)");
     const treeCells = fl.grid.flat().length - fl.grid.flat().filter((c) => c === 0).length - Object.values(fl.kinds || {}).filter((k) => k !== "tree").length;
     assert.ok(m.trees >= treeCells * 0.95, `every tree drawn: ${m.trees} of about ${treeCells}`);
     assert.ok(l.has(index["ground:litter"]) && l.has(index["ground:needles"]), "needles under the firs, litter under the rest");
@@ -3031,7 +3031,7 @@ test("the surface's life: grass and flowers by the season, tall grass and hay in
   assert.ok(!summer.tuft.some((p) => canopy.has(`${p.x},${p.y}`)), "no meadow grass under the leaves");
   const wet = new Set(wood.decor.filter((d) => d.kind === "water").map((d) => `${d.x},${d.y}`));
   assert.ok(summer.reeds.every((p) => CM.DIRS.some(([dx, dy]) => wet.has(`${p.x + dx},${p.y + dy}`))), "reeds by the water");
-  { const M2 = CM.SOUTH_WOOD.meadows[1], fy = M2.c[1] - 1; assert.strictEqual(JSON.stringify(summer.steps.map((p) => `${p.x},${p.y}`).sort()), JSON.stringify([wood.ford.join(","), `${CM.riverX(fy)},${fy}`].sort()), "stepping stones in the two fords, and only there"); }   /* (v127.0: the south's ford too) */
+  { const M2 = CM.SOUTH_WOOD.meadows[1], fy = M2.c[1] - 1; assert.strictEqual(JSON.stringify(summer.steps.map((p) => `${p.x},${p.y}`).sort()), JSON.stringify([wood.ford.join(","), `${CM.riverX(fy)},${fy}`, CM.SHORE.streamFord.join(","), `${CM.riverX(CM.SHORE.mouth)},${CM.SHORE.mouth}`].sort()), "stepping stones in the fords, and only there"); }   /* (v127.0: the south's ford too; v129.0: the falls' stream and the river's mouth) */
   const t = ids(town, "summer"), w = ids(weekly, "summer", "weekly-2026-44");
   assert.ok(t.barrel && t.lamp && !t.stall && !t.reeds && !t.bones, "barrels and lamps in town; no stalls on an ordinary seed");
   assert.ok(w.stall && w.stall.every((p) => p.x >= CM.TOWN_SQUARE[0] && p.x <= CM.TOWN_SQUARE[2] && p.y >= CM.TOWN_SQUARE[1] && p.y <= CM.TOWN_SQUARE[3]), "stalls in the Square on market day");
@@ -7467,8 +7467,8 @@ test("the wolf den: a crag with an open cave mouth west of the river, a clearing
 
 test("the south of the Wood: twenty rows more, the east beyond the cliffs the hill and the gate where it was; the two meadows reached on foot (the second over a new ford); everything the seed placed in the old land where it was; an old save's map read at its own size; the herd of ten in the page", () => {
   const CM = load(), w = CM.makeWood("south-1"), N = w.grid.length;
-  assert.strictEqual(N, 81); assert.strictEqual(w.things[CM.WOOD_GATE.join(",")].type, "woodgate"); assert.ok(CM.isOpen(w, CM.WOOD_EAST + 2, CM.WOOD_GATE[1]), "the gate's way out");
-  for (let y = 0; y < N; y++) for (let x = CM.WOOD_EAST; x < N; x++) if (!(y === CM.WOOD_GATE[1] && x <= CM.WOOD_EAST + 2) && !(CM.isOpen(w, x, y))) assert.ok(["cliff"].includes(CM.solidAt(w, x, y)) || CM.isOpen(w, x, y), `${x},${y} is the hill`);
+  assert.strictEqual(N, CM.WOOD_SIZE); assert.strictEqual(w.things[CM.WOOD_GATE.join(",")].type, "woodgate"); assert.ok(CM.isOpen(w, CM.WOOD_EAST + 2, CM.WOOD_GATE[1]), "the gate's way out");
+  for (let y = 0; y < N; y++) for (let x = CM.WOOD_EAST; x < N; x++) if (!(y === CM.WOOD_GATE[1] && x <= CM.WOOD_EAST + 2) && !(CM.isOpen(w, x, y))) assert.ok(["cliff", "sea"].includes(CM.solidAt(w, x, y)) || CM.isOpen(w, x, y), `${x},${y} is the hill (or the sea at its foot: v129.0)`);
   const S = CM.WOOD_GATE, seen = new Set([S.join()]), q = [S]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.isOpen(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
   for (const M of CM.SOUTH_WOOD.meadows) { assert.ok(seen.has(M.c.join()), `${M.name}: walked to`); assert.ok(w.rooms.some((r) => r.name === M.name)); }
   // the old land's things as they were: the seed's picks bounded to the old land (the gate's outer square is outside them)
@@ -7504,6 +7504,35 @@ test("the Scarp: a high heath in the Wood's south-east as high as the cliffs, wa
   const back = CM.restoreFloor(d, g.seed, CM.GEN).floor; assert.strictEqual(CM.floorAt(back, ...S.lookout), S.h, "and made again with it on a load");
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["fx:falls${f}", "add(\"solid:scarp\", c)", "quad([x, F0, y + 1], [x + 1, F0, y + 1]", "id === \"falls\""]) assert.ok(html.includes(s), s);
+});
+
+test("the island: the Wood runs on to the sea - a fringe of dunes, the Strand's sand under the cliffs too, the river shallow at its mouth, tracks down from both meadows (stepping stones over the falls' stream), and the sea past it; the sea seen first from the sand, the island from the Lookout, kept with the village; Claude told; an old save's map read at its size; the sea round the land drawn and on the world map", () => {
+  const CM = load(), H = CM.SHORE, S = CM.SCARP;
+  for (const seed of ["isle-1", "abc"]) { const w = CM.makeWood(seed), N = w.grid.length; assert.strictEqual(N, CM.WOOD_SIZE); assert.ok(N > H.sea + 1);
+    for (let x = 0; x < N; x++) for (let y = H.sea; y < N; y++) assert.strictEqual(CM.solidAt(w, x, y), "sea", `${x},${y} is the sea`);
+    assert.ok(!w.decor.some((d) => d.kind === "water" && d.y >= H.sea), "the river's water ends at the sea");
+    for (let x = 1; x < N - 1; x++) for (let y = H.strand[0]; y <= H.strand[1]; y++) if (x !== CM.riverX(y)) assert.strictEqual(w.ground[`${x},${y}`], "sand");
+    assert.ok(CM.passable(w, CM.riverX(H.mouth), H.mouth), "the river's mouth wades"); assert.ok(CM.passable(w, ...H.streamFord), "stepping stones over the falls' stream");
+    const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    for (let x = 1; x < N - 1; x++) assert.ok(seen.has(`${x},${H.strand[1]}`) || x === CM.riverX(H.strand[1]), `the water's edge at ${x} walked to`);
+    assert.ok(seen.has(S.lookout.join()), "and the Lookout still");
+    assert.strictEqual(CM.woodPlace(w, 30, 84), "The Strand"); assert.strictEqual(CM.woodPlace(w, CM.riverX(H.mouth), H.mouth), "the river's mouth");
+    assert.ok(!w.seen.some(([, y]) => y >= H.fringe), "the shore is not on the map from the gate"); }
+  const g = new CM.Game(); g.newGame("isle-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; const said = []; const s0 = g.say; g.say = function (t, ...a) { said.push(t); return s0.call(this, t, ...a); };
+  g.enterFloor(-1, "rope", [H.tracks[0][0], H.fringe]); assert.ok(!CM.islandKnown(g));
+  g.floor.pos = [H.tracks[0][0], H.strand[0]]; g.emit("moved", ...g.floor.pos); assert.strictEqual(said[said.length - 1], CM.ISLAND_WORDS.SEA_FIRST); assert.ok(g.vext("land").sea, "the sea, kept");
+  g.floor.pos = [H.tracks[0][0] + 2, H.strand[0]]; const n = said.length; g.emit("moved", ...g.floor.pos); assert.strictEqual(said.length, n, "said once a run");
+  assert.ok(CM.wayPlaces(g).length >= 0); g.floor.pos = [H.tracks[0][0], H.strand[1]]; assert.ok(g.use(), "the water's edge answers");
+  g.floor.pos = S.lookout.slice(); g.emit("moved", ...S.lookout); assert.strictEqual(said[said.length - 1], CM.ISLAND_WORDS.ISLAND_FIRST); assert.ok(CM.islandKnown(g), "the island, known"); assert.ok(/island/.test(CM.lookoutWords(g)));
+  // Claude, once told
+  const topics = CM.claudeTopics.flatMap((f) => f(g) || []); assert.ok(topics.some((o) => o[0] === "island"), "Claude can be told");
+  const heard = []; CM.claudeActs.island(g, null, (s) => heard.push(s)); CM.claudeActs.island(g, null, (s) => heard.push(s)); assert.ok(/An island/.test(heard[0]) && heard[1] !== heard[0]);
+  // kept with the village: a new run knows
+  const g2 = new CM.Game(); g2.village = g.village; assert.ok(CM.islandKnown(g2));
+  // an old save: the seen map packed at 81
+  const old = [[3, 4], [59, 30], [60, 80]]; assert.strictEqual(JSON.stringify(CM.unpackSeen(CM.packSeen(old, 81), CM.WOOD_SIZE)), JSON.stringify(old));
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["const isle = fl.number === -1 && CM.LAND_ISLE", "CM.shoreNear = ", "p.fillText(\"the Sea\", 26, 476)", "water, 0.92, 4)"]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
