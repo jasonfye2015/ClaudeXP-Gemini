@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The mix (v123.0, UPGRADE_PLAN_76.md)
+  (src/js/77n-audiomix.js, tests/run.js, UPGRADE_PLAN_76.md)
+  - The mix (plan 76, release 1, from the audio review): every sound effect is now a touch different each time - its
+    pitch and level shift a little - so coins, steps, doors and blows stop sounding stamped (the bells, the tolls,
+    the victory and the level's fanfare keep their own pitch). A burst of one sound is thinned rather than piled up,
+    and a gentle compressor on the effects and on the music keeps a crowded moment from clipping. And silence where
+    it matters: the music and the place's ambience dip under any conversation; when a hero falls the music falls
+    away for a few seconds; a new band's first floor gets a breath of quiet before its theme; and the king's floor
+    is a hush. Every change eases in and out. Volume, mute and the headphones are as they were.
+
 The king's bargains (v122.0, UPGRADE_PLAN_75.md)
   (src/js/69zzzzc-bargains.js, tools/headless.js, tests/run.js)
   - The king's bargains (plan 75, release 3): three times a run the Lich King makes an offer - a letter sealed with a
