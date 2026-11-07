@@ -20,6 +20,13 @@ The design document (Claude Docs): https://claude.ai/artifact/JtQZ3J468Lqh9E8Qqo
   drifting noise, thinning at the wall and when seen edge-on, fading near the eye and into the far dark, lit warm by
   the lantern near him and pale by the moon toward the crown.
 
+## Phase 1c - the dark roots, the night sky - done
+
+- The root tunnel far darker (its wood and earth shaded down), and his lantern's throw short and dim there
+  (night.lantern_reach: about 2.2 units at a third of its strength deep in the roots, opening out to 6.5 in the hollow).
+- The sky darker, the stars twinkling, and a faint aurora: two wavering curtains strung across the sky, each in layers
+  (green low, violet high) with rays shimmering along them, slowly breathing - seen through the crown.
+
 ## Phase 2 - webs and movement
 
 Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.

@@ -16,7 +16,7 @@ Playing (phase 1: the tree)
 
   In through the roots, into the hollow: the inside of the tree going up and up into the dark, a ledge winding up its
   wall past chambers opening into the wood - the gallery, the larder, the high hollow - to the crown, broken open to the
-  sky. Glowing fungus in pockets, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
+  sky - a deep night, its stars twinkling, a faint aurora wavering across it. Glowing fungus in pockets, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
   over the floor of the hollow, and wisps of mist hanging in the air, catching the lantern's light. And high
   in the dark, something watching: eight small lights that are gone when you come close.
 

@@ -99,3 +99,13 @@ def test_the_clock_and_her_eyes():
     assert n.eyes() and n.eye_alpha > 0.5                                     # (something up there, watching)
     px, py, pz = n.perches[n.perch]
     assert py > n.eye[1] + 1.5
+
+
+def test_the_lantern_is_close_in_the_roots():
+    """In the root tunnel his lantern throws its light only a little way; in the hollow it reaches out."""
+    n = N.Night(seed=3)
+    deep, k_deep = n.lantern_reach()                                          # (he starts deep in the roots)
+    x, z = n.tree.tunnel_point(-0.5, 0.0)
+    n.x, n.z = x, z
+    open_, k_open = n.lantern_reach()
+    assert deep < 3.0 and k_deep < 0.5 and open_ > 6.0 and k_open == 1.0
