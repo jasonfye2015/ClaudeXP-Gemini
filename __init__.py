@@ -18,6 +18,7 @@ from claudecore import host
 
 TITLE = "Claudenites 3-D"
 HERE = Path(__file__).resolve().parent
+SAVES = None                            # (where the slots go: host.saves("claudenites") unless a test says otherwise)
 _open = {}
 
 
@@ -49,7 +50,7 @@ def launch(desktop):
         desktop.open_window(win)
         return win
     from .ui.shell import Shell
-    body = Shell(host.saves("claudenites"), host.muted)
+    body = Shell(SAVES or host.saves("claudenites"), host.muted)
     win = host.window(desktop, TITLE, body, nites_icon(), (1280, 800))
     body.frame = win
     _open["win"] = win
