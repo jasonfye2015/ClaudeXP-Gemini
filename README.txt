@@ -54,6 +54,10 @@ Playing
   The title: a title card - the name over Thornwick at dusk, the camera circling the Deep's mouth - and then one page
   with Play (the three slots as cards), Records, Options, Keys and Credits.
 
+  What the dead drop is seen: each thing - its gold, a potion, a scroll, a robe, a wand, a wand part - pops out of the
+  body as its own picture, bounces, glints (gold for the rare), and flies to Claude as it goes into the pack. Chests
+  and broken barrels too.
+
   The dead flip over: a thing that stood falls flat on its back, a beast or a blob rolls belly-up.
 
   The floors are big - sixteen to thirty-six rooms - and climb: each room at its own height, a step or two from the

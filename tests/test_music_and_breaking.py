@@ -65,3 +65,25 @@ def test_racks_and_shelves_break_too():
     L = levels.dungeon(3, 4)
     names = {t[0].get("name") or t[0].get("model") for v in L.breakables().values() for t in v}
     assert names & {"fu.rack", "fu.shelf", "barrel", "crate"}
+
+
+def test_drops_are_seen_flying_to_him():
+    """A guardian's fall: its gold and its things pop out as their pictures, bounce, and fly to Claude."""
+    from claudenites.engine.itempics import drop_picture
+    from claudenites.game.world import Input
+    g = Game.new(seed=14)
+    g.go_floor(10)
+    boss = next(m for m in g.monsters if m.guardian)
+    g._kill(boss)
+    assert len(g.drops) >= 4
+    assert sum(1 for d in g.drops if isinstance(d["what"], dict)) == 3       # (a guardian's three things)
+    assert any(d["what"] == "gold" for d in g.drops)
+    for d in g.drops:
+        assert drop_picture(d["what"]), d["what"]
+    inp = Input()
+    for _ in range(30):
+        g.step(1 / 60, inp)
+    assert all(d["y"] >= d["floor"] for d in g.drops)
+    for _ in range(120):
+        g.step(1 / 60, inp)
+    assert not g.drops                                                      # (all gone to him)

@@ -2,9 +2,6 @@
 7Soul1's gems, runes, potions and scroll), chosen by the item: its slot and tier (and a little variety between items
 of the same tier), its wand body, its part's kind and element. The pixel art is enlarged crisply, then smoothed to the
 size asked. Where a picture is missing, the item is painted instead."""
-import json
-import zlib
-from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 
@@ -12,46 +9,7 @@ from ..game import data as D
 from ..game import items as I
 
 _cache = {}
-ITEMS = Path(__file__).resolve().parents[1] / "assets" / "items"
-_map = None
-
-
-def _mapping():
-    global _map
-    if _map is None:
-        try:
-            _map = json.loads((ITEMS / "items.json").read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            _map = {}
-    return _map
-
-
-def sprite_name(it):
-    """The sprite file for an item (None: paint it)."""
-    M = _mapping()
-    if not M:
-        return None
-    t = it.get("type")
-    if t == "gear":
-        tiers = M["gear"].get(it["slot"])
-        if not tiers:
-            return None
-        bases = D.GEAR_BASES[it["slot"]]
-        tier = bases.index(it["base"]) if it["base"] in bases else 0
-        if it.get("rarity", 0) >= 3:
-            tier = len(tiers) - 1                                  # (a legendary wears the finest)
-        pics = tiers[min(tier, len(tiers) - 1)]
-        return pics[zlib.crc32(str(it.get("id", "")).encode()) % len(pics)]
-    if t == "wand":
-        return M["wands"].get(it["body"])
-    if t == "part":
-        key = f"core:{it.get('element', 'arcane')}" if it["kind"] == "core" else it["kind"]
-        return M["parts"].get(key)
-    if t == "potion":
-        return M["other"].get("potion:" + it["kind"]) if it["kind"] != "return" else M["other"].get("scroll")
-    if t == "scroll":
-        return M["other"].get("scroll")
-    return None
+from ..engine.itempics import ITEMS, sprite_name  # noqa: F401  (the pictures' choice: engine/itempics.py)
 
 
 def _sprite(name, size):
