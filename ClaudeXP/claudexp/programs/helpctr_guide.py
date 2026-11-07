@@ -173,7 +173,9 @@ CATALOG = {
                              "Woodcutter's Camp, the Fairy Ring, the Hollow Oak, the Wolf Hollow, the Bandits' Camp, the Stream) and "
                              "creatures as strong as Claude that never come into the town. Barrels, crates and racks break under his bolts; the "
                              "music is ClaudeRPG's own, made as it plays, in its worlds' styles; the title has three slot cards, records "
-                             "and options. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "and options. Claude and Magic's sky and weather run over it all: a day, a season and a moon, and live "
+                             "weather (rain, storms, mist, wind, snow, heat, aurora, tornadoes) that changes the fight and floods the "
+                             "first floors in a storm; a dial shows the hour and the weather, and K the Calendar. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
                              "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, left button to cast, "
                              "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
