@@ -80,6 +80,7 @@ class GameView(QOpenGLWidget):
         if self.renderer and self.game:
             try:
                 dpr = self.devicePixelRatioF()
+                self.renderer.ground_blend = bool(self.shell.settings.get("blend", True))
                 self.renderer.draw(self.game, int(self.width() * dpr), int(self.height() * dpr), dt)
             except Exception as exc:
                 self.gl_error = repr(exc)

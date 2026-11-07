@@ -16,7 +16,7 @@ from ..game import data as D
 from . import theme
 from .icons import icon
 
-VERSION = "v0.12"
+VERSION = "v0.13"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
 CSS = theme.CSS + """
@@ -362,6 +362,8 @@ class TitleScreen(QWidget):
              lambda: S.set_setting("sound", not S.settings.get("sound", True))),
             ("The townsfolk speak (a language model)", "On" if S.settings.get("speech", True) else "Off",
              lambda: S.set_setting("speech", not S.settings.get("speech", True))),
+            ("Ground blending (the grounds meet softly, worn ways, dappled light)", "On" if S.settings.get("blend", True) else "Off",
+             lambda: S.set_setting("blend", not S.settings.get("blend", True))),
             ("Mouse sensitivity", f"{S.settings.get('mouse', 1.0):.1f}",
              lambda: S.set_setting("mouse", round(S.settings.get("mouse", 1.0) + 0.25, 2) if S.settings.get("mouse", 1.0) < 2.0 else 0.5)),
         ]

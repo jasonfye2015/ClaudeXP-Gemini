@@ -71,4 +71,6 @@ def look(sky, outdoor, base_fog=0.042):
         "rain": k if kind in ("rain", "storm") else 0.0, "storm": k if kind == "storm" else 0.0,
         "snowfall": k if kind == "snow" else 0.0, "leaves": k if kind in ("wind", "tornado") else 0.0,
         "kind": kind, "strength": k, "night": d["night"],
+        "mud": max(k if kind in ("rain", "storm") else 0.0, sky.after_rain()),
+        "autumn": 1.0 if sky.season == "autumn" else 0.0,
     }

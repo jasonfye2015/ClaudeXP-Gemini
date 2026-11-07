@@ -103,6 +103,13 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   1-5 real hours (three at once); the hearth's experiments and the cookbook. Seeds from monsters, chests, Hesper.
 - The pack's tabs: Armor, Wands, Seeds, Raw, Cooked, Misc.
 
+## v0.13 - the ground blends (Claude and Magic's polish) - done
+
+- engine/groundmap.py: a texel a square (ground kind, cover, water, wear), and the level shader's ground(): noisy
+  edge blends between grounds, anti-tiling patches, wear by traffic, the forest floor under the trees (moss, litter),
+  muddy banks, dappled light, autumn leaves at the walls, mud after rain - as C&M's 76zzzzzzzzzz0-groundblend,
+  26c-wear, 26d-forestfloor and 40-render's uGBlend. An option to turn it off.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the
