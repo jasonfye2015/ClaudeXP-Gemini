@@ -302,6 +302,13 @@
   "fruit": "dc_food_fruit.png",
   "chunk": "dc_food_chunk.png"
  },
+ "keys": {
+  "gold": "s7_I_Key03.png",
+  "red": "key_red.png",
+  "blue": "key_blue.png",
+  "green": "key_green.png",
+  "rune": "key_rune.png"
+ },
  "litter": {
   "bottle1": "s7_I_Bottle01.png",
   "bottle2": "s7_I_Bottle02.png",

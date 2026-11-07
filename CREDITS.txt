@@ -44,6 +44,8 @@ these pictures stay under that licence wherever they go:
 - "Fruit and Veggie Inventory" by Joshua Taylor (CC-BY-SA 3.0 / GPL 3.0), part of the Liberated Pixel Cup:
   https://opengameart.org/content/fruit-and-veggie-inventory - the harvested produce (and the meals made of one crop).
 The food (meat, fish, mushroom, the dishes) and the seed pouch are 7Soul1's and Crawl's, CC0, as above; so are the
-Deep's empty bottles and loose bones (7Soul1's I_Bottle01-04, E_Bones02-03, I_Bone).
+Deep's empty bottles and loose bones (7Soul1's I_Bottle01-04, E_Bones02-03, I_Bone), and the doors' keys (its
+I_Key03, and its I_Key02 tinted red, blue, green and violet). The cold brazier (assets/cm/nx.brazier_cold.png) is
+Claude and Magic's brazier with its fire taken out (tools/make_art.py).
 
 The sounds are made by the game as it starts (engine/sound.py); the item pictures fall back to painted ones (ui/icons.py).

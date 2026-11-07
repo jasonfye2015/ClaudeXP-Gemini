@@ -76,10 +76,26 @@ def build(L, layer_of):
     return np.array(out, np.float32).reshape(-1, 10)
 
 
+def door(L, d, layer):
+    """A closed door's slab: across its passage, floor to ceiling, timber (-> float32 vertices, as build's)."""
+    out = []
+
+    def quad(p0, p1, p2, p3, n, uvs, lay, shades):
+        for i in (0, 1, 2, 0, 2, 3):
+            p = (p0, p1, p2, p3)[i]
+            out.append((*p, *n, *uvs[i], lay, shades[i]))
+    x, y = d["x"], d["y"]
+    f, c = float(L.floor[y, x]), float(L.ceil[y, x])
+    t = 0.07
+    b = (x, f, y + 0.5 - t, x + 1, c, y + 0.5 + t, None) if d["axis"] == "ns" else (x + 0.5 - t, f, y, x + 0.5 + t, c, y + 1, None)
+    _box(quad, b, lambda _i: layer, None)
+    return np.array(out, np.float32).reshape(-1, 10)
+
+
 def _box(quad, b, layer_of, L):
     """A box of furniture: its top and four sides (the bottom never shows)."""
     x0, y0, z0, x1, y1, z1, name = b
-    lay = layer_of(L.textures.index(name)) if name in L.textures else layer_of(L.tex(name))
+    lay = layer_of(0) if L is None else layer_of(L.textures.index(name)) if name in L.textures else layer_of(L.tex(name))
     U = UV_SCALE * 1.5
     quad((x0, y1, z0), (x1, y1, z0), (x1, y1, z1), (x0, y1, z1), (0, 1, 0),
          ((x0 * U, z0 * U), (x1 * U, z0 * U), (x1 * U, z1 * U), (x0 * U, z1 * U)), lay, (1.0,) * 4)

@@ -62,6 +62,9 @@ class Level:
         self.farm_cells = []                             # the farm's plots' squares, in order
         # the finer detail (game/detail.py): the ambient by square, puddles, stains, light from above, ceiling things
         self.amb, self.wet, self.stain, self.shafts, self.ceils = None, {}, {}, [], []
+        # what makes a floor more (game/features.py): its special, ghosts, pouring pipes, doors, levers, braziers
+        self.special, self.den, self.ghosts, self.pours = None, None, [], []      # pours: (x, top, z, bottom, nx, nz)
+        self.doors, self.levers, self.braziers, self.trial = [], [], [], None
         self.caches = []
         self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 
@@ -136,8 +139,24 @@ class Level:
             self._blockers = b
         return self._blockers
 
-    def can_stand(self, x, z, radius, foot):
-        """Whether a walker of this radius, feet at height foot, fits here (walls, steps too high, low ceilings)."""
+    def door_at(self, x, z, radius):
+        """A closed door in the way of a walker here (a door fills its square's middle, across the passage)."""
+        for d in self.doors:
+            if d["open"]:
+                continue
+            cx, cz = d["x"] + 0.5, d["y"] + 0.5
+            if d["axis"] == "ns":                            # (across a north-south passage: a slab along x)
+                if abs(z - cz) < 0.08 + radius and abs(x - cx) < 0.5 + radius:
+                    return d
+            elif abs(x - cx) < 0.08 + radius and abs(z - cz) < 0.5 + radius:
+                return d
+        return None
+
+    def can_stand(self, x, z, radius, foot, doors=True):
+        """Whether a walker of this radius, feet at height foot, fits here (walls, steps too high, low ceilings, and
+        a closed door unless doors is False)."""
+        if doors and self.doors and self.door_at(x, z, radius):
+            return False
         B = self.blockers()
         if B:
             for cx in (int(x) - 1, int(x), int(x) + 1):
@@ -232,7 +251,9 @@ def dungeon(depth, seed):
     for heights in (2, 1, 0):                                        # (high and low; gentler; level)
         L = _dungeon(depth, seed, heights)
         if heights == 0 or _whole(L):
-            return L
+            break
+    from . import features
+    features.apply(L, depth, seed)
     return L
 
 
@@ -465,7 +486,7 @@ def walkable_reach(L, radius=0.24):
             if (nx, ny) in seen or not L.open_at(nx, ny) or abs(L.floor[ny, nx] - L.floor[y, x]) > STEP:
                 continue
             foot = max(L.floor[y, x], L.floor[ny, nx]) - 0.01
-            if all(L.can_stand(x + 0.5 + dx * t, y + 0.5 + dy * t, radius, foot) for t in (0.25, 0.5, 0.75, 1.0)):
+            if all(L.can_stand(x + 0.5 + dx * t, y + 0.5 + dy * t, radius, foot, doors=False) for t in (0.25, 0.5, 0.75, 1.0)):
                 seen.add((nx, ny))
                 q.append((nx, ny))
     return seen
