@@ -176,6 +176,12 @@ CATALOG = {
                              "and options. Claude and Magic's sky and weather run over it all: a day, a season and a moon, and live "
                              "weather (rain, storms, mist, wind, snow, heat, aurora, tornadoes) that changes the fight and floods the "
                              "first floors in a storm; a dial shows the hour and the weather, and K the Calendar. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "Home is his cabin in Thornwick: a bed (sleep until morning, mended), a hearth for cooking and a chest that "
+                             "keeps things through death; outside, a farm of up to twenty plots run from its sign - plant, water, harvest, "
+                             "and buy a sprinkler, a farmhand and more plots - growing fourteen crops from seeds that monsters and chests "
+                             "give. Monsters leave meat, fish, mushrooms and honey; eat them raw, or cook up to three things into one of "
+                             "twenty-four dishes for a buff of one to five real hours, found into a cookbook. The pack has tabs: Armor, "
+                             "Wands, Seeds, Raw, Cooked and Misc. "
                              "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, Shift to run (and leap), left button to cast, "
                              "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
