@@ -8,6 +8,7 @@
 { const H = CM.SHORE, S = CM.SCARP, P = CM.Game.prototype, key = (x, y) => `${x},${y}`;
   CM.SOLID.sea = { face: "ground:sand", h: 0.001, see: true, sea: true };   // (no wall to see, no ground: the sea itself lies there, under the land and out past it - 77t-island.js)
   if (CM.SOLID_COLOURS) CM.SOLID_COLOURS.sea = "#4A7A9A";
+  CM.seaCells = (fl) => (fl && fl.number === -1 && fl.kinds ? Object.keys(fl.kinds).filter((k) => fl.kinds[k] === "sea").map((k) => k.split(",").map(Number)) : []);   // (v130.0: for the renderer's map - the sea is water)
   CM.islandKnown = (g) => Boolean(g && g.vext && g.vext("land").island);
   // names
   { const mw0 = CM.makeWood; CM.makeWood = function (seed) { const fl = mw0.call(this, seed); if (fl && fl.grid.length > H.sea && !fl.rooms.some((r) => r.name === "The Strand")) fl.rooms = [{ x0: 0, y0: H.fringe, x1: fl.grid.length - 1, y1: fl.grid.length - 1, name: "The Strand" }].concat(fl.rooms); return fl; }; }

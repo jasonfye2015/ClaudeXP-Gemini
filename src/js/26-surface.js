@@ -213,7 +213,7 @@ CM.floorMesh = function (fl, theme, index, opts = {}) {                 // opts:
       const nx = x + dx, ny = y + dy;
       if (!solid(nx, ny)) { if (fl.levels) { const NL = fl.levels[`${nx},${ny}`], nf = NL ? NL[0] : 0, nc = NL ? NL[1] : 1;   // (v47.0: a step up to the next square, or its lower ceiling, faced from this one)
           const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x + 1, y] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x, y + 1] : d === 2 ? [x + 1, y + 1] : [x, y];
-          if (nf > F0 + 1e-6) quad([a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], nf, b[1]], [a[0], nf, a[1]], sky ? L(index["solid:scarp"] !== undefined ? "solid:scarp" : "solid:cliff") : pickWall(x, y, d, nx, ny), shade * 0.95);   // (under a sky: the rock of a scarp, or a stair cut in it)
+          if (nf > F0 + 1e-6) quad([a[0], F0, a[1]], [b[0], F0, b[1]], [b[0], nf, b[1]], [a[0], nf, a[1]], sky ? L(CM.groundAt(fl, nx, ny) === "planks" ? "solid:timber" : index["solid:scarp"] !== undefined ? "solid:scarp" : "solid:cliff") : pickWall(x, y, d, nx, ny), shade * 0.95);   // (under a sky: the rock of a scarp, or a stair cut in it)
           if (!sky && nc < C0 - 1e-6) quad([a[0], nc, a[1]], [b[0], nc, b[1]], [b[0], C0, b[1]], [a[0], C0, a[1]], pickWall(x, y, d, nx, ny), shade * 0.7); } return; }
       const K = kindOf(nx, ny), key = `${nx},${ny}`;
       if (K.roof || K.tower) return;                                                  // (a building or a tower: walled and roofed below, every face)

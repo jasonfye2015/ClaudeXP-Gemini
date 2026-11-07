@@ -5845,7 +5845,7 @@ test("levels: about one plain room in five a dais and one in nine a pit, the roo
   assert.ok(dais > rooms / 12 && dais < rooms / 2.2, `dais ${dais} of ${rooms}`);   /* (plan 64: the set pieces take room from the plain ones, so the share runs a little higher) */ assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
   assert.ok(CM.FLOOR_FIXED.includes("levels"), "made with the floor, never saved");
   assert.deepStrictEqual(JSON.stringify(CM.makeFloor(7, "lv-1").levels), JSON.stringify(CM.makeFloor(7, "lv-1").levels), "the same each time");
-  assert.ok(!CM.makeFloor(0, "lv-1").levels && Object.keys(CM.makeFloor(-1, "lv-1").levels).every((k) => CM.isScarp(...k.split(",").map(Number))), "none above but the Scarp's (v128.0)");
+  assert.ok(!CM.makeFloor(0, "lv-1").levels && Object.keys(CM.makeFloor(-1, "lv-1").levels).every((k) => CM.isScarp(...k.split(",").map(Number)) || CM.isPier(...k.split(",").map(Number))), "none above but the Scarp's and the pier's (v128.0, v130.0)");
   // the mesh: a stepped floor has more faces than the same floor made level
   let fl = null; for (let n = 1; n <= 30 && !fl; n++) { const f = CM.makeFloor(n, "lv-1"); if (f.levels && Object.keys(f.levels).length) fl = f; }
   const index = new Proxy({}, { get: () => 0 }), stepped = CM.floorMesh(fl, CM.themeFor(fl.number), index).count, flat = CM.floorMesh(Object.assign({}, fl, { levels: null }), CM.themeFor(fl.number), index).count;
@@ -7509,9 +7509,9 @@ test("the Scarp: a high heath in the Wood's south-east as high as the cliffs, wa
 test("the island: the Wood runs on to the sea - a fringe of dunes, the Strand's sand under the cliffs too, the river shallow at its mouth, tracks down from both meadows (stepping stones over the falls' stream), and the sea past it; the sea seen first from the sand, the island from the Lookout, kept with the village; Claude told; an old save's map read at its size; the sea round the land drawn and on the world map", () => {
   const CM = load(), H = CM.SHORE, S = CM.SCARP;
   for (const seed of ["isle-1", "abc"]) { const w = CM.makeWood(seed), N = w.grid.length; assert.strictEqual(N, CM.WOOD_SIZE); assert.ok(N > H.sea + 1);
-    for (let x = 0; x < N; x++) for (let y = H.sea; y < N; y++) assert.strictEqual(CM.solidAt(w, x, y), "sea", `${x},${y} is the sea`);
+    for (let x = 0; x < N; x++) for (let y = H.sea; y < N; y++) if (!(CM.isPier && CM.isPier(x, y))) assert.strictEqual(CM.solidAt(w, x, y), "sea", `${x},${y} is the sea`);   /* (v130.0: but for the pier) */
     assert.ok(!w.decor.some((d) => d.kind === "water" && d.y >= H.sea), "the river's water ends at the sea");
-    for (let x = 1; x < N - 1; x++) for (let y = H.strand[0]; y <= H.strand[1]; y++) if (x !== CM.riverX(y)) assert.strictEqual(w.ground[`${x},${y}`], "sand");
+    for (let x = 1; x < N - 1; x++) for (let y = H.strand[0]; y <= H.strand[1]; y++) if (x !== CM.riverX(y) && !(CM.isPier && CM.isPier(x, y))) assert.strictEqual(w.ground[`${x},${y}`], "sand");
     assert.ok(CM.passable(w, CM.riverX(H.mouth), H.mouth), "the river's mouth wades"); assert.ok(CM.passable(w, ...H.streamFord), "stepping stones over the falls' stream");
     const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
     for (let x = 1; x < N - 1; x++) assert.ok(seen.has(`${x},${H.strand[1]}`) || x === CM.riverX(H.strand[1]), `the water's edge at ${x} walked to`);
@@ -7533,6 +7533,28 @@ test("the island: the Wood runs on to the sea - a fringe of dunes, the Strand's 
   const old = [[3, 4], [59, 30], [60, 80]]; assert.strictEqual(JSON.stringify(CM.unpackSeen(CM.packSeen(old, 81), CM.WOOD_SIZE)), JSON.stringify(old));
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["const isle = fl.number === -1 && CM.LAND_ISLE", "CM.shoreNear = ", "p.fillText(\"the Sea\", 26, 476)", "water, 0.92, 4)"]) assert.ok(html.includes(s), s);
+});
+
+test("the harbour: a long pier from the Strand out over the sea on piles, up a ramp off the sand, with a broad dock across its head; a portal on the dock and its twin in the Square, each to the other; the Harbour Road from the sand over the falls' stream on planks and north to the fields' road; named, safe, on the Where-to list; what the seed placed where it was", () => {
+  const CM = load(), H = CM.HARBOUR;
+  for (const seed of ["dock-1", "abc"]) { const w = CM.makeWood(seed), N = w.grid.length; assert.ok(N > H.head[3] + 1);
+    const deck = []; for (let y = H.foot; y <= H.head[3]; y++) for (let x = 0; x < N; x++) if (CM.isPier(x, y)) { assert.ok(CM.passable(w, x, y), `${x},${y} walked on`); assert.strictEqual(w.ground[`${x},${y}`], "planks"); deck.push(CM.floorAt(w, x, y)); }
+    assert.ok(deck.length >= 40, `a long pier and a broad dock (${deck.length} squares)`); assert.ok(H.head[3] - H.foot >= 12, "a long one");
+    let up = 0; for (let y = H.foot - 1; y <= H.foot + 2; y++) { const a = CM.floorAt(w, H.pier[0], y), b = CM.floorAt(w, H.pier[0], y + 1); assert.ok(b >= a && b - a <= 0.16, "a ramp a step a square"); up = b; } assert.strictEqual(up, H.deck);
+    const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(`${H.portal[0] + 1},${H.portal[1]}`), "the dock walked to from the gate");
+    for (let y = H.road.from; y <= H.road.to; y++) assert.ok(CM.passable(w, H.road.x, y), `the Harbour Road at ${y}`);
+    assert.strictEqual(w.ground[H.bridge.join()], "planks"); assert.ok(!w.decor.some((d) => d.kind === "water" && d.x === H.bridge[0] && d.y === H.bridge[1]));
+    assert.strictEqual(w.things[H.portal.join()].type, "portal"); assert.strictEqual(CM.woodPlace(w, H.portal[0] + 1, H.portal[1]), "the dock"); assert.strictEqual(CM.woodPlace(w, H.pier[0], H.foot + 5), "the pier"); assert.strictEqual(CM.woodPlace(w, H.road.x, 50), "the Harbour Road");
+    assert.ok(CM.woodSafe(w, H.pier[0], H.foot + 5)); }
+  const t = CM.makeTown("dock-1"); assert.strictEqual(t.things[CM.TOWN_DOCK_PORTAL.join()].to, "dock");
+  const g = new CM.Game(); g.newGame("dock-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore";
+  g.enterFloor(0, "rope", [CM.TOWN_DOCK_PORTAL[0] + 1, CM.TOWN_DOCK_PORTAL[1]]); assert.ok(CM.wayPlaces(g).length >= 1); g.usePortal(g.floor.things[CM.TOWN_DOCK_PORTAL.join()]);
+  assert.strictEqual(g.floor.number, -1); assert.strictEqual(CM.woodPlace(g.floor, ...g.floor.pos), "the dock"); assert.ok(g.use(), "the dock answers");
+  g.usePortal(g.floor.things[H.portal.join()]); assert.strictEqual(g.floor.number, 0); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify([CM.TOWN_DOCK_PORTAL[0] + 1, CM.TOWN_DOCK_PORTAL[1]]));
+  g.enterFloor(-1, "rope", CM.CABIN.portal.slice()); g.floor.pos = [CM.CABIN.portal[0] + 1, CM.CABIN.portal[1]]; g.usePortal({ type: "portal", to: "town" }); assert.strictEqual(JSON.stringify(g.floor.pos), JSON.stringify(CM.PORTAL_YARD.cabin), "the cabin's portal still goes to the court");
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["add(\"solid:pile\", c)", "\"harbour:lantern\"", "if (offMap) mS = 1.0;", "CM.seaCells(floor)"]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

@@ -1392,6 +1392,17 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The harbour (v130.0, UPGRADE_PLAN_80.md)
+  (src/js/23b-wood.js, src/js/23g-harbour.js, src/js/26-surface.js, src/js/40-render.js, src/js/69zzzzg-island.js, src/js/69zzzzh-harbour.js, src/js/77u-harbour.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_80.md)
+  - The harbour (UPGRADE_PLAN_80.md): from the Strand east of the river's mouth, a ramp climbs off the sand onto a long
+    wooden pier standing on piles out over the sea, rails along both sides and lanterns on posts that are lit from
+    dusk to dawn, out to a broad dock across its head, with bollards along its south face where a boat will lie.
+    The pier and the dock are safe at any hour, and the dock is on the Where-to list once you've seen it.
+  - The sea's portal: a portal on the dock and its twin in the town's Square, each taking you to the other.
+  - The Harbour Road: from the pier's foot west along the sand, over the falls' stream on a plank bridge, north past
+    the falls, through the South Meadow and the forest, to the fields' road and on to the West Gate.
+  - The open sea is deep water now: no weed or lily pads past the shore, and fish moving under the surface.
+
 The shore, the sea, and the island (v129.0, UPGRADE_PLAN_79.md)
   (src/js/23b-wood.js, src/js/23f-shore.js, src/js/26-surface.js, src/js/69zzzzg-island.js, src/js/76zzzg-worldmap.js, src/js/76zzzzs-placeamb.js, src/js/76zzzzzzzzz1-farhills.js, src/js/77s-scarp.js, src/js/77t-island.js, tools/headless.js, tests/run.js)
   - The shore (UPGRADE_PLAN_79.md): the Deep Wood runs on south past the Scarp to the coast - the trees thinning onto
