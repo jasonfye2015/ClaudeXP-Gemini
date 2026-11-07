@@ -135,6 +135,15 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   tools/make_art.py). Hidden rooms behind cracked walls (L.secret_walls; world._crack; L.mesh_version makes the
   renderer build the floor again). game/eggs.py: the secrets (see it, not the README).
 
+## v0.17 - auto-play, and the endless Deep - done
+
+- game/autoplay.py: Autopilot.drive (fight / puzzles at hand / Dijkstra over squares his body fits through - traps
+  dear, doors shut without their keys - to pickups, chests, doors, levers, the trial, cracked walls, monsters, the
+  unseen, the stairs; stuck: jump, strafe, shoot ahead, give the goal up a while) and housekeeping (shopping, the
+  best wands by greedy dps, gear by weighted stats, skills, farm, cooking and eating, selling, potions). The HUD's
+  button over the life orb, and P. Endless: data.band_of cycles; world.endless() once the hundredth floor's
+  guardian falls (stats["won"]).
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

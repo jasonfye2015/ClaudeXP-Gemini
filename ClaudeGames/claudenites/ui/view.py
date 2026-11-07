@@ -51,6 +51,7 @@ class GameView(QOpenGLWidget):
         self.renderer = None
         self.keys = set()
         self.inp = Input()
+        self.auto, self.bot = False, None             # (auto-play: game/autoplay.py drives him)
         self.captured = False
         self.running = False
         self.last = time.perf_counter()
@@ -111,6 +112,9 @@ class GameView(QOpenGLWidget):
     # ---- the loop ----------------------------------------------------------------------------------------------
     def start(self, game):
         self.game = game
+        if self.auto:
+            from ..game.autoplay import Autopilot
+            self.bot = Autopilot()
         self.running = True
         self.floaters, self.toasts = [], []
         self.explored = None
@@ -125,7 +129,20 @@ class GameView(QOpenGLWidget):
         if dt > 0:
             self.fps = self.fps * 0.95 + (1 / dt) * 0.05
         g = self.game
-        if g and self.running and not self.shell.panel_open():
+        if g and self.running and self.auto and self.shell.panel_open():   # (auto-play: past death's and the end's notices)
+            from .panels import ChoicePanel
+            ov = self.shell.overlay
+            if ov is not None and isinstance(getattr(ov, "panel", None), ChoicePanel):
+                self.shell.close_panel()
+        if g and self.running and not self.shell.panel_open() and self.auto:
+            self.bot.drive(g, self.inp, dt)
+            ox, oz = g.x, g.z
+            g.step(dt, self.inp)
+            g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt, 1e-4)
+            self._explore()
+            self._music(g)
+            self._sound_of_weather(g)
+        elif g and self.running and not self.shell.panel_open():
             k = self.keys
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
@@ -342,7 +359,25 @@ class GameView(QOpenGLWidget):
         self.inp.pitch = max(-1.4, min(1.4, self.inp.pitch - dy * sens))
         self._centre()
 
+    def auto_rect(self):
+        """The Auto-play button, over the life orb."""
+        return QRectF(18, self.height() - 168, 122, 26)
+
+    def toggle_auto(self):
+        self.auto = not self.auto
+        if self.auto:
+            from ..game.autoplay import Autopilot
+            self.bot = Autopilot()
+        else:
+            self.inp.forward = self.inp.strafe = 0.0
+            self.inp.fire = self.inp.jump = False
+        self.toasts.append(("Auto-play on: Claude plays himself (P to stop)" if self.auto else "Auto-play off",
+                            (0.7, 0.9, 1.0), time.perf_counter()))
+
     def mousePressEvent(self, e):
+        if self.game and self.running and self.auto_rect().contains(QPointF(e.position())) and not self.captured:
+            self.toggle_auto()
+            return
         if not self.captured:
             self.capture()
             return
@@ -403,6 +438,8 @@ class GameView(QOpenGLWidget):
             self.shell.open_dialog(("pack",))
         elif k == Qt.Key_M:
             self.show_map = not self.show_map
+        elif k == Qt.Key_P:
+            self.toggle_auto()
         elif k == Qt.Key_K:
             self.release()
             self.shell.open_dialog(("calendar",))
@@ -504,6 +541,16 @@ class GameView(QOpenGLWidget):
             T.outlined(p, r.x() + 26, r.y() + 17, key, QFont(T.BODY, 9, QFont.Bold), QColor("#FFE9A0"), width=2.5)
             T.outlined(p, r.x() + 40, r.y() + 17, f"x{pl.potions.get(kind, 0)}", QFont(T.BODY, 10, QFont.Bold),
                        QColor("#F0E4C8"), width=2.5)
+        # the Auto-play button, over the life orb
+        r = self.auto_rect()
+        T.plate(p, r, 8, 210)
+        if self.auto:
+            pulse = 0.5 + 0.5 * math.sin(now * 3)
+            p.setPen(QPen(QColor(120, 220, 255, int(140 + 110 * pulse)), 2))
+            p.setBrush(Qt.NoBrush)
+            p.drawRoundedRect(r, 8, 8)
+        T.outlined(p, r.center().x(), r.y() + 18, f"Auto-play: {'Y' if self.auto else 'N'}", QFont(T.BODY, 10, QFont.Bold),
+                   QColor("#9EE6FF") if self.auto else QColor("#E8D8B8"), centre=True, width=2.5)
         # life and mana, in their orbs at the plate's ends
         T.orb(p, 78, H - 78, 56, pl.life / max(1, pl.max_life()), QColor("#C8242A"),
               f"{int(pl.life)}/{pl.max_life()}", now, warn=pl.life < pl.max_life() * 0.3)

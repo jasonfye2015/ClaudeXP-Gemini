@@ -8,7 +8,7 @@ thing the town is built over.
 Playing
   WASD move, Shift run (a running jump goes higher and further), mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
   F talk / use (the vendors, the stairs, the Deep's mouth, the cabin, the bed, the hearth, the chest, the farm sign), Q health potion, E mana potion, T Scroll of Return,
-  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, Esc the menu.
+  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, P auto-play on/off, Esc the menu.
 
   Thornwick is home: four vendors round the square - Hesper the Apothecary (potions, Scrolls of Return), Old Tamsin
   the Wandwright (wands and wand parts), Bramwell the Outfitter (hats, robes, gloves, boots, rings, amulets) and
@@ -126,6 +126,18 @@ Playing
   Puzzles: a door sealed with runes and no key - find and pull every lever on the floor (two or three, glowing red
   until pulled) and it grinds open; and a room of cold braziers - shoot one to light it and the trial begins: light
   them all within twelve seconds (the time shows) and a chest rises from the floor, or they all go out to try again.
+
+  Auto-play (the button over the life orb, or P): Claude plays himself (game/autoplay.py). On a floor he fights
+  whatever he sees (backing off from biters, potions when he needs them), takes everything lying about, opens every
+  chest, unlocks the doors he has keys for, pulls the levers, runs the brazier trial, breaks the cracked walls he's
+  found, hunts down every monster left and walks every square - then takes the stairs home (eight minutes on a
+  floor, and he heads for the stairs whatever's left). In Thornwick he sees to his things: buys from Old Tamsin and
+  Bramwell whatever beats what he has, builds the best two wands he can from every body and part, wears the best
+  gear, spends his skill points, harvests and waters and plants the farm, cooks, eats the best meals, sells
+  everything left over (never the chest at home) and stocks up on potions and scrolls - then goes down again to
+  where the run has got to. If he falls, he gets up and starts again. Past the hundredth floor it goes on: endless.
+  Endless: once the Unmade King falls, the Deep goes on past the hundredth floor - the bands come round again, their
+  guardians with them, everything harder each time.
 
   The Gauntlet: once a guardian has fallen, a strange floor may be a boss rush - the guardians of the bands already
   passed (up to four, the newest last), waiting in the stairs' hall. Step in and they come one at a time, each

@@ -144,9 +144,9 @@ class Shell(QWidget):
             if nxt % 10 == 0:
                 note += f" Something waits on floor {nxt}: {band['guardian']}."
             choices = []
-            if g.depth < D.FLOORS:
+            if g.depth < D.FLOORS or g.endless():
                 choices.append((f"Go down to floor {nxt}", lambda: self._do(g.descend)))
-            choices.append((f"Go home to {D.TOWN_NAME} (the way down will wait at floor {min(D.FLOORS, nxt)})",
+            choices.append((f"Go home to {D.TOWN_NAME} (the way down will wait at floor {nxt if g.endless() else min(D.FLOORS, nxt)})",
                             lambda: self._do(g.stairs_home)))
             choices.append(("Not yet", self.close_panel))
             self.set_panel(panels.ChoicePanel("The stairs", note.strip(), choices))
@@ -246,8 +246,8 @@ class Shell(QWidget):
     def on_victory(self):
         self.set_panel(panels.ChoicePanel(
             "The bottom of the Deep",
-            "The Unmade King is unmade. Whatever Claude becomes after this, it begins here. (The Deep stays open: "
-            "every floor of it, for as long as he likes.)",
+            "The Unmade King is unmade. Whatever Claude becomes after this, it begins here. And the Deep goes on: "
+            "past the hundredth floor the bands come round again, harder each time - endless.",
             [("Carry on", self.close_panel)]))
 
     def closeEvent(self, e):
