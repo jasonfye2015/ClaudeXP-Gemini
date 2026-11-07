@@ -1392,6 +1392,15 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The bells of Caer Duin (v124.0, UPGRADE_PLAN_76.md)
+  (src/js/77o-bells.js, tests/run.js)
+  - The bells of Caer Duin (plan 76, release 2): the story turns on bells - taken down when the queen died, cast by
+    the hundred and never rung - and now so does the sound. Until the story earns them they are almost unheard: in
+    the Foundry, now and then, far off, a cracked bell begins and is cut short. At the quiet ending a single clear
+    bell rings out, the first in all the years; at the Last Page, a slow peal of three. After that the town keeps the
+    hours with a soft bell far off, and the title card opens with one. And a band's first floor greets the party with
+    the first phrase of the band's own theme.
+
 The mix (v123.0, UPGRADE_PLAN_76.md)
   (src/js/77n-audiomix.js, tests/run.js, UPGRADE_PLAN_76.md)
   - The mix (plan 76, release 1, from the audio review): every sound effect is now a touch different each time - its
