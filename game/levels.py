@@ -15,6 +15,9 @@ from . import data as D
 from . import dress
 from . import forest
 
+# what breaks: props (radius and height at scale 0.4) and sprites by picture
+BREAK_PROPS = {"barrel": (0.27, 0.5), "crate": (0.26, 0.32)}
+BREAK_SPRITES = {"fu.rack", "fu.shelf", "fu.table", "fu.bench", "sp.eggsac", "sp.cocoon", "sp.egg", "fungus", "sp.cage"}
 STEP = 0.42                          # the highest step a walker takes without a jump
 INVISIBLE = 255                      # a wall texture that draws nothing (the forest's edge: trees stand there instead)
 
@@ -75,6 +78,31 @@ class Level:
         if not self.open_at(cx, cy):
             return -99.0
         return 99.0 if self.outdoor else float(self.ceil[cy, cx])
+
+    def breakables(self):
+        """What a bolt can smash, by square: [(thing, x, z, y, r, h)] - barrels and crates (props), racks, shelves,
+        tables, benches, egg sacs, cocoons and fungus (sprites). Made again when one breaks."""
+        if getattr(self, "_breakables", None) is None:
+            out = {}
+            for p in self.props:
+                if p["model"] in BREAK_PROPS:
+                    r, h = BREAK_PROPS[p["model"]]
+                    out.setdefault((int(p["x"]), int(p["z"])), []).append((p, p["x"], p["z"], p.get("y", 0.0), r * p["scale"] / 0.4, h * p["scale"] / 0.4))
+            for s in self.sprites:
+                if s["name"] in BREAK_SPRITES:
+                    out.setdefault((int(s["x"]), int(s["z"])), []).append((s, s["x"], s["z"], s["y"], max(0.2, s["w"] * 0.4), s["h"]))
+            self._breakables = out
+        return self._breakables
+
+    def smash(self, thing):
+        """Take a broken thing out of the floor (it no longer stands in the way, and isn't drawn)."""
+        if thing in self.props:
+            self.props.remove(thing)
+        elif thing in self.sprites:
+            self.sprites.remove(thing)
+        self._breakables = None
+        self._blockers = None
+        self.version = getattr(self, "version", 0) + 1
 
     def blockers(self):
         """Things that stand in the way, by square: [(x, z, r)] (solid sprites, chests, solid props)."""

@@ -30,6 +30,18 @@ Playing
   a Rebounding Band (bounces) and a Piercing Thorn (passes through). Fire burns, Frost slows, Storm leaps to the
   next foe, Venom stacks; Arcane hits harder. Four wands ready at once.
 
+  Barrels, crates, weapon racks, shelves, tables, benches, egg sacs, cocoons and fungus break under his bolts -
+  splinters everywhere, and now and then a little gold or a potion inside.
+
+  The music is ClaudeRPG's: its own engine (engine/music.py, carried over from its SND), every note made as it plays
+  - a drone, a bass, a lead from the place's scale, bells, an echo - in its worlds' styles: the town and the title in
+  its own, the forest in its Crystal Grotto's, and each band of the Deep in one of its worlds' (the Undercroft, the
+  Sunken Halls, the Frozen Caverns, the Clockwork City's waltz, the Burning Heart's drums), turning to its battle
+  music when a guardian wakes. Options on the title: music on/off and volume, sound, the townsfolk's voices, the mouse.
+
+  The title: a title card - the name over Thornwick at dusk, the camera circling the Deep's mouth - and then one page
+  with Play (the three slots as cards), Records, Options, Keys and Credits.
+
   The dead flip over: a thing that stood falls flat on its back, a beast or a blob rolls belly-up.
 
   The Deep is dressed as Claude and Magic's is: pipe mouths that drip, barred grates and drain ports, webs in the

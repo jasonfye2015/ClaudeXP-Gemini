@@ -15,6 +15,8 @@ from ..game.saves import Saves
 from ..game.world import Game
 
 from . import panels
+from .audio import Music
+from .title import TitleScreen
 from .view import GameView
 
 
@@ -29,8 +31,10 @@ class Shell(QWidget):
         self.setMinimumSize(800, 520)
         self.setAttribute(Qt.WA_DeleteOnClose, False)
         self.saves = Saves(saves_dir)
-        self.sounds = Sounds(muted)
         self.settings = self._read_settings()
+        self.sounds = Sounds(lambda: muted() or not self.settings.get("sound", True))
+        self.music = Music(enabled=lambda: self.settings.get("music", True),
+                           volume=lambda: self.settings.get("music_volume", 0.8), muted=muted)
         self.speech = Speech(enabled=self.settings.get("speech", True))
         self.talk = {}                                       # vendor -> [(who, text)] this visit
         self._bridge = _Bridge()
@@ -51,14 +55,14 @@ class Shell(QWidget):
     def panel_open(self):
         return self.overlay is not None
 
-    def set_panel(self, panel):
+    def set_panel(self, panel, full=False):
         if self.overlay is not None:
             self.overlay.hide()
             self.overlay.deleteLater()
             self.overlay = None
         if panel is not None:
             self.view.release()
-            self.overlay = panels.Overlay(self, panel)
+            self.overlay = panels.Overlay(self, panel, full)
             self.overlay.setGeometry(self.rect())
             self.overlay.show()
             self.overlay.raise_()
@@ -74,10 +78,12 @@ class Shell(QWidget):
         self.slot = None
         backdrop = Game.new(seed=4242)                      # (Thornwick behind the title, turning slowly)
         backdrop.yaw = 0.0
+        backdrop.hand = False                               # (no wand in hand on the title)
         self.view.start(backdrop)
         self.view.running = False
         self.view.inp.yaw = 0.0
-        self.set_panel(panels.TitlePanel(self))
+        self.music.place("title")
+        self.set_panel(TitleScreen(self), full=True)
 
     def play(self, slot):
         d = self.saves.load(slot)
@@ -231,5 +237,6 @@ class Shell(QWidget):
 
     def closeEvent(self, e):
         self.save()
+        self.music.stop()
         super().closeEvent(e)
 

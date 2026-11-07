@@ -319,6 +319,17 @@ class Game:
         self._bolts(dt)
         self._monsters(dt)
         self.fx = [f for f in self.fx if self.time - f["t"] < f.get("life", 0.5)]
+        for f in self.fx:                                        # (splinters fly and fall)
+            if f.get("kind") == "debris":
+                f["vy"] -= GRAVITY * dt
+                f["x"] += f["vx"] * dt
+                f["z"] += f["vz"] * dt
+                f["y"] += f["vy"] * dt
+                if f["y"] < f["floor"] + 0.03:
+                    f["y"] = f["floor"] + 0.03
+                    f["vy"] = -f["vy"] * 0.3
+                    f["vx"] *= 0.5
+                    f["vz"] *= 0.5
         if p.life <= 0 and not self.dead:
             self.dead = True
             self.die()
@@ -445,6 +456,9 @@ class Game:
                         alive = False
                         break
                 else:
+                    if self._smash_at(b):
+                        alive = False
+                        break
                     for m in self.monsters:
                         if m.dead or m.id in b.hit:
                             continue
@@ -463,6 +477,50 @@ class Game:
             if alive:
                 keep.append(b)
         self.bolts = keep
+
+    def _smash_at(self, b):
+        """A bolt meeting a barrel, a crate, a rack: it takes the blow, and enough of them break it."""
+        L = self.level
+        B = L.breakables()
+        if not B:
+            return False
+        cx, cy = int(b.x), int(b.z)
+        for gx in (cx - 1, cx, cx + 1):
+            for gy in (cy - 1, cy, cy + 1):
+                for thing, x, z, y, r, h in B.get((gx, gy), ()):
+                    if (b.x - x) ** 2 + (b.z - z) ** 2 < (r + b.radius) ** 2 and y - 0.05 < b.y < y + h + 0.05:
+                        thing["hurt"] = thing.get("hurt", 0) + b.dmg
+                        self._spark(b.x, b.y, b.z, b.element, "impact")
+                        if thing["hurt"] >= 8 + 3 * max(1, self.depth) ** 0.5:
+                            self.smash(thing, x, y, z, h)
+                        else:
+                            self.events.append(("thud", (x, y + h * 0.5, z)))
+                        return True
+        return False
+
+    def smash(self, thing, x, y, z, h):
+        L = self.level
+        L.smash(thing)
+        name = thing.get("model") or thing.get("name")
+        self.events.append(("break", (x, y, z), name, h))
+        for _ in range(9):                                       # (the splinters)
+            a = self.rng.uniform(0, math.tau)
+            sp = self.rng.uniform(1.0, 2.6)
+            self.fx.append({"x": x, "y": y + h * 0.5, "z": z, "vx": math.cos(a) * sp, "vy": self.rng.uniform(1.5, 3.5),
+                            "vz": math.sin(a) * sp, "t": self.time, "life": 1.1, "kind": "debris", "c": (0.5, 0.36, 0.22),
+                            "floor": y, "size": self.rng.uniform(0.05, 0.11), "pic": name})
+        p, rng = self.player, self.rng
+        got = []
+        if rng.random() < 0.3:
+            n = max(1, I.gold_for(max(1, self.depth), rng, p.bonus().get("find", 0)) // 2)
+            p.gold += n
+            got.append(f"+{n} gold")
+        if rng.random() < 0.06:
+            k = rng.choice(["health", "mana"])
+            p.potions[k] += 1
+            got.append("a Health Potion" if k == "health" else "a Mana Potion")
+        if got:
+            self.events.append(("loot", (x, y + 0.5, z), got))
 
     def _reflect(self, b, nx, ny, nz):
         L = self.level

@@ -20,4 +20,7 @@ The painted art and the set pieces (assets/cm): Claude and Magic's own, as it dr
 furniture, landmarks and set-piece things) and writes them (its sixty set-piece rooms and their lines), exported from
 the running game by tools/export_cm_art.py.
 
+The music: ClaudeRPG's own - its sound engine (SND) and its worlds' music styles (MSTY), by Kithylin, MIT licence
+(ClaudeGames/clauderpg/game/LICENSE) - carried over into Python in engine/music.py, note for note.
+
 The sounds are made by the game as it starts (engine/sound.py); the item pictures are painted (ui/icons.py).

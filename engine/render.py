@@ -217,6 +217,7 @@ class Renderer:
         self.bob = 0.0
         self.anim_now = 0.0
         self.arcs = []
+        self._version = 0
         self.proj_view = np.identity(4, np.float32)
 
     # ---- the level ---------------------------------------------------------------------------------------------
@@ -228,6 +229,9 @@ class Renderer:
         from ..game import dress as _dress
         theme = _dress.CM_THEME_OF_BAND[min(9, max(0, (L.depth - 1) // 10))]
         self.water_mesh.upload(dressmesh.water(L, self.art_layers.get(f"t{theme}.water0", 0)))
+        self._props(L)
+
+    def _props(self, L):
         for vao, buf, _n, _mesh in self.inst.values():
             GL.glDeleteBuffers(1, [buf])
             GL.glDeleteVertexArrays(1, [vao])
@@ -279,6 +283,9 @@ class Renderer:
         L = g.level
         if L is not self.level:
             self.set_level(L)
+        elif getattr(L, "version", 0) != self._version:            # (something broke: the props again)
+            self._props(L)
+        self._version = getattr(L, "version", 0)
         now = time.perf_counter() - self.t0
         self.anim_now += dt
         GL.glViewport(0, 0, w, h)
@@ -376,7 +383,8 @@ class Renderer:
         # glows: bolts, sparks, torches, the stairs' rune circle, the Deep's mouth
         self._glows(g, view, now)
         # the wand in his hand
-        self._wand(g, proj, view, now, dt, lights, common)
+        if getattr(g, "hand", True):
+            self._wand(g, proj, view, now, dt, lights, common)
 
     def _dressing(self, g, L, now):
         self.art.use()
@@ -394,6 +402,13 @@ class Renderer:
             lay = get(s["name"])
             if lay is not None:
                 things.append((s["x"], s["y"], s["z"], s["w"], s["h"], lay, 1.5 if s.get("glow") else 1.0))
+        wood = get("fu.table")
+        for f in g.fx:                                                  # (splinters of what broke)
+            if f.get("kind") == "debris":
+                lay = get(f.get("pic") or "")
+                lay = lay if lay is not None and f.get("pic", "").startswith(("fu.", "sp.", "fungus")) else wood
+                if lay is not None:
+                    things.append((f["x"], f["y"], f["z"], f["size"] * 2, f["size"] * 2, lay, 0.9))
         chest = get("chest")
         if chest is not None:
             for c in L.chests:
@@ -424,7 +439,7 @@ class Renderer:
         for b in g.bolts[:10]:
             c = D.ELEMENT_COLOUR[b.element]
             out.append(((b.x, b.y, b.z, 3.2 if not b.foe else 2.6), (c[0] * 0.9, c[1] * 0.9, c[2] * 0.9, 1)))
-        for f in g.fx[-4:]:
+        for f in [f for f in g.fx if f.get("kind") != "debris"][-4:]:
             k = max(0.0, 1 - (g.time - f["t"]) / f.get("life", 0.5))
             c = f["c"]
             out.append(((f["x"], f["y"], f["z"], 2.5), (c[0] * k * 1.4, c[1] * k * 1.4, c[2] * k * 1.4, 1)))
@@ -549,6 +564,8 @@ class Renderer:
                 t = k * 0.025
                 bill(b.x - b.vx * t, b.y - b.vy * t, b.z - b.vz * t, 0.12 - k * 0.025, c, 0.7 - k * 0.15)
         for f in g.fx:
+            if f.get("kind") == "debris":
+                continue
             k = (g.time - f["t"]) / f.get("life", 0.5)
             if k < 1:
                 bill(f["x"], f["y"], f["z"], 0.15 + k * 0.45, f["c"], (1 - k) * 1.4)

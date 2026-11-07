@@ -100,7 +100,8 @@ class GameView(QOpenGLWidget):
                 p.drawText(self.rect().adjusted(30, 30, -30, -30), Qt.TextWordWrap,
                            "The picture couldn't be drawn:\n\n" + self.gl_error)
             elif self.game:
-                self.hud(p)
+                if self.running:
+                    self.hud(p)
         finally:
             p.end()
 
@@ -133,12 +134,28 @@ class GameView(QOpenGLWidget):
             g.step(dt, self.inp)
             g._speed_seen = math.hypot(g.x - ox, g.z - oz) / max(dt, 1e-4)
             self._explore()
-        elif g and not self.running:                       # (the title's backdrop: Thornwick, turning)
-            g.yaw += dt * 0.06
+            self._music(g)
+        elif g and not self.running:                       # (the title's backdrop: Thornwick, the camera circling the square)
             g.time += dt
+            a = g.time * 0.045
+            cx, cz = g.level.portal
+            g.x, g.z = cx + math.cos(a) * 8.5, cz + math.sin(a) * 8.5
+            g.y = 1.1
+            g.yaw = math.atan2(cx - g.x, -(cz - g.z))
+            g.pitch = -0.2
         if g:
             self._events()
         self.update()
+
+    def _music(self, g):
+        """The music follows him: the town, the forest, the band he's in, and a guardian's fight."""
+        if g.depth:
+            key = (g.depth - 1) // 10
+            boss = any(m.guardian and m.awake and not m.dead for m in g.monsters)
+        else:
+            key = "town" if g.in_town() else "forest"
+            boss = False
+        self.shell.music.place(key, boss)
 
     def _explore(self):
         g = self.game
@@ -183,6 +200,10 @@ class GameView(QOpenGLWidget):
                     self.toasts.append((line, (0.85, 0.82, 0.74), now + 0.3))
             elif kind == "chest":
                 snd.play("coin", 0.7)
+            elif kind == "break":
+                snd.play("break", 0.7)
+            elif kind == "thud":
+                snd.play("thud", 0.5)
             elif kind == "cast":
                 snd.play("cast_" + e[1], 0.32)
                 if self.renderer:
@@ -248,8 +269,9 @@ class GameView(QOpenGLWidget):
         if c is None or gp == c:
             return
         dx, dy = gp.x() - c.x(), gp.y() - c.y()
-        self.inp.yaw += dx * SENS
-        self.inp.pitch = max(-1.4, min(1.4, self.inp.pitch - dy * SENS))
+        sens = SENS * float(self.shell.settings.get("mouse", 1.0))
+        self.inp.yaw += dx * sens
+        self.inp.pitch = max(-1.4, min(1.4, self.inp.pitch - dy * sens))
         self._centre()
 
     def mousePressEvent(self, e):
