@@ -119,6 +119,15 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
 - Five rarities for gear, wands and parts (data.RARITIES, WAND_POWER, WAND_HASTE, PART_POWER); old saves migrated
   (items.migrate); the colours and effects in the tiles, tooltips, HUD, drops, toasts and a Legendary banner.
 
+## v0.15 - strange floors, locked doors, puzzles - done
+
+- game/features.py, after a floor is made whole: specials (dream/hoard/den/drowned, about 1 in 5, seeded), coloured
+  doors on one-way-in rooms with their keys reachable with every door shut (features.reach), the lever-sealed rune
+  door, the brazier trial. Level.door_at/can_stand(doors=) - walkable_reach ignores doors. Game: ghosts (their own
+  list: nothing touches them), keys, open_door, pull_lever, _trial, _light_brazier. Renderer: door slabs
+  (levelmesh.door, tinted), runes, lever lights, pouring pipes, ghosts, the Dreaming's lights/tint/FOV; HUD keys,
+  the trial's countdown, the Dreaming's colour wash.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

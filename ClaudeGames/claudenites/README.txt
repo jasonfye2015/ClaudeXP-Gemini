@@ -111,6 +111,22 @@ Playing
   bottles, vines down the walls and hanging from the roof - and here and there a grate in a ceiling with the light
   of the day above falling through it (the moon's at night, less under cloud), dust turning in the beam.
 
+  Strange floors (game/features.py): about one floor in five, never the first nor a guardian's, is more than it
+  seems, and says so on its card -
+    the Dreaming   the lights red, green and blue and turning, the colours washing over the eyes, the view
+                   breathing; half the creatures real, and ghosts drifting among them - they can't be hurt, and
+                   they don't hurt, but try telling your nerves that
+    a Hoard        gold heaped in every room and spilled across the floors, the torches burning gold, more chests,
+                   and some of them guarded
+    a Den          one kind of creature, and lots of it, with its nests
+    Drowned        the rooms flooded to the knee (it slows him), pipes in the walls pouring water into them
+  Locked doors: on about half the floors, a dead-end room is shut by a red, blue, green or gold door; its key lies
+  somewhere on the floor that can be reached without it (it glows in its colour). F at the door with the key opens
+  it on the vault: rich chests, gold and finds. The keys held show under the place's name.
+  Puzzles: a door sealed with runes and no key - find and pull every lever on the floor (two or three, glowing red
+  until pulled) and it grinds open; and a room of cold braziers - shoot one to light it and the trial begins: light
+  them all within twelve seconds (the time shows) and a chest rises from the floor, or they all go out to try again.
+
   Rarity: everything found - gear, wands and wand parts - is Common, Uncommon (green), Rare (blue), Epic (purple)
   or Legendary (orange), likelier the deeper and with luck. A wand's rarity adds damage (to +65%) and casting speed
   (to +18%), and an Epic or Legendary wand has a slot more; a part's rarity strengthens its effects (to x1.75) and

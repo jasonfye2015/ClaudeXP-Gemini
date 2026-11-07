@@ -44,7 +44,7 @@ def test_every_floor_is_whole():
             assert dist[gz, gx] > 0, f"floor {depth}: the guardian can't be reached"
         else:
             assert not guardians
-        assert L.name == D.band_of(depth)["name"]
+        assert L.name.split(":")[0] == D.band_of(depth)["name"]          # (a strange floor adds its kind: "...: a Hoard")
         assert len(L.spawns) >= 6, (depth, len(L.spawns))
 
 

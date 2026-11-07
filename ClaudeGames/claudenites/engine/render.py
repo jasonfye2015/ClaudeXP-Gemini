@@ -180,7 +180,7 @@ vec3 sheen(vec3 p) {                                                       // th
         vec3 hv = normalize(d / max(dist, 1e-3) + v);
         s += uLightCol[i].rgb * pow(max(hv.y, 0.0), 90.0) * att * 2.5;
     }
-    return s + uAmbient * 0.12 * pow(1.0 - max(v.y, 0.0), 3.0);
+    return min(s, vec3(1.2)) + uAmbient * 0.12 * pow(1.0 - max(v.y, 0.0), 3.0);
 }
 void main() { vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint;
               if (uGBlend > 0.0 && uMapN.x > 0.0 && vNrm.y > 0.9 && vPos.y < 0.6) base = mix(base, ground(base), uGBlend);
@@ -416,6 +416,7 @@ class Renderer:
         self.proj_view = np.identity(4, np.float32)
         self.map_tex, self.map_n = None, (0.0, 0.0)
         self.amb_tex, self.amb_n = None, (0.0, 0.0)
+        self.door_meshes = []
         self.ground_blend = True                             # (the ground's blending: Options, on/off)
 
     # ---- the level ---------------------------------------------------------------------------------------------
@@ -423,6 +424,11 @@ class Renderer:
         self.level = L
         layer_of = lambda i: self.layers.get(L.textures[int(i)], 0) if int(i) < len(L.textures) else 0   # noqa: E731
         self.level_mesh.upload(levelmesh.build(L, layer_of))
+        self.door_meshes = []
+        for d in getattr(L, "doors", ()):
+            m = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
+            m.upload(levelmesh.door(L, d, self.layers.get("ground.planks", 0)))
+            self.door_meshes.append((d, m))
         if getattr(self, "map_tex", None):
             GL.glDeleteTextures(1, [self.map_tex])
             self.map_tex = None
@@ -522,7 +528,12 @@ class Renderer:
         self.flash = max(0.0, getattr(self, "flash", 0.0) - dt * 4)
         GL.glClearColor(*fogc, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
-        proj = gl.perspective(72.0, w / max(1, h), 0.05, 120.0)
+        dream = getattr(L, "special", None) == "dream"
+        if dream:                                                       # (the Dreaming: the view breathes, its colour drifts)
+            if not hasattr(L, "tint0"):
+                L.tint0 = L.tint
+            L.tint = tuple(t * (1.0 + 0.22 * math.sin(now * 0.6 + k * 2.1)) for k, t in enumerate(L.tint0))
+        proj = gl.perspective(72.0 + (4.0 * math.sin(now * 0.8) if dream else 0.0), w / max(1, h), 0.05, 120.0)
         self._proj_cache = proj
         eye = g.eye
         moving = abs(getattr(g, "_speed_seen", 0)) > 0.1
@@ -587,6 +598,15 @@ class Renderer:
         GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.tex_array)
         self.world.int("uTex", 0)
         self.level_mesh.draw()
+        if self.door_meshes:                                            # (the closed doors: timber, in their colours)
+            from ..game.features import DOOR_COLOURS
+            for d, mesh in self.door_meshes:
+                if d["open"]:
+                    continue
+                c = DOOR_COLOURS[d["colour"]]
+                self.world.vec("uTint", tuple(0.45 + 0.75 * v for v in c))
+                mesh.draw()
+            self.world.vec("uTint", L.tint)
         # the props
         self.plant.use()
         self.plant.vec("uTint", (1, 1, 1) if outdoor else tuple(min(1.0, t) * 0.9 for t in L.tint))
@@ -620,6 +640,9 @@ class Renderer:
             if d2 > 32 * 32 or (d2 > 4 and dx * fx + dz * fz < -0.2 * math.sqrt(d2)):
                 continue                                                # (behind him, or lost in the dark)
             self._monster(g, m)
+        for m in getattr(g, "ghosts", ()):                             # (the Dreaming's ghosts: see-through, shifting colour)
+            if (m.x - g.x) ** 2 + (m.z - g.z) ** 2 < 30 * 30:
+                self._ghost(g, m, now)
         # the water's surface
         if self.art_array is not None and (self.water_mesh.count or self.flood_mesh.count):
             self.art.use()
@@ -667,12 +690,17 @@ class Renderer:
                 things.append((s["x"], s["y"], s["z"], s["w"], s["h"], lay, 1.5 if s.get("glow") else 1.0))
         pile = get("item:dc_gold_gold_pile_10.png") or get("sp.coins")
         pics = {"health": get("item:s7_P_Red01.png"), "mana": get("item:s7_P_Blue01.png"), "scroll": get("item:s7_I_Scroll.png")}
+        for colour in ("red", "blue", "green", "rune"):
+            pics["key:" + colour] = get(f"item:key_{colour}.png")
+        pics["key:gold"] = get("item:s7_I_Key03.png")
         for pk in L.pickups:                                            # (things lying about, in their own pictures)
             if pk["kind"] == "gold" and pile is not None:
                 things.append((pk["x"], pk["y"], pk["z"], 0.42, 0.42, pile, 1.25))
-            elif pics.get(pk["kind"]) is not None:
+            elif pics.get(pk["kind"] if pk["kind"] != "key" else "key:" + pk["colour"]) is not None:
                 bob = 0.05 * math.sin(now * 2.5 + pk["phase"])
-                things.append((pk["x"], pk["y"] + 0.04 + bob, pk["z"], 0.34, 0.34, pics[pk["kind"]], 1.35))
+                key = pk["kind"] if pk["kind"] != "key" else "key:" + pk["colour"]
+                size = 0.34 if pk["kind"] != "key" else 0.42
+                things.append((pk["x"], pk["y"] + 0.04 + bob + (0.25 if pk["kind"] == "key" else 0), pk["z"], size, size, pics[key], 1.5))
         for d in getattr(g, "drops", ()):                               # (what was had, flying to him)
             if g.time < d["t"]:
                 continue
@@ -824,11 +852,23 @@ class Renderer:
                 out.append(((t[0], t[1], t[2], t[6]), (t[3], t[4], t[5], 1)))
                 continue
             fl = 0.85 + 0.15 * math.sin(now * 11 + t[0] * 3) * math.sin(now * 7.3 + t[2])
+            if getattr(L, "special", None) == "dream":
+                import colorsys
+                hh, _s, vv = colorsys.rgb_to_hsv(t[3], t[4], t[5])
+                r, gg, b = colorsys.hsv_to_rgb((hh + now * 0.08 + t[0] * 0.05) % 1.0, 0.9, vv)
+                out.append(((t[0], t[1], t[2], t[6]), (r * 1.9, gg * 1.9, b * 1.9, 1)))
+                continue
             torch = t[3] > 0.9 and t[4] < 0.7 and t[6] > 5
             k = 2.1 if torch and not L.outdoor else 1.3                 # (a torch below burns bright, and reaches)
             out.append(((t[0], t[1], t[2], t[6] * (1.3 if torch and not L.outdoor else 1.0)), (t[3] * fl * k, t[4] * fl * k, t[5] * fl * k, 1)))
         if L.stairs and not L.outdoor:
             out.append(((L.stairs[0], L.floor_at(*L.stairs) + 0.4, L.stairs[1], 4.0), (0.35, 0.5, 1.0, 1)))
+        from ..game.features import DOOR_COLOURS
+        extra = [((b["x"], b["y"] + 0.9, b["z"], 5.0), (1.8, 1.0, 0.4, 1)) for b in getattr(L, "braziers", ()) if b["lit"]]
+        extra += [((d["x"] + 0.5, L.floor_at(d["x"] + 0.5, d["y"] + 0.5) + 1.0, d["y"] + 0.5, 3.0),
+                   (*[c * 0.9 for c in DOOR_COLOURS[d["colour"]]], 1)) for d in getattr(L, "doors", ()) if not d["open"]]
+        extra.sort(key=lambda e: (e[0][0] - ex) ** 2 + (e[0][2] - ez) ** 2)
+        out = out[:MAX_LIGHTS - min(4, len(extra))] + extra[:4]
         return out[:MAX_LIGHTS]
 
     def _above(self, g):
@@ -874,6 +914,16 @@ class Renderer:
         self._figure(fig["model"], fig, m.x, m.y + (m.lift * (1 - flip)), m.z, m.yaw, m.size, m.anim, cue, m.hit_flash,
                      m.dead, alpha, glow, flip=flip,
                      speed=1.0 if "chill" not in m.status else 0.55)
+
+    def _ghost(self, g, m, now):
+        import colorsys
+        fig = self.pack.figure("monster:" + (m.d.get("figure") or m.name))
+        if not fig:
+            return
+        r, gg, b = colorsys.hsv_to_rgb((m.hue + now * 0.12) % 1.0, 0.8, 1.0)
+        alpha = 0.32 + 0.12 * math.sin(now * 2.3 + m.id)
+        self._figure(fig["model"], {"tint": (int(r * 255), int(gg * 255), int(b * 255)), "scale": fig.get("scale")},
+                     m.x, m.y + m.lift, m.z, m.yaw, m.size, m.anim, "walk", 0.0, False, alpha, (r * 0.35, gg * 0.35, b * 0.35))
 
     def _figure(self, model_name, fig, x, y, z, yaw, size, st, cue, flash, dead, alpha, glow, speed=1.0, flip=0.0):
         try:
@@ -930,6 +980,7 @@ class Renderer:
 
     # ---- glows -------------------------------------------------------------------------------------------------
     def _glows(self, g, view, now):
+        from ..game.features import DOOR_COLOURS
         L = g.level
         right = view[0, :3]
         up = view[1, :3]
@@ -996,6 +1047,11 @@ class Renderer:
         for pk in getattr(L, "pickups", ()):                         # (potions, scrolls and finds, glowing)
             if pk["kind"] == "gold" or (pk["x"] - ex) ** 2 + (pk["z"] - ez) ** 2 > 600:
                 continue
+            if pk["kind"] == "key":                                     # (a key: its colour, bright, turning)
+                c = DOOR_COLOURS[pk["colour"]]
+                bill(pk["x"], pk["y"] + 0.5, pk["z"], 0.35 + 0.05 * math.sin(now * 4 + pk["phase"]), c, 0.6)
+                bill(pk["x"], pk["y"] + 0.8, pk["z"], 0.1, c, 0.3, 4.0, 8.0)
+                continue
             if pk["kind"] != "item":                                    # (a potion or scroll: a faint glow under it)
                 c = {"health": (1.0, 0.25, 0.2), "mana": (0.3, 0.45, 1.0), "scroll": (0.9, 0.8, 0.5)}[pk["kind"]]
                 bill(pk["x"], pk["y"] + 0.2, pk["z"], 0.25, c, 0.3)
@@ -1005,6 +1061,31 @@ class Renderer:
             bill(pk["x"], bobh, pk["z"], 0.14, c, 1.4)
             if pk["kind"] == "item":
                 bill(pk["x"], bobh, pk["z"], 0.3 + 0.05 * math.sin(now * 5 + pk["phase"]), c, 0.35)
+        from ..game.features import DOOR_COLOURS
+        for d in getattr(L, "doors", ()):                              # (a closed door: its rune, glowing on both faces)
+            if d["open"] or (d["x"] + 0.5 - ex) ** 2 + (d["y"] + 0.5 - ez) ** 2 > 400:
+                continue
+            c = DOOR_COLOURS[d["colour"]]
+            fy = L.floor_at(d["x"] + 0.5, d["y"] + 0.5)
+            for side in (-1, 1):
+                ox, oz = (0, side * 0.1) if d["axis"] == "ns" else (side * 0.1, 0)
+                bill(d["x"] + 0.5 + ox, fy + 0.95, d["y"] + 0.5 + oz, 0.16, c, 1.1 + 0.4 * math.sin(now * 3), 0.0)
+        for lv in getattr(L, "levers", ()):
+            c = (0.3, 1.0, 0.4) if lv["pulled"] else (1.0, 0.3, 0.25)
+            bill(lv["px"], lv["py"], lv["pz"], 0.09, c, 0.9 + (0 if lv["pulled"] else 0.4 * math.sin(now * 4)))
+        for k, (px, top, pz, bot, nx, nz) in enumerate(getattr(L, "pours", ())):   # (water pouring from a pipe)
+            if (px - ex) ** 2 + (pz - ez) ** 2 > 500:
+                continue
+            col = (0.55, 0.72, 0.9)
+            sx, sz = px + nx * 0.14, pz + nz * 0.14
+            half = max(0.05, (top - bot) / 2)
+            bill(sx, bot + half, sz, 0.07, col, 0.75, 4.0, half / 0.07)
+            for j in range(6):                                          # (the water's run down it)
+                ph = (now * 1.6 + j / 6 + k * 0.31) % 1.0
+                bill(sx, top - (top - bot) * ph * ph, sz, 0.05, (0.75, 0.88, 1.0), 0.8)
+            for j in range(3):                                          # (and the splash where it lands)
+                ph = (now * 1.2 + j / 3 + k * 0.17) % 1.0
+                flat(sx, bot + 0.01, sz, 0.12 + ph * 0.35, col, (1 - ph) * 0.9, 0.0)
         above = self._above(g)
         if above[3] > 0.05:                                             # (light through the grates, and dust in it)
             cam_r = np.array([view[0, 0], 0.0, view[0, 2]], np.float32)

@@ -271,6 +271,15 @@ class GameView(QOpenGLWidget):
             elif kind == "sleep":
                 self.sleep_fade = now
                 snd.play("levelup", 0.35)
+            elif kind == "door":
+                snd.play("break", 0.5)
+                snd.play("levelup", 0.3)
+            elif kind == "lever":
+                snd.play("thud", 0.7)
+            elif kind == "brazier":
+                snd.play("cast_fire", 0.6)
+            elif kind == "trial":
+                snd.play("levelup" if e[1] else "nomana", 0.6)
             elif kind == "save":
                 self.shell.save()
             elif kind == "died":
@@ -530,6 +539,16 @@ class GameView(QOpenGLWidget):
                 T.outlined(p, s[0], s[1], "The farm", QFont(T.HEAD, 12, QFont.Bold), QColor(200, 236, 150), a, centre=True)
         # the meals at work, under the place's name: each its picture and the time it has left
         self._buffs(p, pl)
+        if getattr(g, "keys", None):                                    # (the keys he holds on this floor)
+            from .icons import _sprite
+            from ..engine.itempics import ITEMS
+            for k, colour in enumerate(sorted(g.keys)):
+                pm = _sprite("s7_I_Key03.png" if colour == "gold" else f"key_{colour}.png", 30)
+                r = QRectF(18 + k * 40, 126, 36, 36)
+                T.plate(p, r, 8, 190)
+                if pm is not None:
+                    p.drawPixmap(int(r.x() + 3), int(r.y() + 3), pm)
+            _ = ITEMS
         # the townsfolk's names over their heads
         if pv is not None and g.level.npcs:
             for n in g.level.npcs:
@@ -573,6 +592,23 @@ class GameView(QOpenGLWidget):
         if not self.show_map:
             from .dial import paint_dial
             paint_dial(p, QRectF(W - 196, 204, 180, 112), g.sky, g.level.outdoor, g.depth)
+        T_ = getattr(g.level, "trial", None)                            # (the brazier trial: how many, how long)
+        if T_ and T_["until"] and not T_["done"]:
+            left = max(0.0, T_["until"] - g.time)
+            n = sum(b["lit"] for b in g.level.braziers)
+            r = QRectF(W / 2 - 150, 170, 300, 40)
+            T.plate(p, r, 10, 210)
+            T.bar(p, QRectF(r.x() + 14, r.y() + 27, r.width() - 28, 6), left / 12.0, QColor("#C8501C"), QColor("#FFC060"), now)
+            T.outlined(p, W / 2, r.y() + 20, f"Braziers lit: {n} of {len(g.level.braziers)}  -  {left:.0f}s",
+                       QFont(T.HEAD, 12, QFont.Bold), QColor("#FFD890"), centre=True, width=2.5)
+        if getattr(g.level, "special", None) == "dream":                 # (the Dreaming: colour washing over the eyes)
+            for k, col in enumerate(((255, 40, 60), (40, 255, 90), (60, 90, 255))):
+                cx = W * (0.5 + 0.45 * math.sin(now * 0.31 + k * 2.1))
+                cy = H * (0.5 + 0.4 * math.cos(now * 0.23 + k * 1.7))
+                rg = QRadialGradient(QPointF(cx, cy), max(W, H) * 0.55)
+                rg.setColorAt(0, QColor(*col, int(58 + 22 * math.sin(now * 0.9 + k))))
+                rg.setColorAt(1, QColor(*col, 0))
+                p.fillRect(self.rect(), rg)
         # a new floor's card, and a level's banner
         self._cards(p, W, H, now)
         fade = getattr(self, "sleep_fade", None)                        # (to sleep: dark, then the morning)

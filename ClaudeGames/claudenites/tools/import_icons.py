@@ -129,6 +129,25 @@ def main():
             mapping["food"][k] = name
     for k, rel in FOOD_DC.items():
         mapping["food"][k] = dc(rel)
+    mapping["keys"] = {}                                       # (the coloured doors' keys: the silver key, tinted)
+    with zipfile.ZipFile(S7) as z:
+        import io
+        silver = Image.open(io.BytesIO(z.read("I_Key02.png"))).convert("RGBA")
+        (OUT / "s7_I_Key03.png").write_bytes(z.read("I_Key03.png"))
+        mapping["keys"]["gold"] = "s7_I_Key03.png"
+        for colour, rgb in {"red": (255, 70, 60), "blue": (80, 130, 255), "green": (80, 235, 100),
+                            "rune": (190, 120, 255)}.items():
+            im = silver.copy()
+            px = im.load()
+            for yy in range(im.height):
+                for xx in range(im.width):
+                    r, g, b, a = px[xx, yy]
+                    lum = (r * 0.3 + g * 0.59 + b * 0.11) / 255
+                    px[xx, yy] = (int(rgb[0] * lum * 1.2) if lum < 0.85 else r, int(rgb[1] * lum * 1.2) if lum < 0.85 else g,
+                                  int(rgb[2] * lum * 1.2) if lum < 0.85 else b, a)
+            name = f"key_{colour}.png"
+            im.save(OUT / name)
+            mapping["keys"][colour] = name
     mapping["litter"] = {}
     with zipfile.ZipFile(S7) as z:
         for k, n in LITTER_S7.items():

@@ -108,6 +108,8 @@ class Game:
         self.depth = 0                       # 0: Thornwick
         self.level = None
         self.monsters = []
+        self.ghosts = []                     # the Dreaming's ghosts (Monster objects that nothing touches)
+        self.keys = set()                    # the coloured keys found on this floor
         self.bolts = []
         self.events = []
         self.fx = []                         # short-lived sparks: {"x","y","z","c","t","kind"}
@@ -185,6 +187,14 @@ class Game:
             if m.kind == "flyer":
                 m.lift = 0.35
             self.monsters.append(m)
+        self.ghosts = []                                                # (the Dreaming's: they can't hurt, or be hurt)
+        for s in getattr(level, "ghosts", ()):
+            m = Monster(s["monster"], s["x"], s["z"], strength, rng)
+            m.y = level.floor_at(m.x, m.z)
+            m.home = (s["x"], s["z"])
+            m.hue = rng.random()
+            self.ghosts.append(m)
+        self.keys = set()                                               # (the keys found on this floor)
         self.events.append(("level", level))
 
     def go_cabin(self):
@@ -306,6 +316,18 @@ class Game:
                 return ("vendor", n["vendor"]), f"Talk to {v['name']}, {v['title']}"
         if self.depth == 0 and L.portal and math.hypot(L.portal[0] - self.x, L.portal[1] - self.z) < 2.0:
             return ("mouth",), "Go down into the Deep"
+        for i, d in enumerate(getattr(L, "doors", ())):
+            if not d["open"] and math.hypot(d["x"] + 0.5 - self.x, d["y"] + 0.5 - self.z) < 1.35:
+                word = "sealed door" if d["colour"] == "rune" else f"{d['colour']} door"
+                if d["colour"] == "rune":
+                    n = sum(lv["pulled"] for lv in L.levers)
+                    return ("locked", i), f"A door sealed with runes ({n} of {len(L.levers)} levers pulled)"
+                if d["colour"] in self.keys:
+                    return ("door", i), f"Unlock the {word}"
+                return ("locked", i), f"The {word} is locked - its key is somewhere on this floor"
+        for i, lv in enumerate(getattr(L, "levers", ())):
+            if not lv["pulled"] and math.hypot(lv["x"] + 0.5 - self.x, lv["y"] + 0.5 - self.z) < 1.2:
+                return ("lever", i), "Pull the lever"
         for i, c in enumerate(L.chests):
             if c.get("stash"):
                 continue
@@ -329,9 +351,105 @@ class Game:
             self.sleep()
         elif what and what[0] in ("hearth", "stash", "sign"):
             self.dialog = what
+        elif what and what[0] == "door":
+            self.open_door(what[1])
+        elif what and what[0] == "lever":
+            self.pull_lever(what[1])
+        elif what and what[0] == "locked":
+            pass
         elif what and what[0] != "sealed":
             self.dialog = what
         return what
+
+    def open_door(self, i):
+        L = self.level
+        d = L.doors[i]
+        if d["open"]:
+            return
+        d["open"] = True
+        self.keys.discard(d["colour"])
+        self._flow = None
+        cx, cz = d["x"] + 0.5, d["y"] + 0.5
+        from .features import DOOR_COLOURS
+        c = DOOR_COLOURS[d["colour"]]
+        for k in range(10):
+            self.fx.append({"x": cx + self.rng.uniform(-0.4, 0.4), "y": L.floor_at(cx, cz) + self.rng.uniform(0.2, 1.4),
+                            "z": cz + self.rng.uniform(-0.4, 0.4), "t": self.time + k * 0.03, "c": c, "life": 0.7})
+        self.events.append(("door", d["colour"]))
+        self.events.append(("toast", "The sealed door grinds open." if d["colour"] == "rune" else
+                            f"The {d['colour']} door swings open.", c))
+
+    def pull_lever(self, i):
+        L = self.level
+        lv = L.levers[i]
+        if lv["pulled"]:
+            return
+        lv["pulled"] = True
+        n = sum(v["pulled"] for v in L.levers)
+        self.events.append(("lever",))
+        if n < len(L.levers):
+            self.events.append(("toast", f"A lever clunks down. Somewhere a seal loosens ({n} of {len(L.levers)}).",
+                                (0.8, 0.65, 1.0)))
+        else:
+            for k, d in enumerate(L.doors):
+                if d["colour"] == "rune":
+                    self.open_door(k)
+
+    def _trial(self):
+        """The brazier trial: once one's lit, all of them within the time, or they all go out."""
+        L = self.level
+        T = getattr(L, "trial", None)
+        if not T or T["done"] or not T["until"]:
+            return
+        if all(b["lit"] for b in L.braziers):
+            T["done"] = True
+            from . import dress
+            x, y = T["x"], T["y"]
+            dress.chest(L, x, y, self.rng, rich=2.4)
+            for k in range(14):
+                self.fx.append({"x": x + 0.5 + self.rng.uniform(-0.5, 0.5), "y": L.floor_at(x + 0.5, y + 0.5) + self.rng.uniform(0, 1.2),
+                                "z": y + 0.5 + self.rng.uniform(-0.5, 0.5), "t": self.time + k * 0.04, "c": (1.0, 0.7, 0.3), "life": 0.9})
+            self.events.append(("trial", True))
+            self.events.append(("toast", "Every brazier burns. A chest rises from the floor!", (1.0, 0.8, 0.4)))
+        elif self.time > T["until"]:
+            T["until"] = 0.0
+            for b in L.braziers:
+                b["lit"] = False
+                L.sprites[b["sprite"]].update(name="nx.brazier_cold", glow=None)
+            self.events.append(("trial", False))
+            self.events.append(("toast", "The flames gutter and die. Light them all, and quickly.", (0.9, 0.6, 0.5)))
+
+    def _light_brazier(self, b):
+        L = self.level
+        if b["lit"] or (L.trial and L.trial["done"]):
+            return False
+        b["lit"] = True
+        L.sprites[b["sprite"]].update(name="brazier", glow=(1.0, 0.55, 0.2))
+        if not L.trial["until"]:
+            from .features import BRAZIER_TIME
+            L.trial["until"] = self.time + BRAZIER_TIME
+            self.events.append(("toast", f"A brazier flares! Light the rest - {BRAZIER_TIME:.0f} seconds.", (1.0, 0.7, 0.35)))
+        self.events.append(("brazier",))
+        return True
+
+    def _ghosts(self, dt):
+        """The Dreaming's ghosts: drifting, and drawn to him a little - they pass through everything, him included."""
+        for m in self.ghosts:
+            dx, dz = self.x - m.x, self.z - m.z
+            d = math.hypot(dx, dz)
+            m.moving = True
+            if d < 10:
+                a = math.atan2(dz, dx) + math.sin(self.time * 0.7 + m.id) * 1.2
+                sp = m.speed * 0.45
+            else:
+                a = m.yaw + math.sin(self.time * 0.3 + m.id) * 0.8
+                sp = m.speed * 0.3
+            nx, nz = m.x + math.cos(a) * sp * dt, m.z + math.sin(a) * sp * dt
+            if self.level.open_at(int(nx), int(nz)):
+                m.x, m.z = nx, nz
+                m.yaw = math.atan2(-math.cos(a), math.sin(a))
+            m.y += (self.level.floor_at(m.x, m.z) - m.y) * min(1.0, dt * 6)
+            m.lift = 0.15 + 0.12 * math.sin(self.time * 1.7 + m.id)
 
     def open_chest(self, i):
         """Its gold and its things straight into the pack - and whatever was set to guard it, up and about."""
@@ -413,6 +531,9 @@ class Game:
             self._fire()
         self._bolts(dt)
         self._monsters(dt)
+        if self.ghosts:
+            self._ghosts(dt)
+        self._trial()
         self.fx = [f for f in self.fx if self.time - f["t"] < f.get("life", 0.5)]
         self._fly_drops(dt)
         for f in self.fx:                                        # (splinters fly and fall)
@@ -528,6 +649,11 @@ class Game:
         elif k == "scroll":
             p.potions["return"] += 1
             got = ["a Scroll of Return"]
+        elif k == "key":
+            self.keys.add(pk["colour"])
+            got = [f"the {pk['colour']} key"]
+            from .features import DOOR_COLOURS
+            self.events.append(("toast", f"The {pk['colour']} key! Its door is somewhere on this floor.", DOOR_COLOURS[pk["colour"]]))
         else:
             it = I.roll_item(rng, depth + 1, p.bonus().get("find", 0) / 400)
             kept = p.give(it)
@@ -644,6 +770,10 @@ class Game:
                     self._spark(b.x, b.y, b.z, b.element, "impact")
                     alive = False
                     break
+                if L.doors and L.door_at(nx, nz, 0.02):
+                    self._spark(b.x, b.y, b.z, b.element, "impact")
+                    alive = False
+                    break
                 b.x, b.y, b.z = nx, ny, nz
                 if b.foe:
                     ex, ey, ez = self.eye
@@ -653,6 +783,12 @@ class Game:
                         alive = False
                         break
                 else:
+                    hit_b = next((br for br in L.braziers if not br["lit"] and (br["x"] - b.x) ** 2 + (br["z"] - b.z) ** 2 < 0.2
+                                  and br["y"] < b.y < br["y"] + 1.0), None)
+                    if hit_b and self._light_brazier(hit_b):
+                        self._spark(b.x, b.y, b.z, "fire", "impact")
+                        alive = False
+                        break
                     if self._smash_at(b):
                         alive = False
                         break
