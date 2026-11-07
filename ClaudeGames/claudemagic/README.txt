@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The Fenholm and the Sunken Barrow (v135.0, UPGRADE_PLAN_81.md phase 2)
+  (src/js/35c-figures.js, src/js/69zzzzl-isles.js, src/js/69zzzzn-fenholm.js, src/models/figures.json, tools/headless.js, tests/run.js)
+  - The Fenholm (UPGRADE_PLAN_81.md): the Wren's second island, south-west of home. She feels her way in between the
+    islands and ties up at a jetty of black poles. Plank walks on stilts join the islands over the still water; the
+    fen-folk's huts are shut and stay shut; and on the largest island a long barrow of grey stones, its sealed door
+    broken - from the inside.
+  - The Sunken Barrow: forty floors in four bands - the peat-and-root Reedways standing in brown water, the clay Eel
+    Warrens, the old stone Barrow-halls where the fen's dead lie (not all of them lying down), and the green, breathing
+    Mire Heart. Bog frogs, blobs, fen adders and marsh wasps; mushnubs, armabees and eels; barrow wights, golelings and
+    thornbacks; armoured bees and bog trolls.
+  - The Mushroom King on floor 10, Old Gulp on 20, the Barrow-King on 30, and at the bottom the Mire Mother, from whom
+    the whole fen grows - each with a relic and its own turn at half health.
+  - Fifteen more of Quaternius's CC0 creatures in the game, animated.
+
 Gull Rock and the Drowned Light (v134.0, UPGRADE_PLAN_81.md)
   (src/js/35c-figures.js, src/js/26-surface.js, src/js/69zzzzg-island.js, src/js/69zzzzk-boat.js, src/js/69zzzzl-isles.js, src/js/69zzzzm-gullrock.js, src/js/71-title.js, src/js/76zzzzzzzzz1-farhills.js, src/js/76zzzzzzzzzze-figures2.js, src/js/77t-island.js, src/js/77x-boat.js, src/js/77y-isles.js, src/js/80-main.js, src/models/figures.json, src/models/CREDITS.txt, tools/models.py, tools/headless.js, tests/run.js, UPGRADE_PLAN_81.md)
   - Gull Rock (UPGRADE_PLAN_81.md): the Wren's sea chart has its first charted island. She sails out from the dock

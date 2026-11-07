@@ -2030,7 +2030,7 @@ test("gathering, the field kit and the kitchen: nodes by hash on ordinary floors
 
 test("living items: a relic's power once a floor, a trinket's oddity, a weapon's marks and its name kept through save, vault and a later party, an heirloom's third bearer", () => {
   const CM = load();
-  assert.strictEqual(Object.keys(CM.TRINKETS).length, 24);   /* (the twenty-fourth: Claude's bookmark, plan 70) */   /* (the twenty-third: the chronicle's rubbing, plan 65) */   /* (the twenty-second: the kennel-master's whistle, plan 64 release 4) */ assert.strictEqual(Object.keys(CM.RELIC_POWERS).length, 14)   /* (v134.0: Gull Rock's four) */;   /* (the twenty-first: the painted likeness, plan 64) */   // (the tenth: the Undercroft's, v9.9) assert.ok(CM.SLOTS.includes("trinket"));
+  assert.strictEqual(Object.keys(CM.TRINKETS).length, 24);   /* (the twenty-fourth: Claude's bookmark, plan 70) */   /* (the twenty-third: the chronicle's rubbing, plan 65) */   /* (the twenty-second: the kennel-master's whistle, plan 64 release 4) */ assert.ok(Object.keys(CM.RELIC_POWERS).length >= 14)   /* (v134.0 on: the islands' guardians' four apiece) */;   /* (the twenty-first: the painted likeness, plan 64) */   // (the tenth: the Undercroft's, v9.9) assert.ok(CM.SLOTS.includes("trinket"));
   for (const id of Object.keys(CM.GUARDIANS)) if (CM.GUARDIANS[id].relic) assert.ok(CM.powerOf(CM.relic(id)), `${id}'s relic has a power`);
   assert.ok(CM.powerOf(CM.makeUnique("firstroot")) && CM.powerOf(CM.makeUnique("firstroot")).id === "regrow");
   const game = new CM.Game(); game.newGame("living-1", fixedParty(CM));
@@ -7624,7 +7624,7 @@ test("the island dungeons and Gull Rock: the Wren sails there from the dock and 
   for (let n = 1; n <= 60; n += 7) { const fl = CM.makeFloor(n, "isle-shaft", 2); for (const t of Object.values(fl.things)) if (t.group) for (const m of t.group) assert.ok(!names.has(m.kind || m.name), `the shaft never meets ${m.name}`); }
   const g = new CM.Game(); g.newGame("isle-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.gold = 500;
   g.enterFloor(-1, "rope", [CM.HARBOUR.pier[0], CM.HARBOUR.head[3]]); g.clock = 1440 + 5 * 60;
-  assert.strictEqual(g.seaWhyNot("gull"), "", "Gull Rock is charted"); assert.ok(g.seaWhyNot("fen"), "the others not yet"); g.sail("gull"); assert.strictEqual(g.floor.number, I.base, "landed");
+  assert.strictEqual(g.seaWhyNot("gull"), "", "Gull Rock is charted"); assert.ok(g.seaWhyNot("main"), "the others not yet");   /* (v135.0: the Fenholm is charted) */ g.sail("gull"); assert.strictEqual(g.floor.number, I.base, "landed");
   assert.ok(CM.atBerth(g), "at the jetty"); assert.strictEqual(g.seaWhyNot("home"), ""); assert.ok(/where you are/.test(g.seaWhyNot("gull")));
   g.floor.pos = I.mouthFront.slice(); assert.ok(g.use() && g.isleMenu.length === 2, "the mouth: down, or not yet"); g.choose(I.mouthFront.join(), 0); assert.strictEqual(g.floor.number, I.base - 1);
   const ty = (fl, type) => Object.keys(fl.things).filter((k) => fl.things[k].type === type);
@@ -7645,6 +7645,22 @@ test("the island dungeons and Gull Rock: the Wren sails there from the dock and 
   g.isleGo(I.base, I.jetty); g.sail("home"); assert.strictEqual(g.floor.number, -1); assert.strictEqual(CM.woodPlace(g.floor, ...g.floor.pos), "the dock");
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["\"monster:Rock Crab\":{\"model\":\"crab\"", "(fig.lift || 0)", "\"glub\":{", "\"ghostskull\":{", "\"whale\":{"]) assert.ok(html.includes(s), s);
+});
+
+test("every island: charted and sailed to; a landing with a jetty the Wren lies at and a mouth that goes down; forty floors in four bands of its own looks and kinds (each kind given a figure, none ever met in the shaft); a guardian on each tenth floor with a relic that has a power and a turn at half health; the master at the bottom; stronger than the island before", () => {
+  const CM = load(), F = CM.figuresPack.figures, isles = Object.values(CM.ISLES); assert.ok(isles.length >= 2);
+  let last = 0;
+  for (const I of isles) { assert.ok(CM.SEA_OPEN.includes(I.id) && CM.seaPlace(I.id), `${I.id} on the chart and charted`); assert.strictEqual(I.bands.length, 4); assert.strictEqual(I.guardians.length, 4);
+    assert.ok(I.levels[1] > I.levels[0] && I.levels[1] >= last, `${I.id}: deeper and stronger`); last = I.levels[1];
+    for (const b of I.bands) for (const k of b.kinds) { assert.ok(CM.monsterKind(k), `${I.id}: ${k}`); assert.ok(F[`monster:${k}`] && CM.figuresPack.manifest.models[F[`monster:${k}`].model], `${k} has a figure`); }
+    I.guardians.forEach((id, i) => { const G = CM.GUARDIANS[id]; assert.ok(G && G.isle === I.id, id); assert.strictEqual(G.floor, I.base - (i + 1) * 10); assert.ok(CM.powerOf(CM.relic(id)), `${id}'s relic has a power`); assert.ok(CM.BOSS_PHASES[id], `${id} turns at half health`); assert.ok(F[`monster:${G.name}`], `${G.name} has a figure`); });
+    const land = CM.makeFloor(I.base, "isle-all", 2); assert.strictEqual(land.things[I.mouthFront.join()].type, "islemouth"); assert.ok(CM.isOpen(land, ...I.jetty) && I.atBerth(I.jetty));
+    const seen = new Set([I.jetty.join()]), q = [I.jetty]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(land, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(I.mouthFront.join()), `${I.id}: the mouth walked to from the jetty`);
+    const g = new CM.Game(); g.newGame(`isle-${I.id}`, fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.gold = 999; g.clock = 1440 + 5 * 60;
+    g.enterFloor(-1, "rope", [CM.HARBOUR.pier[0], CM.HARBOUR.head[3]]); assert.strictEqual(g.seaWhyNot(I.id), ""); g.sail(I.id); assert.strictEqual(g.floor.number, I.base, `${I.id}: landed`);
+    g.floor.pos = I.mouthFront.slice(); g.use(); g.choose(I.mouthFront.join(), 0); assert.strictEqual(g.floor.number, I.base - 1, `${I.id}: down`);
+    for (const d of [10, 40]) { const fl = CM.makeFloor(I.base - d, g.seed, 2), gk = Object.keys(fl.things).find((k) => fl.things[k].type === "guardian"); assert.strictEqual(fl.things[gk].group[0].guardian, I.guardians[d / 10 - 1]); } }
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
