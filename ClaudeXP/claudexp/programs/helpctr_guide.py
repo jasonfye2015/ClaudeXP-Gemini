@@ -156,6 +156,19 @@ CATALOG = {
                           "chests."),
     "claudeggle": ("games", "Claudeggle: a Peggle-style ball-and-peg game - twelve levels, clear the orange pegs in ten "
                             "balls, with green-peg powers, a free-ball bucket and Extreme Fever."),
+    "claudenites": ("games", "Claudenites 3-D: a first-person roguelike in Python and OpenGL (its own repo, jasonfye2015/claudenites-3d), "
+                             "Claude's story before Claude and Magic. Claude, an apprentice mage, goes down the Deep under the forest "
+                             "town of Thornwick alone: a hundred floors made fresh each run, ten bands of ten (the Root Cellars, the "
+                             "Mossway, the Sunken Halls, the Barrows, the Glass Caves, the Old Foundry, the Thornwild, the Ember Deep, "
+                             "the Bone Court and the Hollow Throne), each with its own monsters - Claude and Magic's figures - and a "
+                             "guardian on its tenth floor, the stairs sealed until it falls. His wands are built: a body for the rate and "
+                             "bolt speed, and parts in its slots - Fire, Frost, Storm or Venom cores, lenses, splitting prisms, focusing "
+                             "rings, quickening runes, seekers, rebounding bands and piercing thorns. Gold, potions and finds go straight "
+                             "into the pack; he wears a hat, robe, gloves, boots, ring and amulet. Hesper, Old Tamsin and Bramwell sell "
+                             "potions, wands and gear; Mother Wren teaches three skill trees (Evocation, Warding, Arcana) that stay "
+                             "learned. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, left button to cast, "
+                             "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
                              "(its own repo, jasonfye2015/claude-and-magic). A run sets out from the party's door in Caer Duin, a "
                              "walled town on a hill under a sky that keeps the game's hours, seasons and moon: Lantern Street to the "

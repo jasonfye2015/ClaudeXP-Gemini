@@ -8,3 +8,6 @@ pyflakes==4.0.3
 # Furry Hollow's catalog pictures (opensim_world/catalog.py); also in the portable Python (Python\), which is what
 # runs the Timeline from the SSD on any PC
 pillow==13.0.0
+# Claudenites 3-D draws with OpenGL from Python (ClaudeGames/claudenites)
+numpy==2.5.4
+PyOpenGL==3.1.10

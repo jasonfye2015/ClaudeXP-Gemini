@@ -17,6 +17,8 @@ Claude7/seed/win7_2011/Storage/
 ClaudeGames/Saves/
 # Claude and Magic's own development repo (its own git, pushed to GitHub; the Timeline plays the copy in claudemagic/)
 ClaudeGames/Claude and Magic/
+# Claudenites 3-D's own development repo (pushed to GitHub; the Timeline plays the copy in claudenites/)
+ClaudeGames/Claudenites 3-D/
 # Kithylin AI keeps its own art, models and chats in its folder (personal, and large)
 ClaudeApps/kithylinai/Art/
 ClaudeApps/kithylinai/Models/
