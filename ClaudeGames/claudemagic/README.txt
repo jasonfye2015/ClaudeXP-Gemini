@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The lighthouse (v132.0, UPGRADE_PLAN_80.md phase 3)
+  (src/js/23b-wood.js, src/js/23i-lighthouse.js, src/js/40-render.js, src/js/69zzzzj-lighthouse.js, src/js/77u-harbour.js, src/js/77w-lighthouse.js, src/js/80-main.js, tools/headless.js, tests/run.js)
+  - The lighthouse (UPGRADE_PLAN_80.md): off the east end of the dock, on a shoulder of rock walked onto from the
+    dock, a tall tower banded red and white, an iron gallery round its top, the lamp room's glazing and a red cap
+    over that. Its door faces the dock; Space there goes up the turning stair.
+  - By day the gallery gives the whole island and the sea round it (and if you hadn't yet found it was an island,
+    you have now). By night the lamp is yours to light: once lit it burns and turns till dawn, two beams going round
+    over the water, and the keeper's box pays the town's wage, 12 gold, once a night. A lit light is what a boat will
+    want, coming in at night.
+
 The coast, the shells, and the fish (v131.0, UPGRADE_PLAN_80.md phase 2)
   (src/js/23b-wood.js, src/js/23h-coast.js, src/js/69zzzzi-shells.js, src/js/77v-shorelife.js, tools/headless.js, tests/run.js)
   - The coast path (UPGRADE_PLAN_80.md): a sandy path runs round the island's edge with the sea at one hand - up the

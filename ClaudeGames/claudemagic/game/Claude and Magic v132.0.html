@@ -5,7 +5,7 @@
 <title>Claude and Magic</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
-  Claude and Magic v131.0 - a first-person dungeon crawler for a party of four, in one file.
+  Claude and Magic v132.0 - a first-person dungeon crawler for a party of four, in one file.
   Open it in a browser and play; the Claude Timeline opens it in a window of its own. Your runs and the Hall of Fame
   are kept in this browser (Settings > Export carries them elsewhere). Built from ClaudeGames/claudemagic/src by
   build.py - change the source there, not this file.
@@ -1551,7 +1551,7 @@ body.reduced .dialog.on, body.reduced .dialog.on > .box { animation: none; }
 "use strict";
 // Claude and Magic - the shared bits: the version, a seeded random, saving in the browser, small maths.
 // Everything the game is lives on window.CM, so the Timeline's tests can reach it with page.runJavaScript.
-const CM = window.CM = { version: "131.0", built: "2026-11-07", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
+const CM = window.CM = { version: "132.0", built: "2026-11-07", startLog: [] };   // (startLog: the start's moments, v26.4 - when the packs were in, when each look first went up)   // (art: the code's fingerprint, v26.4)
 
 // a 32-bit number from any text (FNV-1a) - a seed word becomes a dungeon
 CM.hashSeed = function (text) {
@@ -5625,7 +5625,8 @@ CM.makeWood = function (seed) {
   const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};
   if (CM.layShore) CM.layShore({ grid, kinds, ground, features, decor, things, size });   // (v129.0: the Strand and the sea - 23f-shore.js)
   if (CM.layHarbour) Object.assign(levels, CM.layHarbour({ grid, kinds, ground, features, decor, things, size }));   // (v130.0: the pier, the dock, the Harbour Road - 23g-harbour.js)
-  if (CM.layCoast) CM.layCoast({ grid, kinds, ground, features, decor, things, size });   // (v131.0: the coast path round the island, the springhead, the bridges - 23h-coast.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
+  if (CM.layCoast) CM.layCoast({ grid, kinds, ground, features, decor, things, size });   // (v131.0: the coast path round the island, the springhead, the bridges - 23h-coast.js)
+  if (CM.layLighthouse) Object.assign(levels, CM.layLighthouse({ grid, kinds, ground, features, decor, things, size }));   // (v132.0: the lighthouse on its rock by the dock - 23i-lighthouse.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe) && !(CM.COAST && (y === 0 || (x === CM.COAST.east && y <= CM.COAST.eastTo)))) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
@@ -5917,6 +5918,24 @@ CM.layCoast = function (P) {
   // a plank bridge over the river's mouth, beside the ford
   { const mx = CM.riverX(C.mouthBridge); dry(mx, C.mouthBridge); ground[key(mx, C.mouthBridge)] = "planks"; }
   things[key(C.west, C.last - 1)] = things[key(C.west, C.last - 1)] || { type: "signpost", text: "THE COAST PATH, north: up the island's west shore, along the north coast past the river's springhead, and round to the cliff path and the fields. South: the Strand." };
+};
+
+// ---- 23i-lighthouse.js ----
+"use strict";
+// The lighthouse (UPGRADE_PLAN_80.md, v132.0): off the east end of the dock, a shoulder of rock in the sea, flat-topped
+// at the dock's height, and on it a tall tower banded red and white, a gallery round its top and the lamp room over
+// that. Its door faces the dock; the stair inside goes up to the gallery.
+//   CM.LIGHTHOUSE; CM.layLighthouse(parts) -> levels for the rock
+CM.LIGHTHOUSE = { at: [58, 97], rock: [57, 95, 59, 99], door: [57, 97], h: 6.2, r0: 0.47, r1: 0.36, lamp: 6.7 };
+CM.isLighthouseRock = (x, y) => { const [x0, y0, x1, y1] = CM.LIGHTHOUSE.rock; return x >= x0 && x <= x1 && y >= y0 && y <= y1; };
+CM.layLighthouse = function (P) {
+  const { grid, kinds, ground, things, size } = P, L = CM.LIGHTHOUSE, key = (x, y) => `${x},${y}`, levels = {};
+  if (size <= L.rock[3] + 1 || !CM.HARBOUR) return levels;
+  const [x0, y0, x1, y1] = L.rock;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { grid[y][x] = 0; delete kinds[key(x, y)]; ground[key(x, y)] = "rock"; levels[key(x, y)] = [CM.HARBOUR.deck, CM.HARBOUR.deck + 1]; }
+  const [tx, ty] = L.at; grid[ty][tx] = 1; kinds[key(tx, ty)] = "lighthouse"; delete ground[key(tx, ty)]; delete levels[key(tx, ty)];
+  things[key(...L.door)] = { type: "lighthousedoor" };
+  return levels;
 };
 
 // ---- 24-clock.js ----
@@ -10724,14 +10743,15 @@ CM.Renderer = class {
       const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
-      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && s.hang === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend) {   // (v26.2: a plain billboard - an instance)
+      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && s.hang === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend && !s.quad) {   // (v26.2: a plain billboard - an instance)
         inst.push(cx, (s.lift || 0) + (s.base || 0), cz, w, h, layer, s.shade || 1, (s.sway && this.wind && !CM.reducedMotion ? s.sway : 0), sb ? sb[1] : 0, sb ? sb[2] : 0, sb ? sb[3] : 1, sb ? sb[4] : 1, s.flash || 0, s.alpha === undefined ? 1 : s.alpha, s.glow || 0, s.mirror ? 1 : 0);
         continue; }
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
       const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const base = s.base || 0, lift = (s.lift || 0) + base;   // (v47.0: base, the floor's level where it stands)
-      if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
+      if (s.quad) corners = s.quad;                                       // (v132.0) four corners given outright, in the world: a lighthouse's beam
+      else if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
         const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = (w * (s.len || 1)) / 2, hw = w / 2, ox = c * hl * 0.85, oz = sn * hl * 0.85, y0 = 0.0035 + base;
         const P = (a2, b2) => [cx + ox + c * a2 - sn * b2, y0, cz + oz + sn * a2 + c * b2];
         corners = [P(-hl, hw), P(hl, hw), P(hl, -hw), P(-hl, -hw)];
@@ -33784,6 +33804,40 @@ if (CM.SOLID_COLOURS) { CM.SOLID_COLOURS.tor = "#7A7468"; CM.SOLID_COLOURS.scarp
       say(`${lines.join(" ")} He finds each one a place on the shelf, and won't hear of not paying for them: ten gold apiece.${V.shelf.length >= CM.SHELLS.length - 1 ? " \"That's one of everything. The sea's been generous with you.\"" : ""}`); g.emit("change"); } });
 }
 
+// ---- 69zzzzj-lighthouse.js ----
+"use strict";
+// The lighthouse (UPGRADE_PLAN_80.md, v132.0), the rules' side. Its door on the rock by the dock opens on a stair up
+// to the gallery: by day, the whole island and the sea round it (the island found, if it wasn't); by night, the lamp.
+// The lamp is the party's to light - nobody else keeps it - and once lit it burns and turns till dawn, its beam
+// going round over the water; the town pays the keeper's wage for every night it's kept, out of a box by the lamp.
+// A lit light is what a boat will want, coming in at night (the boat: v133.0).
+//   CM.lighthouseLit(game); game.climbLighthouse(); CM.LIGHTHOUSE_WAGE
+{ const L = CM.LIGHTHOUSE, P = CM.Game.prototype, key = (x, y) => `${x},${y}`;
+  CM.SOLID.lighthouse = { face: "solid:lighthouse", h: L.h, tower: true };   // (built by the window: 77w-lighthouse.js)
+  if (CM.SOLID_COLOURS) CM.SOLID_COLOURS.lighthouse = "#E8E4DC";
+  CM.LIGHTHOUSE_WAGE = 12; const EYE_ABOVE = -0.12;   // (the gallery's floor is the tower's top; the eye a little over it)
+  const nightOf = (g) => { const h = CM.hourOf ? CM.hourOf(g) : 12, d = CM.dayOf ? CM.dayOf(g) : 0; return h < 12 ? d - 1 : d; };   // (a night belongs to the day it began on)
+  CM.lighthouseLit = (g) => Boolean(g && g.ext && CM.isNight && CM.isNight(g) && g.ext("lighthouse").lit === nightOf(g));
+  P.climbLighthouse = function () { const fl = this.floor; if (!fl || fl.number !== -1 || this.perch) return false; const R = this.ext("lighthouse"), V = this.vext("lighthouse");
+    this.perch = { tower: [L.at[0] - 0.55, L.at[1]], from: key(...L.door), h: L.h - EYE_ABOVE, lighthouse: true };   // (out on the gallery, the dock's side) this.clock = (this.clock || 0) + 6; this.sound && this.sound("wind");
+    if (CM.isNight && CM.isNight(this)) {
+      if (R.lit === nightOf(this)) this.say("Up the turning stair to the lamp room. The great lamp burns steady behind its lenses and the clockwork turns it, slow and certain; the beam goes round over the water, and round again.");
+      else { R.lit = nightOf(this); V.nights = (V.nights || 0) + 1; this.gold += CM.LIGHTHOUSE_WAGE; this.tally = this.tally || {}; this.tally.lighthouse = (this.tally.lighthouse || 0) + 1;
+        this.say(`Up the turning stair to the lamp room, dark and smelling of oil. The wick takes the flame; the lenses catch it; you wind the clockwork and the whole lamp begins to turn, and the beam goes out over the sea. ${V.nights === 1 ? "Whoever kept this light before, it's yours to keep now. " : ""}In the keeper's box by the lamp, the town's wage for a night's keeping: ${CM.LIGHTHOUSE_WAGE} gold. The book beside it has ${V.nights} night${V.nights === 1 ? "" : "s"} in your hand.`); } }
+    else { this.say("Up the turning stair and out onto the gallery, the wind pulling at you: the dock below, the pier running back to the sand, the Strand, the Scarp, the Wood, the town on its hill - and the sea all round, every way you look. The lamp behind you waits for night.");
+      const Ld = this.vext("land"); if (!Ld.island) { Ld.island = (CM.dayOf ? CM.dayOf(this) : 0) + 1; this.say("It is an island. The whole of the world you know is an island."); this.emit("island"); } }
+    this.emit("change"); return true; };
+  { const cd0 = P.climbDown; P.climbDown = function () { if (this.perch && this.perch.lighthouse) { this.perch = null; this.clock = (this.clock || 0) + 6; this.say("Down the turning stair, and out onto the rock by the dock."); this.emit("change"); return true; } return cd0.call(this); }; }
+  { const u0 = P.use; P.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl && fl.number === -1 && !this.perch) { const [dx, dy] = CM.DIRS[fl.facing], ahead = [fl.pos[0] + dx, fl.pos[1] + dy];
+      const atDoor = (fl.pos[0] === L.door[0] && fl.pos[1] === L.door[1]) || (ahead[0] === L.at[0] && ahead[1] === L.at[1]); if (atDoor) return this.climbLighthouse(); } return u0.apply(this, a); }; }
+  { const l0 = P.look; P.look = function (...a) { const out = l0.apply(this, a), fl = this.floor; if (this.mode === "explore" && fl && fl.number === -1 && fl.pos[0] === L.door[0] && fl.pos[1] === L.door[1]) this.say(CM.lighthouseLit(this) ? "The lighthouse door. High overhead the lamp is burning, its beam going round. (Space: up the stair)" : CM.isNight && CM.isNight(this) ? "The lighthouse door, and over it the tower dark against the stars: the lamp's unlit. (Space: up the stair to light it)" : "The lighthouse: a tower banded red and white, a gallery round its top. The door's on the latch. (Space: up the stair)"); return out; }; }
+  // names
+  { const wp0 = CM.woodPlace; CM.woodPlace = function (fl, x, y) { if (fl && fl.number === -1 && CM.isLighthouseRock(x, y) && fl.grid.length > L.rock[3]) return "the lighthouse rock"; return wp0.call(this, fl, x, y); }; }
+  { const ws0 = CM.woodSafe; CM.woodSafe = function (fl, x, y) { return (fl && fl.number === -1 && CM.isLighthouseRock(x, y)) || ws0.call(this, fl, x, y); }; }
+  { const wy0 = CM.wayPlaces; CM.wayPlaces = function (game) { const out = wy0(game), fl = game.floor; if (!fl || fl.number !== -1 || fl.grid.length <= L.rock[3]) return out; const at = L.door;
+      if ((fl.seen || []).some(([x, y]) => x === at[0] && y === at[1]) && !(fl.pos[0] === at[0] && fl.pos[1] === at[1])) { const p = game.pathTo(...at); out.push({ name: "The lighthouse", x: at[0], y: at[1], steps: p ? p.length : null }); } return out; }; }
+}
+
 // ---- 70-ui.js ----
 "use strict";
 // The window around the dungeon: the title (what you set out with, the Hall of Fame and its details, settings), the
@@ -50660,7 +50714,8 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
         put([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1], layer, sh * 0.8, 0); put([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0], layer, sh * 0.85, 0); put([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], layer, sh * 1.05, 0); };
       const berthSide = (x, y, d) => d === 2 && y === H.head[3];
       for (let y = H.foot; y <= H.head[3]; y++) for (let x = H.head[0]; x <= H.head[2]; x++) { if (!pier(x, y)) continue; const F = lvl(x, y), deck = y >= H.foot + 2;
-        CM.DIRS.forEach(([dx, dy], d) => { const nx = x + dx, ny = y + dy; if (pier(nx, ny) || (ny < CM.SHORE.sea && !deck)) return; if (ny < CM.SHORE.sea && fl.grid[ny] && fl.grid[ny][nx] === 0) return;   // (on the sand: the step's own face does)
+        CM.DIRS.forEach(([dx, dy], d) => { const nx = x + dx, ny = y + dy; if (pier(nx, ny) || (CM.isLighthouseRock && CM.isLighthouseRock(nx, ny)) || (ny < CM.SHORE.sea && !deck)) return;   // (v132.0: open onto the lighthouse's rock)
+          if (ny < CM.SHORE.sea && fl.grid[ny] && fl.grid[ny][nx] === 0) return;   // (on the sand: the step's own face does)
           const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y] : d === 2 ? [x + 1, y + 1] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x, y + 1] : [x, y];
           put([a[0], F - 0.24, a[1]], [b[0], F - 0.24, b[1]], [b[0], F, b[1]], [a[0], F, a[1]], wood, 0.72, 0);   // (the edge beam)
           if (!deck) return;
@@ -50729,6 +50784,68 @@ body.reduce-motion .bar.hp i, body.reduce-motion .member .ail .ailchip { animati
             if (k < 1) out.push({ x, y, dx: (k - 0.5) * 0.6 * jump.dir, base, lift: Math.sin(Math.PI * k) * 0.55, layer: "fx:fish", w: 0.34, h: 0.34, tilt: (0.5 - k) * 1.6 * jump.dir, mirror: jump.dir < 0 });
             for (const [kk, sx] of [[k, -0.3], [k - 1, 0.3]]) if (kk >= 0 && kk < 0.5) out.push({ x, y, dx: sx * jump.dir, base, layer: "fx:splash", w: 0.5, h: 0.4, alpha: 0.9 * (1 - kk * 2) });
             if (!jump.sounded && CM.audio && CM.audio.play && Math.abs(x - fl.pos[0]) + Math.abs(y - fl.pos[1]) < 7) { jump.sounded = true; try { CM.audio.play("splash", 0.18, 0, 1.5); } catch (e) { /* (no sound) */ } } } } }
+      return out; }; }
+}
+
+// ---- 77w-lighthouse.js ----
+"use strict";
+// The lighthouse, seen (UPGRADE_PLAN_80.md, v132.0; the land 23i-lighthouse.js, the rules 69zzzzj-lighthouse.js): the
+// tower built of eight faces banded red and white, narrowing as it rises, a door on its west face, an iron gallery
+// round its top, the lamp room's glazing over that and a red cap; the rock it stands on, its edges falling into the
+// sea, boulders about its foot; and when the lamp is lit, its glow, and two beams going round over the water.
+{ const L = CM.LIGHTHOUSE, B = (CM.HARBOUR && CM.HARBOUR.deck) || 0.45, cx = L.at[0] + 0.5, cz = L.at[1] + 0.5, TOP = L.h;
+  { const b0 = CM.art.build; CM.art.build = function (theme, look) { const set = b0.call(this, theme, look), N = set.size, add = (n, c) => { set.index[n] = set.layers.length; set.layers.push(c); };
+      const can = () => { const c = document.createElement("canvas"); c.width = c.height = N; return [c, c.getContext("2d")]; };
+      { const [c, p] = can(), r = new CM.Random(CM.hashSeed("lh:bands"));   // the tower's face: four bands, white and red, weathered
+        for (let i = 0; i < 4; i++) { p.fillStyle = i % 2 ? "#B8332A" : "#EDE8DE"; p.fillRect(0, (i * N) / 4, N, N / 4 + 1); }
+        for (let i = 0; i < 500; i++) { p.fillStyle = r.next() < 0.5 ? "rgba(60,50,40,0.08)" : "rgba(255,255,255,0.08)"; p.fillRect(r.next() * N, r.next() * N, 2 + r.next() * 6, 1 + r.next() * 3); }
+        const g = p.createLinearGradient(0, N * 0.85, 0, N); g.addColorStop(0, "rgba(40,50,40,0)"); g.addColorStop(1, "rgba(40,50,40,0.45)"); p.fillStyle = g; p.fillRect(0, N * 0.85, N, N * 0.15);
+        for (let i = 0; i < 3; i++) { p.fillStyle = "#2A2A30"; p.fillRect(N * 0.42, N * (0.18 + i * 0.25), N * 0.16, N * 0.07); }   // (a slit window on each band)
+        add("solid:lighthouse", c); }
+      { const [c, p] = can(); p.fillStyle = "#2A2420"; p.fillRect(N * 0.1, 0, N * 0.8, N); p.fillStyle = "#4A3A2A"; p.fillRect(N * 0.16, N * 0.06, N * 0.68, N * 0.94); p.fillStyle = "#C8A040"; p.fillRect(N * 0.68, N * 0.5, N * 0.06, N * 0.06); add("lh:door", c); }
+      { const [c, p] = can(); p.fillStyle = "#1E1E22"; p.fillRect(0, 0, N, N * 0.05); p.fillRect(0, N * 0.95, N, N * 0.05); p.fillRect(0, 0, N * 0.035, N); p.fillRect(N * 0.965, 0, N * 0.035, N); add("lh:glass", c); }   // (the lamp room's frames: the panes are clear)
+      { const [c, p] = can(); p.fillStyle = "#9A2A22"; p.fillRect(0, 0, N, N); p.fillStyle = "rgba(0,0,0,0.18)"; for (let i = 0; i < N; i += N / 8) p.fillRect(i, 0, 2, N); add("lh:cap", c); }
+      { const [c, p] = can(); p.fillStyle = "#26262A"; p.fillRect(0, N * 0.1, N, N * 0.12); for (let i = 0; i < 5; i++) p.fillRect(i * N / 4 - 2, N * 0.1, 5, N * 0.9); add("lh:rail", c); }   // (the gallery's rail: open between its bars)
+      { const [c, p] = can(), g = p.createLinearGradient(0, N, 0, 0); g.addColorStop(0, "rgba(255,244,200,0.95)"); g.addColorStop(0.35, "rgba(255,236,180,0.55)"); g.addColorStop(1, "rgba(255,230,170,0)"); p.fillStyle = g; p.fillRect(0, 0, N, N);
+        const e = p.createLinearGradient(0, 0, N, 0); e.addColorStop(0, "rgba(0,0,0,1)"); e.addColorStop(0.25, "rgba(0,0,0,0)"); e.addColorStop(0.75, "rgba(0,0,0,0)"); e.addColorStop(1, "rgba(0,0,0,1)"); p.globalCompositeOperation = "destination-out"; p.fillStyle = e; p.fillRect(0, 0, N, N); add("fx:beam", c); }
+      return set; }; }
+  // the build
+  { const fv0 = CM.farViews; CM.farViews = (fl, size, index, night, put) => { const n = fv0 ? fv0(fl, size, index, night, put) : 0; if (!fl || fl.number !== -1 || !fl.levels || size <= L.rock[3] + 1 || index["solid:lighthouse"] === undefined) return n;
+      const face = index["solid:lighthouse"], glass = index["lh:glass"], cap = index["lh:cap"], rail = index["lh:rail"], door = index["lh:door"], iron = index["lh:rail"], rock = index["solid:scarp"] !== undefined ? index["solid:scarp"] : index["solid:cliff"];
+      const at = (i, r) => { const a = (Math.PI / 4) * i + Math.PI / 8; return [cx + Math.cos(a) * r, cz + Math.sin(a) * r]; }, sh = (i) => 0.72 + 0.28 * Math.abs(Math.cos((Math.PI / 4) * i + Math.PI / 4 - 0.6));
+      for (let i = 0; i < 8; i++) { const [ax, az] = at(i, L.r0), [bx, bz] = at(i + 1, L.r0), [ax1, az1] = at(i, L.r1), [bx1, bz1] = at(i + 1, L.r1);
+        put([ax, B, az], [bx, B, bz], [bx1, TOP, bz1], [ax1, TOP, az1], face, sh(i), 0);                                           // the tower's face
+        const [gx, gz] = at(i, 0.62), [hx, hz] = at(i + 1, 0.62);
+        put([ax1, TOP, az1], [bx1, TOP, bz1], [hx, TOP, hz], [gx, TOP, gz], iron, 0.5, 0); put([gx, TOP - 0.08, gz], [hx, TOP - 0.08, hz], [hx, TOP, hz], [gx, TOP, gz], iron, 0.45, 0);   // the gallery's floor and its edge
+        put([gx, TOP, gz], [hx, TOP, hz], [hx, TOP + 0.36, hz], [gx, TOP + 0.36, gz], rail, 0.6, 0);                             // its rail
+        const [lx, lz] = at(i, 0.3), [mx, mz] = at(i + 1, 0.3), [kx, kz] = at(i, 0.38), [jx, jz] = at(i + 1, 0.38);
+        put([lx, TOP, lz], [mx, TOP, mz], [mx, TOP + 0.62, mz], [lx, TOP + 0.62, lz], glass, 0.7, 0);                            // the lamp room's glazing
+        put([kx, TOP + 0.62, kz], [jx, TOP + 0.62, jz], [cx, TOP + 1.1, cz], [cx, TOP + 1.1, cz], cap, sh(i) * 0.9, 0); }           // the cap
+      { const s = 0.04; put([cx - s, TOP + 1.1, cz], [cx + s, TOP + 1.1, cz], [cx + s, TOP + 1.3, cz], [cx - s, TOP + 1.3, cz], iron, 0.5, 0); put([cx, TOP + 1.1, cz - s], [cx, TOP + 1.1, cz + s], [cx, TOP + 1.3, cz + s], [cx, TOP + 1.3, cz - s], iron, 0.5, 0); }   // (the vane's rod)
+      { const [ax, az] = at(3, L.r0 + 0.01), [bx, bz] = at(4, L.r0 + 0.01), m = 0.2; put([ax + (bx - ax) * m, B, az + (bz - az) * m], [ax + (bx - ax) * (1 - m), B, az + (bz - az) * (1 - m)], [ax + (bx - ax) * (1 - m), B + 0.78, az + (bz - az) * (1 - m)], [ax + (bx - ax) * m, B + 0.78, az + (bz - az) * m], door, 0.85, 0); }   // the door, facing the dock
+      { const g = index["ground:rock"]; if (g !== undefined) put([L.at[0], B, L.at[1] + 1], [L.at[0] + 1, B, L.at[1] + 1], [L.at[0] + 1, B, L.at[1]], [L.at[0], B, L.at[1]], g, 0.8, 0); }   // (the rock under the tower)
+      // the rock: its edges falling into the sea
+      const [x0, y0, x1, y1] = L.rock, onRock = (x, y) => CM.isLighthouseRock(x, y), joined = (x, y) => onRock(x, y) || (CM.isPier && CM.isPier(x, y));
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) CM.DIRS.forEach(([dx, dy], d) => { if (joined(x + dx, y + dy)) return;
+        const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y] : d === 2 ? [x + 1, y + 1] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x, y + 1] : [x, y];
+        put([a[0] + dx * 0.25, -0.9, a[1] + dy * 0.25], [b[0] + dx * 0.25, -0.9, b[1] + dy * 0.25], [b[0], B, b[1]], [a[0], B, a[1]], rock, 0.7, 0); });
+      return n + 1; }; }
+  // boulders round the rock's foot
+  { const pi0 = CM.plantInstancesOf; if (pi0) CM.plantInstancesOf = (game, fl, at, reach, density) => { const out = pi0(game, fl, at, reach, density); if (!fl || fl.number !== -1 || !fl.levels || !(density > 0) || fl.grid.length <= L.rock[3] + 1) return out;
+      const M = (CM.plantsPack && CM.plantsPack.manifest && CM.plantsPack.manifest.models) || {}, [ax, ay] = at || fl.pos; if (Math.abs(ax - L.at[0]) + Math.abs(ay - L.at[1]) > (reach || 12) + 6) return out;
+      const put = (name, x, z, y, size, salt) => { const m = M[name]; if (!m) return; const lo = m.box[0], hi = m.box[1], w = Math.max(1e-3, hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]), sc = size * 0.62 / w, hh = CM.hashSeed(`lh:${salt}`);
+        out.push({ model: name, x: x - (lo[0] + hi[0]) / 2 * sc, y: y - lo[1] * sc, z: z - (lo[2] + hi[2]) / 2 * sc, yaw: (hh % 360) * Math.PI / 180, scale: sc, sway: 0, height: (hi[1] - lo[1]) * sc, shade: 0.6, kind: "rock" }); };
+      const [x0, y0, x1, y1] = L.rock;
+      for (let x = x0; x <= x1 + 1; x++) { put(x % 2 ? "rock1" : "rock2", x + 0.1, y0 - 0.15, -0.5, 1.5, `n${x}`); put(x % 2 ? "rock2" : "rock1", x - 0.1, y1 + 1.15, -0.5, 1.5, `s${x}`); }
+      for (let y = y0; y <= y1; y++) put(y % 2 ? "rock1" : "rock2", x1 + 1.2, y + 0.5, -0.5, 1.6, `e${y}`);
+      return out; }; }
+  // the lamp, lit: its glow, and the two beams going round
+  { const ls0 = CM.lifeSprites; CM.lifeSprites = (game, fl, now) => { const out = ls0 ? ls0(game, fl, now) : []; if (!fl || fl.number !== -1 || !fl.levels || game.mode === "title" || fl.grid.length <= L.rock[3] + 1 || !CM.lighthouseLit || !CM.lighthouseLit(game)) return out;
+      const t = CM.reducedMotion ? 1 : now / 1000, y = TOP + 0.32, [x, z] = L.at;
+      out.push({ x, y: z, lift: y - 0.55, layer: "fx:mist", w: 1.1, h: 1.1, alpha: 0.9, glow: 1.3 }, { x, y: z, lift: y - 0.25, layer: "fx:mist", w: 0.5, h: 0.5, alpha: 1, glow: 1.3 });
+      for (const off of [0, Math.PI]) { const a = t * 0.55 + off, d = [Math.cos(a), Math.sin(a)], p = [-d[1], d[0]], len = 34, w0 = 0.14, w1 = 2.8, O = [cx, y, cz], E = [cx + d[0] * len, y - 1.6, cz + d[1] * len];
+        out.push({ x, y: z, quad: [[O[0] - p[0] * w0, O[1], O[2] - p[1] * w0], [O[0] + p[0] * w0, O[1], O[2] + p[1] * w0], [E[0] + p[0] * w1, E[1], E[2] + p[1] * w1], [E[0] - p[0] * w1, E[1], E[2] - p[1] * w1]], layer: "fx:beam", alpha: 0.75, glow: 1.3 });
+        out.push({ x, y: z, quad: [[O[0], O[1] - w0, O[2]], [O[0], O[1] + w0, O[2]], [E[0], E[1] + w1 * 0.55, E[2]], [E[0], E[1] - w1 * 0.55, E[2]]], layer: "fx:beam", alpha: 0.75, glow: 1.3 }); }
       return out; }; }
 }
 
@@ -51930,7 +52047,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
-        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
+        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: game.perch.h || CM.TOWER.h } : null;   /* (v132.0: a perch of its own height - the lighthouse) */   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky ? (CM.snowDepth ? CM.snowDepth(game) : CM.snowLying(game) ? 1 : 0) : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = renderer.sky && (game.floor.number === 0 || game.floor.number === -1) ? (CM.litShare ? CM.litShare(game) : renderer.sky.night ? 0.7 : 0) : 0;   // the town's windows lit at dusk, and out as it goes to bed (v24.3: a share): the floor's mesh made again

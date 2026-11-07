@@ -721,14 +721,15 @@ CM.Renderer = class {
       const sb = this.sub[s.layer], layer = sb ? this.index[sb[0]] : this.index[s.layer];   // (a prop: one corner of a shared layer)
       if (layer === undefined) continue;
       const cx = s.x + 0.5 + (s.dx || 0), cz = s.y + 0.5 + (s.dz || 0), w = s.w || 0.7, h = s.h || 0.7;
-      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && s.hang === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend) {   // (v26.2: a plain billboard - an instance)
+      if (!CM.noInstances && !s.flat && !s.axis && s.face === undefined && s.hang === undefined && !s.tilt && !s.skew && !s.scale && !s.water && !s.bend && !s.quad) {   // (v26.2: a plain billboard - an instance)
         inst.push(cx, (s.lift || 0) + (s.base || 0), cz, w, h, layer, s.shade || 1, (s.sway && this.wind && !CM.reducedMotion ? s.sway : 0), sb ? sb[1] : 0, sb ? sb[2] : 0, sb ? sb[3] : 1, sb ? sb[4] : 1, s.flash || 0, s.alpha === undefined ? 1 : s.alpha, s.glow || 0, s.mirror ? 1 : 0);
         continue; }
       const flash = s.flash || 0, alpha = s.alpha === undefined ? 1 : s.alpha, shade = s.shade || 1, glow = s.glow || 0;
       const uv = sb ? [[sb[1], sb[4]], [sb[3], sb[4]], [sb[3], sb[2]], [sb[1], sb[2]]] : [[0, 1], [1, 1], [1, 0], [0, 0]];
       let corners;
       const base = s.base || 0, lift = (s.lift || 0) + base;   // (v47.0: base, the floor's level where it stands)
-      if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
+      if (s.quad) corners = s.quad;                                       // (v132.0) four corners given outright, in the world: a lighthouse's beam
+      else if (s.flat && s.rot !== undefined) {                               // (v22.2) a shadow cast: turned toward where it falls and stretched by the light's angle
         const c = Math.cos(s.rot), sn = Math.sin(s.rot), hl = (w * (s.len || 1)) / 2, hw = w / 2, ox = c * hl * 0.85, oz = sn * hl * 0.85, y0 = 0.0035 + base;
         const P = (a2, b2) => [cx + ox + c * a2 - sn * b2, y0, cz + oz + sn * a2 + c * b2];
         corners = [P(-hl, hw), P(hl, hw), P(hl, -hw), P(-hl, -hw)];
