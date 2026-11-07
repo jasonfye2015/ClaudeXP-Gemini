@@ -24,6 +24,13 @@ PEOPLE = {
                "and how a good boot saves more lives than a sword. Warm, a little loud, given to old soldiers' sayings.",
         "sells": "hats, robes, gloves, boots, rings and amulets",
     },
+    "woodcutter": {
+        "who": "Rook, the woodcutter, who lives out in the forest at his camp and comes into Thornwick only to sell "
+               "his wood: broad, slow-spoken, bearded, who knows every trail and glade of the wood - the Mossy Pond, "
+               "the Old Shrine, the Fairy Ring nobody dares, the Hollow Oak, the Wolf Hollow, the Bandits' Camp, the "
+               "Stream. He distrusts the Deep and thinks Claude a fool for going down it, kindly.",
+        "sells": "nothing - he cuts wood, and talks to whoever comes by his fire",
+    },
     "sage": {
         "who": "Mother Wren, the sage: calm, very old, kind and unhurried, with eyes that seem to see further than the "
                "room. She calls Claude 'child'. She teaches the three schools of magic - Evocation, Warding and Arcana - "
@@ -112,6 +119,10 @@ LINES = {
     "outfitter": ["Cloth won't stop a claw, but the right cloth makes the claw think twice. Try it on.",
                   "A good boot's saved more lives than a good sword. Old soldier's truth, that.",
                   "Back from floor {deepest}? Let's see the damage. Hm. I've stitched worse."],
+    "woodcutter": ["Sit by the fire a while. The wood's quiet today. Too quiet, some would say. I say it's just quiet.",
+                   "Mind the wolves past the Hollow. And mind the Fairy Ring - I've never seen that chest open, and I've "
+                   "never wanted to.",
+                   "Down the hole again? I'd sooner fell the Hollow Oak with a butter knife."],
     "sage": ["Three schools, child: Evocation, Warding and Arcana. What you learn of them stays learned, whatever the Deep does to you.",
              "You have fallen {deaths} times, child, and stood up every one of them. That is its own kind of magic.",
              "The bottom of the Deep is patient. You needn't be in a hurry to meet it."],

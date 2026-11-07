@@ -118,6 +118,9 @@ MONSTERS = {
     "Ogre": _m(200, 30, 1.7, "brute"), "Troll": _m(170, 27, 2.0, "brute"), "Hollow One": _m(110, 26, 2.8),
     "Drakeling": _m(110, 25, 2.8, "flyer", "fire"),
     "The Unmade King": _m(9000, 60, 2.1, "ranged", "arcane", figure="Pit Fiend", size=2.0),
+    # the forest round Thornwick (as strong as Claude is)
+    "Deer": _m(22, 0, 3.6, "timid", xp=6), "Boar": _m(34, 7, 2.8),
+    "Hedge Wizard": _m(30, 8, 2.0, "ranged", "storm"),
 }
 GUARDIANS = {b["guardian"] for b in BANDS}
 
@@ -198,4 +201,5 @@ VENDORS = {
     "outfitter": {"name": "Bramwell", "title": "the Outfitter", "figure": "barbarian", "tint": (140, 120, 100),
                   "sells": "gear"},
     "sage": {"name": "Mother Wren", "title": "the Sage", "figure": "mage", "tint": (110, 100, 150), "sells": "skills"},
+    "woodcutter": {"name": "Rook", "title": "the Woodcutter", "figure": "barbarian", "tint": (110, 90, 70), "sells": "talk"},
 }

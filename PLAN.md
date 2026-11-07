@@ -56,7 +56,16 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
 - Their own lines when no model is there (or it's switched off in the menu).
 - Later: townsfolk beyond the four, who talk about the forest and the story (phase 5).
 
-## Phase 5 - the forest, and the story
+## Phase 5 - the forest (v0.4) - done
 
-- The forest round Thornwick to walk in: paths, glades, a few of the forest's own creatures and places.
-- Claude's back story, told through the floors, the guardians and the townsfolk - fitting Claude and Magic's canon.
+- The wood round Thornwick (game/forest.py): the town 176 squares across, trails from the clearing's four ways to
+  eight glades with their lines (the Mossy Pond, the Old Shrine, the Woodcutter's Camp with Rook - who talks - the
+  Fairy Ring, the Hollow Oak, the Wolf Hollow, the Bandits' Camp, the Stream and its bridge), ~3400 trees you walk
+  between, undergrowth; creatures at Claude's own strength that keep to the wood; falling there costs nothing.
+- Also: the dead flip over; nothing in the Deep stands in a corridor or a narrow way (tests walk every floor at
+  Claude's size); the trees drawn by chunks near him, 60 frames a second.
+
+## Phase 6 - the story
+
+- Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the
+  Unmade King tell how it begins - what he finds at the bottom, and what it costs him.

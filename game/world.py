@@ -154,9 +154,11 @@ class Game:
         self.dialog = None
         self.guardian_down = False
         self.pieces_seen = set()
-        rng = random.Random(f"{self.seed}:spawns:{level.depth}")
+        rng = random.Random(f"{self.seed}:spawns:{level.depth}:{self.visits}")
+        strength = level.depth or max(1, min(60, self.player.level))        # (the forest's creatures: as strong as he is)
         for s in level.spawns:
-            m = Monster(s["monster"], s["x"], s["z"], level.depth, rng, s.get("guardian", False))
+            m = Monster(s["monster"], s["x"], s["z"], strength, rng, s.get("guardian", False))
+            m.home = (s["x"], s["z"])
             m.y = level.floor_at(m.x, m.z)
             if m.kind == "flyer":
                 m.lift = 0.35
@@ -205,8 +207,20 @@ class Game:
         self.events.append(("save",))
         return True
 
+    def in_town(self):
+        S = self.level.safe
+        return S is not None and bool(S[min(S.shape[0] - 1, max(0, int(self.z))), min(S.shape[1] - 1, max(0, int(self.x)))])
+
     def die(self):
         p = self.player
+        if self.depth == 0:                                  # (fallen in the forest: home, and the Deep is as it was)
+            self.go_town()
+            p.life, p.mana = p.max_life(), p.max_mana()
+            self.dead = False
+            self.events.append(("toast", "Claude wakes in the clearing, bruised. The forest lets him go, this time.",
+                                (1.0, 0.7, 0.5)))
+            self.events.append(("save",))
+            return
         p.stats["deaths"] += 1
         self.events.append(("died", self.depth))
         self.run_floor = 1
@@ -295,12 +309,12 @@ class Game:
             amt = min(self.heal_over, p.max_life() * 0.2 * dt)
             p.life = min(p.max_life(), p.life + amt)
             self.heal_over -= amt
-        if self.depth == 0:
+        if self.depth == 0 and self.in_town():
             p.life = min(p.max_life(), p.life + p.max_life() * 0.25 * dt)      # (home: he mends)
         self.hurt = max(0.0, self.hurt - dt * 1.5)
         # the wand
         self.cool -= dt
-        if inp.fire and self.cool <= 0 and self.depth > 0:
+        if inp.fire and self.cool <= 0 and (self.depth > 0 or not self.in_town()):
             self._fire()
         self._bolts(dt)
         self._monsters(dt)
@@ -610,7 +624,7 @@ class Game:
 
     def _monsters(self, dt):
         L = self.level
-        if self.depth == 0:
+        if not self.monsters:
             return
         flow = self._flow_field()
         ex, ey, ez = self.eye
@@ -657,6 +671,15 @@ class Game:
                 m.los_at = self.time + 0.2
                 m.los = dist < 16 and L.line_of_sight(m.x, m.z, m.centre_y, ex, ez, ey)
             sees = m.los and dist < 16
+            if m.kind == "timid":                                       # (a deer: it runs)
+                if dist < 12:
+                    self._walk(m, -dx / max(dist, 1e-3), -dz / max(dist, 1e-3), m.speed, dt)
+                else:
+                    m.awake = False
+                continue
+            if self.depth == 0 and math.hypot(m.x - m.home[0], m.z - m.home[1]) > 28 and dist > 8:
+                m.awake = False                                         # (too far from home: it goes back)
+                continue
             m.yaw = math.atan2(-dx, dz) if sees or dist < 2 else m.yaw
             m.cool -= dt
             # striking
@@ -673,10 +696,10 @@ class Game:
                 continue
             want_range = 5.5 if m.kind == "ranged" else 0.0
             reach = m.radius + RADIUS + 0.55
-            if m.kind == "ranged" and sees and dist < 9 and m.cool <= 0:
+            if m.kind == "ranged" and sees and dist < 9 and m.cool <= 0 and not self.in_town():
                 m.strike, m.cool = 0.0, self.rng.uniform(1.8, 2.8)
                 continue
-            if m.kind != "ranged" and dist < reach and m.cool <= 0 and abs(self.y - m.y) < 1.0:
+            if m.kind != "ranged" and dist < reach and m.cool <= 0 and abs(self.y - m.y) < 1.0 and not self.in_town():
                 m.strike, m.cool = 0.0, (1.7 if m.kind == "brute" else 1.15)
                 continue
             # moving: straight at him when in sight, else down the flow field
@@ -738,6 +761,8 @@ class Game:
         gx, gz = gx / max(1.0, ln), gz / max(1.0, ln)
         L = self.level
         nx, nz = m.x + gx * speed * dt, m.z + gz * speed * dt
+        if L.safe is not None and L.safe[min(L.h - 1, int(nz)), min(L.w - 1, int(nx))]:
+            return                                                      # (nothing hunts in the town)
         r = min(m.radius, 0.4)
         if L.can_stand(nx, m.z, r, m.y):
             m.x = nx

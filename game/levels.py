@@ -13,6 +13,7 @@ import numpy as np
 
 from . import data as D
 from . import dress
+from . import forest
 
 STEP = 0.42                          # the highest step a walker takes without a jump
 INVISIBLE = 255                      # a wall texture that draws nothing (the forest's edge: trees stand there instead)
@@ -49,6 +50,7 @@ class Level:
         # the dressing (game/dress.py says what each is)
         self.decals, self.flats, self.webs, self.hangs, self.sprites, self.drips, self.chests = [], [], [], [], [], [], []
         self.water, self.pieces, self.gold_squares = set(), [], set()
+        self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 
     def tex(self, name):
         if name not in self.textures:
@@ -80,10 +82,13 @@ class Level:
             b = {}
             things = [(s["x"], s["z"], s["solid"]) for s in self.sprites if s.get("solid")]
             things += [(c["x"], c["z"], 0.3) for c in self.chests]
-            things += [(p["x"], p["z"], 0.28 * p.get("scale", 1) / 0.4 if p["scale"] < 0.6 else 0.3) for p in self.props
+            things = [(x, z, min(0.45, r)) for x, z, r in things]
+            things += [(p["x"], p["z"], p.get("trunk") or (0.26 if p.get("scale", 1) < 0.5 else 0.32)) for p in self.props
                        if p.get("solid")]
             for x, z, r in things:
-                b.setdefault((int(x), int(z)), []).append((x, z, min(0.45, r)))
+                for cx in range(int(x - r), int(x + r) + 1):
+                    for cy in range(int(z - r), int(z + r) + 1):
+                        b.setdefault((cx, cy), []).append((x, z, r))
             self._blockers = b
         return self._blockers
 
@@ -298,7 +303,7 @@ def dungeon(depth, seed):
             continue
         for _ in range(20):
             x, y = rng.randint(r.x, r.x + r.w - 1), rng.randint(r.y, r.y + r.h - 1)
-            if L.open_at(x, y) and not _near(L, x, y, L.stairs, 2) and \
+            if L.open_at(x, y) and not _near(L, x, y, L.stairs, 2) and not clear_way(L, x, y) and \
                     any(not L.open_at(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                 dress.chest(L, x, y, rng)
                 break
@@ -307,18 +312,47 @@ def dungeon(depth, seed):
     for r in rooms:
         for _ in range(rng.randint(0, 3)):
             x, y = rng.randint(r.x, r.x + r.w - 1), rng.randint(r.y, r.y + r.h - 1)
-            if not L.open_at(x, y) or _near(L, x, y, L.stairs) or _near(L, x, y, L.portal):
+            if not L.open_at(x, y) or _near(L, x, y, L.stairs) or _near(L, x, y, L.portal) or clear_way(L, x, y):
                 continue
             edge = sum(not L.open_at(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
             if edge or rng.random() < 0.3:
-                L.props.append({"model": rng.choice(props), "x": x + 0.5, "z": y + 0.5, "yaw": rng.uniform(0, math.tau),
-                                "scale": rng.uniform(0.32, 0.45), "y": float(L.floor[y, x]), "solid": True})
+                model = rng.choice(props)
+                L.props.append({"model": model, "x": x + 0.5, "z": y + 0.5, "yaw": rng.uniform(0, math.tau),
+                                "scale": rng.uniform(0.32, 0.45), "y": float(L.floor[y, x]),
+                                "solid": model in ("barrel", "crate", "stump", "stump_moss", "willow_dead")})
         for _ in range(1 + (r.w * r.h) // 30):
             spot = _wall_spot(L, r, rng)
             if spot:
                 L.lights.append(spot)
     dress.dress(L, rng, bi)
     return L
+
+
+def walkable_reach(L, radius=0.24):
+    """The squares Claude's own body can walk to from where he comes in, things in the way and all (square to square,
+    the way between looked at in small steps)."""
+    from collections import deque
+    sx, sy = int(L.start[0]), int(L.start[1])
+    seen = {(sx, sy)}
+    q = deque([(sx, sy)])
+    while q:
+        x, y = q.popleft()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if (nx, ny) in seen or not L.open_at(nx, ny) or abs(L.floor[ny, nx] - L.floor[y, x]) > STEP:
+                continue
+            foot = max(L.floor[y, x], L.floor[ny, nx]) - 0.01
+            if all(L.can_stand(x + 0.5 + dx * t, y + 0.5 + dy * t, radius, foot) for t in (0.25, 0.5, 0.75, 1.0)):
+                seen.add((nx, ny))
+                q.append((nx, ny))
+    return seen
+
+
+def clear_way(L, x, y):
+    """A square that must stay free to walk: a corridor runs through it, or it's a passage a square wide."""
+    if (x, y) in L.paths:
+        return True
+    return (not L.open_at(x - 1, y) and not L.open_at(x + 1, y)) or (not L.open_at(x, y - 1) and not L.open_at(x, y + 1))
 
 
 def _near(L, x, y, at, d=1.6):
@@ -396,7 +430,7 @@ def _wall_spot(L, r, rng):
 
 
 # ---- Thornwick -------------------------------------------------------------------------------------------------------
-TOWN_SIZE = 64
+TOWN_SIZE = 176
 
 
 def town(seed=1):
@@ -404,10 +438,10 @@ def town(seed=1):
     S = TOWN_SIZE
     L = Level(S, S, 0, outdoor=True)
     L.name, L.line = D.TOWN_NAME, "Home: a clearing in the forest, a ring of roofs, and the Deep under the old stones."
-    L.tint, L.fog, L.ambient = (1.0, 1.0, 1.0), ((0.42, 0.52, 0.58), 0.035), 0.55
+    L.tint, L.fog, L.ambient = (1.0, 1.0, 1.0), ((0.40, 0.50, 0.52), 0.042), 0.55
     grass, dirt, cobble, flags = L.tex("ground.grass"), L.tex("ground.dirt"), L.tex("ground.cobbles"), L.tex("ground.flags")
     needles = L.tex("ground.needles")
-    plaster, roof, stone, bark = L.tex("solid.plaster"), L.tex("solid.roof"), L.tex("solid.cliff"), L.tex("solid.bark")
+    plaster, roof, bark = L.tex("solid.plaster"), L.tex("solid.roof"), L.tex("solid.bark")
     L.tex("ground.planks")
     cx = cy = S // 2
     yy, xx = np.mgrid[0:S, 0:S]
@@ -434,9 +468,9 @@ def town(seed=1):
     for k in range(8):
         a = k / 8 * math.tau + math.pi / 8
         sx, sy = int(cx + math.cos(a) * 3.6), int(cy + math.sin(a) * 3.6)
-        L.solid[sy, sx] = True
-        L.wtex[sy, sx] = stone
-        L.top[sy, sx] = 1.4 + 0.25 * (k % 3)
+        L.solid[sy, sx] = True                          # (an old standing stone: a rock, stood on end)
+        L.props.append({"model": "rock2" if k % 2 else "rock1", "x": sx + 0.5, "z": sy + 0.5, "yaw": k * 1.7,
+                        "scale": 2.1 + 0.3 * (k % 3), "y": 0.0})
     L.portal = (cx + 0.5, cy + 0.5)
     # the houses and the stalls: a vendor before each, facing the square
     spots = {"apothecary": 0.35, "wandwright": 1.95, "outfitter": 3.55, "sage": 5.15}
@@ -469,16 +503,12 @@ def town(seed=1):
                     L.top[qy, qx] = 2.2
         door = (round(math.cos(ang + math.pi)), 0) if abs(math.cos(ang)) > abs(math.sin(ang)) else (0, round(math.sin(ang + math.pi)))
         L.houses.append((int(hx) - 1, int(hy) - 1, int(hx) + 2, int(hy) + 2, 2.2, roof, door))
-    # the forest: trees thick round the edge, a few in the clearing's skirts
-    trees = ["pine", "pine2", "common", "common2", "birch", "birch2", "willow"]
-    for (x, y) in zip(*np.nonzero(L.solid.T)):
-        if L.wtex[y, x] != INVISIBLE:
-            continue
-        if r[y, x] < 30 and rng.random() < (0.5 if r[y, x] < 26 else 0.25):
-            L.props.append({"model": rng.choice(trees), "x": x + rng.uniform(0.2, 0.8), "z": y + rng.uniform(0.2, 0.8),
-                            "yaw": rng.uniform(0, math.tau), "scale": rng.uniform(0.9, 1.5), "y": 0.0})
+    # the forest round it all (game/forest.py): its trails, its glades, its trees and its creatures
+    solid_town = L.solid & clearing                           # (the houses and the stones)
+    forest.grow(L, rng, cx, cy, clearing)
+    L.solid |= solid_town
     for (x, y) in L.open_squares():
-        if r[y, x] > 17.5 and rng.random() < 0.06:
+        if 17.5 < r[y, x] < 22 and rng.random() < 0.06:
             L.props.append({"model": rng.choice(["bush", "bush2", "bushberries", "plant1", "plant2", "flowers", "rock1",
                                                  "stump_moss", "grass", "grass2"]),
                             "x": x + 0.5, "z": y + 0.5, "yaw": rng.uniform(0, math.tau), "scale": rng.uniform(0.5, 0.8),
