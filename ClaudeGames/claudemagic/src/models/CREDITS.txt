@@ -8,3 +8,7 @@ CC0 asks nothing; the credit is given anyway, as for the tiles and the textures 
 The plants and trees (src/models/plants.json, UPGRADE_PLAN_62.md): static vertex-coloured meshes, baked by tools/plants.py.
 
 - Quaternius - Ultimate Nature Pack (the common, birch, pine and willow trees in their green, autumn, dead and snow shapes; bushes, plants, grass, flowers, lilypads, corn and wheat, stumps, logs and rocks), quaternius.com (CC0): https://quaternius.com/packs/ultimatenature.html - fetched as .glb from the showcase mirror https://github.com/trebeljahr/quaternius-showcase (LICENSES.md lists the pack CC0-1.0). Kept in Local Storage/Claude and Magic models/quaternius-nature/; only the baked file (src/js/35d-plants.js) is in the repo.
+
+The harbour's models (v133.0): the ship, the rowing boat, the palms, barrels and crates, baked by tools/plants.py from their colour map.
+
+- Kenney - Pirate Kit (2.1), www.kenney.nl (Creative Commons Zero, CC0): https://kenney.nl/assets/pirate-kit - fetched from https://opengameart.org/content/pirate-kit (kenney_pirate-kit_2.1.zip, its License.txt kept beside the models). Kept in Local Storage/Claude and Magic models/kenney-pirate/; only the baked file (src/js/35d-plants.js) is in the repo.

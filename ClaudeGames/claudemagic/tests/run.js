@@ -7599,6 +7599,23 @@ test("the lighthouse: on a rock off the dock's end, walked onto from the dock; i
   for (const s of ["add(\"solid:lighthouse\", c)", "layer: \"fx:beam\"", "if (s.quad) corners = s.quad;", "h: game.perch.h || CM.TOWER.h"]) assert.ok(html.includes(s), s);
 });
 
+test("the boat: the Wren at the dock's south face; aboard from the dock's edge, the captain's sea chart - home, a sail round the island, the islands and the mainland - the fare, the hours, never out in the dark with the light unlit, the places not yet charted closed; a sail round the island and home to the dock; the ship drawn and the voyage seen from her deck", () => {
+  const CM = load(), H = CM.HARBOUR;
+  const g = new CM.Game(); g.newGame("boat-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; let chart = 0; g.on("seachart", () => chart++);
+  g.enterFloor(-1, "rope", [H.pier[0], H.head[1]]); assert.ok(!g.use() || chart === 0, "not from the middle of the dock");
+  g.floor.pos = [H.pier[0], H.head[3]]; g.floor.facing = 2; assert.ok(g.use(), "aboard from the dock's edge"); assert.strictEqual(chart, 1, "the chart unrolled");
+  const ids = CM.SEA_PLACES.map((p) => p.id); for (const id of ["home", "round", "main"]) assert.ok(ids.includes(id), id); assert.ok(CM.SEA_PLACES.filter((p) => !p.trip && !p.here).length >= 4, "islands and the mainland on the chart");
+  assert.ok(CM.SEA_PLACES.find((p) => p.id === "main").what.includes("continent"));
+  g.clock = 1440 + (11 - 6) * 60; assert.strictEqual(g.seaWhyNot("home"), "That's where you are."); assert.ok(/not yet/.test(g.seaWhyNot("gull")), "not charted yet");
+  g.gold = 2; assert.ok(/fare/.test(g.seaWhyNot("round")), "the fare"); g.gold = 50;
+  g.clock = 1440 + (22 - 6) * 60; assert.ok(/dark/.test(g.seaWhyNot("round")), "not in the dark, unlit"); g.floor.pos = CM.LIGHTHOUSE.door.slice(); g.climbLighthouse(); g.climbDown(); g.floor.pos = [H.pier[0], H.head[3]];
+  assert.strictEqual(g.seaWhyNot("round"), "", "with the light lit, yes"); const gold = g.gold, clock = g.clock, seen = [];
+  g.on("voyage", (v) => seen.push(v)); const r = g.sail("round"); assert.ok(r && r.home); assert.strictEqual(g.gold, gold - CM.seaPlace("round").fare); assert.strictEqual(g.clock, clock + CM.seaPlace("round").hours * 60);
+  assert.strictEqual(seen.length, 1); assert.strictEqual(g.floor.number, -1); assert.strictEqual(CM.woodPlace(g.floor, ...g.floor.pos), "the dock", "home to the dock"); assert.strictEqual(g.vext("sea").sailed, 1);
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["CM.movingStatics = ", "openSeaChart() {", "CM.startVoyage = ", "\"ship\":{"]) assert.ok(html.includes(s), s);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");
