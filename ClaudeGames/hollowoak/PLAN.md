@@ -46,6 +46,13 @@ The design document (Claude Docs): https://claude.ai/artifact/JtQZ3J468Lqh9E8Qqo
 - Everything about a third darker or more: the lantern's light (and its reach, more so in the roots), the ambient,
   the fungus's light, the moon.
 
+## Phase 1f - the wand, the dark, the breathing fungus - done
+
+The lantern hangs by its ring from the crook of Claude's wand (KayKit's, CC0 - copied once into assets by
+tools/export_wand.py), held out low from the right and swinging as he walks, thrown about by a shake. When it goes out
+the den goes darker still (the faint bounce of its light goes with it; only an ember is left). Each patch of glowing
+fungus breathes on its own slow cycle (6 to 15 seconds), fading almost out and growing back, and its light with it.
+
 ## Phase 2 - webs and movement
 
 Walkable silk strands across the hollow (balance, vibration, sound), silk sense, her small ones scurrying.

@@ -15,7 +15,7 @@ OUT_EVERY = (55.0, 120.0)           # (then every minute or two)
 SPUTTER_EVERY = (5.0, 16.0)
 SHAKE_TIME = 0.85
 RELIGHT = 0.65                      # (the chance a shake brings it back)
-EMBER = 0.035
+EMBER = 0.02
 
 
 class Lantern:

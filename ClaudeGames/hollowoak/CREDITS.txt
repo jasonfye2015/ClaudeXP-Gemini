@@ -3,6 +3,9 @@ The Hollow Oak - what it's made of, and where it came from.
 The textures (assets/textures): ambientCG (CC0), https://ambientcg.com - Bark007 (the heartwood), Ground103 (the earth),
 ScatteredLeaves001 (the dry leaves); colour and normal maps, resized to 512, tinted in the game.
 
+Claude's wand (assets/wand.npz, wand.png): Kay Lousberg's KayKit Adventurers pack (CC0), https://kaylousberg.com -
+its shape and colours copied out once by tools/export_wand.py.
+
 To come (phase 3): the spider, Ysmeine and her small ones - Quaternius's animated Spider (CC0), https://quaternius.com.
 
 The code, the tree, its light and its words: written for this game. The small OpenGL layer (engine/gl.py) is the one the
