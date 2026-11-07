@@ -6,7 +6,7 @@ apprentice with a birch wand. A hundred floors, ten bands of ten, a guardian at 
 thing the town is built over.
 
 Playing
-  WASD move, mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
+  WASD move, Shift run (a running jump goes higher and further), mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
   F talk / use (the vendors, the stairs, the Deep's mouth), Q health potion, E mana potion, T Scroll of Return,
   1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, Esc the menu.
 
@@ -55,6 +55,11 @@ Playing
   with Play (the three slots as cards), Records, Options, Keys and Credits.
 
   The dead flip over: a thing that stood falls flat on its back, a beast or a blob rolls belly-up.
+
+  The floors are big - sixteen to thirty-six rooms - and climb: each room at its own height, a step or two from the
+  ones it joins, the corridors rising and falling between them in gentle steps; L-shaped rooms, rooms round a block
+  of rock, split and stepped rooms, winding corridors, loops, and dead-end alcoves with a chest or a find at the end.
+  Gold, potions, scrolls and things that glint lie about, taken as he walks over them; more chests, more barrels.
 
   The Deep is dressed as Claude and Magic's is: pipe mouths that drip, barred grates and drain ports, webs in the
   corners, moss, roots, chains, sconces and banners, beams and hanging roots overhead, stalagmites, and each band's

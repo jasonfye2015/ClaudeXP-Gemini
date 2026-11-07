@@ -81,6 +81,15 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   below (engine/weatherfx.py); its dial and Calendar (ui/dial.py); rain and wind heard, thunder after lightning.
 - The weather in play, outdoors and in the first floors (its flood: floors 1-3, a day to drain).
 
+## v0.7 - running, and floors twice the size - done
+
+- Shift runs (x1.65), and a running jump goes higher (x1.3) and carries further.
+- Floors twice the area (64 to 108 squares across), 16 to 36 rooms; rooms at their own heights along the tree that
+  joins them, corridors relaxed between them in steps of a tenth; L, ring, split and stepped rooms; winding
+  corridors; more loops; dead-end alcoves with caches; floors made again gentler, then level, should the heights
+  ever cut anything off (a whole-floor walk at Claude's size decides).
+- Pickups (gold, potions, scrolls, finds) lying about; two to five chests; more breakables.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

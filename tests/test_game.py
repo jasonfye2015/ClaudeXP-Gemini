@@ -278,3 +278,52 @@ def test_saves():
         assert I.wand_stats(h.player.wand())["element"] == "arcane"
         S.delete(1)
         assert S.load(1) is None
+
+
+def test_running_and_the_running_jump():
+    """Shift: faster on the ground, and a running jump goes higher and further."""
+    def run_for(run, jump, secs=0.6):
+        g = Game.new(seed=12)
+        g.go_floor(1)
+        g.monsters = []
+        L = g.level
+        # a long clear run: the start room's floor, straight ahead
+        g.yaw = 0.0
+        inp = Input()
+        inp.forward, inp.run, inp.yaw = 1.0, run, 0.0
+        x0, z0, top = g.x, g.z, g.y
+        if jump:
+            inp.jump = True
+        for _ in range(int(secs * 60)):
+            g.step(1 / 60, inp)
+            top = max(top, g.y)
+        return math.hypot(g.x - x0, g.z - z0), top - L.floor_at(x0, z0)
+    walk, _ = run_for(False, False, 0.3)
+    run, _ = run_for(True, False, 0.3)
+    assert run > walk * 1.4, (walk, run)
+    _, hop = run_for(False, True)
+    _, leap = run_for(True, True)
+    assert leap > hop * 1.4, (hop, leap)
+
+
+def test_things_lying_about():
+    g = Game.new(seed=13)
+    g.go_floor(5)
+    L = g.level
+    assert len(L.pickups) >= 10 and len(L.chests) >= 2
+    kinds = {pk["kind"] for d in range(1, 12) for pk in levels.dungeon(d, 13).pickups}
+    assert {"gold", "health", "mana", "item"} <= kinds
+    p = g.player
+    pk = next(pk for pk in L.pickups if pk["kind"] == "gold")
+    gold = p.gold
+    g.x, g.z, g.y = pk["x"], pk["z"], pk["y"]
+    g.step(0.02, Input())
+    assert pk not in L.pickups and p.gold > gold
+
+
+def test_the_floors_are_bigger_and_climb():
+    L = levels.dungeon(30, 2)
+    assert L.w >= 79 and len(L.rooms) >= 22
+    heights = {round(float(h), 1) for h in L.floor[~L.solid]}
+    assert len(heights) >= 5
+    assert {r.kind for r in L.rooms} & {"L", "ring", "split", "steps"}

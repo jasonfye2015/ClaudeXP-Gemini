@@ -21,6 +21,8 @@ EYE = 0.62
 RADIUS = 0.24
 GRAVITY = 16.0
 JUMP = 5.2
+RUN = 1.65                     # how much faster he runs (Shift)
+RUN_JUMP = 1.3                 # and how much higher a running jump goes
 
 
 class Input:
@@ -29,6 +31,7 @@ class Input:
         self.strafe = 0.0        # -1..1 (right positive)
         self.fire = False
         self.jump = False
+        self.run = False         # (Shift: faster, and a higher, longer jump)
         self.yaw = 0.0
         self.pitch = 0.0
 
@@ -423,11 +426,36 @@ class Game:
                 self.pieces_seen.add(k)
                 name = pc["name"][0].upper() + pc["name"][1:]
                 self.events.append(("piece", name, pc["line"]))
+        for pk in list(L.pickups):
+            if (pk["x"] - self.x) ** 2 + (pk["z"] - self.z) ** 2 < 0.55 ** 2 and abs(pk["y"] - self.y) < 0.8:
+                L.pickups.remove(pk)
+                self._take(pk)
         if (cx, cy) in L.gold_squares:
             L.gold_squares.discard((cx, cy))
             n = max(1, I.gold_for(max(1, self.depth), self.rng) // 2)
             self.player.gold += n
             self.events.append(("loot", (self.x, self.y + 0.3, self.z), [f"+{n} gold"]))
+
+    def _take(self, pk):
+        p, rng, depth = self.player, self.rng, max(1, self.depth)
+        k = pk["kind"]
+        if k == "gold":
+            n = I.gold_for(depth, rng, p.bonus().get("find", 0)) * rng.randint(2, 4)
+            p.gold += n
+            got = [f"+{n} gold"]
+        elif k in ("health", "mana"):
+            p.potions[k] += 1
+            got = ["a Health Potion" if k == "health" else "a Mana Potion"]
+        elif k == "scroll":
+            p.potions["return"] += 1
+            got = ["a Scroll of Return"]
+        else:
+            it = I.roll_item(rng, depth + 1, p.bonus().get("find", 0) / 400)
+            kept = p.give(it)
+            got = [I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)"]
+            self.events.append(("found", it))
+        self.events.append(("loot", (pk["x"], pk["y"] + 0.4, pk["z"]), got))
+        self.events.append(("pickup", k))
 
     def _move(self, dt, inp):
         p, L = self.player, self.level
@@ -439,7 +467,13 @@ class Game:
         if ln > 1:
             mx, mz = mx / ln, mz / ln
         here = (int(self.x), int(self.z))
+        on_ground0 = self.y <= L.floor_at(self.x, self.z) + 0.02
+        running = inp.run and inp.forward > 0
+        if on_ground0:
+            self.leap = 1.0                                  # (the boost of a running jump lasts while he's in the air)
         sp = p.speed() * (0.6 if here in L.water or self.flooded(*here) else 1.0) * self.wx.get("speed", 1.0)
+        sp *= (RUN if running else 1.0) * getattr(self, "leap", 1.0)
+        self.running = running
         step_x, step_z = mx * sp * dt, mz * sp * dt
         foot = self.y
         if L.can_stand(self.x + step_x, self.z, RADIUS, foot):
@@ -449,7 +483,10 @@ class Game:
         ground = L.floor_at(self.x, self.z)
         on_ground = self.y <= ground + 0.02
         if inp.jump and on_ground:
-            self.vy = JUMP
+            self.vy = JUMP * (RUN_JUMP if self.running else 1.0)
+            if self.running:
+                self.leap = 1.18                             # (and he carries further)
+            self.events.append(("jump", self.running))
             inp.jump = False
         self.vy -= GRAVITY * dt
         self.y += self.vy * dt
