@@ -66,3 +66,16 @@ def test_endless():
     assert I.depth_scale(101) > I.depth_scale(100)
     L = levels.dungeon(110, 3)
     assert L.guardian == D.BANDS[0]["guardian"]               # (the guardians come round again too)
+
+
+def test_auto_play_sped_up():
+    """The view steps the game several times a frame at speed (as ui/view.py does): the same play, sooner."""
+    g = Game.new(seed=24)
+    g.go_floor(1)
+    inp, bot = Input(), autoplay.Autopilot()
+    for _frame in range(250):                             # (250 frames at x8: a hundred seconds of play)
+        for _ in range(8):
+            bot.drive(g, inp, 0.05)
+            g.step(0.05, inp)
+        g.events.clear()
+    assert g.time > 99 and g.player.stats["kills"] > 5
