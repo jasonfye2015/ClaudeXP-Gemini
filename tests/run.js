@@ -5845,7 +5845,7 @@ test("levels: about one plain room in five a dais and one in nine a pit, the roo
   assert.ok(dais > rooms / 12 && dais < rooms / 2.2, `dais ${dais} of ${rooms}`);   /* (plan 64: the set pieces take room from the plain ones, so the share runs a little higher) */ assert.ok(pit > 0 && pit < rooms / 5, `pit ${pit} of ${rooms}`);
   assert.ok(CM.FLOOR_FIXED.includes("levels"), "made with the floor, never saved");
   assert.deepStrictEqual(JSON.stringify(CM.makeFloor(7, "lv-1").levels), JSON.stringify(CM.makeFloor(7, "lv-1").levels), "the same each time");
-  assert.ok(!CM.makeFloor(0, "lv-1").levels && Object.keys(CM.makeFloor(-1, "lv-1").levels).every((k) => CM.isScarp(...k.split(",").map(Number)) || CM.isPier(...k.split(",").map(Number))), "none above but the Scarp's and the pier's (v128.0, v130.0)");
+  assert.ok(!CM.makeFloor(0, "lv-1").levels && Object.keys(CM.makeFloor(-1, "lv-1").levels).every((k) => CM.isScarp(...k.split(",").map(Number)) || CM.isPier(...k.split(",").map(Number)) || CM.isLighthouseRock(...k.split(",").map(Number))), "none above but the Scarp's, the pier's and the lighthouse rock's (v128.0, v130.0, v132.0)");
   // the mesh: a stepped floor has more faces than the same floor made level
   let fl = null; for (let n = 1; n <= 30 && !fl; n++) { const f = CM.makeFloor(n, "lv-1"); if (f.levels && Object.keys(f.levels).length) fl = f; }
   const index = new Proxy({}, { get: () => 0 }), stepped = CM.floorMesh(fl, CM.themeFor(fl.number), index).count, flat = CM.floorMesh(Object.assign({}, fl, { levels: null }), CM.themeFor(fl.number), index).count;
@@ -7468,7 +7468,7 @@ test("the wolf den: a crag with an open cave mouth west of the river, a clearing
 test("the south of the Wood: twenty rows more, the east beyond the cliffs the hill and the gate where it was; the two meadows reached on foot (the second over a new ford); everything the seed placed in the old land where it was; an old save's map read at its own size; the herd of ten in the page", () => {
   const CM = load(), w = CM.makeWood("south-1"), N = w.grid.length;
   assert.strictEqual(N, CM.WOOD_SIZE); assert.strictEqual(w.things[CM.WOOD_GATE.join(",")].type, "woodgate"); assert.ok(CM.isOpen(w, CM.WOOD_EAST + 2, CM.WOOD_GATE[1]), "the gate's way out");
-  for (let y = 0; y < N; y++) for (let x = CM.WOOD_EAST; x < N; x++) if (!(y === CM.WOOD_GATE[1] && x <= CM.WOOD_EAST + 2) && !(CM.isOpen(w, x, y))) assert.ok(["cliff", "sea"].includes(CM.solidAt(w, x, y)) || CM.isOpen(w, x, y), `${x},${y} is the hill (or the sea at its foot: v129.0)`);
+  for (let y = 0; y < N; y++) for (let x = CM.WOOD_EAST; x < N; x++) if (!(y === CM.WOOD_GATE[1] && x <= CM.WOOD_EAST + 2) && !(CM.isOpen(w, x, y))) assert.ok(["cliff", "sea", "lighthouse"].includes(CM.solidAt(w, x, y)) || CM.isOpen(w, x, y), `${x},${y} is the hill (or the sea at its foot: v129.0)`);
   const S = CM.WOOD_GATE, seen = new Set([S.join()]), q = [S]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.isOpen(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
   for (const M of CM.SOUTH_WOOD.meadows) { assert.ok(seen.has(M.c.join()), `${M.name}: walked to`); assert.ok(w.rooms.some((r) => r.name === M.name)); }
   // the old land's things as they were: the seed's picks bounded to the old land (the gate's outer square is outside them)
@@ -7509,7 +7509,7 @@ test("the Scarp: a high heath in the Wood's south-east as high as the cliffs, wa
 test("the island: the Wood runs on to the sea - a fringe of dunes, the Strand's sand under the cliffs too, the river shallow at its mouth, tracks down from both meadows (stepping stones over the falls' stream), and the sea past it; the sea seen first from the sand, the island from the Lookout, kept with the village; Claude told; an old save's map read at its size; the sea round the land drawn and on the world map", () => {
   const CM = load(), H = CM.SHORE, S = CM.SCARP;
   for (const seed of ["isle-1", "abc"]) { const w = CM.makeWood(seed), N = w.grid.length; assert.strictEqual(N, CM.WOOD_SIZE); assert.ok(N > H.sea + 1);
-    for (let x = 0; x < N; x++) for (let y = H.sea; y < N; y++) if (!(CM.isPier && CM.isPier(x, y))) assert.strictEqual(CM.solidAt(w, x, y), "sea", `${x},${y} is the sea`);   /* (v130.0: but for the pier) */
+    for (let x = 0; x < N; x++) for (let y = H.sea; y < N; y++) if (!(CM.isPier && CM.isPier(x, y)) && !(CM.isLighthouseRock && CM.isLighthouseRock(x, y))) assert.strictEqual(CM.solidAt(w, x, y), "sea", `${x},${y} is the sea`);   /* (v130.0: but for the pier) */
     assert.ok(!w.decor.some((d) => d.kind === "water" && d.y >= H.sea), "the river's water ends at the sea");
     for (let x = 1; x < N - 1; x++) for (let y = H.strand[0]; y <= H.strand[1]; y++) if (x !== CM.riverX(y) && !(CM.isPier && CM.isPier(x, y))) assert.strictEqual(w.ground[`${x},${y}`], "sand");
     assert.ok(CM.passable(w, CM.riverX(H.mouth), H.mouth), "the river's mouth wades"); assert.ok(CM.passable(w, ...H.streamFord), "stepping stones over the falls' stream");
@@ -7579,6 +7579,24 @@ test("the coast: a path round the island's edge - the west shore, the north coas
   const gold = g.gold, heard = []; CM.claudeActs.shells(g, null, (t) => heard.push(t)); assert.ok(g.gold > gold && heard.length === 1, "Claude pays for the shelf"); assert.ok(!CM.claudeTopics.flatMap((f) => f(g) || []).some((o) => o[0] === "shells"), "and wants no second of the same");
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["add(\"fx:fishshadow\", c)", "layer: \"fx:fish\"", "layer: `shell:${s.id}`"]) assert.ok(html.includes(s), s);
+});
+
+test("the lighthouse: on a rock off the dock's end, walked onto from the dock; its door opens on the stair to the gallery - by day the view (and the island found), by night the lamp, lit by the party, burning and turning till dawn, the keeper's wage once a night; down again; never saved up there; the tower built and its beam drawn", () => {
+  const CM = load(), L = CM.LIGHTHOUSE;
+  for (const seed of ["lh-1", "abc"]) { const w = CM.makeWood(seed); assert.strictEqual(CM.solidAt(w, ...L.at), "lighthouse"); assert.ok(CM.SOLID.lighthouse.tower);
+    assert.ok(CM.passable(w, ...L.door)); assert.strictEqual(CM.floorAt(w, ...L.door), CM.HARBOUR.deck, "the rock at the dock's height"); assert.strictEqual(CM.woodPlace(w, ...L.door), "the lighthouse rock");
+    const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    assert.ok(seen.has(L.door.join()), "walked to from the gate, over the dock"); }
+  const g = new CM.Game(); g.newGame("lh-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.enterFloor(-1, "rope", L.door.slice()); g.floor.facing = 1;
+  g.clock = 1440 + (11 - 6) * 60; assert.ok(!CM.isNight(g)); assert.ok(g.use(), "up the stair by day"); assert.ok(g.perch && g.perch.lighthouse); assert.ok(CM.islandKnown(g), "the island seen from the gallery"); assert.ok(!CM.lighthouseLit(g));
+  g.climbDown(); assert.ok(!g.perch);
+  g.clock = 1440 + (22 - 6) * 60; assert.ok(CM.isNight(g)); const gold = g.gold; assert.ok(g.use(), "up the stair by night"); assert.ok(CM.lighthouseLit(g), "the lamp lit"); assert.strictEqual(g.gold, gold + CM.LIGHTHOUSE_WAGE, "the keeper's wage");
+  g.climbDown(); g.use(); assert.strictEqual(g.gold, gold + CM.LIGHTHOUSE_WAGE, "once a night"); g.climbDown();
+  g.clock += 4 * 60; assert.ok(CM.lighthouseLit(g), "burning past midnight, the same night"); g.clock += 6 * 60; assert.ok(!CM.isNight(g) && !CM.lighthouseLit(g), "out at day");
+  g.clock += 14 * 60; assert.ok(CM.isNight(g) && !CM.lighthouseLit(g), "unlit the next night till someone climbs");
+  assert.strictEqual(g.vext("lighthouse").nights, 1); g.floor.seen.push(L.door.slice()); g.floor.pos = [CM.HARBOUR.pier[0], CM.HARBOUR.head[1]]; assert.ok(CM.wayPlaces(g).some((p) => p.name === "The lighthouse"), "on the Where-to list once seen");
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["add(\"solid:lighthouse\", c)", "layer: \"fx:beam\"", "if (s.quad) corners = s.quad;", "h: game.perch.h || CM.TOWER.h"]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

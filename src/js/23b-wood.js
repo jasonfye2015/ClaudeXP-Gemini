@@ -83,7 +83,8 @@ CM.makeWood = function (seed) {
   const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};
   if (CM.layShore) CM.layShore({ grid, kinds, ground, features, decor, things, size });   // (v129.0: the Strand and the sea - 23f-shore.js)
   if (CM.layHarbour) Object.assign(levels, CM.layHarbour({ grid, kinds, ground, features, decor, things, size }));   // (v130.0: the pier, the dock, the Harbour Road - 23g-harbour.js)
-  if (CM.layCoast) CM.layCoast({ grid, kinds, ground, features, decor, things, size });   // (v131.0: the coast path round the island, the springhead, the bridges - 23h-coast.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
+  if (CM.layCoast) CM.layCoast({ grid, kinds, ground, features, decor, things, size });   // (v131.0: the coast path round the island, the springhead, the bridges - 23h-coast.js)
+  if (CM.layLighthouse) Object.assign(levels, CM.layLighthouse({ grid, kinds, ground, features, decor, things, size }));   // (v132.0: the lighthouse on its rock by the dock - 23i-lighthouse.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe) && !(CM.COAST && (y === 0 || (x === CM.COAST.east && y <= CM.COAST.eastTo)))) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],

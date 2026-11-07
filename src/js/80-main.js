@@ -1127,7 +1127,7 @@ window.addEventListener("DOMContentLoaded", () => {
         }
         renderer.light = game.lightFactor();
         renderer.sky = game.floor && CM.themeFor(game.floor.number).sky ? CM.sky(game) : null;
-        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: CM.TOWER.h } : null;   // (on a gate tower's top)
+        renderer.perch = game.perch ? { x: game.perch.tower[0], y: game.perch.tower[1], h: game.perch.h || CM.TOWER.h } : null;   /* (v132.0: a perch of its own height - the lighthouse) */   // (on a gate tower's top)
         renderer.wet = renderer.sky && CM.weather(game) === "rain" ? 1 : 0;   // (the rain on the ground: 40-render.js)
         renderer.snow = renderer.sky ? (CM.snowDepth ? CM.snowDepth(game) : CM.snowLying(game) ? 1 : 0) : 0; renderer.mist = renderer.sky && (CM.weather(game) === "mist" || (game.floor.number === -1 && Math.abs(game.floor.pos[0] - CM.MAGE_TOWER.at[0]) + Math.abs(game.floor.pos[1] - CM.MAGE_TOWER.at[1]) <= 8)) ? 1 : 0;   // (and always about the Mage Tower)   // (snow lying, mist low: the seasons seen)
         { const night = renderer.sky && (game.floor.number === 0 || game.floor.number === -1) ? (CM.litShare ? CM.litShare(game) : renderer.sky.night ? 0.7 : 0) : 0;   // the town's windows lit at dusk, and out as it goes to bed (v24.3: a share): the floor's mesh made again

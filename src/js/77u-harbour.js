@@ -25,7 +25,8 @@
         put([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1], layer, sh * 0.8, 0); put([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0], layer, sh * 0.85, 0); put([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], layer, sh * 1.05, 0); };
       const berthSide = (x, y, d) => d === 2 && y === H.head[3];
       for (let y = H.foot; y <= H.head[3]; y++) for (let x = H.head[0]; x <= H.head[2]; x++) { if (!pier(x, y)) continue; const F = lvl(x, y), deck = y >= H.foot + 2;
-        CM.DIRS.forEach(([dx, dy], d) => { const nx = x + dx, ny = y + dy; if (pier(nx, ny) || (ny < CM.SHORE.sea && !deck)) return; if (ny < CM.SHORE.sea && fl.grid[ny] && fl.grid[ny][nx] === 0) return;   // (on the sand: the step's own face does)
+        CM.DIRS.forEach(([dx, dy], d) => { const nx = x + dx, ny = y + dy; if (pier(nx, ny) || (CM.isLighthouseRock && CM.isLighthouseRock(nx, ny)) || (ny < CM.SHORE.sea && !deck)) return;   // (v132.0: open onto the lighthouse's rock)
+          if (ny < CM.SHORE.sea && fl.grid[ny] && fl.grid[ny][nx] === 0) return;   // (on the sand: the step's own face does)
           const a = d === 0 ? [x, y] : d === 1 ? [x + 1, y] : d === 2 ? [x + 1, y + 1] : [x, y + 1], b = d === 0 ? [x + 1, y] : d === 1 ? [x + 1, y + 1] : d === 2 ? [x, y + 1] : [x, y];
           put([a[0], F - 0.24, a[1]], [b[0], F - 0.24, b[1]], [b[0], F, b[1]], [a[0], F, a[1]], wood, 0.72, 0);   // (the edge beam)
           if (!deck) return;
