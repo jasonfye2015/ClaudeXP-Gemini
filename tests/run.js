@@ -188,6 +188,7 @@ test("a run's dice carry over a save: play on from a save, and from the game tha
   game.saveRun();
   const CM2 = load({ storage: CM.storage }), game2 = new CM2.Game();
   game2.continueRun();
+  { const seeded = (C) => { const R = new C.Random(9); C.wxRandom = () => R.next(); }; seeded(CM); seeded(CM2); }   /* (the world's own chance - rockfalls, blooms, fogs - the same in both from here: it isn't the run's dice) */
   playRun(CM, game, { maxFloor: 3 });
   playRun(CM2, game2, { maxFloor: 3 });
   assert.strictEqual(game.messages.slice(-5).join("\n"), game2.messages.slice(-5).join("\n"));
@@ -7441,6 +7442,11 @@ test("the bells of Caer Duin (plan 76, release 2): the story earns them - a remi
   const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
   for (const s of ["CM.bellsRung = ", "CM.ringBell = ", "CM.themeIndex(g.floor.number) === 7", "CM.ringBell(peal ? 3 : 1", "M.tune(`depth${b}`)"]) assert.ok(html.includes(s), s);
   const CM = load(), g = new CM.Game(); g.newGame("bell-1", fixedParty(CM)); assert.ok(g.quietEnd, "the quiet ending the peal follows");
+});
+
+test("Claude's sound and the cues (plan 76, release 3): the built page carries every cue and its trigger - his quill and the chapter's page, the cabin, the heartbeat, the ailments, the guardian's gathering, the vows, the king's wax, the revenants' calls, the curiosities' chime, the crit and the fall - and the mix's hold", () => {
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["CM.soundCue = ", "CM.mixHold = ", 'fx.kind === "intent") cue("rumble")', 'cue(v.kept ? "vowKept" : v.broken ? "vowBroken" : "vowSworn")', 'startsWith("bargain:")) cue("wax")', 'g.on("curio", () => cue("chime"))', "CM.heroBark(g, { name: m.name, cls: m.cls, level: m.level }, \"fall\")"]) assert.ok(html.includes(s), s);
 });
 
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {

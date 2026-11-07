@@ -21,6 +21,7 @@
     return p0.call(this, name, volume * crowd, pan, rate); };
   // the outputs: a compressor each, and the duckers
   const st = { dialog: false, fallUntil: 0, quietUntil: 0, king: false, music: 1, amb: 1 };
+  const holds = new Map(); CM.mixHold = (id, music, amb, ms) => { holds.set(id, { music, amb, until: performance.now() + (ms || 1000) }); };   // (another file's moment: music and ambience at most these, for a while)
   CM.mixState = () => Object.assign({}, st, { installed: Boolean(A._mixed) });
   const comp = (ctx) => { const c = ctx.createDynamicsCompressor(); c.threshold.value = -14; c.knee.value = 12; c.ratio.value = 3; c.attack.value = 0.006; c.release.value = 0.25; c.connect(ctx.destination); return c; };
   const install = () => { if (A._mixed || !A.ctx || !A.master) return false; const ctx = A.ctx;
@@ -34,7 +35,7 @@
       st.dialog = Boolean(ui && ui.dialogOpen && ui.dialogOpen() && g && g.mode !== "title");
       st.king = Boolean(g && g.floor && g.floor.number === CM.LAST_FLOOR && g.mode === "explore");
       let music = 1, amb = 1; if (st.dialog) { music = Math.min(music, 0.55); amb = Math.min(amb, 0.6); } if (st.king) music = Math.min(music, 0.35);
-      if (now < st.fallUntil) music = Math.min(music, 0.08); if (now < st.quietUntil) music = Math.min(music, 0.0);
+      if (now < st.fallUntil) music = Math.min(music, 0.08); for (const [id, H] of holds) { if (now > H.until) { holds.delete(id); continue; } music = Math.min(music, H.music); amb = Math.min(amb, H.amb); } if (now < st.quietUntil) music = Math.min(music, 0.0);
       const ease = (node, want, was) => { if (!node) return; node.gain.setTargetAtTime(want, ctx.currentTime, want < was ? 0.18 : 0.6); };
       if (CM.music && CM.music._duck && Math.abs(music - st.music) > 0.001) { ease(CM.music._duck, music, st.music); st.music = music; }
       if (A._ambDuck && Math.abs(amb - st.amb) > 0.001) { ease(A._ambDuck, amb, st.amb); st.amb = amb; } }

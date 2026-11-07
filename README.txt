@@ -1392,6 +1392,19 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Claude's sound and the cues (v125.0, UPGRADE_PLAN_76.md)
+  (src/js/77p-soundcues.js, src/js/77n-audiomix.js, tests/run.js)
+  - Claude's sound (plan 76, release 3): a quiet quill scratches under his lines in the log, and a page turns when a
+    band's chapter opens. His cabin is heard - a clock's tick, the hearth, now and then the kettle starting to sing,
+    the cat purring when you stand by it - and when he speaks plainly the room's sounds fall away.
+  - Danger you can hear: a soft, muffled heartbeat in a fight while any hero is down to a third of their health; a
+    small cue as an ailment takes hold - poison's bubble, paralysis's tick, sleep's hush, blindness falling, a curse's
+    low pair; and a low rumble as a guardian gathers itself for something terrible.
+  - The new systems by ear: a vow sworn is a low seal, kept a bright chord, broken a dull crack; the king's letter a
+    wax-crack and a cold chord; a revenant, now and then, heard crying out far off in the voice its hero had; a
+    curiosity, a soft chime the same for every one. And weight: a critical blow cracks bright on top of the hit, and
+    a foe's fall lands with a low thud.
+
 The bells of Caer Duin (v124.0, UPGRADE_PLAN_76.md)
   (src/js/77o-bells.js, tests/run.js)
   - The bells of Caer Duin (plan 76, release 2): the story turns on bells - taken down when the queen died, cast by
