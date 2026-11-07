@@ -3,7 +3,9 @@ into it, the fade in from black, and a word about the mouse. No bars, no meters:
 the den itself.
 
 Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
-lantern when it gutters out."""
+lantern when it gutters out. On a strand, A and D lean against its sway.
+
+The sound (ui/audio.py) hears what the night does, and follows the computer's mute."""
 import math
 import time
 
@@ -39,7 +41,9 @@ class GameView(QOpenGLWidget):
         self.captured = False
         self.cards = []                          # (title, line, born)
         self.outs = 0                            # (how often the lantern has gone out: the hint shows the first times)
-        self.whisper = None                      # (a few small words low on the screen, and when)
+        self.whisper = None                      # (a few small words low on the screen: (words, when, how long))
+        self.teeters = 0                         # (how often he's teetered on a strand: the hint shows the first times)
+        self.audio = None
         self.fade = None                         # (born): in from black
         self.last = time.perf_counter()
         self.t0 = self.last
@@ -85,7 +89,13 @@ class GameView(QOpenGLWidget):
         self.playing = True
         night.show_lantern = True
         self.outs = 0
+        self.teeters = 0
+        self.whisper = None
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
+        self.inp.strafe = self.inp.forward = 0.0
+        if self.audio is None:
+            from .audio import DenAudio
+            self.audio = DenAudio(self.shell.muted)
         self.fade = time.perf_counter()
         self.cards = []
         self.setFocus()
@@ -115,13 +125,21 @@ class GameView(QOpenGLWidget):
             if Qt.Key_Right in k:
                 self.inp.yaw += 1.8 * dt
             n.step(dt, self.inp)
+            if self.audio is not None:
+                self.audio.hear(n, n.events)
             for e in n.events:
                 if e[0] == "place":
                     self.cards.append((e[1], e[2], now))
                 elif e[0] == "lantern" and e[1] == "out":
                     self.outs += 1
                 elif e[0] == "lantern" and e[1] == "failed":
-                    self.whisper = ("It won't catch.", now)
+                    self.whisper = ("It won't catch.", now, 2.5)
+                elif e[0] == "silk" and e[1] == "first":
+                    self.whisper = ("The silk gives under you, and hums. Somewhere, something feels it.", now, 5.0)
+                elif e[0] == "silk" and e[1] == "teeter":
+                    self.teeters += 1
+                elif e[0] == "silk" and e[1] == "caught":
+                    self.whisper = ("Caught in her silk. Everything in the oak felt that.", now, 4.0)
             n.events.clear()
         elif not self.playing:
             n.time += dt
@@ -155,8 +173,12 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, a))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "E   -   shake the lantern")
-        if self.whisper and t - self.whisper[1] < 2.5:
-            p.setPen(QColor(210, 190, 170, int(220 * max(0.0, 1 - (t - self.whisper[1]) / 2.5))))
+        if n.teetering and self.teeters <= 3:                    # (swaying on a strand: what to do, the first few times)
+            p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
+            p.setFont(QFont(SERIF, 13))
+            p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "A   D   -   lean against the sway")
+        if self.whisper and t - self.whisper[1] < self.whisper[2]:
+            p.setPen(QColor(210, 190, 170, int(220 * min(1.0, 1.6 * max(0.0, 1 - (t - self.whisper[1]) / self.whisper[2])))))
             f = QFont(SERIF, 13)
             f.setItalic(True)
             p.setFont(f)

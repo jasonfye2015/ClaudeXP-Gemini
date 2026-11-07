@@ -114,6 +114,12 @@ class Mesh:
             GL.glDrawArrays(mode, 0, self.count)
         GL.glBindVertexArray(0)
 
+    def draw_range(self, first, count, mode=GL.GL_TRIANGLES):
+        """A run of the vertices (no indices): one frame of many kept one after another."""
+        GL.glBindVertexArray(self.vao)
+        GL.glDrawArrays(mode, first, count)
+        GL.glBindVertexArray(0)
+
     def delete(self):
         GL.glDeleteBuffers(1, [self.vbo])
         if self.ebo is not None:

@@ -1,6 +1,7 @@
 """Drawing the Hollow Oak: the wood (textured, normal-mapped, lit by the lantern, the fungus and a little moon), the
-fungus glowing, the moonbeams and the dust in them, the sky through the broken crown, fog pooled low, and - now and
-then, high in the dark - a cluster of eyes.
+fungus glowing, the moonbeams and the dust in them, the sky through the broken crown, fog pooled low, her silk
+(glinting where a light catches it, lost in the dark where none does; shivering when walked on, dipping under him),
+her small ones about the den, and - now and then, high in the dark - a cluster of eyes.
 
     r = Renderer()            (inside a current OpenGL 3.3 context)
     r.draw(night, w, h, now)
@@ -13,8 +14,9 @@ import numpy as np
 from OpenGL import GL
 from PIL import Image
 
-from . import fogfx, gl, held, treemesh
+from . import fogfx, gl, held, silkmesh, treemesh
 from ..game import tree as T
+from ..game import web as W
 
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
 LAYERS = ("Bark007", "Ground103", "ScatteredLeaves001")
@@ -203,6 +205,88 @@ void main() {
     frag = vec4(pow(col, vec3(1.0 / 2.2)), a);
 }"""
 
+SILK_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aTan; layout(location=2) in float aSide;
+layout(location=3) in float aWidth; layout(location=4) in float aGroup; layout(location=5) in float aFree;
+layout(location=6) in float aPhase;
+uniform mat4 uPV; uniform vec3 uEye; uniform float uTime; uniform float uAmp[8]; uniform vec4 uDip; uniform float uDipGroup;
+uniform float uPixel;
+out vec3 vPos; out vec3 vTan; out float vCover;
+void main() {
+    int g = int(aGroup + 0.5);
+    vec3 p = aPos;
+    float shiver = sin(uTime * (11.0 + aPhase) + aPhase * 7.0 + aPos.x * 1.3 + aPos.z * 1.1);
+    p.y += aFree * (uAmp[g] * shiver * 0.05 + 0.01 * sin(uTime * 0.7 + aPhase * 5.0));     // (shaking; and breathing)
+    if (g >= 5) p.xz += aFree * 0.05 * vec2(sin(uTime * 0.5 + aPhase), cos(uTime * 0.43 + aPhase * 1.7));   // (drifting)
+    if (abs(aGroup - uDipGroup) < 0.5) {                                 // (his weight, where he stands)
+        float d = distance(p.xz, uDip.xz);
+        p.y -= uDip.w * aFree * exp(-d * d / 1.4);
+    }
+    vec3 v = normalize(p - uEye);
+    vec3 s = normalize(cross(aTan, v) + vec3(1e-5));
+    float w = max(aWidth, uPixel * length(p - uEye) * 1.1);               // (never thinner than a pixel: fainter instead)
+    vCover = aWidth / w;
+    p += s * aSide * w * 0.5;
+    vPos = p; vTan = aTan;
+    gl_Position = uPV * vec4(p, 1.0);
+}"""
+
+SILK_FS = """#version 330 core
+in vec3 vPos; in vec3 vTan; in float vCover;
+uniform vec3 uEye; uniform vec3 uAmbient; uniform vec3 uMoonDir; uniform vec3 uMoonCol;
+uniform int uLightCount; uniform vec4 uLightPos[16]; uniform vec4 uLightCol[16]; uniform float uFogDensity;
+out vec4 frag;
+float strand(vec3 T, vec3 L, vec3 V, float power) {          // (a thread's light: along its length, never flat)
+    vec3 H = normalize(L + V); float th = dot(T, H);
+    return pow(sqrt(max(0.0, 1.0 - th * th)), power);
+}
+void main() {
+    vec3 T = normalize(vTan), V = normalize(uEye - vPos);
+    vec3 c = uAmbient * 0.7;
+    for (int i = 0; i < uLightCount; i++) {
+        vec3 d = uLightPos[i].xyz - vPos; float dist = length(d);
+        float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0); att *= att * att;
+        vec3 L = d / max(dist, 1e-3);
+        float diff = sqrt(max(0.0, 1.0 - pow(dot(T, L), 2.0)));
+        c += uLightCol[i].rgb * att * (diff * 0.16 + strand(T, L, V, 400.0) * 0.9);
+    }
+    float moon = smoothstep(%(TOP)s * 0.35, %(TOP)s + 2.0, vPos.y);
+    c += uMoonCol * moon * moon * (0.45 + strand(T, -uMoonDir, V, 160.0) * 2.8);     // (silver, under the moon)
+    float dist = length(vPos - uEye);
+    float low = 0.22 * exp(-max(vPos.y, 0.0) / 1.6);
+    c *= exp(-pow((uFogDensity + low) * dist, 1.25));                    // (lost in the fog, far off)
+    c *= vec3(0.86, 0.9, 1.0) * vCover;
+    frag = vec4(max(c, vec3(0.0)) * 1.6, 1.0);         // (added as it is: faint threads stay faint, glints stand out)
+}""" % {"TOP": f"{T.TOP:.1f}"}
+
+SPIDER_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in vec3 aCol;
+uniform mat4 uPV; uniform mat4 uModel; out vec3 vPos; out vec3 vNrm; out vec3 vCol;
+void main() { vec4 p = uModel * vec4(aPos, 1.0); vPos = p.xyz; vNrm = normalize(mat3(uModel) * aNrm); vCol = aCol;
+              gl_Position = uPV * p; }"""
+
+SPIDER_FS = """#version 330 core
+in vec3 vPos; in vec3 vNrm; in vec3 vCol;
+out vec4 frag;
+""" + LIGHTING + """
+void main() {
+    vec3 N = normalize(vNrm);
+    if (dot(N, uEye - vPos) < 0.0) N = -N;
+    vec3 col = lit(vPos, N, vCol * 2.2, 1.0);
+    vec3 V = normalize(uEye - vPos);
+    for (int i = 0; i < uLightCount; i++) {                    // (a hard shine on the chitin)
+        vec3 d = uLightPos[i].xyz - vPos; float dist = length(d);
+        float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0);
+        col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0) * 1.1;
+    }
+    if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is)
+        float shine = 0.0;
+        for (int i = 0; i < uLightCount; i++) shine += clamp(1.0 - distance(uLightPos[i].xyz, vPos) / uLightPos[i].w, 0.0, 1.0);
+        col += vec3(0.9, 0.12, 0.05) * (0.03 + shine * 1.2);
+    }
+    frag = outColour(fogged(vPos, col));
+}"""
+
 SKY_VS = """#version 330 core
 layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
@@ -277,6 +361,13 @@ class Renderer:
         self.beams = treemesh.shafts(self.tree)
         self.glow_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
         self.sky_mesh = gl.Mesh([(0, 2)], np.array([[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]], np.float32))
+        self.web = W.Web(self.tree)
+        self.silk_prog = gl.Program(SILK_VS, SILK_FS)
+        self.silk = gl.Mesh([(0, 3), (1, 3), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)], silkmesh.silk(self.web))
+        self.amp = np.zeros(W.GROUPS, np.float32)
+        self.spider_prog = gl.Program(SPIDER_VS, SPIDER_FS)
+        sv, self.spider_clips, self.spider_n = silkmesh.spider_frames()
+        self.spiders = gl.Mesh([(0, 3), (1, 3), (2, 3)], sv)
         self.moon = np.array((0.35, 1.0, -0.25), np.float32)
         self.moon /= np.linalg.norm(self.moon)
 
@@ -296,6 +387,10 @@ class Renderer:
         eye = night.eye
         proj = gl.perspective(70.0, w / max(1, h), 0.05, 160.0)
         view = gl.view_matrix(eye, night.yaw, night.pitch)
+        roll = getattr(night, "sway", 0.0) * 0.2                # (his lean, on a strand)
+        if roll:
+            c, s = math.cos(roll), math.sin(roll)
+            view = np.array(((c, s, 0, 0), (-s, c, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)), np.float32) @ view
         pv = proj @ view
         self.pv = pv
         self._view = view
@@ -310,7 +405,7 @@ class Renderer:
         self.sky_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
         lights = self._lights(night, now)
-        for prog in (self.world, self.fung, self.dress_prog):
+        for prog in (self.world, self.fung, self.dress_prog, self.spider_prog, self.silk_prog):
             prog.use()
             prog.mat4("uPV", pv)
             prog.vec("uEye", eye)
@@ -341,11 +436,64 @@ class Renderer:
         self.fung.use()
         self.fung.float("uTime", now)
         self.fungus.draw()
+        self._spiders(night)
+        self._silk(night, now, proj, h)
         self._glows(night, view, now)
         if self.fog_on:
             self._fog(night, view, now, lights)
         if night is not None and getattr(night, "show_lantern", True):
             self._lantern(night, now)
+
+    def _spiders(self, night):
+        """Her small ones, each in its own place and pose, a frame of its walk or its stillness."""
+        brood = getattr(night, "brood", None)
+        if brood is None:
+            return
+        self.spider_prog.use()
+        eye = np.array(night.eye)
+        look = np.array((math.sin(night.yaw), 0.0, -math.cos(night.yaw)))
+        for pos, fwd, up, size, clip, t in brood.near(night.eye):
+            p = np.array(pos)
+            to = p - eye
+            if float(np.dot(to, look)) < -0.5 and float(np.linalg.norm(to)) > 1.0:
+                continue
+            up = np.array(up)
+            f = np.array(fwd) - up * float(np.dot(fwd, up))
+            f /= float(np.linalg.norm(f)) or 1.0
+            right = np.cross(up, f)
+            m = np.identity(4, np.float32)
+            m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = right * size, up * size, f * size, p
+            first, frames, fps = self.spider_clips[clip]
+            k = first + int(t * fps) % frames
+            self.spider_prog.mat4("uModel", m)
+            self.spiders.draw_range(k * self.spider_n, self.spider_n)
+
+    def _silk(self, night, now, proj, h):
+        """Every thread: added over what's behind it, as light caught in it."""
+        web_on = getattr(night, "on", None)
+        tremor = getattr(night, "tremor", 0.0)
+        target = np.full(W.GROUPS, 0.04, np.float32)
+        if web_on is not None:
+            target[web_on.group] = min(2.5, 0.25 + tremor * 0.6)
+            for b in range(5):                                  # (all her silk is one thing: the rest feel it too)
+                if b != web_on.group:
+                    target[b] = max(target[b], min(1.0, tremor * 0.12))
+        self.amp += (target - self.amp) * 0.15
+        self.silk_prog.use()
+        self.silk_prog.float("uTime", now)
+        GL.glUniform1fv(self.silk_prog.loc("uAmp"), W.GROUPS, self.amp)
+        if web_on is not None:
+            self.silk_prog.vec4s("uDip", [(night.x, night.y, night.z, W.DIP)])
+            self.silk_prog.float("uDipGroup", float(web_on.group))
+        else:
+            self.silk_prog.float("uDipGroup", -1.0)
+        self.silk_prog.float("uPixel", 2.0 / (max(1, h) * float(proj[1, 1])))
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.silk.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
 
     def flame_at(self, night):
         now = getattr(self, "now", 0.0)
