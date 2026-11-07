@@ -6,9 +6,10 @@ import math
 
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from ..engine.atmosphere import look
+from . import theme
 from ..game.sky import CLOCK, DAYLIGHT, MOON_WORDS, NAMES, hour_word
 
 ICONS = {"clear": "sun", "cloud": "cloud", "rain": "rain", "storm": "storm", "mist": "mist", "wind": "wind",
@@ -106,9 +107,7 @@ def paint_dial(p, r, sky, outdoors, depth):
     a = look(sky, True)
     d = sky.dial()
     w = sky.now()
-    p.setPen(QPen(QColor("#8A7050"), 1.5))
-    p.setBrush(QColor(0, 0, 0, 160))
-    p.drawRoundedRect(r, 6, 6)
+    theme.plate(p, r, 8, 200)
     # the sky of the hour, and the arc
     band = QRectF(r.x() + 6, r.y() + 6, r.width() - 52, 46)
     g = QLinearGradient(0, band.top(), 0, band.bottom())
@@ -158,12 +157,11 @@ def paint_dial(p, r, sky, outdoors, depth):
     p.restore()
 
 
-class CalendarPanel(QFrame):
+class CalendarPanel(theme.Ornate):
     """The Calendar (K): the moon's month, the seasons' daylight, the weather now and next."""
 
     def __init__(self, shell):
         super().__init__()
-        self.setObjectName("panel")
         self.setFixedSize(760, 520)
         self.shell = shell
         sky = shell.view.game.sky

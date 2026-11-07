@@ -78,6 +78,14 @@ Playing
   Claude in their own voices, knowing how deep he's been, how often he's fallen and what he's killed, and answer
   whatever he says to them at their stalls. Without one they have their own lines. (Menu: the townsfolk speak, on/off.)
 
+  The pack: choose a wand, then a wand slot (1-4), to ready it there (or its Ready-in-slot buttons); a ready wand,
+  then another slot, to swap them; a part, then a socket; gear, then its slot. Where a chosen thing can go lights up.
+
+  The look (ui/theme.py): dark leather and old gold - painted panels with a double gold rim and filigree corners,
+  fading in over a darkening vignette; bronze buttons; glass orbs with moving liquid; a gold-rimmed plate for the
+  wands and potions; a shimmering experience bar; ribbons for the news; a title card for each floor and a banner
+  for each level.
+
   Three save slots. Saves live in the Timeline's ClaudeGames/Saves/claudenites/ (slot1.json .. slot3.json).
 
 How it's made

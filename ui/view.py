@@ -8,13 +8,15 @@ import time
 
 import numpy as np
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QPen, QRadialGradient, QSurfaceFormat
+from PySide6.QtGui import (QColor, QCursor, QFont, QFontMetrics, QLinearGradient, QPainter, QPen, QRadialGradient,
+                           QSurfaceFormat)
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..engine.render import Renderer, project
 from ..game import data as D
 from ..game import items as I
 from ..game.world import Input
+from . import theme
 
 SENS = 0.0024
 
@@ -237,6 +239,7 @@ class GameView(QOpenGLWidget):
                 snd.play("hurt", 0.55)
             elif kind == "levelup":
                 snd.play("levelup", 0.6)
+                self.banner = (f"LEVEL {e[1]}", now)
             elif kind == "drink":
                 snd.play("drink", 0.5)
             elif kind == "nomana":
@@ -248,6 +251,11 @@ class GameView(QOpenGLWidget):
             elif kind == "level":
                 snd.play("stairs", 0.5)
                 self.explored = None
+                L = e[1]
+                if L.depth:
+                    self.card = (f"FLOOR {L.depth}", L.name, L.line, now + 0.2)
+                elif self.running:
+                    self.card = ("HOME", D.TOWN_NAME, "A clearing in the forest, a ring of roofs, and the Deep under the old stones.", now + 0.2)
             elif kind == "save":
                 self.shell.save()
             elif kind == "died":
@@ -384,80 +392,99 @@ class GameView(QOpenGLWidget):
         pl = g.player
         W, H = self.width(), self.height()
         now = time.perf_counter()
+        T = theme
         # hurt: red at the edges
         if g.hurt > 0:
             rg = QRadialGradient(QPointF(W / 2, H / 2), max(W, H) * 0.7)
             rg.setColorAt(0.55, QColor(0, 0, 0, 0))
             rg.setColorAt(1.0, QColor(170, 10, 10, int(170 * min(1, g.hurt))))
             p.fillRect(self.rect(), rg)
-        # the cross
-        if g.depth:
-            p.setPen(QPen(QColor(255, 255, 255, 170), 1.5))
+        # the cross: a ring and a dot, in the wand's element
+        if g.depth or not g.in_town():
+            s = pl.wand_stats()
+            c = QColor.fromRgbF(*D.ELEMENT_COLOUR[s["element"]]) if s else QColor(255, 255, 255)
+            c.setAlpha(190)
             cx, cy = W / 2, H / 2
-            for a, b in (((-9, 0), (-3, 0)), ((3, 0), (9, 0)), ((0, -9), (0, -3)), ((0, 3), (0, 9))):
-                p.drawLine(QPointF(cx + a[0], cy + a[1]), QPointF(cx + b[0], cy + b[1]))
-        # life and mana
-        self._orb(p, 70, H - 70, 52, pl.life / max(1, pl.max_life()), QColor("#C0262A"), f"{int(pl.life)}/{pl.max_life()}")
-        self._orb(p, W - 70, H - 70, 52, pl.mana / max(1, pl.max_mana()), QColor("#2A50D0"), f"{int(pl.mana)}/{pl.max_mana()}")
-        # the wands
-        n = len(pl.wands)
-        bw = 64
-        x0 = W / 2 - (n * (bw + 8)) / 2
-        y0 = H - 92
-        f = QFont("Segoe UI", 8)
-        p.setFont(f)
-        for i, w in enumerate(pl.wands):
-            r = QRectF(x0 + i * (bw + 8), y0, bw, 52)
-            p.setPen(QPen(QColor("#F0D080") if i == pl.active else QColor(255, 255, 255, 60), 2 if i == pl.active else 1))
-            p.setBrush(QColor(10, 10, 16, 170))
-            p.drawRoundedRect(r, 6, 6)
-            p.setPen(QColor(255, 255, 255, 140))
-            p.drawText(r.adjusted(4, 2, 0, 0), Qt.AlignLeft | Qt.AlignTop, str(i + 1))
-            if w:
-                from .icons import icon
-                p.drawPixmap(int(r.x() + 12), int(r.y() + 4), icon(w, 40))
-        # potions
-        p.setFont(QFont("Segoe UI", 9, QFont.Bold))
-        bx = W / 2 - 140
-        for k, (key, kind, col) in enumerate((("Q", "health", "#E04040"), ("E", "mana", "#4070F0"), ("T", "return", "#C8A060"))):
-            r = QRectF(bx + k * 96, H - 32, 88, 24)
+            p.setRenderHint(QPainter.Antialiasing)
+            p.setPen(QPen(QColor(0, 0, 0, 140), 3))
+            p.setBrush(Qt.NoBrush)
+            p.drawEllipse(QPointF(cx, cy), 7, 7)
+            p.setPen(QPen(c, 1.5))
+            p.drawEllipse(QPointF(cx, cy), 7, 7)
             p.setPen(Qt.NoPen)
-            p.setBrush(QColor(10, 10, 16, 170))
-            p.drawRoundedRect(r, 5, 5)
-            from .icons import icon as _icon
-            pic = _icon({"type": "potion" if kind != "return" else "scroll", "kind": kind, "id": "hud:" + kind}, 22)
-            p.drawPixmap(int(r.x() + 3), int(r.y() + 1), pic)
-            p.setPen(QColor("#E8E8E8"))
-            p.drawText(r.adjusted(26, 0, 0, 0), Qt.AlignVCenter, f"{key}  x{pl.potions.get(kind, 0)}")
-        # experience
+            p.setBrush(c)
+            p.drawEllipse(QPointF(cx, cy), 1.6, 1.6)
+        # the plate along the bottom: the wands, the potions, the experience
+        n = len(pl.wands)
+        bw, gap = 62, 8
+        pw = n * (bw + gap) + 60
+        plate_r = QRectF(W / 2 - pw / 2, H - 112, pw, 106)
+        T.plate(p, plate_r, 14)
         need = I.xp_to_next(pl.level)
-        r = QRectF(W / 2 - 200, H - 100 - 10, 400, 5)
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor(0, 0, 0, 150))
-        p.drawRect(r)
-        p.setBrush(QColor("#D8B040"))
-        p.drawRect(QRectF(r.x(), r.y(), r.width() * min(1, pl.xp / need), r.height()))
+        T.bar(p, QRectF(plate_r.x() + 18, plate_r.y() + 9, plate_r.width() - 36, 8), pl.xp / need,
+              QColor("#C8962C"), QColor("#FFE9A0"), now)
+        x0 = W / 2 - (n * (bw + gap) - gap) / 2
+        y0 = plate_r.y() + 24
+        from .icons import icon
+        for i, w in enumerate(pl.wands):
+            r = QRectF(x0 + i * (bw + gap), y0, bw, 50)
+            active = i == pl.active
+            gr = QLinearGradient(r.topLeft(), r.bottomLeft())
+            gr.setColorAt(0, QColor(10, 8, 5, 230))
+            gr.setColorAt(1, QColor(42, 32, 22, 230))
+            p.setPen(Qt.NoPen)
+            p.setBrush(gr)
+            p.drawRoundedRect(r, 8, 8)
+            if active and w:
+                el = QColor.fromRgbF(*D.ELEMENT_COLOUR[I.wand_stats(w)["element"]])
+                k = 0.6 + 0.4 * math.sin(now * 3.2)
+                glow = QRadialGradient(r.center(), r.width() * 0.7)
+                el.setAlpha(int(110 * k))
+                glow.setColorAt(0, el)
+                el2 = QColor(el)
+                el2.setAlpha(0)
+                glow.setColorAt(1, el2)
+                p.setBrush(glow)
+                p.drawRoundedRect(r, 8, 8)
+            p.setBrush(Qt.NoBrush)
+            p.setPen(T.gold_pen(r, 2.2) if active else QPen(QColor(120, 96, 62, 160), 1.2))
+            p.drawRoundedRect(r, 8, 8)
+            if w:
+                p.drawPixmap(int(r.x() + 11), int(r.y() + 5), icon(w, 40))
+            T.outlined(p, r.x() + 5, r.y() + 13, str(i + 1), QFont(T.BODY, 9, QFont.Bold),
+                       QColor("#FFE9A0") if active else QColor(200, 186, 160), width=2.5)
+        # the potions and the scroll, on the plate's foot
+        bx = W / 2 - 3 * 88 / 2
+        for k, (key, kind) in enumerate((("Q", "health"), ("E", "mana"), ("T", "return"))):
+            r = QRectF(bx + k * 88 + 4, plate_r.bottom() - 30, 80, 24)
+            pic = icon({"type": "potion" if kind != "return" else "scroll", "kind": kind, "id": "hud:" + kind}, 22)
+            p.drawPixmap(int(r.x()), int(r.y() + 1), pic)
+            T.outlined(p, r.x() + 26, r.y() + 17, key, QFont(T.BODY, 9, QFont.Bold), QColor("#FFE9A0"), width=2.5)
+            T.outlined(p, r.x() + 40, r.y() + 17, f"x{pl.potions.get(kind, 0)}", QFont(T.BODY, 10, QFont.Bold),
+                       QColor("#F0E4C8"), width=2.5)
+        # life and mana, in their orbs at the plate's ends
+        T.orb(p, 78, H - 78, 56, pl.life / max(1, pl.max_life()), QColor("#C8242A"),
+              f"{int(pl.life)}/{pl.max_life()}", now, warn=pl.life < pl.max_life() * 0.3)
+        T.orb(p, W - 78, H - 78, 56, pl.mana / max(1, pl.max_mana()), QColor("#2E58E0"),
+              f"{int(pl.mana)}/{pl.max_mana()}", now)
         # where, and gold
-        p.setFont(QFont("Georgia", 13, QFont.Bold))
-        where = D.TOWN_NAME if g.depth == 0 else f"Floor {g.depth} - {g.level.name}"
-        self._shadow_text(p, QPointF(18, 30), where, QColor("#F0E0C0"))
-        p.setFont(QFont("Segoe UI", 10))
-        self._shadow_text(p, QPointF(18, 52), f"Level {pl.level}    {pl.gold} gold", QColor("#E8D088"))
+        where = D.TOWN_NAME if g.depth == 0 else f"Floor {g.depth}  -  {g.level.name}"
+        if g.depth == 0 and not g.in_town():
+            where = f"The wood round {D.TOWN_NAME}"
+        T.outlined(p, 18, 32, where, QFont(T.HEAD, 15, QFont.Bold), QColor("#F6E2B0"))
+        T.outlined(p, 18, 54, f"Level {pl.level}", QFont(T.BODY, 10, QFont.Bold), QColor("#E8D8B8"), width=2.5)
+        T.outlined(p, 90, 54, f"{pl.gold} gold", QFont(T.BODY, 10, QFont.Bold), QColor("#FFD86A"), width=2.5)
         if g.depth == 0:
-            self._shadow_text(p, QPointF(18, 72), f"The Deep's mouth goes down to floor {g.run_floor}", QColor("#B8B8D8"))
+            T.outlined(p, 18, 74, f"The Deep's mouth goes down to floor {g.run_floor}", QFont(T.HEAD, 10),
+                       QColor("#C8C4E0"), width=2.5)
         # the guardian's bar
         boss = next((m for m in g.monsters if m.guardian and not m.dead and m.awake), None)
         if boss:
-            r = QRectF(W / 2 - 260, 54, 520, 14)
-            p.setPen(QPen(QColor("#2A1010"), 2))
-            p.setBrush(QColor(20, 0, 0, 200))
-            p.drawRect(r)
-            p.setPen(Qt.NoPen)
-            p.setBrush(QColor("#C03020"))
-            p.drawRect(QRectF(r.x() + 2, r.y() + 2, (r.width() - 4) * max(0, boss.hp / boss.max_hp), r.height() - 4))
-            p.setFont(QFont("Georgia", 12, QFont.Bold))
-            self._shadow_text(p, QPointF(W / 2 - p.fontMetrics().horizontalAdvance(boss.name) / 2, 46), boss.name, QColor("#F0C0A0"))
-        # floating numbers and loot
+            r = QRectF(W / 2 - 270, 52, 540, 16)
+            T.plate(p, r.adjusted(-10, -26, 10, 8), 8, 180)
+            T.bar(p, r, max(0.0, boss.hp / boss.max_hp), QColor("#A01810"), QColor("#FF7050"), now)
+            T.outlined(p, W / 2, 44, boss.name, QFont(T.HEAD, 13, QFont.Bold), QColor("#FFD0A8"), centre=True)
+        # floating numbers and loot: they pop, then rise and fade
         pv = self.renderer.proj_view if self.renderer else None
         if pv is not None:
             for pos, text, col, born, size in self.floaters:
@@ -467,15 +494,12 @@ class GameView(QOpenGLWidget):
                 s = project(pv, (pos[0], pos[1] + age * 0.5, pos[2]), W, H)
                 if not s:
                     continue
-                p.setFont(QFont("Segoe UI", size, QFont.Bold))
+                pop = 1.0 + 0.45 * max(0.0, 1 - age / 0.15)
                 a = int(255 * max(0, 1 - age / 1.4))
-                c = QColor.fromRgbF(*col)
-                c.setAlpha(a)
-                tw = p.fontMetrics().horizontalAdvance(text)
-                self._shadow_text(p, QPointF(s[0] - tw / 2, s[1]), text, c, a)
+                T.outlined(p, s[0], s[1], text, QFont(T.BODY, int(size * pop), QFont.Bold), QColor.fromRgbF(*col), a,
+                           centre=True)
         # the townsfolk's names over their heads
         if pv is not None and g.level.npcs:
-            p.setFont(QFont("Georgia", 11, QFont.Bold))
             for n in g.level.npcs:
                 d = math.hypot(n["x"] - g.x, n["z"] - g.z)
                 if d > 9:
@@ -485,67 +509,83 @@ class GameView(QOpenGLWidget):
                     continue
                 v = D.VENDORS[n["vendor"]]
                 a = int(255 * max(0.0, min(1.0, (9 - d) / 3)))
-                for k, (text, col) in enumerate(((v["name"], QColor(248, 232, 176, a)), (v["title"], QColor(200, 190, 170, a)))):
-                    tw = p.fontMetrics().horizontalAdvance(text)
-                    self._shadow_text(p, QPointF(s[0] - tw / 2, s[1] - 18 + k * 17), text, col, a)
-        # toasts
-        p.setFont(QFont("Georgia", 12))
+                T.outlined(p, s[0], s[1] - 18, v["name"], QFont(T.HEAD, 12, QFont.Bold), QColor(250, 226, 160), a, centre=True)
+                T.outlined(p, s[0], s[1] - 2, v["title"], QFont(T.HEAD, 10), QColor(210, 198, 176), a, centre=True)
+        # toasts, on ribbons
         for i, (text, col, born) in enumerate(self.toasts):
             age = now - born
-            a = int(255 * max(0, min(1, (5 - age) / 1.0)))
-            c = QColor.fromRgbF(*col)
-            c.setAlpha(a)
-            tw = p.fontMetrics().horizontalAdvance(text)
-            self._shadow_text(p, QPointF(W / 2 - tw / 2, 104 + i * 24), text, c, a)
+            if age < 0:
+                continue
+            a = int(255 * max(0, min(1, (6.5 - age) / 1.0, age / 0.25)))
+            y = 104 + i * 26 - max(0.0, 0.25 - age) * 40
+            T.ribbon(p, W / 2, y - 17, min(W - 60, 30 + 8.2 * len(text)), 24, a)
+            T.outlined(p, W / 2, y, text, QFont(T.HEAD, 12), QColor.fromRgbF(*col), a, centre=True, width=2.5)
         # what F does here
         what, label = g.near()
         if label:
-            p.setFont(QFont("Segoe UI", 12, QFont.Bold))
-            text = label if what and what[0] == "sealed" else f"[F]  {label}"
-            tw = p.fontMetrics().horizontalAdvance(text)
-            r = QRectF(W / 2 - tw / 2 - 14, H * 0.62, tw + 28, 32)
-            p.setPen(Qt.NoPen)
-            p.setBrush(QColor(0, 0, 0, 150))
-            p.drawRoundedRect(r, 6, 6)
-            p.setPen(QColor("#F8E8B0"))
-            p.drawText(r, Qt.AlignCenter, text)
+            text = label if what and what[0] == "sealed" else label
+            f = QFont(T.HEAD, 13, QFont.Bold)
+            tw = QFontMetrics(f).horizontalAdvance(text)
+            r = QRectF(W / 2 - tw / 2 - 46, H * 0.62, tw + 70, 36)
+            T.plate(p, r, 18, 200)
+            if not (what and what[0] == "sealed"):
+                key = QRectF(r.x() + 10, r.y() + 7, 22, 22)
+                p.setPen(T.gold_pen(key, 1.5))
+                p.setBrush(QColor(60, 44, 24))
+                p.drawRoundedRect(key, 4, 4)
+                T.outlined(p, key.center().x(), key.y() + 16, "F", QFont(T.BODY, 10, QFont.Bold), QColor("#FFE9A0"),
+                           centre=True, width=2)
+            T.outlined(p, r.x() + 40 + tw / 2, r.y() + 24, text, f, QColor("#F8E8B8"), centre=True)
         # the map, and the dial under it
         self._minimap(p, W, H, big=self.show_map)
         if not self.show_map:
             from .dial import paint_dial
             paint_dial(p, QRectF(W - 196, 204, 180, 112), g.sky, g.level.outdoor, g.depth)
+        # a new floor's card, and a level's banner
+        self._cards(p, W, H, now)
         if not self.captured and not self.shell.panel_open():
-            p.setFont(QFont("Segoe UI", 11))
-            text = "Click to take the mouse (Esc gives it back)"
-            tw = p.fontMetrics().horizontalAdvance(text)
-            self._shadow_text(p, QPointF(W / 2 - tw / 2, H / 2 + 40), text, QColor(255, 255, 255, 200))
+            T.outlined(p, W / 2, H / 2 + 44, "Click to take the mouse  (Esc gives it back)", QFont(T.HEAD, 12),
+                       QColor(255, 248, 230), 220, centre=True, width=2.5)
 
-    def _shadow_text(self, p, at, text, colour, alpha=255):
-        p.setPen(QColor(0, 0, 0, int(alpha * 0.8)))
-        p.drawText(at + QPointF(1.5, 1.5), text)
-        p.setPen(colour)
-        p.drawText(at, text)
-
-    def _orb(self, p, x, y, r, frac, colour, label):
-        p.setPen(QPen(QColor("#1A1410"), 3))
-        p.setBrush(QColor(12, 10, 10, 220))
-        p.drawEllipse(QPointF(x, y), r, r)
-        frac = max(0.0, min(1.0, frac))
-        p.save()
-        p.setClipRect(QRectF(x - r, y + r - 2 * r * frac, 2 * r, 2 * r * frac))
-        rg = QRadialGradient(QPointF(x - r * 0.3, y - r * 0.3), r * 1.3)
-        rg.setColorAt(0, colour.lighter(170))
-        rg.setColorAt(1, colour.darker(160))
-        p.setPen(Qt.NoPen)
-        p.setBrush(rg)
-        p.drawEllipse(QPointF(x, y), r - 3, r - 3)
-        p.restore()
-        p.setPen(QPen(QColor("#8A7050"), 2))
-        p.setBrush(Qt.NoBrush)
-        p.drawEllipse(QPointF(x, y), r, r)
-        p.setFont(QFont("Segoe UI", 9, QFont.Bold))
-        tw = p.fontMetrics().horizontalAdvance(label)
-        self._shadow_text(p, QPointF(x - tw / 2, y + 5), label, QColor("#FFFFFF"))
+    def _cards(self, p, W, H, now):
+        T = theme
+        card = getattr(self, "card", None)
+        if card:
+            title, sub, line, born = card
+            age = now - born
+            if age > 5.0:
+                self.card = None
+            else:
+                a = max(0.0, min(1.0, age / 0.6, (5.0 - age) / 1.0))
+                A = int(255 * a)
+                y = H * 0.28 - (1 - min(1.0, age / 0.6)) * 14
+                T.ribbon(p, W / 2, y - 62, min(W - 40, 760), 118, A)
+                T.outlined(p, W / 2, y - 30, title, QFont(T.BODY, 12, QFont.Bold), QColor(232, 192, 104), A, centre=True)
+                T.outlined(p, W / 2, y + 12, sub, QFont(T.HEAD, 32, QFont.Bold), QColor(250, 236, 200), A, centre=True,
+                           width=4)
+                if line:
+                    T.outlined(p, W / 2, y + 42, line, QFont(T.HEAD, 12, -1, True),
+                               QColor(220, 208, 184), A, centre=True, width=2.5)
+        ban = getattr(self, "banner", None)
+        if ban:
+            text, born = ban
+            age = now - born
+            if age > 3.0:
+                self.banner = None
+            else:
+                a = int(255 * max(0.0, min(1.0, age / 0.2, (3.0 - age) / 0.8)))
+                scale = 1.0 + 0.25 * max(0.0, 1 - age / 0.35)
+                cy = H * 0.42
+                burst = QRadialGradient(QPointF(W / 2, cy - 10), 220 * scale)
+                burst.setColorAt(0, QColor(255, 220, 120, int(a * 0.45)))
+                burst.setColorAt(1, QColor(255, 220, 120, 0))
+                p.setPen(Qt.NoPen)
+                p.setBrush(burst)
+                p.drawEllipse(QPointF(W / 2, cy - 10), 260 * scale, 120 * scale)
+                T.outlined(p, W / 2, cy, text, QFont(T.HEAD, int(30 * scale), QFont.Bold), QColor(255, 226, 130), a,
+                           centre=True, width=5)
+                T.outlined(p, W / 2, cy + 30, "A skill point to spend with Mother Wren", QFont(T.HEAD, 12), QColor(240, 228, 200),
+                           a, centre=True, width=2.5)
 
     def _map_image(self, L):
         """The explored squares as a little picture, made again only when more has been seen."""
@@ -598,6 +638,9 @@ class GameView(QOpenGLWidget):
         p.setPen(QPen(QColor("#FFFFFF"), 1.5))
         p.drawLine(QPointF(cx, cy), QPointF(cx + math.sin(g.yaw) * 10, cy - math.cos(g.yaw) * 10))
         p.restore()
-        p.setPen(QPen(QColor("#8A7050"), 1.5))
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(QPen(QColor(8, 5, 2, 220), 4))
         p.setBrush(Qt.NoBrush)
-        p.drawRect(QRectF(x0, y0, size, size))
+        p.drawRoundedRect(QRectF(x0, y0, size, size), 6, 6)
+        p.setPen(theme.gold_pen(QRectF(x0, y0, size, size), 2))
+        p.drawRoundedRect(QRectF(x0, y0, size, size), 6, 6)
