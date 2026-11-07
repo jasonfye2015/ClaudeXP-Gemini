@@ -1,0 +1,27 @@
+The Hollow Oak
+==============
+
+One night. One host. Get to dawn.
+
+A short, deadly serious first-person romance: one night as the guest of Ysmeine, the Weaver Below - an ancient spider
+who lives inside the Hollow Oak - played from dusk to dawn. The absurd premise is never winked at; the gravity of the
+telling is what makes it unsettling. One sitting, two to four hours. It stands alone: it shares nothing with the
+Timeline's other games.
+
+The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/artifact/JtQZ3J468Lqh9E8QqoVXfS
+
+Playing (phase 1: the tree)
+  Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift hurries (never a run, in here).
+  L the lantern.
+
+  In through the roots, into the hollow: the inside of the tree going up and up into the dark, a ledge winding up its
+  wall past chambers opening into the wood - the gallery, the larder, the high hollow - to the crown, broken open to the
+  sky. Glowing fungus in pockets, moonlight in narrow shafts through the knot-holes, fog pooled at the bottom. And high
+  in the dark, something watching: eight small lights that are gone when you come close.
+
+Running it
+  In the Timeline: the launcher's Apps, or Games on any of the computers.
+  On its own: python tools/play.py (with the Timeline's Python).
+  The tests: python tests/run.py
+
+Built in Python, PySide6 and OpenGL 3.3 (PyOpenGL). The night (game/) is plain Python; the tests walk it.

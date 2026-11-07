@@ -1,0 +1,211 @@
+"""The view: the night drawn in first person, and over it as little as possible - a place's name when he first comes
+into it, the fade in from black, and a word about the mouse. No bars, no meters: what she thinks of him will show in
+the den itself.
+
+Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), L the lantern."""
+import math
+import time
+
+from PySide6.QtCore import QPoint, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QSurfaceFormat
+from PySide6.QtOpenGLWidgets import QOpenGLWidget
+
+from ..game.night import Input
+
+SENS = 0.0022
+SERIF = "Georgia"
+
+
+class GameView(QOpenGLWidget):
+    def __init__(self, shell):
+        super().__init__(shell)
+        self.shell = shell
+        fmt = QSurfaceFormat()
+        fmt.setVersion(3, 3)
+        fmt.setProfile(QSurfaceFormat.CoreProfile)
+        fmt.setDepthBufferSize(24)
+        fmt.setSamples(4)
+        fmt.setSwapInterval(1)
+        self.setFormat(fmt)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.setMouseTracking(True)
+        self.night = None
+        self.playing = False
+        self.renderer = None
+        self.gl_error = None
+        self.keys = set()
+        self.inp = Input()
+        self.captured = False
+        self.cards = []                          # (title, line, born)
+        self.fade = None                         # (born): in from black
+        self.last = time.perf_counter()
+        self.t0 = self.last
+        self.timer = QTimer(self)
+        self.timer.setTimerType(Qt.PreciseTimer)
+        self.timer.timeout.connect(self.tick)
+        self.timer.start(0)
+
+    # ---- GL ----------------------------------------------------------------------------------------------------
+    def initializeGL(self):
+        try:
+            from ..engine.render import Renderer
+            self.renderer = Renderer()
+        except Exception as exc:                  # (shown on the view, not lost)
+            import traceback
+            traceback.print_exc()
+            self.gl_error = str(exc)
+
+    def paintGL(self):
+        now = time.perf_counter() - self.t0
+        if self.renderer and self.night:
+            try:
+                dpr = self.devicePixelRatioF()
+                self.renderer.draw(self.night, int(self.width() * dpr), int(self.height() * dpr), now)
+            except Exception as exc:
+                import traceback
+                traceback.print_exc()
+                self.gl_error = repr(exc)
+        p = QPainter(self)
+        try:
+            if self.gl_error:
+                p.fillRect(self.rect(), QColor(8, 6, 10))
+                p.setPen(QColor(220, 200, 190))
+                p.drawText(self.rect().adjusted(30, 30, -30, -30), Qt.TextWordWrap, "The den couldn't be drawn:\n\n" + self.gl_error)
+            elif self.playing:
+                self.hud(p, now)
+        finally:
+            p.end()
+
+    # ---- the loop ----------------------------------------------------------------------------------------------
+    def begin(self, night):
+        self.night = night
+        self.playing = True
+        self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
+        self.fade = time.perf_counter()
+        self.cards = []
+        self.setFocus()
+
+    def backdrop(self, night):
+        """The title's backdrop: standing at the foot of the hollow, turning slowly, looking up into the dark."""
+        self.night = night
+        self.playing = False
+        night.x, night.z = 0.8, 0.4
+        night.y = night.tree.ground(0.8, 0.4)
+
+    def tick(self):
+        now = time.perf_counter()
+        dt = min(0.05, now - self.last)
+        self.last = now
+        n = self.night
+        if n is None:
+            return
+        if self.playing and not self.shell.panel_open():
+            k = self.keys
+            self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
+            self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
+            self.inp.hurry = Qt.Key_Shift in k
+            if Qt.Key_Left in k:
+                self.inp.yaw -= 1.8 * dt
+            if Qt.Key_Right in k:
+                self.inp.yaw += 1.8 * dt
+            n.step(dt, self.inp)
+            for e in n.events:
+                if e[0] == "place":
+                    self.cards.append((e[1], e[2], now))
+            n.events.clear()
+        elif not self.playing:
+            n.time += dt
+            n.yaw = (now - self.t0) * 0.06
+            n.pitch = 0.62 + 0.08 * math.sin((now - self.t0) * 0.1)
+            n._watch(dt)
+        self.update()
+
+    # ---- what's drawn over it ----------------------------------------------------------------------------------
+    def hud(self, p, now):
+        W, H = self.width(), self.height()
+        t = time.perf_counter()
+        p.setRenderHint(QPainter.Antialiasing)
+        # a place's name, the first time he comes into it: it rises out of the dark and goes again
+        self.cards = [c for c in self.cards if t - c[2] < 8.0]
+        if self.cards:
+            title, line, born = self.cards[-1]
+            age = t - born
+            a = max(0.0, min(1.0, age / 1.4, (8.0 - age) / 1.8))
+            p.setPen(QColor(226, 212, 190, int(235 * a)))
+            p.setFont(QFont(SERIF, 26))
+            p.drawText(QRectF(0, H * 0.70, W, 44), Qt.AlignHCenter, title)
+            p.setPen(QColor(200, 190, 176, int(200 * a)))
+            f = QFont(SERIF, 13)
+            f.setItalic(True)
+            p.setFont(f)
+            p.drawText(QRectF(W * 0.2, H * 0.70 + 48, W * 0.6, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
+        if self.fade is not None:
+            age = t - self.fade
+            if age > 3.0:
+                self.fade = None
+            else:
+                p.fillRect(self.rect(), QColor(0, 0, 0, int(255 * max(0.0, 1 - age / 3.0))))
+        if not self.captured and not self.shell.panel_open():
+            p.setPen(QColor(220, 208, 190, 170))
+            p.setFont(QFont(SERIF, 12))
+            p.drawText(QRectF(0, H * 0.5 + 40, W, 30), Qt.AlignHCenter, "Click to take the mouse   (Esc gives it back)")
+
+    # ---- input -------------------------------------------------------------------------------------------------
+    def capture(self):
+        if self.captured or not self.playing:
+            return
+        self.captured = True
+        self.setCursor(Qt.BlankCursor)
+        self.grabMouse()
+        self._centre()
+        self.setFocus()
+
+    def release(self):
+        if not self.captured:
+            return
+        self.captured = False
+        self.releaseMouse()
+        self.unsetCursor()
+
+    def _centre(self):
+        c = self.mapToGlobal(QPoint(self.width() // 2, self.height() // 2))
+        self._centre_at = c
+        QCursor.setPos(c)
+
+    def mousePressEvent(self, e):
+        if self.playing and not self.captured:
+            self.capture()
+
+    def mouseMoveEvent(self, e):
+        if not self.captured:
+            return
+        c = getattr(self, "_centre_at", None)
+        gp = e.globalPosition().toPoint()
+        if c is None or gp == c:
+            return
+        dx, dy = gp.x() - c.x(), gp.y() - c.y()
+        self.inp.yaw += dx * SENS
+        self.inp.pitch = max(-1.45, min(1.45, self.inp.pitch - dy * SENS))
+        self._centre()
+
+    def keyPressEvent(self, e):
+        if e.isAutoRepeat():
+            return
+        k = e.key()
+        if k == Qt.Key_Escape:
+            self.release()
+            self.shell.pause()
+            return
+        if not self.playing:
+            return
+        self.keys.add(k)
+        if k == Qt.Key_L and self.night:
+            self.night.lantern = not self.night.lantern
+
+    def keyReleaseEvent(self, e):
+        if not e.isAutoRepeat():
+            self.keys.discard(e.key())
+
+    def focusOutEvent(self, e):
+        self.keys.clear()
+        super().focusOutEvent(e)
