@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+Emberreach and the Ember Halls (v136.0, UPGRADE_PLAN_81.md phase 3)
+  (src/js/35c-figures.js, src/js/69zzzzo-emberreach.js, src/models/figures.json, tools/headless.js, tests/run.js)
+  - Emberreach (UPGRADE_PLAN_81.md): the Wren's third island, south-east of home: warm water that smells of eggs, a
+    mountain with smoke leaning off its top, a jetty on black sand, a hot spring (don't drink it), and high on the
+    mountain's black flank a mouth with a red light in it.
+  - The Ember Halls: forty floors in four bands - the black Ash Tunnels of cinder imps, ember hounds, magma blobs and
+    ash golelings; the Lost World, a jungle grown up in a cavern lit by the magma, where raptors, crestbacks,
+    platehides, hornfaces and longnecks still walk; the gold-and-soot Forge-temple of the lizard priests, their blue
+    demons and drakelings; and the Molten Heart of ember drakes, magma golelings and pit fiends.
+  - The Cinder Prince on floor 10, the Tyrant on 20, the Forge-Priest on 30, and on 40, on a hoard of melted gold,
+    the Ember Dragon - each with a relic and its own turn at half health.
+  - Quaternius's animated dinosaurs (CC0) - Velociraptor, T-rex, Triceratops, Stegosaurus, Parasaurolophus and
+    Apatosaurus - and his demons, the Dino and the dragons, in the game, animated.
+
 The Fenholm and the Sunken Barrow (v135.0, UPGRADE_PLAN_81.md phase 2)
   (src/js/35c-figures.js, src/js/69zzzzl-isles.js, src/js/69zzzzn-fenholm.js, src/models/figures.json, tools/headless.js, tests/run.js)
   - The Fenholm (UPGRADE_PLAN_81.md): the Wren's second island, south-west of home. She feels her way in between the

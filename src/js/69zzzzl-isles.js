@@ -72,7 +72,7 @@
   CM.ISLE_KIT = {
     theme: (I, name, like, o) => Object.assign({}, CM.THEMES[like], { name, like, floors: [I.base - CM.ISLE_DEPTH, I.base - 1] }, o),
     kind: (isle, name, colour, body, head, eyes, extras, speed, o) => { const k = Object.assign({ name, colour, body, head, eyes, extras, speed, isle }, o); if (!CM.MONSTERS.some((m) => m.name === name)) CM.MONSTERS.push(k); return k; },
-    guardian: (I, id, name, colour, body, level, k, depth, o) => { CM.GUARDIANS[id] = Object.assign({ floor: I.base - depth, name, colour, body, head: "round", eyes: "#FFF0A0", extras: [], speed: 10, size: 1.0, isle: I.id,
+    guardian: (I, id, name, colour, body, level, k, depth, o) => { if (CM.GUARDIANS[id] && CM.GUARDIANS[id].isle !== I.id) throw new Error(`the guardian id ${id} is taken`); CM.GUARDIANS[id] = Object.assign({ floor: I.base - depth, name, colour, body, head: "round", eyes: "#FFF0A0", extras: [], speed: 10, size: 1.0, isle: I.id,
         hp: Math.round(44 * level * k), atk: Math.round(2.6 * level * Math.sqrt(k)), df: Math.round(1.1 * level), xp: Math.round(220 * level * k), gold: Math.round(110 * level * k), abilities: [],
         lair: { name: `${I.name}, floor ${depth}`, rows: ["#########", "#.......#", "#...B...#", "#.......#", "####D####"] } }, o);
       if (o.relic) CM.BASES[o.relic.name] = Object.assign({}, CM.BASES["Rat King's Crown"] || {}, { id: o.relic.name, kind: o.relic.kind, slot: o.relic.slot, tier: Math.min(9, Math.round(level / 2)), group: "relic" });

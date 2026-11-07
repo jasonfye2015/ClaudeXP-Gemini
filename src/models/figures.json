@@ -1,7 +1,7 @@
 {
  "_": "The figures (UPGRADE_PLAN_60.md): which CC0 model stands for each townsperson, pet and monster kind, and how. tools/models.py bakes the models listed here into src/js/35c-figures.js. A figure mapped to \"painted\" keeps its painted billboard. Sources live in Local Storage/Claude and Magic models/<pack>/ (not committed).",
  "credits": "Figures: KayKit Adventurers and Skeletons character packs by Kay Lousberg (CC0; www.kaylousberg.com); Quaternius Ultimate Animated Animal Pack and Easy Enemy Pack (CC0; quaternius.com). See src/models/CREDITS.txt.",
- "budget": 4500000,
+ "budget": 6500000,
  "packs": {
   "kaykit-adventurers": {
    "dir": "kaykit-adventurers",
@@ -613,6 +613,108 @@
     "attack": "WaspArmature|Wasp_Attack",
     "hit": "WaspArmature|Wasp_Flying",
     "die": "WaspArmature|Wasp_Death"
+   }
+  },
+  "demon": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Demon.glb",
+   "rig": "umbig"
+  },
+  "bluedemon": {
+   "pack": "quaternius-monsters",
+   "file": "Big/BlueDemon.glb",
+   "rig": "umbig"
+  },
+  "dinobig": {
+   "pack": "quaternius-monsters",
+   "file": "Big/Dino.glb",
+   "rig": "umbig"
+  },
+  "dragon": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Dragon.glb",
+   "rig": "umfly"
+  },
+  "dragon2": {
+   "pack": "quaternius-monsters",
+   "file": "Flying/Dragon_Evolved.glb",
+   "rig": "umfly"
+  },
+  "alienblob": {
+   "pack": "quaternius-monsters",
+   "file": "Blob/Alien.glb",
+   "rig": "umblob"
+  },
+  "raptor": {
+   "pack": "quaternius-extra",
+   "file": "Velociraptor.glb",
+   "clips": {
+    "idle": "Armature|Velociraptor_Idle",
+    "walk": "Armature|Velociraptor_Walk",
+    "run": "Armature|Velociraptor_Run",
+    "attack": "Armature|Velociraptor_Attack",
+    "hit": "Armature|Velociraptor_Jump",
+    "die": "Armature|Velociraptor_Death"
+   }
+  },
+  "trex": {
+   "pack": "quaternius-extra",
+   "file": "Trex.glb",
+   "clips": {
+    "idle": "Armature|TRex_Idle",
+    "walk": "Armature|TRex_Walk",
+    "run": "Armature|TRex_Run",
+    "attack": "Armature|TRex_Attack",
+    "hit": "Armature|TRex_Jump",
+    "die": "Armature|TRex_Death"
+   }
+  },
+  "trike": {
+   "pack": "quaternius-extra",
+   "file": "Triceratops.glb",
+   "clips": {
+    "idle": "Armature|Triceratops_Idle",
+    "walk": "Armature|Triceratops_Walk",
+    "run": "Armature|Triceratops_Run",
+    "attack": "Armature|Triceratops_Attack",
+    "hit": "Armature|Triceratops_Jump",
+    "die": "Armature|Triceratops_Death"
+   }
+  },
+  "stego": {
+   "pack": "quaternius-extra",
+   "file": "Stegosaurus.glb",
+   "clips": {
+    "idle": "Armature|Stegosaurus_Idle",
+    "walk": "Armature|Stegosaurus_Walk",
+    "run": "Armature|Stegosaurus_Run",
+    "attack": "Armature|Stegosaurus_Attack",
+    "hit": "Armature|Stegosaurus_Jump",
+    "die": "Armature|Stegosaurus_Death"
+   }
+  },
+  "para": {
+   "pack": "quaternius-extra",
+   "file": "Parasaurolophus.glb",
+   "clips": {
+    "idle": "Armature|Parasaurolophus_Idle",
+    "walk": "Armature|Parasaurolophus_Walk",
+    "run": "Armature|Parasaurolophus_Run",
+    "attack": "Armature|Parasaurolophus_Attack",
+    "hit": "Armature|Parasaurolophus_Jump",
+    "die": "Armature|Parasaurolophus_Death"
+   }
+  },
+  "apato": {
+   "pack": "quaternius-extra",
+   "file": "Apatosaurus.glb",
+   "clips": {
+    "idle": "Armature|Apatosaurus_Idle",
+    "walk": "Armature|Apatosaurus_Walk",
+    "run": "Armature|Apatosaurus_Run",
+    "attack": "Armature|Apatosaurus_Attack",
+    "hit": "Armature|Apatosaurus_Jump",
+    "die": "Armature|Stegosaurus_Death"
    }
   }
  },
@@ -1654,6 +1756,163 @@
     80
    ],
    "wear": []
+  },
+  "monster:Cinder Imp": {
+   "model": "alienblob",
+   "scale": 0.9,
+   "tint": [
+    230,
+    110,
+    70
+   ],
+   "wear": []
+  },
+  "monster:Ember Hound": {
+   "model": "husky",
+   "scale": 1.0,
+   "tint": [
+    90,
+    60,
+    50
+   ],
+   "wear": []
+  },
+  "monster:Magma Blob": {
+   "model": "pinkblob",
+   "scale": 1.05,
+   "tint": [
+    255,
+    140,
+    60
+   ],
+   "wear": []
+  },
+  "monster:Ash Goleling": {
+   "model": "goleling",
+   "scale": 1.05,
+   "tint": [
+    110,
+    100,
+    95
+   ],
+   "wear": []
+  },
+  "monster:Raptor": {
+   "model": "raptor",
+   "scale": 1.45,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Crestback": {
+   "model": "para",
+   "scale": 1.8,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Platehide": {
+   "model": "stego",
+   "scale": 1.8,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Hornface": {
+   "model": "trike",
+   "scale": 1.8,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Longneck": {
+   "model": "apato",
+   "scale": 2.1,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Lizard Priest": {
+   "model": "dinobig",
+   "scale": 1.0,
+   "tint": [
+    200,
+    190,
+    120
+   ],
+   "wear": []
+  },
+  "monster:Blue Demon": {
+   "model": "bluedemon",
+   "scale": 1.05,
+   "tint": null,
+   "wear": []
+  },
+  "monster:Drakeling": {
+   "model": "dragon",
+   "scale": 1.0,
+   "tint": null,
+   "wear": [],
+   "lift": 0.2
+  },
+  "monster:Ember Drake": {
+   "model": "dragon2",
+   "scale": 1.05,
+   "tint": [
+    230,
+    120,
+    90
+   ],
+   "wear": [],
+   "lift": 0.2
+  },
+  "monster:Magma Goleling": {
+   "model": "goleling2",
+   "scale": 1.1,
+   "tint": [
+    230,
+    130,
+    80
+   ],
+   "wear": []
+  },
+  "monster:Pit Fiend": {
+   "model": "demon",
+   "scale": 1.1,
+   "tint": null,
+   "wear": []
+  },
+  "monster:The Cinder Prince": {
+   "model": "demon",
+   "scale": 0.8,
+   "tint": [
+    255,
+    140,
+    100
+   ],
+   "wear": []
+  },
+  "monster:The Tyrant": {
+   "model": "trex",
+   "scale": 1.45,
+   "tint": null,
+   "wear": []
+  },
+  "monster:The Forge-Priest": {
+   "model": "bluedemon",
+   "scale": 0.8,
+   "tint": [
+    240,
+    210,
+    120
+   ],
+   "wear": []
+  },
+  "monster:The Ember Dragon": {
+   "model": "dragon2",
+   "scale": 0.9,
+   "tint": [
+    255,
+    110,
+    70
+   ],
+   "wear": [],
+   "lift": 0.25
   }
  }
 }
