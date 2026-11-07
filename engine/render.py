@@ -1,0 +1,275 @@
+"""Drawing the Hollow Oak: the wood (textured, normal-mapped, lit by the lantern, the fungus and a little moon), the
+fungus glowing, the moonbeams and the dust in them, the sky through the broken crown, fog pooled low, and - now and
+then, high in the dark - a cluster of eyes.
+
+    r = Renderer()            (inside a current OpenGL 3.3 context)
+    r.draw(night, w, h, now)
+"""
+import math
+
+from pathlib import Path
+
+import numpy as np
+from OpenGL import GL
+from PIL import Image
+
+from . import gl, treemesh
+from ..game import tree as T
+
+TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
+LAYERS = ("Bark007", "Ground103", "ScatteredLeaves001")
+# each layer's colour, to turn the textures into the inside of an old oak: dark, red-brown, damp
+LAYER_TINT = ((0.30, 0.205, 0.15), (0.40, 0.30, 0.235), (0.36, 0.25, 0.18))
+MAX_LIGHTS = 16
+FOG = (0.018, 0.022, 0.03)
+
+LIGHTING = """
+uniform vec3 uEye; uniform vec3 uAmbient; uniform vec3 uMoonDir; uniform vec3 uMoonCol;
+uniform int uLightCount; uniform vec4 uLightPos[16]; uniform vec4 uLightCol[16];
+uniform vec3 uFog; uniform float uFogDensity;
+float moonReach(float y) { return smoothstep(%(TOP)s * 0.35, %(TOP)s + 2.0, y); }
+vec3 lit(vec3 p, vec3 n, vec3 base, float shade) {
+    vec3 c = uAmbient * shade + uMoonCol * max(dot(n, -uMoonDir), 0.0) * moonReach(p.y) * shade;
+    for (int i = 0; i < uLightCount; i++) {
+        vec3 d = uLightPos[i].xyz - p; float dist = length(d);
+        float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0); att *= att;
+        float ndl = max(dot(n, d / max(dist, 1e-3)), 0.0) * 0.85 + 0.15;
+        c += uLightCol[i].rgb * att * ndl;
+    }
+    return base * c;
+}
+vec3 fogged(vec3 p, vec3 col) {
+    float dist = length(p - uEye);
+    float low = 0.22 * exp(-max(p.y, 0.0) / 1.6);                       // (fog pooled at the foot of the hollow)
+    float f = 1.0 - exp(-pow((uFogDensity + low) * dist, 1.25));
+    return mix(col, uFog, clamp(f, 0.0, 1.0));
+}
+vec4 outColour(vec3 c) { return vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), 1.0); }
+""" % {"TOP": f"{T.TOP:.1f}"}
+
+WORLD_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in vec2 aUV;
+layout(location=3) in float aLayer; layout(location=4) in float aShade;
+uniform mat4 uPV;
+out vec3 vPos; out vec3 vNrm; out vec2 vUV; flat out float vLayer; out float vShade;
+void main() { vPos = aPos; vNrm = aNrm; vUV = aUV; vLayer = aLayer; vShade = aShade; gl_Position = uPV * vec4(aPos, 1.0); }"""
+
+WORLD_FS = """#version 330 core
+in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in float vShade;
+uniform sampler2DArray uTex; uniform sampler2DArray uNrmTex; uniform vec3 uTint[3];
+out vec4 frag;
+""" + LIGHTING + """
+mat3 frame(vec3 N, vec3 p, vec2 uv) {          // (the surface's own axes, from how its position and uv change)
+    vec3 dp1 = dFdx(p), dp2 = dFdy(p); vec2 du1 = dFdx(uv), du2 = dFdy(uv);
+    vec3 a = cross(dp2, N), b = cross(N, dp1);
+    vec3 t = a * du1.x + b * du2.x, bt = a * du1.y + b * du2.y;
+    float k = inversesqrt(max(max(dot(t, t), dot(bt, bt)), 1e-12));
+    return mat3(t * k, bt * k, N);
+}
+void main() {
+    int L = int(vLayer + 0.5);
+    vec3 base = texture(uTex, vec3(vUV, vLayer)).rgb * uTint[L];
+    vec3 N = normalize(vNrm);
+    if (dot(N, uEye - vPos) < 0.0) N = -N;                              // (lit from the side he sees)
+    vec3 m = texture(uNrmTex, vec3(vUV, vLayer)).xyz * 2.0 - 1.0;
+    vec3 n = normalize(frame(N, vPos, vUV) * vec3(m.xy * 1.05, m.z));
+    float grain = 0.85 + 0.3 * fract(sin(dot(floor(vPos.xz * 3.0 + vPos.y), vec2(12.9898, 78.233))) * 43758.5453);
+    frag = outColour(fogged(vPos, lit(vPos, n, base * mix(1.0, grain, 0.25), vShade)));
+}"""
+
+GLOWY_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec3 aCol;
+uniform mat4 uPV; out vec3 vPos; out vec3 vCol;
+void main() { vPos = aPos; vCol = aCol; gl_Position = uPV * vec4(aPos, 1.0); }"""
+
+FUNGUS_FS = """#version 330 core
+in vec3 vPos; in vec3 vCol; uniform float uTime;
+out vec4 frag;
+""" + LIGHTING + """
+void main() {
+    float pulse = 0.85 + 0.15 * sin(uTime * 0.7 + vPos.y * 1.3 + vPos.x);
+    frag = outColour(fogged(vPos, vCol * pulse * 0.9));
+}"""
+
+GLOW_VS = """#version 330 core
+layout(location=0) in vec3 aPos; layout(location=1) in vec2 aUV; layout(location=2) in vec4 aCol; layout(location=3) in float aMode;
+uniform mat4 uPV; out vec2 vUV; out vec4 vCol; flat out float vMode; out vec3 vPos;
+void main() { vUV = aUV; vCol = aCol; vMode = aMode; vPos = aPos; gl_Position = uPV * vec4(aPos, 1.0); }"""
+
+GLOW_FS = """#version 330 core
+in vec2 vUV; in vec4 vCol; flat in float vMode; in vec3 vPos; uniform float uTime;
+out vec4 frag;
+void main() {
+    vec2 p = vUV * 2.0 - 1.0; float a;
+    if (vMode < 0.5) { float r = length(p); a = pow(max(0.0, 1.0 - r), 2.0) + pow(max(0.0, 1.0 - r * 3.0), 3.0) * 1.5; }
+    else { a = pow(max(0.0, 1.0 - abs(p.x)), 1.8) * smoothstep(0.0, 0.3, vUV.y) * smoothstep(1.0, 0.8, vUV.y)
+               * (0.8 + 0.2 * sin(uTime * 0.5 + vUV.y * 5.0 + vPos.x)); }
+    if (a < 0.003) discard;
+    frag = vec4(vCol.rgb * a * vCol.a, 1.0);
+}"""
+
+SKY_VS = """#version 330 core
+layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
+SKY_FS = """#version 330 core
+in vec2 vP; uniform mat4 uInvPV; uniform vec3 uMoon; out vec4 frag;
+float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
+void main() {
+    vec4 a = uInvPV * vec4(vP, -1.0, 1.0), b = uInvPV * vec4(vP, 1.0, 1.0);
+    vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
+    vec3 col = mix(vec3(0.012, 0.016, 0.03), vec3(0.03, 0.045, 0.09), smoothstep(0.0, 1.0, d.y));
+    vec3 q = floor(d * 380.0); float s = hash(q);
+    col += vec3(0.7, 0.75, 0.9) * step(0.9975, s) * smoothstep(0.1, 0.5, d.y) * (0.5 + 0.5 * hash(q + 3.0));
+    float m = dot(d, normalize(uMoon));
+    col += vec3(0.85, 0.88, 1.0) * smoothstep(0.9994, 0.9997, m) + vec3(0.18, 0.2, 0.3) * pow(max(m, 0.0), 220.0);
+    frag = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
+}"""
+
+
+class Renderer:
+    def __init__(self):
+        self.tree = T.Tree()
+        self.world = gl.Program(WORLD_VS, WORLD_FS)
+        self.fung = gl.Program(GLOWY_VS, FUNGUS_FS)
+        self.glow = gl.Program(GLOW_VS, GLOW_FS)
+        self.sky = gl.Program(SKY_VS, SKY_FS)
+        colours = [Image.open(TEXTURES / f"{n}.color.jpg") for n in LAYERS]
+        normals = [Image.open(TEXTURES / f"{n}.normal.jpg") for n in LAYERS]
+        self.tex = gl.texture_array(colours, 512)
+        self.ntex = gl.texture_array(normals, 512, srgb=False)
+        self.mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)], treemesh.world(self.tree))
+        fv, self.fungus_lights = treemesh.fungus(self.tree)
+        self.fungus = gl.Mesh([(0, 3), (1, 3)], fv)
+        self.beams = treemesh.shafts(self.tree)
+        self.glow_mesh = gl.Mesh([(0, 3), (1, 2), (2, 4), (3, 1)], dynamic=True)
+        self.sky_mesh = gl.Mesh([(0, 2)], np.array([[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]], np.float32))
+        self.moon = np.array((0.35, 1.0, -0.25), np.float32)
+        self.moon /= np.linalg.norm(self.moon)
+
+    # ---- a frame ---------------------------------------------------------------------------------------------
+    def draw(self, night, w, h, now):
+        GL.glViewport(0, 0, w, h)
+        GL.glClearColor(*FOG, 1.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
+        GL.glEnable(GL.GL_DEPTH_TEST)                         # (what the painter over the view may have left: undone)
+        GL.glDepthFunc(GL.GL_LESS)
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
+        GL.glDisable(GL.GL_SCISSOR_TEST)
+        GL.glDisable(GL.GL_STENCIL_TEST)
+        GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
+        GL.glDisable(GL.GL_CULL_FACE)
+        eye = night.eye
+        proj = gl.perspective(70.0, w / max(1, h), 0.05, 160.0)
+        view = gl.view_matrix(eye, night.yaw, night.pitch)
+        pv = proj @ view
+        self.pv = pv
+        # the sky, behind everything (seen only up through the crown)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.sky.use()
+        self.sky.mat4("uInvPV", np.linalg.inv(pv))
+        self.sky.vec("uMoon", self.moon)
+        self.sky_mesh.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        lights = self._lights(night, now)
+        for prog in (self.world, self.fung):
+            prog.use()
+            prog.mat4("uPV", pv)
+            prog.vec("uEye", eye)
+            prog.vec("uAmbient", (0.035, 0.032, 0.04))
+            prog.vec("uMoonDir", -self.moon)
+            prog.vec("uMoonCol", (0.16, 0.19, 0.28))
+            prog.vec("uFog", [c ** 2.2 for c in FOG])
+            prog.float("uFogDensity", 0.045)
+            prog.int("uLightCount", len(lights))
+            if lights:
+                prog.vec4s("uLightPos", [l[0] for l in lights])
+                prog.vec4s("uLightCol", [l[1] for l in lights])
+        self.world.use()
+        GL.glActiveTexture(GL.GL_TEXTURE0)
+        GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.tex)
+        GL.glActiveTexture(GL.GL_TEXTURE1)
+        GL.glBindTexture(GL.GL_TEXTURE_2D_ARRAY, self.ntex)
+        self.world.int("uTex", 0)
+        self.world.int("uNrmTex", 1)
+        GL.glUniform3fv(self.world.loc("uTint"), 3, np.array(LAYER_TINT, np.float32))
+        GL.glActiveTexture(GL.GL_TEXTURE0)
+        self.mesh.draw()
+        self.fung.use()
+        self.fung.float("uTime", now)
+        self.fungus.draw()
+        self._glows(night, view, now)
+
+    def _lights(self, night, now):
+        ex, ey, ez = night.eye
+        out = []
+        if night.lantern:                                     # (his lantern: warm, a little unsteady)
+            fl = 0.9 + 0.06 * math.sin(now * 9.1) + 0.04 * math.sin(now * 23.7)
+            fx, fz = math.sin(night.yaw) * 0.3, -math.cos(night.yaw) * 0.3
+            out.append(((ex + fx + 0.12, ey - 0.15, ez + fz, 6.5), (0.95 * fl, 0.62 * fl, 0.36 * fl, 1)))
+        near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
+        for l in near[:MAX_LIGHTS - len(out) - 3]:
+            k = 0.85 + 0.15 * math.sin(now * 0.7 + l[1] * 1.3 + l[0])
+            out.append(((l[0], l[1], l[2], l[6]), (l[3] * k, l[4] * k, l[5] * k, 1)))
+        for start, end, width in sorted(self.beams, key=lambda b: float(np.sum((b[1] - np.array(night.eye)) ** 2)))[:3]:
+            out.append(((*end, 4.5), (0.16, 0.19, 0.27, 1)))   # (where a moonbeam falls, a little light)
+        return out[:MAX_LIGHTS]
+
+    def _glows(self, night, view, now):
+        verts = []
+        right, up = view[0, :3], view[1, :3]
+
+        def bill(p, size, c, a):
+            r, u = right * size, up * size
+            p = np.asarray(p, np.float32)
+            corners = (p - r - u, p + r - u, p + r + u, p - r + u)
+            for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                verts.append((*corners[i], *uv, *c, a, 0.0))
+        eye = np.array(night.eye, np.float32)
+        # the moonbeams: soft columns turned to face him
+        for start, end, width in self.beams:
+            axis = end - start
+            side = np.cross(axis, start - eye)
+            n = float(np.linalg.norm(side)) or 1.0
+            side = side / n * width
+            quad = (end - side * 1.6, end + side * 1.6, start + side * 0.6, start - side * 0.6)
+            for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                verts.append((*quad[i], *uv, 0.5, 0.58, 0.8, 0.55, 1.0))
+            for m in range(6):                                # (dust turning in the beam)
+                ph = (now * 0.04 + m * 0.17 + float(start[1]) * 0.1) % 1.0
+                p = start + axis * ph + side * 0.6 * math.sin(now * 0.3 + m * 2.0)
+                bill(p, 0.025, (0.75, 0.8, 1.0), 0.8 * math.sin(ph * math.pi))
+        # the fungus: a soft halo about each cluster
+        for l in self.fungus_lights:
+            bill((l[0], l[1], l[2]), 1.3, treemesh.GLOW, 0.38)
+        # the way out, behind him: night air through the roots
+        tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
+        bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
+        # her eyes, high in the dark: eight small lights that watch, and are gone when he comes close
+        for e in night.eyes():
+            for k in range(8):
+                ox = (k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)
+                oy = (0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02
+                p = np.array(e["pos"], np.float32) + right * ox + up * oy
+                bill(p, 0.05 if k in (1, 2) else 0.035, (1.0, 0.35, 0.18), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
+        if not verts:
+            return
+        self.glow_mesh.upload(np.array(verts, np.float32))
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.glow.use()
+        self.glow.mat4("uPV", self.pv)
+        self.glow.float("uTime", now)
+        self.glow_mesh.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
+
+
+def project(pv, p, w, h):
+    v = pv @ np.array((*p, 1.0), np.float32)
+    if v[3] <= 0.01:
+        return None
+    return ((v[0] / v[3] * 0.5 + 0.5) * w, (1 - (v[1] / v[3] * 0.5 + 0.5)) * h)
+
+
+
