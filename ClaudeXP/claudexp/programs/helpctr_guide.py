@@ -171,7 +171,9 @@ CATALOG = {
                              "and Magic's things (pipes that drip, grates, webs, glowcaps, crystals) and most hold one of its sixty "
                              "set pieces. Round the town a great forest: trails to eight glades (the Mossy Pond, the Old Shrine, the "
                              "Woodcutter's Camp, the Fairy Ring, the Hollow Oak, the Wolf Hollow, the Bandits' Camp, the Stream) and "
-                             "creatures as strong as Claude that never come into the town. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
+                             "creatures as strong as Claude that never come into the town. Barrels, crates and racks break under his bolts; the "
+                             "music is ClaudeRPG's own, made as it plays, in its worlds' styles; the title has three slot cards, records "
+                             "and options. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
                              "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, left button to cast, "
                              "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
