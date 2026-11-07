@@ -47,11 +47,14 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
 - Elites and champions (named, with an affix: fast, warded, splitting...), and a band's rarer monsters.
 - More wand bodies and parts (chain, nova, beam, orbiting motes), legendary parts, item sets.
 
-## Phase 4 - the NPCs speak (llama.cpp)
+## Phase 4 - the NPCs speak (llama.cpp) (v0.3) - done
 
-- The vendors, Mother Wren and the townsfolk talk through llama-server (the Timeline's llama.cpp, a model from
-  Local Storage/LLM Models), in character, knowing what Claude has done (his depth, his kills, his deaths).
-- A canned line for each when no model is there; nothing waits on the model to play.
+- The vendors and Mother Wren talk through the Timeline's llama.cpp engine (claudecore.ai.llm_server: llama-server
+  from Local Storage/LLM Models; Qwen3 4B Instruct when it's there), in character (game/people.py), knowing what
+  Claude has done (his deepest floor, the run, his falls, his kills, the guardians, his wand); greeting him, and
+  answering what he types at their stalls. Warmed as the game starts; asked in a thread; never waited on.
+- Their own lines when no model is there (or it's switched off in the menu).
+- Later: townsfolk beyond the four, who talk about the forest and the story (phase 5).
 
 ## Phase 5 - the forest, and the story
 

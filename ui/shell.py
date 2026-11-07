@@ -1,9 +1,14 @@
 """The game's window content: the view, with a panel laid over it when one is open (the title, the menu, the pack,
 a vendor, a choice), and the saving."""
-from PySide6.QtCore import Qt
+import json
+import random
+
+from PySide6.QtCore import QObject, Qt, Signal
 from PySide6.QtWidgets import QWidget
 
 from ..engine.sound import Sounds
+from ..engine.speech import Speech
+from ..game import people
 from ..game import data as D
 from ..game import shop
 from ..game.saves import Saves
@@ -13,6 +18,11 @@ from . import panels
 from .view import GameView
 
 
+class _Bridge(QObject):
+    """Brings a thread's answer back to the window's own thread."""
+    got = Signal(object, object)
+
+
 class Shell(QWidget):
     def __init__(self, saves_dir, muted=lambda: False):
         super().__init__()
@@ -20,6 +30,11 @@ class Shell(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose, False)
         self.saves = Saves(saves_dir)
         self.sounds = Sounds(muted)
+        self.settings = self._read_settings()
+        self.speech = Speech(enabled=self.settings.get("speech", True))
+        self.talk = {}                                       # vendor -> [(who, text)] this visit
+        self._bridge = _Bridge()
+        self._bridge.got.connect(lambda fn, text: fn(text))
         self.view = GameView(self)
         self.overlay = None
         self.slot = None
@@ -73,6 +88,8 @@ class Shell(QWidget):
         self.view.inp.yaw, self.view.inp.pitch = g.yaw, 0.0
         self.save()
         self.set_panel(None)
+        self.talk = {}
+        self.speech.warm()
         self.view.toasts.append((f"{D.TOWN_NAME}. The Deep's mouth is in the square: floor {g.run_floor} is open.",
                                  (0.95, 0.88, 0.7), __import__("time").perf_counter()))
         self.view.setFocus()
@@ -143,9 +160,60 @@ class Shell(QWidget):
             self._stock[vendor] = shop.stock(vendor, g.seed, g.visits, max(g.run_floor, g.player.stats["deepest"]))
         return self._stock[vendor]
 
+    # ---- the townsfolk talking -------------------------------------------------------------------------------
+    def _read_settings(self):
+        try:
+            return json.loads((self.saves.folder / "settings.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+
+    def set_setting(self, key, value):
+        self.settings[key] = value
+        try:
+            self.saves.folder.mkdir(parents=True, exist_ok=True)
+            (self.saves.folder / "settings.json").write_text(json.dumps(self.settings, indent=1), encoding="utf-8")
+        except OSError:
+            pass
+        if key == "speech":
+            self.speech.enabled = bool(value)
+            if value:
+                self.speech.warm()
+
     def greeting(self, vendor):
-        """What the vendor says (the language model's line, once the NPCs speak; for now their own)."""
-        return None
+        """What the vendor says as Claude comes up: the last thing they said this visit, or a line of their own (the
+        language model's line replaces it when it comes)."""
+        said = self.talk.get(vendor)
+        if said:
+            return next((t for who, t in reversed(said) if who == "them"), None)
+        line = people.line(vendor, self.view.game, random.Random())
+        self.talk[vendor] = [("them", line)]
+        if self.speech.available():
+            self.speech_ask(vendor, people.greeting_request(vendor, self.view.game), replace=True)
+        return line
+
+    def speech_ask(self, vendor, messages, replace=False):
+        def got(text):
+            text = people.clean(text) if text else ""
+            if not text:
+                if not replace:
+                    self.talk.setdefault(vendor, []).append(("them", "..."))
+            elif replace and self.talk.get(vendor) and len(self.talk[vendor]) == 1:
+                self.talk[vendor] = [("them", text)]
+            else:
+                self.talk.setdefault(vendor, []).append(("them", text))
+            panel = self.overlay.panel if self.overlay is not None else None
+            if isinstance(panel, panels.VendorPanel) and panel.key == vendor:
+                panel.show_talk()
+        self.speech.ask(messages, lambda text: self._bridge.got.emit(got, text))
+
+    def say_to(self, vendor, said):
+        said = said.strip()
+        if not said:
+            return
+        hist = self.talk.setdefault(vendor, [])
+        msgs = people.chat_request(vendor, self.view.game, hist, said)
+        hist.append(("claude", said))
+        self.speech_ask(vendor, msgs)
 
     def on_death(self, depth):
         self.set_panel(panels.ChoicePanel(

@@ -2,7 +2,9 @@
 parts in them), the vendors, and the choices at the stairs and the Deep's mouth."""
 from PySide6.QtCore import QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
-from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QVBoxLayout, QWidget
+
+from shiboken6 import isValid
 
 from ..game import data as D
 from ..game import items as I
@@ -203,6 +205,14 @@ class PausePanel(QFrame):
             b = QPushButton(text)
             b.clicked.connect(fn)
             lay.addWidget(b)
+        sp = shell.speech
+        on = shell.settings.get("speech", True)
+        talk = QPushButton(("The townsfolk speak: on" + (f" ({sp.model})" if on and sp.available() else
+                            " (no language model found)" if on else "")) if on else "The townsfolk speak: off")
+        talk.setToolTip("When on, Thornwick's people talk through a language model (llama.cpp, from the Timeline's "
+                        "LLM Models): you can say anything to them at their stalls. Off, they have their own lines.")
+        talk.clicked.connect(lambda: (shell.set_setting("speech", not on), shell.pause(), shell.pause()))
+        lay.addWidget(talk)
         lay.addSpacing(8)
         lay.addWidget(_label("WASD move, mouse look, left button cast, Space jump, F talk or use, Q health potion, "
                              "E mana potion, T Scroll of Return, 1-4 or the wheel change wand, Tab the pack, M the map.",
@@ -465,8 +475,28 @@ class VendorPanel(QFrame):
         close.clicked.connect(self.shell.close_panel)
         head.addWidget(close)
         self.root.addLayout(head)
-        self.greet = _label(self.shell.greeting(self.key) or GREETINGS[self.key], "sub")
+        self.greet = _label("", "sub")
+        self.greet.setTextFormat(Qt.RichText)
         self.root.addWidget(self.greet)
+        row = QHBoxLayout()
+        self.entry = QLineEdit()
+        self.entry.setStyleSheet("QLineEdit { background: #221C16; color: #F0E4C8; border: 1px solid #6A5638; "
+                                 "border-radius: 5px; padding: 6px; font-family: Georgia; font-size: 14px; }")
+        speaks = self.shell.speech.available()
+        self.entry.setPlaceholderText(f"Say something to {self.v['name']}..." if speaks else
+                                      f"(No language model in LLM Models: {self.v['name']} has only her own lines.)"
+                                      if self.key in ("apothecary", "wandwright", "sage") else
+                                      f"(No language model in LLM Models: {self.v['name']} has only his own lines.)")
+        self.entry.setEnabled(speaks)
+        self.entry.returnPressed.connect(self._say)
+        row.addWidget(self.entry, 1)
+        say = QPushButton("Say")
+        say.setEnabled(speaks)
+        say.clicked.connect(self._say)
+        row.addWidget(say)
+        self.root.addLayout(row)
+        self.shell.greeting(self.key)
+        self.show_talk()
         body = QHBoxLayout()
         # what's for sale
         sale = QVBoxLayout()
@@ -542,6 +572,26 @@ class VendorPanel(QFrame):
     def pick(self, sel):
         self.sel = None if sel == self.sel else sel
         self.build()
+
+    def show_talk(self):
+        """The last few things said at the stall."""
+        if not isValid(self.greet):
+            return
+        lines = []
+        for who, text in self.shell.talk.get(self.key, [])[-4:]:
+            esc = text.replace("&", "&amp;").replace("<", "&lt;")
+            lines.append(f"<span style='color:#9FB8D8'>Claude: {esc}</span>" if who == "claude" else f"\"{esc}\"")
+        if self.shell.speech.busy:
+            lines.append(f"<span style='color:#8A7A60'>{self.v['name']} thinks...</span>")
+        self.greet.setText("<br>".join(lines) or GREETINGS[self.key])
+
+    def _say(self):
+        text = self.entry.text().strip()
+        if not text:
+            return
+        self.entry.clear()
+        self.shell.say_to(self.key, text)
+        self.show_talk()
 
     def _buy(self, it):
         if shop.buy(self.player, it):

@@ -30,6 +30,11 @@ Playing
   set pieces (the Bone Room, the Chapel of Candles, the Cold Store, the Wolf Den, the Fallen Star...), which says its
   line when he steps in. Chests open with F (some are guarded); water slows him.
 
+  The townsfolk speak: with a language model in the Timeline's Local Storage\LLM Models (llama.cpp, through the
+  Timeline's own engine - Qwen3 4B Instruct when it's there), Hesper, Old Tamsin, Bramwell and Mother Wren greet
+  Claude in their own voices, knowing how deep he's been, how often he's fallen and what he's killed, and answer
+  whatever he says to them at their stalls. Without one they have their own lines. (Menu: the townsfolk speak, on/off.)
+
   Three save slots. Saves live in the Timeline's ClaudeGames/Saves/claudenites/ (slot1.json .. slot3.json).
 
 How it's made
@@ -37,7 +42,8 @@ How it's made
     game/     the rules, with no Qt and no GL: levels (the floors and the town), world (the running game), player,
               items (wands, parts, gear, loot), skills, shop, saves, data (the tables)
     engine/   gl (programs, meshes, textures), render (the frame), levelmesh, figures (Claude and Magic's figures and
-              plants, read with numpy and skinned on the card), sound (made at start)
+              plants, read with numpy and skinned on the card), sound (made at start), speech (the townsfolk's voices, through
+              claudecore.ai.llm_server)
     ui/       shell (the window's content), view (the loop, the input, the HUD), panels, icons, skills_panel
     assets/   imported from Claude and Magic by tools/import_cm.py (figures, plants, stone) and tools/export_cm_art.py
               (assets/cm: its painted art and its set pieces, exported from the running game; see CREDITS.txt)
