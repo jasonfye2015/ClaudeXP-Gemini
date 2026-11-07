@@ -1,6 +1,6 @@
 # 15. Every program
 
-Read from the three computers' registries on 07 November 2026: 178 programs in all, 169 on EPOCH-2001, 165 on SYSTEM-2011 and 155 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
+Read from the three computers' registries on 07 November 2026: 179 programs in all, 170 on EPOCH-2001, 166 on SYSTEM-2011 and 156 on WORKSTATION-2025. A program is on every computer unless an era dropped it (a service that closed) or renamed it (the same program in that year's clothes). The sections are the ones XP's Help and Support uses. Regenerate with `python -m manual.catalog` from `ClaudeApps` after adding or renaming a program.
 
 ## Talking with your buddies
 
@@ -177,6 +177,7 @@ All in Start > Games and the desktop's Games folder.
 | **Solitaire** | One of Windows' own games | yes | yes | yes |
 | **Spider Solitaire** | One of Windows' own games | yes | yes | as *Spider* |
 | **Taipei** | Mahjong solitaire | yes | yes | yes |
+| **The Hollow Oak** | The Hollow Oak: a short first-person game in Python and OpenGL (its own repo, jasonfye2015/the-hollow-oak), standing alone from the Timeline's other games. One night as the guest of Ysmeine, the Weaver Below, an ancient spider who lives inside the Hollow Oak - a serious, eerie romance played from dusk to dawn. So far (phase 1 of its build) the tree itself can be walked: in through the root tunnel, across the great hollow and up the ledge that winds round its wall past the gallery, the larder and the high hollow to the crown, broken open to the sky - by lantern-light, among glowing fungus and moonbeams through the knot-holes, with something watching from high in the dark. Click to take the mouse, W A S D to walk (Shift hurries), L the lantern, Esc to pause. | yes | yes | yes |
 | **TriPeaks** | TriPeaks solitaire | yes | yes | yes |
 | **Wolfenstein 3D** | Wolfenstein 3D. | yes | yes | yes |
 

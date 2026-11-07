@@ -171,7 +171,7 @@ def test_one_copy_at_a_time():
 
 
 def test_the_apps_window():
-    """The launcher's APPS window: seven apps with icons, each started the right way, once - and one already open
+    """The launcher's APPS window: eight apps with icons, each started the right way, once - and one already open
     brought forward instead"""
     sys.path.insert(0, str(support.TIMELINE / "ClaudeLauncher"))
     from systec import ui
@@ -189,7 +189,7 @@ def test_the_apps_window():
         w.apps_window()
         a = w._apps
         support.pump(0.3)
-        assert list(a.tiles) == ["kithylinai", "soulsong", "rpg", "claudemagic", "claudenites", "pystudio", "qbstudio"], list(a.tiles)
+        assert list(a.tiles) == ["kithylinai", "soulsong", "rpg", "claudemagic", "claudenites", "hollowoak", "pystudio", "qbstudio"], list(a.tiles)
         assert all(not t.icon().isNull() for t in a.tiles.values()), "an app has no icon"
         a.start("qbstudio")
         a.start("kithylinai")

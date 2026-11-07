@@ -200,6 +200,14 @@ CATALOG = {
                              "Wands, Seeds, Raw, Cooked and Misc. "
                              "If he falls he keeps everything but the run. Three save slots. WASD and the mouse, Shift to run (and leap), left button to cast, "
                              "F to talk or use, Q and E potions, T the scroll, 1-4 wands, Tab the pack, M the map."),
+    "hollowoak": ("games", "The Hollow Oak: a short first-person game in Python and OpenGL (its own repo, jasonfye2015/the-hollow-oak), "
+                           "standing alone from the Timeline's other games. One night as the guest of Ysmeine, the Weaver Below, an "
+                           "ancient spider who lives inside the Hollow Oak - a serious, eerie romance played from dusk to dawn. So far "
+                           "(phase 1 of its build) the tree itself can be walked: in through the root tunnel, across the great hollow and "
+                           "up the ledge that winds round its wall past the gallery, the larder and the high hollow to the crown, broken "
+                           "open to the sky - by lantern-light, among glowing fungus and moonbeams through the knot-holes, with something "
+                           "watching from high in the dark. Click to take the mouse, W A S D to walk (Shift hurries), L the lantern, "
+                           "Esc to pause."),
     "claudemagic": ("games", "Claude and Magic: a first-person dungeon crawler for a party of four, in 3D, in one HTML file "
                              "(its own repo, jasonfye2015/claude-and-magic). A run sets out from the party's door in Caer Duin, a "
                              "walled town on a hill under a sky that keeps the game's hours, seasons and moon: Lantern Street to the "

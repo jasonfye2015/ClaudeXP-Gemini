@@ -1,6 +1,6 @@
 """Shared programs on their own, outside the Timeline's computers - the launcher's APPS window:
 
-    python -m claudecore.standalone soulsong       (or rpg, claudemagic, claudenites, pystudio, qbstudio)
+    python -m claudecore.standalone soulsong       (or rpg, claudemagic, claudenites, hollowoak, pystudio, qbstudio)
     python -m claudecore.standalone qbstudio --check    open it, close it again, and say whether that worked
 
 One copy of each at a time (single.py): started again, it brings the one that's running forward instead - out of
@@ -36,13 +36,15 @@ APPS = {
                     "Seventy floors down, the Lich King waits: four go in together, in first person"),
     "claudenites": ("Claudenites 3-D", "claudenites", "launch", "nites_icon",
                     "A hundred floors under Thornwick: Claude alone, with a wand he builds"),
+    "hollowoak": ("The Hollow Oak", "hollowoak", "launch", "oak_icon",
+                  "One night as the guest of an ancient spider. Get to dawn."),
     "pystudio": ("Copilot Python Studio", "pystudio", "launch", "studio_icon",
                  "Write, debug and run Python, with an AI Helper"),
     "qbstudio": ("Claude QBasic Studio", "qbstudio", "launch", "studio_icon",
                  "QBasic as it was, and a Vibe Coder that writes it for you"),
 }
 # these share their files with the same program inside a computer (Companions, chats, game saves): not both at once
-SHARED_FILES = {"kithylinai", "soulsong", "rpg", "claudemagic", "claudenites"}
+SHARED_FILES = {"kithylinai", "soulsong", "rpg", "claudemagic", "claudenites", "hollowoak"}
 
 
 def _paths():

@@ -20,6 +20,10 @@ Each OS lists the games in its own Start menu and desktop folders; ClaudeXP impo
 Claudenites 3-D (claudenites/) is a Python game drawn with OpenGL 3.3 through PyOpenGL and numpy (in
 ClaudeXP/requirements.txt); its development repo is ClaudeGames/Claudenites 3-D (jasonfye2015/claudenites-3d), brought in
 here as a subtree. Its saves are Saves/claudenites/slot1..3.json.
+
+The Hollow Oak (hollowoak/) is a Python game on the same footing (OpenGL 3.3, PyOpenGL, numpy), standing alone from
+the others; its development repo is ClaudeGames/The Hollow Oak (jasonfye2015/the-hollow-oak), brought in here as a
+subtree. Its saves go in Saves/hollowoak/.
 Two games are single HTML files, played in a Qt WebEngine window on a permanent browser profile in Saves/: clauderpg
 (the user's own, dropped into clauderpg/game) and claudemagic (built from claudemagic/src by its build.py into
 claudemagic/game; see claudemagic/README.txt). Both play in an ordinary browser as they are.
