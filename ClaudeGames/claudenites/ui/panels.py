@@ -115,13 +115,20 @@ def _label(text, name=None, wrap=True):
 
 
 class Overlay(QWidget):
-    """The dimmed layer over the view, holding one panel in its middle."""
+    """The dimmed layer over the view, holding one panel in its middle (or, full, a panel that is the whole screen:
+    the title)."""
 
-    def __init__(self, parent, panel):
+    def __init__(self, parent, panel, full=False):
         super().__init__(parent)
-        self.setObjectName("overlay")
+        self.setObjectName("overlayfull" if full else "overlay")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setStyleSheet(CSS)
+        self.panel = panel
+        if full:
+            lay = QVBoxLayout(self)
+            lay.setContentsMargins(0, 0, 0, 0)
+            lay.addWidget(panel)
+            return
         lay = QVBoxLayout(self)
         lay.addStretch(1)
         row = QHBoxLayout()
@@ -131,61 +138,6 @@ class Overlay(QWidget):
         lay.addLayout(row)
         lay.addStretch(1)
         self.panel = panel
-
-
-# ---- the title ------------------------------------------------------------------------------------------------
-class TitlePanel(QFrame):
-    def __init__(self, shell):
-        super().__init__()
-        self.setObjectName("panel")
-        self.setFixedWidth(760)
-        self.shell = shell
-        lay = QVBoxLayout(self)
-        lay.setContentsMargins(34, 28, 34, 28)
-        lay.addWidget(_label("Claudenites 3-D", "title"))
-        lay.addWidget(_label("Before he was anything else, Claude was an apprentice with a birch wand, and the forest "
-                             "town of Thornwick sat over a hole nobody had seen the bottom of. A hundred floors down, "
-                             "something waits. He means to see it.", "sub"))
-        lay.addSpacing(12)
-        for slot in range(3):
-            lay.addWidget(self._card(slot))
-        lay.addSpacing(10)
-        lay.addWidget(_label("WASD move  -  mouse look  -  left button cast  -  Space jump  -  F talk / use  -  "
-                             "Q / E potions  -  T Scroll of Return  -  1-4 or wheel: wands  -  Tab the pack  -  M map  -  "
-                             "Esc menu", "small"))
-
-    def _card(self, slot):
-        card = QFrame()
-        card.setObjectName("card")
-        row = QHBoxLayout(card)
-        row.setContentsMargins(16, 12, 16, 12)
-        info = self.shell.saves.summary(slot)
-        if info:
-            text = (f"<b>Slot {slot + 1}</b> - Claude, level {info['level']}<br>"
-                    f"<span style='color:#B8A888'>{info['gold']} gold - the Deep open to floor {info['floor']} - "
-                    f"deepest {info['deepest']} - {info['kills']} slain, {info['deaths']} times fallen<br>"
-                    f"saved {info['when']}</span>")
-        else:
-            text = f"<b>Slot {slot + 1}</b> - <span style='color:#B8A888'>empty</span>"
-        lab = QLabel(text)
-        lab.setTextFormat(Qt.RichText)
-        row.addWidget(lab, 1)
-        play = QPushButton("Continue" if info else "New game")
-        play.clicked.connect(lambda: self.shell.play(slot))
-        row.addWidget(play)
-        if info:
-            dele = QPushButton("Delete")
-            dele.setObjectName("danger")
-            dele.clicked.connect(lambda: self._confirm_delete(slot, dele))
-            row.addWidget(dele)
-        return card
-
-    def _confirm_delete(self, slot, button):
-        if button.text() == "Delete":
-            button.setText("Sure?")
-            return
-        self.shell.saves.delete(slot)
-        self.shell.show_title()
 
 
 # ---- the menu -------------------------------------------------------------------------------------------------
@@ -204,6 +156,11 @@ class PausePanel(QFrame):
                          ("Save and go to the title", shell.quit_to_title)):
             b = QPushButton(text)
             b.clicked.connect(fn)
+            lay.addWidget(b)
+        for key, name in (("music", "Music"), ("sound", "Sound")):
+            on_ = shell.settings.get(key, True)
+            b = QPushButton(f"{name}: {'on' if on_ else 'off'}")
+            b.clicked.connect(lambda _=False, k=key, v=on_: (shell.set_setting(k, not v), shell.pause(), shell.pause()))
             lay.addWidget(b)
         sp = shell.speech
         on = shell.settings.get("speech", True)

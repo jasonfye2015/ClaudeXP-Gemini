@@ -65,6 +65,14 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
 - Also: the dead flip over; nothing in the Deep stands in a corridor or a narrow way (tests walk every floor at
   Claude's size); the trees drawn by chunks near him, 60 frames a second.
 
+## v0.5 - breaking things, ClaudeRPG's music, the title - done
+
+- Barrels, crates, racks, shelves, tables, benches, egg sacs, cocoons and fungus break under bolts (splinters,
+  a sound, sometimes gold or a potion); where they stood is clear.
+- ClaudeRPG's music engine and its worlds' styles in Python (engine/music.py), streamed through a QAudioSink
+  (ui/audio.py), following the town, the forest, the band and a guardian's fight; music/sound options.
+- The title (ui/title.py): a title card over Thornwick, then Play / Records / Options / Keys / Credits.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

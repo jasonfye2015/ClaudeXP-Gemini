@@ -46,6 +46,15 @@ def _make():
     s["drink"] = np.sin(np.cumsum(2 * math.pi * (300 + 260 * np.sin(x * 40)) / RATE)) * _env(len(x), 0.01, 0.2) * 0.25
     x = t(1.2)
     s["stairs"] = (np.sin(2 * math.pi * 110 * x) * 0.4 + np.sin(2 * math.pi * 165 * x) * 0.3) * _env(len(x), 0.2, 0.8) * 0.4
+    x = t(0.45)
+    crack = _noise(len(x), 13) * np.exp(-x * 14) * 0.8 + np.sin(2 * math.pi * 70 * x) * np.exp(-x * 9) * 0.5
+    for k in range(5):                                        # (the pieces landing)
+        at = int(RATE * (0.08 + k * 0.06))
+        n = int(RATE * 0.03)
+        crack[at:at + n] += _noise(n, 20 + k) * np.exp(-np.arange(n) / RATE * 60) * 0.35
+    s["break"] = crack * 0.5
+    x = t(0.12)
+    s["thud"] = (np.sin(2 * math.pi * 110 * x) * 0.6 + _noise(len(x), 17) * 0.3) * _env(len(x), 0.001, 0.1) * 0.35
     x = t(0.1)
     s["click"] = np.sin(2 * math.pi * 700 * x) * _env(len(x), 0.001, 0.08) * 0.15
     x = t(0.2)
