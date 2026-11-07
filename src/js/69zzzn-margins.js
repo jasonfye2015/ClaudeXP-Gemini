@@ -29,7 +29,7 @@
         if (n >= 1 && n <= CM.BOTTOM && n % 1 === 0 && fl.special !== "interior" && !(this.deltas && this.deltas[n])) { const E = this.ext("margins");
           for (let b = 0; b < CM.MARGINS.length; b++) { if (E[b] || CM.marginFloor(this.seed, b) !== n) continue; E[b] = true;
             if (b in (this.vext("claude").pages || {}) || (this.bag || []).some((i) => i.kind === "margin" && i.page === b)) continue;
-            const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y));
+            const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y) && !(fl.number === -1 && CM.isCoastLine && CM.isCoastLine(x, y))) cells.push(key(x, y));
             if (cells.length) fl.things[cells[CM.hashSeed(`${this.seed}:marginat:${b}`) % cells.length]] = { type: "margin", page: b }; } } }
       return em0.call(this, ev, ...a); }; }
   // found: stepped on, it's seen; Space takes it

@@ -1392,6 +1392,20 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The coast, the shells, and the fish (v131.0, UPGRADE_PLAN_80.md phase 2)
+  (src/js/23b-wood.js, src/js/23h-coast.js, src/js/69zzzzi-shells.js, src/js/77v-shorelife.js, tools/headless.js, tests/run.js)
+  - The coast path (UPGRADE_PLAN_80.md): a sandy path runs round the island's edge with the sea at one hand - up the
+    west shore from the Strand, along the north coast, and down through the trees of the north-east corner to the cliff
+    path and the fields - so the whole island can be walked round. Signposted from the Strand.
+  - The river now rises at a springhead, a heap of rock at the north coast, and the coast path crosses it on the north
+    bridge just below. A plank bridge crosses the river's mouth beside the ford, and new spurs lead down to the shore
+    from the Long Meadow and the wolf den.
+  - Shells: each tide (every four hours) leaves a fresh scatter of shells along the sand - cockles and whelks mostly,
+    scallops, cowries, sea-glass, now and then a conch, and very rarely an oyster with a pearl in it. Walk onto one to
+    pick it up. They sell, and Claude would like one of each kind for his shelf (he pays for them).
+  - Fish: dark shapes turning under the surface of the river and the sea, and now and then one leaps out with a
+    splash.
+
 The harbour (v130.0, UPGRADE_PLAN_80.md)
   (src/js/23b-wood.js, src/js/23g-harbour.js, src/js/26-surface.js, src/js/40-render.js, src/js/69zzzzg-island.js, src/js/69zzzzh-harbour.js, src/js/77u-harbour.js, tools/headless.js, tests/run.js, UPGRADE_PLAN_80.md)
   - The harbour (UPGRADE_PLAN_80.md): from the Strand east of the river's mouth, a ramp climbs off the sand onto a long

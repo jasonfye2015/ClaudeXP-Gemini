@@ -7557,6 +7557,30 @@ test("the harbour: a long pier from the Strand out over the sea on piles, up a r
   for (const s of ["add(\"solid:pile\", c)", "\"harbour:lantern\"", "if (offMap) mS = 1.0;", "CM.seaCells(floor)"]) assert.ok(html.includes(s), s);
 });
 
+test("the coast: a path round the island's edge - the west shore, the north coast past the river's springhead and over the north bridge, down the north-east corner to the cliff path - with the sea past it, not forest; a bridge over the river's mouth; more ways to the shore; shells on the sand each tide, picked up underfoot, a fresh scatter four hours on, the same for a replay; Claude's shelf; fish in the water", () => {
+  const CM = load(), C = CM.COAST;
+  for (const seed of ["coast-1", "abc"]) { const w = CM.makeWood(seed);
+    const seen = new Set([CM.WOOD_GATE.join()]), q = [CM.WOOD_GATE]; while (q.length) { const [x, y] = q.shift(); for (const [dx, dy] of CM.DIRS) { const k = `${x + dx},${y + dy}`; if (!seen.has(k) && CM.passable(w, x + dx, y + dy)) { seen.add(k); q.push([x + dx, y + dy]); } } }
+    for (let y = 0; y <= C.last; y++) assert.ok(seen.has(`0,${y}`) || w.things[`0,${y}`], `the west shore at ${y}`);
+    for (let x = 0; x < CM.WOOD_EAST; x++) if (x < C.spring[0] || x > C.spring[1]) assert.ok(seen.has(`${x},0`), `the north coast at ${x}`);
+    for (let y = 0; y <= C.eastTo; y++) assert.ok(seen.has(`${C.east},${y}`), `down the north-east corner at ${y}`);
+    assert.strictEqual(CM.solidAt(w, -1, 30), "sea"); assert.strictEqual(CM.solidAt(w, 30, -1), "sea");
+    assert.strictEqual(w.ground[C.northBridge.join()], "planks"); assert.ok(CM.passable(w, ...C.northBridge)); assert.strictEqual(CM.woodPlace(w, ...C.northBridge), "the north bridge");
+    const mb = [CM.riverX(C.mouthBridge), C.mouthBridge]; assert.strictEqual(w.ground[mb.join()], "planks"); assert.ok(CM.passable(w, ...mb)); assert.strictEqual(CM.woodPlace(w, ...mb), "the mouth bridge");
+    assert.ok(!w.decor.some((d) => d.kind === "water" && d.y === 0), "the river rises at the springhead"); assert.ok(w.decor.some((d) => d.kind === "water" && d.y === 1 && d.x === CM.riverX(1)));
+    assert.strictEqual(CM.woodPlace(w, 0, 40), "the coast path"); assert.ok(!w.seen.some(([x, y]) => x === 0 || y === 0), "the coast is not on the map from the gate"); }
+  const g = new CM.Game(); g.newGame("coast-2", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.mode = "explore"; g.enterFloor(-1, "rope", [30, 84]);
+  const now = CM.shellsNow(g); assert.ok(now.length >= 8, `a scatter of shells (${now.length})`); for (const s of now) assert.strictEqual(g.floor.ground[`${s.x},${s.y}`], "sand");
+  assert.strictEqual(JSON.stringify(CM.shellsNow(g)), JSON.stringify(now), "the same for the same tide");
+  const s0 = now[0], before = g.bag.length; g.floor.pos = [s0.x, s0.y]; g.emit("moved", s0.x, s0.y); assert.strictEqual(g.bag.length, before + 1, "picked up underfoot"); assert.strictEqual(g.bag[g.bag.length - 1].kind, "shell");
+  assert.ok(!CM.shellsNow(g).some((s) => s.x === s0.x && s.y === s0.y), "gone once taken"); g.emit("moved", s0.x, s0.y); assert.strictEqual(g.bag.length, before + 1, "and not twice");
+  const tide = CM.tideOf(g); g.clock += 60 * CM.TIDE_HOURS; assert.strictEqual(CM.tideOf(g), tide + 1); assert.notStrictEqual(JSON.stringify(CM.shellsNow(g)), JSON.stringify(now), "a fresh scatter on the next tide");
+  const total = CM.SHELLS.reduce((a, s) => a + s.w, 0); assert.ok(CM.SHELLS.find((s) => s.id === "pearl").w / total < 0.02, "a pearl is rare"); assert.ok(CM.SHELLS.every((s) => s.value > 0));
+  const gold = g.gold, heard = []; CM.claudeActs.shells(g, null, (t) => heard.push(t)); assert.ok(g.gold > gold && heard.length === 1, "Claude pays for the shelf"); assert.ok(!CM.claudeTopics.flatMap((f) => f(g) || []).some((o) => o[0] === "shells"), "and wants no second of the same");
+  const dir = path.join(__dirname, "..", "game"), file = fs.readdirSync(dir).filter((f) => /^Claude and Magic v[\d.]+\.html$/.test(f)).sort().pop(), html = fs.readFileSync(path.join(dir, file), "utf8");
+  for (const s of ["add(\"fx:fishshadow\", c)", "layer: \"fx:fish\"", "layer: `shell:${s.id}`"]) assert.ok(html.includes(s), s);
+});
+
 test("the Joker's story: chapters open by Joker level; the Final Night waits for level 25 and every chapter; its rounds are counted from the tables' own play in order (a lost round starts over, practice doesn't count); winning all five pays once and opens the Joker's Own and the golden crown", () => {
   const CM = load(), ST = CM.STORY, g = new CM.Game(); g.newGame("st-1", fixedParty(CM), "pauper", "fair", [], "dungeon", { town: true }); g.gold = 1e6; const J = g.jkStore(), lv = (L) => { J.jxp = 0; for (let k = 1; k < L; k++) J.jxp += CM.JK.need(k); J.level = L; J.owed = []; };
   assert.ok(g.stHear(0).error); lv(3); assert.ok(!g.stHear(0).error); assert.ok(g.stHear(1).error); lv(25); assert.ok(!g.stFinalReady(), "every chapter first"); for (let i = 0; i < 5; i++) g.stHear(i); assert.ok(g.stFinalReady()); g.stBegin(); assert.strictEqual(g.stRound().id, "reels");

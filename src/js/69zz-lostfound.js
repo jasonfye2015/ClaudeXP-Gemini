@@ -12,7 +12,7 @@
     return end0.call(this, won); };
   const em0 = G.emit; G.emit = function (ev, ...a) { if (ev === "floor" && this.floor && this.tally) {   /* (a replay lays it as the run did: the store is read, not changed) */ const fl = this.floor, n = fl.number, E = this.ext("lostfound");
       if (n >= 1 && n < 1000 && !E[n] && !(this.deltas && this.deltas[n])) { E[n] = true; const L = this.lostGear(), here = L.find((r) => r.floor === n && !r.run.startsWith(`${this.seed}:`) && (!r.taken || r.taken === this.seed));
-        if (here) { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y)) cells.push(key(x, y));
+        if (here) { const N = fl.grid.length, cells = []; for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) if (fl.grid[y][x] === 0 && !fl.things[key(x, y)] && !(fl.features || {})[key(x, y)] && !(fl.pos[0] === x && fl.pos[1] === y) && !(fl.number === -1 && CM.isCoastLine && CM.isCoastLine(x, y))) cells.push(key(x, y));
           if (cells.length) fl.things[cells[CM.hashSeed(`${this.seed}:lostat:${here.id}`) % cells.length]] = { type: "lostpack", id: here.id, names: here.names, items: here.items, date: here.date }; } } }
     return em0.call(this, ev, ...a); };
   const use0 = G.use; G.use = function (...a) { const fl = this.floor; if (this.mode === "explore" && fl) { const k = key(fl.pos[0], fl.pos[1]), t = fl.things[k];

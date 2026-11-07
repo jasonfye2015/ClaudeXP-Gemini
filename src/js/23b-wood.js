@@ -82,9 +82,10 @@ CM.makeWood = function (seed) {
   if (CM.laySouthWood) CM.laySouthWood({ grid, kinds, ground, features, decor, things, size }, seed);   // (v127.0: the south, laid after everything the seed placed, by its own dice)
   const levels = CM.layScarp ? CM.layScarp({ grid, kinds, ground, features, decor, things, size }) : {};
   if (CM.layShore) CM.layShore({ grid, kinds, ground, features, decor, things, size });   // (v129.0: the Strand and the sea - 23f-shore.js)
-  if (CM.layHarbour) Object.assign(levels, CM.layHarbour({ grid, kinds, ground, features, decor, things, size }));   // (v130.0: the pier, the dock, the Harbour Road - 23g-harbour.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
+  if (CM.layHarbour) Object.assign(levels, CM.layHarbour({ grid, kinds, ground, features, decor, things, size }));   // (v130.0: the pier, the dock, the Harbour Road - 23g-harbour.js)
+  if (CM.layCoast) CM.layCoast({ grid, kinds, ground, features, decor, things, size });   // (v131.0: the coast path round the island, the springhead, the bridges - 23h-coast.js)   // (v128.0: the Scarp - 23e-scarp.js - its heights the floor's levels)
   const seen = [];                                                       // open country in daylight: the road, the fields and the river's near bank are on the map from the gate; the forest is not
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe)) seen.push([x, y]);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) if (grid[y][x] === 0 && x >= CM.riverX(y) && !(CM.isScarp && CM.isScarp(x, y)) && !(CM.SHORE && y >= CM.SHORE.fringe) && !(CM.COAST && (y === 0 || (x === CM.COAST.east && y <= CM.COAST.eastTo)))) seen.push([x, y]);
   const fl = { number: -1, grid, pos: CM.WOOD_GATE.slice(), facing: 3, things, features, dark: [], seen, decor, special: "wood", glades, ford: [CM.riverX(fordY), fordY], bridge: [CM.riverX(bridgeY), bridgeY],
     solidDefault: "tree", kinds, ground, ...(Object.keys(levels).length ? { levels } : {}),
     rooms: [...glades.map((g, i) => ({ x0: g[0] - 3, y0: g[1] - 3, x1: g[0] + 3, y1: g[1] + 3, name: i === 0 ? "The First Glade" : "A Glade" })), { x0: CM.FIELDS[0], y0: CM.FIELDS[1], x1: CM.FIELDS[2], y1: CM.FIELDS[3], name: "The Fields" }] };
