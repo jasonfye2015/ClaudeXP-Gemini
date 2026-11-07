@@ -1,6 +1,6 @@
 """Claudenites 3-D in the Timeline (ClaudeGames/claudenites, a subtree of jasonfye2015/claudenites-3d): its own suite
 of rules passes here as it does on GitHub; and its window opens through the stand-in host on a scratch save folder
-(the real saves are never touched), goes from the title into Thornwick and down to a floor, draws a frame when the
+(the real saves are never touched, and no language model is loaded), goes from the title into Thornwick and down to a floor, draws a frame when the
 machine gives it OpenGL, saves the slot, and closes."""
 import importlib.util
 import json
@@ -14,6 +14,7 @@ support.qapp()
 from claudecore import standalone as S  # noqa: E402
 
 S.install()
+support.no_model_server()                    # (the townsfolk keep to their own lines: no model is loaded in a test)
 import claudenites as N  # noqa: E402
 
 GAME = support.TIMELINE / "ClaudeGames" / "claudenites"
