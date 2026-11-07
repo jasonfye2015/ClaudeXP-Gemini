@@ -1392,6 +1392,16 @@ A world with things in it (the tenth big update - v8.1 to v9.0)
   back up. The file grew from 3.8 MB to 4.7 MB (within the plan's budget of 1.5 MB): the photographs and the atlas are
   3.1 MB of it, and the small props share texture layers four to one.
 
+The king's bargains (v122.0, UPGRADE_PLAN_75.md)
+  (src/js/69zzzzc-bargains.js, tools/headless.js, tests/run.js)
+  - The king's bargains (plan 75, release 3): three times a run the Lich King makes an offer - a letter sealed with a
+    black crown, waiting the first time the party reaches the floor, with the price on a slip in Claude's hand. The
+    Short Stair on floor 18: five floors down at once, and every torch burns half again as fast for the rest of the
+    run. Strength from the Throne on floor 36: a level for every hero standing, and every hero's greatest health a
+    tenth less. The King's Answer on floor 53: one thing the king will ask you at the end, answered for you - and
+    Claude won't walk down with a party that has bargained, so no Last Page that run. Burning the letter lifts the
+    party's heart. The Automatic hand is never asked. Claude writes every letter taken or burned into his account.
+
 Your own dead come back (v121.0, UPGRADE_PLAN_75.md)
   (src/js/69zzzzb-revenants.js, tools/headless.js, tests/run.js)
   - Your own dead come back (plan 75, release 2): a hero on the memorial may rise on a later run in the band where
