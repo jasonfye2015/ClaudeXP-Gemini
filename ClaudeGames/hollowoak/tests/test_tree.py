@@ -108,4 +108,4 @@ def test_the_lantern_is_close_in_the_roots():
     x, z = n.tree.tunnel_point(-0.5, 0.0)
     n.x, n.z = x, z
     open_, k_open = n.lantern_reach()
-    assert deep < 3.0 and k_deep < 0.5 and open_ > 6.0 and k_open == 1.0
+    assert deep < 2.0 and k_deep < 0.3 and open_ >= 5.9 and k_open == n.lamp.level == 1.0

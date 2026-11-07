@@ -13,7 +13,7 @@ import numpy as np
 from OpenGL import GL
 from PIL import Image
 
-from . import fogfx, gl, treemesh
+from . import fogfx, gl, held, treemesh
 from ..game import tree as T
 
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
@@ -259,6 +259,9 @@ class Renderer:
         self.mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)], treemesh.world(self.tree, self.den))
         self.dress_prog = gl.Program(DRESS_VS, DRESS_FS)
         self.dress = gl.Mesh([(0, 3), (1, 3), (2, 3)], treemesh.dress(self.den))
+        self.held_parts = held.parts()
+        self.held_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
+        self._held_at = (0.0, None)
         drips = self.den.drips[:24]
         self.drip_uniform = np.array([(x, z, b) for x, _t, z, b in drips], np.float32)
         fv, self.fungus_lights = treemesh.fungus(self.tree)
@@ -287,6 +290,9 @@ class Renderer:
         view = gl.view_matrix(eye, night.yaw, night.pitch)
         pv = proj @ view
         self.pv = pv
+        self._view = view
+        self.now = now
+        self._held_at = (now, held.hold(night, now))
         # the sky, behind everything (seen only up through the crown)
         GL.glDepthMask(GL.GL_FALSE)
         self.sky.use()
@@ -300,9 +306,9 @@ class Renderer:
             prog.use()
             prog.mat4("uPV", pv)
             prog.vec("uEye", eye)
-            prog.vec("uAmbient", (0.035, 0.032, 0.04))
+            prog.vec("uAmbient", (0.022, 0.02, 0.026))
             prog.vec("uMoonDir", -self.moon)
-            prog.vec("uMoonCol", (0.16, 0.19, 0.28))
+            prog.vec("uMoonCol", (0.11, 0.13, 0.2))
             prog.vec("uFog", [c ** 2.2 for c in FOG])
             prog.float("uFogDensity", 0.045)
             prog.int("uLightCount", len(lights))
@@ -329,21 +335,58 @@ class Renderer:
         self._glows(night, view, now)
         if self.fog_on:
             self._fog(night, view, now, lights)
+        if night is not None and getattr(night, "show_lantern", True):
+            self._lantern(night, now)
+
+    def flame_at(self, night):
+        now = getattr(self, "now", 0.0)
+        if self._held_at[0] != now or self._held_at[1] is None:
+            self._held_at = (now, held.hold(night, now))
+        return tuple(held.flame(*self._held_at[1]))
+
+    def _lantern(self, night, now):
+        """The lantern in his hand, drawn over everything (it's never inside a wall), and its flame."""
+        if not night.lantern:
+            return
+        origin, axes = self._held_at[1] if self._held_at[1] is not None else held.hold(night, now)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.held_mesh.upload(held.place(self.held_parts, origin, axes))
+        self.dress_prog.use()
+        self.held_mesh.draw()
+        lvl = night.lamp.level
+        f = held.flame(origin, axes)
+        verts = []
+        right, up = self._view[0, :3], self._view[1, :3]
+        for size, col, a in ((0.012 + 0.008 * lvl, (1.0, 0.92, 0.7), 1.6 * lvl), (0.03, (1.0, 0.6, 0.25), 1.1 * lvl),
+                             (0.1, (1.0, 0.5, 0.2), 0.35 * lvl), (0.006, (1.0, 0.25, 0.08), 0.9)):
+            r, u = right * size, up * size * (1.4 if size < 0.04 else 1.0)
+            corners = (f - r - u, f + r - u, f + r + u, f - r + u)
+            for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                verts.append((*corners[i], *uv, *col, a, 0.0))
+        self.glow_mesh.upload(np.array(verts, np.float32))
+        GL.glEnable(GL.GL_BLEND)
+        GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
+        GL.glDepthMask(GL.GL_FALSE)
+        self.glow.use()
+        self.glow.mat4("uPV", self.pv)
+        self.glow.float("uTime", now)
+        self.glow_mesh.draw()
+        GL.glDepthMask(GL.GL_TRUE)
+        GL.glDisable(GL.GL_BLEND)
 
     def _lights(self, night, now):
         ex, ey, ez = night.eye
         out = []
-        if night.lantern:                                     # (his lantern: warm, a little unsteady)
-            fl = 0.9 + 0.06 * math.sin(now * 9.1) + 0.04 * math.sin(now * 23.7)
-            fx, fz = math.sin(night.yaw) * 0.3, -math.cos(night.yaw) * 0.3
+        if night.lantern:                                     # (his lantern: from its flame, as bright as the lamp allows)
             reach, k = night.lantern_reach()
-            out.append(((ex + fx + 0.12, ey - 0.15, ez + fz, reach), (0.95 * fl * k, 0.62 * fl * k, 0.36 * fl * k, 1)))
+            fx, fy, fz = self.flame_at(night)
+            out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
         near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
         for l in near[:MAX_LIGHTS - len(out) - 3]:
-            k = 0.85 + 0.15 * math.sin(now * 0.7 + l[1] * 1.3 + l[0])
+            k = (0.85 + 0.15 * math.sin(now * 0.7 + l[1] * 1.3 + l[0])) * 0.72
             out.append(((l[0], l[1], l[2], l[6]), (l[3] * k, l[4] * k, l[5] * k, 1)))
         for start, end, width in sorted(self.beams, key=lambda b: float(np.sum((b[1] - np.array(night.eye)) ** 2)))[:3]:
-            out.append(((*end, 4.5), (0.16, 0.19, 0.27, 1)))   # (where a moonbeam falls, a little light)
+            out.append(((*end, 4.5), (0.1, 0.12, 0.18, 1)))   # (where a moonbeam falls, a little light)
         return out[:MAX_LIGHTS]
 
     def _fog(self, night, view, now, lights):

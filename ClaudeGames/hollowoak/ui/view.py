@@ -2,7 +2,8 @@
 into it, the fade in from black, and a word about the mouse. No bars, no meters: what she thinks of him will show in
 the den itself.
 
-Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), L the lantern."""
+Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
+lantern when it gutters out."""
 import math
 import time
 
@@ -37,6 +38,8 @@ class GameView(QOpenGLWidget):
         self.inp = Input()
         self.captured = False
         self.cards = []                          # (title, line, born)
+        self.outs = 0                            # (how often the lantern has gone out: the hint shows the first times)
+        self.whisper = None                      # (a few small words low on the screen, and when)
         self.fade = None                         # (born): in from black
         self.last = time.perf_counter()
         self.t0 = self.last
@@ -80,6 +83,8 @@ class GameView(QOpenGLWidget):
     def begin(self, night):
         self.night = night
         self.playing = True
+        night.show_lantern = True
+        self.outs = 0
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
         self.fade = time.perf_counter()
         self.cards = []
@@ -89,6 +94,7 @@ class GameView(QOpenGLWidget):
         """The title's backdrop: standing at the foot of the hollow, turning slowly, looking up into the dark."""
         self.night = night
         self.playing = False
+        night.show_lantern = False                   # (no hand in the title's view)
         night.x, night.z = 0.8, 0.4
         night.y = night.tree.ground(0.8, 0.4)
 
@@ -112,6 +118,10 @@ class GameView(QOpenGLWidget):
             for e in n.events:
                 if e[0] == "place":
                     self.cards.append((e[1], e[2], now))
+                elif e[0] == "lantern" and e[1] == "out":
+                    self.outs += 1
+                elif e[0] == "lantern" and e[1] == "failed":
+                    self.whisper = ("It won't catch.", now)
             n.events.clear()
         elif not self.playing:
             n.time += dt
@@ -139,6 +149,18 @@ class GameView(QOpenGLWidget):
             f.setItalic(True)
             p.setFont(f)
             p.drawText(QRectF(W * 0.2, H * 0.70 + 48, W * 0.6, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
+        n = self.night
+        if n.lamp.state == "out" and self.outs <= 3:             # (the lantern out: what to do, the first few times)
+            a = int(150 + 60 * math.sin(t * 2.4))
+            p.setPen(QColor(220, 200, 170, a))
+            p.setFont(QFont(SERIF, 13))
+            p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "E   -   shake the lantern")
+        if self.whisper and t - self.whisper[1] < 2.5:
+            p.setPen(QColor(210, 190, 170, int(220 * max(0.0, 1 - (t - self.whisper[1]) / 2.5))))
+            f = QFont(SERIF, 13)
+            f.setItalic(True)
+            p.setFont(f)
+            p.drawText(QRectF(0, H * 0.6 + 28, W, 30), Qt.AlignHCenter, self.whisper[0])
         if self.fade is not None:
             age = t - self.fade
             if age > 3.0:
@@ -199,8 +221,8 @@ class GameView(QOpenGLWidget):
         if not self.playing:
             return
         self.keys.add(k)
-        if k == Qt.Key_L and self.night:
-            self.night.lantern = not self.night.lantern
+        if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
+            self.night.lamp.shake()
 
     def keyReleaseEvent(self, e):
         if not e.isAutoRepeat():
