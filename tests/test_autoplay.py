@@ -79,3 +79,28 @@ def test_auto_play_sped_up():
             g.step(0.05, inp)
         g.events.clear()
     assert g.time > 99 and g.player.stats["kills"] > 5
+
+
+def test_auto_play_keeps_count():
+    """The stats panel's numbers: this session's, and all of it in the save."""
+    g = Game.new(seed=21)
+    g.go_floor(1)
+    inp, bot = Input(), autoplay.Autopilot()
+    for _ in range(9000):
+        bot.drive(g, inp, 0.05)
+        g.step(0.05, inp)
+        bot.stepped(g)
+        g.events.clear()
+        if g.depth == 2:
+            break
+    sm = bot.tally.summary(g)
+    assert sm["floors"] == 1 and sm["recent"][-1]["how"] == "cleared" and sm["recent"][-1]["floor"] == 1
+    assert sm["kills"] == g.player.stats["kills"] and sm["kills"] > 10
+    assert sm["gold"] > 0 and sm["items"] == sum(sm["rarity"]) and sm["avg"] > 0
+    assert sm["levels"] == g.player.level - 1 and bot.status
+    tot = g.player.stats["autoplay"]
+    assert tot["floors"] == 1 and tot["kills"] == sm["kills"] and tot["seconds"] > 60
+    g.player.life = 0                                        # (a fall is counted too)
+    g.die()
+    bot.drive(g, inp, 0.05)
+    assert bot.tally.summary(g)["deaths"] == 1 and bot.tally.recent[-1]["how"] == "fell"

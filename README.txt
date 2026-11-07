@@ -8,7 +8,7 @@ thing the town is built over.
 Playing
   WASD move, Shift run (a running jump goes higher and further), mouse look (click to take the mouse, Esc gives it back), left button cast, Space jump,
   F talk / use (the vendors, the stairs, the Deep's mouth, the cabin, the bed, the hearth, the chest, the farm sign), Q health potion, E mana potion, T Scroll of Return,
-  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, F9 (or P) auto-play on/off, F10 its speed (x1, x2, x4, x8), Esc the menu.
+  1-4 or the wheel: change wand, Tab the pack, M the big map, K the Calendar, F9 (or P) auto-play on/off, F10 its speed (x1, x2, x4, x8), F11 its stats, Esc the menu.
 
   Thornwick is home: four vendors round the square - Hesper the Apothecary (potions, Scrolls of Return), Old Tamsin
   the Wandwright (wands and wand parts), Bramwell the Outfitter (hats, robes, gloves, boots, rings, amulets) and
@@ -137,6 +137,11 @@ Playing
   gear, spends his skill points, harvests and waters and plants the farm, cooks, eats the best meals, sells
   everything left over (never the chest at home) and stocks up on potions and scrolls - then goes down again to
   where the run has got to. If he falls, he gets up and starts again. Past the hundredth floor it goes on: endless.
+  Auto-play's stats (F11, or the Stats button beside the other two): a panel on the right that stays up while he
+  plays - what he's doing this moment, how far the run has got (to floor 100, or endless), this session's floors
+  (and floors an hour, and the average floor's time), deaths, kills, guardians, gold, chests, levels gained,
+  potions, game and real time, what he's found in each rarity's colour, the last five floors (cleared, fled, timed
+  out or fallen, how long, how many kills), and all the auto-play the save has ever done.
   Endless: once the Unmade King falls, the Deep goes on past the hundredth floor - the bands come round again, their
   guardians with them, everything harder each time.
 
