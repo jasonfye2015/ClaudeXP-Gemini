@@ -90,6 +90,19 @@ own GitHub repo; in the launcher's Apps. The main goal: the guardian on floor 10
   ever cut anything off (a whole-floor walk at Claude's size decides).
 - Pickups (gold, potions, scrolls, finds) lying about; two to five chests; more breakables.
 
+## v0.8-v0.11 - item pictures, drops seen, 3-D chests, the pack and the look - done
+
+## v0.12 - home: the cabin, the farm, food - done
+
+- The cabin in Thornwick (levels.cabin, entered at its door): bed (sleep to six, full life/mana, the farm grows
+  through the night), hearth (cooking), chest (the stash: items and food, kept through death).
+- The farm (game/farm.py): 8-20 plots, watering (by hand, rain, the sprinkler), four growth stages over 1.5-5 days,
+  harvests with seed back; the sign's panel; the Sprinkler, Farmhand (basket, replanting from the chest's seeds) and
+  More plots. Crops drawn on the plots (LPC Crops).
+- Food (game/food.py): 14 crops, meat/fish/mushroom/honey from monsters, 24 recipes of one to three things, buffs of
+  1-5 real hours (three at once); the hearth's experiments and the cookbook. Seeds from monsters, chests, Hesper.
+- The pack's tabs: Armor, Wands, Seeds, Raw, Cooked, Misc.
+
 ## Phase 6 - the story
 
 - Claude becomes the Lich King later (Claude and Magic's canon): the floors, the guardians, Mother Wren and the

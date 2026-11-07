@@ -52,6 +52,21 @@ PARTS = {"core:fire": "S_Fire03", "core:frost": "S_Ice02", "core:storm": "S_Thun
          "quickener": "I_Feather01", "seeker": "I_Eye", "rebound": "I_Sapphire", "piercer": "I_Amethist"}
 OTHER = {"potion:health": "P_Red01", "potion:mana": "P_Blue01", "scroll": "I_Scroll", "coin": "I_GoldCoin"}
 GOLD_PILE = "gold/gold_pile_10"
+# the farm: each crop's growing sprites (Claude and Magic's crop sheet: src/art/crops.png - LPC Crops, CC-BY-SA 3.0,
+# and josehzz's, CC0) and its produce (Joshua Taylor's Fruit and Veggie Inventory, LPC: CC-BY-SA 3.0 / GPL 3.0)
+CROPSHEET = ROOT.parent / "Claude and Magic" / "src" / "art" / "crops.png"
+CROPINDEX = ROOT.parent / "Claude and Magic" / "src" / "art" / "crops.json"
+VEGIES = STORAGE / "Farm - Sprites" / "LPC Fruit and Veggie Inventory" / "Vegies.png"
+VEG_CELLS = {"tomato": (0, 0), "strawberry": (1, 0), "carrot": (3, 0), "pumpkin": (4, 0), "watermelon": (7, 0),
+             "onion": (14, 0), "cabbage": (0, 1), "potato": (1, 1), "pepper": (2, 1), "cauliflower": (4, 1),
+             "eggplant": (5, 1), "radish": (6, 1), "corn": (7, 1), "squash": (8, 0)}
+# the larder's other things: raw and cooked (7Soul1's and Dungeon Crawl's, CC0)
+FOOD_S7 = {"meat": "I_C_RawMeat", "fish": "I_C_RawFish", "mushroom": "I_C_Mushroom", "roast": "I_C_Meat",
+           "grilled": "I_C_Fish", "pie": "I_C_Pie", "bread": "I_C_Bread", "seeds": "I_C_Nut", "cheese": "I_C_Cheese"}
+FOOD_DC = {"honey": "food/honeycomb_new", "sausage": "food/sausage", "jerky": "food/beef_jerky_new",
+           "stew": "food/meat_ration_new", "pizza": "food/pizza_new", "ambrosia": "food/piece_of_ambrosia_new",
+           "jelly": "food/lump_of_royal_jelly_new", "ration": "food/bread_ration_new", "fruit": "food/fruit",
+           "chunk": "food/chunk"}
 
 
 def main():
@@ -83,6 +98,34 @@ def main():
             mapping["parts"][k] = s7(n)
         for k, n in OTHER.items():
             mapping["other"][k] = s7(n)
+    # the farm and the larder
+    from PIL import Image
+    mapping["crops"], mapping["produce"], mapping["food"] = {}, {}, {}
+    sheet = Image.open(CROPSHEET).convert("RGBA")
+    idx = json.loads(CROPINDEX.read_text(encoding="utf-8"))
+    cw, ch, cols = idx["cell"][0], idx["cell"][1], idx["cols"]
+
+    def frame(n, name):
+        x, y = (n % cols) * cw, (n // cols) * ch
+        sheet.crop((x, y, x + cw, y + ch)).save(OUT / name)
+        return name
+    mapping["crops"]["sown"] = frame(idx["frames"]["sown"], "crop_sown.png")
+    for crop in VEG_CELLS:
+        fr = idx["frames"].get(crop)
+        if fr:
+            mapping["crops"][crop] = [frame(n, f"crop_{crop}_{k}.png") for k, n in enumerate(fr["s"])]
+    veg = Image.open(VEGIES).convert("RGBA")
+    for crop, (cx, cy) in VEG_CELLS.items():
+        name = f"veg_{crop}.png"
+        veg.crop((cx * 32, cy * 32, cx * 32 + 32, cy * 32 + 32)).save(OUT / name)
+        mapping["produce"][crop] = name
+    with zipfile.ZipFile(S7) as z:
+        for k, n in FOOD_S7.items():
+            name = "s7_" + n + ".png"
+            (OUT / name).write_bytes(z.read(n + ".png"))
+            mapping["food"][k] = name
+    for k, rel in FOOD_DC.items():
+        mapping["food"][k] = dc(rel)
     (OUT / "items.json").write_text(json.dumps(mapping, indent=1), encoding="utf-8")
     print("items:", len(list(OUT.glob("*.png"))), "pictures")
     return 0

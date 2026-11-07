@@ -1,5 +1,6 @@
 Claudenites 3-D - the art, and where it came from. All of it is Claude and Magic's, brought across by
-tools/import_cm.py; every source is CC0 (it asks nothing; the credit is given anyway).
+tools/import_cm.py; every source is CC0 (it asks nothing; the credit is given anyway) - save the farm's crops and
+produce, which are CC-BY-SA 3.0 / GPL 3.0 and credited in full below.
 
 The figures (assets/figures/figures.bin): rigged, animated low-poly bodies, as Claude and Magic bakes them.
 - KayKit: Adventurers Character Pack and Skeletons Character Pack - Kay Lousberg, www.kaylousberg.com (CC0):
@@ -30,5 +31,15 @@ The item pictures (assets/items, by tools/import_icons.py), both CC0:
 - Henrique Lazarini (7Soul1), "496 pixel art icons for medieval/fantasy RPG" - the gems and runes of the wand
   parts, the potions, the scroll and the coin: https://opengameart.org/content/496-pixel-art-icons-for-medievalfantasy-rpg
   (kept in Local Storage/Claudenites icons/7soul-496-rpg-icons).
+
+The farm's pictures (assets/items/crop_*.png, veg_*.png, by tools/import_icons.py) - CC-BY-SA 3.0+ or GPL 3.0+, and so
+these pictures stay under that licence wherever they go:
+- "[LPC] Crops" by bluecarrot16, Daniel Eddeland (daneeklu), Joshua Taylor, Richard Kettering (Jetrel), commissioned by
+  castelonia: https://opengameart.org/content/lpc-crops - the growing crops, through Claude and Magic's crop sheet
+  (its src/art/crops.png). Its attribution statement and licence table, whole: assets/items/CREDITS-crops.txt.
+  The sown-earth picture is josehzz's "Farming Crops 16x16" (CC0): https://opengameart.org/content/farming-crops-16x16
+- "Fruit and Veggie Inventory" by Joshua Taylor (CC-BY-SA 3.0 / GPL 3.0), part of the Liberated Pixel Cup:
+  https://opengameart.org/content/fruit-and-veggie-inventory - the harvested produce (and the meals made of one crop).
+The food (meat, fish, mushroom, the dishes) and the seed pouch are 7Soul1's and Crawl's, CC0, as above.
 
 The sounds are made by the game as it starts (engine/sound.py); the item pictures fall back to painted ones (ui/icons.py).

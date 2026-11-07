@@ -150,6 +150,9 @@ def item_name(it):
         return part_name(it)
     if t == "gear":
         return gear_name(it)
+    if t == "larder":
+        from .food import name_of
+        return name_of(it["key"])
     return str(it.get("name", "?"))
 
 

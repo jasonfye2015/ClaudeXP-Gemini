@@ -252,10 +252,19 @@ class GameView(QOpenGLWidget):
                 snd.play("stairs", 0.5)
                 self.explored = None
                 L = e[1]
+                came = getattr(self, "_last_kind", None)
+                self._last_kind = L.kind
                 if L.depth:
                     self.card = (f"FLOOR {L.depth}", L.name, L.line, now + 0.2)
+                elif L.kind == "cabin":
+                    self.card = ("HOME", L.name, L.line, now + 0.1)
+                elif came == "cabin":
+                    pass
                 elif self.running:
                     self.card = ("HOME", D.TOWN_NAME, "A clearing in the forest, a ring of roofs, and the Deep under the old stones.", now + 0.2)
+            elif kind == "sleep":
+                self.sleep_fade = now
+                snd.play("levelup", 0.35)
             elif kind == "save":
                 self.shell.save()
             elif kind == "died":
@@ -471,6 +480,8 @@ class GameView(QOpenGLWidget):
         where = D.TOWN_NAME if g.depth == 0 else f"Floor {g.depth}  -  {g.level.name}"
         if g.depth == 0 and not g.in_town():
             where = f"The wood round {D.TOWN_NAME}"
+        if g.level.kind == "cabin":
+            where = g.level.name
         T.outlined(p, 18, 32, where, QFont(T.HEAD, 15, QFont.Bold), QColor("#F6E2B0"))
         T.outlined(p, 18, 54, f"Level {pl.level}", QFont(T.BODY, 10, QFont.Bold), QColor("#E8D8B8"), width=2.5)
         T.outlined(p, 90, 54, f"{pl.gold} gold", QFont(T.BODY, 10, QFont.Bold), QColor("#FFD86A"), width=2.5)
@@ -498,6 +509,16 @@ class GameView(QOpenGLWidget):
                 a = int(255 * max(0, 1 - age / 1.4))
                 T.outlined(p, s[0], s[1], text, QFont(T.BODY, int(size * pop), QFont.Bold), QColor.fromRgbF(*col), a,
                            centre=True)
+        # the farm's sign, named over it
+        sign = g.level.spots.get("sign")
+        if pv is not None and sign:
+            d = math.hypot(sign[0] - g.x, sign[1] - g.z)
+            s = project(pv, (sign[0], 1.45, sign[1]), W, H) if d < 12 else None
+            if s:
+                a = int(255 * max(0.0, min(1.0, (12 - d) / 3)))
+                T.outlined(p, s[0], s[1], "The farm", QFont(T.HEAD, 12, QFont.Bold), QColor(200, 236, 150), a, centre=True)
+        # the meals at work, under the place's name: each its picture and the time it has left
+        self._buffs(p, pl)
         # the townsfolk's names over their heads
         if pv is not None and g.level.npcs:
             for n in g.level.npcs:
@@ -543,9 +564,36 @@ class GameView(QOpenGLWidget):
             paint_dial(p, QRectF(W - 196, 204, 180, 112), g.sky, g.level.outdoor, g.depth)
         # a new floor's card, and a level's banner
         self._cards(p, W, H, now)
+        fade = getattr(self, "sleep_fade", None)                        # (to sleep: dark, then the morning)
+        if fade is not None:
+            age = now - fade
+            if age > 3.0:
+                self.sleep_fade = None
+            else:
+                a = min(1.0, age / 0.4) if age < 0.4 else max(0.0, 1 - (age - 1.2) / 1.8) if age > 1.2 else 1.0
+                p.fillRect(self.rect(), QColor(4, 3, 8, int(250 * a)))
+                if 0.3 < age < 2.4:
+                    T.outlined(p, W / 2, H / 2, "Morning.", QFont(T.HEAD, 26, QFont.Bold), QColor(250, 226, 170),
+                               int(255 * min(1.0, (age - 0.3) / 0.4, (2.4 - age) / 0.4)), centre=True)
         if not self.captured and not self.shell.panel_open():
             T.outlined(p, W / 2, H / 2 + 44, "Click to take the mouse  (Esc gives it back)", QFont(T.HEAD, 12),
                        QColor(255, 248, 230), 220, centre=True, width=2.5)
+
+    def _buffs(self, p, pl):
+        import time as _t
+        from ..game import food as F
+        from .icons import icon
+        T = theme
+        live = F.active(pl.buffs, _t.time())
+        for k, (key, end) in enumerate(live):
+            x, y = 18 + k * 128, 86
+            r = QRectF(x, y, 122, 34)
+            T.plate(p, r, 8, 190)
+            p.drawPixmap(int(x + 4), int(y + 3), icon({"type": "larder", "key": "cooked:" + key, "id": "l:cooked:" + key}, 28))
+            left = max(0, int(end - _t.time()))
+            T.outlined(p, x + 36, y + 15, F.RECIPES[key][0][:15], QFont(T.BODY, 8, QFont.Bold), QColor("#F6D98A"), width=2)
+            T.outlined(p, x + 36, y + 29, f"{left // 3600}:{left % 3600 // 60:02d}:{left % 60:02d} left", QFont(T.BODY, 8),
+                       QColor("#E0D4B8"), width=2)
 
     def _cards(self, p, W, H, now):
         T = theme

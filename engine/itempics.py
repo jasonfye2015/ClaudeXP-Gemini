@@ -45,9 +45,42 @@ def sprite_name(it):
         return M["other"].get("potion:" + it["kind"]) if it["kind"] != "return" else M["other"].get("scroll")
     if t == "scroll":
         return M["other"].get("scroll")
+    if t == "larder":
+        return larder_picture(it["key"])
+    if t == "crop":
+        return crop_picture(it["crop"], it["stage"])
     return None
 
 
+
+
+def larder_picture(key):
+    """A larder key -> its sprite: seeds a pouch of them, a crop its produce, meat/fish/mushroom/honey theirs, a meal
+    its dish (a recipe's picture is a food key, or "veg:<crop>")."""
+    M = _mapping()
+    if not M:
+        return None
+    kind, _, k = key.partition(":")
+    if kind == "seed":
+        return M["food"].get("seeds")
+    if kind == "raw":
+        return M["produce"].get(k) or M["food"].get(k)
+    if kind == "cooked":
+        from ..game.food import RECIPES
+        pic = RECIPES[k][1]
+        return M["produce"].get(pic[4:]) if pic.startswith("veg:") else M["food"].get(pic)
+    return None
+
+
+def crop_picture(crop, stage):
+    """A crop growing: stage 0 the sown earth, 1-4 its four stages (4 ripe)."""
+    M = _mapping()
+    if not M:
+        return None
+    if stage == 0:
+        return M["crops"].get("sown")
+    frames = M["crops"].get(crop)
+    return frames[min(3, stage - 1)] if frames else None
 
 
 def drop_picture(what):
@@ -63,4 +96,6 @@ def drop_picture(what):
         return M["other"].get("scroll")
     if isinstance(what, dict):
         return sprite_name(what)
+    if isinstance(what, str) and ":" in what:
+        return larder_picture(what)
     return None

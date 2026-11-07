@@ -26,6 +26,10 @@ def rarity_colour(it):
         r = D.RARITIES[it["rarity"]][2]
     elif it.get("type") == "part":
         r = (0.55, 0.85, 0.75)
+    elif it.get("type") == "larder":
+        r = {"seed": (0.7, 0.85, 0.45), "raw": (0.9, 0.62, 0.5), "cooked": (1.0, 0.78, 0.35)}[it["key"].split(":")[0]]
+    elif it.get("type") == "crop":
+        r = (0.65, 0.9, 0.45)
     elif it.get("type") == "wand":
         r = (0.95, 0.8, 0.55)
     else:
@@ -41,6 +45,11 @@ def icon(it, size=56):
     key = (it.get("id") or str(it), size, I.item_name(it))
     if key in _cache:
         return _cache[key]
+    if it.get("type") == "larder" and it["key"].startswith("seed:"):   # (a seed: its pouch, and what it grows)
+        pm = _seed(it["key"][5:], size)
+        if pm is not None:
+            _cache[key] = pm
+            return pm
     name = sprite_name(it)
     if name:
         pm = _sprite(name, size)
@@ -55,6 +64,23 @@ def icon(it, size=56):
     _draw(p, it)
     p.end()
     _cache[key] = pm
+    return pm
+
+
+def _seed(crop, size):
+    from ..engine.itempics import larder_picture
+    pouch, veg = larder_picture("seed:" + crop), larder_picture("raw:" + crop)
+    a = _sprite(pouch, int(size * 0.72)) if pouch else None
+    b = _sprite(veg, int(size * 0.62)) if veg else None
+    if a is None or b is None:
+        return None
+    pm = QPixmap(size, size)
+    pm.fill(Qt.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.SmoothPixmapTransform)
+    p.drawPixmap(0, size - a.height(), a)
+    p.drawPixmap(size - b.width(), 0, b)
+    p.end()
     return pm
 
 

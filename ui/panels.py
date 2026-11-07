@@ -56,6 +56,7 @@ class Tile(QPushButton):
         self.item, self.empty, self.size_ = item, empty, size
         self.selected = False
         self.hot = False
+        self.count = 0
         self.hover = 0.0
         self.setFixedSize(size, size)
         self.setCursor(Qt.PointingHandCursor)
@@ -136,6 +137,11 @@ class Tile(QPushButton):
             sz = self.size_ - 10
             lift = int(round(self.hover * 2))
             p.drawPixmap(5, 5 - lift, icon(self.item, sz))
+            if self.count:
+                from PySide6.QtGui import QFontMetricsF
+                f = QFont(theme.BODY, 10, QFont.Bold)
+                w = QFontMetricsF(f).horizontalAdvance(str(self.count))
+                theme.outlined(p, self.width() - 7 - w, self.height() - 7, str(self.count), f, QColor(255, 240, 200))
         elif self.empty:
             p.setPen(QColor(150, 128, 96))
             f = QFont(theme.HEAD, 8)
@@ -270,6 +276,7 @@ class PackPanel(theme.Ornate):
         self.shell = shell
         self.player = shell.view.game.player
         self.sel = None                         # ("pack", item) / ("gear", slot) / ("wand", i) / ("socket", i, k)
+        self.tab = "armor"                      # / ("larder", key) / ("misc", kind)
         self.root = QHBoxLayout(self)
         self.root.setContentsMargins(22, 18, 22, 18)
         self.build()
@@ -340,16 +347,11 @@ class PackPanel(theme.Ornate):
         close.clicked.connect(self.shell.close_panel)
         head.addWidget(close)
         right.addLayout(head)
-        grid = QGridLayout()
-        grid.setSpacing(6)
-        for k in range(48):
-            it = P.inventory[k] if k < len(P.inventory) else None
-            t = Tile(it, "")
-            t.selected = bool(it) and self.sel == ("pack", it)
-            if it:
-                t.setToolTip(tooltip(it, P))
-                t.clicked.connect(lambda _=False, it=it: self.pick(("pack", it)))
-            grid.addWidget(t, k // 8, k % 8)
+        from . import home
+        counts = {k: len(home.entries(P.inventory, P.larder, P.potions, k)) for k, _n in home.TABS}
+        right.addLayout(home.tab_row(self.tab, self._tab, counts))
+        shown = home.entries(P.inventory, P.larder, P.potions, self.tab)
+        grid, _ = home.grid(shown, self.sel, self.pick, cols=8, rows=5, size=60)
         right.addLayout(grid)
         right.addWidget(self._detail())
         right.addStretch(1)
@@ -375,7 +377,20 @@ class PackPanel(theme.Ornate):
         box.setObjectName("card")
         lay = QVBoxLayout(box)
         P = self.player
+        if self.sel and self.sel[0] in ("larder", "misc"):
+            return self._food_detail(box, lay)
         it = self._selected_item()
+        if it is None and self.tab in ("seeds", "raw", "cooked", "misc"):
+            lay.addWidget(_label({"seeds": "Seeds go in the farm plot by the cabin: read the sign there.",
+                                  "raw": "Raw things: eat one as it is, or cook it at the cabin's hearth into a meal.",
+                                  "cooked": "A meal is good for hours (real hours): up to three at once.",
+                                  "misc": "Potions and the Scroll of Return."}[self.tab], "sub"))
+            if self.tab == "cooked":
+                row = QHBoxLayout()
+                self._button(row, "The cookbook", self._cookbook)
+                row.addStretch(1)
+                lay.addLayout(row)
+            return box
         if it is None:
             hint = ("Choose a thing to see it. A wand, then a wand slot (1-4), readies it there; a ready wand, then "
                     "another slot, swaps them; a part, then a wand's empty socket, sets it; gear, then its slot, wears it.")
@@ -418,6 +433,55 @@ class PackPanel(theme.Ornate):
         row.addStretch(1)
         lay.addLayout(row)
         return box
+
+    def _tab(self, k):
+        self.tab = k
+        self.sel = None if self.sel and self.sel[0] in ("pack", "larder", "misc") else self.sel
+        self.build()
+
+    def _cookbook(self):
+        from .home import CookbookPanel
+        self.shell.set_panel(CookbookPanel(self.shell))
+
+    def _food_detail(self, box, lay):
+        from . import home
+        from ..game import food as F
+        P = self.player
+        kind, key = self.sel
+        row = QHBoxLayout()
+        if kind == "misc":
+            lab = QLabel(f"<b>{D.CONSUMABLES[key]['name']}</b> x{P.potions.get(key, 0)}<br>{D.CONSUMABLES[key]['what']}")
+            if key in ("health", "mana"):
+                self._button(row, "Drink it", lambda: self._drink(key))
+        else:
+            lab = QLabel(f"<b style='color:#F6D98A'>{F.name_of(key)}</b> x{P.larder.get(key, 0)}<br>"
+                         + "<br>".join(home.larder_lines(key)))
+            if not key.startswith("seed:"):
+                self._button(row, "Eat it", lambda: self._eat(key))
+            if key.startswith("cooked:"):
+                self._button(row, "The cookbook", self._cookbook)
+        lab.setTextFormat(Qt.RichText)
+        lab.setWordWrap(True)
+        lay.addWidget(lab)
+        row.addStretch(1)
+        lay.addLayout(row)
+        return box
+
+    def _eat(self, key):
+        import time as _t
+        said = self.player.eat(key)
+        if said:
+            self.shell.sounds.play("drink", 0.5)
+            self.shell.view.toasts.append((said, (0.9, 0.85, 0.6), _t.perf_counter()))
+        if self.player.larder.get(key, 0) <= 0:
+            self.sel = None
+        self.build()
+
+    def _drink(self, key):
+        self.shell.view.game.drink(key)
+        if self.player.potions.get(key, 0) <= 0:
+            self.sel = None
+        self.build()
 
     def _unready(self, i):
         P = self.player
@@ -575,6 +639,22 @@ class VendorPanel(theme.Ornate):
                 b.clicked.connect(lambda _=False, k=kind: self._buy_consumable(k))
                 row.addWidget(b)
                 sale.addLayout(row)
+            g = self.shell.view.game
+            sale.addSpacing(6)
+            sale.addWidget(_label("Seeds (click to buy one)", "heading"))
+            from ..game import food as F
+            seeds = QGridLayout()
+            seeds.setSpacing(5)
+            for k, crop in enumerate(shop.seed_stock(g.seed, g.visits, max(g.run_floor, P.stats["deepest"]))):
+                key = f"seed:{crop}"
+                t = Tile({"type": "larder", "key": key, "id": "l:" + key}, "", 46)
+                t.count = P.larder.get(key, 0)
+                c = F.CROPS[crop]
+                t.setToolTip(f"<b>{c[0]} Seeds</b> - {c[4]} gold<br>Grows in {c[1]:g} days, watered.<br>You have {t.count}.")
+                t.setEnabled(P.gold >= c[4])
+                t.clicked.connect(lambda _=False, c=crop: (shop.buy_seed(P, c), self.shell.sounds.play("coin", 0.5), self.build()))
+                seeds.addWidget(t, k // 5, k % 5)
+            sale.addLayout(seeds)
         elif self.key == "sage":
             sale.addWidget(_label(f"Claude has {P.skill_points} skill points to spend.", None))
             from . import skills_panel

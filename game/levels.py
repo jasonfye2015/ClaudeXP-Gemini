@@ -55,6 +55,11 @@ class Level:
         self.decals, self.flats, self.webs, self.hangs, self.sprites, self.drips, self.chests = [], [], [], [], [], [], []
         self.water, self.pieces, self.gold_squares = set(), [], set()
         self.pickups = []                                # things lying about: {x, z, y, kind (gold/health/mana/item/scroll)}
+        self.boxes = []                                  # furniture: (x0, y0, z0, x1, y1, z1, texture name)
+        self.extra_blockers = []                         # (x, z, r): what stands in the way besides
+        self.kind = "floor"                              # floor, town, cabin
+        self.spots = {}                                  # named places to use: cabin door, bed, hearth, stash, exit, sign
+        self.farm_cells = []                             # the farm's plots' squares, in order
         self.caches = []
         self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 
@@ -119,7 +124,7 @@ class Level:
             b = {}
             things = [(s["x"], s["z"], s["solid"]) for s in self.sprites if s.get("solid")]
             things += [(c["x"], c["z"], 0.3) for c in self.chests if not c.get("broken")]
-            things = [(x, z, min(0.45, r)) for x, z, r in things]
+            things = [(x, z, min(0.45, r)) for x, z, r in things] + list(self.extra_blockers)
             things += [(p["x"], p["z"], p.get("trunk") or (0.26 if p.get("scale", 1) < 0.5 else 0.32)) for p in self.props
                        if p.get("solid")]
             for x, z, r in things:
@@ -636,6 +641,92 @@ def _wall_spot(L, r, rng):
 TOWN_SIZE = 176
 
 
+HOME_ANGLE = 2.75
+FARM_COLS, FARM_ROWS = 5, 4
+
+
+def _homestead(L, cx, cy, bark, roof):
+    """The cabin (a log house, its door to the east), and north of it the farm: twenty squares of tilled earth in
+    five columns, the first eight dug, the rest for later; the sign at the plot's east foot."""
+    hx = int(round(cx + math.cos(HOME_ANGLE) * 18))
+    hy = int(round(cy + math.sin(HOME_ANGLE) * 18))
+    for dx in range(-2, 3):
+        for dy in range(-2, 3):
+            L.solid[hy + dy, hx + dx] = True
+            L.wtex[hy + dy, hx + dx] = bark
+            L.top[hy + dy, hx + dx] = 2.4
+    L.houses.append((hx - 2, hy - 2, hx + 3, hy + 3, 2.4, roof, (1, 0)))
+    L.spots["cabin_door"] = (hx + 3.45, hy + 0.5)
+    tilled = L.tex("ground.tilled")
+    L.farm_cells = []
+    for row in range(FARM_ROWS):                         # (the nearest row first: the first plots by the cabin)
+        for col in range(FARM_COLS):
+            x, y = hx - 2 + col, hy - 4 - row
+            L.solid[y, x] = False
+            L.ftex[y, x] = tilled
+            L.floor[y, x] = 0.0
+            L.farm_cells.append((x, y))
+    sx, sy = hx + 4, hy - 4
+    L.spots["sign"] = (sx + 0.5, sy + 0.5)
+    planks = L.tex("ground.planks")
+    L.boxes += [(sx + 0.45, 0.0, sy + 0.45, sx + 0.55, 1.15, sy + 0.55, "ground.planks"),
+                (sx + 0.1, 0.75, sy + 0.42, sx + 0.9, 1.2, sy + 0.58, "ground.planks")]
+    L.extra_blockers.append((sx + 0.5, sy + 0.5, 0.2))
+    _ = planks
+
+
+def cabin(seed=1):
+    """Claude's cabin, inside: a room of logs and planks - the bed by the north wall, the hearth with its cauldron
+    in the east wall, the chest he keeps things in, a table and a shelf, and the door south."""
+    W, H = 9, 7
+    L = Level(W, H, 0)
+    L.kind = "cabin"
+    L.name, L.line = "Claude's Cabin", "Home: four walls of logs, a fire, a bed, and the chest."
+    L.tint, L.fog, L.ambient = (1.0, 0.95, 0.88), ((0.05, 0.04, 0.03), 0.02), 0.32
+    L.tex("solid.bark")
+    floor, wall, ceil = L.tex("ground.planks"), L.tex("solid.bark"), L.tex("ground.planks")
+    L.wtex[:], L.ftex[:], L.ctex[:] = wall, floor, ceil
+    for y in range(1, H - 1):
+        for x in range(1, W - 1):
+            L.solid[y, x] = False
+            L.floor[y, x] = 0.0
+            L.ceil[y, x] = 2.5
+    L.safe = ~L.solid
+    for name in ("solid.plaster", "solid.hedge", "solid.townwall", "solid.roof"):
+        L.tex(name)
+    # the bed, against the north wall in the west corner
+    L.boxes += [(1.05, 0.0, 1.02, 2.95, 0.32, 2.05, "ground.planks"),
+                (1.1, 0.32, 1.06, 2.9, 0.48, 2.0, "solid.plaster"),
+                (1.15, 0.48, 1.12, 1.55, 0.6, 1.94, "solid.plaster"),
+                (1.6, 0.48, 1.04, 2.92, 0.54, 2.02, "solid.hedge"),
+                (1.02, 0.0, 1.0, 1.12, 0.85, 2.07, "ground.planks")]
+    L.extra_blockers += [(1.5, 1.5, 0.45), (2.5, 1.5, 0.45)]
+    L.spots["bed"] = (2.0, 2.5)
+    # the hearth: a block of stone in the east wall, a fire before it and the cauldron on it
+    L.boxes += [(7.35, 0.0, 2.3, 8.0, 2.5, 4.7, "solid.townwall"),
+                (7.0, 0.0, 2.6, 7.35, 0.25, 4.4, "solid.townwall")]
+    L.extra_blockers += [(7.4, 3.5, 0.5)]
+    L.sprites.append({"x": 7.25, "z": 3.5, "y": 0.25, "w": 0.6, "h": 0.55, "name": "sp.fire", "glow": (1.0, 0.55, 0.2), "solid": 0})
+    L.sprites.append({"x": 7.05, "z": 3.5, "y": 0.2, "w": 0.75, "h": 0.65, "name": "lm.crucible", "glow": None, "solid": 0})
+    L.lights.append((7.0, 0.8, 3.5, 1.0, 0.6, 0.28, 5.5))
+    L.spots["hearth"] = (6.4, 3.5)
+    # the chest, in the north-east corner
+    L.chests.append({"x": 6.5, "z": 1.5, "y": 0.0, "opened": False, "broken": False, "yaw": 0.0, "guard": [], "rich": 0,
+                     "stash": True})
+    L.spots["stash"] = (6.5, 2.4)
+    # a table and a shelf; a lamp over the table
+    L.sprites.append({"x": 3.5, "z": 4.3, "y": 0.0, "w": 1.1, "h": 0.75, "name": "fu.table", "glow": None, "solid": 0.4})
+    L.sprites.append({"x": 4.6, "z": 1.12, "y": 0.0, "w": 0.95, "h": 1.15, "name": "fu.shelf", "glow": None, "solid": 0.3})
+    L.lights.append((3.5, 2.1, 4.0, 1.0, 0.8, 0.5, 6.0))
+    # the door, south
+    L.decals.append((4.5, 0.0, 5.995, 0, -1, 0.95, 1.6, "door"))
+    L.spots["exit"] = (4.5, 5.4)
+    L.start = (4.5, 4.9, 0.0)
+    L.portal = None
+    L.stairs = None
+    return L
+
+
 def town(seed=1):
     rng = random.Random(f"{seed}:town")
     S = TOWN_SIZE
@@ -691,10 +782,12 @@ def town(seed=1):
         L.npcs.append({"vendor": key, "x": nx, "z": nz, "yaw": math.atan2(-(cx - nx), cy - nz)})
         L.lights.append((nx + math.cos(ang) * 0.9, 1.9, nz + math.sin(ang) * 0.9, 1.0, 0.75, 0.4, 6.0))
     L.roof = roof
+    # Claude's cabin, its farm and the farm's sign (west of the square, between the Wandwright and the Outfitter)
+    _homestead(L, cx, cy, bark, roof)
     # more houses, to make a town of it
     for k in range(7):
         ang = 0.35 + 0.8 + k * (math.tau / 7)
-        if any(abs(((ang - a + math.pi) % math.tau) - math.pi) < 0.45 for a in spots.values()):
+        if any(abs(((ang - a + math.pi) % math.tau) - math.pi) < 0.45 for a in list(spots.values()) + [HOME_ANGLE]):
             continue
         hx, hy = cx + math.cos(ang) * 16.5, cy + math.sin(ang) * 16.5
         for dx in range(-1, 2):
@@ -710,11 +803,15 @@ def town(seed=1):
     solid_town = L.solid & clearing                           # (the houses and the stones)
     forest.grow(L, rng, cx, cy, clearing)
     L.solid |= solid_town
+    keep_clear = set(L.farm_cells) | {(int(px) + dx, int(pz) + dy) for px, pz in L.spots.values() for dx in (-1, 0, 1) for dy in (-1, 0, 1)}
     for (x, y) in L.open_squares():
+        if (x, y) in keep_clear:
+            continue
         if 17.5 < r[y, x] < 22 and rng.random() < 0.06:
             L.props.append({"model": rng.choice(["bush", "bush2", "bushberries", "plant1", "plant2", "flowers", "rock1",
                                                  "stump_moss", "grass", "grass2"]),
                             "x": x + 0.5, "z": y + 0.5, "yaw": rng.uniform(0, math.tau), "scale": rng.uniform(0.5, 0.8),
                             "y": 0.0})
     L.start = (cx + 0.5, cy + 7.5, 0.0)
+    L.kind = "town"
     return L

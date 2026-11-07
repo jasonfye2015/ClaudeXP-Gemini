@@ -8,6 +8,12 @@ INVENTORY_SIZE = 48
 
 class Player:
     def __init__(self):
+        # the farm and the kitchen (game/food.py): counts by key ("seed:carrot", "raw:meat", "cooked:stew")
+        self.larder = {"seed:carrot": 3, "seed:potato": 2, "seed:radish": 2}
+        self.stash = []                                      # the cabin's chest: items
+        self.stash_larder = {}                               # and its larder
+        self.buffs = []                                      # [recipe key, ends at (the wall clock's seconds)]
+        self.cookbook = []                                   # the recipes found
         self.level = 1
         self.xp = 0
         self.gold = 30
@@ -35,7 +41,35 @@ class Player:
                 b[k] = b.get(k, 0) + v
         except ImportError:
             pass
+        from . import food
+        for k, v in food.bonus(self.buffs).items():           # (the meals in him)
+            b[k] = b.get(k, 0) + v
         return b
+
+    def eat(self, key):
+        """Eat one from the larder: raw heals a little; a cooked meal is a buff for its hours (real time), three at
+        most (the oldest goes); the same meal again starts its time over. -> what it did, or None."""
+        import time
+        from . import food
+        if self.larder.get(key, 0) <= 0:
+            return None
+        kind, _, k = key.partition(":")
+        if kind == "seed":
+            return None
+        food.add(self.larder, key, -1)
+        if kind == "raw":
+            life, mana = food.RAW[k][2:] if k in food.RAW else food.RAW_CROP
+            self.life = min(self.max_life(), self.life + self.max_life() * life)
+            self.mana = min(self.max_mana(), self.mana + self.max_mana() * mana)
+            return f"Claude eats the {food.name_of(key).lower()}. It does him a little good."
+        r = food.RECIPES[k]
+        now = time.time()
+        self.buffs = [[b, t] for b, t in food.active(self.buffs, now) if b != k]
+        if len(self.buffs) >= food.MAX_BUFFS:              # (the one eaten longest ago goes)
+            self.buffs = self.buffs[1:]
+        self.buffs.append([k, now + r[4] * 3600])
+        self.life = min(self.max_life(), self.life + self.max_life() * 0.15)
+        return f"{r[0]}: " + ", ".join(food.buff_lines(r[3])) + f" for {r[4]} hour{'s' if r[4] != 1 else ''}."
 
     def max_life(self):
         b = self.bonus()
@@ -148,7 +182,7 @@ class Player:
 
     # ---- saving -----------------------------------------------------------------------------------------------
     FIELDS = ("level", "xp", "gold", "inventory", "gear", "wands", "active", "potions", "skills", "skill_points",
-              "life", "mana", "stats")
+              "life", "mana", "stats", "larder", "stash", "stash_larder", "buffs", "cookbook")
 
     def to_json(self):
         return {k: getattr(self, k) for k in self.FIELDS}

@@ -16,7 +16,7 @@ from ..game import data as D
 from . import theme
 from .icons import icon
 
-VERSION = "v0.5"
+VERSION = "v0.12"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
 CSS = theme.CSS + """
@@ -408,6 +408,8 @@ class TitleScreen(QWidget):
             ("Plants and props", "Quaternius Ultimate Nature Pack; Kenney Pirate Kit (CC0)"),
             ("Stone", "ambientCG (CC0)"),
             ("Items", "Dungeon Crawl Stone Soup's tiles; Henrique Lazarini (7Soul1)'s 496 RPG icons (both CC0)"),
+            ("The farm", "[LPC] Crops (bluecarrot16, Daniel Eddeland, Joshua Taylor, Richard Kettering; CC-BY-SA 3.0 / GPL 3.0); "
+                         "Joshua Taylor's Fruit and Veggie Inventory (CC-BY-SA 3.0 / GPL 3.0); josehzz's Farming Crops (CC0)"),
             ("Painted art, the set pieces", "Claude and Magic's own"),
             ("Voices", "llama.cpp, with a model from the Timeline's LLM Models"),
         ]
