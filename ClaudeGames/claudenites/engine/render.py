@@ -14,6 +14,7 @@ from ..game import data as D
 
 from . import dressmesh
 from . import gl
+from .itempics import drop_picture
 from . import weatherfx
 from . import levelmesh
 from .figures import Pack, Plants
@@ -490,6 +491,14 @@ class Renderer:
             elif pics.get(pk["kind"]) is not None:
                 bob = 0.05 * math.sin(now * 2.5 + pk["phase"])
                 things.append((pk["x"], pk["y"] + 0.04 + bob, pk["z"], 0.34, 0.34, pics[pk["kind"]], 1.35))
+        for d in getattr(g, "drops", ()):                               # (what was had, flying to him)
+            if g.time < d["t"]:
+                continue
+            lay = get("item:" + (drop_picture(d["what"]) or ""))
+            if lay is None:
+                continue
+            s = (0.34 if d["what"] != "gold" else 0.4) * (1 - 0.6 * d.get("fly", 0.0))
+            things.append((d["x"], d["y"] - s * 0.5, d["z"], s, s, lay, 1.4))
         wood = get("fu.table")
         for f in g.fx:                                                  # (splinters of what broke)
             if f.get("kind") == "debris":
@@ -695,6 +704,10 @@ class Renderer:
             for k in (1, 2, 3):                                               # its tail
                 t = k * 0.025
                 bill(b.x - b.vx * t, b.y - b.vy * t, b.z - b.vz * t, 0.12 - k * 0.025, c, 0.7 - k * 0.15)
+        for d in getattr(g, "drops", ()):                                # (a glint about what was had: gold for the rare)
+            if g.time >= d["t"]:
+                c = (1.0, 0.8, 0.35) if d.get("rare") else (0.9, 0.85, 0.7)
+                bill(d["x"], d["y"], d["z"], 0.22 if d.get("rare") else 0.14, c, 0.55 if d.get("rare") else 0.3)
         for f in g.fx:
             if f.get("kind") == "debris":
                 continue

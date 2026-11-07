@@ -107,6 +107,7 @@ class Game:
         self.bolts = []
         self.events = []
         self.fx = []                         # short-lived sparks: {"x","y","z","c","t","kind"}
+        self.drops = []                      # what was had, flying to him: {"x","y","z","vx","vy","vz","t","what"}
         self.x = self.z = 0.0
         self.y = 0.0
         self.vy = 0.0
@@ -155,6 +156,7 @@ class Game:
         self.monsters = []
         self.bolts = []
         self.fx = []
+        self.drops = []
         self.x, self.z, self.yaw = level.start
         self.y = level.floor_at(self.x, self.z)
         self.vy = 0.0
@@ -278,6 +280,7 @@ class Game:
         if c["opened"]:
             return
         c["opened"] = True
+        mark = len(self.events)
         p, rng, depth = self.player, self.rng, max(1, self.depth)
         find = p.bonus().get("find", 0)
         gold = int(I.gold_for(depth, rng, find) * 5 * c.get("rich", 1.0))
@@ -293,6 +296,7 @@ class Game:
             p.potions[k] += 1
             got.append("a Health Potion" if k == "health" else "a Mana Potion")
         self.events.append(("loot", (c["x"], c["y"] + 0.6, c["z"]), got))
+        self._drops((c["x"], c["y"] + 0.5, c["z"]), got, mark, c["y"])
         self.events.append(("chest", c))
         srng = random.Random(f"{self.seed}:guard:{depth}:{i}")
         for k, name in enumerate(c.get("guard") or []):
@@ -336,6 +340,7 @@ class Game:
         self._bolts(dt)
         self._monsters(dt)
         self.fx = [f for f in self.fx if self.time - f["t"] < f.get("life", 0.5)]
+        self._fly_drops(dt)
         for f in self.fx:                                        # (splinters fly and fall)
             if f.get("kind") == "debris":
                 f["vy"] -= GRAVITY * dt
@@ -639,6 +644,7 @@ class Game:
             got.append("a Health Potion" if k == "health" else "a Mana Potion")
         if got:
             self.events.append(("loot", (x, y + 0.5, z), got))
+            self._drops((x, y + h * 0.5, z), got, len(self.events), y)
 
     def _reflect(self, b, nx, ny, nz):
         L = self.level
@@ -721,7 +727,8 @@ class Game:
                 self.events.append(("victory",))
 
     def _loot(self, m):
-        """Gold always; sometimes a potion; sometimes a thing - straight into the pack."""
+        """Gold always; sometimes a potion; sometimes a thing - straight into the pack (and seen going there)."""
+        mark = len(self.events)
         p, rng, depth = self.player, self.rng, max(1, self.depth)
         find = p.bonus().get("find", 0)
         gold = I.gold_for(depth, rng, find) * (10 if m.guardian else 1)
@@ -745,6 +752,67 @@ class Game:
             got.append(I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)")
             self.events.append(("found", it))
         self.events.append(("loot", (m.x, m.centre_y, m.z), got))
+        self._drops((m.x, m.y + m.lift + m.height * 0.6, m.z), got, mark, m.y)
+
+    DROP_POP, DROP_HOLD, DROP_FLY = 0.75, 0.55, 0.45
+
+    def _fly_drops(self, dt):
+        """Out, down, a bounce; a moment glinting where it lies; then away to him."""
+        keep = []
+        ex, ey, ez = self.eye
+        for d in self.drops:
+            age = self.time - d["t"]
+            if age < 0:
+                keep.append(d)
+                continue
+            if age < self.DROP_POP + self.DROP_HOLD:
+                d["vy"] -= GRAVITY * 0.8 * dt
+                d["x"] += d["vx"] * dt
+                d["z"] += d["vz"] * dt
+                d["y"] += d["vy"] * dt
+                if d["y"] < d["floor"] + 0.12:
+                    d["y"] = d["floor"] + 0.12
+                    d["vy"] = -d["vy"] * 0.35 if abs(d["vy"]) > 0.6 else 0.0
+                    d["vx"] *= 0.55
+                    d["vz"] *= 0.55
+                if not self.level.can_stand(d["x"], d["z"], 0.05, d["floor"]):
+                    d["x"] -= d["vx"] * dt
+                    d["z"] -= d["vz"] * dt
+                    d["vx"] = d["vz"] = 0.0
+                keep.append(d)
+            elif age < self.DROP_POP + self.DROP_HOLD + self.DROP_FLY:
+                k = min(1.0, dt / max(0.05, self.DROP_POP + self.DROP_HOLD + self.DROP_FLY - age) * 1.0)
+                d["x"] += (ex - d["x"]) * k
+                d["y"] += (ey - 0.35 - d["y"]) * k
+                d["z"] += (ez - d["z"]) * k
+                d["fly"] = (age - self.DROP_POP - self.DROP_HOLD) / self.DROP_FLY
+                keep.append(d)
+        self.drops = keep
+
+    def _drops(self, pos, got, mark, floor):
+        """What was had, seen: each thing pops out where it came from, bounces, glints a moment, then flies to Claude
+        (it's already in the pack: this is only the sight of it). got: the loot's lines; the items are the "found"
+        events since mark."""
+        items = [e[1] for e in self.events[mark:] if e[0] == "found"]
+        whats = []
+        for line in got:
+            if "gold" in line and line.startswith("+"):
+                whats.append("gold")
+            elif "Health Potion" in line:
+                whats.append("health")
+            elif "Mana Potion" in line:
+                whats.append("mana")
+            elif "Scroll of Return" in line:
+                whats.append("scroll")
+            elif items:
+                whats.append(items.pop(0))
+        x, y, z = pos
+        for k, what in enumerate(whats):
+            a = self.rng.uniform(0, math.tau)
+            sp = self.rng.uniform(0.8, 1.8)
+            self.drops.append({"x": x, "y": y, "z": z, "vx": math.cos(a) * sp, "vy": self.rng.uniform(2.5, 4.0),
+                               "vz": math.sin(a) * sp, "t": self.time + k * 0.08, "floor": floor, "what": what,
+                               "rare": isinstance(what, dict) and (what.get("rarity", 0) >= 2 or what.get("type") != "gear")})
 
     def _hurt_player(self, dmg, element="arcane"):
         p = self.player
