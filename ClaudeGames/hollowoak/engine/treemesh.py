@@ -33,14 +33,95 @@ def _shade_wall(y, r_in_chamber):
     return max(0.35, min(1.0, 0.55 + y * 0.05)) * (0.75 if r_in_chamber else 1.0)
 
 
-def world(tree):
+def world(tree, den=None):
     out = []
     _wall(tree, out)
     _floor(tree, out)
     _ledge(tree, out)
     _tunnel(tree, out)
     _crown(tree, out)
+    if den is not None:
+        _roots(den, out)
     return np.array(out, np.float32).reshape(-1, 10)
+
+
+def _roots(den, out):
+    """Each root a tapering tube along its line, its lower part sunk in the earth."""
+    sides = 7
+    for line in den.roots:
+        rings = []
+        for i, (x, y, z, rad) in enumerate(line):
+            nx, nz = (line[min(i + 1, len(line) - 1)][0] - line[max(i - 1, 0)][0],
+                      line[min(i + 1, len(line) - 1)][2] - line[max(i - 1, 0)][2])
+            ln = math.hypot(nx, nz) or 1.0
+            sx, sz = -nz / ln, nx / ln                          # (across the root, level)
+            ring = []
+            for k in range(sides + 1):
+                b = k / sides * math.tau
+                ox, oy = math.cos(b) * rad, math.sin(b) * rad
+                ring.append(((x + sx * ox, y + oy, z + sz * ox), (sx * math.cos(b), math.sin(b), sz * math.cos(b))))
+            rings.append(ring)
+        along = 0.0
+        for i in range(len(rings) - 1):
+            seg = math.dist(line[i][:3], line[i + 1][:3])
+            for k in range(sides):
+                p00, n0 = rings[i][k]
+                p01, _ = rings[i][k + 1]
+                p10, _ = rings[i + 1][k]
+                p11, _ = rings[i + 1][k + 1]
+                u0, u1 = k / sides * 0.6, (k + 1) / sides * 0.6
+                _quad(out, p00, p10, p11, p01, BARK, ((u0, along), (u0, along + seg * UV * 2), (u1, along + seg * UV * 2),
+                                                      (u1, along)), (0.75, 0.75, 0.75, 0.75))
+            along += seg * UV * 2
+
+
+# ---- the vines and the fallen leaves: coloured, lit, no texture ----------------------------------------------------
+def dress(den):
+    """-> float32 (n, 9): position 3, normal 3, colour 3 - the vines (a stem, leaves along it) and the leaf litter."""
+    import random
+    rng = random.Random(5)
+    out = []
+
+    def tri(a, b, c, col):
+        n = np.cross(np.subtract(b, a), np.subtract(c, a))
+        ln = float(np.linalg.norm(n)) or 1.0
+        n = n / ln
+        for p in (a, b, c):
+            out.append((*p, *n, *col))
+    for line in den.vines:
+        green = (0.13 + rng.uniform(-0.03, 0.03), 0.25 + rng.uniform(-0.05, 0.05), 0.08)
+        for i in range(len(line) - 1):
+            a, b = np.array(line[i]), np.array(line[i + 1])
+            r = math.hypot(a[0], a[2]) or 1.0
+            side = np.array((-a[2] / r, 0.0, a[0] / r)) * 0.035           # (along the wall, level)
+            stem = (0.16, 0.13, 0.07)
+            tri(a - side, b - side, b + side, stem)
+            tri(a - side, b + side, a + side, stem)
+            if i % 2 == 0 and rng.random() < 0.85:                        # (a leaf: a small pointed blade off the stem)
+                k = 1 if (i // 2) % 2 else -1
+                inward = np.array((-a[0] / r, 0.0, -a[2] / r))
+                base = a + side * k
+                tip = base + side * k * 5.5 + np.array((0, -0.1, 0)) + inward * 0.07
+                mid = (base + tip) / 2
+                w = np.array((0, 0.075, 0)) + inward * 0.03
+                col = tuple(c * rng.uniform(0.8, 1.25) for c in green)
+                tri(base, mid + w, tip, col)
+                tri(base, tip, mid - w, col)
+    for x, y, z, size, turn, shade in den.leaves:                        # (a fallen leaf: a flat pointed oval)
+        c, s_ = math.cos(turn), math.sin(turn)
+        L, W = size, size * 0.45
+        tip = (x + c * L, y, z + s_ * L)
+        tail = (x - c * L, y, z - s_ * L)
+        left = (x - s_ * W, y + 0.004, z + c * W)
+        right = (x + s_ * W, y + 0.004, z - c * W)
+        col = (0.07 + 0.08 * shade, 0.04 + 0.035 * shade, 0.02 + 0.012 * shade) if shade > 0.15 else (0.06, 0.055, 0.03)
+        mid_l = (x - s_ * W * 0.7 + c * L * 0.45, y + 0.006, z + c * W * 0.7 + s_ * L * 0.45)
+        mid_r = (x + s_ * W * 0.7 + c * L * 0.45, y + 0.006, z - c * W * 0.7 + s_ * L * 0.45)
+        tri(tail, left, mid_l, col)
+        tri(tail, mid_l, tip, col)
+        tri(tail, tip, mid_r, col)
+        tri(tail, mid_r, right, col)
+    return np.array(out, np.float32).reshape(-1, 9)
 
 
 def _wall(tree, out):
