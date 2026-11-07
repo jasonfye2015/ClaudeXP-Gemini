@@ -63,6 +63,9 @@ VEG_CELLS = {"tomato": (0, 0), "strawberry": (1, 0), "carrot": (3, 0), "pumpkin"
 # the larder's other things: raw and cooked (7Soul1's and Dungeon Crawl's, CC0)
 FOOD_S7 = {"meat": "I_C_RawMeat", "fish": "I_C_RawFish", "mushroom": "I_C_Mushroom", "roast": "I_C_Meat",
            "grilled": "I_C_Fish", "pie": "I_C_Pie", "bread": "I_C_Bread", "seeds": "I_C_Nut", "cheese": "I_C_Cheese"}
+# the Deep's litter: empty bottles and old bones lying about (7Soul1's, CC0)
+LITTER_S7 = {"bottle1": "I_Bottle01", "bottle2": "I_Bottle02", "bottle3": "I_Bottle03", "bottle4": "I_Bottle04",
+             "bones1": "E_Bones02", "bones2": "E_Bones03", "bone": "I_Bone"}
 FOOD_DC = {"honey": "food/honeycomb_new", "sausage": "food/sausage", "jerky": "food/beef_jerky_new",
            "stew": "food/meat_ration_new", "pizza": "food/pizza_new", "ambrosia": "food/piece_of_ambrosia_new",
            "jelly": "food/lump_of_royal_jelly_new", "ration": "food/bread_ration_new", "fruit": "food/fruit",
@@ -126,6 +129,12 @@ def main():
             mapping["food"][k] = name
     for k, rel in FOOD_DC.items():
         mapping["food"][k] = dc(rel)
+    mapping["litter"] = {}
+    with zipfile.ZipFile(S7) as z:
+        for k, n in LITTER_S7.items():
+            name = "s7_" + n + ".png"
+            (OUT / name).write_bytes(z.read(n + ".png"))
+            mapping["litter"][k] = name
     (OUT / "items.json").write_text(json.dumps(mapping, indent=1), encoding="utf-8")
     print("items:", len(list(OUT.glob("*.png"))), "pictures")
     return 0

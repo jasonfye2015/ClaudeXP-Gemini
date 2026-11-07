@@ -180,8 +180,15 @@ AFFIXES = {
     "leech": ("{v}% of damage healed", 0.6, 0.02), "find": ("+{v}% Gold Found", 6, 0.3),
 }
 BASE_STAT = {"hat": "armour", "robe": "life", "gloves": "haste", "boots": "swift", "ring": "power", "amulet": "mana"}
-RARITIES = [("Common", 0, (0.85, 0.85, 0.85)), ("Magic", 1, (0.45, 0.65, 1.0)), ("Rare", 2, (1.0, 0.85, 0.3)),
-            ("Legendary", 3, (1.0, 0.55, 0.15))]
+# the rarities, for everything found: name, rank, colour, and what it does to the thing - a wand's damage and casting
+# speed, a part's effects, gear's extra affixes (an Epic wand or better has a slot more; a Legendary part an extra
+# bolt, bounce or pierce where it gives any)
+RARITIES = [("Common", 0, (0.82, 0.82, 0.8)), ("Uncommon", 1, (0.38, 0.88, 0.42)), ("Rare", 2, (0.35, 0.62, 1.0)),
+            ("Epic", 3, (0.76, 0.42, 1.0)), ("Legendary", 4, (1.0, 0.6, 0.16))]
+WAND_POWER = (1.0, 1.12, 1.26, 1.42, 1.65)
+WAND_HASTE = (0.0, 0.04, 0.08, 0.12, 0.18)
+PART_POWER = (1.0, 1.15, 1.32, 1.5, 1.75)
+RARITY_PRICE = (1.0, 1.6, 2.5, 4.0, 7.0)
 
 # ---- potions and scrolls -------------------------------------------------------------------------------------------
 CONSUMABLES = {

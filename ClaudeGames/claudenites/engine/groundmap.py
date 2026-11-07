@@ -96,6 +96,20 @@ def wear(L):
     return W
 
 
+def deep(L):
+    """A floor of the Deep's map, floats a square: r the ambient (the corridors darker), g the floor's height,
+    b how wet (-1 in the rock), a how stained."""
+    A = np.zeros((L.h, L.w, 4), np.float32)
+    A[..., 0] = L.amb if L.amb is not None else 1.0
+    A[..., 1] = L.floor
+    A[..., 2] = np.where(L.solid, -1.0, 0.0)
+    for (x, y), v in L.wet.items():
+        A[y, x, 2] = v
+    for (x, y), v in L.stain.items():
+        A[y, x, 3] = v
+    return A
+
+
 def build(L, layer_of):
     M = np.zeros((L.h, L.w, 4), np.uint8)
     trees = _trees(L)

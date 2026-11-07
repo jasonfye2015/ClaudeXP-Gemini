@@ -60,6 +60,8 @@ class Level:
         self.kind = "floor"                              # floor, town, cabin
         self.spots = {}                                  # named places to use: cabin door, bed, hearth, stash, exit, sign
         self.farm_cells = []                             # the farm's plots' squares, in order
+        # the finer detail (game/detail.py): the ambient by square, puddles, stains, light from above, ceiling things
+        self.amb, self.wet, self.stain, self.shafts, self.ceils = None, {}, {}, [], []
         self.caches = []
         self.safe = None                                 # (outdoors: the town's squares, where nothing hunts him)
 
@@ -444,6 +446,8 @@ def _dungeon(depth, seed, varied):
             if spot:
                 L.lights.append(spot)
     dress.dress(L, rng, bi)
+    from . import detail
+    detail.detail(L, rng, bi)
     return L
 
 

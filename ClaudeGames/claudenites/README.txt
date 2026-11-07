@@ -103,6 +103,24 @@ Playing
   The pack has tabs: Armor (the gear not worn), Wands (wands and wand parts), Seeds, Raw, Cooked and Misc (potions
   and the scroll); food stacks with its count, and Eat it / Drink it act on it there.
 
+  The Deep's detail (game/detail.py): the corridors are dark - a fifth of a room's light, and Claude's own glow
+  dimmer in them - with a torch now and then on a long one; the torches burn bright and reach far. Timber holds the
+  place up: frames of posts and a lintel down the corridors, skirting boards and ceiling beams in the rooms (most in
+  the Cellars and the Foundry). The floors are stained in blotches, the walls streaked with old water and grimed at
+  their feet; puddles lie under the drips and in the low places and catch the torchlight. Bones, empty potion
+  bottles, vines down the walls and hanging from the roof - and here and there a grate in a ceiling with the light
+  of the day above falling through it (the moon's at night, less under cloud), dust turning in the beam.
+
+  Rarity: everything found - gear, wands and wand parts - is Common, Uncommon (green), Rare (blue), Epic (purple)
+  or Legendary (orange), likelier the deeper and with luck. A wand's rarity adds damage (to +65%) and casting speed
+  (to +18%), and an Epic or Legendary wand has a slot more; a part's rarity strengthens its effects (to x1.75) and
+  a Legendary one adds another bolt, bounce or pierce; gear gets an affix more each step, an Epic its main stat half
+  again, a Legendary its main stat doubled and the rest a fifth more. The colours show everywhere: the pack's tiles
+  (Rare and up breathe, Epic and up shine, Legendary turns its rays), the names, the wand slots, what drops - Rare
+  and up stand in a pillar of their light, a Legendary in a ring - and a find Rare or better is announced (a
+  Legendary with a banner). Guardians drop Rare or better. Older saves' things keep their rarity (their Legendary
+  stays Legendary).
+
   The townsfolk speak: with a language model in the Timeline's Local Storage\LLM Models (llama.cpp, through the
   Timeline's own engine - Qwen3 4B Instruct when it's there), Hesper, Old Tamsin, Bramwell and Mother Wren greet
   Claude in their own voices, knowing how deep he's been, how often he's fallen and what he's killed, and answer

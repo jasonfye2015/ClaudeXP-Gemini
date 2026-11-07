@@ -301,5 +301,14 @@
   "ration": "dc_food_bread_ration_new.png",
   "fruit": "dc_food_fruit.png",
   "chunk": "dc_food_chunk.png"
+ },
+ "litter": {
+  "bottle1": "s7_I_Bottle01.png",
+  "bottle2": "s7_I_Bottle02.png",
+  "bottle3": "s7_I_Bottle03.png",
+  "bottle4": "s7_I_Bottle04.png",
+  "bones1": "s7_E_Bones02.png",
+  "bones2": "s7_E_Bones03.png",
+  "bone": "s7_I_Bone.png"
  }
 }

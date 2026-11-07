@@ -32,7 +32,7 @@ def sprite_name(it):
             return None
         bases = D.GEAR_BASES[it["slot"]]
         tier = bases.index(it["base"]) if it["base"] in bases else 0
-        if it.get("rarity", 0) >= 3:
+        if it.get("rarity", 0) >= 4:
             tier = len(tiers) - 1                                  # (a legendary wears the finest)
         pics = tiers[min(tier, len(tiers) - 1)]
         return pics[zlib.crc32(str(it.get("id", "")).encode()) % len(pics)]

@@ -835,8 +835,12 @@ class Game:
         drops = 3 if m.guardian else (1 if rng.random() < 0.12 + (0.05 if m.kind == "brute" else 0) else 0)
         for _ in range(drops):
             it = I.roll_item(rng, depth, find / 400)
-            if m.guardian and it.get("type") == "gear":
-                it = I.make_gear(it["slot"], it["level"], max(2, it["rarity"]), rng)
+            if m.guardian and I.rarity(it) < 2:                 # (a guardian's things: Rare at the least)
+                it["rarity"] = 2 if rng.random() < 0.75 else 3
+                if it.get("type") == "gear":
+                    it = I.make_gear(it["slot"], it["level"], it["rarity"], rng)
+                elif it.get("type") == "wand" and it["rarity"] >= 3:
+                    it["parts"].append(None)
             kept = p.give(it)
             got.append(I.item_name(it) if kept else f"{I.item_name(it)} (pack full: sold)")
             self.events.append(("found", it))
@@ -909,7 +913,8 @@ class Game:
             sp = self.rng.uniform(0.8, 1.8)
             self.drops.append({"x": x, "y": y, "z": z, "vx": math.cos(a) * sp, "vy": self.rng.uniform(2.5, 4.0),
                                "vz": math.sin(a) * sp, "t": self.time + k * 0.08, "floor": floor, "what": what,
-                               "rare": isinstance(what, dict) and (what.get("rarity", 0) >= 2 or what.get("type") != "gear")})
+                               "rare": isinstance(what, dict) and what.get("rarity", 0) >= 2,
+                               "rarity": what.get("rarity", 0) if isinstance(what, dict) else -1})
 
     def _hurt_player(self, dmg, element="arcane"):
         p = self.player

@@ -16,7 +16,7 @@ from ..game import data as D
 from . import theme
 from .icons import icon
 
-VERSION = "v0.13"
+VERSION = "v0.14"
 TAGLINE = "Before he was the Lich King, he was an apprentice with a birch wand - and a hundred floors to go down."
 
 CSS = theme.CSS + """

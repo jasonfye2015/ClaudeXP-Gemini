@@ -44,6 +44,13 @@ def static(L, layer_of):
         cx, cz = x - ax * size * 0.32, z - az * size * 0.32
         a, b = (cx - tx, y - 0.02, cz - tz), (cx + tx, y - 0.02, cz + tz)
         _quad(out, (a[0], y - size, a[2]), (b[0], y - size, b[2]), b, a, (-ax, 0, -az), lay, 1.0)
+    for (x, y, z, size, name, yaw) in getattr(L, "ceils", ()):       # (on the ceiling, facing down: a grate)
+        lay = layer_of(name)
+        if lay is None:
+            continue
+        c, s = math.cos(yaw) * size, math.sin(yaw) * size
+        pts = [(x + (-c + s), y, z + (-s - c)), (x + (c + s), y, z + (s - c)), (x + (c - s), y, z + (s + c)), (x + (-c - s), y, z + (-s + c))]
+        _quad(out, pts[3], pts[2], pts[1], pts[0], (0, -1, 0), lay, 1.0, ((0, 1), (1, 1), (1, 0), (0, 0)))
     for (x, y, z, w, h, name) in L.hangs:
         lay = layer_of(name)
         if lay is None:
