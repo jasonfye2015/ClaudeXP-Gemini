@@ -135,7 +135,7 @@ def test_the_brazier_trial():
 
 def test_every_floor_is_still_whole_with_its_doors():
     for depth in range(1, D.FLOORS + 1, 3):
-        L = levels.dungeon(depth, "w")
+        L = levels.dungeon(depth, 99)
         shut = features.reach(L)
         assert (int(L.stairs[0]), int(L.stairs[1])) in shut, depth
         for p in L.pickups:

@@ -22,8 +22,27 @@ def load_package():
     return sys.modules["claudenites"]
 
 
+def share_floors():
+    """Each floor (depth, seed) is made once in a run of the tests and handed out as a copy: the slow tests walk the
+    same hundred floors (seeds 99 and "0:0"), and no test can spoil another's."""
+    import copy
+    from claudenites.game import levels
+    if getattr(levels.dungeon, "shared", False):
+        return
+    made, real = {}, levels.dungeon
+
+    def dungeon(depth, seed):
+        key = (depth, str(seed))
+        if key not in made:
+            made[key] = real(depth, seed)
+        return copy.deepcopy(made[key])
+    dungeon.shared = True
+    levels.dungeon = dungeon
+
+
 def main(argv):
     load_package()
+    share_floors()
     pick = argv[0] if argv else ""
     passed = failed = 0
     t0 = time.time()
