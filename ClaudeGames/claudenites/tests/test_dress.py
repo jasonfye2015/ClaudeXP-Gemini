@@ -123,3 +123,27 @@ def test_nothing_blocks_the_way():
                 assert any((cx + dx, cy + dy) in reach for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))), (d, c)
             cut = [p for p in L.paths if L.open_at(*p) and p not in reach and L.floor[p[1], p[0]] > -0.5]
             assert not cut, f"floor {d}: corridor squares cut off {cut[:5]}"
+
+
+def test_every_item_has_its_picture():
+    """The item sprites (assets/items, tools/import_icons.py): every slot's five tiers, every wand body, every part
+    and element, the potions, the scroll and the gold."""
+    import json
+    from claudenites.game import data as D2
+    folder = ART.parent / "items"
+    M = json.loads((folder / "items.json").read_text(encoding="utf-8"))
+    names = []
+    for slot in D2.GEAR_SLOTS:
+        tiers = M["gear"][slot]
+        assert len(tiers) == len(D2.GEAR_BASES[slot]), slot
+        names += [n for tier in tiers for n in tier]
+    assert set(M["wands"]) == set(D2.WAND_BODIES)
+    names += list(M["wands"].values())
+    for kind in D2.PART_KINDS:
+        if kind == "core":
+            names += [M["parts"][f"core:{e}"] for e in D2.ELEMENTS]
+        else:
+            names.append(M["parts"][kind])
+    names += [M["other"][k] for k in ("potion:health", "potion:mana", "scroll", "gold_pile", "coin")]
+    missing = [n for n in names if not (folder / n).exists()]
+    assert not missing, missing

@@ -20,6 +20,7 @@ from .figures import Pack, Plants
 
 TEXTURES = Path(__file__).resolve().parents[1] / "assets" / "textures"
 ART = Path(__file__).resolve().parents[1] / "assets" / "cm"
+ITEMS = Path(__file__).resolve().parents[1] / "assets" / "items"
 MAX_LIGHTS = 24
 CHUNK = 24
 MAX_JOINTS = 64
@@ -244,8 +245,13 @@ class Renderer:
         self.tex_array = gl.texture_array([Image.open(TEXTURES / f"{n}.jpg") for n in names], 512)
         self.level_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
         art_names = sorted(p.stem for p in ART.glob("*.png"))
+        pics = [Image.open(ART / f"{n}.png") for n in art_names]
+        for f in sorted(ITEMS.glob("*.png")):                      # (the item sprites: pixel art, enlarged crisply)
+            im = Image.open(f).convert("RGBA")
+            pics.append(im.resize((256, 256), Image.NEAREST))
+            art_names.append("item:" + f.name)
         self.art_layers = {n: i for i, n in enumerate(art_names)}
-        self.art_array = gl.texture_array([Image.open(ART / f"{n}.png") for n in art_names], 256) if art_names else None
+        self.art_array = gl.texture_array(pics, 256) if art_names else None
         self.dress_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
         self.water_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)])
         self.bill_mesh = gl.Mesh([(0, 3), (1, 3), (2, 2), (3, 1), (4, 1)], dynamic=True)
@@ -476,10 +482,14 @@ class Renderer:
             lay = get(s["name"])
             if lay is not None:
                 things.append((s["x"], s["y"], s["z"], s["w"], s["h"], lay, 1.5 if s.get("glow") else 1.0))
-        coins = get("sp.coins")
-        for pk in L.pickups:
-            if pk["kind"] == "gold" and coins is not None:
-                things.append((pk["x"], pk["y"], pk["z"], 0.42, 0.3, coins, 1.25))
+        pile = get("item:dc_gold_gold_pile_10.png") or get("sp.coins")
+        pics = {"health": get("item:s7_P_Red01.png"), "mana": get("item:s7_P_Blue01.png"), "scroll": get("item:s7_I_Scroll.png")}
+        for pk in L.pickups:                                            # (things lying about, in their own pictures)
+            if pk["kind"] == "gold" and pile is not None:
+                things.append((pk["x"], pk["y"], pk["z"], 0.42, 0.42, pile, 1.25))
+            elif pics.get(pk["kind"]) is not None:
+                bob = 0.05 * math.sin(now * 2.5 + pk["phase"])
+                things.append((pk["x"], pk["y"] + 0.04 + bob, pk["z"], 0.34, 0.34, pics[pk["kind"]], 1.35))
         wood = get("fu.table")
         for f in g.fx:                                                  # (splinters of what broke)
             if f.get("kind") == "debris":
@@ -711,6 +721,10 @@ class Renderer:
                 bill(dx, dfloor + 0.02, dz, 0.05 + k2 * 0.12, (0.5, 0.65, 0.85), (1 - k2) * 0.9)
         for pk in getattr(L, "pickups", ()):                         # (potions, scrolls and finds, glowing)
             if pk["kind"] == "gold" or (pk["x"] - ex) ** 2 + (pk["z"] - ez) ** 2 > 600:
+                continue
+            if pk["kind"] != "item":                                    # (a potion or scroll: a faint glow under it)
+                c = {"health": (1.0, 0.25, 0.2), "mana": (0.3, 0.45, 1.0), "scroll": (0.9, 0.8, 0.5)}[pk["kind"]]
+                bill(pk["x"], pk["y"] + 0.2, pk["z"], 0.25, c, 0.3)
                 continue
             c = {"health": (1.0, 0.25, 0.2), "mana": (0.3, 0.45, 1.0), "scroll": (0.9, 0.8, 0.5), "item": (1.0, 0.85, 0.4)}[pk["kind"]]
             bobh = pk["y"] + 0.25 + 0.06 * math.sin(now * 2.5 + pk["phase"])

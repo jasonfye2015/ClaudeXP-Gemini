@@ -1,12 +1,66 @@
-"""Item pictures, painted (no image files): a hood, a robe, gloves, boots, a ring, an amulet, a wand, a wand part's gem,
-the potions and the scroll - in the item's colours, with its rarity's frame."""
+"""Item pictures: CC0 sprites (assets/items, by tools/import_icons.py - Dungeon Crawl Stone Soup's gear and wands,
+7Soul1's gems, runes, potions and scroll), chosen by the item: its slot and tier (and a little variety between items
+of the same tier), its wand body, its part's kind and element. The pixel art is enlarged crisply, then smoothed to the
+size asked. Where a picture is missing, the item is painted instead."""
+import json
+import zlib
+from pathlib import Path
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
+from PySide6.QtGui import QColor, QImage, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 
 from ..game import data as D
 from ..game import items as I
 
 _cache = {}
+ITEMS = Path(__file__).resolve().parents[1] / "assets" / "items"
+_map = None
+
+
+def _mapping():
+    global _map
+    if _map is None:
+        try:
+            _map = json.loads((ITEMS / "items.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _map = {}
+    return _map
+
+
+def sprite_name(it):
+    """The sprite file for an item (None: paint it)."""
+    M = _mapping()
+    if not M:
+        return None
+    t = it.get("type")
+    if t == "gear":
+        tiers = M["gear"].get(it["slot"])
+        if not tiers:
+            return None
+        bases = D.GEAR_BASES[it["slot"]]
+        tier = bases.index(it["base"]) if it["base"] in bases else 0
+        if it.get("rarity", 0) >= 3:
+            tier = len(tiers) - 1                                  # (a legendary wears the finest)
+        pics = tiers[min(tier, len(tiers) - 1)]
+        return pics[zlib.crc32(str(it.get("id", "")).encode()) % len(pics)]
+    if t == "wand":
+        return M["wands"].get(it["body"])
+    if t == "part":
+        key = f"core:{it.get('element', 'arcane')}" if it["kind"] == "core" else it["kind"]
+        return M["parts"].get(key)
+    if t == "potion":
+        return M["other"].get("potion:" + it["kind"]) if it["kind"] != "return" else M["other"].get("scroll")
+    if t == "scroll":
+        return M["other"].get("scroll")
+    return None
+
+
+def _sprite(name, size):
+    img = QImage(str(ITEMS / name))
+    if img.isNull():
+        return None
+    k = max(1, (size * 2) // max(img.width(), img.height()))
+    big = img.scaled(img.width() * k, img.height() * k, Qt.IgnoreAspectRatio, Qt.FastTransformation)   # (crisp)
+    return QPixmap.fromImage(big.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation))
 
 
 def rarity_colour(it):
@@ -29,6 +83,12 @@ def icon(it, size=56):
     key = (it.get("id") or str(it), size, I.item_name(it))
     if key in _cache:
         return _cache[key]
+    name = sprite_name(it)
+    if name:
+        pm = _sprite(name, size)
+        if pm is not None:
+            _cache[key] = pm
+            return pm
     pm = QPixmap(size, size)
     pm.fill(Qt.transparent)
     p = QPainter(pm)
