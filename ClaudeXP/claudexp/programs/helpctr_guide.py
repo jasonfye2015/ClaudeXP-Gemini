@@ -176,7 +176,7 @@ CATALOG = {
                              "and options. Claude and Magic's sky and weather run over it all: a day, a season and a moon, and live "
                              "weather (rain, storms, mist, wind, snow, heat, aurora, tornadoes) that changes the fight and floods the "
                              "first floors in a storm; a dial shows the hour and the weather, and K the Calendar. At each floor's stairs he goes deeper or home; a Scroll of Return brings him home from anywhere. "
-                             "Auto-play (the button over the life orb, or F9; F10 or the button beside it speeds it up to x8) lets Claude play himself: clearing each floor - fighting, "
+                             "Auto-play (the button over the life orb, or F9; F10 or the button beside it speeds it up to x8; F11 shows its stats - floors an hour, kills, gold, finds by rarity, the last floors) lets Claude play himself: clearing each floor - fighting, "
                              "looting, opening, exploring - then home to buy, build the best wands, wear the best gear, learn skills, "
                              "farm, cook, sell and restock, and down again; past the hundredth floor the Deep goes on, endless. "
                              "The Gauntlet is a boss rush: the guardians already beaten return one at a time, for a Legendary at the end. "
