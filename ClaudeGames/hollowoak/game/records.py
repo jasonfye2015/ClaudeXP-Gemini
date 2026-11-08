@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 
 ENDINGS = 7                     # (how many there are: their names are found, not told)
-OPTIONS = {"volume": 80, "look": 50, "heart": True, "heartbeat": True, "orbs": True}
+OPTIONS = {"volume": 80, "look": 50, "heart": True, "heartbeat": True, "orbs": True,
+           "voice": ""}                # (her voice: a model's name, or "none"; "" - not chosen yet: the best there is)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
 
 

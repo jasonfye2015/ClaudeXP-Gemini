@@ -159,6 +159,15 @@ cools with suspicion; her silk's hum rises in pitch with hunger. F3 shows the nu
 A calm watcher: in 10 minutes fascination 30 -> 61, patience 88, regard rising. A careless runner: hunted and bitten
 in about 8. (Still to come: she can't reach him in the middle of the floor - a drop on a thread from above, later.)
 
+Phase 3c begun - her voice, chosen (done). game/voice.py: three choices in Before the night > Options > Her voice -
+NemoMix Unleashed 12B (the user's pick: the best at roleplay; about 7.5 GB), Gemma 3 4B (the lighter alternative,
+about 2.5 GB), or None (no model, no typing: she speaks from a script and he answers from a fixed set of lines that
+lead to the different outcomes). Each shows whether it's on this computer; nothing chosen yet means the best that's
+there. The models run in the Timeline's own engine (llama.cpp via claudecore.ai, as Claudenites' townsfolk do) from
+Local Storage/LLM Models/models/<name>/. LLM Help: a window saying where to download each (the Hugging Face pages and
+file names), where to put them, NemoMix's info.json (ChatML) with a copy button, the engine, and a button that opens
+the models folder; Check again rescans. Voice.ask() asks in a thread (for 3c proper: her persona, guardrails, memory).
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
