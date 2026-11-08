@@ -101,7 +101,7 @@ and a green one rising under it from the bottom; when the green reaches the othe
 coming down on his health, and stupor on his sanity. Health (red): falls onto wood (far less into silk), poison eating
 slowly. Poison (green): bites - a dangler walked into, one over his face, the babies on the lantern in the dark; wears
 off slowly. Sanity (blue): the dark, worse with them on the lantern; spiders on his face; slips and falls into the web;
-her eyes, a slow creep; steady light restores it. Stupor (green): heavy poison, a failing mind, a hard knock; clears
+her eyes, a slow creep; steady light restores it. Stupor (yellow): heavy poison, a failing mind, a hard knock; clears
 when those ease. ui/orbs.py: Diablo-style glass orbs, health and poison bottom left, sanity and stupor bottom right,
 values beneath in their colours; the edge of the view beats red, blue or green as the green nears the other (within
 20), in the colour of whichever is doing it. Her own moods keep no meter - the design's rule still holds for her.

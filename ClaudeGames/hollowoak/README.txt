@@ -30,7 +30,7 @@ Playing (phases 1 and 2: the tree, and her silk)
   they come up the wand for it.
 
   How you hold up shows in two orbs, each with two fluids: red health with green poison rising under it (bottom left),
-  blue sanity with green stupor rising under it (bottom right). If the green reaches the other - she has you. The edge
+  blue sanity with yellow stupor rising under it (bottom right). If either reaches the other - she has you. The edge
   of the view beats when it comes close. Hard falls hurt, bites poison, the dark wears at your mind.
 
   Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
