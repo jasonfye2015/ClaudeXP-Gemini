@@ -8,6 +8,7 @@
   the lantern   its rattle when shaken; a soft puff when it gutters out
   a thud        a fall to the wood
   a whoosh      his hand across his face
+  his heart     lub-dub, when it races (and at the end, slowing, until it stops)
 
     synth = Synth()
     synth.set(hum=0..1, height=0..1)     the steady parts
@@ -101,6 +102,17 @@ def _thud(rng, rate=RATE):
     return y / (np.abs(y).max() or 1.0)
 
 
+def _beat(rng, rate=RATE):
+    """Lub-dub: two low thumps, the second softer."""
+    n = int(0.42 * rate)
+    t = np.arange(n) / rate
+    y = np.zeros(n)
+    for at, f, a in ((0.0, 58.0, 1.0), (0.17, 66.0, 0.7)):
+        u = np.clip(t - at, 0, None)
+        y += a * np.sin(math.tau * f * u * (1 - 0.3 * u)) * np.exp(-u * 22) * (t >= at)
+    return y / (np.abs(y).max() or 1.0)
+
+
 def _whoosh(rng, rate=RATE):
     n = int(0.4 * rate)
     t = np.arange(n) / rate
@@ -126,8 +138,8 @@ class Synth:
                        "skitter": [_skitter(rng, d, rate) for d in (0.45, 0.6, 0.75)],
                        "rattle": [_rattle(r, rate), _rattle(r, rate)],
                        "catch": [_catch(r, rate)], "thud": [_thud(rng, rate)], "puff": [_puff(rng, rate)],
-                       "whoosh": [_whoosh(rng, rate)]}
-        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35}
+                       "whoosh": [_whoosh(rng, rate)], "beat": [_beat(rng, rate)]}
+        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35, "beat": 0.6}
         self.voices = []                    # [samples, position, gain]
         self.n = 0                          # (samples played so far)
         self.hum, self._hum = 0.0, 0.0

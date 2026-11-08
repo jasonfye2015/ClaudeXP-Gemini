@@ -11,6 +11,11 @@ other, he's done - so the poison in him is a ceiling coming down on his health, 
 
 He collapses when poison reaches his health, or stupor his sanity (or either runs dry). Plain Python: the tests run it.
 
+And his heart: resting near 66 beats a minute; faster in the dark, with less sanity left in him, with poison; leaping
+when something drops onto his face or he slips or falls; slower with stupor. body.beats holds when it beat (the last
+ten seconds), body.history its rate every half second (the last minute) - for the monitor at the bottom of the view.
+At the end (body.dying_heart) it races, then slows, and stops.
+
     body = Condition(rng)
     body.step(dt, night, events)  -> events: ("bitten", where), ("hurt", amount)
     body.critical()               -> the orbs in danger now: "health" and/or "sanity" (for the edge of the view)
@@ -28,6 +33,9 @@ class Condition:
     def __init__(self, rng):
         self.rng = rng
         self.health, self.poison, self.sanity, self.stupor = 100.0, 0.0, 100.0, 0.0
+        self.bpm, self.startle, self.t = 66.0, 0.0, 0.0
+        self._phase, self._sample = 0.0, 0.0
+        self.beats, self.history = [], []
 
     def values(self):
         return {"health": self.health, "poison": self.poison, "sanity": self.sanity, "stupor": self.stupor}
@@ -48,6 +56,37 @@ class Condition:
             if rv > 0.5 and rv >= lv:                                  # (it's reached him)
                 return rising
         return None
+
+    def _heart(self, dt, target, ease=0.6):
+        """Toward a rate; beating as it goes."""
+        self.t += dt
+        self.bpm += (target - self.bpm) * min(1.0, dt * ease)
+        self.bpm = max(0.0, self.bpm)
+        self._phase += self.bpm / 60.0 * dt
+        if self._phase >= 1.0:
+            self._phase -= math.floor(self._phase)
+            self.beats.append(self.t)
+        while self.beats and self.t - self.beats[0] > 10.0:
+            self.beats.pop(0)
+        self._sample += dt
+        if self._sample >= 0.5:
+            self._sample -= 0.5
+            self.history.append(self.bpm)
+            del self.history[:-120]
+
+    def dying_heart(self, dt, t):
+        """At the end: racing as they come, slowing as he's drawn up, and still."""
+        if t < 2.0:
+            target, ease = 165.0, 2.0
+        elif t < 10.0:
+            target, ease = 150.0 - (t - 2.0) * 2.0, 1.0
+        elif t < 22.0:
+            target, ease = max(0.0, 134.0 - (t - 10.0) * 11.0), 0.5
+        else:
+            target, ease = 0.0, 3.0
+        if t >= 21.0:
+            target, ease = 0.0, 8.0
+        self._heart(dt, target, ease)
 
     def _bite(self, out, where, venom, hurt=2.0):
         self.poison += venom
@@ -105,6 +144,27 @@ class Condition:
             self.stupor -= 0.6 * dt
         for k in ("health", "poison", "sanity", "stupor"):
             setattr(self, k, max(0.0, min(100.0, getattr(self, k))))
+        # his heart: what's in him, what's about him, and what just made it leap
+        for e in events:
+            kind = e[0]
+            jump = {"crawler": 14.0, "swipe": 6.0, "collapse": 30.0}.get(kind, 0.0)
+            if kind == "dangler":
+                jump = 24.0 if e[1] == "face" else 5.0
+            elif kind == "silk" and e[1] in ("slip", "caught", "teeter"):
+                jump = {"slip": 26.0, "caught": 30.0, "teeter": 10.0}[e[1]]
+            elif kind == "fall":
+                jump = min(35.0, e[1] * 1.5)
+            elif kind == "lantern" and e[1] == "out":
+                jump = 12.0
+            self.startle += jump
+        for e in out:
+            if e[0] == "bitten":
+                self.startle += 12.0
+        self.startle *= math.exp(-dt / 7.0)
+        target = 66.0 + (100.0 - self.sanity) * 0.35 + self.poison * 0.25 - self.stupor * 0.2
+        target += (9.0 if dark else 0.0) + (12.0 if night.inp_hurry and night.moved_now > 0 else 0.0)
+        target += min(80.0, self.startle)
+        self._heart(dt, max(40.0, min(185.0, target)))
         return out
 
 

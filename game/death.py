@@ -1,13 +1,15 @@
 """Supper: when the poison reaches his health, or stupor his sanity (or either runs dry). He collapses where he stands; the lantern falls and breaks
 and its flame dies on the ground. They come - onto him, over his face, laying silk across his eyes until he can hardly
-see. Then he's dragged, in pulls, to the middle of the hollow's floor; turned, lifted by the feet, and drawn up, upside
-down, half the height of the trunk, swinging. Then black - and, small, "Ending 1 of 6: Supper".
+see. They turn him over and over, wrapping him in thick bands of silk. Then he's dragged, in pulls, to the middle of the
+hollow's floor; turned, lifted by the feet on her ropes - thick silk from far above - and drawn up, upside down, half
+the height of the trunk, swinging. Then black - and, small, "Ending 1 of 6: Supper".
 
     death = Death(night, cause, rng)
     death.step(dt, night)       -> events ("lantern", "break"), ("death", "drag"), ("death", "lift"), ("death", "end")
     death.cover()               -> [(u, v, du, dv, size, t)] the spiders on his face (as Crawlers.active())
-    death.webs                  -> what's been laid across his eyes: [("strand", (u0, v0), (u1, v1), sag) |
-                                   ("orb", (u, v), radius, turn)], with how far each is drawn in ("drawn")
+    death.webs                  -> what's been laid across his eyes: dicts of kind "strand" (a, b, sag), "orb" (c, r,
+                                   turn) or "band" (a, b, sag, width - the wrapping), each with how far it's drawn in
+    death.ropes()               -> her ropes, from far above down to his feet, while he's drawn up: [(top, bottom)]
     death.black                 0..1, the end coming down
     death.done                  over: the ending's line is showing
 Plain Python: it moves the night's own Claude - where he is, how he lies, which way is up."""
@@ -18,9 +20,11 @@ from . import tree as T
 COLLAPSE = 1.4
 BREAK = 0.55
 COVER_END = 7.4                 # (by now his eyes are mostly silk)
-DRAG_END = 12.4
-LIFT_END = 19.4
-FADE_END = 21.4
+WRAP_END = 10.4                 # (turned over and over, bound)
+DRAG_END = 15.4
+LIFT_END = 22.4
+FADE_END = 24.4
+BANDS = 16
 PULLS = 5
 SPIDERS = 46
 WEBS = 70
@@ -47,6 +51,7 @@ class Death:
         self.done = False
         self.said = set()
         self.centre_y = night.tree.ground(0.0, 0.0)
+        self._ropes = []
         self.top = T.TOP * 0.5
 
     def flame(self):
@@ -65,8 +70,9 @@ class Death:
             night.lantern = False
             out.append(("lantern", "break"))
         self._pose(night)
+        self.hold(night)
         self._cover(dt)
-        for name, at in (("drag", COVER_END), ("lift", DRAG_END), ("end", FADE_END)):
+        for name, at in (("wrap", COVER_END), ("drag", WRAP_END), ("lift", DRAG_END), ("end", FADE_END)):
             if t >= at and name not in self.said:
                 self.said.add(name)
                 out.append(("death", name))
@@ -84,16 +90,23 @@ class Death:
             night.roll = 1.25 * k
             night.pitch = self.pitch0 * (1 - k) - 0.25 * k + 0.02 * math.sin(t * 1.3)
             night.yaw = self.yaw0
-        elif t < DRAG_END:                                              # (dragged by the feet, in pulls, onto his back)
-            f = (t - COVER_END) / (DRAG_END - COVER_END) * PULLS
+        elif t < WRAP_END:                                              # (turned over and over in their silk)
+            k = _ease((t - COVER_END) / (WRAP_END - COVER_END))
+            night.x, night.y, night.z = self.x0, self.y0, self.z0
+            night.eye_h = 0.1
+            night.roll = 1.25 + (4 * math.pi - 1.25) * k
+            night.pitch = -0.25 + 1.45 * k + 0.05 * math.sin(t * 9.0)
+            night.yaw = self.yaw0
+        elif t < DRAG_END:                                              # (dragged by the feet, in pulls, on his back)
+            f = (t - WRAP_END) / (DRAG_END - WRAP_END) * PULLS
             n = min(PULLS - 1, int(f))
             k = (n + _ease((f - n) * 1.6)) / PULLS
             night.x = self.x0 * (1 - k)
             night.z = self.z0 * (1 - k)
             night.y = max(self.y0 * (1 - k) + self.centre_y * k, night.tree.ground(night.x, night.z))  # (let down, if high)
             night.eye_h = 0.1
-            night.roll = 1.25 * (1 - _ease(f / 2))
-            night.pitch = -0.25 + 1.45 * _ease(f / 2) + 0.06 * math.sin(f * math.pi * 2)   # (jerked; staring up)
+            night.roll = 0.0
+            night.pitch = 1.2 + 0.06 * math.sin(f * math.pi * 2)                            # (jerked; staring up)
             night.yaw = self.yaw0 + 0.15 * math.sin(f * 2.1)
         else:                                                           # (turned, lifted by the feet, drawn up, swinging)
             u = t - DRAG_END
@@ -140,8 +153,28 @@ class Death:
             else:
                 self.webs.append({"kind": "orb", "c": (rng.uniform(0.1, 0.9), rng.uniform(0.1, 0.9)),
                                   "r": rng.uniform(0.08, 0.22), "turn": rng.uniform(0, math.tau), "born": t})
+        bands = sum(1 for w in self.webs if w["kind"] == "band")
+        want = int(BANDS * min(1.0, max(0.0, (t - COVER_END) / (WRAP_END - COVER_END))))
+        while bands < want:                                             # (the wrapping: thick bands, across and across)
+            bands += 1
+            y0 = rng.uniform(-0.1, 1.1)
+            a, b = (-0.15, y0), (1.15, y0 + rng.uniform(-1.1, 1.1))       # (round and round him, at all angles)
+            self.webs.append({"kind": "band", "a": a, "b": b, "sag": rng.uniform(-0.15, 0.15),
+                              "width": rng.uniform(0.03, 0.08), "born": t})
         for w in self.webs:
-            w["drawn"] = min(1.0, (t - w["born"]) / 0.6)                 # (laid, not appearing)
+            w["drawn"] = min(1.0, (t - w["born"]) / (0.35 if w["kind"] == "band" else 0.6))   # (laid, not appearing)
+
+    def ropes(self):
+        """Her ropes while he's drawn up: from far above, down to his feet."""
+        if self.t < DRAG_END:
+            return []
+        return self._ropes
+
+    def hold(self, night):
+        """Where her ropes meet him now (his feet), for drawing them."""
+        feet = (night.x, night.y + 0.05, night.z)
+        top = T.TOP * 0.5 + 10.0
+        self._ropes = [((dx, top, dz), feet) for dx, dz in ((0.0, 0.0), (0.5, 0.3), (-0.4, 0.45))]
 
     def cover(self):
         return [(s["u"], s["v"], math.cos(s["head"]), math.sin(s["head"]), s["size"], s["anim"])
