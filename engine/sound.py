@@ -8,6 +8,7 @@
   the lantern   its rattle when shaken; a soft puff when it gutters out
   a thud        a fall to the wood
   a whoosh      his hand across his face
+  her           a dry rustle of many legs as she moves - louder the nearer she is
   his heart     lub-dub, when it races (and at the end, slowing, until it stops)
 
     synth = Synth()
@@ -144,9 +145,13 @@ class Synth:
         self.n = 0                          # (samples played so far)
         self.hum, self._hum = 0.0, 0.0
         self.height, self._height = 0.0, 0.0
+        self.her, self._her = 0.0, 0.0
+        self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
 
-    def set(self, hum=None, height=None):
+    def set(self, hum=None, height=None, her=None):
+        if her is not None:
+            self.her = max(0.0, min(1.0, her))
         if hum is not None:
             self.hum = max(0.0, min(1.0, hum))
         if height is not None:
@@ -177,6 +182,12 @@ class Synth:
             hum = (np.sin(math.tau * 55.0 * t) + 0.8 * np.sin(math.tau * 55.6 * t) + 0.5 * np.sin(math.tau * 82.4 * t)
                    + 0.3 * np.sin(math.tau * 110.7 * t) + 0.12 * np.sin(math.tau * 220.0 * t + np.sin(math.tau * 3 * t)))
             out += hum / 2.7 * amp * (0.75 + 0.25 * np.sin(math.tau * 6.3 * t))
+        # her: many legs, slow, felt more than heard - a dry rustle, ticking
+        h0, self._her = self._her, self._her + (self.her - self._her) * 0.2
+        if h0 > 1e-4 or self._her > 1e-4:
+            i = (self.n + np.arange(n)) % len(self.rustle_loop)
+            legs = 0.45 + 0.55 * np.abs(np.sin(math.tau * 2.3 * t)) ** 6 + 0.3 * np.abs(np.sin(math.tau * 3.1 * t + 1)) ** 8
+            out += self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
         # the one-offs
         keep = []
         for v in self.voices:

@@ -170,7 +170,7 @@ class GameView(QOpenGLWidget):
             n.time += dt
             n.yaw = (now - self.t0) * 0.06
             n.pitch = 0.62 + 0.08 * math.sin((now - self.t0) * 0.1)
-            n._watch(dt)
+            n.her.step(dt, n)                            # (and her, up there, watching the title)
         self.update()
 
     def _count(self, events):

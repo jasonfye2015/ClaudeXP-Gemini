@@ -19,7 +19,7 @@ Playing (phases 1 and 2: the tree, and her silk)
   wall past chambers opening into the wood - the gallery, the larder, the high hollow - to the crown, broken open to the
   sky - a deep night, its stars twinkling, a faint aurora wavering across it. Glowing fungus in pockets, each breathing slowly in and out, moonlight in narrow shafts through the knot-holes, and fog: low layers of it curling
   over the floor of the hollow, and wisps of mist hanging in the air, catching the lantern's light. And high
-  in the dark, something watching: eight small lights that are gone when you come close.
+  in the dark, something watching you: eight red lights, across the hollow and above. She keeps to the dark.
 
   Her silk: three strands thrown across the hollow from one turn of the ledge to a higher one - a shorter way up, and a
   test of nerve - her loom, a great web across the hollow low down, and a web across the crown under the moon. On a

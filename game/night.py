@@ -22,6 +22,7 @@ from .condition import Condition
 from .crawlers import Crawlers
 from .death import Death
 from .lantern import Lantern
+from .mother import Mother
 from .web import BRIDGE_HALF, Bridge, Web
 
 EYE = 0.62
@@ -78,10 +79,7 @@ class Night:
         self.seen = set()
         self.place = None
         self.moved = 0.0
-        self.perches = self._perches()
-        self.perch = 0
-        self.eye_alpha = 0.0
-        self.eye_gone_until = 0.0
+        self.her = Mother(self.tree, random.Random(self.rng.random()))     # (Ysmeine: on the wall, in the dark)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
         self.rng.shuffle(spots)
@@ -170,8 +168,6 @@ class Night:
         self.moved_now = self.moved - before
         self._balance(dt, inp, turn)
         self.tremor *= math.exp(-dt / 1.3)
-        if self.tremor > 2.2 and self.time < self.eye_gone_until:       # (she felt that: her eyes come sooner)
-            self.eye_gone_until = min(self.eye_gone_until, self.time + 1.5)
         p = self.where()
         if p != self.place:
             self.place = p
@@ -182,7 +178,7 @@ class Night:
         lamp_events = self.lamp.step(dt)
         for e in lamp_events:
             self.events.append(("lantern", e))
-        self._watch(dt)
+        self.events.extend(self.her.step(dt, self))
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         self.events.extend(self.crawlers.step(dt))
@@ -341,40 +337,15 @@ class Night:
                 self.silk["touched"] = True
                 self.events.append(("silk", "first", self.on.name))
 
-    # ---- her eyes ----------------------------------------------------------------------------------------------
-    def _perches(self):
-        """Places high on the ledge, away from the wall a little, where something could sit and watch."""
-        t = self.tree
-        out = []
-        for k in range(14):
-            s = 1.2 + k * (t.s_end - 1.5) / 13
-            a = t.theta_of(s)
-            h = t.ledge_h(s)
-            r = t.base_r(a, h + 0.5) - 0.5
-            out.append((math.cos(a) * r, h + 1.1, math.sin(a) * r))
-        return out
-
-    def _watch(self, dt):
-        """The eyes sit on a perch above him; when he comes within eight units, they're gone - and turn up
-        again, higher, a while later."""
-        ex, ey, ez = self.eye
-        if self.time < self.eye_gone_until:
-            self.eye_alpha = max(0.0, self.eye_alpha - dt * 3)
-            return
-        px, py, pz = self.perches[self.perch]
-        d = math.dist((px, py, pz), (ex, ey, ez))
-        if d < 8.0 or py < ey + 1.5:
-            self.eye_alpha = max(0.0, self.eye_alpha - dt * 4)
-            if self.eye_alpha == 0.0:
-                above = [k for k, p in enumerate(self.perches) if p[1] > ey + 3 and math.dist(p, (ex, ey, ez)) > 10]
-                self.perch = self.rng.choice(above) if above else self.perch
-                self.eye_gone_until = self.time + self.rng.uniform(6, 14)
-                self.events.append(("eyes_gone",))
-        else:
-            self.eye_alpha = min(1.0, self.eye_alpha + dt * 0.4)
+    # ---- her ---------------------------------------------------------------------------------------------------
+    @property
+    def eye_alpha(self):
+        return self.her.alpha
 
     def eyes(self):
-        if self.eye_alpha <= 0.01:
+        """Her eyes, if they show: [{"pos", "alpha"}] (they blink, now and then)."""
+        pos, alpha = self.her.eyes()
+        if alpha <= 0.01:
             return []
         blink = 0.15 if (self.time * 0.37) % 4.0 < 0.12 else 1.0
-        return [{"pos": self.perches[self.perch], "alpha": self.eye_alpha * blink}]
+        return [{"pos": pos, "alpha": alpha * blink}]

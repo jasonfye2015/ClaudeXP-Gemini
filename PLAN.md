@@ -131,6 +131,19 @@ black; "Wrapped, and hung, and kept for later." / "Ending 1 of 6: Supper"; a cli
 Her figure (Quaternius's Spider, scaled), her moods, the language model's voice with its guardrails and memory, the
 visual-novel scenes; a scripted fallback.
 
+Phase 3a - her body in the den (done). game/mother.py: Ysmeine on the hollow's wall - Quaternius's spider at a
+leg-span of 4.5 units, her back to the hollow - keeping to the dark: mostly across the hollow from him and above,
+watching (her eyes: eight red lights, as wide as her head); keeping pace as he climbs. Every 40-80 seconds she comes to
+the edge of his light and leans out toward him, legs reaching (the spider's attack, held), a long moment, then gone
+(the web creaks under her). In the dark she comes close and stays. When he comes at her, she withdraws, fast. When the
+silk shakes hard she turns to him and comes. Drawn dark (only her eyes catch the light: a deep red), heard as a dry
+rustle of many legs, louder the nearer she is. Her eyes are the ones that watch him now (the perches are gone).
+If she feels too small: shrink Claude, slow him, lower his eye, enlarge the babies.
+
+Still to come in phase 3: her moods (3b), her voice (3c - the local model, a persona, guardrails, memory; a scripted
+fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
+leaves and mushrooms, like Before the night).
+
 ## Phase 4 - the night
 
 The six acts, the clock, offerings, venom, saves; the six endings (each closing "Ending n of 6: <name>").

@@ -43,7 +43,7 @@ def spider_frames():
     d = np.load(ASSETS / "spider.npz")
     col = d["colour"].astype(np.float32)
     clips, chunks, first = {}, [], 0
-    for clip in ("walk", "idle"):
+    for clip in ("walk", "idle", "attack"):
         frames = d[clip].astype(np.float32)
         tri = frames.reshape(len(frames), -1, 3, 3)
         nrm = np.cross(tri[:, :, 1] - tri[:, :, 0], tri[:, :, 2] - tri[:, :, 0])

@@ -1,5 +1,6 @@
 """The den's sound's way out: engine/sound.py's synth, pulled a block at a time by a QAudioSink, following the
 computer's mute. If there's no sound device, there's simply no sound."""
+import math
 import random
 
 from PySide6.QtCore import QIODevice
@@ -69,6 +70,12 @@ class DenAudio:
             s.play("skitter", 0.4 + 0.5 * random.random())
         s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
               height=night.y / 26.0 if d is None or not d.done else 0.0)
+        her = getattr(night, "her", None)
+        if her is not None and d is None:
+            near = max(0.0, 1.0 - math.dist(her.at(), night.eye) / 14.0)
+            s.set(her=(0.15 + 0.85 * her.moving) * near ** 1.5)
+        else:
+            s.set(her=0.0)
         b = night.body.beats                                         # (his heart: heard when it races, and at the end)
         if b and b[-1] != self._beat:
             self._beat = b[-1]
@@ -103,6 +110,8 @@ class DenAudio:
                 s.play("slip", 1.2)
             elif kind == "death" and e[1] == "lift":
                 s.play("catch", 1.2)
+            elif kind == "her" and e[1] == "glimpse":
+                s.play("creak", 1.6)                                   # (the web shifting under her weight)
             elif kind == "swipe":
                 s.play("whoosh")
             elif kind == "skitter":

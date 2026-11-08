@@ -67,7 +67,7 @@ def test_they_keep_about_him():
 
 def test_the_spider_frames():
     v, clips, per = silkmesh.spider_frames()
-    assert set(clips) == {"walk", "idle"} and v.shape[1] == 9
+    assert set(clips) == {"walk", "idle", "attack"} and v.shape[1] == 9
     assert v.shape[0] == per * sum(f for _a, f, _r in clips.values())
     first, frames, _fps = clips["walk"]
     a, b = v[first * per:(first + 1) * per], v[(first + frames // 2) * per:(first + frames // 2 + 1) * per]
