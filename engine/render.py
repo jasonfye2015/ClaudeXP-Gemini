@@ -235,6 +235,7 @@ SILK_FS = """#version 330 core
 in vec3 vPos; in vec3 vTan; in float vCover;
 uniform vec3 uEye; uniform vec3 uAmbient; uniform vec3 uMoonDir; uniform vec3 uMoonCol;
 uniform int uLightCount; uniform vec4 uLightPos[16]; uniform vec4 uLightCol[16]; uniform float uFogDensity;
+uniform float uWhite;
 out vec4 frag;
 float strand(vec3 T, vec3 L, vec3 V, float power) {          // (a thread's light: along its length, never flat)
     vec3 H = normalize(L + V); float th = dot(T, H);
@@ -255,6 +256,7 @@ void main() {
     float dist = length(vPos - uEye);
     float low = 0.22 * exp(-max(vPos.y, 0.0) / 1.6);
     c *= exp(-pow((uFogDensity + low) * dist, 1.25));                    // (lost in the fog, far off)
+    c += vec3(0.5, 0.52, 0.56) * uWhite;                                  // (fresh silk, close: white)
     c *= vec3(0.86, 0.9, 1.0) * vCover;
     frag = vec4(max(c, vec3(0.0)) * 1.6, 1.0);         // (added as it is: faint threads stay faint, glints stand out)
 }""" % {"TOP": f"{T.TOP:.1f}"}
@@ -267,12 +269,14 @@ void main() { vec4 p = uModel * vec4(aPos, 1.0); vPos = p.xyz; vNrm = normalize(
 
 SPIDER_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec3 vCol;
+uniform float uRim;
 out vec4 frag;
 """ + LIGHTING + """
 void main() {
     vec3 N = normalize(vNrm);
     if (dot(N, uEye - vPos) < 0.0) N = -N;
     vec3 col = lit(vPos, N, vCol * 2.2, 1.0);
+    col += vec3(0.3, 0.34, 0.44) * pow(1.0 - abs(dot(N, normalize(uEye - vPos))), 2.0) * uRim;   // (an edge of the den's light)
     vec3 V = normalize(uEye - vPos);
     for (int i = 0; i < uLightCount; i++) {                    // (a hard shine on the chitin)
         vec3 d = uLightPos[i].xyz - vPos; float dist = length(d);
@@ -282,7 +286,7 @@ void main() {
     if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is)
         float shine = 0.0;
         for (int i = 0; i < uLightCount; i++) shine += clamp(1.0 - distance(uLightPos[i].xyz, vPos) / uLightPos[i].w, 0.0, 1.0);
-        col += vec3(0.9, 0.12, 0.05) * (0.03 + shine * 1.2);
+        col += vec3(0.9, 0.12, 0.05) * (0.03 + shine * 1.2 + uRim * 0.6);
     }
     frag = outColour(fogged(vPos, col));
 }"""
@@ -385,6 +389,8 @@ class Renderer:
         sv, self.spider_clips, self.spider_n = silkmesh.spider_frames()
         self.spiders = gl.Mesh([(0, 3), (1, 3), (2, 3)], sv)
         self.crawler_prog = gl.Program(SPIDER_VS, CRAWLER_FS)
+        self.loose = gl.Mesh([(0, 3), (1, 3), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)], dynamic=True)
+        _w, self.wand_tip = held.wand_parts()
         self.moon = np.array((0.35, 1.0, -0.25), np.float32)
         self.moon /= np.linalg.norm(self.moon)
 
@@ -495,6 +501,7 @@ class Renderer:
         if brood is None:
             return
         self.spider_prog.use()
+        self.spider_prog.float("uRim", 0.0)
         eye = np.array(night.eye)
         look = np.array((math.sin(night.yaw), 0.0, -math.cos(night.yaw)))
         for pos, fwd, up, size, clip, t in brood.near(night.eye):
@@ -502,16 +509,32 @@ class Renderer:
             to = p - eye
             if float(np.dot(to, look)) < -0.5 and float(np.linalg.norm(to)) > 1.0:
                 continue
-            up = np.array(up)
-            f = np.array(fwd) - up * float(np.dot(fwd, up))
-            f /= float(np.linalg.norm(f)) or 1.0
-            right = np.cross(up, f)
-            m = np.identity(4, np.float32)
-            m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = right * size, up * size, f * size, p
-            first, frames, fps = self.spider_clips[clip]
-            k = first + int(t * fps) % frames
-            self.spider_prog.mat4("uModel", m)
-            self.spiders.draw_range(k * self.spider_n, self.spider_n)
+            self._spider(p, fwd, up, size, clip, t)
+        self.spider_prog.float("uRim", 0.3)
+        for x, y, z, top, size, ph in night.danglers.active():  # (hanging before him: its back to him, turning a little)
+            to = eye - np.array((x, y, z))
+            ang = math.atan2(to[2], to[0]) + 0.5 * math.sin(self.now * 0.7 + ph)
+            self._spider(self._dangle(x, y, z, ph), (0.0, -1.0, 0.0), (math.cos(ang), 0.0, math.sin(ang)), size, "idle",
+                         self.now + ph)
+
+    def _dangle(self, x, y, z, ph):
+        """Where a dangler is this moment: bobbing on its thread, swinging a little."""
+        t = self.now
+        return np.array((x + 0.02 * math.sin(t * 0.9 + ph), y + 0.025 * math.sin(t * 1.7 + ph * 2),
+                         z + 0.02 * math.cos(t * 0.8 + ph)))
+
+    def _spider(self, p, fwd, up, size, clip, t):
+        up = np.asarray(up, np.float64)
+        up = up / (float(np.linalg.norm(up)) or 1.0)
+        f = np.asarray(fwd, np.float64) - up * float(np.dot(fwd, up))
+        f /= float(np.linalg.norm(f)) or 1.0
+        right = np.cross(up, f)
+        m = np.identity(4, np.float32)
+        m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = right * size, up * size, f * size, p
+        first, frames, fps = self.spider_clips[clip]
+        k = first + int(t * fps) % frames
+        self.spider_prog.mat4("uModel", m)
+        self.spiders.draw_range(k * self.spider_n, self.spider_n)
 
     def _silk(self, night, now, proj, h):
         """Every thread: added over what's behind it, as light caught in it."""
@@ -526,6 +549,7 @@ class Renderer:
         self.amp += (target - self.amp) * 0.15
         self.silk_prog.use()
         self.silk_prog.float("uTime", now)
+        self.silk_prog.float("uWhite", 0.0)
         GL.glUniform1fv(self.silk_prog.loc("uAmp"), W.GROUPS, self.amp)
         if web_on is not None:
             self.silk_prog.vec4s("uDip", [(night.x, night.y, night.z, W.DIP)])
@@ -537,6 +561,14 @@ class Renderer:
         GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
         GL.glDepthMask(GL.GL_FALSE)
         self.silk.draw()
+        threads = []
+        for x, y, z, top, size, ph in night.danglers.active():
+            p = self._dangle(x, y, z, ph)
+            threads.append(([(x, top, z), (p[0], p[1] + size * 0.25, p[2])], 0.003, 7, [0.0, 0.0], 0.0))
+        if threads:
+            self.silk_prog.float("uWhite", 0.14)
+            self.loose.upload(silkmesh.ribbons(threads))
+            self.loose.draw()
         GL.glDepthMask(GL.GL_TRUE)
         GL.glDisable(GL.GL_BLEND)
 
@@ -557,6 +589,7 @@ class Renderer:
         self.dress_prog.use()
         self.wand_mesh.draw()
         self.held_mesh.draw()
+        self._swarm(night, (grip, waxes), (origin, axes), now)
         lvl = night.lamp.level
         f = held.flame(origin, axes)
         verts = []
@@ -577,6 +610,59 @@ class Renderer:
         self.glow_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
         GL.glDisable(GL.GL_BLEND)
+
+    def _swarm(self, night, wand, lantern, now):
+        """The babies on his wand and his lantern; and those letting go, each on a thread of white silk."""
+        swarm = getattr(night, "swarm", None)
+        if swarm is None or not swarm.babies:
+            return
+        (grip, wx), (ring, la) = wand, lantern
+        W = np.stack(wx, axis=1)
+        tip = W @ np.asarray(self.wand_tip, np.float64)
+        along = tip / (float(np.linalg.norm(tip)) or 1.0)
+
+        def on_wand(s):
+            return grip + tip * (0.3 + 0.7 * s) + wx[0] * 0.012
+
+        def on_lantern(phi, hh):
+            return ring + la[0] * math.cos(phi) * 0.05 + la[1] * hh + la[2] * math.sin(phi) * 0.05
+        self.spider_prog.use()
+        self.spider_prog.float("uRim", 0.4)
+        threads = []
+        for b in swarm.babies:
+            size = b["size"]
+            if b["state"] == "wand":
+                self._spider(on_wand(b["s"]), along, wx[0], size, "walk", b["anim"])
+                continue
+            if b["state"] == "lantern":
+                phi = b["phi"]
+                out = la[0] * math.cos(phi) + la[2] * math.sin(phi)
+                tangent = -la[0] * math.sin(phi) + la[2] * math.cos(phi)
+                f = tangent * math.cos(b["head"]) + la[1] * math.sin(b["head"])
+                self._spider(on_lantern(phi, b["h"]), f, out, size, "idle" if b["rest"] > 0 else "walk", b["anim"])
+                continue
+            if b["state"] == "hang":
+                anchor = on_wand(b["h"]) if b["phi"] is None else on_lantern(b["phi"], b["h"])
+                sw = 0.4 * math.sin(now * 2.6 + b["seed"] * 6.0) * (1.0 if b["len"] >= b["reach"] else b["len"] / b["reach"])
+                body = anchor + la[0] * math.sin(sw) * b["len"] - np.array((0.0, 1.0, 0.0)) * math.cos(sw) * b["len"]
+                b["drop_from"] = (anchor, body)
+            else:
+                a0, b0 = b.get("drop_from", (ring, ring))
+                drop = np.array((0.0, b["fall"], 0.0))
+                anchor, body = a0 - drop, b0 - drop
+            to = np.asarray(night.eye) - body
+            self._spider(body, (0.0, -1.0, 0.0), (to[0], 0.0, to[2]), size, "idle", b["anim"])
+            threads.append(([tuple(anchor), tuple(body + np.array((0.0, size * 0.25, 0.0)))], 0.0012, 7, [0.0, 0.0], 0.0))
+        if threads:
+            self.silk_prog.use()
+            self.silk_prog.float("uWhite", 0.3)
+            GL.glEnable(GL.GL_BLEND)
+            GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
+            GL.glDepthMask(GL.GL_FALSE)
+            self.loose.upload(silkmesh.ribbons(threads))
+            self.loose.draw()
+            GL.glDepthMask(GL.GL_TRUE)
+            GL.glDisable(GL.GL_BLEND)
 
     def _lights(self, night, now):
         ex, ey, ez = night.eye

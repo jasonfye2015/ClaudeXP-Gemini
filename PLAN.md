@@ -83,6 +83,13 @@ screen's height) runs across the view itself in 0.55 to 1 second, in just off on
 slight curve; three times in ten, two at once by different ways. Drawn flat over everything (Quaternius's spider, seen
 from above, its legs going), lit by the lantern - a dark shape when it's out - with a skitter close by.
 
+Phase 2c - her babies, close (done): game/babies.py. Danglers: every 25 to 45 seconds one drops on a single thread a
+little before him (from the dark overhead, or the tunnel's roof) and stops at the height of his face, bobbing and
+turning; walk into it and the thread is gone and it runs off across his eyes (crawlers.scurry); left alone, it climbs
+back up. The swarm: with the lantern out, one comes up the wand and onto the lantern after 2-4 seconds, then another
+every 10-20, to 5-7 in all, crawling all over it; a shake that lights it and they all let go, each hanging from it on
+a thread of white silk, swinging, for 1.5-4 seconds before falling away; a shake that fails throws one or two off.
+
 ## Phase 3 - Ysmeine
 
 Her figure (Quaternius's Spider, scaled), her moods, the language model's voice with its guardrails and memory, the

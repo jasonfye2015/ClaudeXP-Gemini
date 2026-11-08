@@ -15,8 +15,13 @@ ASSETS = Path(__file__).resolve().parents[1] / "assets"
 
 
 def silk(web):
+    return ribbons(web.strands())
+
+
+def ribbons(strands):
+    """Threads -> ribbon vertices: [(points, width, group, free, phase)] -> float32 (n, 11)."""
     parts = []
-    for pts, width, group, free, phase in web.strands():
+    for pts, width, group, free, phase in strands:
         p = np.asarray(pts, np.float32)
         if len(p) < 2:
             continue
@@ -31,7 +36,7 @@ def silk(web):
         n = len(idx)
         parts.append(np.column_stack([p[idx], tan[idx], side, np.full(n, width, np.float32),
                                       np.full(n, group, np.float32), f[idx], np.full(n, phase, np.float32)]))
-    return np.concatenate(parts).astype(np.float32)
+    return np.concatenate(parts).astype(np.float32) if parts else np.zeros((0, 11), np.float32)
 
 
 def spider_frames():
