@@ -179,8 +179,12 @@ class SceneView(QWidget):
         """If he carries anything: something to give her. And his spells, as gestures."""
         from ..game.offerings import KEPT
         n = self.shell.view.night
-        if any(i not in KEPT for i in n.pack):
-            self._button("✦  Offer her something...", self._open_pack)
+        if n.held and n.held not in KEPT:                       # (what's in his hand: held out to her)
+            from ..game.offerings import ITEMS
+            self._button("✦  Hold out " + ITEMS[n.held][0] + ", in your hand", lambda: self._offered(n.held))
+        if any(i not in KEPT and i != n.held for i in n.pack):
+            self._button("✦  Offer her something" + (" else" if n.held and n.held not in KEPT else "") + "...",
+                         self._open_pack)
         if self.talk.knows_her and not self.talk.flags.get("named"):
             self._button("✦  Speak her true name", self._speak_name)
         if n.venom.active and not self.talk.flags.get("asked_cure"):
@@ -241,9 +245,13 @@ class SceneView(QWidget):
         from ..game.offerings import ITEMS
         self._clear()
         from ..game.offerings import KEPT
+        learned = self.shell.records.learned
         for item in [i for i in self.shell.view.night.pack if i not in KEPT]:
-            self._button("✦  " + ITEMS[item][0][:1].upper() + ITEMS[item][0][1:],
-                         lambda _x=False, item=item: self._offered(item))
+            seen = learned.get(item, [])
+            label = "✦  " + ITEMS[item][0][:1].upper() + ITEMS[item][0][1:]
+            if seen:
+                label += "\n      (" + seen[-1] + ")"                 # (what he's learned of it, other times)
+            self._button(label, lambda _x=False, item=item: self._offered(item))
         self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
         self._lay()
 

@@ -50,6 +50,9 @@ class GameView(QOpenGLWidget):
         self.first_ending = False
         self.audio = None
         self.fade = None                         # (born): in from black
+        from .satchel import Satchel
+        self.satchel = Satchel()                 # (his satchel, opened: Tab - the night going on behind it)
+        self.flying = None                       # (a thing just picked up, on its way into the satchel: (item, when))
         self.last = time.perf_counter()
         self.t0 = self.last
         self.timer = QTimer(self)
@@ -202,6 +205,9 @@ class GameView(QOpenGLWidget):
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
             self.inp.hurry = Qt.Key_Shift in k
+            if self.satchel.open:                                 # (his hands in his satchel: he stands still)
+                self.inp.forward = self.inp.strafe = 0.0
+                self.inp.jump = False
             if Qt.Key_Left in k:
                 self.inp.yaw -= 1.8 * dt
             if Qt.Key_Right in k:
@@ -210,6 +216,7 @@ class GameView(QOpenGLWidget):
             if self.audio is not None:
                 self.audio.hear(n, n.events)
             self._count(n.events)
+            self._satchel_events(n, now)
             self._notes_from(n)
             self._murmurs(n)
             for e in n.events:
@@ -238,7 +245,7 @@ class GameView(QOpenGLWidget):
                 elif e[0] == "vision_end":
                     self.whisper = ("You are yourself again.", now, 2.5)
                 elif e[0] == "take" and e[1] == "antidote":
-                    self.whisper = ("Q  -  drink it", now, 6.0)
+                    self.whisper = ("Q  -  drink it, while her venom is in you", now, 6.0)
                 elif e[0] == "spell":
                     self.whisper = (self.SPELL_WORDS.get((e[1], e[2]), ""), now, 3.0)
                 elif e == ("her", "hurt"):
@@ -396,6 +403,32 @@ class GameView(QOpenGLWidget):
                                           ("memory", "Memory"))):
             p.setPen(QColor(215, 200, 175, 190 if sp.ready(name) else 70))
             p.drawText(QRectF(x + i * 72, H - 112, 72, 20), Qt.AlignLeft, f"{i + 1}  {word}")
+
+    SATCHEL_WORDS = {"full": "Your satchel is full. Put something down first (wheel to it, then G).",
+                     "mouse_still": "The mouse in your satchel has stopped kicking.",
+                     "moth_out": "A moth gets out of your satchel.",
+                     "moths_gone": "The last of the moths gets away.",
+                     "honey": "Honey on your fingers - and something small has found it."}
+
+    def _satchel_events(self, n, now):
+        """What's carried, as it changes: picked up (into its place on the strip), put down, tiring, escaping."""
+        from ..game.offerings import ITEMS
+        for e in n.events:
+            if e[0] == "take":
+                self.flying = (e[1], now)
+                if self.audio is not None:
+                    self.audio.synth.play("puff", 0.6)
+            elif e[0] == "satchel":
+                self.whisper = (self.SATCHEL_WORDS.get(e[1], ""), now, 3.5)
+            elif e[0] == "put_down":
+                st = e[1]
+                self.whisper = ({"mouse": "It's gone into the roots before it touches the wood.",
+                                 "moths": "They're gone, up into the dark."}.get(st) if st not in n.finds.dropped
+                                else "You set down " + ITEMS[st][0] + ".", now, 3.0)
+        for item, line in n.learned:                             # (what she made of it: written beside it, kept)
+            if self.shell.records.learn(item, line):
+                self.note_toast = ("Beside " + ITEMS[item][0] + ": " + line, time.perf_counter())
+        n.learned.clear()
 
     def _last_words(self, n):
         """Supper: what she says to him as he's hung - from what she made of him tonight, and on other nights; in a
@@ -595,14 +628,9 @@ class GameView(QOpenGLWidget):
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   " + prompt)
         self._spell_glow(p, W, H, n)
         self._venom(p, W, H, n)
-        if n.pack:                                                # (what he carries: offerings, for her)
-            from ..game.offerings import ITEMS
-            f = QFont(SERIF, 10)
-            f.setItalic(True)
-            p.setFont(f)
-            p.setPen(QColor(210, 190, 160, 190))
-            p.drawText(QRectF(14, H - 200, W * 0.4, 40), Qt.AlignLeft | Qt.TextWordWrap,
-                       "Carrying: " + ", ".join(ITEMS[i][0] for i in n.pack))
+        if n.pack or n.held:                                      # (what he carries: his satchel's places)
+            from .satchel import strip
+            strip(p, W, H, n, t, self.flying)
         if n.teetering and self.teeters <= 3:                    # (swaying on a strand: what to do, the first few times)
             p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
             p.setFont(QFont(SERIF, 13))
@@ -636,7 +664,8 @@ class GameView(QOpenGLWidget):
                 self.fade = None
             else:
                 p.fillRect(self.rect(), QColor(0, 0, 0, int(255 * max(0.0, 1 - age / 3.0))))
-        if not self.captured and not self.shell.panel_open():
+        self.satchel.draw(p, W, H, n, self.shell.records)
+        if not self.captured and not self.shell.panel_open() and not self.satchel.open:
             p.setPen(QColor(220, 208, 190, 170))
             p.setFont(QFont(SERIF, 12))
             p.drawText(QRectF(0, H * 0.5 + 40, W, 30), Qt.AlignHCenter, "Click to take the mouse   (Esc gives it back)")
@@ -672,8 +701,24 @@ class GameView(QOpenGLWidget):
             if self.night.dying.done and self.night.dying.t > 26.0:
                 self.shell.show_title()                          # (it's over: back to the start)
             return
+        if self.playing and self.satchel.open and self.night is not None:      # (a thing chosen, into his hand)
+            item = self.satchel.click(e.position())
+            if item is not None:
+                self.night.held = item
+            return
         if self.playing and not self.captured and getattr(self, "scene", None) is None:
             self.capture()
+
+    def focusNextPrevChild(self, _next):
+        return False                                             # (Tab is his satchel's, not the focus's)
+
+    def wheelEvent(self, e):
+        """The mouse wheel: the next thing out of his satchel into his hand (or an empty hand)."""
+        n = self.night
+        if not self.playing or n is None or n.dying is not None or n.ending is not None:
+            return
+        from ..game import satchel
+        satchel.choose(n, -1 if e.angleDelta().y() > 0 else 1)
 
     def mouseMoveEvent(self, e):
         if not self.captured:
@@ -715,6 +760,18 @@ class GameView(QOpenGLWidget):
         spell = {Qt.Key_1: "light", Qt.Key_2: "warmth", Qt.Key_3: "illusion", Qt.Key_4: "memory"}.get(k)
         if spell and self.night is not None and getattr(self, "scene", None) is None:
             self.night.cast(spell)
+            return
+        n = self.night
+        free = n is not None and getattr(self, "scene", None) is None and n.dying is None and n.ending is None
+        if k == Qt.Key_Tab and free:                             # (his satchel: open, or shut)
+            self.satchel.toggle()
+            if self.satchel.open:
+                self.release()
+            else:
+                self.capture()
+            return
+        if k == Qt.Key_G and free:                               # (what's in his hand, put down)
+            n.put_down()
             return
         if k == Qt.Key_F5:                                       # (a quick save)
             why = self.quick_save()

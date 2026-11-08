@@ -37,6 +37,11 @@ def _late(night):
 def worth(item, night):
     """What it's worth to her, now: (tier, kinds for her moods, direct moves {mood: amount})."""
     m = night.moods
+    st = getattr(night, "items", {}).get(item, {})
+    if item == "mouse" and st.get("still"):                                  # (dead in his fist: she likes them kicking)
+        return ("plain" if m.hunger > 60 else "insult"), ["gift"], {"hunger": -12 if m.hunger > 60 else 0}
+    if item == "moths" and 0 < st.get("moths", 6) <= 2:                       # (two or three: hardly a gift)
+        return "plain", ["small_talk"], {"hunger": -2}
     if item == "mouse":
         if m.hunger < 30:
             return "insult", ["demand"], {"patience": -5}                    # (I am not a cat)
@@ -76,6 +81,9 @@ ANSWERS = {
                "insult": "You have been stealing from my guests. Wick did that, once. Look where he hangs."},
     "journal": {"delight": "Maudren's book. Every word I ever said to her, and she understood none of them. Will you?",
                 "plain": "Her book. I know what is in it. So, now, do you."},
+    "still": {"plain": "Dead. I like them kicking - but I am hungry, so.",
+              "insult": "Dead. You let it die in your fist, and you bring me that?"},
+    "few": {"plain": "Two moths. Three. The rest got away from you, I see."},
     "honey": {"delight": "My own honey, from my own wall, given back to me. You are either very bold or very foolish. "
                          "I like it.",
               "insult": "That is mine. You took it from my larder, and you offer it to me as a gift?"},
@@ -84,15 +92,21 @@ ANSWERS = {
 
 def give(item, night):
     """He offers it: it leaves his pack; her moods move. -> (tier, her answer in the script)."""
+    st = getattr(night, "items", {}).get(item, {})
+    special = "still" if item == "mouse" and st.get("still") else \
+        "few" if item == "moths" and 0 < st.get("moths", 6) <= 2 else None
     tier, kinds, direct = worth(item, night)
     for k in kinds:
         night.moods.heard(k)
     for name, amount in direct.items():
         setattr(night.moods, name, max(0.0, min(100.0, getattr(night.moods, name) + amount)))
-    if item in night.pack:
-        night.pack.remove(item)
+    from . import satchel
+    satchel.gone(night, item)
     night.given.append((item, tier))
-    answers = ANSWERS[item]
+    line = satchel.learned_line(item, special or tier, night)
+    if line and hasattr(night, "learned"):
+        night.learned.append((item, line))                                  # (written beside it: kept across nights)
+    answers = ANSWERS[special] if special else ANSWERS[item]
     return tier, answers.get(tier) or answers.get("plain") or answers["delight"]
 
 
@@ -125,9 +139,12 @@ class Finds:
         ar = tree.wall_r(aa, lh + 0.3) - 0.3
         ax, az = math.cos(aa) * ar, math.sin(aa) * ar
         self.spots["antidote"] = (ax, tree.floor_at(ax, az, lh + 0.5), az)
+        self.dropped = {}                        # (what he's put down again, and where: game/satchel.py)
 
     def where(self, item, night):
-        """Where it is now (the mouse wanders a little)."""
+        """Where it is now (the mouse wanders a little; what he put down, where he put it)."""
+        if item in self.dropped:
+            return self.dropped[item]
         if item == "mouse":
             return self.mouse(night.time)
         return self.spots[item]
@@ -144,8 +161,8 @@ class Finds:
         look = (math.sin(night.yaw) * math.cos(night.pitch), math.sin(night.pitch),
                 -math.cos(night.yaw) * math.cos(night.pitch))
         best = None
-        for item in self.spots:
-            if item in night.taken or (item == "antidote" and not hidden_shown(night)):
+        for item in list(self.spots) + [i for i in self.dropped if i not in self.spots or i in night.taken]:
+            if item not in self.dropped and (item in night.taken or (item == "antidote" and not hidden_shown(night))):
                 continue
             p = self.where(item, night)
             d = math.dist(p, (ex, ey, ez))

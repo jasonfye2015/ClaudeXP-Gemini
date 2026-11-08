@@ -413,6 +413,8 @@ class Renderer:
         _w, self.wand_tip = held.wand_parts()
         self.hand_parts = held.arm_parts() + held.hand_parts()
         self.hand_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
+        self.cup_parts = held.arm_parts() + held.hand_parts(curl=0.62, spread=0.04)     # (his left hand, cupped)
+        self.cup_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
         from ..game.cocoons import Cocoons
         from . import cocoonmesh
         self.cocoons = Cocoons(self.tree)
@@ -521,8 +523,27 @@ class Renderer:
             self._fog(night, view, now, lights)
         if night is not None and getattr(night, "show_lantern", True) and cam is None:
             self._lantern(night, now)
+        if night is not None and getattr(night, "show_lantern", True) and cam is None:
+            self._carried(night, now)
         self._crawlers(night, w, h)
         self._hand(night)
+
+    def _carried(self, night, now):
+        """What's in his left hand (the mouse wheel chose it): held low on the left, cupped - over everything."""
+        item = getattr(night, "held", None)
+        crawlers = getattr(night, "crawlers", None)
+        if item is None or getattr(night, "dying", None) is not None or getattr(night, "ending", None) is not None:
+            return
+        if crawlers is not None and crawlers.swipe_phase() is not None:
+            return                                                    # (that hand's busy, swiping)
+        from . import itemmesh
+        (wrist, axes), (palm, iaxes) = itemmesh.held_at(night, now)
+        out = itemmesh.build(item, palm, iaxes, now, night.items.get(item), scale=0.9)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.dress_prog.use()
+        self.cup_mesh.upload(np.concatenate([held.place(self.cup_parts, wrist, axes), np.array(out, np.float32)])
+                             if out else held.place(self.cup_parts, wrist, axes))
+        self.cup_mesh.draw()
 
     def _hand(self, night):
         """His left hand, swiping them off his face: over everything, them too."""
@@ -731,6 +752,11 @@ class Renderer:
                            (side, up, n_in), (0.05, 0.035, 0.025))
                 C._box(out, np.array((mx, my - 0.14, mz)), (0.28, 0.006, 0.006), (side, up, n_in),
                        (0.05, 0.035, 0.025))
+        if finds.dropped:                                       # (what he's put down again)
+            from . import itemmesh
+            for item, pos in finds.dropped.items():
+                out += itemmesh.build(item, pos, ((1.0, 0.0, 0.0), up, (0.0, 0.0, 1.0)), now,
+                                      night.items_left.get(item))
         if not out:
             return
         if not hasattr(self, "find_mesh"):
@@ -897,6 +923,10 @@ class Renderer:
                 elif k > 0 and kind == "ember":  # (silk, smouldering)
                     flick = 0.75 + 0.25 * math.sin(now * 23) * math.sin(now * 7.1)
                     out.append(((*pos, 2.2), (0.8 * k * flick, 0.25 * k * flick, 0.05 * k, 1)))
+        if getattr(night, "held", None) == "antidote":          # (her phial in his hand: a little green light)
+            from . import itemmesh
+            (_w, _a), (palm, _ia) = itemmesh.held_at(night, now)
+            out.append(((*palm, 1.2), (0.05, 0.22, 0.07, 1)))
         ending = getattr(night, "ending", None)
         if ending is not None and ending.name == "Fire":            # (her silk alight all about him)
             k = min(1.0, ending.t / 2.5) * (1.0 - ending.black)

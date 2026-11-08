@@ -19,7 +19,8 @@ VERSION = 1
 KINDS = ("act", "quick")
 FIELDS = {
     "": ("x", "y", "z", "yaw", "pitch", "time", "seen", "place", "moved", "pack", "taken", "given", "silk", "flags",
-         "lies", "met"),
+         "lies", "met", "items", "items_left", "held"),
+    "finds": ("dropped",),
     "moods": ("fascination", "patience", "hunger", "suspicion", "regard", "bites"),
     "body": ("health", "poison", "sanity", "stupor"),
     "acts": ("act", "request", "calling", "next_call", "t", "found", "outcomes"),

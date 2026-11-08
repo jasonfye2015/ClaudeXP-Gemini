@@ -12,7 +12,8 @@ The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/
 
 Playing
   Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
-  Q drinks the antidote, if he has it. F5 saves (the night saves itself, too, as each act begins).
+  Tab opens his satchel (the night doesn't wait while he rummages); the mouse wheel puts one thing in his left hand;
+  G puts it down. Q drinks the antidote, if he has it. F5 saves (the night saves itself, too, as each act begins).
   1 2 3 4 cast his spells: Light, Warmth, Illusion, Memory (in her scenes: "Cast a spell...").
   E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.

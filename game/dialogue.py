@@ -40,6 +40,14 @@ PLACES = {"tunnel": "the roots", "hollow": "the great hollow", "gallery": "the g
           "high hollow": "the high hollow", "crown": "the crown of the oak"}
 
 
+def _names():
+    from .offerings import ITEMS
+    return {k: v[0] for k, v in ITEMS.items()}
+
+
+ITEMS_NAMES = _names()
+
+
 class Conversation:
     def __init__(self, night, voice, reputation=None, rng=None):
         self.night, self.voice = night, voice
@@ -64,7 +72,8 @@ class Conversation:
         return {"place": PLACES.get(n.where(), "the Hollow"), "time": n.clock_words(), "moods": n.moods.values(),
                 "manner": n.manner(), "dark": (not n.lantern) or n.lamp.state == "out", "bitten": n.venom.active,
                 "cured": n.venom.cured,
-                "memory": self.memory, "reputation": self.reputation}
+                "memory": self.memory, "reputation": self.reputation,
+                "holding": ITEMS_NAMES.get(getattr(n, "held", None))}
 
     def _keep(self, fact):
         if fact and any(w in fact.lower() for w in MODERN):                # (nothing from outside the night)

@@ -323,3 +323,18 @@ aloud): one quiet line, without cruelty, from what she made of him - held dear; 
 with care; bitten - or, with a model speaking for her, its own words if they come in time.
 Polish: Options for how fast her words come and for steadier light (the lantern's flicker smoothed, the lightning only
 a glow); the Saved nights page lists the night's saves to go on from; the README tells the whole night.
+
+## Phase 6 - in his hands
+
+Phase 6a - the satchel (done). game/satchel.py: four places, and what's in them doesn't keep - the mouse kicks for three
+and a half minutes, then it's still (and a still mouse is worth less: she likes them kicking); the moths get out one
+by one (two or three left are hardly a gift); the honey drips, and her small ones follow it onto his face. A full
+satchel takes nothing more. The mouse wheel puts one thing in his left hand (engine/itemmesh.py: held low on the left,
+cupped, palm up - the mouse kicking, the moths beating about his fingers, the phial glowing green on him); G puts it
+down at his feet (a live mouse or the moths are simply gone; the rest lie where he left them, to take again). Tab opens
+the satchel over the den - leather, stitched, the night going on behind it (he can't walk with his hands in it): each
+thing drawn as itself on the cloth, where he found it, how it is now, and what she made of it other times he gave it
+her - written there once he's seen it (records.learned, kept across nights). In her scenes, what's in his hand is
+held out first; the rest are offered as cards with what he's learned. Picked up, a thing flies into its place on the
+strip low on the left. A model is told what he's holding. Saved with the night: the satchel, his hand, what's put down.
+
