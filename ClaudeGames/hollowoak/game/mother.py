@@ -125,6 +125,9 @@ class Mother:
             off = math.sqrt(max(0.0, gap * gap - d_wall * d_wall)) / max(1.0, r)
             side = 1.0 if _wrap(self.th - th_him) >= 0 else -1.0
             return th_him + side * min(1.2, off + 0.15), ey + (0.6 if self.state == "glimpse" else 1.2)
+        acts = getattr(night, "acts", None)
+        if acts is not None and acts.act == "crown":                            # (gone up to the crown: waiting there)
+            return th_him + math.pi, max(ey + 1.0, night.tree.landing_h["crown"] - 1.5)
         restless = max(0.0, (self._mood(night, "hunger", 20) - 65) / 35)          # (hungry: she circles)
         return (th_him + math.pi + 0.35 * math.sin(self.t * 0.05) + self.circle + restless * 1.4 * math.sin(self.t * 0.13),
                 max(ey + 2.2, 12.5))                                                  # (high, unless he is)

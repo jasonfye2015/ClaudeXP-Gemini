@@ -49,14 +49,23 @@ class Scene:
         """Before him, on whatever he stands on (her loom, mostly), facing him."""
         n = self.night
         her = n.her
-        fx, fz = math.sin(n.yaw), -math.cos(n.yaw)
         t = n.tree
-        x, z = n.x + fx * GAP, n.z + fz * GAP
-        r = math.hypot(x, z)
-        lim = t.base_r(math.atan2(z, x), n.y + 0.5) - 1.8           # (inside the hollow: her legs not through the wall)
-        if r > lim:
-            x, z = x * lim / r, z * lim / r
-        y = n.floor_at(x, z, n.y + 0.3)
+        best = None
+        for k in range(24):                                         # (before him if there's room at his own level -
+            turn = ((k + 1) // 2) * 0.26 * (1 if k % 2 else -1)   #  or the nearest way round that has)
+            for gap in (GAP, GAP * 0.8, GAP * 0.62):
+                a = n.yaw + turn
+                x, z = n.x + math.sin(a) * gap, n.z - math.cos(a) * gap
+                y = n.floor_at(x, z, n.y + 0.3)
+                if abs(y - n.y) < 0.6 and t.can_stand(x, z, y, 0.7, 0.8):
+                    best = (x, y, z)
+                    break
+            if best:
+                break
+        if best is None:                                            # (nowhere: as close before him as can be)
+            x, z = n.x + math.sin(n.yaw) * 1.6, n.z - math.cos(n.yaw) * 1.6
+            best = (x, n.y, z)
+        x, y, z = best
         face = _norm((n.x - x, 0.0, n.z - z))
         her.stage((x, y, z), face)
         n.yaw = math.atan2(x - n.x, -(z - n.z))                  # (and he turns to her)

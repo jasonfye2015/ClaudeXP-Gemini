@@ -136,7 +136,19 @@ class GameView(QOpenGLWidget):
             self.audio.volume = o["volume"] / 100.0
             self.audio.heartbeat = bool(o["heartbeat"])
             self.audio.aloud = bool(o["aloud"])
-        if self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
+        if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
+            n.step(dt, self.inp)
+            for e in n.events:
+                if e[0] == "ending" and e[1] == "line":
+                    if self.audio is not None:
+                        self.audio.say(e[2])
+            if n.ending.done:
+                self.release()
+                if self.tally is not None and not self.tally["done"]:
+                    self.first_ending = self.shell.records.ending(n.ending.name)
+                    self.night_done()
+            n.events.clear()
+        elif self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
             n.step(dt, self.inp)
             if self.audio is not None:
                 self.audio.hear(n, n.events)
@@ -149,8 +161,9 @@ class GameView(QOpenGLWidget):
         elif self.playing and getattr(self, "scene", None) is not None and not self.shell.panel_open():
             self._scene_tick(n, dt)                               # (her scene: his hands off; the night goes on)
         elif self.playing and not self.shell.panel_open():
-            if n.on is n.web.loom and "audience" not in n.met and n.dying is None:
-                self.start_scene("audience")                      # (onto her loom: she comes to him)
+            scene = n.acts.scene_for(n) if n.dying is None and n.ending is None else None
+            if scene is not None and scene not in n.met:
+                self.start_scene(scene)                           # (where he is, in the night's act: she comes to him)
             k = self.keys
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
@@ -226,6 +239,14 @@ class GameView(QOpenGLWidget):
         n = self.night
         name = self.scene.name
         n.met[name] = self.talk.ended or "done"
+        n.lies = self.talk.lies
+        for e in n.acts.scene_over(name, n.met[name], n):
+            n.events.append(e)
+            if e == ("meal",):                                    # (her larder: he was the meal - her bite)
+                self.whisper = ("She bit you.", time.perf_counter(), 3.0)
+                n.bitten()
+        if name == "crown":
+            self.whisper = ("T  -  wait with her for the light", time.perf_counter(), 8.0)
         n.camera, n.riders = None, ()
         self.inp.yaw, self.inp.pitch = n.yaw, 0.0
         if self.audio is not None:
@@ -234,6 +255,14 @@ class GameView(QOpenGLWidget):
         self.scene_ui.deleteLater()
         self.scene = self.scene_ui = None
         self.setFocus()
+
+    def wait_for_dawn(self):
+        """Waiting with her for the light: the dark a moment, and then it's coming."""
+        from ..game import sky as S
+        n = self.night
+        day = int(n.sky.clock // 1440) + (1 if n.sky.clock % 1440 >= S.DUSK else 0)
+        n.sky.clock = day * 1440 + S.DAWN - 0.5
+        self.fade = time.perf_counter()
 
     def ensure_audio(self):
         if self.audio is None:
@@ -283,10 +312,16 @@ class GameView(QOpenGLWidget):
 
     def _murmurs(self, n):
         """Her words, unasked, now and then: when she leans out to him, comes close in the dark, turns to his
-        scrambling, hunts, draws back. Shown low on the screen, and heard."""
+        scrambling, hunts, draws back - and when she calls him on. Shown low on the screen, and heard."""
         talk = getattr(self, "talk", None)
         if talk is None:
             return
+        for e in n.events:
+            if e[0] == "call":                                    # (her calling him on: always said)
+                self.last_murmur = n.time
+                talk.murmur("call_" + e[1], self.her_lines.put)
+            elif e[0] == "act" and e[1] in ("gallery", "supper", "crown"):
+                self.whisper = (n.acts.request, time.perf_counter(), 6.0)
         for e in n.events:
             if e[0] == "her" and e[1] in self.MURMUR and n.time - self.last_murmur > 25.0:
                 self.last_murmur = n.time
@@ -313,6 +348,10 @@ class GameView(QOpenGLWidget):
         ending = None
         if n.dying is not None:
             ending = "your larder" if n.dying.cause == "bite" else "your silk, wrapped and hung"
+        elif n.ending is not None:
+            ending = {"Dawn": "dawn, and you let him go", "Cast out": "dawn, and you cast him out",
+                      "Bound": "him staying, wrapped, at his own asking",
+                      "The gift": "dawn, and your gift to him"}.get(n.ending.name, "dawn")
         self.shell.records.night_over(dict(t, seconds=n.time, ending=ending, manner=n.manner(),
                                            lies=talk.lies if talk else 0,
                                            kept=talk.memory[-1] if talk and talk.memory else ""))
@@ -348,6 +387,9 @@ class GameView(QOpenGLWidget):
             for i, line in enumerate(lines):
                 p.drawText(12, 20 + i * 14, line)
         o = self.shell.records.options
+        if n.ending is not None:
+            orbs.draw_ending(p, W, H, n.ending, self.shell.records, self.first_ending)
+            return
         if n.dying is not None:
             if o["orbs"]:
                 orbs.draw_orbs(p, W, H, n.body, t, max(0.0, 1.0 - n.dying.t / 1.2))
@@ -431,6 +473,10 @@ class GameView(QOpenGLWidget):
         QCursor.setPos(c)
 
     def mousePressEvent(self, e):
+        if self.playing and self.night is not None and self.night.ending is not None:
+            if self.night.ending.done and self.night.ending.t > 14.0:
+                self.shell.show_title()                          # (it's over: back to the start)
+            return
         if self.playing and self.night is not None and self.night.dying is not None:
             if self.night.dying.done and self.night.dying.t > 26.0:
                 self.shell.show_title()                          # (it's over: back to the start)
@@ -467,6 +513,10 @@ class GameView(QOpenGLWidget):
             return
         if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
             self.debug = not getattr(self, "debug", False)
+        if k == Qt.Key_T and self.night is not None and self.night.ending is None and \
+                self.night.acts.act == "crown" and "crown" in self.night.acts.outcomes:
+            self.wait_for_dawn()
+            return
         if k == Qt.Key_F and self.night is not None and self.night.dying is None:     # (a closer look)
             self.night.examine()
         if k == Qt.Key_Space and self.night is not None:

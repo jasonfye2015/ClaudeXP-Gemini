@@ -244,7 +244,20 @@ leaves and mushrooms, like Before the night).
 
 ## Phase 4 - the night
 
-The six acts, the clock, offerings, venom, saves; the six endings (each closing "Ending n of 6: <name>").
+Sub-phases: 4a the acts (done) - 4b offerings - 4c spells (Warmth: the road to Fire) - 4d venom (and the antidote) -
+4e saving - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
+
+Phase 4a - the acts (done). game/acts.py: threshold (in, to her loom) -> audience (her loom) -> gallery (her guests;
+sent up to look at them) -> supper (her larder; she calls him down at midnight, or sooner once he's looked at three of
+her guests; entering the larder begins it) -> crown (she goes up to her web under the moon and calls him at 3 am;
+stepping onto it begins it) -> dawn. She calls when he's late (her calls: in her words, aloud). What she's asked shows
+in the pause and as a word when it changes. Supper's script ends as her moods decide - guest, or meal (her bite: the
+first is venom; the second is Supper). The crown's script: what he wants of her - to know (and ask for her bite's
+gift), to stay (and mean it), her true name (not tonight), to go home alive. With a model: each scene its own opening
+and closing; the judge hears "stay". After the crown, T waits with her for the light. Dawn decides: bitten and little
+thought of - Cast out; held dear and staying - Bound; held dear, still fascinating, never caught lying, never bitten -
+The gift; otherwise Dawn. game/ending.py: the dawn light down into the den, her last words (her hand, her voice), the
+dark, the line, "Ending n of 7: ..." (Supper 1, Cast out 2, Dawn 3, Bound 4, The gift 5, The hidden 6, Fire 7).
 
 ## Phase 5 - music, sound, polish
 

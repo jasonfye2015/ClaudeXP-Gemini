@@ -23,7 +23,9 @@ from .crawlers import Crawlers
 from .death import Death
 from .lantern import Lantern
 from .moods import Moods
+from .acts import Acts
 from .cocoons import Cocoons
+from .ending import Ending
 from .mother import Mother
 from .sky import Sky
 from .web import BRIDGE_HALF, Bridge, Web
@@ -106,6 +108,10 @@ class Night:
         self.swarm = Swarm(random.Random(self.rng.random()))           # (and come for the lantern, in the dark)
         self.body = Condition(random.Random(self.rng.random()))        # (how he's holding up: the orbs)
         self.dying = None                                              # (a Death, once something gives out)
+        self.ending = None                                             # (an Ending, when dawn comes)
+        self.acts = Acts()                                             # (the night's shape: game/acts.py)
+        self.flags = {}                                                # (what he's chosen tonight: to stay...)
+        self.lies = 0
         self.quiet = False                                             # (in her scenes: nothing small onto him)
         self.met = {}                                                  # (her scenes so far: name -> how it ended)
         self.eye_h = EYE
@@ -168,8 +174,17 @@ class Night:
             self.events.extend(self.dying.step(dt, self))
             self.body.dying_heart(dt, self.dying.t)
             return
+        if self.ending is not None:                                    # (dawn: how it ends)
+            self.sky.step(dt)
+            self.events.extend(self.ending.step(dt))
+            return
         first = len(self.events)                                       # (what happens this step, from here)
         self.events.extend(self.sky.step(dt))
+        for e in self.acts.step(dt, self):
+            self.events.append(e)
+            if e == ("act", "dawn"):                                   # (the light: how it ends, decided by all of it)
+                self.ending = Ending(self.acts.decide(self))
+                return
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         before = self.moved
@@ -190,15 +205,8 @@ class Night:
         self.events.extend(self.moods.step(dt, self, self.events[first:]))
         for e in self.her.step(dt, self):
             self.events.append(e)
-            if e == ("her", "bite"):                                    # (her bite: venom, and she's eased a while)
-                self.moods.bit()
-                self.body.poison = min(100.0, self.body.poison + 30.0)
-                self.body.health = max(0.0, self.body.health - 8.0)
-                self.body.startle += 40.0
-                self.tremor += 3.0
-                if self.moods.bites >= 2:                               # (a second bite: Supper)
-                    self.collapse("bite")
-                    return
+            if e == ("her", "bite") and self.bitten():
+                return
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         if not self.quiet:
@@ -227,6 +235,18 @@ class Night:
                 self.moods.fascination = min(100.0, self.moods.fascination + 1.0)
                 self.tremor += 2.5                              # (she felt her guest disturbed)
         return spot
+
+    def bitten(self):
+        """Her bite: venom, and her hunger eased a while. A second is Supper. -> True if that was the end of him."""
+        self.moods.bit()
+        self.body.poison = min(100.0, self.body.poison + 30.0)
+        self.body.health = max(0.0, self.body.health - 8.0)
+        self.body.startle += 40.0
+        self.tremor += 3.0
+        if self.moods.bites >= 2:
+            self.collapse("bite")
+            return True
+        return False
 
     def collapse(self, cause):
         """Something gave out: down he goes, and they come."""

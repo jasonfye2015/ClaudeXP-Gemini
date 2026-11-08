@@ -126,7 +126,8 @@ class Shell(QWidget):
         self.pause_menu()
 
     def pause_menu(self):
-        self.set_panel(Panel(self, "The night waits", f"It is {self.view.night.clock_words()}.",
+        self.set_panel(Panel(self, "The night waits", f"It is {self.view.night.clock_words()}.   "
+                                                      f"{self.view.night.acts.request}",
                              [("Go on", self.resume), ("View letter", self.view_letter), ("Notes", self.show_notes),
                               ("Unlocks", self.show_unlocks), ("Back to the title", self.show_title)], small=True))
 
