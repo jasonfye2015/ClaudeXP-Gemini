@@ -310,6 +310,8 @@ class GameView(QOpenGLWidget):
                     self.whisper = ("It catches.", now, 4.0)
                 elif e[0] == "smoulder":
                     self.whisper = ("The silk blackens under your hand, and smokes. The whole oak shudders.", now, 5.0)
+                elif e == ("sight", "behind"):
+                    self.whisper = ("...", now, 1.5)
                 elif e[0] == "mark":
                     self.whisper = ("The light finds something cut into the wood.", now, 4.0)
             n.events.clear()

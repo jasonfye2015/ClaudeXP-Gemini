@@ -99,6 +99,8 @@ class Night:
         self.afflict = Afflictions(random.Random(None if seed is None else f"afflict{seed}"))   # (game/afflictions.py)
         self.venom = Venom(random.Random(None if seed is None else f"venom{seed}"))
         self.camera = None                                             # (through her eyes, a while: game/venom.py)
+        from .sightings import Sightings
+        self.sightings = Sightings(random.Random(None if seed is None else f"sight{seed}"))   # (her, between scenes)
         self.spells = Spells(random.Random(None if seed is None else f"spells{seed}"))      # (his four)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
@@ -238,6 +240,7 @@ class Night:
             self.events.append(e)
             if e == ("her", "bite") and self.bitten():
                 return
+        self.events.extend(self.sightings.step(dt, self))         # (her, seen in pieces between her scenes)
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         self.spells.step(dt)

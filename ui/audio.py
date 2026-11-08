@@ -111,7 +111,9 @@ class DenAudio:
         d = night.dying
         if d is not None and d.t < 20.0 and random.random() < 0.09:  # (all over him: the sound of them never stops)
             s.play("skitter", 0.4 + 0.5 * random.random())
-        s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
+        sg = getattr(night, "sightings", None)
+        thrum = sg.thrum * 0.3 if sg is not None else 0.0          # (her web, thrumming with her)
+        s.set(hum=max(thrum, min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1)),
               height=night.y / 26.0 if d is None or not d.done else 0.0)
         sky = getattr(night, "sky", None)
         if sky is not None:
@@ -174,6 +176,16 @@ class DenAudio:
                 s.play("slip", 1.0, pc)                            # (the silk tearing)
                 s.play("skitter", 1.0, pc)
                 s.play("skitter", 0.8, pc * 0.6)
+            elif kind == "sight":                                     # (her, seen in pieces)
+                hp = self.pan(night, her_p)
+                if e[1] == "cross":
+                    s.play("skitter", 0.9, hp)
+                    s.play("creak", 1.2, hp)
+                elif e[1] == "behind":
+                    s.play("skitter", 1.0, 0.0)
+                    s.play("slip", 0.8, 0.0)
+                elif e[1] == "legs":
+                    s.play("creak", 1.0, hp)
             elif kind == "thunder":
                 s.play("thunder", 0.5 + 0.5 * e[1], random.uniform(-0.6, 0.6))
             elif kind == "swipe":

@@ -407,3 +407,10 @@ wood, the dressing, her guests, her small ones near him, and her. Every surface 
 the shared lighting: nine samples, a soft edge, never quite black), and her chitin's shine too. The shadows swing as
 the lantern swings. Options: "The lantern's shadows" (off, for a slower computer).
 
+9c - her, between her scenes (done). game/sightings.py, every minute or two (oftener the more she's taken with him,
+or hungry; never in her scenes, while she hunts, or in the first minute): across the wall above him, fast (when he's
+near enough the wall for the lantern to catch her: Mother's "cross"); legs at the edge of the light, drawn back quick
+(a glimpse cut short). And when he turns round fast (2.2 radians in 0.7 s), now and then - at most every two and a half
+minutes - she's there, close, facing him (staged on the floor before him), his heart leaping; the lantern stutters, and
+she isn't. While she moves near him her web thrums: the silk shivers, a low hum. Two pages: "Above me", "Behind me".
+
