@@ -293,6 +293,7 @@ class Synth:
         self.music_gain = 0.7
         self.muffle, self._lp = 0.0, 0.0          # (his hearing, dulled: stupor's haze)
         self.her_pan = 0.0                        # (where she is, left to right of him)
+        self.duck, self._duck = 1.0, 1.0          # (she's close: the music, and most of the den, fall away)
         self.speech_pan = 0.0                     # (where her voice comes from: the middle, in her scenes)
         self.reverb = _Reverb()                   # (the space he's in)
 
@@ -347,12 +348,14 @@ class Synth:
         t = (self.n + np.arange(n)) / rate
         L, R = np.zeros(n), np.zeros(n)
         send = np.zeros(n)                                        # (into the hollow's echo)
+        d0, self._duck = self._duck, self._duck + (self.duck - self._duck) * (0.08 if self.duck < self._duck else 0.02)
+        duck = np.linspace(d0, self._duck, n)
         # the wind: louder the higher, breathing slowly - each ear its own gusts
         h0, self._height = self._height, self._height + (self.height - self._height) * 0.2
         ln = len(self.wind_loop)
         i = (self.n + np.arange(n)) % ln
         breath = 0.65 + 0.35 * np.sin(math.tau * t / 11.0) * np.sin(math.tau * t / 4.3 + 1.0)
-        amp = np.linspace(0.04 + 0.1 * h0, 0.04 + 0.1 * self._height, n) * breath
+        amp = np.linspace(0.04 + 0.1 * h0, 0.04 + 0.1 * self._height, n) * breath * (0.35 + 0.65 * duck)
         L += self.wind_loop[i] * amp
         R += self.wind_loop[(i + ln // 2) % ln] * amp
         # the hum of the silk under him (under his feet: both ears)
@@ -397,7 +400,7 @@ class Synth:
             R += x
         # the score: in the middle of everything
         if self.music_gain > 0.001:
-            x = self.music.render(n) * self.music_gain
+            x = self.music.render(n) * self.music_gain * duck
             L += x
             R += x
         # the one-offs, each where it is

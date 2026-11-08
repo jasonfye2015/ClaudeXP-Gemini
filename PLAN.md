@@ -425,3 +425,7 @@ twice or half the light). Also in Options and the notebook's Options.
 breathes and turns a little, and tilts as she weighs what he's just said (Mother.judge), coming back. The scene's
 camera looks a little lower, so her mouth is in the frame.
 
+9f - silence, when she's close (done). Within four and a half of him, outside her scenes (and when she's there behind
+him), the music falls away, and most of the wind - fast going, slow coming back - and what's left is his breathing and
+his heart, loud (engine/sound.py duck; ui/audio.py).
+

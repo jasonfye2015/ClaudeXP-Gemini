@@ -125,6 +125,11 @@ class DenAudio:
                            if v is not None and v.active else 0.0)
             s.set(pitch=moods.hum_pitch() * waver)
         her = getattr(night, "her", None)
+        close = her is not None and d is None and not night.quiet and math.dist(her.at() if her.staged is None
+                                                                                 else her.staged[0], night.eye) < 4.5
+        s.duck = 0.0 if close else 1.0                              # (she's close: silence, but him)
+        if close:
+            s.set(breath=0.8)
         if her is not None and d is None:
             near = max(0.0, 1.0 - math.dist(her.at(), night.eye) / 14.0)
             s.set(her=(0.15 + 0.85 * her.moving) * near ** 1.5, her_pan=self.pan(night, her.at()))
@@ -134,6 +139,8 @@ class DenAudio:
         if b and b[-1] != self._beat:
             self._beat = b[-1]
             loud = max(0.0, min(1.0, (night.body.bpm - 92) / 50.0)) if d is None else 0.85
+            if close:
+                loud = max(loud, 0.75)                               # (his heart, in the silence)
             if self.heartbeat and loud > 0.05:
                 s.play("beat", loud)
         for e in events:

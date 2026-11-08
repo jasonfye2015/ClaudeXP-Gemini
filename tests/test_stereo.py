@@ -49,3 +49,14 @@ def test_where_a_sound_is_heard():
     rx, rz = np.cos(n.yaw), np.sin(n.yaw)
     assert heard_pan(n, (ex + rx * 3, ey, ez + rz * 3)) > 0.9          # (to his right)
     assert heard_pan(n, (ex - rx * 3, ey, ez - rz * 3)) < -0.9         # (to his left)
+
+
+def test_silence_when_she_is_close():
+    s = Synth()
+    s.music.set("crown", fascination=80)
+    s.music_gain = 0.7
+    loud = np.sqrt((np.concatenate([s.render(1102) for _ in range(60)]) ** 2).mean())
+    s.duck = 0.0                                   # (she's close)
+    np.concatenate([s.render(1102) for _ in range(60)])
+    hushed = np.sqrt((np.concatenate([s.render(1102) for _ in range(30)]) ** 2).mean())
+    assert hushed < loud * 0.5
