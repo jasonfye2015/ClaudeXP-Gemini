@@ -506,6 +506,7 @@ class Renderer:
         self.dress_prog.use()
         self.dress.draw()
         self.cocoon_mesh.draw()
+        self._finds(night, now)
         self.fung.use()
         self.fung.float("uTime", now)
         self.fung.vec("uTint", self._tint(night))
@@ -666,6 +667,51 @@ class Renderer:
         cur = getattr(self, "_tint_now", want)
         self._tint_now = cur + (want - cur) * 0.02                # (slowly: never a switch)
         return self._tint_now
+
+    def _finds(self, night, now):
+        """The loose things lying in her house: a silver ring in the mud, a mouse, a honeycomb on the larder wall."""
+        finds = getattr(night, "finds", None)
+        if finds is None:
+            return
+        from . import cocoonmesh as C
+        out = []
+        up = (0.0, 1.0, 0.0)
+        if "ring" not in night.taken:
+            cx, cy, cz = finds.where("ring", night)
+            for k in range(10):
+                a = k / 10 * math.tau
+                d = (math.cos(a), 0.0, math.sin(a))
+                C._box(out, (cx + d[0] * 0.03, cy + 0.004, cz + d[2] * 0.03), (0.01, 0.004, 0.005),
+                       (np.cross(up, d), up, d), (0.75, 0.76, 0.8))
+        if "mouse" not in night.taken:
+            mx, my, mz = finds.mouse(night.time)
+            hx, _hy, hz = finds.mouse(night.time + 0.1)
+            f = np.array((hx - mx, 0.0, hz - mz))
+            f = f / (float(np.linalg.norm(f)) or 1.0)
+            r = np.cross(up, f)
+            C._blob(out, (mx, my + 0.03, mz), (0.045, 0.028, 0.03), (f, up, r), (0.28, 0.25, 0.23), seg=5)
+            C._blob(out, (mx + f[0] * 0.05, my + 0.035, mz + f[2] * 0.05), (0.022, 0.018, 0.018), (f, up, r),
+                    (0.3, 0.27, 0.25), seg=4)
+            for k in range(5):                                    # (its tail, flicking)
+                t = 0.05 + k * 0.025
+                C._box(out, (mx - f[0] * t + r[0] * 0.01 * math.sin(now * 9 + k), my + 0.015,
+                             mz - f[2] * t + r[2] * 0.01 * math.sin(now * 9 + k)), (0.013, 0.003, 0.003),
+                       (f, up, r), (0.45, 0.36, 0.34))
+        if "honey" not in night.taken:
+            hx, hy, hz = finds.where("honey", night)
+            a = math.atan2(hz, hx)
+            n_in = np.array((-math.cos(a), 0.0, -math.sin(a)))
+            side = np.array((-math.sin(a), 0.0, math.cos(a)))
+            for i in range(-2, 3):
+                for j in range(-1, 2):
+                    c = np.array((hx, hy, hz)) + side * (i * 0.05 + (0.025 if j % 2 else 0)) + np.array((0, j * 0.045, 0))
+                    C._box(out, c, (0.022, 0.02, 0.02), (side, up, n_in), (0.72, 0.42, 0.08))
+        if not out:
+            return
+        if not hasattr(self, "find_mesh"):
+            self.find_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
+        self.find_mesh.upload(np.array(out, np.float32))
+        self.find_mesh.draw()
 
     def _falling(self, sky, now, eye, right, verts):
         """Rain (streaks) or snow (flakes), falling through the hollow about him - in through the broken crown."""
@@ -935,6 +981,20 @@ class Renderer:
         sky = getattr(night, "sky", None)
         if sky is not None and sky.weather in ("rain", "storm", "snow") and sky.strength > 0.02:
             self._falling(sky, now, eye, right, verts)
+        finds = getattr(night, "finds", None)                  # (the ring's glint; moths about the fungus; honey's glow)
+        if finds is not None:
+            if "ring" not in night.taken:
+                rx, ry, rz = finds.where("ring", night)
+                bill((rx, ry + 0.02, rz), 0.05, (0.9, 0.92, 1.0), 0.35 + 0.35 * max(0.0, math.sin(now * 2.7)))
+            if "moths" not in night.taken:
+                mx, my, mz = finds.where("moths", night)
+                for k in range(7):
+                    a = now * (1.3 + k * 0.17) + k * 2.1
+                    p = (mx + math.cos(a) * 0.3, my + 0.15 * math.sin(now * 3.1 + k), mz + math.sin(a) * 0.3)
+                    bill(p, 0.02 + 0.01 * abs(math.sin(now * 14 + k)), (0.85, 0.8, 0.68), 0.7)
+            if "honey" not in night.taken:
+                hx, hy, hz = finds.where("honey", night)
+                bill((hx, hy, hz), 0.35, (0.9, 0.55, 0.15), 0.18)
         cocoons = getattr(night, "cocoons", None)             # (a guest split open: silk torn loose, drifting)
         for sid, t0 in (cocoons.burst_at.items() if cocoons is not None else ()):
             age = night.time - t0

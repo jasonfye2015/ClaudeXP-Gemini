@@ -41,7 +41,10 @@ def test_look_closer_and_they_pour_out():
     assert ("cocoon", s["id"], s["pos"], True) in n.events
     assert len(n.brood.pouring) == 34 and len(n.crawlers.runs) == 2 and n.moods.suspicion > before
     n.events.clear()
-    n.examine()                                                               # (again: nothing more in him)
+    n.examine()                                                               # (again: what he brought, beneath him)
+    assert n.events == [("take", "string")] and n.pack == ["string"]
+    n.events.clear()
+    n.examine()                                                               # (and again: nothing more)
     assert n.events == [("cocoon", s["id"], s["pos"], False)]
     for _ in range(int(5 / 0.05)):
         n.brood.step(0.05, n.eye)

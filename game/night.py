@@ -25,6 +25,7 @@ from .lantern import Lantern
 from .moods import Moods
 from .acts import Acts
 from .cocoons import Cocoons
+from .offerings import Finds
 from .ending import Ending
 from .mother import Mother
 from .sky import Sky
@@ -86,6 +87,8 @@ class Night:
         self.moved = 0.0
         self.her = Mother(self.tree, random.Random(self.rng.random()))     # (Ysmeine: on the wall, in the dark)
         self.cocoons = Cocoons(self.tree)                                   # (her guests, wrapped)
+        self.finds = Finds(self.tree)                                       # (things lying in her house: offerings)
+        self.pack, self.taken, self.given = [], set(), []                   # (what he carries; took; gave her)
         self.moods = Moods()                                                # (how she regards him: hidden)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
@@ -218,10 +221,26 @@ class Night:
         if gone is not None:
             self.collapse(gone)
 
+    KEEPSAKES = {"orrin": "string", "maudren": "journal"}
+
+    def take(self, item):
+        if item not in self.taken:
+            self.taken.add(item)
+            self.pack.append(item)
+            self.events.append(("take", item))
+
     def examine(self):
-        """F: a closer look at the wrapped thing before him. If it's whole, it splits - and they pour out of it."""
+        """F: a closer look at the wrapped thing before him (if it's whole, it splits - and they pour out of it); or,
+        opened already, what lies under him; or the thing before him on the floor or the wall - taken."""
         spot = self.cocoons.near(self)
+        keep = self.KEEPSAKES.get(spot["id"]) if spot is not None else None
+        if spot is not None and spot["id"] in self.cocoons.burst and keep and keep not in self.taken:
+            self.take(keep)
+            return spot
         if spot is None:
+            item = self.finds.near(self)
+            if item is not None:
+                self.take(item)
             return None
         for e in self.cocoons.examine(self, spot):
             self.events.append(e)

@@ -259,6 +259,15 @@ thought of - Cast out; held dear and staying - Bound; held dear, still fascinati
 The gift; otherwise Dawn. game/ending.py: the dawn light down into the den, her last words (her hand, her voice), the
 dark, the line, "Ending n of 7: ..." (Supper 1, Cast out 2, Dawn 3, Bound 4, The gift 5, The hidden 6, Fire 7).
 
+Phase 4b - offerings (done). game/offerings.py: a silver ring in the mud of the root tunnel, a live mouse scurrying
+where the roots open into the hollow, moths about the low fungus, a comb of honey on her larder wall (her own), Orrin's
+lute string and Maudren's journal under them once opened (the journal: a page of his notes - a clue to her true name).
+F takes; he carries them (shown low left); in her scenes "Offer her something..." opens his pack. Worth to her by her
+mood and the hour: moths delight early, are only kind late, insult her starving; a mouse delights her hungry, insults
+her fed ("I am not a cat"); the ring delights if she thinks well of him, else reads as a bribe; Orrin's string touches
+her fascinated, else he's a thief like Wick; the journal softens her doubt; her own honey amuses her fascinated, else
+he stole it. Script: her answer for that gift and worth, and the talk goes on; a model: told how it lands.
+
 ## Phase 5 - music, sound, polish
 
 A new style on the ClaudeRPG-style sound engine; the den's sounds; text only for her voice (unless a fitting local
