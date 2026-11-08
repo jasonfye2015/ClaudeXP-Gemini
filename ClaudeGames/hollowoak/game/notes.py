@@ -73,6 +73,11 @@ PAGES = {
     "antidote": ("Her ways", "The phial",
                  "A small stoppered phial in her larder, behind her stores, green as the fungus-light. It takes her "
                  "venom out. She keeps it for the ones she means to keep."),
+    "above": ("Her ways", "Above me",
+              "Something crossed the wall above me, fast, many-legged, the way water runs downhill. I didn't see her "
+              "face. I didn't need to."),
+    "behind": ("Her ways", "Behind me",
+               "I turned round, and she was there - close enough to touch. Then the light stuttered, and she wasn't."),
     "hunt": ("Her ways", "When she hunts",
              "When her patience is gone, or her hunger too much, she stops talking and comes straight for me, light or "
              "no light. The middle of the floor is the only place she cannot reach."),
@@ -144,6 +149,8 @@ def unlock_for(event, night=None):
         return ["small_ones"]
     if kind == "smoulder":
         return ["smoulder"]
+    if kind == "sight":
+        return {"cross": ["above"], "behind": ["behind"]}.get(event[1], [])
     if kind == "afflict":
         return {"pant": ["me_pant"], "bleed": ["me_bleed"], "bloodied": ["me_bloodied"], "vomit": ["me_vomit"],
                 "foam": ["me_foam"], "sway": ["me_sway"], "crawl": ["me_crawl"], "prey": ["me_crawl"],

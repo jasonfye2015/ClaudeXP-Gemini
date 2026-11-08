@@ -859,6 +859,10 @@ class Renderer:
             for b in range(5):                                  # (all her silk is one thing: the rest feel it too)
                 if b != web_on.group:
                     target[b] = max(target[b], min(1.0, tremor * 0.12))
+        sg = getattr(night, "sightings", None)
+        if sg is not None and sg.thrum > 0.02:                  # (her web, shivering as she moves near him)
+            target = np.maximum(target, np.array([0.5 * sg.thrum] * 5 + [0.2 * sg.thrum] * (W.GROUPS - 5),
+                                                 np.float32))
         self.amp += (target - self.amp) * 0.15
         self.silk_prog.use()
         self.silk_prog.float("uTime", now)

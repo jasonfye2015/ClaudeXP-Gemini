@@ -55,6 +55,8 @@ class Mother:
         self.strike_t = -1.0
         self.staged = None                   # (in a scene: (position, facing) - held there, off the wall)
         self.shift = 0.0                     # (a leg shifting, in a scene)
+        self.cross_to = None                 # (crossing the wall above him: where to - game/sightings.py)
+        self.quick = False                   # (a glimpse cut short: legs drawn back)
 
     # ---- where she is --------------------------------------------------------------------------------------------
     def stage(self, pos, face):
@@ -148,6 +150,19 @@ class Mother:
             self.alpha += (1.0 - self.alpha) * min(1.0, dt * 2)
             self.moving = 0.0
             return out
+        if self.state == "cross":                       # (across the wall above him: fast, and on into the dark)
+            r = self.tree.base_r(self.th, self.y)
+            dth = _wrap(self.cross_to - self.th)
+            step = FLEE * 1.3 * dt / max(1.0, r)
+            if abs(dth) <= step or self.t >= self.until:
+                self.state, self.until = "withdraw", self.t + 3.0
+            else:
+                self.th += math.copysign(step, dth)
+            self.clip, self.moving = "walk", 1.0
+            self.anim += dt * FLEE * 1.3 / SIZE * 3.0
+            self.alpha += (0.8 - self.alpha) * min(1.0, dt * 3)
+            self.lean = max(0.0, self.lean - dt)
+            return out
         ex, ey, ez = night.eye
         me = self.at()
         d = math.dist(me, night.eye)
@@ -178,6 +193,8 @@ class Mother:
         if self.state == "glimpse" and self.lean > 0.9 and not self.leaned:
             self.leaned = True
             self.until = self.t + rng.uniform(2.5, 4.0) * (0.7 + 0.8 * fasc)   # (a long moment, leaning out; then gone)
+            if self.quick:                                                  # (legs at the edge - and drawn back)
+                self.until, self.quick = self.t + 0.5, False
         if self.state in ("near", "glimpse") and self.t >= self.until:
             self.state, self.until = "withdraw", self.t + rng.uniform(3, 5)
             out.append(("her", "withdraw"))
