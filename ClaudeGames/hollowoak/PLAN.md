@@ -414,3 +414,8 @@ near enough the wall for the lantern to catch her: Mother's "cross"); legs at th
 minutes - she's there, close, facing him (staged on the floor before him), his heart leaping; the lantern stutters, and
 she isn't. While she moves near him her web thrums: the silk shivers, a low hum. Two pages: "Above me", "Behind me".
 
+9d - before the dark (done). ui/pages.py Brightness: the first time Begin is pressed, a black screen with three small
+spiders at the den's own darks (about 4, 9 and 20 of 255, as made) and a slider: until the middle is barely there.
+The setting (0..100, 50 as made) is the den's exposure before its gamma (engine/render.py exposure: every 25 steps
+twice or half the light). Also in Options and the notebook's Options.
+

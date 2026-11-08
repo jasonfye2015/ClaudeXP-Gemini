@@ -130,8 +130,22 @@ class Shell(QWidget):
         self.set_panel(NightMenu(self))
         self.view.ensure_audio()                             # (and her voice, readied while the player reads)
 
+    def show_brightness(self, then=None):
+        """Three marks on the dark: the brightness set, as the player's own screen shows the den."""
+        from .pages import Brightness
+
+        def done():
+            self.records.options["calibrated"] = True
+            self.records.save()
+            (then or self.show_menu)()
+        self.set_panel(Brightness(self, done))
+        self.panel.setFocus()
+
     def begin_clicked(self):
-        """Begin the night: the very first time, the first night is offered."""
+        """Begin the night: the very first time, the brightness first, then the first night is offered."""
+        if not self.records.options.get("calibrated"):
+            self.show_brightness(self.begin_clicked)
+            return
         if self.records.totals.get("nights", 0) == 0 and not self.records.found and not getattr(self, "offered", False):
             self.offered = True
             self.set_panel(Panel(self, "Your first night?", "The oak can be learned - or gone into alone.",

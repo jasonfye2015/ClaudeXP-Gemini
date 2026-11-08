@@ -23,7 +23,7 @@ INK, FADED, RULE = QColor(52, 36, 26), QColor(120, 98, 76), QColor(150, 130, 100
 CONTENTS = (("go", "Go on"), ("notes", "Notes on her"), ("letter", "Her letter"), ("unlocks", "What's been found"),
             ("options", "Options"), ("body", "What the night does"), ("save", "Save here"),
             ("leave", "Back to the title"))
-SLIDERS = (("Volume", "volume"), ("Music", "music"), ("Looking about", "look"), ("Her words, how fast", "text_speed"),
+SLIDERS = (("Brightness", "brightness"), ("Volume", "volume"), ("Music", "music"), ("Looking about", "look"), ("Her words, how fast", "text_speed"),
            ("Her words, their size", "her_size"), ("Your words, their size", "his_size"))
 RANGE = {"her_size": (60, 160), "his_size": (60, 160)}            # (the rest: 0 to 100)
 TOGGLES = (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"), ("The orbs", "orbs"),

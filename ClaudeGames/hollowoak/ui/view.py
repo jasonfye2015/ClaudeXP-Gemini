@@ -196,6 +196,7 @@ class GameView(QOpenGLWidget):
             n.afflict.opts[k] = bool(o.get(k, True))
         n.steady = bool(self.shell.records.options.get("steady", False))
         n.shadows = bool(self.shell.records.options.get("shadows", True))
+        n.brightness = self.shell.records.options.get("brightness", 50)
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
             if self.audio is not None:

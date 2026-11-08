@@ -85,7 +85,8 @@ vec3 fogged(vec3 p, vec3 col) {
     float f = 1.0 - exp(-pow((uFogDensity + low) * dist, 1.25));
     return mix(col, uFog, clamp(f, 0.0, 1.0));
 }
-vec4 outColour(vec3 c) { return vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), 1.0); }
+uniform float uExposure;                 // (the player's brightness: 1.0 as made)
+vec4 outColour(vec3 c) { return vec4(pow(max(c * uExposure, vec3(0.0)), vec3(1.0 / 2.2)), 1.0); }
 """ % {"TOP": f"{T.TOP:.1f}"}
 
 SHADOW_VS = """#version 330 core
@@ -422,6 +423,11 @@ void main() {
 }"""
 
 
+def exposure(brightness):
+    """The brightness setting (0..100, 50 as made) as a multiplier on the den's light, before its gamma."""
+    return 2.0 ** ((max(0.0, min(100.0, brightness)) - 50.0) / 25.0)     # (every 25: twice, or half, the light)
+
+
 class Renderer:
     def __init__(self):
         self.tree = T.Tree()
@@ -580,6 +586,7 @@ class Renderer:
         shadow = self._shadow_pass(night, lights, w, h)
         for prog in (self.world, self.fung, self.dress_prog, self.spider_prog, self.silk_prog):
             prog.use()
+            prog.float("uExposure", exposure(getattr(night, "brightness", 50)))
             prog.int("uShadowOn", 1 if shadow else 0)
             prog.int("uShadow", 3)
             if shadow:

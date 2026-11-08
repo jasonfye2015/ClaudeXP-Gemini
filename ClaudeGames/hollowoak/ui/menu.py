@@ -392,6 +392,7 @@ class NightMenu(QWidget):
             s.valueChanged.connect(lambda v, key=key: self._set(key, v))
             lay.addWidget(s)
             lay.addSpacing(10)
+        slider("Brightness (50 as made)", "brightness")
         slider("Volume", "volume")
         slider("Music", "music")
         slider("Looking about (mouse speed)", "look")
