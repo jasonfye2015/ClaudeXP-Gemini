@@ -77,6 +77,8 @@ class DenAudio:
                 s.play("skitter", 0.9)
             elif kind == "swarm" and e[1] == "up":
                 s.play("skitter", 0.25)
+            elif kind == "swipe":
+                s.play("whoosh")
             elif kind == "skitter":
                 s.play("skitter", max(0.0, 1.0 - e[2] / 7.0))
             elif kind == "lantern" and e[1] == "shake":
