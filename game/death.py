@@ -1,4 +1,4 @@
-"""Supper: when health, sanity or consciousness gives out. He collapses where he stands; the lantern falls and breaks
+"""Supper: when the poison reaches his health, or stupor his sanity (or either runs dry). He collapses where he stands; the lantern falls and breaks
 and its flame dies on the ground. They come - onto him, over his face, laying silk across his eyes until he can hardly
 see. Then he's dragged, in pulls, to the middle of the hollow's floor; turned, lifted by the feet, and drawn up, upside
 down, half the height of the trunk, swinging. Then black - and, small, "Ending 1 of 6: Supper".

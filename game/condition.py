@@ -1,40 +1,49 @@
-"""How Claude himself is holding up - his own state, shown in the two orbs (her moods stay hidden, in the den):
+"""How Claude himself is holding up - his own state, shown in the two orbs (her moods stay hidden, in the den). Each orb
+holds two fluids: the one he lives on, and the one rising under it from the bottom. When the rising one reaches the
+other, he's done - so the poison in him is a ceiling coming down on his health, and stupor on his sanity.
 
-    health          falls onto the wood hurt (into her silk, far less); poison eats at it
-    poison          bites - one he walked into, one running over his face, the babies on his lantern in the dark;
-                    it wears off, slowly
-    sanity          the dark (the lantern out - and worse with them all over it), spiders on his face, her eyes on
-                    him, slipping, falling into her web; steady light brings it back
-    consciousness   heavy poison, a mind giving way, a hard knock; it comes back when those ease
+    health      red. Falls onto the wood hurt (into her silk, far less); poison eats at it slowly
+    poison      green, rising in the same orb: bites - one he walked into, one running over his face, the babies on his
+                lantern in the dark; it wears off, slowly
+    sanity      blue. The dark (the lantern out - and worse with them all over it), spiders on his face, her eyes on him,
+                slipping, falling into her web; steady light brings it back
+    stupor      green, rising in the sanity orb: heavy poison, a mind giving way, a hard knock; it clears when those ease
 
-Any of health, sanity or consciousness gone, and he collapses. Plain Python: the tests run it.
+He collapses when poison reaches his health, or stupor his sanity (or either runs dry). Plain Python: the tests run it.
 
     body = Condition(rng)
     body.step(dt, night, events)  -> events: ("bitten", where), ("hurt", amount)
-    body.critical()               -> the names of those in danger now
-    body.spent()                  -> what gave out ("health", "sanity", "conscious"), or None
+    body.critical()               -> the names of those in danger now (for the edge of the view)
+    body.spent()                  -> what did for him ("health", "poison", "sanity", "stupor"), or None
 """
 import math
 
-CRITICAL = {"health": lambda v: v < 25, "poison": lambda v: v > 70, "sanity": lambda v: v < 25,
-            "conscious": lambda v: v < 25}
+MARGIN = 20.0                   # (closer than this, the rising fluid to the other: danger)
 
 
 class Condition:
     def __init__(self, rng):
         self.rng = rng
-        self.health, self.poison, self.sanity, self.conscious = 100.0, 0.0, 100.0, 100.0
+        self.health, self.poison, self.sanity, self.stupor = 100.0, 0.0, 100.0, 0.0
 
     def values(self):
-        return {"health": self.health, "poison": self.poison, "sanity": self.sanity, "conscious": self.conscious}
+        return {"health": self.health, "poison": self.poison, "sanity": self.sanity, "stupor": self.stupor}
 
     def critical(self):
-        return [k for k, v in self.values().items() if CRITICAL[k](v)]
+        out = []
+        for life, rising in (("health", "poison"), ("sanity", "stupor")):
+            lv, rv = getattr(self, life), getattr(self, rising)
+            if lv - rv < MARGIN:
+                out.append(rising if rv >= lv * 0.5 else life)        # (whichever is doing it)
+        return out
 
     def spent(self):
-        for k in ("health", "conscious", "sanity"):
-            if getattr(self, k) < 0.5:                                  # (as good as gone)
-                return k
+        for life, rising in (("health", "poison"), ("sanity", "stupor")):
+            lv, rv = getattr(self, life), getattr(self, rising)
+            if lv < 0.5:
+                return life
+            if rv > 0.5 and rv >= lv:                                  # (it's reached him)
+                return rising
         return None
 
     def _bite(self, out, where, venom, hurt=2.0):
@@ -49,13 +58,12 @@ class Condition:
         for e in events:
             kind = e[0]
             if kind == "fall":                                          # (the wood is hard; her silk gives)
-                speed = e[1]
-                dmg = max(0.0, speed - 7.0) * 6.0 * (0.25 if night.on is not None else 1.0)
+                dmg = max(0.0, e[1] - 7.0) * 6.0 * (0.25 if night.on is not None else 1.0)
                 if dmg > 0:
                     self.health -= dmg
                     out.append(("hurt", dmg))
                     if dmg > 20:
-                        self.conscious -= dmg * 0.5                     # (a knock to the head)
+                        self.stupor += dmg * 0.5                        # (a knock to the head)
             elif kind == "dangler" and e[1] == "face":
                 self.sanity -= 6
                 calm = False
@@ -79,23 +87,21 @@ class Condition:
             self.sanity -= (0.7 + 0.12 * on_lantern) * dt
             calm = False
         watched = night.eye_alpha if night.eyes() else 0.0
-        self.sanity -= 0.05 * watched * dt                               # (being watched: a slow creep)
+        self.sanity -= 0.05 * watched * dt                             # (being watched: a slow creep)
         if calm and not dark and night.lamp.level > 0.4 and watched < 0.3:
             self.sanity += 0.3 * dt
-        # the poison: eating at him, wearing off
-        self.health -= self.poison * 0.015 * dt
+        # the poison: eating at him a little, wearing off slowly
+        self.health -= self.poison * 0.006 * dt
         self.poison = max(0.0, self.poison - 0.2 * dt)
         if self.poison < 5:
             self.health += 0.1 * dt
-        drop = max(0.0, self.poison - 40) * 0.025 + (0.3 if self.sanity < 20 else 0.0)
-        if drop > 0:
-            self.conscious -= drop * dt
+        rise = max(0.0, self.poison - 40) * 0.025 + (0.3 if self.sanity < 30 else 0.0)
+        if rise > 0:
+            self.stupor += rise * dt
         elif self.poison < 40:
-            self.conscious += 0.6 * dt
-        self.health = max(0.0, min(100.0, self.health))
-        self.poison = max(0.0, min(100.0, self.poison))
-        self.sanity = max(0.0, min(100.0, self.sanity))
-        self.conscious = max(0.0, min(100.0, self.conscious))
+            self.stupor -= 0.6 * dt
+        for k in ("health", "poison", "sanity", "stupor"):
+            setattr(self, k, max(0.0, min(100.0, getattr(self, k))))
         return out
 
 

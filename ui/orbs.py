@@ -1,6 +1,7 @@
-"""Claude's own state, drawn over the view: two glass orbs at the bottom corners - health (red) with poison (green)
-round its rim on the left, sanity (blue) with consciousness (green) round its rim on the right - and their numbers
-under them in their colours. When one is in danger, the edge of the view beats in its colour.
+"""Claude's own state, drawn over the view: two glass orbs at the bottom corners, each holding two fluids - health
+(red) on the left with poison (green) rising under it from the bottom, sanity (blue) on the right with stupor (green)
+rising under it - and their numbers under them in their colours. When the green comes near the other, the edge of the
+view beats; when it reaches it, he's done.
 
 And the end of him: the silk laid across his eyes, the dark coming down, and the ending's line."""
 import math
@@ -12,10 +13,38 @@ from ..game.condition import pulse
 
 SERIF = "Georgia"
 EDGE = {"health": QColor(210, 25, 20), "poison": QColor(70, 220, 60), "sanity": QColor(40, 90, 240),
-        "conscious": QColor(130, 235, 160)}
+        "stupor": QColor(130, 235, 160)}
 
 
-def _orb(p, cx, cy, r, level, deep, bright, ring, ring_col, t, seed):
+def _fluid(p, cx, cy, r, level, deep, bright, t, seed, alpha=255):
+    """A fluid in the orb up to `level` (0..1), its surface moving."""
+    top = cy + r - 2 * r * max(0.0, min(1.0, level))
+    surf = QPainterPath()
+    surf.moveTo(cx - r, cy + r + 2)
+    for k in range(25):
+        x = cx - r + 2 * r * k / 24
+        y = top + 2.2 * math.sin(t * 2.1 + k * 0.55 + seed) + 1.4 * math.sin(t * 3.3 - k * 0.9 + seed)
+        surf.lineTo(x, y)
+    surf.lineTo(cx + r, cy + r + 2)
+    surf.closeSubpath()
+    lg = QLinearGradient(0, top, 0, cy + r)
+    lg.setColorAt(0, QColor(bright.red(), bright.green(), bright.blue(), alpha))
+    lg.setColorAt(1, QColor(deep.red(), deep.green(), deep.blue(), alpha))
+    p.setBrush(lg)
+    p.drawPath(surf)
+    if level > 0.01:                                       # (a bright line where its surface is)
+        edge = QPainterPath()
+        for k in range(25):
+            x = cx - r + 2 * r * k / 24
+            y = top + 2.2 * math.sin(t * 2.1 + k * 0.55 + seed) + 1.4 * math.sin(t * 3.3 - k * 0.9 + seed)
+            edge.lineTo(x, y) if k else edge.moveTo(x, y)
+        p.setPen(QPen(QColor(min(255, bright.red() + 60), min(255, bright.green() + 60), min(255, bright.blue() + 60), 150), 1.2))
+        p.setBrush(Qt.NoBrush)
+        p.drawPath(edge)
+        p.setPen(Qt.NoPen)
+
+
+def _orb(p, cx, cy, r, level, deep, bright, rising, rdeep, rbright, t, seed):
     # the iron round it
     g = QRadialGradient(QPointF(cx - r * 0.3, cy - r * 0.4), r * 1.5)
     g.setColorAt(0, QColor(92, 80, 66))
@@ -35,20 +64,9 @@ def _orb(p, cx, cy, r, level, deep, bright, ring, ring_col, t, seed):
     clip.addEllipse(QPointF(cx, cy), r - 1, r - 1)
     p.save()
     p.setClipPath(clip)
-    top = cy + r - 2 * r * max(0.0, min(1.0, level))
-    surf = QPainterPath()
-    surf.moveTo(cx - r, cy + r + 2)
-    for k in range(25):
-        x = cx - r + 2 * r * k / 24
-        y = top + 2.2 * math.sin(t * 2.1 + k * 0.55 + seed) + 1.4 * math.sin(t * 3.3 - k * 0.9)
-        surf.lineTo(x, y)
-    surf.lineTo(cx + r, cy + r + 2)
-    surf.closeSubpath()
-    lg = QLinearGradient(0, top, 0, cy + r)
-    lg.setColorAt(0, bright)
-    lg.setColorAt(1, deep)
-    p.setBrush(lg)
-    p.drawPath(surf)
+    _fluid(p, cx, cy, r, level, deep, bright, t, seed)
+    if rising > 0.004:                                     # (the green, rising under it: where they meet, he's done)
+        _fluid(p, cx, cy, r, rising, rdeep, rbright, t * 0.8, seed + 2.7, 235)
     shade = QRadialGradient(QPointF(cx + r * 0.25, cy + r * 0.2), r * 1.1)          # (round: darker at its edge)
     shade.setColorAt(0, QColor(0, 0, 0, 0))
     shade.setColorAt(1, QColor(0, 0, 0, 150))
@@ -61,14 +79,6 @@ def _orb(p, cx, cy, r, level, deep, bright, ring, ring_col, t, seed):
     hl.setColorAt(1, QColor(255, 255, 255, 0))
     p.setBrush(hl)
     p.drawEllipse(QPointF(cx - r * 0.3, cy - r * 0.4), r * 0.55, r * 0.4)
-    # the second measure, round the rim
-    rect = QRectF(cx - r - 4, cy - r - 4, 2 * r + 8, 2 * r + 8)
-    p.setBrush(Qt.NoBrush)
-    p.setPen(QPen(QColor(0, 0, 0, 160), 5, Qt.SolidLine, Qt.FlatCap))
-    p.drawArc(rect, 0, 360 * 16)
-    if ring > 0.005:
-        p.setPen(QPen(ring_col, 4, Qt.SolidLine, Qt.RoundCap))
-        p.drawArc(rect, -90 * 16, -int(360 * 16 * max(0.0, min(1.0, ring))))         # (from the bottom, round)
 
 
 def draw_orbs(p, W, H, body, t, alpha=1.0):
@@ -82,13 +92,13 @@ def draw_orbs(p, W, H, body, t, alpha=1.0):
     v = body.values()
     left, right = m + 8 + r, W - m - 8 - r
     _orb(p, left, cy, r, v["health"] / 100, QColor(70, 4, 6), QColor(215, 30, 26), v["poison"] / 100,
-         QColor(80, 225, 60), t, 0.0)
-    _orb(p, right, cy, r, v["sanity"] / 100, QColor(6, 14, 70), QColor(45, 100, 235), v["conscious"] / 100,
-         QColor(120, 230, 150), t, 2.0)
+         QColor(14, 70, 10), QColor(90, 225, 55), t, 0.0)
+    _orb(p, right, cy, r, v["sanity"] / 100, QColor(6, 14, 70), QColor(45, 100, 235), v["stupor"] / 100,
+         QColor(20, 75, 40), QColor(120, 225, 140), t, 2.0)
     f = QFont(SERIF, 11)
     p.setFont(f)
     for x, lines in ((left, (("Health", v["health"], QColor(225, 70, 60)), ("Poison", v["poison"], QColor(110, 220, 90)))),
-                     (right, (("Sanity", v["sanity"], QColor(95, 140, 245)), ("Consciousness", v["conscious"], QColor(130, 225, 155))))):
+                     (right, (("Sanity", v["sanity"], QColor(95, 140, 245)), ("Stupor", v["stupor"], QColor(130, 225, 155))))):
         for k, (name, val, col) in enumerate(lines):
             p.setPen(QColor(0, 0, 0, 200))
             box = QRectF(x - 90, cy + r + 12 + k * 17, 180, 18)

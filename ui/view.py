@@ -1,6 +1,6 @@
 """The view: the night drawn in first person, and over it as little as possible - a place's name when he first comes
 into it, the fade in from black, a word about the mouse, and his own state in two orbs (ui/orbs.py): health and
-poison, sanity and consciousness. What she thinks of him has no meter: that will show in the den itself.
+poison, sanity and stupor. What she thinks of him has no meter: that will show in the den itself.
 
 Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
 lantern when it gutters out. On a strand, A and D lean against its sway.
