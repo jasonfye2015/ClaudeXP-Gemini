@@ -15,7 +15,7 @@
     synth = Synth()
     synth.set(hum=0..1, height=0..1)     the steady parts
     synth.play("creak", gain)            the one-offs: creak, slip, catch, skitter, rattle, puff, thud
-    synth.render(n)                      -> float32 (n,), -1..1
+    synth.render(n)                      -> float32 (n, 2), left and right, -1..1
 """
 import math
 
@@ -194,6 +194,70 @@ def _scrape(rng, rate=RATE):
     return y / (np.abs(y).max() or 1.0)
 
 
+def heard_pan(night, p):
+    """Where p is, heard: -1 hard left of him .. 1 hard right (a little less, behind him)."""
+    if p is None:
+        return 0.0
+    ex, _ey, ez = night.eye
+    dx, dz = p[0] - ex, p[2] - ez
+    d = math.hypot(dx, dz) or 1.0
+    rx, rz = math.cos(night.yaw), math.sin(night.yaw)
+    fx, fz = math.sin(night.yaw), -math.cos(night.yaw)
+    side = (dx * rx + dz * rz) / d
+    ahead = (dx * fx + dz * fz) / d
+    return side * (1.0 if ahead > -0.2 else 0.8)
+
+
+def _pans(pan):
+    """Equal-power: pan -1 (all left) .. 1 (all right) -> (left, right) gains."""
+    a = (max(-1.0, min(1.0, pan)) + 1.0) * math.pi / 4
+    return math.cos(a) * 1.41421356 * 0.75 + 0.25, math.sin(a) * 1.41421356 * 0.75 + 0.25
+
+
+class _Comb:
+    """A feedback comb, its delay longer than a block: so a block is one numpy step."""
+
+    def __init__(self, delay):
+        self.ring = np.zeros(delay)
+        self.at = 0
+
+    def run(self, x, g):
+        d = len(self.ring)
+        out = np.empty(len(x))
+        for j in range(0, len(x), d):             # (blocks longer than the delay: in pieces)
+            seg = x[j:j + d]
+            idx = (self.at + np.arange(len(seg))) % d
+            past = self.ring[idx]
+            self.ring[idx] = seg + g * past
+            self.at = (self.at + len(seg)) % d
+            out[j:j + len(seg)] = past
+        return out
+
+
+ROOMS = {"hollow": (0.32, 0.78), "tunnel": (0.12, 0.45), "crown": (0.08, 0.55), "chamber": (0.18, 0.6)}
+
+
+class _Reverb:
+    """The space he's in: four combs an ear, their echoes darker as they go (wet, feedback by room)."""
+
+    def __init__(self):
+        self.left = [_Comb(d) for d in (1163, 1327, 1489, 1613)]
+        self.right = [_Comb(d) for d in (1201, 1361, 1523, 1657)]
+        self.wet, self.fb = ROOMS["hollow"]
+        self.want = ROOMS["hollow"]
+        self._lp = np.zeros(2)
+
+    def room(self, name):
+        self.want = ROOMS.get(name, ROOMS["hollow"])
+
+    def run(self, send):
+        self.wet += (self.want[0] - self.wet) * 0.05
+        self.fb += (self.want[1] - self.fb) * 0.05
+        l = sum(c.run(send, self.fb) for c in self.left) * (self.wet / 4)
+        r = sum(c.run(send, self.fb) for c in self.right) * (self.wet / 4)
+        return l, r
+
+
 class Synth:
     def __init__(self, rate=RATE, seed=7):
         self.rate = rate
@@ -228,8 +292,11 @@ class Synth:
         self.music = Music(rate)                 # (the score: engine/music.py)
         self.music_gain = 0.7
         self.muffle, self._lp = 0.0, 0.0          # (his hearing, dulled: stupor's haze)
+        self.her_pan = 0.0                        # (where she is, left to right of him)
+        self.speech_pan = 0.0                     # (where her voice comes from: the middle, in her scenes)
+        self.reverb = _Reverb()                   # (the space he's in)
 
-    def set(self, hum=None, height=None, her=None, pitch=None, breath=None, rain=None):
+    def set(self, hum=None, height=None, her=None, pitch=None, breath=None, rain=None, her_pan=None, room=None):
         if rain is not None:
             self.rain = rain
         if breath is not None:
@@ -242,18 +309,24 @@ class Synth:
             self.hum = max(0.0, min(1.0, hum))
         if height is not None:
             self.height = max(0.0, min(1.0, height))
+        if her_pan is not None:
+            self.her_pan = max(-1.0, min(1.0, her_pan))
+        if room is not None:
+            self.reverb.room(room)
 
-    def play(self, name, gain=1.0):
+    def play(self, name, gain=1.0, pan=0.0):
+        """A one-off, where it is: pan -1 (left) .. 1 (right)."""
         bank = self.sounds.get(name)
         if not bank or gain <= 0.01:
             return
         self._pick += 1
-        self.voices.append([bank[self._pick % len(bank)], 0, gain * self.levels[name]])
+        self.voices.append([bank[self._pick % len(bank)], 0, gain * self.levels[name], max(-1.0, min(1.0, pan))])
         if len(self.voices) > 12:
             self.voices.pop(0)
 
     def speak(self, samples, gain=1.0):
-        """A line in her voice (already at the synth's rate): it plays over the den, which quiets a little for it."""
+        """A line in her voice (already at the synth's rate): it plays over the den, which quiets a little for it - from
+        where she is (speech_pan), unless she's before him."""
         if samples is not None and len(samples):
             self.speech = [np.asarray(samples, np.float64), 0, gain]
 
@@ -261,15 +334,20 @@ class Synth:
         return self.speech is not None
 
     def render(self, n):
+        """-> float32 (n, 2): left, right."""
         rate = self.rate
         t = (self.n + np.arange(n)) / rate
-        out = np.zeros(n)
-        # the wind: louder the higher, breathing slowly
+        L, R = np.zeros(n), np.zeros(n)
+        send = np.zeros(n)                                        # (into the hollow's echo)
+        # the wind: louder the higher, breathing slowly - each ear its own gusts
         h0, self._height = self._height, self._height + (self.height - self._height) * 0.2
-        i = (self.n + np.arange(n)) % len(self.wind_loop)
+        ln = len(self.wind_loop)
+        i = (self.n + np.arange(n)) % ln
         breath = 0.65 + 0.35 * np.sin(math.tau * t / 11.0) * np.sin(math.tau * t / 4.3 + 1.0)
-        out += self.wind_loop[i] * breath * np.linspace(0.04 + 0.1 * h0, 0.04 + 0.1 * self._height, n)
-        # the hum of the silk under him
+        amp = np.linspace(0.04 + 0.1 * h0, 0.04 + 0.1 * self._height, n) * breath
+        L += self.wind_loop[i] * amp
+        R += self.wind_loop[(i + ln // 2) % ln] * amp
+        # the hum of the silk under him (under his feet: both ears)
         a0, self._hum = self._hum, self._hum + (self.hum - self._hum) * 0.25
         if a0 > 1e-4 or self._hum > 1e-4:
             amp = np.linspace(a0, self._hum, n) * 0.2
@@ -278,56 +356,84 @@ class Synth:
             self._hph = float(ph[-1]) % (math.tau * 1000)
             hum = (np.sin(ph) + 0.8 * np.sin(ph * 1.0109) + 0.5 * np.sin(ph * 1.498)
                    + 0.3 * np.sin(ph * 2.013) + 0.12 * np.sin(ph * 4.0 + np.sin(math.tau * 3 * t)))
-            out += hum / 2.7 * amp * (0.75 + 0.25 * np.sin(math.tau * 6.3 * t))
-        # her: many legs, slow, felt more than heard - a dry rustle, ticking
+            x = hum / 2.7 * amp * (0.75 + 0.25 * np.sin(math.tau * 6.3 * t))
+            L += x
+            R += x
+            send += x * 0.6
+        # her: many legs, slow, felt more than heard - a dry rustle, ticking, from where she is
         h0, self._her = self._her, self._her + (self.her - self._her) * 0.2
         if h0 > 1e-4 or self._her > 1e-4:
             i = (self.n + np.arange(n)) % len(self.rustle_loop)
             legs = 0.45 + 0.55 * np.abs(np.sin(math.tau * 2.3 * t)) ** 6 + 0.3 * np.abs(np.sin(math.tau * 3.1 * t + 1)) ** 8
-            out += self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
-        # rain: a hiss down the trunk, and drops ticking
+            x = self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
+            pl, pr = _pans(self.her_pan)
+            L += x * pl
+            R += x * pr
+            send += x * 0.8
+        # rain: a hiss down the trunk, and drops ticking - all about him
         r0, self._rain = self._rain, self._rain + (self.rain - self._rain) * 0.05
         if r0 > 1e-4 or self._rain > 1e-4:
-            i = (self.n + np.arange(n)) % len(self.rain_loop)
-            out += self.rain_loop[i] * np.linspace(r0, self._rain, n) * 0.09
-        # his breathing, close: in, and out, slowly - in her scenes
+            ln = len(self.rain_loop)
+            i = (self.n + np.arange(n)) % ln
+            amp = np.linspace(r0, self._rain, n) * 0.09
+            L += self.rain_loop[i] * amp
+            R += self.rain_loop[(i + ln // 3) % ln] * amp
+        # his breathing, close: in, and out, slowly
         b0, self._breath = self._breath, self._breath + (self.breath - self._breath) * 0.1
         if b0 > 1e-4 or self._breath > 1e-4:
             i = (self.n + np.arange(n)) % len(self.breath_loop)
             ph = (t % 4.6) / 4.6
             shape = np.where(ph < 0.42, np.sin(np.pi * ph / 0.42) ** 2, 0.7 * np.sin(np.pi * (ph - 0.42) / 0.5) ** 2 * (ph < 0.92))
-            out += self.breath_loop[i] * shape * np.linspace(b0, self._breath, n) * 0.07
-        # the score
+            x = self.breath_loop[i] * shape * np.linspace(b0, self._breath, n) * 0.07
+            L += x
+            R += x
+        # the score: in the middle of everything
         if self.music_gain > 0.001:
-            out += self.music.render(n) * self.music_gain
-        # her voice, over it all - and the den hushed a little while she speaks
-        if self.speech is not None:
-            out *= 0.6
-            buf, pos, g = self.speech
-            m = min(n, len(buf) - pos)
-            out[:m] += buf[pos:pos + m] * g * 0.9
-            self.speech[1] = pos + m
-            if self.speech[1] >= len(buf):
-                self.speech = None
-        # the one-offs
+            x = self.music.render(n) * self.music_gain
+            L += x
+            R += x
+        # the one-offs, each where it is
         keep = []
         for v in self.voices:
-            buf, pos, g = v
+            buf, pos, g, pan = v
             m = min(n, len(buf) - pos)
-            out[:m] += buf[pos:pos + m] * g
+            x = buf[pos:pos + m] * g
+            pl, pr = _pans(pan)
+            L[:m] += x * pl
+            R[:m] += x * pr
+            send[:m] += x
             v[1] = pos + m
             if v[1] < len(buf):
                 keep.append(v)
         self.voices = keep
+        # her voice, over it all - from where she is - and the den hushed a little while she speaks
+        if self.speech is not None:
+            L *= 0.6
+            R *= 0.6
+            buf, pos, g = self.speech
+            m = min(n, len(buf) - pos)
+            x = buf[pos:pos + m] * g * 0.9
+            pl, pr = _pans(self.speech_pan * 0.7)
+            L[:m] += x * pl
+            R[:m] += x * pr
+            send[:m] += x * 0.5
+            self.speech[1] = pos + m
+            if self.speech[1] >= len(buf):
+                self.speech = None
+        # the hollow's echo: long and dark up the trunk, close in the roots, thin under the open sky
+        el, er = self.reverb.run(send)
+        L += el
+        R += er
         self.n += n
+        out = np.stack([L, R], axis=1)
         if self.muffle > 0.01:                    # (sounds from far away: a soft low-pass)
             k = 1.0 - 0.82 * min(1.0, self.muffle)
-            y = np.empty(n)
-            lp = self._lp
-            for i in range(0, n, 32):              # (in short runs: cheap enough)
-                seg = out[i:i + 32]
-                lp = lp + k * (seg.mean() - lp)
-                y[i:i + 32] = seg * (1 - 0.82 * min(1.0, self.muffle)) + lp * 0.82 * min(1.0, self.muffle)
+            y = np.empty_like(out)
+            lp = self._lp if np.ndim(self._lp) else np.zeros(2)
+            for j in range(0, n, 32):              # (in short runs: cheap enough)
+                seg = out[j:j + 32]
+                lp = lp + k * (seg.mean(axis=0) - lp)
+                y[j:j + 32] = seg * (1 - 0.82 * min(1.0, self.muffle)) + lp * 0.82 * min(1.0, self.muffle)
             self._lp = lp
             out = y
         return np.tanh(out * 1.2).astype(np.float32)

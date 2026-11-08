@@ -15,10 +15,10 @@ class _Stream(QIODevice):
         self.synth, self.gain = synth, gain
 
     def readData(self, maxlen):
-        n = max(0, min(maxlen // 2, RATE // 20))
+        n = max(0, min(maxlen // 4, RATE // 20))
         if n == 0:
             return b""
-        x = self.synth.render(n) * self.gain()
+        x = self.synth.render(n) * self.gain()                      # (n, 2): left, right - interleaved
         return (x * 32767).astype("<i2").tobytes()
 
     def writeData(self, data):
@@ -47,7 +47,7 @@ class DenAudio:
             from PySide6.QtMultimedia import QAudioFormat, QAudioSink, QMediaDevices
             fmt = QAudioFormat()
             fmt.setSampleRate(RATE)
-            fmt.setChannelCount(1)
+            fmt.setChannelCount(2)
             fmt.setSampleFormat(QAudioFormat.Int16)
             dev = QMediaDevices.defaultAudioOutput()
             if dev.isNull() or not dev.isFormatSupported(fmt):
@@ -55,7 +55,7 @@ class DenAudio:
             self.stream = _Stream(self.synth, self._gain)
             self.stream.open(QIODevice.ReadOnly)
             self.sink = QAudioSink(dev, fmt)
-            self.sink.setBufferSize(RATE // 8 * 2)
+            self.sink.setBufferSize(RATE // 8 * 4)
             self.sink.start(self.stream)
         except Exception:
             self.sink = None
@@ -82,9 +82,20 @@ class DenAudio:
         self.synth.music.set(mode, **{k: v for k, v in mood.items()
                                       if k in ("hunger", "patience", "suspicion", "fascination", "venom")})
 
+    @staticmethod
+    def pan(night, p):
+        from ..engine.sound import heard_pan
+        return heard_pan(night, p)
+
     def hear(self, night, events):
         """What the night just did, as sound; and the steady parts as they stand now."""
         s = self.synth
+        cam = getattr(night, "camera", None)
+        room = night.where() if hasattr(night, "where") else "hollow"
+        s.set(room="tunnel" if room == "tunnel" else "crown" if room == "crown" else
+              "chamber" if room in ("gallery", "larder", "high hollow") else "hollow")
+        her_p = night.her.at() if getattr(night, "her", None) is not None else None
+        s.speech_pan = 0.0 if (night.quiet or cam is not None or her_p is None) else self.pan(night, her_p)
         af = getattr(night, "afflict", None)
         if af is not None:
             s.muffle = af.haze * 0.8
@@ -114,7 +125,7 @@ class DenAudio:
         her = getattr(night, "her", None)
         if her is not None and d is None:
             near = max(0.0, 1.0 - math.dist(her.at(), night.eye) / 14.0)
-            s.set(her=(0.15 + 0.85 * her.moving) * near ** 1.5)
+            s.set(her=(0.15 + 0.85 * her.moving) * near ** 1.5, her_pan=self.pan(night, her.at()))
         else:
             s.set(her=0.0)
         b = night.body.beats                                         # (his heart: heard when it races, and at the end)
@@ -134,7 +145,7 @@ class DenAudio:
             elif kind == "fall" and not on:
                 s.play("thud", min(1.0, e[1] / 14.0))
             elif kind == "crawler":                               # (right across his eyes: close, quick)
-                s.play("skitter", 0.55 * e[1])
+                s.play("skitter", 0.55 * e[1], random.uniform(-0.7, 0.7))
             elif kind == "dangler" and e[1] == "face":
                 s.play("skitter", 0.9)
             elif kind == "swarm" and e[1] == "up":
@@ -152,18 +163,19 @@ class DenAudio:
             elif kind == "death" and e[1] == "lift":
                 s.play("catch", 1.2)
             elif kind == "her" and e[1] == "strike":
-                s.play("slip", 1.4)
-                s.play("skitter", 1.0)
+                s.play("slip", 1.4, self.pan(night, her_p))
+                s.play("skitter", 1.0, self.pan(night, her_p))
             elif kind == "her" and e[1] == "bite":
                 s.play("thud", 0.9)
             elif kind == "her" and e[1] == "glimpse":
-                s.play("creak", 1.6)                                   # (the web shifting under her weight)
+                s.play("creak", 1.6, self.pan(night, her_p))           # (the web shifting under her weight)
             elif kind == "cocoon" and e[3]:
-                s.play("slip", 1.0)                                # (the silk tearing)
-                s.play("skitter", 1.0)
-                s.play("skitter", 0.8)
+                pc = self.pan(night, e[2])
+                s.play("slip", 1.0, pc)                            # (the silk tearing)
+                s.play("skitter", 1.0, pc)
+                s.play("skitter", 0.8, pc * 0.6)
             elif kind == "thunder":
-                s.play("thunder", 0.5 + 0.5 * e[1])
+                s.play("thunder", 0.5 + 0.5 * e[1], random.uniform(-0.6, 0.6))
             elif kind == "swipe":
                 s.play("whoosh")
             elif kind == "afflict":                                    # (what the night's doing to him)
@@ -176,9 +188,9 @@ class DenAudio:
                 s.play("puff", 1.4)
                 s.play("creak", 1.8)
             elif kind == "skitter":
-                s.play("skitter", max(0.0, 1.0 - e[2] / 7.0))
+                s.play("skitter", max(0.0, 1.0 - e[2] / 7.0), self.pan(night, e[1]))
             elif kind == "lantern" and e[1] == "shake":
-                s.play("rattle")
+                s.play("rattle", 1.0, 0.25)                             # (the lantern: a little to his right)
             elif kind == "lantern" and e[1] == "out":
                 s.play("puff")
 

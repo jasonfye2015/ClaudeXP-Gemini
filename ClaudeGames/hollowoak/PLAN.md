@@ -392,3 +392,12 @@ notebook. Retuned: poison lingers (0.06 a second) and eats at health a little le
 (never the worst); the first night is never the worst either, and has a lesson on it. The letter waits out what's
 done to him, shakes the lantern clean, and steadies his mind with Light (her far off) or Memory.
 
+## Phase 9 - polish, one at a time
+
+9a - sound from where it is (done). The den's sound is stereo now (engine/sound.py: render -> (n, 2); the audio sink two
+channels). Her rustle, her strike, the web creaking under her, her voice outside her scenes: from where she is
+(heard_pan: left to right of him, a little less behind). Small ones bolting, a guest's silk tearing, thunder, the
+crawlers across his face: each from its side; the lantern a little to his right. Wind and rain different in each ear.
+And the space he's in: a reverb (four combs an ear) - long and dark in the hollow, close in the root tunnel, thinner in
+the chambers and under the open crown.
+
