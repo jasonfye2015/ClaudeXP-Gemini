@@ -55,6 +55,12 @@ uniform int uLightCount; uniform vec4 uLightPos[16]; uniform vec4 uLightCol[16];
 uniform vec3 uFog; uniform float uFogDensity;
 uniform int uShadowOn; uniform mat4 uLightPV; uniform vec3 uLightP; uniform float uShadowFar; uniform sampler2D uShadow;
 float moonReach(float y) { return smoothstep(%(TOP)s * 0.35, %(TOP)s + 2.0, y); }
+uniform vec3 uSkyFill;                  // (outside the oak: the dusk sky's own light over everything)
+float outsideK(vec3 p) {
+    float k = smoothstep(9.4, 10.2, length(p.xz));
+    if (abs(p.z) < 1.1 && p.y < 2.4 && p.x < 15.6 && p.x > 5.0) k = 0.0;     // (the roots' tunnel: inside)
+    return k;
+}
 float shadowAt(vec3 p) {                // (the lantern's light, and what stands between it and here: her, the wood)
     if (uShadowOn == 0) return 1.0;
     vec4 c = uLightPV * vec4(p, 1.0);
@@ -70,7 +76,9 @@ float shadowAt(vec3 p) {                // (the lantern's light, and what stands
     return mix(0.18, 1.0, s / 9.0);       // (never quite black: the lamp's own bounce)
 }
 vec3 lit(vec3 p, vec3 n, vec3 base, float shade) {
-    vec3 c = uAmbient * shade + uMoonCol * max(dot(n, -uMoonDir), 0.0) * moonReach(p.y) * shade;
+    float sky = outsideK(p);
+    vec3 c = uAmbient * shade + uMoonCol * max(dot(n, -uMoonDir), 0.0) * max(moonReach(p.y), sky) * shade
+             + uSkyFill * sky * shade * (0.55 + 0.45 * max(n.y, 0.0));
     for (int i = 0; i < uLightCount; i++) {
         vec3 d = uLightPos[i].xyz - p; float dist = length(d);
         float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0); att *= att;
@@ -82,7 +90,7 @@ vec3 lit(vec3 p, vec3 n, vec3 base, float shade) {
 vec3 fogged(vec3 p, vec3 col) {
     float dist = length(p - uEye);
     float low = 0.22 * exp(-max(p.y, 0.0) / 1.6);                       // (fog pooled at the foot of the hollow)
-    float f = 1.0 - exp(-pow((uFogDensity + low) * dist, 1.25));
+    float f = 1.0 - exp(-pow((uFogDensity * (1.0 + 1.6 * outsideK(p)) + low) * dist, 1.25));
     return mix(col, uFog, clamp(f, 0.0, 1.0));
 }
 uniform float uExposure;                 // (the player's brightness: 1.0 as made)
@@ -572,6 +580,9 @@ class Renderer:
         self.sky.vec("uMoon", self.moon)
         self.sky.float("uTime", now)
         lit = self._sky_light(night)
+        if night is not None and self.tree.outside(night.x, night.z) is not None:      # (out under it: dusk, deepening)
+            lit = dict(lit, sky_top=tuple(c * 0.3 for c in lit["sky_top"]),
+                       sky_low=tuple(c * 0.4 + w for c, w in zip(lit["sky_low"], (0.05, 0.02, 0.012))))
         self.sky.vec("uSkyTop", lit["sky_top"])
         self.sky.vec("uSkyLow", lit["sky_low"])
         self.sky.float("uStars", lit["stars"])
@@ -587,6 +598,8 @@ class Renderer:
         for prog in (self.world, self.fung, self.dress_prog, self.spider_prog, self.silk_prog):
             prog.use()
             prog.float("uExposure", exposure(getattr(night, "brightness", 50)))
+            sl = lit["sky_low"] if "sky_low" in lit else (0.003, 0.0045, 0.01)
+            prog.vec("uSkyFill", tuple(0.05 + 3.0 * c for c in sl))
             prog.int("uShadowOn", 1 if shadow else 0)
             prog.int("uShadow", 3)
             if shadow:
@@ -679,6 +692,8 @@ class Renderer:
     def _carried(self, night, now):
         """What's in his left hand (the mouse wheel chose it): held low on the left, cupped - over everything."""
         item = getattr(night, "held", None)
+        if getattr(night, "letter_in_hand", False):
+            item = "letter"                                           # (walking to the oak: her letter, held)
         crawlers = getattr(night, "crawlers", None)
         if item is None or getattr(night, "dying", None) is not None or getattr(night, "ending", None) is not None:
             return
@@ -689,7 +704,7 @@ class Renderer:
             return                                                    # (that hand's busy, swiping)
         from . import itemmesh
         (wrist, axes), (palm, iaxes) = itemmesh.held_at(night, now)
-        out = itemmesh.build(item, palm, iaxes, now, night.items.get(item), scale=0.9)
+        out = itemmesh.build(item, palm, iaxes, now, night.items.get(item) if item in night.items else None, scale=0.9)
         GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
         self.dress_prog.use()
         self.cup_mesh.upload(np.concatenate([held.place(self.cup_parts, wrist, axes), np.array(out, np.float32)])
@@ -1394,9 +1409,10 @@ class Renderer:
                     r = 0.15 + age * (0.4 + b * 0.5)
                     p = (cx + math.cos(a) * r, cy + (b - 0.3) * 0.6 + age * 0.15 - age * age * 0.12, cz + math.sin(a) * r)
                     bill(p, 0.03 + b * 0.03, (0.75, 0.74, 0.7), 0.5 * (1 - age / 2.5))
-        # the way out, behind him: night air through the roots
+        # the way out, behind him: dusk at the roots' mouth (from inside)
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
-        bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
+        if self.tree.outside(night.x, night.z) is None:
+            bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.35)
         # her eyes: eight red lights in the dark, as wide as her head (she's five units across) - and, his mind going,
         # eyes that aren't hers
         af = getattr(night, "afflict", None)

@@ -170,6 +170,7 @@ class Shell(QWidget):
         self.set_panel(None)
         self.saves.clear()                                      # (a new night: the last one's saves gone)
         night = Night()
+        night.begin_outside()                                  # (the walk to the oak, at dusk)
         if mode == "led":
             night.flags["led"] = True                           # (Spellbound: game/autoplay.py)
         elif mode == "first":

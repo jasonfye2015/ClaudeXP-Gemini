@@ -68,6 +68,11 @@ def build(item, origin, axes, now, state=None, scale=1.0):
         C._box(out, o + up * 0.026, (0.053, 0.003, 0.041), (f, up, r), (0.32, 0.17, 0.09))        # (the covers)
         C._box(out, o - up * 0.001, (0.053, 0.003, 0.041), (f, up, r), (0.32, 0.17, 0.09))
         C._box(out, o + up * 0.012 - r * 0.04, (0.053, 0.015, 0.004), (f, up, r), (0.28, 0.14, 0.07))
+    elif item == "letter":                                              # (silk, written on, in her hand)
+        C._box(out, o + up * 0.01, (0.07, 0.0015, 0.055), (f, up, r), (0.55, 0.5, 0.42))
+        for k in range(6):
+            C._box(out, o + up * 0.0125 + f * (0.04 - k * 0.014) - r * 0.005, (0.0015, 0.0006, 0.035 - 0.004 * (k % 3)),
+                   (f, up, r), (0.22, 0.12, 0.1))
     elif item == "eye":
         C._blob(out, o + up * 0.03, (0.026, 0.026, 0.026), (f, up, r), (0.86, 0.84, 0.8), seg=8)
         C._blob(out, o + up * 0.052, (0.013, 0.006, 0.013), (f, up, r), (0.34, 0.22, 0.12), seg=6)  # (iris: looking up at him)

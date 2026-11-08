@@ -32,8 +32,12 @@ def test_the_way_in():
         assert t.can_stand(x, z, t.floor_at(x, z, 1.0))
     x, z = t.tunnel_point(4.0, T.TUNNEL_HALF + 0.05)                          # (not through its sides)
     assert not t.can_stand(x, z, 0.1)
-    x, z = t.tunnel_point(T.TUNNEL_LEN + 0.5, 0.0)                            # (nor out through the far end)
-    assert not t.can_stand(x, z, 0.1)
+    x, z = t.tunnel_point(T.TUNNEL_LEN + 0.5, 0.0)                            # (out through the far end: the glade)
+    assert t.outside(x, z) and t.can_stand(x, z, t.floor_at(x, z, 1.0))
+    x, z = t.tunnel_point(T.TUNNEL_LEN + 0.2, T.TUNNEL_HALF + 0.4)            # (but not up the mound's flanks)
+    assert not t.can_stand(x, z, t.floor_at(x, z, 1.0))
+    sx, sz, _f = t.start_outside                                              # (a new night: out there, at dusk)
+    assert t.outside(sx, sz) and t.can_stand(sx, sz, t.floor_at(sx, sz, 1.0)) and t.ceiling_at(sx, sz, 0.0) is None
 
 
 def test_the_wall_holds():
