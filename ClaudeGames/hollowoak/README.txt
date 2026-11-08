@@ -10,7 +10,7 @@ Timeline's other games.
 
 The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/artifact/JtQZ3J468Lqh9E8QqoVXfS
 
-Playing (phases 1 and 2: the tree, and her silk)
+Playing
   Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
   Q drinks the antidote, if he has it. F5 saves (the night saves itself, too, as each act begins).
   1 2 3 4 cast his spells: Light, Warmth, Illusion, Memory (in her scenes: "Cast a spell...").
@@ -39,11 +39,25 @@ Playing (phases 1 and 2: the tree, and her silk)
   On her loom, she comes to you. Her scenes are framed, and slow: she speaks (in her own hand, and aloud), and you
   answer - in your own words, if a language model writes hers; from lines offered, if not.
 
+  The night has a shape: in, to her loom; up to her guests in the gallery, wrapped in silk (look closer, and they split);
+  down to her larder for supper, when she calls; up to the crown at three, under the moon; and at last the light. Her
+  moods are never shown in numbers - watch the fungus-light, listen to the silk's hum. What you find in her house you
+  can offer her, and what it's worth depends on her mood and the hour. Your four spells are conversation as much as
+  tools - and Warmth in a house of silk is a dangerous thing. If she bites, you live, at first; her venom stays, and
+  sometimes you see through her eyes. There is an antidote somewhere. Seven endings; their names are found, not told.
+  Your notes on her are kept across nights - and across deaths.
+
   Before the night (after the title): begin, the endings you've found, your records, the options - among them what
   writes her words (a language model on this computer, or a script) and whether you hear her voice aloud.
 
   Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
-  rattle. It follows the computer's mute.
+  rattle, rain and thunder. The music is the game's own, made as it plays: a low drone and harp and bell drips in the
+  dark; a slow waltz, slightly out of true, in her scenes; strings at the crown; a short coda for each ending. It follows
+  her - a heartbeat under it when she's hungry, gaps when her patience thins, a voice a semitone wrong when she doubts
+  you, the bells warming when she's taken with you, the pitch wavering with her venom. It follows the computer's mute.
+
+  Options: volume and music, mouse speed, how fast her words come, the size of her words and yours, the heart monitor,
+  the orbs, her venom's pulse at the edges, steadier light (less flicker and flashing), and what speaks for her.
 
 Running it
   In the Timeline: the launcher's Apps, or Games on any of the computers.

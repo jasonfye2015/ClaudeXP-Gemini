@@ -159,6 +159,9 @@ class GameView(QOpenGLWidget):
             self.audio.volume = o["volume"] / 100.0
             self.audio.heartbeat = bool(o["heartbeat"])
             self.audio.aloud = bool(o["aloud"])
+            self.audio.synth.music_gain = 0.7 * o.get("music", 70) / 70.0
+            self.audio.score(n, getattr(self, "scene", None), self.playing)
+        n.steady = bool(self.shell.records.options.get("steady", False))
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
             if self.audio is not None:
@@ -175,9 +178,14 @@ class GameView(QOpenGLWidget):
                     self.night_done()
             n.events.clear()
         elif self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
+            if not n.dying.asked:                                 # (her last words to him: what she made of him)
+                self._last_words(n)
             n.step(dt, self.inp)
             if self.audio is not None:
                 self.audio.hear(n, n.events)
+            for e in n.events:
+                if e[0] == "death" and e[1] == "line" and self.audio is not None:
+                    self.audio.say(e[2])
             if n.dying.done:
                 self.release()
                 if self.tally is not None and not self.tally["done"]:
@@ -389,6 +397,23 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(215, 200, 175, 190 if sp.ready(name) else 70))
             p.drawText(QRectF(x + i * 72, H - 112, 72, 20), Qt.AlignLeft, f"{i + 1}  {word}")
 
+    def _last_words(self, n):
+        """Supper: what she says to him as he's hung - from what she made of him tonight, and on other nights; in a
+        model's words, if one is speaking for her and answers in time."""
+        from ..game.death import last_words
+        d = n.dying
+        d.asked = True
+        talk = getattr(self, "talk", None)
+        d.her_line = last_words(n, self.shell.records.reputation, talk.lies if talk else 0)
+        if talk is not None and talk.mode == "model":
+            from ..game import persona
+
+            def back(text):
+                line = persona.clean(text)
+                if len(line) > 3 and not d.spoke:
+                    d.her_line = line
+            talk.voice.ask(persona.murmur_prompt("supper_end", talk.context()), back, max_tokens=50)
+
     def wait_for_dawn(self):
         """Waiting with her for the light: the dark a moment, and then it's coming."""
         from ..game import sky as S
@@ -548,7 +573,7 @@ class GameView(QOpenGLWidget):
         if n.dying is not None:
             if o["orbs"]:
                 orbs.draw_orbs(p, W, H, n.body, t, max(0.0, 1.0 - n.dying.t / 1.2))
-            orbs.draw_death(p, W, H, n.dying, t, self.first_ending)
+            orbs.draw_death(p, W, H, n.dying, t, self.first_ending, self.shell.records)
             if o["heart"] and n.dying.black < 0.98:
                 orbs.draw_heart(p, W, H, n.body, 1.0 - n.dying.black)       # (to the last beat, and the flat line)
             return

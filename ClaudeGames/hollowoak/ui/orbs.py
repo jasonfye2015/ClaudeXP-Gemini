@@ -245,7 +245,7 @@ def _ending_fx(p, W, H, ending):
         p.drawText(QRectF(0, H * 0.16, W, 90), Qt.AlignHCenter, NAME.upper())
 
 
-def draw_death(p, W, H, death, t, first=False):
+def draw_death(p, W, H, death, t, first=False, records=None):
     """The silk over his eyes; the dark; and the line."""
     def at(u, v):
         return QPointF(u * W, (1 - v) * H)
@@ -301,6 +301,20 @@ def draw_death(p, W, H, death, t, first=False):
         for off in (-0.33, 0.0, 0.33):                               # (the threads it's twisted from)
             p.setPen(QPen(QColor(245, 247, 252, 70), 1.0))
             p.drawPath(path.translated(0, off * wpx))
+    if death.show_line:                                              # (her last words, in her own hand)
+        from . import fonts
+        from ..game.death import SPEAK
+        a = min(1.0, (death.t - SPEAK) / 0.8)
+        p.setFont(fonts.her(records, 32) if records is not None else QFont(SERIF, 22))
+        box = QRectF(W * 0.14, H * 0.62, W * 0.72, H * 0.25)
+        g = QRadialGradient(QPointF(W / 2, H * 0.66), W * 0.42)       # (a little dark behind her words)
+        g.setColorAt(0, QColor(0, 0, 0, int(150 * a)))
+        g.setColorAt(1, QColor(0, 0, 0, 0))
+        p.fillRect(QRectF(0, H * 0.5, W, H * 0.32), g)
+        p.setPen(QColor(0, 0, 0, int(170 * a)))
+        p.drawText(box.translated(2, 2), Qt.AlignHCenter | Qt.TextWordWrap, death.show_line)
+        p.setPen(QColor(250, 232, 214, int(235 * a)))
+        p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, death.show_line)
     if death.black > 0:
         p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * death.black)))
     if death.done:

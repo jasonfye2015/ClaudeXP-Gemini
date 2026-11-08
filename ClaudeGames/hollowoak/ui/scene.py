@@ -133,7 +133,8 @@ class SceneView(QWidget):
         self.update()
 
     def _shown(self):
-        return int((self.t - self.line_t) * REVEAL)
+        speed = REVEAL * (0.4 + 1.2 * self.shell.records.options.get("text_speed", 50) / 100.0)
+        return int((self.t - self.line_t) * speed)
 
     def _her(self, text, choices, again=False):
         if again:                                              # (back to where they were: no word said again)

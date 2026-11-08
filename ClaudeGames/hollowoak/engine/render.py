@@ -778,7 +778,10 @@ class Renderer:
             return {"sky_top": (0.0015, 0.002, 0.004), "sky_low": (0.003, 0.0045, 0.01), "stars": 1.0, "aurora": 1.0,
                     "sun": (0.0, 1.0, 0.0), "sun_up": 0.0, "flash": 0.0, "beam": (0, 0, 0), "beam_k": 0.0,
                     "phase": "night"}
-        return sky.light()
+        lit = sky.light()
+        if getattr(night, "steady", False):                        # (steadier light: the lightning only a glow)
+            lit = dict(lit, flash=lit["flash"] * 0.2)
+        return lit
 
     def flame_at(self, night):
         now = getattr(self, "now", 0.0)
@@ -878,6 +881,9 @@ class Renderer:
         out = []
         if night.lantern:                                     # (his lantern: from its flame, as bright as the lamp allows)
             reach, k = night.lantern_reach()
+            if getattr(night, "steady", False):                    # (steadier light: the flicker smoothed away)
+                self._steady = getattr(self, "_steady", k) + (k - getattr(self, "_steady", k)) * 0.05
+                k = self._steady
             fx, fy, fz = self.flame_at(night)
             out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
         sp = getattr(night, "spells", None)

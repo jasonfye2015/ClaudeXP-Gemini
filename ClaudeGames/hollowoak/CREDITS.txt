@@ -10,10 +10,11 @@ His left sleeve and cuff (assets/arm.npz): the left arm of KayKit's Mage (Kay Lo
 copied out once by tools/export_arm.py; the hand at its end (fingers and all) is made in the game (engine/held.py).
 
 Her small ones (assets/spider.npz): Quaternius's animated Spider (the Easy Enemy pack, CC0), https://quaternius.com -
-its walk and its stillness baked into frames once by tools/export_spider.py. Ysmeine herself (phase 3) will be the same
-spider, much larger.
+its walk and its stillness baked into frames once by tools/export_spider.py. Ysmeine herself is the same spider, much
+larger.
 
-The sound: made as it plays (engine/sound.py) - no recordings.
+The sound and the music: made as they play (engine/sound.py, engine/music.py) - no recordings; the score written for
+this game.
 
 Her words, written: the Italianno font (The Italianno Project Authors, SIL Open Font License 1.1 -
 assets/fonts/Italianno-OFL.txt), https://github.com/googlefonts/italianno.

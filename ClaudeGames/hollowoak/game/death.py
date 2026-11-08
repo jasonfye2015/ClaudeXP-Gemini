@@ -24,11 +24,30 @@ WRAP_END = 10.4                 # (turned over and over, bound)
 DRAG_END = 15.4
 LIFT_END = 22.4
 FADE_END = 24.4
+LEAN = DRAG_END + 2.4           # (she comes down to him, close, and leans into his sight)
+SPEAK = LEAN + 1.2
 BANDS = 16
 PULLS = 5
 SPIDERS = 46
 WEBS = 70
 ENDING = ("Ending 1 of 7: Supper", "Wrapped, and hung, and kept for later.")
+
+
+def last_words(night, reputation=None, lies=0):
+    """What she says to him as he's hung: quiet, without cruelty - from what she made of him, tonight and before."""
+    m = night.moods
+    cause = night.dying.cause if night.dying is not None else None
+    if m.regard >= 55:
+        return "I didn't want it to be you. Hush, now. I'll keep you close, where it's warm."
+    if lies:
+        return "You lied to me, little wizard. I would so have liked to know the truth of you."
+    if (reputation or {}).get("met", 0) >= 1:
+        return "You again. You keep coming back to me, little wizard - and I keep you, every time."
+    if night.manner() > 0.5:
+        return "You walked so gently on my silk. I'll remember that, when I'm hungry again."
+    if cause == "bite":
+        return "Only a little bite. Only a little more. Sleep."
+    return "Hush. It's only the dark - and the dark is my house, and you are in it."
 
 
 def _ease(k):
@@ -54,6 +73,11 @@ class Death:
         self.centre_y = night.tree.ground(0.0, 0.0)
         self._ropes = []
         self.top = T.TOP * 0.5
+        self.her_line = None            # (her last words to him: set by whoever knows what she made of him)
+        self.asked = False
+        self.spoke = False
+        self.show_line = None
+        self.her_at = None
 
     def flame(self):
         """The broken lantern's flame on the ground, dying: 0..1."""
@@ -70,9 +94,15 @@ class Death:
             self.broke = True
             night.lantern = False
             out.append(("lantern", "break"))
+        if t >= LEAN and self.her_at is None:                          # (her, down to him, close)
+            self._lean(night)
         self._pose(night)
         self.hold(night)
         self._cover(dt)
+        if t >= SPEAK and not self.spoke and self.her_line:
+            self.spoke = True
+            out.append(("death", "line", self.her_line))
+        self.show_line = self.her_line if self.spoke and t < FADE_END - 0.3 else None
         for name, at in (("wrap", COVER_END), ("drag", WRAP_END), ("lift", DRAG_END), ("end", FADE_END)):
             if t >= at and name not in self.said:
                 self.said.add(name)
@@ -109,18 +139,46 @@ class Death:
             night.roll = 0.0
             night.pitch = 1.2 + 0.06 * math.sin(f * math.pi * 2)                            # (jerked; staring up)
             night.yaw = self.yaw0 + 0.15 * math.sin(f * 2.1)
-        else:                                                           # (turned, lifted by the feet, drawn up, swinging)
-            u = t - DRAG_END
-            turn = _ease(u / 1.6)
-            rise = _ease((u - 0.8) / (LIFT_END - DRAG_END - 1.0))
-            swing = math.sin(u * 1.9) * (0.15 + 0.55 * rise)
-            night.x = swing
-            night.z = 0.25 * math.sin(u * 1.3)
-            night.y = self.centre_y + 0.7 * turn + (self.top - self.centre_y - 0.7) * rise
-            night.eye_h = 0.1 - 0.72 * turn                             # (his head below his feet)
-            night.roll = math.pi * turn
-            night.pitch = 1.2 * (1 - turn) - 0.15 * turn + 0.12 * math.sin(u * 1.9 + 0.5)
-            night.yaw = self.yaw0 + 0.5 * math.sin(u * 0.45) + u * 0.05
+        elif self.her_at is not None:                                    # (hung; and she's there, close: he looks at her)
+            self._hung(night, t)
+            ex, ey, ez = night.eye
+            hx, _hy, hz = self.her_at
+            self.her_at = (hx, ey - 0.9, hz)                            # (she comes up with him, on her own thread)
+            if night.her.staged is not None:
+                night.her.staged = (self.her_at, night.her.staged[1])
+            hy = self.her_at[1]
+            k = _ease((t - LEAN) / 1.6)
+            want_yaw = math.atan2(hx - ex, -(hz - ez))
+            want_pitch = math.atan2(hy + 0.9 - ey, math.hypot(hx - ex, hz - ez))
+            dy = (want_yaw - night.yaw + math.pi) % math.tau - math.pi
+            night.yaw += dy * k
+            night.pitch = night.pitch * (1 - k) + want_pitch * k
+        else:
+            self._hung(night, t)
+
+    def _lean(self, night):
+        """She comes down her rope to him, and leans close - before his face."""
+        ex, ey, ez = night.eye
+        f = (math.sin(night.yaw), -math.cos(night.yaw))
+        x, z = ex + f[0] * 2.5, ez + f[1] * 2.5
+        self.her_at = (x, ey - 0.9, z)
+        face = (ex - x, 0.0, ez - z)
+        k = math.hypot(face[0], face[2]) or 1.0
+        night.her.stage(self.her_at, (face[0] / k, 0.0, face[2] / k))
+
+    def _hung(self, night, t):
+        """Turned, lifted by the feet, drawn up, swinging."""
+        u = t - DRAG_END
+        turn = _ease(u / 1.6)
+        rise = _ease((u - 0.8) / (LIFT_END - DRAG_END - 1.0))
+        swing = math.sin(u * 1.9) * (0.15 + 0.55 * rise)
+        night.x = swing
+        night.z = 0.25 * math.sin(u * 1.3)
+        night.y = self.centre_y + 0.7 * turn + (self.top - self.centre_y - 0.7) * rise
+        night.eye_h = 0.1 - 0.72 * turn                             # (his head below his feet)
+        night.roll = math.pi * turn
+        night.pitch = 1.2 * (1 - turn) - 0.15 * turn + 0.12 * math.sin(u * 1.9 + 0.5)
+        night.yaw = self.yaw0 + 0.5 * math.sin(u * 0.45) + u * 0.05
 
     def _cover(self, dt):
         """They come onto his face, more and more; and lay their silk across his eyes."""
