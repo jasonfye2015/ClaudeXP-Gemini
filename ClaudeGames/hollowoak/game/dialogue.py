@@ -180,6 +180,29 @@ class Conversation:
             done(line, [])
         self.voice.ask(msgs, back)
 
+    def cast(self, name, done, memory=None):
+        """A spell, cast before her: her moods move as it lands; she answers (game/spells.py). done(text, choices)."""
+        tier, scripted, said = self.night.spells.in_scene(name, self.night, memory)
+        self.history.append(("him", f"(casts {name})" if name != "memory" else "(shows her a memory)"))
+        if memory is not None and name == "memory":
+            from .spells import MEMORIES
+            self.memory.append(MEMORIES[memory][1].replace("shows", "showed"))  # (she keeps what she sees)
+        if self.mode != "model":
+            self.history.append(("her", scripted))
+            node = script.SCENES[self.scene]["nodes"].get(self.node, {})
+            done(scripted, [c[0] for c in node.get("choices", [])] if self.ended is None else None)
+            return
+        msgs = [{"role": "system", "content": persona.system(self.context())}]
+        for who, t in self.history[-14:-1]:
+            msgs.append({"role": "assistant" if who == "her" else "user", "content": t})
+        msgs.append({"role": "user", "content": f"({said}. Answer him - one to three sentences.)"})
+
+        def back(reply):
+            line = persona.clean(reply) or scripted
+            self.history.append(("her", line))
+            done(line, [])
+        self.voice.ask(msgs, back)
+
     def supper(self):
         """Guest, or meal: her hunger against what she's come to think of him."""
         m = self.night.moods

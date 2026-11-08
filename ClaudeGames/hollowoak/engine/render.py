@@ -706,6 +706,21 @@ class Renderer:
                 for j in range(-1, 2):
                     c = np.array((hx, hy, hz)) + side * (i * 0.05 + (0.025 if j % 2 else 0)) + np.array((0, j * 0.045, 0))
                     C._box(out, c, (0.022, 0.02, 0.02), (side, up, n_in), (0.72, 0.42, 0.08))
+        sp = getattr(night, "spells", None)
+        if sp is not None and sp.shining("light") > 0:          # (the old marks: only this light shows them)
+            from ..game import spells as S
+            for _mid, where, along, _reach in S.MARKS:
+                mx, my, mz = S.mark_at(night.tree, where, along)
+                if math.dist((mx, my, mz), night.eye) > 9.0:
+                    continue
+                side = np.array(S.mark_side(night.tree, where, along, (mx, my, mz)))
+                n_in = np.cross(side, up)
+                for i in range(-4, 5):                            # (cut marks: dark strokes in the wood)
+                    c = np.array((mx, my, mz)) + side * i * 0.06
+                    C._box(out, c + np.array((0, 0.02 * math.sin(i * 2.1), 0)), (0.006, 0.09, 0.006),
+                           (side, up, n_in), (0.05, 0.035, 0.025))
+                C._box(out, np.array((mx, my - 0.14, mz)), (0.28, 0.006, 0.006), (side, up, n_in),
+                       (0.05, 0.035, 0.025))
         if not out:
             return
         if not hasattr(self, "find_mesh"):
@@ -855,6 +870,17 @@ class Renderer:
             reach, k = night.lantern_reach()
             fx, fy, fz = self.flame_at(night)
             out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
+        sp = getattr(night, "spells", None)
+        if sp is not None:                                    # (his spells: Light hung above him, Warmth in his palm)
+            for kind, pos, _w, _l in sp.lit:
+                k = sp.shining(kind)
+                if k > 0 and kind == "light":
+                    out.append(((*pos, 14.0), (1.1 * k, 1.15 * k, 1.3 * k, 1)))
+                elif k > 0 and kind == "warmth":
+                    out.append(((*pos, 3.5), (0.75 * k, 0.4 * k, 0.15 * k, 1)))
+                elif k > 0 and kind == "ember":
+                    flick = 0.75 + 0.25 * math.sin(now * 23) * math.sin(now * 7.1)
+                    out.append(((*pos, 2.2), (0.8 * k * flick, 0.25 * k * flick, 0.05 * k, 1)))
         dying = getattr(night, "dying", None)
         if dying is not None and dying.flame() > 0:
             k = dying.flame()
