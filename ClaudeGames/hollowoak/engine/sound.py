@@ -333,6 +333,14 @@ class Synth:
     def speaking(self):
         return self.speech is not None
 
+    def speech_level(self):
+        """How loud her voice is just now, 0..1 (her fangs move with it)."""
+        if self.speech is None:
+            return 0.0
+        buf, pos, g = self.speech
+        seg = buf[max(0, pos - 600):pos]
+        return 0.0 if not len(seg) else min(1.0, float(np.sqrt((seg ** 2).mean())) * 4.0 * g)
+
     def render(self, n):
         """-> float32 (n, 2): left, right."""
         rate = self.rate

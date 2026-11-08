@@ -91,7 +91,7 @@ class Scene:
             cx, cz = ex, ez
         p, f, up, size, *_ = n.her.pose()
         eyes = tuple(p[i] + up[i] * EYES[1] * size * 0.9 for i in range(3))
-        dx, dy, dz = eyes[0] - cx, eyes[1] - 0.25 - cy, eyes[2] - cz
+        dx, dy, dz = eyes[0] - cx, eyes[1] - 0.6 - cy, eyes[2] - cz        # (her eyes, and her mouth under them)
         yaw = math.atan2(dx, -dz)
         pitch = math.atan2(dy, math.hypot(dx, dz))
         return (cx, cy, cz), yaw, pitch
