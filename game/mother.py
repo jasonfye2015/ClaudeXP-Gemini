@@ -1,6 +1,6 @@
 """Ysmeine, the Weaver Below: her body in the den (phase 3a - before she ever speaks).
 
-She is on the wall of the hollow, a leg-span of four and a half units, and she keeps to the dark. Mostly she is across
+She is on the wall of the hollow, a leg-span of near seven units, and she keeps to the dark. Mostly she is across
 the hollow from him and a little above, watching - eight red lights and a shape in the black. She keeps pace with him
 as he climbs. Now and then she comes closer, to the very edge of his light, and leans out toward him, legs reaching -
 and is gone again. When his lantern goes out she comes close and stays close. When he comes at her, she withdraws. When
@@ -19,7 +19,7 @@ import math
 
 from . import tree as T
 
-SIZE = 4.5                       # (her leg-span, nose to tail with her legs)
+SIZE = 6.75                      # (her leg-span, nose to tail with her legs)
 EYES = (0.01, 0.19, 0.06)        # (where her eyes are on her, in the spider's own units)
 CREEP, PACE, FLEE = 0.55, 1.3, 3.4
 GLIMPSE_EVERY = (40.0, 80.0)
@@ -33,7 +33,7 @@ def _wrap(a):
 class Mother:
     def __init__(self, tree, rng):
         self.tree, self.rng = tree, rng
-        self.th, self.y = math.pi * 0.9, 9.0
+        self.th, self.y = math.pi * 0.9, 13.5                # (half way up the hollow, to begin with)
         self.head = 0.0                      # (which way she faces on the wall: 0 round it, pi/2 up it)
         self.state = "watch"
         self.until = 0.0
@@ -87,13 +87,13 @@ class Mother:
         th_him = math.atan2(ez, ex)
         reach = night.lantern_reach()[0] if night.lantern and night.lamp.state != "out" else 0.0
         if self.state in ("near", "glimpse"):
-            gap = max(2.4, reach * 0.95) if self.state == "glimpse" else 2.6
+            gap = max(3.4, reach * 0.95) if self.state == "glimpse" else 3.6     # (her size: she never quite touches him)
             r = self.tree.base_r(th_him, ey)
             d_wall = max(0.3, r - math.hypot(ex, ez))
             off = math.sqrt(max(0.0, gap * gap - d_wall * d_wall)) / max(1.0, r)
             side = 1.0 if _wrap(self.th - th_him) >= 0 else -1.0
             return th_him + side * min(1.2, off + 0.15), ey + (0.6 if self.state == "glimpse" else 1.2)
-        return th_him + math.pi + 0.35 * math.sin(self.t * 0.05), ey + 2.2
+        return th_him + math.pi + 0.35 * math.sin(self.t * 0.05), max(ey + 2.2, 12.5)   # (high, unless he is)
 
     # ---- a step ---------------------------------------------------------------------------------------------------
     def step(self, dt, night):

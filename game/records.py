@@ -10,7 +10,7 @@ import json
 import time
 from pathlib import Path
 
-ENDINGS = 6                     # (how many there are: their names are found, not told)
+ENDINGS = 7                     # (how many there are: their names are found, not told)
 OPTIONS = {"volume": 80, "look": 50, "heart": True, "heartbeat": True, "orbs": True}
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
 

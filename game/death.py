@@ -2,7 +2,7 @@
 and its flame dies on the ground. They come - onto him, over his face, laying silk across his eyes until he can hardly
 see. They turn him over and over, wrapping him in thick bands of silk. Then he's dragged, in pulls, to the middle of the
 hollow's floor; turned, lifted by the feet on her ropes - thick silk from far above - and drawn up, upside down, half
-the height of the trunk, swinging. Then black - and, small, "Ending 1 of 6: Supper".
+the height of the trunk, swinging. Then black - and, small, "Ending 1 of 7: Supper".
 
     death = Death(night, cause, rng)
     death.step(dt, night)       -> events ("lantern", "break"), ("death", "drag"), ("death", "lift"), ("death", "end")
@@ -28,7 +28,7 @@ BANDS = 16
 PULLS = 5
 SPIDERS = 46
 WEBS = 70
-ENDING = ("Ending 1 of 6: Supper", "Wrapped, and hung, and kept for later.")
+ENDING = ("Ending 1 of 7: Supper", "Wrapped, and hung, and kept for later.")
 
 
 def _ease(k):
@@ -42,6 +42,7 @@ class Death:
         self.t = 0.0
         self.x0, self.y0, self.z0 = night.x, night.y, night.z
         self.yaw0, self.pitch0 = night.yaw, night.pitch
+        self.eye0 = night.eye_h
         f = (math.sin(night.yaw), -math.cos(night.yaw))
         self.lamp_at = (night.x + f[0] * 0.35, night.y + 0.03, night.z + f[1] * 0.35)    # (where the lantern lands)
         self.broke = False
@@ -86,7 +87,7 @@ class Death:
         if t < COVER_END:                                               # (down, on his side, and there he stays)
             k = _ease(t / COLLAPSE)
             night.x, night.y, night.z = self.x0, self.y0, self.z0
-            night.eye_h = 0.62 * (1 - k) + 0.1 * k
+            night.eye_h = self.eye0 * (1 - k) + 0.1 * k
             night.roll = 1.25 * k
             night.pitch = self.pitch0 * (1 - k) - 0.25 * k + 0.02 * math.sin(t * 1.3)
             night.yaw = self.yaw0

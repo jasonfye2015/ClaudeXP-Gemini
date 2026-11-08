@@ -138,7 +138,12 @@ the edge of his light and leans out toward him, legs reaching (the spider's atta
 (the web creaks under her). In the dark she comes close and stays. When he comes at her, she withdraws, fast. When the
 silk shakes hard she turns to him and comes. Drawn dark (only her eyes catch the light: a deep red), heard as a dry
 rustle of many legs, louder the nearer she is. Her eyes are the ones that watch him now (the perches are gone).
-If she feels too small: shrink Claude, slow him, lower his eye, enlarge the babies.
+Then larger: a leg-span of 6.75 (half again), and she starts half way up the hollow and watches from there unless
+he climbs higher; Claude a little smaller (eye 0.52, radius 0.21). Shift runs (3.45 a second, half again as fast);
+Space jumps (about half his height; on her silk it's a scramble she feels, and it throws his balance on a strand).
+
+A seventh ending, Fire (proposed): the whole oak set alight, somehow - very likely with him in it. The design's Warmth
+spell is the natural way in ("fire in a web; one slip and the night may end"). The count is now "of 7".
 
 Still to come in phase 3: her moods (3b), her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,

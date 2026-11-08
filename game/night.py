@@ -25,10 +25,12 @@ from .lantern import Lantern
 from .mother import Mother
 from .web import BRIDGE_HALF, Bridge, Web
 
-EYE = 0.62
-RADIUS = 0.24
+EYE = 0.52                     # (a little smaller than the Timeline's other first-person games: she is very large)
+RADIUS = 0.21
+HEIGHT = 0.64                  # (room he needs over his head)
 WALK = 1.35                    # (unhurried: she feels every step)
-HURRY = 2.3                    # (a hurried walk - never a run, in here)
+HURRY = 3.45                   # (a run: Shift)
+JUMP = 3.9                     # (Space: about half his height)
 GRAVITY = 16.0
 DUSK = 19 * 60.0               # (the clock: minutes from midnight)
 DAWN = 30 * 60.0 + 30.0        # (half past six in the morning)
@@ -57,6 +59,7 @@ class Input:
         self.yaw = 0.0
         self.pitch = 0.0
         self.hurry = False
+        self.jump = False              # (Space: set by the view, used once)
 
 
 class Night:
@@ -299,6 +302,20 @@ class Night:
             dx = bridge.dir[0] * along + bridge.side[0] * pull
             dz = bridge.dir[1] * along + bridge.side[1] * pull
         on_ground = self.y <= self.floor_at(self.x, self.z, self.y) + 0.01
+        if inp.jump:                                            # (a jump: off the ground, or off her silk)
+            inp.jump = False
+            if on_ground and self.vy == 0.0:
+                self.vy = JUMP
+                self._fall_from = self.y
+                self.events.append(("jump",))
+                if self.on is not None:                         # (she feels that: a scramble, not a step)
+                    self.tremor += 1.2
+                    self.silk["hurried"] += 0.6
+                    if isinstance(self.on, Bridge):
+                        self.sway_v += self.rng.gauss(0.0, 1.4)
+                self.on = None
+                self.y += 0.02
+                on_ground = False
         for mx, mz in ((dx, dz), (dx, 0.0), (0.0, dz)):        # (straight on, or sliding along what's in the way)
             if not (mx or mz):
                 continue
@@ -306,7 +323,7 @@ class Night:
             f = self.floor_at(nx, nz, self.y)
             if f > self.y + T.STEP:
                 continue
-            if t.can_stand(nx, nz, max(self.y, f) if on_ground else self.y, RADIUS):
+            if t.can_stand(nx, nz, max(self.y, f) if on_ground else self.y, RADIUS, HEIGHT):
                 self.x, self.z = nx, nz
                 d = math.hypot(mx, mz)
                 self.moved += d
@@ -314,12 +331,16 @@ class Night:
                     self._on_silk(d, inp.hurry)
                 break
         f = self.floor_at(self.x, self.z, self.y)
-        if self.y > f + 0.01:                                 # (falling: off the ledge's edge, or a strand)
+        if self.y > f + 0.01:                                 # (falling: off the ledge's edge, or a strand - or jumping)
             if self.vy == 0.0:
                 self._fall_from = self.y
             self.on = None
             self.vy -= GRAVITY * dt
             self.y = max(f, self.y + self.vy * dt)
+            ceil = t.ceiling_at(self.x, self.z, f)
+            if ceil is not None and self.vy > 0 and self.y + HEIGHT > ceil:     # (his head on the roof)
+                self.y, self.vy = ceil - HEIGHT, 0.0
+            self._fall_from = max(self._fall_from, self.y)
             if self.y == f:
                 if self.vy < -9:
                     self.events.append(("fall", -self.vy))
