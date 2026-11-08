@@ -37,6 +37,7 @@ class Conversation:
         self.turns = 0
         self.lies = 0
         self.ended = None
+        self.visited = []                         # (the script's lines she's said, in order: for his notes)
 
     # ---- what she knows, now -------------------------------------------------------------------------------------
     def context(self):
@@ -103,6 +104,7 @@ class Conversation:
         node = nodes[node_id]
         while True:
             parts.append(node["her"])
+            self.visited.append(node_id)
             if "next" not in node:
                 break
             node_id = node["next"]

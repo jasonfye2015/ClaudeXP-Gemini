@@ -136,6 +136,12 @@ class SceneView(QWidget):
         return int((self.t - self.line_t) * REVEAL)
 
     def _her(self, text, choices):
+        from ..game import notes
+        view = self.shell.view
+        view.note(notes.for_line(text))
+        for node in self.talk.visited[getattr(self, "_seen", 0):]:
+            view.note(notes.for_node(node))
+        self._seen = len(self.talk.visited)
         self.waiting = False
         self.her_text, self.line_t = text, self.t
         audio = self.shell.view.audio
@@ -230,6 +236,15 @@ class SceneView(QWidget):
             p.fillRect(self.rect(), QColor(0, 0, 0, int(255 * min(1.0, sc.dim))))
         if sc.phase == "talk" and self.opened:
             self._window(p)
+        toast = getattr(self.shell.view, "note_toast", None)
+        import time
+        if toast and time.perf_counter() - toast[1] < 4.5:            # (a page written in his notes, even now)
+            age = time.perf_counter() - toast[1]
+            f = fonts.his(self.shell.records, 11)
+            f.setItalic(True)
+            p.setFont(f)
+            p.setPen(QColor(220, 196, 150, int(220 * min(1.0, age / 0.4, (4.5 - age) / 0.8))))
+            p.drawText(QRectF(0, H * 0.115 * sc.box + 8, W, 22), Qt.AlignHCenter, f"Written in your notes:  {toast[0]}")
         p.end()
 
     def _window(self, p):

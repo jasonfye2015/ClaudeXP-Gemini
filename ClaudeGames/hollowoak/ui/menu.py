@@ -250,7 +250,7 @@ class NightMenu(QWidget):
         begin = QPushButton("Begin the night")
         begin.setObjectName("begin")
         begin.setCursor(Qt.PointingHandCursor)
-        begin.clicked.connect(shell.begin)
+        begin.clicked.connect(shell.show_letter)
         nav.addWidget(begin)
         nav.addSpacing(18)
         for name, page in (("Endings", self._endings()), ("Records", self._records()), ("Saved nights", self._saved()),

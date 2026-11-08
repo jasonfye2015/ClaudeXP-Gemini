@@ -105,6 +105,14 @@ class Shell(QWidget):
         self.set_panel(NightMenu(self))
         self.view.ensure_audio()                             # (and her voice, readied while the player reads)
 
+    def show_letter(self):
+        """Before the night: her letter, and what it means to him. Go to the oak - or not tonight."""
+        from .pages import Letter
+        for page in ("letter", "silk"):
+            self.records.note(page)
+        self.set_panel(Letter(self, "begin", on_go=self.begin, on_back=self.show_menu))
+        self.panel.setFocus()
+
     def begin(self):
         self.set_panel(None)
         self.view.begin(Night())
@@ -115,8 +123,34 @@ class Shell(QWidget):
         if self.panel:
             self.resume()
             return
+        self.pause_menu()
+
+    def pause_menu(self):
         self.set_panel(Panel(self, "The night waits", f"It is {self.view.night.clock_words()}.",
-                             [("Go on", self.resume), ("Back to the title", self.show_title)], small=True))
+                             [("Go on", self.resume), ("View letter", self.view_letter), ("Notes", self.show_notes),
+                              ("Unlocks", self.show_unlocks), ("Back to the title", self.show_title)], small=True))
+
+    def view_letter(self):
+        from .pages import Letter
+        self.set_panel(Letter(self, "view", on_back=self._back_from_page))
+        self.panel.setFocus()
+
+    def show_notes(self):
+        from .pages import Notebook
+        self.set_panel(Notebook(self, self._back_from_page))
+        self.panel.setFocus()
+
+    def show_unlocks(self):
+        from .pages import Unlocks
+        self.set_panel(Unlocks(self, self._back_from_page))
+        self.panel.setFocus()
+
+    def _back_from_page(self):
+        """Back from the letter, the notes or the unlocks: to the pause in a night, or to Before the night."""
+        if self.view.playing:
+            self.pause_menu()
+        else:
+            self.show_menu()
 
     def resume(self):
         self.set_panel(None)

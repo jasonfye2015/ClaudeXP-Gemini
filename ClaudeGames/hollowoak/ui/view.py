@@ -163,6 +163,7 @@ class GameView(QOpenGLWidget):
             if self.audio is not None:
                 self.audio.hear(n, n.events)
             self._count(n.events)
+            self._notes_from(n)
             self._murmurs(n)
             for e in n.events:
                 if e[0] == "place":
@@ -262,6 +263,20 @@ class GameView(QOpenGLWidget):
 
     MURMUR = {"glimpse": "glimpse", "near": "dark", "turn": "turn", "hunt": "hunt", "withdraw": "withdraw"}
 
+    def note(self, ids):
+        """Pages of his notebook, written as he learns them (kept across nights): a word low on the screen."""
+        for nid in ids:
+            if self.shell.records.note(nid):
+                from ..game.notes import PAGES
+                self.note_toast = (PAGES[nid][1], time.perf_counter())
+
+    def _notes_from(self, n):
+        from ..game import notes
+        for e in n.events:
+            self.note(notes.unlock_for(e, n))
+        if int(n.time * 2) != int((n.time - 0.05) * 2):          # (twice a second: has he seen her moods in the light?)
+            self.note(notes.for_moods(n.moods))
+
     def _murmurs(self, n):
         """Her words, unasked, now and then: when she leans out to him, comes close in the dark, turns to his
         scrambling, hunts, draws back. Shown low on the screen, and heard."""
@@ -278,6 +293,8 @@ class GameView(QOpenGLWidget):
         except queue.Empty:
             return
         if line:
+            from ..game import notes
+            self.note(notes.for_line(line))
             self.her_line = (line, time.perf_counter())
             if self.audio is not None:
                 self.audio.say(line)
@@ -348,6 +365,14 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "A   D   -   lean against the sway")
+        toast = getattr(self, "note_toast", None)
+        if toast and t - toast[1] < 4.5:                         # (a page written in his notes)
+            a = min(1.0, (t - toast[1]) / 0.4, (4.5 - (t - toast[1])) / 0.8)
+            f = QFont(SERIF, 12)
+            f.setItalic(True)
+            p.setFont(f)
+            p.setPen(QColor(220, 196, 150, int(220 * a)))
+            p.drawText(QRectF(0, H * 0.78, W, 24), Qt.AlignHCenter, f"Written in your notes:  {toast[0]}")
         if getattr(self, "her_line", None) and t - self.her_line[1] < 7.0:     # (her words: hers, low and large)
             age = t - self.her_line[1]
             a = min(1.0, age / 0.6, (7.0 - age) / 1.2)
