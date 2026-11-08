@@ -78,6 +78,11 @@ catch, skittering, the lantern's rattle and puff, a thud - synthesized, followin
 
 Tests: test_web.py (strands, loom, a gentle crossing, hurrying and leaning, what she feels), test_brood.py.
 
+Phase 2b - across his eyes (done): game/crawlers.py - every 20 to 30 seconds a small spider (3 to 8.5% of the
+screen's height) runs across the view itself in 0.55 to 1 second, in just off one edge and out just off another, on a
+slight curve; three times in ten, two at once by different ways. Drawn flat over everything (Quaternius's spider, seen
+from above, its legs going), lit by the lantern - a dark shape when it's out - with a skitter close by.
+
 ## Phase 3 - Ysmeine
 
 Her figure (Quaternius's Spider, scaled), her moods, the language model's voice with its guardrails and memory, the

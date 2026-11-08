@@ -89,3 +89,29 @@ def test_the_den_sounds():
         s.play(name)
     loud = np.concatenate([s.render(2205) for _ in range(10)])
     assert np.isfinite(loud).all() and np.abs(loud).max() <= 1.0 and not s.voices or len(s.voices) <= 12
+
+
+def test_now_and_then_one_runs_across_his_eyes():
+    import random
+
+    from hollowoak.game.crawlers import Crawlers
+    c = Crawlers(random.Random(8))
+    starts, counts, seen = [], [], []
+    for _ in range(int(600 / 0.05)):
+        for e in c.step(0.05):
+            starts.append(c.t)
+            counts.append(e[1])
+            runs = c.runs[-e[1]:]
+            for r in runs:
+                assert 0.55 <= r["time"] <= 1.0 and 0.03 <= r["size"] <= 0.085
+                for u, v in (r["from"], r["to"]):                    # (from just off one edge to just off another)
+                    assert min(u, v) < 0 or max(u, v) > 1
+                assert abs(r["from"][0] - r["to"][0]) + abs(r["from"][1] - r["to"][1]) > 0.7
+            if len(runs) == 2:
+                (a, b) = runs
+                assert a["from"] != b["from"] and a["to"] != b["to"]
+        seen.append(len(c.active()))
+    gaps = [b - a for a, b in zip(starts, starts[1:])]
+    assert 18 <= len(starts) <= 31 and all(19.9 < g < 30.1 for g in gaps)
+    assert 2 in counts and 1 in counts and max(seen) <= 2
+    assert sum(1 for k in seen if k) * 0.05 < len(starts) * 2.0 * 1.0 + 1     # (each gone within a second)

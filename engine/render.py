@@ -287,6 +287,22 @@ void main() {
     frag = outColour(fogged(vPos, col));
 }"""
 
+CRAWLER_FS = """#version 330 core
+in vec3 vPos; in vec3 vNrm; in vec3 vCol;
+uniform float uLamp;
+out vec4 frag;
+void main() {                                                   // (on his eyes: lit from behind him by the lantern)
+    vec3 N = normalize(vNrm);
+    if (N.z < 0.0) N = -N;
+    vec3 L = normalize(vec3(0.35, -0.45, 0.8));
+    float d = max(dot(N, L), 0.0);
+    float spec = pow(max(dot(N, normalize(L + vec3(0.0, 0.0, 1.0))), 0.0), 24.0);
+    vec3 warm = vec3(1.0, 0.72, 0.45);
+    vec3 c = vCol * (0.25 + 2.2 * d * uLamp) * warm + warm * spec * (0.06 + 0.5 * uLamp);
+    if (vCol.r > 0.15 && vCol.g < 0.06) c = vec3(0.9, 0.12, 0.05) * (0.25 + 0.9 * uLamp);
+    frag = vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), 1.0);
+}"""
+
 SKY_VS = """#version 330 core
 layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
@@ -368,6 +384,7 @@ class Renderer:
         self.spider_prog = gl.Program(SPIDER_VS, SPIDER_FS)
         sv, self.spider_clips, self.spider_n = silkmesh.spider_frames()
         self.spiders = gl.Mesh([(0, 3), (1, 3), (2, 3)], sv)
+        self.crawler_prog = gl.Program(SPIDER_VS, CRAWLER_FS)
         self.moon = np.array((0.35, 1.0, -0.25), np.float32)
         self.moon /= np.linalg.norm(self.moon)
 
@@ -443,6 +460,34 @@ class Renderer:
             self._fog(night, view, now, lights)
         if night is not None and getattr(night, "show_lantern", True):
             self._lantern(night, now)
+        self._crawlers(night, w, h)
+
+    def _crawlers(self, night, w, h):
+        """The small ones running across his eyes: drawn flat on the view, over everything, seen from above."""
+        crawlers = getattr(night, "crawlers", None)
+        runs = crawlers.active() if crawlers is not None and getattr(night, "show_lantern", True) else []
+        if not runs:
+            return
+        aspect = w / max(1, h)
+        ortho = np.array(((1 / aspect, 0, 0, 0), (0, 1, 0, 0), (0, 0, -0.5, 0), (0, 0, 0, 1)), np.float32)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.crawler_prog.use()
+        self.crawler_prog.mat4("uPV", ortho)
+        self.crawler_prog.float("uLamp", min(1.0, night.lamp.level) if night.lantern else 0.0)
+        first, frames, fps = self.spider_clips["walk"]
+        for u, v, du, dv, size, t in runs:
+            x, y = (u * 2 - 1) * aspect, v * 2 - 1
+            fx, fy = du * 2 * aspect, dv * 2
+            n = math.hypot(fx, fy) or 1.0
+            fx, fy = fx / n, fy / n
+            s = size * 2                                       # (a share of the screen's height: in view units)
+            m = np.identity(4, np.float32)
+            m[:3, 0] = (-fy * s, fx * s, 0)                     # (its right)
+            m[:3, 1] = (0, 0, s)                                # (its back, toward him)
+            m[:3, 2] = (fx * s, fy * s, 0)                      # (the way it runs)
+            m[:3, 3] = (x, y, 0)
+            self.crawler_prog.mat4("uModel", m)
+            self.spiders.draw_range((first + int(t * fps) % frames) * self.spider_n, self.spider_n)
 
     def _spiders(self, night):
         """Her small ones, each in its own place and pose, a frame of its walk or its stillness."""
