@@ -27,7 +27,8 @@ SLIDERS = (("Volume", "volume"), ("Music", "music"), ("Looking about", "look"), 
            ("Her words, their size", "her_size"), ("Your words, their size", "his_size"))
 RANGE = {"her_size": (60, 160), "his_size": (60, 160)}            # (the rest: 0 to 100)
 TOGGLES = (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"), ("The orbs", "orbs"),
-           ("Her voice, aloud", "aloud"), ("Her venom's pulse", "venom_fx"), ("Steadier light", "steady"))
+           ("Her voice, aloud", "aloud"), ("Her venom's pulse", "venom_fx"), ("Steadier light", "steady"),
+           ("The lantern's shadows", "shadows"))
 PER_PAGE = 3
 FLIP = 0.42
 

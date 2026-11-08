@@ -401,3 +401,9 @@ crawlers across his face: each from its side; the lantern a little to his right.
 And the space he's in: a reverb (four combs an ear) - long and dark in the hollow, close in the root tunnel, thinner in
 the chambers and under the open crown.
 
+9b - the lantern's shadows (done). engine/render.py: each frame the den is drawn once more from the lantern's flame
+(SHADOW_VS/FS: how far each surface is from it, into a 1024 square), looking where he looks, 128 degrees wide - the
+wood, the dressing, her guests, her small ones near him, and her. Every surface lit by the lantern asks it (shadowAt in
+the shared lighting: nine samples, a soft edge, never quite black), and her chitin's shine too. The shadows swing as
+the lantern swings. Options: "The lantern's shadows" (off, for a slower computer).
+

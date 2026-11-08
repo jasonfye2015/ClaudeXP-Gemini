@@ -424,6 +424,7 @@ class NightMenu(QWidget):
         for label, key in (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"),
                            ("The orbs", "orbs"), ("Her venom, pulsing at the edges", "venom_fx"),
                            ("Steadier light (less flicker and flashing)", "steady"),
+                           ("The lantern's shadows (off for a slower computer)", "shadows"),
                            ("What the night does to him (all of it)", "fx_all"), ("  ...to his body (health)", "fx_health"),
                            ("  ...the poison in him", "fx_poison"), ("  ...his mind (sanity)", "fx_sanity"),
                            ("  ...the stupor", "fx_stupor"), ("  Blood and vomit", "fx_gore"), ("  His eye", "fx_eye"),

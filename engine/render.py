@@ -53,14 +53,29 @@ LIGHTING = """
 uniform vec3 uEye; uniform vec3 uAmbient; uniform vec3 uMoonDir; uniform vec3 uMoonCol;
 uniform int uLightCount; uniform vec4 uLightPos[16]; uniform vec4 uLightCol[16];
 uniform vec3 uFog; uniform float uFogDensity;
+uniform int uShadowOn; uniform mat4 uLightPV; uniform vec3 uLightP; uniform float uShadowFar; uniform sampler2D uShadow;
 float moonReach(float y) { return smoothstep(%(TOP)s * 0.35, %(TOP)s + 2.0, y); }
+float shadowAt(vec3 p) {                // (the lantern's light, and what stands between it and here: her, the wood)
+    if (uShadowOn == 0) return 1.0;
+    vec4 c = uLightPV * vec4(p, 1.0);
+    if (c.w <= 0.0) return 1.0;
+    vec3 q = c.xyz / c.w * 0.5 + 0.5;
+    if (q.x < 0.0 || q.x > 1.0 || q.y < 0.0 || q.y > 1.0) return 1.0;
+    float d = length(p - uLightP) / uShadowFar - 0.012;
+    float s = 0.0;
+    vec2 texel = vec2(1.5 / 1024.0);
+    for (int x = -1; x <= 1; x++)
+        for (int y = -1; y <= 1; y++)
+            s += texture(uShadow, q.xy + vec2(x, y) * texel).r < d ? 0.0 : 1.0;
+    return mix(0.18, 1.0, s / 9.0);       // (never quite black: the lamp's own bounce)
+}
 vec3 lit(vec3 p, vec3 n, vec3 base, float shade) {
     vec3 c = uAmbient * shade + uMoonCol * max(dot(n, -uMoonDir), 0.0) * moonReach(p.y) * shade;
     for (int i = 0; i < uLightCount; i++) {
         vec3 d = uLightPos[i].xyz - p; float dist = length(d);
         float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0); att *= att;
         float ndl = max(dot(n, d / max(dist, 1e-3)), 0.0) * 0.85 + 0.15;
-        c += uLightCol[i].rgb * att * ndl;
+        c += uLightCol[i].rgb * att * ndl * (i == 0 ? shadowAt(p) : 1.0);
     }
     return base * c;
 }
@@ -72,6 +87,20 @@ vec3 fogged(vec3 p, vec3 col) {
 }
 vec4 outColour(vec3 c) { return vec4(pow(max(c, vec3(0.0)), vec3(1.0 / 2.2)), 1.0); }
 """ % {"TOP": f"{T.TOP:.1f}"}
+
+SHADOW_VS = """#version 330 core
+layout(location = 0) in vec3 aPos;
+uniform mat4 uLightPV; uniform mat4 uModel;
+out vec3 vPos;
+void main() { vec4 p = uModel * vec4(aPos, 1.0); vPos = p.xyz; gl_Position = uLightPV * p; }
+"""
+SHADOW_FS = """#version 330 core
+in vec3 vPos;
+uniform vec3 uLightP; uniform float uFar;
+out vec4 frag;
+void main() { frag = vec4(length(vPos - uLightP) / uFar, 0.0, 0.0, 1.0); }
+"""
+SHADOW_SIZE = 1024
 
 WORLD_VS = """#version 330 core
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in vec2 aUV;
@@ -313,7 +342,7 @@ void main() {
     for (int i = 0; i < uLightCount; i++) {                    // (a hard shine on the chitin)
         vec3 d = uLightPos[i].xyz - vPos; float dist = length(d);
         float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0);
-        col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0 + 60.0 * uWet) * (1.1 + 2.2 * uWet);
+        col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0 + 60.0 * uWet) * (1.1 + 2.2 * uWet) * (i == 0 ? shadowAt(vPos) : 1.0);
     }
     col *= uShade;
     if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is - deep red)
@@ -548,7 +577,15 @@ class Renderer:
         GL.glDepthMask(GL.GL_TRUE)
         lights = self._lights(night, now)
         lit = self._sky_light(night)
+        shadow = self._shadow_pass(night, lights, w, h)
         for prog in (self.world, self.fung, self.dress_prog, self.spider_prog, self.silk_prog):
+            prog.use()
+            prog.int("uShadowOn", 1 if shadow else 0)
+            prog.int("uShadow", 3)
+            if shadow:
+                prog.mat4("uLightPV", shadow[0])
+                prog.vec("uLightP", shadow[1])
+                prog.float("uShadowFar", shadow[2])
             prog.use()
             prog.mat4("uPV", pv)
             prog.vec("uEye", eye)
@@ -693,6 +730,69 @@ class Renderer:
             self.crawler_prog.mat4("uModel", m)
             self.spiders.draw_range((first + int(t * fps) % frames) * self.spider_n, self.spider_n)
 
+    def _shadow_pass(self, night, lights, w, h):
+        """The lantern's shadows: how far each surface is from its flame, seen from the flame - the den's wood, her
+        guests, her small ones and her. -> (light's view, flame, far) or None (no flame, or shadows off)."""
+        if not getattr(night, "shadows", True) or not night.lantern or not lights or night.lamp.level < 0.05:
+            return None
+        if getattr(night, "dying", None) is not None:
+            return None
+        flame = np.array(lights[0][0][:3], np.float32)
+        far = float(lights[0][0][3]) + 0.5
+        if not hasattr(self, "shadow_prog"):
+            self.shadow_prog = gl.Program(SHADOW_VS, SHADOW_FS)
+            tex = GL.glGenTextures(1)
+            GL.glBindTexture(GL.GL_TEXTURE_2D, tex)
+            GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_R32F, SHADOW_SIZE, SHADOW_SIZE, 0, GL.GL_RED, GL.GL_FLOAT, None)
+            for k, v in ((GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST), (GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST),
+                         (GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE), (GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)):
+                GL.glTexParameteri(GL.GL_TEXTURE_2D, k, v)
+            rb = GL.glGenRenderbuffers(1)
+            GL.glBindRenderbuffer(GL.GL_RENDERBUFFER, rb)
+            GL.glRenderbufferStorage(GL.GL_RENDERBUFFER, GL.GL_DEPTH_COMPONENT24, SHADOW_SIZE, SHADOW_SIZE)
+            fbo = GL.glGenFramebuffers(1)
+            GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, fbo)
+            GL.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, tex, 0)
+            GL.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_ATTACHMENT, GL.GL_RENDERBUFFER, rb)
+            self._shadow_fbo = (fbo, tex)
+        back = int(GL.glGetIntegerv(GL.GL_FRAMEBUFFER_BINDING))
+        light_pv = gl.perspective(128.0, 1.0, 0.05, far) @ gl.view_matrix(flame, night.yaw, night.pitch - 0.3)
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, self._shadow_fbo[0])
+        GL.glViewport(0, 0, SHADOW_SIZE, SHADOW_SIZE)
+        GL.glClearColor(1.0, 1.0, 1.0, 1.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
+        GL.glEnable(GL.GL_DEPTH_TEST)
+        GL.glDisable(GL.GL_BLEND)
+        sp = self.shadow_prog
+        sp.use()
+        sp.mat4("uLightPV", light_pv)
+        sp.vec("uLightP", flame)
+        sp.float("uFar", far)
+        sp.mat4("uModel", np.identity(4, np.float32))
+        self.mesh.draw()
+        self.dress.draw()
+        self.cocoon_mesh.draw()
+        self._caster = sp                                     # (her, and her small ones, drawn by _spider into it)
+        try:
+            brood = getattr(night, "brood", None)
+            if brood is not None:
+                for pos, fwd, up, size, clip, t in brood.near(night.eye):
+                    if math.dist(pos, flame) < far:
+                        self._spider(np.array(pos), fwd, up, size, clip, t)
+            her = getattr(night, "her", None)
+            if her is not None and math.dist(her.at(), flame) < far + 4.0:
+                p, f, up, size, clip, t, _lean = her.pose()
+                self._spider(np.array(p), f, up, size, clip, t)
+        finally:
+            self._caster = None
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, back)
+        GL.glViewport(0, 0, w, h)
+        GL.glClearColor(*FOG, 1.0)
+        GL.glActiveTexture(GL.GL_TEXTURE3)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, self._shadow_fbo[1])
+        GL.glActiveTexture(GL.GL_TEXTURE0)
+        return light_pv, flame, far
+
     def _spiders(self, night):
         """Her small ones, each in its own place and pose, a frame of its walk or its stillness."""
         brood = getattr(night, "brood", None)
@@ -746,7 +846,7 @@ class Renderer:
         m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = right * size, up * size, f * size, p
         first, frames, fps = self.spider_clips[clip]
         k = first + int(t * fps) % frames
-        self.spider_prog.mat4("uModel", m)
+        (getattr(self, "_caster", None) or self.spider_prog).mat4("uModel", m)
         self.spiders.draw_range(k * self.spider_n, self.spider_n)
 
     def _silk(self, night, now, proj, h):
