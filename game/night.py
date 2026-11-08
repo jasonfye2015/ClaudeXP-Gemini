@@ -29,6 +29,7 @@ from .offerings import Finds
 from .ending import Ending
 from .mother import Mother
 from .sky import Sky
+from .spells import Spells
 from .web import BRIDGE_HALF, Bridge, Web
 
 EYE = 0.52                     # (a little smaller than the Timeline's other first-person games: she is very large)
@@ -90,6 +91,7 @@ class Night:
         self.finds = Finds(self.tree)                                       # (things lying in her house: offerings)
         self.pack, self.taken, self.given = [], set(), []                   # (what he carries; took; gave her)
         self.moods = Moods()                                                # (how she regards him: hidden)
+        self.spells = Spells(random.Random(None if seed is None else f"spells{seed}"))      # (his four)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
         self.rng.shuffle(spots)
@@ -212,7 +214,8 @@ class Night:
                 return
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
-        if not self.quiet:
+        self.spells.step(dt)
+        if not self.quiet and not self.spells.illusion:                     # (Illusion: her small ones lose him)
             self.events.extend(self.crawlers.step(dt))
             self.events.extend(self.danglers.step(dt, self))
             self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
@@ -222,6 +225,14 @@ class Night:
             self.collapse(gone)
 
     KEEPSAKES = {"orrin": "string", "maudren": "journal"}
+
+    def cast(self, name):
+        """1-4: one of his spells, here in her house (in her scenes: game/dialogue.py's cast)."""
+        if self.dying is not None or self.ending is not None:
+            return []
+        out = self.spells.cast(name, self)
+        self.events.extend(out)
+        return out
 
     def take(self, item):
         if item not in self.taken:

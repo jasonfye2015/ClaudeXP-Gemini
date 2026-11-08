@@ -244,7 +244,7 @@ leaves and mushrooms, like Before the night).
 
 ## Phase 4 - the night
 
-Sub-phases: 4a the acts (done) - 4b offerings - 4c spells (Warmth: the road to Fire) - 4d venom (and the antidote) -
+Sub-phases: 4a the acts (done) - 4b offerings (done) - 4c spells (done) (Warmth: the road to Fire) - 4d venom (and the antidote) -
 4e saving - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
 
 Phase 4a - the acts (done). game/acts.py: threshold (in, to her loom) -> audience (her loom) -> gallery (her guests;
@@ -267,6 +267,18 @@ mood and the hour: moths delight early, are only kind late, insult her starving;
 her fed ("I am not a cat"); the ring delights if she thinks well of him, else reads as a bribe; Orrin's string touches
 her fascinated, else he's a thief like Wick; the journal softens her doubt; her own honey amuses her fascinated, else
 he stole it. Script: her answer for that gift and worth, and the talk goes on; a model: told how it lands.
+
+Phase 4c - spells (done). game/spells.py: 1 Light, 2 Warmth, 3 Illusion, 4 Memory, each with a short rest between
+casts (shown low in the middle). In the den: Light hangs a hard white orb before him a few seconds - the den lit, her
+small ones scattering, three old marks cut in the wood that only it shows (notches in the roots, names behind her
+guests, a word burnt under the crown: a new "Old marks" section of his notes); near her it hurts her eyes (she pulls
+back; doubt up, patience down). Warmth: a small flame in his palm - a comfort (sanity up, stupor down); she likes it at
+a distance, distrusts it close; cast on her silk, the silk smoulders (an ember, the oak shaking, her terrified -
+flagged "smouldered": the road to Fire, 4f). Illusion: her small ones lose him for 15 s. Memory: steadies him. In her
+scenes "Cast a spell..." makes them gestures: Light insults her; Warmth from off her silk pleases her a little, on it
+enrages her; Illusion dazzles her or she sees through it (more likely the more she doubts him: suspicion jumps);
+Memory - one of three true memories of his own (his mother's hands, his first candle, the night Thornwick threw him
+out), each once a night - his most intimate gift: she keeps what she sees (into her memory of him), and answers it.
 
 ## Phase 5 - music, sound, polish
 

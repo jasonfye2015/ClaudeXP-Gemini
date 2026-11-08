@@ -133,6 +133,11 @@ class DenAudio:
                 s.play("thunder", 0.5 + 0.5 * e[1])
             elif kind == "swipe":
                 s.play("whoosh")
+            elif kind == "spell" and e[2] == "cast":
+                s.play("whoosh", 0.8)
+            elif kind == "smoulder":
+                s.play("puff", 1.4)
+                s.play("creak", 1.8)
             elif kind == "skitter":
                 s.play("skitter", max(0.0, 1.0 - e[2] / 7.0))
             elif kind == "lantern" and e[1] == "shake":

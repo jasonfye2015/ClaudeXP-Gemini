@@ -175,9 +175,47 @@ class SceneView(QWidget):
             self._offer_button()
 
     def _offer_button(self):
-        """If he carries anything: something to give her."""
+        """If he carries anything: something to give her. And his spells, as gestures."""
         if self.shell.view.night.pack:
             self._button("✦  Offer her something...", self._open_pack)
+        sp = self.shell.view.night.spells
+        if any(sp.ready(k) for k in ("light", "warmth", "illusion")) or sp.unshown():
+            self._button("✧  Cast a spell...", self._open_spells)
+
+    SPELLS = (("light", "Light  -  a hard white light"), ("warmth", "Warmth  -  a small flame in his palm"),
+              ("illusion", "Illusion  -  seem grander than he is"))
+
+    def _open_spells(self):
+        sp = self.shell.view.night.spells
+        self._clear()
+        for name, label in self.SPELLS:
+            if sp.ready(name):
+                self._button("✧  " + label, lambda _x=False, name=name: self._cast(name))
+        if sp.unshown():
+            self._button("✧  Memory  -  show her something true", self._open_memories)
+        self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
+        self._lay()
+
+    def _open_memories(self):
+        from ..game.spells import MEMORIES
+        self._clear()
+        for k in self.shell.view.night.spells.unshown():
+            self._button("✧  " + MEMORIES[k][0], lambda _x=False, k=k: self._cast("memory", k))
+        self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
+        self._lay()
+
+    def _cast(self, name, memory=None):
+        self.his_text = {"light": "(You raise a hard white light.)", "warmth": "(You open your hand: a small flame.)",
+                         "illusion": "(You wrap yourself in an illusion - a cloak of stars.)"}.get(name) or \
+            "(You show her a memory, and let her see it all.)"
+        n = self.shell.view.night
+        n.spells.lit.append((name, n.eye, n.spells.t, 4.0 if name != "memory" else 2.0))
+        audio = self.shell.view.audio
+        if audio is not None:
+            audio.synth.play("whoosh", 0.7)
+        self._clear()
+        self.waiting = True
+        self.talk.cast(name, lambda t, ch: self.replies.put((t, ch)), memory)
 
     def _open_pack(self):
         from ..game.offerings import ITEMS

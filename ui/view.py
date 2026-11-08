@@ -10,8 +10,8 @@ import math
 import queue
 import time
 
-from PySide6.QtCore import QPoint, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QSurfaceFormat
+from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QRadialGradient, QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
@@ -197,6 +197,14 @@ class GameView(QOpenGLWidget):
                     self.whisper = ("Bitten." if e[1] == "face" else "Something bit your hand.", now, 2.5)
                 elif e[0] == "hurt" and e[1] > 20:
                     self.whisper = ("You hit the wood hard.", now, 2.5)
+                elif e[0] == "spell":
+                    self.whisper = (self.SPELL_WORDS.get((e[1], e[2]), ""), now, 3.0)
+                elif e == ("her", "hurt"):
+                    self.whisper = ("Somewhere above, something hisses and pulls back from the light.", now, 4.0)
+                elif e[0] == "smoulder":
+                    self.whisper = ("The silk blackens under your hand, and smokes. The whole oak shudders.", now, 5.0)
+                elif e[0] == "mark":
+                    self.whisper = ("The light finds something cut into the wood.", now, 4.0)
             n.events.clear()
         elif not self.playing:
             n.time += dt
@@ -267,6 +275,43 @@ class GameView(QOpenGLWidget):
         item = n.finds.near(n)
         return ("take " + ITEMS[item][0]) if item else None
 
+    def _spell_glow(self, p, W, H, n):
+        """His spells, shining: Light hung above him, Warmth in his palm, an ember on the silk; and which are ready."""
+        sp = n.spells
+        r = self.renderer
+        if r is not None and getattr(r, "pv", None) is not None:
+            import numpy as np
+            for kind, pos, _w, _l in sp.lit:
+                k = sp.shining(kind)
+                if k <= 0 or kind not in ("light", "warmth", "ember"):
+                    continue
+                c = r.pv @ np.array((*pos, 1.0), np.float32)
+                if c[3] <= 0.05:
+                    continue
+                x, y = (c[0] / c[3] * 0.5 + 0.5) * W, (0.5 - c[1] / c[3] * 0.5) * H
+                size = {"light": 60.0, "warmth": 34.0, "ember": 22.0}[kind] / max(0.4, c[3]) * 2.0
+                col = {"light": (225, 235, 255), "warmth": (255, 170, 80), "ember": (255, 110, 40)}[kind]
+                g = QRadialGradient(QPointF(x, y), size)
+                g.setColorAt(0, QColor(*col, int(230 * k)))
+                g.setColorAt(0.25, QColor(*col, int(110 * k)))
+                g.setColorAt(1, QColor(*col, 0))
+                p.setCompositionMode(QPainter.CompositionMode_Plus)
+                p.fillRect(QRectF(x - size, y - size, size * 2, size * 2), g)
+                p.setCompositionMode(QPainter.CompositionMode_SourceOver)
+        if sp.illusion:                                           # (Illusion: a faint shimmer at the edges)
+            a = int(40 + 20 * math.sin(time.perf_counter() * 3))
+            g = QRadialGradient(QPointF(W / 2, H / 2), max(W, H) * 0.7)
+            g.setColorAt(0.6, QColor(150, 160, 255, 0))
+            g.setColorAt(1, QColor(150, 160, 255, a))
+            p.fillRect(QRectF(0, 0, W, H), g)
+        f = QFont(SERIF, 10)
+        p.setFont(f)
+        x = W / 2 - 144
+        for i, (name, word) in enumerate((("light", "Light"), ("warmth", "Warmth"), ("illusion", "Illusion"),
+                                          ("memory", "Memory"))):
+            p.setPen(QColor(215, 200, 175, 190 if sp.ready(name) else 70))
+            p.drawText(QRectF(x + i * 72, H - 112, 72, 20), Qt.AlignLeft, f"{i + 1}  {word}")
+
     def wait_for_dawn(self):
         """Waiting with her for the light: the dark a moment, and then it's coming."""
         from ..game import sky as S
@@ -300,6 +345,14 @@ class GameView(QOpenGLWidget):
                 t["swipes"] += e[1]
             elif e[0] == "lantern" and e[1] == "shake":
                 t["shakes"] += 1
+
+    SPELL_WORDS = {("light", "cast"): "Light: hard and white, and the dark draws back.",
+                   ("warmth", "cast"): "Warmth: a small flame in your palm.",
+                   ("illusion", "cast"): "Illusion: for a while, her small ones cannot find you.",
+                   ("memory", "cast"): "You remember something true, and it steadies you.",
+                   ("light", "resting"): "Not yet - the light needs a moment.",
+                   ("warmth", "resting"): "Not yet.", ("illusion", "resting"): "Not yet.",
+                   ("memory", "resting"): "Not yet."}
 
     MURMUR = {"glimpse": "glimpse", "near": "dark", "turn": "turn", "hunt": "hunt", "withdraw": "withdraw"}
 
@@ -429,6 +482,7 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, 200))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   " + prompt)
+        self._spell_glow(p, W, H, n)
         if n.pack:                                                # (what he carries: offerings, for her)
             from ..game.offerings import ITEMS
             f = QFont(SERIF, 10)
@@ -546,6 +600,10 @@ class GameView(QOpenGLWidget):
             self.night.examine()
         if k == Qt.Key_Space and self.night is not None:
             self.inp.jump = True
+        spell = {Qt.Key_1: "light", Qt.Key_2: "warmth", Qt.Key_3: "illusion", Qt.Key_4: "memory"}.get(k)
+        if spell and self.night is not None and getattr(self, "scene", None) is None:
+            self.night.cast(spell)
+            return
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
             self.night.lamp.shake()
 

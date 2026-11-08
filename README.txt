@@ -12,6 +12,7 @@ The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/
 
 Playing (phases 1 and 2: the tree, and her silk)
   Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
+  1 2 3 4 cast his spells: Light, Warmth, Illusion, Memory (in her scenes: "Cast a spell...").
   E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.
 

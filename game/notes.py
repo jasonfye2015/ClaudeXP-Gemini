@@ -7,7 +7,7 @@ so each night begins knowing what the last ones learned. (The notebook: Esc > No
     for_node(node)              which pages a line of the script writes: [ids]
 The writing down and keeping is game/records.py's (rec.note(id))."""
 
-SECTIONS = ("The invitation", "Her", "Her ways", "Her guests")
+SECTIONS = ("The invitation", "Her", "Her ways", "Her guests", "Old marks")
 
 PAGES = {
     # ---- the invitation
@@ -58,6 +58,12 @@ PAGES = {
     "bite": ("Her ways", "Her bite",
              "She bit me. The venom burns, and then it doesn't, which is worse. One bite she forgives. I do not think "
              "she forgives two."),
+    "light_hurts": ("Her ways", "Her eyes",
+                    "Eight eyes made for the dark. My light hurts her - she pulled back from it as if it had cut her, and "
+                    "came back colder."),
+    "smoulder": ("Her ways", "Fire, on her silk",
+                 "I let a flame touch her silk, and it blackened and smoked, and the whole oak shook. She was afraid. "
+                 "I have never seen her afraid."),
     "hunt": ("Her ways", "When she hunts",
              "When her patience is gone, or her hunger too much, she stops talking and comes straight for me, light or "
              "no light. The middle of the floor is the only place she cannot reach."),
@@ -80,6 +86,16 @@ PAGES = {
     "unnamed": ("Her guests", "The one she will not speak of",
                 "High in the crown, wrapped tighter than the rest, and nothing beneath it at all. When I touched it, "
                 "the whole oak went still."),
+    # ---- old marks: only Light shows them
+    "mark_roots": ("Old marks", "Notches, in the roots",
+                   "Cut low in the root wall, under the mud: rows of small notches, hundreds of them, very old. Someone "
+                   "counted something down here, for a long time."),
+    "mark_tally": ("Old marks", "Names, behind her guests",
+                   "Scratched into the gallery wall behind the wrapped ones: names. Orrin's is the newest. The oldest I "
+                   "cannot read - the letters are older than any I was taught."),
+    "mark_crown": ("Old marks", "A word, burnt in",
+                   "Under the crown, burnt into the wood - burnt, in a tree full of silk - a single word, and a handprint "
+                   "beside it. Not hers. She has no hands."),
 }
 SUITORS = ("orrin", "aldric", "wick", "maudren", "fennick", "isolde", "unnamed")
 
@@ -89,9 +105,13 @@ def unlock_for(event, night=None):
     kind = event[0]
     if kind == "her":
         return {"glimpse": ["edge"], "near": ["dark"], "turn": ["silk_sense"], "hunts": ["hunt"],
-                "bite": ["bite"]}.get(event[1], [])
+                "bite": ["bite"], "hurt": ["light_hurts"]}.get(event[1], [])
     if kind == "crawler" or kind == "dangler" or kind == "swarm":
         return ["small_ones"]
+    if kind == "smoulder":
+        return ["smoulder"]
+    if kind == "mark":
+        return [event[1]]
     return []
 
 
