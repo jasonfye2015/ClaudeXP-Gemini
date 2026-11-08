@@ -110,6 +110,11 @@ MURMURS = {
     "call_threshold": "He has not yet come out onto your loom, in the middle of the great hollow. Call him to it.",
     "call_supper": "It is late, and you are hungry. Call him down to your larder, the chamber off the ledge.",
     "call_crown": "You have gone up to the crown of the oak, to your web under the moon. Call him up to you.",
+    "pant": "He is hurt, out of breath; you can hear every breath through your silk. Say something to him",
+    "blood": "He is bleeding - you can smell it. Say something to him",
+    "prey": "He is crawling on your silk on his hands and knees, like wounded prey. Say something to him",
+    "sick": "Your venom has made him sick. Say something to him",
+    "eye": "He has just torn out his own left eye, in the madness of your house. Say something to him",
     "supper_end": "He has given out. Your small ones have wrapped him, and you are hanging him in your larder, for "
                   "later. You lean close to his face. Say one quiet thing to him - not cruel; it is only what you are",
 }

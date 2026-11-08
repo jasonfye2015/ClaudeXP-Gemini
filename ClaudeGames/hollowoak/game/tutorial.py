@@ -32,6 +32,9 @@ LESSONS = (
     ("orbs", "threshold", None,
      "Red, my health - green, poison rising under it. Blue, my mind - yellow, stupor. If they meet, she has me.",
      "see", None),
+    ("body", "threshold", None,
+     "When I'm hurt, sick, or losing my mind, it shows - and it changes what I can do. (Tonight, never the worst of it."
+     " Options can quiet it.)", "see", None),
     ("small", "threshold", None,
      "Her small ones. When two run over my face, I swipe them off without thinking.", "see", None),
     ("loom", "threshold", ("loom_edge",),

@@ -43,6 +43,13 @@ Playing
   blue sanity with yellow stupor rising under it (bottom right). If either reaches the other - she has you. The edge
   of the view beats when it comes close. Hard falls hurt, bites poison, the dark wears at your mind. Between the
   orbs, a monitor shows your heart.
+  And what the night does to him shows on him, at three quarters, half and a quarter of each: hurt, he pants, his
+  eyes bleed, and at the last his blood runs down the wand and turns the light red (she smells it); poisoned, he's
+  sick (it eases it, a little), foams, his heart skips - and sick over the lantern, the light goes green (shake it
+  off); his mind going, the walls breathe and false eyes open in the fungus, he goes down on his hands and knees for
+  minutes at a time (on her silk, steadier - and to her, like wounded prey), and at the last, his left eye; dazed, the
+  air shimmers, he won't do what he tells himself, and he falls. Options (or his notebook's "What the night does") can
+  quiet any of it - blood and vomit, the eye, the swaying sight, what takes him from himself.
 
   On her loom, she comes to you. Her scenes are framed, and slow: she speaks (in her own hand, and aloud), and you
   answer - in your own words, if a language model writes hers; from lines offered, if not.

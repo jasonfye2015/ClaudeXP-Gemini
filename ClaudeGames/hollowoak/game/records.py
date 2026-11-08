@@ -17,7 +17,9 @@ OPTIONS = {"volume": 80, "music": 70, "look": 50, "heart": True, "heartbeat": Tr
            "her_size": 100, "his_size": 100,     # (the size of her words and his, in percent)
            "venom_fx": True,            # (her venom: the edges of his sight darkening and pulsing)
            "steady": False,             # (steadier light: the lantern's flicker and the lightning calmed)
-           "text_speed": 50}            # (how fast her words come)            # (her venom: the edges of his sight darkening and pulsing)
+           "text_speed": 50,            # (how fast her words come)
+           "fx_all": True, "fx_health": True, "fx_poison": True, "fx_sanity": True, "fx_stupor": True,
+           "fx_gore": True, "fx_eye": True, "fx_distort": True, "fx_control": True}   # (game/afflictions.py)            # (her venom: the edges of his sight darkening and pulsing)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
 
 

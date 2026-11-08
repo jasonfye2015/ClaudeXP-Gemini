@@ -27,7 +27,8 @@ WHERE = {"ring": "Found in the mud of her roots, among old bones.",
          "string": "From under Orrin Vale, where his lute broke.",
          "journal": "From under Maudren Hale. Every page is her words.",
          "honey": "Her own, from her larder wall.",
-         "antidote": "Her phial, from behind her stores. It takes her venom out."}
+         "antidote": "Her phial, from behind her stores. It takes her venom out.",
+         "eye": "My own. I don't remember deciding to."}
 
 
 def items(night):
@@ -120,6 +121,8 @@ LEARNED = {
     ("string", "insult"): "To her it was theft from her guests. Like Wick.",
     ("journal", "delight"): "Maudren's book softened her doubt, {when}.",
     ("journal", "plain"): "Maudren's book, {when}: she knew what was in it.",
+    ("eye", "delight"): "My eye, given her: she kept it, where it can still see me. She was taken with me.",
+    ("eye", "insult"): "My eye, offered: she said she doesn't take what's given in madness.",
     ("honey", "delight"): "Her own honey amused her - when she was taken with me.",
     ("honey", "insult"): "Her own honey, given back: she said I'd stolen it.",
 }

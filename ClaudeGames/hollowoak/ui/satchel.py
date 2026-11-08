@@ -116,6 +116,26 @@ def icon(p, item, r, t, state=None):
         p.drawRoundedRect(QRectF(cx - s * 0.26, cy - s * 0.3, s * 0.48, s * 0.6), s * 0.03, s * 0.03)
         p.setPen(QPen(QColor(200, 170, 110), s * 0.012))
         p.drawLine(QPointF(cx - s * 0.18, cy - s * 0.2), QPointF(cx + s * 0.14, cy - s * 0.2))
+    elif item == "eye":
+        p.setPen(QPen(QColor(120, 10, 10, 200), s * 0.03))              # (what held it, trailing)
+        p.drawLine(QPointF(cx - s * 0.18, cy + s * 0.05), QPointF(cx - s * 0.36, cy + s * 0.18))
+        g = QRadialGradient(QPointF(cx - s * 0.05, cy - s * 0.05), s * 0.25)
+        g.setColorAt(0, QColor(250, 246, 238))
+        g.setColorAt(1, QColor(200, 180, 170))
+        p.setPen(QPen(QColor(140, 40, 40, 160), 1))
+        p.setBrush(g)
+        p.drawEllipse(QPointF(cx, cy), s * 0.2, s * 0.2)
+        p.setPen(QPen(QColor(170, 30, 30, 140), 1))
+        for k in range(5):                                             # (veins)
+            a = k * 1.3 + 0.4
+            p.drawLine(QPointF(cx + math.cos(a) * s * 0.19, cy + math.sin(a) * s * 0.19),
+                       QPointF(cx + math.cos(a + 0.2) * s * 0.11, cy + math.sin(a + 0.2) * s * 0.11))
+        look = 0.03 * math.sin(t * 0.7)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(110, 72, 40))
+        p.drawEllipse(QPointF(cx + s * (0.06 + look), cy), s * 0.08, s * 0.08)
+        p.setBrush(QColor(10, 6, 6))
+        p.drawEllipse(QPointF(cx + s * (0.07 + look), cy), s * 0.035, s * 0.035)
     elif item == "antidote":
         glow = 0.6 + 0.4 * math.sin(t * 2.2)
         g = QRadialGradient(QPointF(cx, cy + s * 0.05), s * 0.45)

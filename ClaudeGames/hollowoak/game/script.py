@@ -11,6 +11,15 @@ what she keeps of it. The first audience is here; the rest of the night's scenes
 """
 
 MURMURS = {
+    "pant": ("You're out of breath, little wizard. Rest. I can wait.",
+             "Listen to you. Every breath of it, through my silk."),
+    "blood": ("You're bleeding. I can smell it from here. Do be careful.",
+              "Red. All the way down your little light. How it suits you."),
+    "prey": ("On your hands and knees, on my silk. Do you know what that looks like, to me?",
+             "Crawl, then. I'm watching. I'm always watching."),
+    "sick": ("Poor thing. It does that, my venom. It passes. Mostly.",),
+    "eye": ("Oh. Oh, little wizard. What have you done to yourself?",
+            "Your eye. You did that. I didn't even ask."),
     "glimpse": ("Closer, little wizard. I only want to look at you.",
                 "You stand very still. Good. So do I.",
                 "There you are. Warm, and small, and listening.",

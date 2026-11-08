@@ -11,7 +11,8 @@ import queue
 import time
 
 from PySide6.QtCore import QPoint, QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QRadialGradient, QSurfaceFormat
+from PySide6.QtGui import (QColor, QCursor, QFont, QLinearGradient, QPainter, QPen, QRadialGradient,
+                           QSurfaceFormat)
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
@@ -190,6 +191,9 @@ class GameView(QOpenGLWidget):
             self.audio.aloud = bool(o["aloud"])
             self.audio.synth.music_gain = 0.7 * o.get("music", 70) / 70.0
             self.audio.score(n, getattr(self, "scene", None), self.playing)
+        o = self.shell.records.options
+        for k in n.afflict.opts:                                     # (what the night's let do to him: Options)
+            n.afflict.opts[k] = bool(o.get(k, True))
         n.steady = bool(self.shell.records.options.get("steady", False))
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
@@ -260,6 +264,7 @@ class GameView(QOpenGLWidget):
                     break
             self._lessons(n, dt)
             self._watch_text(now)
+            self._afflict_events(n, now)
             if self.journal.open and any(e[0] in ("crawler", "bitten", "collapse") or e == ("dangler", "face") or
                                          e in (("her", "strike"), ("her", "bite")) for e in n.events):
                 self.journal.close(knocked=True)                  # (knocked from his hands)
@@ -484,6 +489,98 @@ class GameView(QOpenGLWidget):
         n.learned.clear()
 
     # ---- led by her letter, and the first night --------------------------------------------------------------------
+    AFFLICT_WORDS = {"pant": "You can't get your breath.", "bleed": "Something warm runs from your eyes.",
+                     "bloodied": "Blood down the wand, over the lantern. Everything is red.",
+                     "vomit": "It comes up before you can stop it.", "foam": "Foam at your mouth. Your heart misses a beat.",
+                     "coat": "Over the wand, the lantern - the light goes green.  (E: shake some of it off)",
+                     "sway": "The walls are breathing.", "crawl": "Your legs won't hold you. Down, on your hands.",
+                     "stand": "You get to your feet again.", "eye_taken": "It's in your hand. Your eye.",
+                     "refuse": "No.", "fall": "The wood comes up to meet you.", "lost": "...",
+                     "haze": "Everything shimmers, far away."}
+    AFFLICT_MURMUR = {"pant": "pant", "bloodied": "blood", "prey": "prey", "vomit": "sick", "eye_taken": "eye"}
+
+    def _afflict_events(self, n, now):
+        talk = getattr(self, "talk", None)
+        for e in n.events:
+            if e[0] != "afflict":
+                continue
+            words = self.AFFLICT_WORDS.get(e[1])
+            if words:
+                self.whisper = (words, now, 3.5)
+            mk = self.AFFLICT_MURMUR.get(e[1])
+            if mk and talk is not None and not n.flags.get("said_" + mk):
+                n.flags["said_" + mk] = True                     # (she notices: once a night, each)
+                self.last_murmur = n.time
+                talk.murmur(mk, self.her_lines.put)
+
+    def _afflict_hud(self, p, W, H, n, t):
+        """His sight, as the night has left it: tints, his eyes bleeding at the edges, foam at his mouth, the dark
+        where his left eye was, the moments lost."""
+        af = n.afflict
+        gore = af.on("health", "gore")
+        h, po = af.tier("health"), af.tier("poison")
+        beat = 0.0
+        if n.body.beats:
+            beat = math.exp(-(n.body.t - n.body.beats[-1]) * 5.0)
+        if h >= 2:
+            p.fillRect(QRectF(0, 0, W, H), QColor(150, 10, 10, 22 + int(10 * beat)))
+            if gore:                                                  # (from his eyes: at the sides, with each beat)
+                for side in (0, 1):
+                    for i in range(4):
+                        seed = side * 7 + i * 3.1
+                        x = (8 + i * 17 + 6 * math.sin(seed)) if side == 0 else W - (8 + i * 17 + 6 * math.sin(seed))
+                        length = H * (0.18 + 0.22 * (0.5 + 0.5 * math.sin(t * 0.13 + seed))) * (0.9 + 0.1 * beat)
+                        g = QLinearGradient(QPointF(x, 0), QPointF(x, length))
+                        g.setColorAt(0, QColor(120, 0, 0, 210))
+                        g.setColorAt(1, QColor(150, 5, 5, 0))
+                        p.setPen(QPen(g, 3.5 + 2 * (i % 2)))
+                        p.drawLine(QPointF(x, 0), QPointF(x + 2 * math.sin(seed), length))
+                        u = ((t * 0.35 + i * 0.27 + side * 0.5) % 1.0)  # (a drop, running down)
+                        p.setPen(Qt.NoPen)
+                        p.setBrush(QColor(130, 0, 0, int(220 * (1 - u))))
+                        p.drawEllipse(QPointF(x, length + u * H * 0.5), 3.5, 5.0)
+        if po >= 2:
+            p.fillRect(QRectF(0, 0, W, H), QColor(40, 120, 20, 20))
+            if gore:                                                  # (foam, and drips, at the bottom of his sight)
+                p.setPen(Qt.NoPen)
+                for i in range(46):
+                    x = W * ((i * 0.618034) % 1.0)
+                    edge = abs(x - W / 2) / (W / 2)
+                    y = H - 4 - 22 * (0.5 + 0.5 * math.sin(t * 1.7 + i)) * (0.4 + 0.6 * edge)
+                    r = 4 + 5 * abs(math.sin(i * 1.3 + t * 0.6))
+                    p.setBrush(QColor(200, 230, 170, 120))
+                    p.drawEllipse(QPointF(x, y), r, r)
+                for i in range(6):
+                    x = W * (0.12 + 0.76 * ((i * 0.381966) % 1.0))
+                    u = (t * 0.25 + i * 0.37) % 1.0
+                    g = QLinearGradient(QPointF(x, H * 0.82), QPointF(x, H))
+                    g.setColorAt(0, QColor(90, 170, 40, 0))
+                    g.setColorAt(1, QColor(90, 170, 40, 160))
+                    p.setBrush(g)
+                    p.drawRoundedRect(QRectF(x - 3, H * (0.82 + 0.1 * u), 6, H * 0.18), 3, 3)
+        ph = af.phase()
+        if ph and ph[0] == "vomit" and gore and 0.8 < ph[1] < 1.9:     # (it comes up)
+            k = (ph[1] - 0.8) / 1.1
+            p.setPen(Qt.NoPen)
+            col = (90, 140, 20) if po >= 3 else (110, 100, 35)
+            for i in range(30):
+                a = -math.pi / 2 + (i / 30 - 0.5) * 1.6
+                d = H * (0.15 + 0.25 * k) * (0.6 + 0.4 * ((i * 0.618) % 1.0))
+                x, y = W / 2 + math.cos(a) * d * 0.8, H + math.sin(a) * d + H * 0.35 * k * k
+                p.setBrush(QColor(*col, int(200 * (1 - k))))
+                p.drawEllipse(QPointF(x, y), 10 + 8 * ((i * 0.37) % 1.0), 8 + 6 * ((i * 0.53) % 1.0))
+        dark = 1.0 if af.eye_lost else 0.0
+        if ph and ph[0] == "eye":
+            dark = max(dark, min(1.0, max(0.0, (ph[1] - 1.5) / 0.4)))
+        if dark > 0:                                                  # (where his left eye was)
+            g = QLinearGradient(QPointF(0, 0), QPointF(W * 0.48, 0))
+            g.setColorAt(0, QColor(0, 0, 0, int(250 * dark)))
+            g.setColorAt(0.55, QColor(0, 0, 0, int(225 * dark)))
+            g.setColorAt(1, QColor(0, 0, 0, 0))
+            p.fillRect(QRectF(0, 0, W * 0.48, H), g)
+        if af.blackout > 0:
+            p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * af.blackout)))
+
     def _drive(self):
         """Who walks him now: the letter (Spellbound, F9), its guiding between lessons, or him."""
         if self.director is not None:
@@ -801,6 +898,7 @@ class GameView(QOpenGLWidget):
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   " + prompt)
         self._spell_glow(p, W, H, n)
+        self._afflict_hud(p, W, H, n, t)
         self._venom(p, W, H, n)
         if n.pack or n.held:                                      # (what he carries: his satchel's places)
             from .satchel import strip
@@ -1011,7 +1109,7 @@ class GameView(QOpenGLWidget):
                                 time.perf_counter(), 5.0)
             return
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
-            self.night.lamp.shake()
+            self.night.shake()
 
     def keyReleaseEvent(self, e):
         if not e.isAutoRepeat():

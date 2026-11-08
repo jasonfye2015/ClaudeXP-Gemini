@@ -7,7 +7,7 @@ so each night begins knowing what the last ones learned. (The notebook: Esc > No
     for_node(node)              which pages a line of the script writes: [ids]
 The writing down and keeping is game/records.py's (rec.note(id))."""
 
-SECTIONS = ("The invitation", "Her", "Her ways", "Her guests", "Old marks")
+SECTIONS = ("The invitation", "Her", "Her ways", "Her guests", "Old marks", "What the night does to me")
 
 PAGES = {
     # ---- the invitation
@@ -109,6 +109,26 @@ PAGES = {
                    "Under the crown, burnt into the wood - burnt, in a tree full of silk - a single word, in letters "
                    "older than any I was taught, and a handprint beside it. Not hers. She has no hands."),
 }
+ME = "What the night does to me"
+PAGES.update({
+    "me_pant": (ME, "Out of breath", "I can't get my breath. My heart won't slow, even standing still - and she hears it."),
+    "me_bleed": (ME, "Bleeding from the eyes", "My eyes are bleeding. I don't think it's the light."),
+    "me_bloodied": (ME, "Blood on the lantern", "Blood down the wand, over the lantern: everything is red now. She can "
+                    "smell it. I can feel her hungering."),
+    "me_vomit": (ME, "Sick", "Her venom turns my stomach. It comes up, and I'm a little clearer after - and her small "
+                 "ones come to what I leave."),
+    "me_foam": (ME, "Foam", "Foam at my mouth. My heart misses its beats, and then remembers them."),
+    "me_coat": (ME, "The green light", "Sick all over the lantern. The light's gone green. A shake flings some of it "
+                "off."),
+    "me_sway": (ME, "The bark breathing", "The walls breathe. There are eyes in the fungus that aren't hers - and then "
+                "there aren't."),
+    "me_crawl": (ME, "On my hands", "I can't stay on my feet. On her silk, crawling, it sways less - and she likes it "
+                 "more than she should. Like something wounded."),
+    "me_eye": (ME, "My left eye", "I don't remember deciding to. It's in my satchel."),
+    "me_haze": (ME, "The heat", "Everything shimmers, as if over a fire. Sounds come from far away."),
+    "me_refuse": (ME, "No", "Sometimes I don't do what I tell myself to. I shake my head. No."),
+    "me_fall": (ME, "Lost", "I fall, and drag myself up. Sometimes time goes on without me."),
+})
 from .hidden import PAGES as _HIDDEN  # noqa: E402  (what she hides: game/hidden.py)
 PAGES.update(_HIDDEN)
 SUITORS = ("orrin", "aldric", "wick", "maudren", "fennick", "isolde", "unnamed")
@@ -124,6 +144,12 @@ def unlock_for(event, night=None):
         return ["small_ones"]
     if kind == "smoulder":
         return ["smoulder"]
+    if kind == "afflict":
+        return {"pant": ["me_pant"], "bleed": ["me_bleed"], "bloodied": ["me_bloodied"], "vomit": ["me_vomit"],
+                "foam": ["me_foam"], "sway": ["me_sway"], "crawl": ["me_crawl"], "prey": ["me_crawl"],
+                "eye_taken": ["me_eye"], "refuse": ["me_refuse"], "fall": ["me_fall"], "coat": ["me_coat"],
+                "haze": ["me_haze"],
+                "lost": ["me_fall"]}.get(event[1], [])
     if kind == "venom":
         return ["venom"]
     if kind == "vision":

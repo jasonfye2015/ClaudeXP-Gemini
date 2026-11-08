@@ -138,6 +138,62 @@ def _puff(rng, rate=RATE):
     return y / (np.abs(y).max() or 1.0)
 
 
+def _retch(rng, rate=RATE):
+    """Heaving: a low, wet, rising noise, twice, and the spill."""
+    n = int(1.6 * rate)
+    t = np.arange(n) / rate
+    y = np.zeros(n)
+    for at, g in ((0.0, 0.6), (0.55, 1.0)):
+        k = np.clip((t - at) / 0.5, 0, 1)
+        env = np.sin(np.pi * k) ** 2 * (t >= at)
+        y += _shaped_noise(rng, n, 120, 900, 0.6, rate) * env * g
+        y += np.sin(math.tau * (85 + 60 * k) * t) * env * 0.5 * g
+    y += _shaped_noise(rng, n, 300, 3000, 0.4, rate) * np.exp(-np.maximum(0, t - 1.05) * 6) * (t > 1.05) * 0.6
+    return y / (np.abs(y).max() or 1.0)
+
+
+def _cough(rng, rate=RATE):
+    n = int(0.6 * rate)
+    t = np.arange(n) / rate
+    y = np.zeros(n)
+    for at in (0.0, 0.28):
+        y += _shaped_noise(rng, n, 200, 2500, 0.5, rate) * np.exp(-np.maximum(0, t - at) * 18) * (t >= at)
+    return y / (np.abs(y).max() or 1.0)
+
+
+def _no(rng, rate=RATE):
+    """Mm-mm: two closed-mouthed hums, the second lower."""
+    n = int(0.75 * rate)
+    t = np.arange(n) / rate
+    y = np.zeros(n)
+    for at, f in ((0.0, 150.0), (0.36, 118.0)):
+        env = np.sin(np.pi * np.clip((t - at) / 0.3, 0, 1)) ** 2 * (t >= at) * (t < at + 0.3)
+        ph = math.tau * f * t
+        y += (np.sin(ph) + 0.5 * np.sin(2 * ph) + 0.25 * np.sin(3 * ph)) * env
+    return y / (np.abs(y).max() or 1.0)
+
+
+def _scream(rng, rate=RATE):
+    """Stifled, through his teeth: a strained rising tone and breath, muffled."""
+    n = int(1.5 * rate)
+    t = np.arange(n) / rate
+    env = np.clip(t / 0.15, 0, 1) * np.clip((1.5 - t) / 0.6, 0, 1)
+    f = 260 + 120 * np.clip(t / 0.8, 0, 1)
+    ph = np.cumsum(math.tau * f / rate)
+    y = (np.sin(ph) + 0.6 * np.sin(2 * ph) + 0.3 * np.sin(3.01 * ph)) * env
+    y += _shaped_noise(rng, n, 300, 1800, 0.5, rate) * env * 0.8
+    k = 0.08                                                            # (behind his hand: dull)
+    for i in range(1, n):
+        y[i] = y[i - 1] + k * (y[i] - y[i - 1])
+    return y / (np.abs(y).max() or 1.0)
+
+
+def _scrape(rng, rate=RATE):
+    n = int(0.5 * rate)
+    y = _shaped_noise(rng, n, 80, 900, 0.7, rate) * _env(n, 0.08, 0.3, rate)
+    return y / (np.abs(y).max() or 1.0)
+
+
 class Synth:
     def __init__(self, rate=RATE, seed=7):
         self.rate = rate
@@ -151,8 +207,10 @@ class Synth:
                        "rattle": [_rattle(r, rate), _rattle(r, rate)],
                        "catch": [_catch(r, rate)], "thud": [_thud(rng, rate)], "puff": [_puff(rng, rate)],
                        "whoosh": [_whoosh(rng, rate)], "beat": [_beat(rng, rate)],
-                       "thunder": [_thunder(rng, rate), _thunder(rng, rate)]}
-        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35, "beat": 0.6, "thunder": 0.85}
+                       "thunder": [_thunder(rng, rate), _thunder(rng, rate)],
+                       "retch": [_retch(rng, rate)], "cough": [_cough(rng, rate)], "no": [_no(rng, rate)],
+                       "scream": [_scream(rng, rate)], "scrape": [_scrape(rng, rate), _scrape(rng, rate)]}
+        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35, "beat": 0.6, "thunder": 0.85, "retch": 0.6, "cough": 0.45, "no": 0.4, "scream": 0.7, "scrape": 0.3}
         self.voices = []                    # [samples, position, gain]
         self.n = 0                          # (samples played so far)
         self.hum, self._hum = 0.0, 0.0
@@ -169,6 +227,7 @@ class Synth:
         from .music import Music
         self.music = Music(rate)                 # (the score: engine/music.py)
         self.music_gain = 0.7
+        self.muffle, self._lp = 0.0, 0.0          # (his hearing, dulled: stupor's haze)
 
     def set(self, hum=None, height=None, her=None, pitch=None, breath=None, rain=None):
         if rain is not None:
@@ -261,4 +320,14 @@ class Synth:
                 keep.append(v)
         self.voices = keep
         self.n += n
+        if self.muffle > 0.01:                    # (sounds from far away: a soft low-pass)
+            k = 1.0 - 0.82 * min(1.0, self.muffle)
+            y = np.empty(n)
+            lp = self._lp
+            for i in range(0, n, 32):              # (in short runs: cheap enough)
+                seg = out[i:i + 32]
+                lp = lp + k * (seg.mean() - lp)
+                y[i:i + 32] = seg * (1 - 0.82 * min(1.0, self.muffle)) + lp * 0.82 * min(1.0, self.muffle)
+            self._lp = lp
+            out = y
         return np.tanh(out * 1.2).astype(np.float32)

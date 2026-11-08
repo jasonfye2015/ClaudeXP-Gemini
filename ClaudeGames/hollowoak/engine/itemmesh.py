@@ -68,6 +68,15 @@ def build(item, origin, axes, now, state=None, scale=1.0):
         C._box(out, o + up * 0.026, (0.053, 0.003, 0.041), (f, up, r), (0.32, 0.17, 0.09))        # (the covers)
         C._box(out, o - up * 0.001, (0.053, 0.003, 0.041), (f, up, r), (0.32, 0.17, 0.09))
         C._box(out, o + up * 0.012 - r * 0.04, (0.053, 0.015, 0.004), (f, up, r), (0.28, 0.14, 0.07))
+    elif item == "eye":
+        C._blob(out, o + up * 0.03, (0.026, 0.026, 0.026), (f, up, r), (0.86, 0.84, 0.8), seg=8)
+        C._blob(out, o + up * 0.052, (0.013, 0.006, 0.013), (f, up, r), (0.34, 0.22, 0.12), seg=6)  # (iris: looking up at him)
+        C._blob(out, o + up * 0.057, (0.006, 0.003, 0.006), (f, up, r), (0.03, 0.02, 0.02), seg=5)  # (pupil)
+        for k in range(4):                                       # (what held it in, red)
+            a = k * 1.6
+            C._box(out, o + up * 0.022 - f * (0.026 + 0.01 * k) + r * 0.006 * math.sin(a),
+                   (0.008, 0.0025, 0.0025), (f, up, r), (0.45, 0.04, 0.04))
+        C._blob(out, o + up * 0.008, (0.04, 0.004, 0.034), (f, up, r), (0.38, 0.02, 0.02), seg=6)
     elif item == "antidote":
         C._blob(out, o + up * 0.035, (0.022, 0.035, 0.022), (f, up, r), (0.25, 0.8, 0.32), seg=7)
         C._box(out, o + up * 0.078, (0.007, 0.012, 0.007), (f, up, r), (0.25, 0.75, 0.3))
@@ -75,7 +84,7 @@ def build(item, origin, axes, now, state=None, scale=1.0):
     return out
 
 
-def held_at(night, now):
+def held_at(night, now, centred=0.0, lift=0.0):
     """His left hand, held low on the left, palm up, cupping what he carries: -> (wrist, hand axes), (palm, item axes)."""
     yaw, pitch = night.yaw, night.pitch
     F = np.array((math.sin(yaw) * math.cos(pitch), math.sin(pitch), -math.cos(yaw) * math.cos(pitch)))
@@ -83,7 +92,7 @@ def held_at(night, now):
     U = np.cross(R, F)
     eye = np.array(night.eye)
     bob = 0.008 * math.sin(night.moved * 2.8 + 1.0)
-    wrist = eye - R * 0.27 - U * (0.24 + bob) + F * 0.42
+    wrist = eye - R * (0.27 - centred) - U * (0.24 + bob - lift) + F * (0.42 - 0.08 * lift / 0.12 if lift else 0.42)
     x = F * 0.55 + R * 0.75 + U * 0.08                         # (fingers in across him, a little forward)
     x /= np.linalg.norm(x)
     y = -U + F * 0.9                                            # (the back of his hand down and away: palm up, to him)
