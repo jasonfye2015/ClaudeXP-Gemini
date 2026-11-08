@@ -80,7 +80,9 @@ class Moods:
         ex, ey, ez = night.eye
         d = math.dist(her.at(), (ex, ey, ez))
         # the clock: her hunger, always (about half a night to grow hungry from nothing - if nothing else moves it)
-        self.hunger = _clip(self.hunger + 0.012 * dt)
+        from .condition import level
+        lv = level(night).hunger                                    # (harder nights: her hunger comes on faster)
+        self.hunger = _clip(self.hunger + 0.012 * dt * lv)
         # how he moves, as she feels it through her silk and sees it
         running = night.inp_hurry and night.moved_now > 0
         if running:

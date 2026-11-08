@@ -20,6 +20,7 @@ OPTIONS = {"volume": 80, "music": 70, "look": 50, "heart": True, "heartbeat": Tr
            "text_speed": 50,            # (how fast her words come)
            "shadows": True,             # (the lantern's shadows: off, for a slower computer)
            "brightness": 50, "calibrated": False,   # (set before the first night: ui/pages.py Brightness)
+           "difficulty": "normal",      # (how hard the night is on him: easy, normal, hard, nightmare)
            "fx_all": True, "fx_health": True, "fx_poison": True, "fx_sanity": True, "fx_stupor": True,
            "fx_gore": True, "fx_eye": True, "fx_distort": True, "fx_control": True}   # (game/afflictions.py)            # (her venom: the edges of his sight darkening and pulsing)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")

@@ -29,6 +29,29 @@ import math
 MARGIN = 20.0                   # (closer than this, the rising fluid to the other: danger)
 
 
+class Level:
+    """How hard the night is on him: what hurts him, by how much; how fast it goes again."""
+
+    def __init__(self, hurt, venom, mind, calm, wear, heal, daze, clear, eat, hunger):
+        self.hurt, self.venom, self.mind, self.calm = hurt, venom, mind, calm        # (damage; bites; the mind's losses;
+        self.wear, self.heal, self.daze, self.clear = wear, heal, daze, clear        #  its mending; poison wearing off;
+        self.eat, self.hunger = eat, hunger                                          #  health back; stupor in and out;
+                                                                                     #  poison eating; her hunger)
+
+
+LEVELS = {                     # (Easy: as it was made. The others: what the night really costs)
+    "easy": Level(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+    "normal": Level(2.2, 2.6, 2.0, 0.6, 0.45, 0.5, 2.0, 0.5, 2.0, 1.25),
+    "hard": Level(3.5, 4.0, 3.0, 0.4, 0.3, 0.3, 3.0, 0.35, 3.0, 1.55),
+    "nightmare": Level(5.0, 6.0, 4.5, 0.25, 0.2, 0.15, 4.5, 0.2, 4.0, 1.9),
+}
+LEVEL_NAMES = (("easy", "Easy"), ("normal", "Normal"), ("hard", "Hard"), ("nightmare", "Nightmare"))
+
+
+def level(night):
+    return LEVELS.get(getattr(night, "difficulty", "easy"), LEVELS["easy"])
+
+
 class Condition:
     def __init__(self, rng):
         self.rng = rng
@@ -91,59 +114,61 @@ class Condition:
         self._heart(dt, target, ease)
 
     def _bite(self, out, where, venom, hurt=2.0):
-        self.poison += venom
-        self.health -= hurt
+        lv = getattr(self, "lv", LEVELS["easy"])
+        self.poison += venom * lv.venom
+        self.health -= hurt * lv.hurt
         out.append(("bitten", where))
 
     def step(self, dt, night, events):
         rng = self.rng
         out = []
+        lv = self.lv = level(night)
         calm = True
         for e in events:
             kind = e[0]
             if kind == "fall":                                          # (the wood is hard; her silk gives)
-                dmg = max(0.0, e[1] - 7.0) * 6.0 * (0.25 if night.on is not None else 1.0)
+                dmg = max(0.0, e[1] - 7.0) * 6.0 * (0.25 if night.on is not None else 1.0) * lv.hurt
                 if dmg > 0:
                     self.health -= dmg
                     out.append(("hurt", dmg))
-                    if dmg > 20:
-                        self.stupor += dmg * 0.5                        # (a knock to the head)
+                    if dmg > 20 * lv.hurt:
+                        self.stupor += dmg * 0.5 * lv.daze              # (a knock to the head)
             elif kind == "dangler" and e[1] == "face":
-                self.sanity -= 2
+                self.sanity -= 2 * lv.mind
                 calm = False
                 if rng.random() < 0.2:
                     self._bite(out, "face", 5.0, 1.0)
             elif kind == "crawler":
-                self.sanity -= 1 * e[1]
+                self.sanity -= 1 * e[1] * lv.mind
                 calm = False
                 if rng.random() < 0.1:
                     self._bite(out, "face", 2.0, 0.5)
             elif kind == "silk" and e[1] == "slip":
-                self.sanity -= 1.5
+                self.sanity -= 1.5 * lv.mind
             elif kind == "silk" and e[1] == "caught":
-                self.sanity -= 2
+                self.sanity -= 2 * lv.mind
         on_lantern = len(night.swarm.crawling()) if night.lantern else 0
         for _ in range(on_lantern):                                    # (on his hand, in the dark)
             if rng.random() < 0.01 * dt:
                 self._bite(out, "hand", 2.0, 0.5)
         dark = night.lamp.state == "out" or not night.lantern
         if dark:
-            self.sanity -= (0.045 + 0.006 * on_lantern) * dt
+            self.sanity -= (0.045 + 0.006 * on_lantern) * dt * lv.mind
             calm = False
         watched = night.eye_alpha if night.eyes() else 0.0
-        self.sanity -= 0.01 * watched * dt                             # (being watched: the slowest creep)
+        self.sanity -= 0.01 * watched * dt * lv.mind                   # (being watched: the slowest creep)
         if calm and not dark and night.lamp.level > 0.4 and watched < 0.3:
-            self.sanity += 0.3 * dt
+            self.sanity += 0.3 * dt * lv.calm
         # the poison: eating at him a little, wearing off slowly
-        self.health -= self.poison * 0.003 * dt
-        self.poison = max(0.0, self.poison - 0.06 * dt)           # (it lingers: minutes, not moments)
+        self.health -= self.poison * 0.003 * dt * lv.eat
+        self.poison = max(0.0, self.poison - 0.06 * dt * lv.wear)  # (it lingers: minutes, not moments)
         if self.poison < 5:
-            self.health += 0.1 * dt
+            self.health += 0.1 * dt * lv.heal
         rise = max(0.0, self.poison - 40) * 0.025 + (0.2 if self.sanity < 30 else 0.0)
         if rise > 0:
-            self.stupor += rise * dt
+            self.stupor += rise * dt * lv.daze
         elif self.poison < 40:
-            self.stupor -= 0.6 * dt
+            self.stupor -= 0.6 * dt * lv.clear
         for k in ("health", "poison", "sanity", "stupor"):
             setattr(self, k, max(0.0, min(100.0, getattr(self, k))))
         # his heart: what's in him, what's about him, and what just made it leap

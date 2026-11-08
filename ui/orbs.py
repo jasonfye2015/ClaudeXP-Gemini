@@ -83,14 +83,14 @@ def _orb(p, cx, cy, r, level, deep, bright, rising, rdeep, rbright, t, seed):
     p.drawEllipse(QPointF(cx - r * 0.3, cy - r * 0.4), r * 0.55, r * 0.4)
 
 
-def draw_orbs(p, W, H, body, t, alpha=1.0):
+def draw_orbs(p, W, H, body, t, alpha=1.0, bottom=None, r=None, inset=0.0):
     if alpha <= 0.01:
         return
     p.save()
     p.setOpacity(alpha)
-    r = max(34.0, H * 0.072)
-    m = 22.0
-    cy = H - m - 44 - r
+    r = r or max(34.0, H * 0.072)
+    m = 22.0 + inset
+    cy = (bottom if bottom is not None else H - 22.0) - 44 - r
     v = body.values()
     left, right = m + 8 + r, W - m - 8 - r
     _orb(p, left, cy, r, v["health"] / 100, QColor(70, 4, 6), QColor(215, 30, 26), v["poison"] / 100,
@@ -359,7 +359,7 @@ def draw_death(p, W, H, death, t, first=False, records=None):
 
 
 
-def draw_heart(p, W, H, body, alpha=1.0, span=6.0):
+def draw_heart(p, W, H, body, alpha=1.0, span=6.0, bottom=None):
     """His heart, at the bottom of the view between the orbs: the trace running right to left (each beat a small rise,
     the sharp spike and its dip, a slow swell after), the last minute of its rate faint behind it, and the rate."""
     if alpha <= 0.01:
@@ -367,7 +367,7 @@ def draw_heart(p, W, H, body, alpha=1.0, span=6.0):
     p.save()
     p.setOpacity(alpha)
     w, h = min(300.0, W * 0.24), max(58.0, H * 0.085)
-    x0, y0 = (W - w) / 2, H - 22 - h
+    x0, y0 = (W - w) / 2, (bottom if bottom is not None else H - 22) - h
     box = QRectF(x0, y0, w, h)
     p.setPen(QPen(QColor(92, 74, 58, 200), 1.2))
     p.setBrush(QColor(6, 4, 6, 175))

@@ -99,3 +99,22 @@ def test_the_green_reaching_the_other_is_the_end():
     m.body.poison += 1.0
     m.step(0.05, N.Input())
     assert m.dying is not None and m.dying.cause == "poison"
+
+
+def test_how_hard_the_night_is():
+    """Easy as it was made; each harder level costs more for the same night, and gives less back."""
+    from hollowoak.game.condition import LEVEL_NAMES
+    costs = []
+    for key, _name in LEVEL_NAMES:
+        m = _night()
+        m.lamp.next_out = 1e9
+        m.difficulty = key
+        c = Condition(random.Random(3))
+        events = [("crawler", 2), ("dangler", "face"), ("fall", 10.0)]
+        c.step(0.05, m, events)
+        c.poison = max(c.poison, 20.0)
+        for _ in range(int(60 / 0.05)):
+            c.step(0.05, m, [])
+        costs.append((100 - c.health, c.poison, 100 - c.sanity))
+    for easier, harder in zip(costs, costs[1:]):
+        assert harder[0] > easier[0] and harder[1] > easier[1] and harder[2] >= easier[2], costs

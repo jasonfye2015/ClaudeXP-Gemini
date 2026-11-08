@@ -392,6 +392,18 @@ class NightMenu(QWidget):
             s.valueChanged.connect(lambda v, key=key: self._set(key, v))
             lay.addWidget(s)
             lay.addSpacing(10)
+        lay.addWidget(QLabel("How hard the night is on him"))
+        from ..game.condition import LEVEL_NAMES
+        row = QHBoxLayout()
+        group = QButtonGroup(w)
+        for key, name in LEVEL_NAMES:
+            rb = QRadioButton(name)
+            rb.setChecked(o.get("difficulty", "normal") == key)
+            rb.toggled.connect(lambda on, key=key: on and self._set("difficulty", key))
+            group.addButton(rb)
+            row.addWidget(rb)
+        lay.addLayout(row)
+        lay.addSpacing(10)
         slider("Brightness (50 as made)", "brightness")
         slider("Volume", "volume")
         slider("Music", "music")
