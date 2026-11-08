@@ -637,6 +637,7 @@ class Renderer:
         self.fung.vec("uTint", self._tint(night))
         self.fungus.draw()
         self._spiders(night)
+        self._mouth(night, now)
         self._silk(night, now, proj, h)
         self._glows(night, view, now)
         if self.fog_on:
@@ -836,6 +837,59 @@ class Renderer:
             ang = math.atan2(to[2], to[0]) + 0.5 * math.sin(self.now * 0.7 + ph)
             self._spider(self._dangle(x, y, z, ph), (0.0, -1.0, 0.0), (math.cos(ang), 0.0, math.sin(ang)), size, "idle",
                          self.now + ph)
+
+    def _mouth(self, night, now):
+        """Her mouthparts and palps, before him in her scenes (and her endings): the fangs opening with her voice, the
+        palps never quite still. Built where her face is, on the spider's own axes."""
+        her = getattr(night, "her", None)
+        if her is None or her.staged is None:
+            return
+        from . import cocoonmesh as C
+        p, f, up, size, _clip, _t, _lean = her.pose()
+        p, f, up = np.array(p), np.array(f, float), np.array(up, float)
+        f = f - up * float(np.dot(f, up))
+        f /= float(np.linalg.norm(f)) or 1.0
+        r = np.cross(up, f)
+
+        k = size * 2.0                                                        # (big enough to be seen talking)
+
+        def at(x, y, z):
+            return p + (r * x + up * y + f * z) * size
+        out = []
+        chitin, fang = (0.07, 0.05, 0.045), (0.62, 0.55, 0.45)
+        v = her.voice
+        for side in (-1.0, 1.0):
+            opened = 0.25 + 0.9 * v + 0.08 * math.sin(now * 3.1 + side)       # (apart, with each word)
+            base = at(side * 0.03, 0.15, 0.125)
+            d = f * math.cos(0.9) - up * math.sin(0.9)                         # (down and forward)
+            d = d + r * side * opened * 0.35
+            d /= np.linalg.norm(d)
+            C._blob(out, base + d * k * 0.022, (k * 0.026, k * 0.014, k * 0.014),
+                    (d, np.cross(r, d) if side > 0 else -np.cross(r, d), r), chitin, seg=6)
+            tip = base + d * k * 0.044
+            hook = (d - up * 0.6 - r * side * (0.5 + opened * 0.4))
+            hook /= np.linalg.norm(hook)
+            C._box(out, tip + hook * k * 0.012, (k * 0.013, k * 0.0035, k * 0.0035),
+                   (hook, np.cross(r, hook), np.cross(hook, np.cross(r, hook))), fang)
+            # her palp: two joints, feeling the air
+            ph = now * (1.7 + 0.3 * side) + side
+            a1 = 0.5 + 0.18 * math.sin(ph) + 0.25 * v
+            seg1 = f * math.cos(a1) - up * math.sin(a1) * 0.6 + r * side * 0.55
+            seg1 /= np.linalg.norm(seg1)
+            j0 = at(side * 0.06, 0.155, 0.115)
+            C._box(out, j0 + seg1 * k * 0.022, (k * 0.022, k * 0.006, k * 0.006),
+                   (seg1, np.cross(r, seg1), np.cross(seg1, np.cross(r, seg1))), chitin)
+            j1 = j0 + seg1 * k * 0.044
+            a2 = 1.0 + 0.3 * math.sin(ph * 1.3 + 0.7)
+            seg2 = f * math.cos(a2) - up * math.sin(a2) + r * side * 0.2
+            seg2 /= np.linalg.norm(seg2)
+            C._box(out, j1 + seg2 * k * 0.018, (k * 0.018, k * 0.005, k * 0.005),
+                   (seg2, np.cross(r, seg2), np.cross(seg2, np.cross(r, seg2))), chitin)
+        if not hasattr(self, "mouth_mesh"):
+            self.mouth_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
+        self.mouth_mesh.upload(np.array(out, np.float32))
+        self.dress_prog.use()
+        self.mouth_mesh.draw()
 
     def _dangle(self, x, y, z, ph):
         """Where a dangler is this moment: bobbing on its thread, swinging a little."""

@@ -403,7 +403,14 @@ class SceneView(QWidget):
         self._lay()
         super().resizeEvent(e)
 
+    def _weigh(self):
+        """His words, said: her head tilts, weighing them."""
+        import random
+        her = self.shell.view.night.her
+        her.judge, her.tilt_dir = 1.0, random.choice((-1.0, 1.0))
+
     def _chose(self, i, text):
+        self._weigh()
         self.his_text = text
         self._clear()
         self.waiting = True
@@ -418,6 +425,7 @@ class SceneView(QWidget):
             from ..game.venom import slur
             text = slur(text.strip(), n.venom.rng)
         self.his_text = text.strip()
+        self._weigh()
         self._clear()
         self.waiting = True
         self.talk.say(text, lambda t, ch: self.replies.put((t, ch)), interrupting=speaking)

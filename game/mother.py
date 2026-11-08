@@ -57,6 +57,8 @@ class Mother:
         self.shift = 0.0                     # (a leg shifting, in a scene)
         self.cross_to = None                 # (crossing the wall above him: where to - game/sightings.py)
         self.quick = False                   # (a glimpse cut short: legs drawn back)
+        self.voice = 0.0                     # (how loud she is, speaking: her fangs move with it - polish 9e)
+        self.judge, self.tilt_dir = 0.0, 1.0 # (weighing what he's said: her head tilts, and comes back)
 
     # ---- where she is --------------------------------------------------------------------------------------------
     def stage(self, pos, face):
@@ -86,9 +88,15 @@ class Mother:
         return tuple(math.cos(head) * a + math.sin(head) * b for a, b in zip(e, (0.0, 1.0, 0.0)))
 
     def pose(self):
-        if self.staged is not None:
+        if self.staged is not None:                     # (before him: breathing, her head tilting as she weighs him)
             pos, face = self.staged
-            return pos, face, (0.0, 1.0, 0.0), SIZE, self.clip, self.anim, 0.0
+            yaw = 0.07 * math.sin(self.t * 0.35) + 0.16 * self.judge * self.tilt_dir
+            roll = 0.05 * math.sin(self.t * 0.27 + 1.0) + 0.12 * self.judge * self.tilt_dir
+            c, s = math.cos(yaw), math.sin(yaw)
+            f = (face[0] * c - face[2] * s, face[1], face[0] * s + face[2] * c)
+            r = (-f[2], 0.0, f[0])
+            up = (r[0] * math.sin(roll), math.cos(roll), r[2] * math.sin(roll))
+            return pos, f, up, SIZE, self.clip, self.anim, 0.0
         up = self._normal()
         lean = self.lean
         x, y, z = self.at()
@@ -139,6 +147,7 @@ class Mother:
         self.t += dt
         rng = self.rng
         out = []
+        self.judge = max(0.0, self.judge - dt * 0.35)
         if self.staged is not None:                     # (in a scene: still, breathing; now and then a leg moves)
             if self.shift > 0:
                 self.shift -= dt

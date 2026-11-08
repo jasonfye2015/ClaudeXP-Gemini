@@ -195,6 +195,11 @@ class GameView(QOpenGLWidget):
         for k in n.afflict.opts:                                     # (what the night's let do to him: Options)
             n.afflict.opts[k] = bool(o.get(k, True))
         n.steady = bool(self.shell.records.options.get("steady", False))
+        ui = getattr(self, "scene_ui", None)                      # (her mouth: with her voice, or her words coming)
+        level = self.audio.synth.speech_level() if self.audio is not None else 0.0
+        if level <= 0.02 and ui is not None and getattr(ui, "her_text", "") and ui._shown() < len(ui.her_text):
+            level = 0.45 + 0.4 * abs(math.sin(now * 13.0))
+        n.her.voice += (level - n.her.voice) * 0.5
         n.shadows = bool(self.shell.records.options.get("shadows", True))
         n.brightness = self.shell.records.options.get("brightness", 50)
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)

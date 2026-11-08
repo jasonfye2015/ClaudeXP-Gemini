@@ -419,3 +419,9 @@ spiders at the den's own darks (about 4, 9 and 20 of 255, as made) and a slider:
 The setting (0..100, 50 as made) is the den's exposure before its gamma (engine/render.py exposure: every 25 steps
 twice or half the light). Also in Options and the notebook's Options.
 
+9e - her body when she talks (done). Before him (her scenes, her endings) her fangs open and close with her voice
+(engine/sound.py speech_level - or, unvoiced, while her words are coming), and her palps never quite still
+(engine/render.py _mouth: built under her eyes on the spider's own axes, twice life size to be seen). Her head
+breathes and turns a little, and tilts as she weighs what he's just said (Mother.judge), coming back. The scene's
+camera looks a little lower, so her mouth is in the frame.
+
