@@ -31,7 +31,10 @@ Playing (phases 1 and 2: the tree, and her silk)
 
   How you hold up shows in two orbs, each with two fluids: red health with green poison rising under it (bottom left),
   blue sanity with yellow stupor rising under it (bottom right). If either reaches the other - she has you. The edge
-  of the view beats when it comes close. Hard falls hurt, bites poison, the dark wears at your mind.
+  of the view beats when it comes close. Hard falls hurt, bites poison, the dark wears at your mind. Between the
+  orbs, a monitor shows your heart.
+
+  Before the night (after the title): begin, the endings you've found, your records, the options.
 
   Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
   rattle. It follows the computer's mute.
