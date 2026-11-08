@@ -1,4 +1,5 @@
-"""How he holds up - health and poison, sanity and consciousness - and the end of him when one gives out."""
+"""How he holds up - health with poison rising under it, sanity with stupor rising under it - and the end of him when
+the green reaches the other."""
 import random
 
 from hollowoak.game import night as N
@@ -20,7 +21,7 @@ def test_steady_light_keeps_him_whole():
     for _ in range(int(120 / 0.05)):
         n.step(0.05, N.Input())
     v = n.body.values()
-    assert v["health"] == 100 and v["poison"] == 0 and v["conscious"] == 100 and v["sanity"] > 90
+    assert v["health"] == 100 and v["poison"] == 0 and v["stupor"] == 0 and v["sanity"] > 90
     assert not n.body.critical() and n.dying is None
 
 
@@ -37,10 +38,10 @@ def test_the_dark_and_the_poison_wear_at_him():
     m.lamp.next_out = 1e9
     for _ in range(int(20 / 0.05)):
         c.step(0.05, m, [])
-    assert c.health < 85 and c.conscious < 95 and "poison" in c.critical()
+    assert c.health < 95 and c.stupor > 5 and "poison" in c.critical()
     hurt = Condition(random.Random(2))                                         # (a long fall onto the wood)
     hurt.step(0.05, m, [("fall", 18.0)])
-    assert hurt.health < 40 and hurt.conscious < 70 and "health" not in hurt.critical() or hurt.health < 25
+    assert hurt.health < 40 and hurt.stupor > 30 and not hurt.critical()     # (hurt, dazed: not yet in danger)
 
 
 def test_when_it_gives_out_supper():
@@ -66,3 +67,23 @@ def test_when_it_gives_out_supper():
     y, roll, eye = seen["hung"]
     assert y > 12 and abs(roll - 3.14159) < 0.05 and eye < 0                   # (upside down, half way up the trunk)
     assert n.dying.black == 1.0 and n.dying.t >= FADE_END and ("lantern", "break") in n.events
+
+
+def test_the_green_reaching_the_other_is_the_end():
+    m = _night()
+    for life, rising, lv, rv, gone in (("health", "poison", 50, 49, None), ("health", "poison", 50, 50, "poison"),
+                                       ("health", "poison", 25, 25, "poison"), ("sanity", "stupor", 40, 41, "stupor"),
+                                       ("sanity", "stupor", 0, 0, "sanity"), ("health", "poison", 60, 30, None)):
+        c = Condition(random.Random(3))
+        setattr(c, life, lv)
+        setattr(c, rising, rv)
+        assert c.spent() == gone, (life, lv, rising, rv)
+    c = Condition(random.Random(4))
+    c.health, c.poison = 50, 36                                                 # (close: the edge beats green)
+    assert c.critical() == ["poison"]
+    c.health, c.poison = 15, 0                                                  # (low, nothing rising: red)
+    assert c.critical() == ["health"]
+    m.body.health, m.body.poison = 50.0, 49.9
+    m.body.poison += 1.0
+    m.step(0.05, N.Input())
+    assert m.dying is not None and m.dying.cause == "poison"
