@@ -1,12 +1,15 @@
 """The window: the view, and over it (when one is up) the title or the pause.
 
 The title stands at the foot of the hollow, turning slowly, looking up into the dark (and whatever is up there
-looking back): the name, a line, Begin. Esc in the night pauses it: Resume, or back to the title."""
+looking back): the name, a line, Begin. Begin goes to Before the night (ui/menu.py): begin the night, the endings
+found, the records, saved nights, unlocks, the options. Esc in the night pauses it: Resume, or back to the title.
+What's kept between nights is the Records (game/records.py) in the saves folder."""
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter
 from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
 from ..game.night import Night
+from ..game.records import Records
 from .view import SERIF, GameView
 
 BUTTONS = """QPushButton { color: #E6D8C2; background: rgba(20, 14, 12, 170); border: 1px solid #5C4632;
@@ -59,6 +62,7 @@ class Shell(QWidget):
         self.setMinimumSize(800, 520)
         self.saves_dir = saves_dir
         self.muted = muted
+        self.records = Records(saves_dir)
         self.view = GameView(self)
         self.panel = None
         self.frame = None
@@ -85,9 +89,14 @@ class Shell(QWidget):
 
     def show_title(self):
         self.view.release()
+        self.view.night_done()                                  # (a night left part-way: its tallies kept)
         self.view.backdrop(Night())
         self.set_panel(Panel(self, "The Hollow Oak", "One night. One host. Get to dawn.",
-                             [("Begin", self.begin), ("Leave", self.leave)]))
+                             [("Begin", self.show_menu), ("Leave", self.leave)]))
+
+    def show_menu(self):
+        from .menu import NightMenu
+        self.set_panel(NightMenu(self))
 
     def begin(self):
         self.set_panel(None)
@@ -116,5 +125,6 @@ class Shell(QWidget):
 
     def close_down(self):
         self.view.release()
+        self.view.night_done()
         if self.view.audio is not None:
             self.view.audio.stop()

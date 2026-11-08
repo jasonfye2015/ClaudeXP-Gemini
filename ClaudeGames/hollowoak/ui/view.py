@@ -15,6 +15,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
 from . import orbs
+from ..game.death import ENDING
 
 SENS = 0.0022
 SERIF = "Georgia"
@@ -44,6 +45,8 @@ class GameView(QOpenGLWidget):
         self.outs = 0                            # (how often the lantern has gone out: the hint shows the first times)
         self.whisper = None                      # (a few small words low on the screen: (words, when, how long))
         self.teeters = 0                         # (how often he's teetered on a strand: the hint shows the first times)
+        self.tally = None                        # (this night's tallies, for the records)
+        self.first_ending = False
         self.audio = None
         self.fade = None                         # (born): in from black
         self.last = time.perf_counter()
@@ -92,6 +95,8 @@ class GameView(QOpenGLWidget):
         self.outs = 0
         self.teeters = 0
         self.whisper = None
+        self.tally = {"bites": 0, "slips": 0, "falls": 0, "swipes": 0, "shakes": 0, "done": False}
+        self.first_ending = False
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
         self.inp.strafe = self.inp.forward = 0.0
         if self.audio is None:
@@ -116,12 +121,19 @@ class GameView(QOpenGLWidget):
         n = self.night
         if n is None:
             return
+        if self.audio is not None:
+            o = self.shell.records.options
+            self.audio.volume = o["volume"] / 100.0
+            self.audio.heartbeat = bool(o["heartbeat"])
         if self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
             n.step(dt, self.inp)
             if self.audio is not None:
                 self.audio.hear(n, n.events)
             if n.dying.done:
                 self.release()
+                if self.tally is not None and not self.tally["done"]:
+                    self.first_ending = self.shell.records.ending(ENDING[0].split(": ")[1])
+                    self.night_done()
             n.events.clear()
         elif self.playing and not self.shell.panel_open():
             k = self.keys
@@ -135,6 +147,7 @@ class GameView(QOpenGLWidget):
             n.step(dt, self.inp)
             if self.audio is not None:
                 self.audio.hear(n, n.events)
+            self._count(n.events)
             for e in n.events:
                 if e[0] == "place":
                     self.cards.append((e[1], e[2], now))
@@ -160,6 +173,30 @@ class GameView(QOpenGLWidget):
             n._watch(dt)
         self.update()
 
+    def _count(self, events):
+        t = self.tally
+        if t is None:
+            return
+        for e in events:
+            if e[0] == "bitten":
+                t["bites"] += 1
+            elif e[0] == "silk" and e[1] == "slip":
+                t["slips"] += 1
+            elif e[0] == "hurt":
+                t["falls"] += 1
+            elif e[0] == "swipe":
+                t["swipes"] += e[1]
+            elif e[0] == "lantern" and e[1] == "shake":
+                t["shakes"] += 1
+
+    def night_done(self):
+        """The night over (an ending, or left part-way): its tallies into the records, once."""
+        t, n = self.tally, self.night
+        if t is None or t["done"] or n is None or not self.playing:
+            return
+        t["done"] = True
+        self.shell.records.night_over(dict(t, seconds=n.time))
+
     # ---- what's drawn over it ----------------------------------------------------------------------------------
     def hud(self, p, now):
         W, H = self.width(), self.height()
@@ -180,12 +217,19 @@ class GameView(QOpenGLWidget):
             p.setFont(f)
             p.drawText(QRectF(W * 0.2, H * 0.70 + 48, W * 0.6, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
         n = self.night
+        o = self.shell.records.options
         if n.dying is not None:
-            orbs.draw_orbs(p, W, H, n.body, t, max(0.0, 1.0 - n.dying.t / 1.2))
-            orbs.draw_death(p, W, H, n.dying, t)
+            if o["orbs"]:
+                orbs.draw_orbs(p, W, H, n.body, t, max(0.0, 1.0 - n.dying.t / 1.2))
+            orbs.draw_death(p, W, H, n.dying, t, self.first_ending)
+            if o["heart"] and n.dying.black < 0.98:
+                orbs.draw_heart(p, W, H, n.body, 1.0 - n.dying.black)       # (to the last beat, and the flat line)
             return
-        orbs.draw_danger(p, W, H, n.body, t)
-        orbs.draw_orbs(p, W, H, n.body, t)
+        if o["orbs"]:
+            orbs.draw_danger(p, W, H, n.body, t)
+            orbs.draw_orbs(p, W, H, n.body, t)
+        if o["heart"]:
+            orbs.draw_heart(p, W, H, n.body)
         if n.lamp.state == "out" and self.outs <= 3:             # (the lantern out: what to do, the first few times)
             a = int(150 + 60 * math.sin(t * 2.4))
             p.setPen(QColor(220, 200, 170, a))
@@ -236,7 +280,7 @@ class GameView(QOpenGLWidget):
 
     def mousePressEvent(self, e):
         if self.playing and self.night is not None and self.night.dying is not None:
-            if self.night.dying.done and self.night.dying.t > 23.0:
+            if self.night.dying.done and self.night.dying.t > 26.0:
                 self.shell.show_title()                          # (it's over: back to the start)
             return
         if self.playing and not self.captured:
@@ -250,8 +294,9 @@ class GameView(QOpenGLWidget):
         if c is None or gp == c:
             return
         dx, dy = gp.x() - c.x(), gp.y() - c.y()
-        self.inp.yaw += dx * SENS
-        self.inp.pitch = max(-1.45, min(1.45, self.inp.pitch - dy * SENS))
+        sens = SENS * (0.35 + 1.3 * self.shell.records.options["look"] / 100.0)
+        self.inp.yaw += dx * sens
+        self.inp.pitch = max(-1.45, min(1.45, self.inp.pitch - dy * sens))
         self._centre()
 
     def keyPressEvent(self, e):

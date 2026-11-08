@@ -583,6 +583,10 @@ class Renderer:
         for x, y, z, top, size, ph in night.danglers.active():
             p = self._dangle(x, y, z, ph)
             threads.append(([(x, top, z), (p[0], p[1] + size * 0.25, p[2])], 0.003, 7, [0.0, 0.0], 0.0))
+        dying = getattr(night, "dying", None)
+        for top, feet in (dying.ropes() if dying is not None else []):      # (her ropes: thick, from far above)
+            pts = [tuple(top[i] + (feet[i] - top[i]) * k / 11 for i in range(3)) for k in range(12)]
+            threads.append((pts, 0.035, 7, [0.0] * 12, 0.0))
         if threads:
             self.silk_prog.float("uWhite", 0.14)
             self.loose.upload(silkmesh.ribbons(threads))

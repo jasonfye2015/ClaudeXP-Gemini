@@ -6,6 +6,7 @@ view beats; when it reaches it, he's done.
 And the end of him: the silk laid across his eyes, the dark coming down, and the ending's line."""
 import math
 
+import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainterPath, QPen, QRadialGradient
 
@@ -130,7 +131,7 @@ def draw_danger(p, W, H, body, t):
             p.fillRect(rect, g)
 
 
-def draw_death(p, W, H, death, t):
+def draw_death(p, W, H, death, t, first=False):
     """The silk over his eyes; the dark; and the line."""
     def at(u, v):
         return QPointF(u * W, (1 - v) * H)
@@ -141,6 +142,8 @@ def draw_death(p, W, H, death, t):
         p.setBrush(Qt.NoBrush)
         for w in death.webs:
             k = w.get("drawn", 1.0)
+            if w["kind"] == "band":                                  # (the wrapping: drawn on its own, below)
+                continue
             if w["kind"] == "strand":
                 (u0, v0), (u1, v1), sag = w["a"], w["b"], w["sag"]
                 mu, mv = (u0 + u1) / 2 - (v1 - v0) * sag, (v0 + v1) / 2 + (u1 - u0) * sag
@@ -167,11 +170,28 @@ def draw_death(p, W, H, death, t):
                         pt = at(cu + math.cos(a) * r * f * H / W, cv + math.sin(a) * r * f)
                         path.lineTo(pt) if i else path.moveTo(pt)
                     p.drawPath(path)
+    for w in death.webs:                                             # (the bands of the wrapping: thick, milky, many-threaded)
+        if w["kind"] != "band":
+            continue
+        k = w.get("drawn", 1.0)
+        (u0, v0), (u1, v1), sag = w["a"], w["b"], w["sag"]
+        mu, mv = (u0 + u1) / 2 - (v1 - v0) * sag, (v0 + v1) / 2 + (u1 - u0) * sag
+        path = QPainterPath(at(u0, v0))
+        for i in range(1, max(2, int(30 * k)) + 1):
+            s_ = i / 30
+            path.lineTo(at((1 - s_) ** 2 * u0 + 2 * (1 - s_) * s_ * mu + s_ * s_ * u1,
+                           (1 - s_) ** 2 * v0 + 2 * (1 - s_) * s_ * mv + s_ * s_ * v1))
+        wpx = w["width"] * H
+        p.setPen(QPen(QColor(225, 228, 235, 70), wpx, Qt.SolidLine, Qt.FlatCap))
+        p.drawPath(path)
+        for off in (-0.33, 0.0, 0.33):                               # (the threads it's twisted from)
+            p.setPen(QPen(QColor(245, 247, 252, 70), 1.0))
+            p.drawPath(path.translated(0, off * wpx))
     if death.black > 0:
         p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * death.black)))
     if death.done:
         from ..game.death import ENDING
-        age = death.t - 21.4
+        age = death.t - 24.4
         a = max(0.0, min(1.0, age / 2.0))
         f = QFont(SERIF, 15)
         f.setItalic(True)
@@ -181,6 +201,79 @@ def draw_death(p, W, H, death, t):
         p.setFont(QFont(SERIF, 10))
         p.setPen(QColor(170, 160, 150, int(200 * max(0.0, min(1.0, (age - 1.5) / 2.0)))))
         p.drawText(QRectF(0, H * 0.45 + 44, W, 20), Qt.AlignHCenter, ENDING[0])
+        if first:
+            p.setPen(QColor(200, 170, 120, int(180 * max(0.0, min(1.0, (age - 2.5) / 2.0)))))
+            p.drawText(QRectF(0, H * 0.45 + 64, W, 20), Qt.AlignHCenter, "(found for the first time)")
         p.setPen(QColor(150, 140, 130, int(150 * max(0.0, min(1.0, (age - 4.0) / 2.0)))))
         p.drawText(QRectF(0, H * 0.88, W, 20), Qt.AlignHCenter, "Click to go back to the title")
 
+
+
+def draw_heart(p, W, H, body, alpha=1.0, span=6.0):
+    """His heart, at the bottom of the view between the orbs: the trace running right to left (each beat a small rise,
+    the sharp spike and its dip, a slow swell after), the last minute of its rate faint behind it, and the rate."""
+    if alpha <= 0.01:
+        return
+    p.save()
+    p.setOpacity(alpha)
+    w, h = min(300.0, W * 0.24), max(58.0, H * 0.085)
+    x0, y0 = (W - w) / 2, H - 22 - h
+    box = QRectF(x0, y0, w, h)
+    p.setPen(QPen(QColor(92, 74, 58, 200), 1.2))
+    p.setBrush(QColor(6, 4, 6, 175))
+    p.drawRoundedRect(box, 6, 6)
+    plot = QRectF(x0 + 8, y0 + 8, w - 74, h - 16)
+    p.setPen(QPen(QColor(60, 30, 30, 120), 1))                       # (a faint grid, like the paper)
+    for k in range(1, 6):
+        x = plot.left() + plot.width() * k / 6
+        p.drawLine(QPointF(x, plot.top()), QPointF(x, plot.bottom()))
+    p.drawLine(QPointF(plot.left(), plot.center().y()), QPointF(plot.right(), plot.center().y()))
+    if len(body.history) > 1:                                         # (the last minute of it, faint)
+        path = QPainterPath()
+        n = len(body.history)
+        for i, b in enumerate(body.history):
+            x = plot.right() - (n - 1 - i) / 119 * plot.width()
+            y = plot.bottom() - max(0.0, min(1.0, (b - 40) / 140)) * plot.height()
+            path.lineTo(x, y) if i else path.moveTo(x, y)
+        p.setPen(QPen(QColor(200, 120, 90, 70), 1.2))
+        p.setBrush(Qt.NoBrush)
+        p.drawPath(path)
+    now = body.t
+    beats = np.array([b for b in body.beats if now - b < span + 0.6])
+    mid, amp = plot.center().y() + plot.height() * 0.18, plot.height() * 0.62
+    times = [np.linspace(now - span, now, 60)]                         # (the flat between beats: a few points)
+    for b in beats:                                                    # (each beat: finely, so its spike is never missed)
+        times.append(np.arange(b - 0.3, b + 0.45, 0.004))
+    tt = np.unique(np.clip(np.concatenate(times), now - span, now))
+    v = np.zeros_like(tt)
+    for b in beats:
+        d = tt - b
+        v += (0.12 * np.exp(-((d + 0.17) / 0.035) ** 2) - 0.14 * np.exp(-((d + 0.025) / 0.012) ** 2)
+              + np.exp(-(d / 0.013) ** 2) - 0.28 * np.exp(-((d - 0.03) / 0.014) ** 2)
+              + 0.22 * np.exp(-((d - 0.26) / 0.06) ** 2))
+    xs = plot.right() - (now - tt) / span * plot.width()
+    ys = mid - v * amp
+    trace = QPainterPath(QPointF(float(xs[0]), float(ys[0])))          # (the trace, running right to left)
+    for x, y in zip(xs[1:], ys[1:]):
+        trace.lineTo(float(x), float(y))
+    for width, col in ((4.0, QColor(255, 70, 60, 45)), (1.4, QColor(255, 120, 105, 230))):
+        p.setPen(QPen(col, width))
+        p.drawPath(trace)
+    last = now - float(beats[-1]) if len(beats) else 9.0                           # (the heart itself, pulsing with each beat)
+    k = max(0.0, 1.0 - last / 0.25)
+    cx, cy, s = x0 + w - 33, y0 + h * 0.36, 7.0 + 3.0 * k
+    heart = QPainterPath()
+    heart.moveTo(cx, cy + s * 0.9)
+    heart.cubicTo(cx - s * 1.6, cy - s * 0.1, cx - s * 0.7, cy - s * 1.3, cx, cy - s * 0.45)
+    heart.cubicTo(cx + s * 0.7, cy - s * 1.3, cx + s * 1.6, cy - s * 0.1, cx, cy + s * 0.9)
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(200 + int(55 * k), 30, 30, 230))
+    p.drawPath(heart)
+    bpm = int(round(body.bpm)) if body.bpm >= 1 else 0
+    p.setPen(QColor(255, 150, 135))
+    p.setFont(QFont(SERIF, 13, QFont.Bold))
+    p.drawText(QRectF(x0 + w - 66, y0 + h * 0.52, 66, 20), Qt.AlignHCenter, str(bpm))
+    p.setFont(QFont(SERIF, 7))
+    p.setPen(QColor(200, 150, 140))
+    p.drawText(QRectF(x0 + w - 66, y0 + h * 0.52 + 18, 66, 12), Qt.AlignHCenter, "BPM")
+    p.restore()

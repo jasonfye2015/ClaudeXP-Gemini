@@ -32,6 +32,9 @@ class _Stream(QIODevice):
 class DenAudio:
     def __init__(self, muted=lambda: False):
         self.muted = muted
+        self.volume = 0.8
+        self.heartbeat = True
+        self._beat = None
         self.synth = Synth(RATE)
         self.sink = None
         self._fade = 0.0
@@ -53,7 +56,7 @@ class DenAudio:
             self.sink = None
 
     def _gain(self):
-        want = 0.0 if self.muted() else 0.9
+        want = 0.0 if self.muted() else 1.1 * self.volume
         self._fade += (want - self._fade) * 0.15                 # (a block's worth of fade, so it never clicks)
         return self._fade
 
@@ -62,10 +65,16 @@ class DenAudio:
         s = self.synth
         on = night.on is not None
         d = night.dying
-        if d is not None and d.t < 17.0 and random.random() < 0.09:  # (all over him: the sound of them never stops)
+        if d is not None and d.t < 20.0 and random.random() < 0.09:  # (all over him: the sound of them never stops)
             s.play("skitter", 0.4 + 0.5 * random.random())
         s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
               height=night.y / 26.0 if d is None or not d.done else 0.0)
+        b = night.body.beats                                         # (his heart: heard when it races, and at the end)
+        if b and b[-1] != self._beat:
+            self._beat = b[-1]
+            loud = max(0.0, min(1.0, (night.body.bpm - 92) / 50.0)) if d is None else 0.85
+            if self.heartbeat and loud > 0.05:
+                s.play("beat", loud)
         for e in events:
             kind = e[0]
             if kind == "silk" and e[1] == "step":
@@ -88,6 +97,8 @@ class DenAudio:
                 s.play("puff", 1.2)
             elif kind == "collapse":
                 s.play("thud", 0.8)
+            elif kind == "death" and e[1] == "wrap":
+                s.play("creak", 1.5)
             elif kind == "death" and e[1] == "drag":
                 s.play("slip", 1.2)
             elif kind == "death" and e[1] == "lift":

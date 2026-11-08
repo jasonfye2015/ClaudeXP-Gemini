@@ -108,6 +108,19 @@ values beneath in their colours; the edge of the view beats red, blue or green a
 Tuned for now (only her babies about) to barely touch him; the edge beats red and green in turn for the health orb,
 blue and yellow for the sanity orb. Doing nothing at all - standing in the dark, never shaking the lantern - ends it in
 about ten minutes: Supper, the first way to finish the game. (What moves the four, and how much, comes later.)
+
+Phase 2f - his heart, the wrapping, and Before the night (done). His heart (game/condition.py): resting near 66,
+faster in the dark, with less sanity, with poison; leaping at a face full of spider, a slip, a fall; slower with
+stupor; at Supper racing, slowing as he's drawn up, and stopping. ui/orbs.py draw_heart: a monitor between the orbs -
+the trace running right to left, a minute of the rate faint behind it, a pulsing heart and the BPM; heard as lub-dub
+when it races and at the end. Supper gains a wrapping: they turn him over and over in thick bands of silk before the
+drag, and he's drawn up on her ropes - thick silk from far above. game/records.py (records.json in the saves folder):
+endings found (with the date), the totals of the nights, unlocks, the options. ui/menu.py, Before the night - between
+the title and the oak: Begin the night, Endings (n of 6, named only once found), Records, Saved nights (none yet),
+Unlocks (none yet), Options (volume, mouse speed, the heart monitor, the heartbeat heard, the orbs); old branches with
+oak leaves reaching in, webs in the corners, and her babies running across it now and then.
+Waiting for her (phase 3): Ysmeine leaning into frame at Supper; her last line to him, from the model, shaped by what
+she remembers of him across nights (a reputation carried forward).
 game/death.py: when the green reaches the other (or health or sanity runs dry) -
 Supper: he collapses, the lantern breaks (its flame dies on the ground), they cover his face and lay silk across his
 eyes, he's dragged in pulls to the middle of the floor, turned, hoisted by the feet half way up the trunk, swinging;

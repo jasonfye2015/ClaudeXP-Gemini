@@ -96,6 +96,7 @@ class Night:
         self._silk_step = 0.0
         self._fall_from = self.y
         self.inp_hurry = False
+        self.moved_now = 0.0
         self.brood = Brood(self.tree, self.web, random.Random(self.rng.random()))
         self.crawlers = Crawlers(random.Random(self.rng.random()))     # (the small ones that cross his eyes)
         self.danglers = Danglers(random.Random(self.rng.random()))     # (and drop before his face)
@@ -158,12 +159,15 @@ class Night:
         if self.dying is not None:                                     # (it's over: what happens to him now)
             self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
             self.events.extend(self.dying.step(dt, self))
+            self.body.dying_heart(dt, self.dying.t)
             return
         first = len(self.events)                                       # (what happens this step, from here)
         self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
+        before = self.moved
         self._move(dt, inp)
+        self.moved_now = self.moved - before
         self._balance(dt, inp, turn)
         self.tremor *= math.exp(-dt / 1.3)
         if self.tremor > 2.2 and self.time < self.eye_gone_until:       # (she felt that: her eyes come sooner)
