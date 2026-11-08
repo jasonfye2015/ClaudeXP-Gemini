@@ -208,6 +208,18 @@ glowing mushrooms at its feet; "Ysmeine" in gold at its head; her words in Itali
 script) - and "Go on" at the end. Then the dark again, she's gone to the wall, the frame opens; night.met records how
 it ended. Her eyes, close: deep glossy red, with a glint of whatever light there is. (The F4 stand-in is gone.)
 
+Phase 3e - the letter, the notebook, unlocks (done; the user's next round). ui/pages.py: Begin the night shows her
+letter first - silk (pale, fibrous, a sheen, frayed, threads trailing), in her hand; on its back the way to the oak, her
+mark, "Bring no fire" - beside what it means to him: why he goes anyway, and that the silk is soaked in her venom and
+something meant for him that makes it impossible to refuse. Go to the oak, or not tonight. Esc in the night now offers
+Go on, View letter (front and back), Notes, Unlocks, Back to the title. Notes (game/notes.py; kept in records.json
+across nights and deaths): a notebook flipped through - The invitation, Her (name, what she hides, what she is, how old,
+what she wants, what she fears), Her ways (her silk sense, the edge of the light, the dark, the three tells in the
+fungus, her small ones, her bite, her hunting), Her guests (seven suitors: Orrin Vale, Ser Aldric, Wick, Maudren Hale,
+Brother Fennick, Isolde of the Marr, and the one she won't speak of) - each page written when he learns it (her
+words, the script's lines, what she does, her moods seen in the light), with a word low on the screen. Unlocks: endings,
+guests found, pages written by section, anything else.
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
