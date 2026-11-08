@@ -141,13 +141,13 @@ uniform mat4 uPV; out vec3 vPos; out vec3 vCol; flat out vec2 vBreath;
 void main() { vPos = aPos; vCol = aCol; vBreath = aBreath; gl_Position = uPV * vec4(aPos, 1.0); }"""
 
 FUNGUS_FS = """#version 330 core
-in vec3 vPos; in vec3 vCol; flat in vec2 vBreath; uniform float uTime;
+in vec3 vPos; in vec3 vCol; flat in vec2 vBreath; uniform float uTime; uniform vec3 uTint;
 out vec4 frag;
 """ + LIGHTING + """
 void main() {
     float s = 0.5 + 0.5 * sin(uTime * 6.2831853 / vBreath.x + vBreath.y);
     float pulse = 0.18 + 0.82 * s * s * (3.0 - 2.0 * s);              // (each patch fading almost out, and growing back)
-    frag = outColour(fogged(vPos, vCol * pulse * 0.95));
+    frag = outColour(fogged(vPos, vCol * uTint * pulse * 0.95));
 }"""
 
 GLOW_VS = """#version 330 core
@@ -461,6 +461,7 @@ class Renderer:
         self.dress.draw()
         self.fung.use()
         self.fung.float("uTime", now)
+        self.fung.vec("uTint", self._tint(night))
         self.fungus.draw()
         self._spiders(night)
         self._silk(night, now, proj, h)
@@ -603,6 +604,14 @@ class Renderer:
         GL.glDepthMask(GL.GL_TRUE)
         GL.glDisable(GL.GL_BLEND)
 
+    def _tint(self, night):
+        """Her moods, in the fungus-light: warmer as she hungers, brighter as she's fascinated, colder as she doubts."""
+        m = getattr(night, "moods", None)
+        want = np.array(m.fungus_tint() if m is not None else (1.0, 1.0, 1.0), np.float32)
+        cur = getattr(self, "_tint_now", want)
+        self._tint_now = cur + (want - cur) * 0.02                # (slowly: never a switch)
+        return self._tint_now
+
     def flame_at(self, night):
         now = getattr(self, "now", 0.0)
         if self._held_at[0] != now or self._held_at[1] is None:
@@ -709,9 +718,10 @@ class Renderer:
             x, y, z = dying.lamp_at
             out.append(((x, y + 0.08, z, 3.0), (0.6 * k, 0.36 * k, 0.18 * k, 1)))
         near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
+        tint = getattr(self, "_tint_now", (1.0, 1.0, 1.0))
         for l in near[:MAX_LIGHTS - len(out) - 3]:
             k = treemesh.glow_level(now, l[7], l[8]) * 0.8
-            out.append(((l[0], l[1], l[2], l[6]), (l[3] * k, l[4] * k, l[5] * k, 1)))
+            out.append(((l[0], l[1], l[2], l[6]), (l[3] * k * tint[0], l[4] * k * tint[1], l[5] * k * tint[2], 1)))
         for start, end, width in sorted(self.beams, key=lambda b: float(np.sum((b[1] - np.array(night.eye)) ** 2)))[:3]:
             out.append(((*end, 4.5), (0.1, 0.12, 0.18, 1)))   # (where a moonbeam falls, a little light)
         return out[:MAX_LIGHTS]
@@ -774,8 +784,10 @@ class Renderer:
                 p = start + axis * ph + side * 0.6 * math.sin(now * 0.3 + m * 2.0)
                 bill(p, 0.025, (0.75, 0.8, 1.0), 0.8 * math.sin(ph * math.pi))
         # the fungus: a soft halo about each cluster
+        tint = getattr(self, "_tint_now", (1.0, 1.0, 1.0))
+        glow = tuple(c * t for c, t in zip(treemesh.GLOW, tint))
         for l in self.fungus_lights:
-            bill((l[0], l[1], l[2]), 1.3, treemesh.GLOW, 0.42 * treemesh.glow_level(now, l[7], l[8]))
+            bill((l[0], l[1], l[2]), 1.3, glow, 0.42 * treemesh.glow_level(now, l[7], l[8]))
         # water, dripping: a drop falls, then a ring spreads where it lands
         for k, (x, top, z, bottom) in enumerate(self.den.drips):
             if (x - eye[0]) ** 2 + (z - eye[2]) ** 2 > 400:
@@ -810,14 +822,14 @@ class Renderer:
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
-        # her eyes: eight red lights in the dark, as wide as her head (she's near seven units across)
+        # her eyes: eight red lights in the dark, as wide as her head (she's five units across)
         for e in night.eyes():
             for k in range(8):
-                ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 3.9
-                oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 3.9
+                ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 2.9
+                oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 2.9
                 p = np.array(e["pos"], np.float32) + right * ox + up * oy
-                bill(p, 0.19 if k in (1, 2) else 0.13, (1.0, 0.3, 0.15), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
-            bill(np.array(e["pos"], np.float32), 1.2, (0.5, 0.06, 0.03), e["alpha"] * 0.12)     # (a red haze about them)
+                bill(p, 0.14 if k in (1, 2) else 0.1, (1.0, 0.3, 0.15), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
+            bill(np.array(e["pos"], np.float32), 0.9, (0.5, 0.06, 0.03), e["alpha"] * 0.12)     # (a red haze about them)
         if not verts:
             return
         self.glow_mesh.upload(np.array(verts, np.float32))

@@ -1,6 +1,6 @@
 """Ysmeine, the Weaver Below: her body in the den (phase 3a - before she ever speaks).
 
-She is on the wall of the hollow, a leg-span of near seven units, and she keeps to the dark. Mostly she is across
+She is on the wall of the hollow, a leg-span of five units, and she keeps to the dark. Mostly she is across
 the hollow from him and a little above, watching - eight red lights and a shape in the black. She keeps pace with him
 as he climbs. Now and then she comes closer, to the very edge of his light, and leans out toward him, legs reaching -
 and is gone again. When his lantern goes out she comes close and stays close. When he comes at her, she withdraws. When
@@ -8,7 +8,13 @@ the silk shakes hard (a fall, a slip, a scramble) she turns to him at once, and 
 at the edge of the light, eyes in a gap, the web shifting under her weight.
 
     her = Mother(tree, rng)
-    her.step(dt, night)       -> events: ("her", "glimpse"), ("her", "withdraw"), ("her", "near"), ("her", "turn")
+    her.step(dt, night)       -> events: ("her", "glimpse"), ("her", "withdraw"), ("her", "near"), ("her", "turn"),
+                                 ("her", "strike"), ("her", "bite")
+
+Her moods (night.moods, game/moods.py) steer her: fascination brings her closer and keeps her longer at the edge of
+his light; suspicion keeps her further off; hunger brings her more often, and when it's high she circles the hollow,
+restless. Hunting (her patience gone, or her hunger past its limit) she comes straight for him, light or no light, and
+strikes - and if he's within her reach, bites.
     her.pose()                -> (position, forward, up, size, clip, t, lean) for drawing
     her.eyes()                -> (where her eyes are, how bright) - for the glow, and for the night to know she's looking
     her.moving                how fast she's going now, 0..1 (for the sound of her)
@@ -19,7 +25,7 @@ import math
 
 from . import tree as T
 
-SIZE = 6.75                      # (her leg-span, nose to tail with her legs)
+SIZE = 5.0                       # (her leg-span, nose to tail with her legs)
 EYES = (0.01, 0.19, 0.06)        # (where her eyes are on her, in the spider's own units)
 CREEP, PACE, FLEE = 0.55, 1.3, 3.4
 GLIMPSE_EVERY = (40.0, 80.0)
@@ -37,6 +43,7 @@ class Mother:
         self.head = 0.0                      # (which way she faces on the wall: 0 round it, pi/2 up it)
         self.state = "watch"
         self.until = 0.0
+        self.circle = 0.0
         self.t = 0.0
         self.next_glimpse = rng.uniform(*GLIMPSE_EVERY)
         self.anim = 0.0
@@ -45,6 +52,7 @@ class Mother:
         self.moving = 0.0
         self.alpha = 0.0                     # (her eyes: how much they show)
         self.leaned = self.announced = False
+        self.strike_t = -1.0
 
     # ---- where she is --------------------------------------------------------------------------------------------
     def at(self, th=None, y=None):
@@ -81,19 +89,28 @@ class Mother:
         return pos, self.alpha
 
     # ---- where she wants to be -----------------------------------------------------------------------------------
+    def _mood(self, night, name, default):
+        m = getattr(night, "moods", None)
+        return getattr(m, name) if m is not None else default
+
     def _target(self, night):
-        """Across the hollow from him and above, watching; or close, at the edge of his light."""
+        """Across the hollow from him and above, watching; or close, at the edge of his light; or, hunting, at him."""
         ex, ey, ez = night.eye
         th_him = math.atan2(ez, ex)
+        if self.state in ("hunt", "strike"):
+            return th_him, ey + 0.3
         reach = night.lantern_reach()[0] if night.lantern and night.lamp.state != "out" else 0.0
         if self.state in ("near", "glimpse"):
-            gap = max(3.4, reach * 0.95) if self.state == "glimpse" else 3.6     # (her size: she never quite touches him)
+            gap = max(2.7, reach * 0.95) if self.state == "glimpse" else 2.9     # (her size: she never quite touches him)
+            gap *= 1.1 - 0.3 * self._mood(night, "fascination", 30) / 100 + 0.5 * self._mood(night, "suspicion", 10) / 100
             r = self.tree.base_r(th_him, ey)
             d_wall = max(0.3, r - math.hypot(ex, ez))
             off = math.sqrt(max(0.0, gap * gap - d_wall * d_wall)) / max(1.0, r)
             side = 1.0 if _wrap(self.th - th_him) >= 0 else -1.0
             return th_him + side * min(1.2, off + 0.15), ey + (0.6 if self.state == "glimpse" else 1.2)
-        return th_him + math.pi + 0.35 * math.sin(self.t * 0.05), max(ey + 2.2, 12.5)   # (high, unless he is)
+        restless = max(0.0, (self._mood(night, "hunger", 20) - 65) / 35)          # (hungry: she circles)
+        return (th_him + math.pi + 0.35 * math.sin(self.t * 0.05) + self.circle + restless * 1.4 * math.sin(self.t * 0.13),
+                max(ey + 2.2, 12.5))                                                  # (high, unless he is)
 
     # ---- a step ---------------------------------------------------------------------------------------------------
     def step(self, dt, night):
@@ -115,13 +132,21 @@ class Mother:
         if not dark and self.state == "near" and self.until > self.t + 1e8:
             self.state, self.until = "watch", 0.0                                  # (light again: back to the dark)
             self.next_glimpse = max(self.next_glimpse, self.t + rng.uniform(15, 30))
+        fasc, hunger = self._mood(night, "fascination", 30) / 100, self._mood(night, "hunger", 20) / 100
+        self.circle += max(0.0, (hunger - 0.65) / 0.35) * 0.1 * dt                # (hungry: round and round the hollow)
+        hunting = getattr(getattr(night, "moods", None), "hunting", False)
+        if hunting and self.state not in ("hunt", "strike"):
+            self.state, self.until = "hunt", self.t + 1e9
+            out.append(("her", "hunt"))
+        if not hunting and self.state == "hunt":
+            self.state, self.until = "withdraw", self.t + rng.uniform(3, 5)
         if self.state == "watch" and self.t >= self.next_glimpse:
             self.state, self.until = "glimpse", self.t + 40.0              # (as long as it takes her to get there)
             self.leaned = self.announced = False
-            self.next_glimpse = self.t + rng.uniform(*GLIMPSE_EVERY)
+            self.next_glimpse = self.t + max(15.0, rng.uniform(*GLIMPSE_EVERY) * (1.3 - 0.5 * fasc - 0.4 * hunger))
         if self.state == "glimpse" and self.lean > 0.9 and not self.leaned:
             self.leaned = True
-            self.until = self.t + rng.uniform(2.5, 4.0)                    # (there: a long moment, leaning out, then gone)
+            self.until = self.t + rng.uniform(2.5, 4.0) * (0.7 + 0.8 * fasc)   # (a long moment, leaning out; then gone)
         if self.state in ("near", "glimpse") and self.t >= self.until:
             self.state, self.until = "withdraw", self.t + rng.uniform(3, 5)
             out.append(("her", "withdraw"))
@@ -136,7 +161,7 @@ class Mother:
             speed = FLEE
         else:
             th_t, y_t = self._target(night)
-            speed = PACE
+            speed = PACE * (1.8 if self.state == "hunt" else 1.0)
         y_t = max(2.0, min(T.TOP - 2.5, y_t))
         r = self.tree.base_r(self.th, self.y)
         dth = _wrap(th_t - self.th) * r                       # (round the wall, the short way: in units)
@@ -159,6 +184,23 @@ class Mother:
             self.moving = 0.0
             self.clip = "idle"
             self.anim += dt
+        # hunting: close enough, and she strikes - legs up and down on him, fast
+        if self.state == "hunt" and d < 4.4 and self.t - self.strike_t > 4.0:
+            self.state, self.strike_t = "strike", self.t
+            out.append(("her", "strike"))
+        if self.state == "strike":
+            k = (self.t - self.strike_t) / 0.75
+            self.lean = 1.0
+            self.clip, self.anim = "attack", min(0.74, k * 0.75)
+            if k >= 0.45 and not getattr(self, "_bit", False):
+                self._bit = True
+                if d < 4.6:
+                    out.append(("her", "bite"))
+            if k >= 1.0:
+                self._bit = False
+                self.state, self.until = "withdraw", self.t + rng.uniform(4, 6)
+            self.alpha += (1.0 - self.alpha) * min(1.0, dt * 3)
+            return out
         # leaning out toward him, at the edge of the light
         want_lean = 1.0 if self.state == "glimpse" and (gap < 1.0 or self.announced) else 0.0
         if self.state == "near" and dark and gap < 1.0:
