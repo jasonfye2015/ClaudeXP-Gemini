@@ -15,6 +15,12 @@ Playing
   options, save - and the night doesn't stop while he reads (something on his face knocks it from his hands). P pauses. W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
   Tab opens his satchel (the night doesn't wait while he rummages); the mouse wheel puts one thing in his left hand;
   G puts it down. Q drinks the antidote, if he has it. F5 saves (the night saves itself, too, as each act begins).
+  Three ways in, before the night: Begin the night; Learn the oak (the first night - the letter leads him from lesson to
+  lesson, a note in his own hand at each, and then it's his to do: Enter skips one, F9 lets the letter lead him through
+  the rest - offered the very first time); Let the letter lead you (the whole night walked for him, his words chosen
+  for him - a ghost of a cursor, dripping her venom, shows what it picks; slowed for every word there is to read; F10
+  hurries it between them; any move key wakes him and the night is his; F9 hands any night to the letter, or takes it
+  back). Led all night long, the night ends its own way.
   1 2 3 4 cast his spells: Light, Warmth, Illusion, Memory (in her scenes: "Cast a spell...").
   E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.

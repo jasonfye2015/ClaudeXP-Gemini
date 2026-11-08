@@ -77,10 +77,14 @@ class Letter(_Screen):
     """Her letter: silk, in her hand. Before the night ("begin"), with what it means to him; or to look at again
     ("view"), from the pause."""
 
-    def __init__(self, shell, mode="begin", on_go=None, on_back=None):
+    LEAD = {"led": ("Let it lead you", "\n\nYou don't decide to go. Your feet are already moving."),
+            "first": ("Learn the oak", "\n\nThe first night, then. Go slowly; write everything down.")}
+
+    def __init__(self, shell, mode="begin", on_go=None, on_back=None, lead=None):
         buttons = [("Turn it over", self.flip)]
+        self.intent = INTENT + (self.LEAD[lead][1] if lead in self.LEAD else "")
         if mode == "begin":
-            buttons += [("Not tonight", on_back), ("Go to the oak", on_go)]
+            buttons += [("Not tonight", on_back), (self.LEAD[lead][0] if lead in self.LEAD else "Go to the oak", on_go)]
         else:
             buttons += [("Back", on_back)]
         super().__init__(shell, buttons)
@@ -121,7 +125,7 @@ class Letter(_Screen):
             p.setFont(QFont(SERIF, 13))
             p.setPen(QColor(214, 200, 182))
             text = QRectF(W * 0.52, H * 0.12, W * 0.4, H * 0.7)
-            p.drawText(text, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, INTENT)
+            p.drawText(text, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, self.intent)
         p.end()
 
     def _silk(self, p, r):

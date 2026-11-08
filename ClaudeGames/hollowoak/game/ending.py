@@ -8,7 +8,7 @@ crown; her last words to him, in her hand and her voice; then the dark, and the 
     ending.show_line    her words, while they're up
     ending.done         over: the card is showing
 """
-ORDER = ("Supper", "Cast out", "Dawn", "Bound", "The gift", "The hidden", "Fire")
+ORDER = ("Supper", "Cast out", "Dawn", "Bound", "The gift", "The hidden", "Fire", "Spellbound")
 LINES = {
     "Dawn": ("Go home, little wizard. Come back when you have something new to tell me.",
              "She let you go, curious. That evening, on your doorstep: a square of silk."),
@@ -22,6 +22,9 @@ LINES = {
     "The hidden": ("Ilsabet. Say it once more, little wizard, so I know I did not dream it.",
                    "At first light she told you everything she had been. You left knowing the oldest name in the forest "
                    "- and she, for the first time in three hundred years, was known."),
+    "Spellbound": ("You never once looked away, little wizard. Sleep, now. Come back awake.",
+                   "You woke on your own doorstep at first light, with no memory of the night. Your notebook was full - "
+                   "in your own hand, but slower, more careful, as if someone had guided it."),
     "Fire": ("Not the silk - not the silk - go. Go, little wizard - the roots - now!",
              "The Hollow Oak burned until morning. You came out through the roots with your sleeves alight. Of her, "
              "nothing was found - not a leg, not a thread."),
@@ -29,7 +32,8 @@ LINES = {
 # each ending's own scene: the light it comes in (r, g, b), whether she's before him for it, and what else is drawn
 LOOK = {"Dawn": ((150, 118, 86), True, None), "Cast out": ((70, 82, 100), False, "cold"),
         "Bound": ((130, 126, 130), True, "silk"), "The gift": ((96, 140, 92), True, "venom"),
-        "The hidden": ((170, 128, 60), True, "name"), "Fire": ((220, 96, 30), False, "fire")}
+        "The hidden": ((170, 128, 60), True, "name"), "Fire": ((220, 96, 30), False, "fire"),
+        "Spellbound": ((118, 108, 150), True, "dream")}
 LIGHT, SPEAK, QUIET, CARD = 3.0, 2.6, 9.5, 11.5
 
 

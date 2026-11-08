@@ -2,7 +2,7 @@
 and its flame dies on the ground. They come - onto him, over his face, laying silk across his eyes until he can hardly
 see. They turn him over and over, wrapping him in thick bands of silk. Then he's dragged, in pulls, to the middle of the
 hollow's floor; turned, lifted by the feet on her ropes - thick silk from far above - and drawn up, upside down, half
-the height of the trunk, swinging. Then black - and, small, "Ending 1 of 7: Supper".
+the height of the trunk, swinging. Then black - and, small, "Ending 1 of 8: Supper".
 
     death = Death(night, cause, rng)
     death.step(dt, night)       -> events ("lantern", "break"), ("death", "drag"), ("death", "lift"), ("death", "end")
@@ -30,7 +30,7 @@ BANDS = 16
 PULLS = 5
 SPIDERS = 46
 WEBS = 70
-ENDING = ("Ending 1 of 7: Supper", "Wrapped, and hung, and kept for later.")
+ENDING = ("Ending 1 of 8: Supper", "Wrapped, and hung, and kept for later.")
 
 
 def last_words(night, reputation=None, lies=0):

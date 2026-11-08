@@ -235,6 +235,15 @@ def _ending_fx(p, W, H, ending):
             x = W * ((i * 0.381966) % 1.0) + math.sin(t + i) * 20
             p.setBrush(QColor(140, 255, 140, int(120 * k * math.sin(math.pi * u) * min(1.0, t / 3.0))))
             p.drawEllipse(QPointF(x, H * (1 - u)), 3.0, 3.0)
+    elif fx == "dream":                                             # (spellbound: a dream, drifting, going soft)
+        p.setPen(Qt.NoPen)
+        for i in range(36):
+            u = (t * 0.05 + i * 0.211) % 1.0
+            x = W * ((i * 0.618034) % 1.0) + math.sin(t * 0.6 + i) * 40
+            y = H * (0.15 + 0.7 * ((i * 0.3819) % 1.0)) + math.cos(t * 0.4 + i * 1.7) * 30
+            p.setBrush(QColor(210, 200, 255, int(70 * k * math.sin(math.pi * u))))
+            p.drawEllipse(QPointF(x, y), 5.0 + 4 * math.sin(i), 5.0 + 4 * math.sin(i))
+        p.fillRect(QRectF(0, 0, W, H), QColor(200, 190, 240, int(40 * min(1.0, t / 4.0) * k)))
     elif fx == "name":                                              # (the hidden: her name, in the light)
         from ..game.hidden import NAME
         a = max(0.0, min(1.0, (t - 4.0) / 3.0)) * k

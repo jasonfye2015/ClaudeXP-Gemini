@@ -345,3 +345,27 @@ Notes on her (written first, three to a page, back and on), Her letter (in her h
 (drawn in ink: sliders to drag, boxes to tick), Save here, Back to the title (Leave / Stay). The true pause is P, or
 the window losing the computer's attention - "The night waits"; in her scenes Esc still pauses.
 
+## Phase 7 - led by her letter (done)
+
+game/autoplay.py: Nav - where he is (the root tunnel, the floor, a turn of the ledge, her silk) and a way from there to
+anywhere through the oak (out of the tunnel, up the ledge from its foot, onto her loom where the ledge meets it, into
+the chambers, onto the crown web); a step that never comes closer in 3.5 s sets him on past it. Director - the night,
+act by act: Light at the old marks, the ring and the mouse, onto her loom; her guests (keepsakes taken, room made in a
+full satchel), the moths, the gallery; down to supper when she calls; the crown's mark and her web; T. Her scenes:
+his lines chosen as her moods would score them (never a lie, never to stay), the best gift held out, a memory shown
+her at the crown; with a model speaking for her, his lines typed. A ghost of a cursor (ui/ghost.py: large, brown,
+dripping her venom) glides to each choice, rests, and presses it; the scene window grows taller, the small things he
+can do in a row under his lines. Paced for reading: every word new on the screen holds him (a second, and a third of
+one a word) - place names, whispers, her murmurs, visions, her lines; a page newly written lifts his notebook to it;
+F10 hurries the rest (x2, x4, x8, more again with nothing to do). The game's pause when the window's left skips the
+letter's nights (they're for watching). Spellbound (Let the letter lead you): led from the first step to the last,
+he's kept from giving out and she doesn't hunt him; any move key wakes him (the night his, no longer Spellbound); F9
+hands any night to the letter or takes it back. Ending 8 of 8: Spellbound - she carries him home asleep; his notebook
+full, in his hand but slower, as if guided. Its own coda, and a dream drifting over the den. (Her guests looked at now
+count, too: three of them, and she calls him to supper from twenty past ten.)
+game/tutorial.py - The first night (Learn the oak; offered the first time): eighteen lessons in the night's own order
+- walking, the lantern, Light and the marks, taking, the satchel, the orbs, her small ones, her loom, her words, her
+guests, the notebook, a strand, Warmth, saving, supper, her venom (one bite, safe), the phial, the crown - each a note
+in his own hand, then his to do (watched for: he walks, shakes, casts, takes, opens...); the letter leads him between
+them. Gentler: kept from giving out, not hunted; she calls him to supper once the lessons before it are done.
+

@@ -16,11 +16,11 @@ def _step(n, secs, dt=0.05):
 
 
 def test_every_ending_has_its_words_and_look():
-    assert len(E.ORDER) == 7
+    assert len(E.ORDER) == 8
     for name in E.ORDER[1:]:                                       # (Supper: game/death.py's own)
         e = E.Ending(name)
         assert e.her and e.after and len(e.light) == 3
-    assert E.card("Fire") == "Ending 7 of 7: Fire" and E.card("The hidden") == "Ending 6 of 7: The hidden"
+    assert E.card("Fire") == "Ending 7 of 8: Fire" and E.card("Spellbound") == "Ending 8 of 8: Spellbound"
 
 
 def test_fire_the_second_time():

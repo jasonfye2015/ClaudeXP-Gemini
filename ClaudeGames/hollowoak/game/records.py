@@ -10,7 +10,7 @@ import json
 import time
 from pathlib import Path
 
-ENDINGS = 7                     # (how many there are: their names are found, not told)
+ENDINGS = 8                     # (how many there are: their names are found, not told)
 OPTIONS = {"volume": 80, "music": 70, "look": 50, "heart": True, "heartbeat": True, "orbs": True,
            "voice": "",                # (her words: a model's name, or "none"; "" - not chosen yet: the best there is)
            "aloud": True,              # (her voice, heard: Kathleen, rasping - where the Timeline's voice runtime is)

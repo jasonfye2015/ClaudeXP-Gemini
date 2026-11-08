@@ -250,8 +250,14 @@ class NightMenu(QWidget):
         begin = QPushButton("Begin the night")
         begin.setObjectName("begin")
         begin.setCursor(Qt.PointingHandCursor)
-        begin.clicked.connect(shell.show_letter)
+        begin.clicked.connect(shell.begin_clicked)
         nav.addWidget(begin)
+        for text, mode in (("Let the letter lead you", "led"), ("Learn the oak", "first")):
+            b = QPushButton(text)                                     # (Spellbound; the first night)
+            b.setObjectName("nav")
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(lambda _c=False, mode=mode: shell.show_letter(mode))
+            nav.addWidget(b)
         nav.addSpacing(18)
         for name, page in (("Endings", self._endings()), ("Records", self._records()), ("Saved nights", self._saved()),
                            ("Unlocks", self._unlocks()), ("Options", self._options())):

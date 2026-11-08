@@ -28,6 +28,7 @@ from .cocoons import Cocoons
 from .offerings import Finds
 from .ending import Ending
 from .mother import Mother
+from . import sky as _S
 from .sky import Sky
 from .spells import Spells
 from .venom import FLOOR as VENOM_FLOOR, Venom
@@ -247,6 +248,11 @@ class Night:
             self.events.extend(self.danglers.step(dt, self))
             self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
         self.events.extend(self.body.step(dt, self, self.events[first:]))
+        if self.charmed() or self.flags.get("first"):                  # (led, or learning: kept from the worst)
+            b = self.body
+            b.health = max(b.health, b.poison + 25.0, 40.0)
+            b.sanity = max(b.sanity, b.stupor + 25.0, 40.0)
+            self.moods.hunger = min(self.moods.hunger, 70.0)           # (she doesn't hunt the spellbound)
         if self.venom.active:
             self.body.poison = max(self.body.poison, VENOM_FLOOR)      # (it doesn't wear off: not before dawn)
         gone = self.body.spent()
@@ -264,6 +270,15 @@ class Night:
         if self.flags.get("ablaze"):
             self.end("Fire")
         return out
+
+    def charmed(self):
+        """Led by her letter, all night, and not woken from it: Spellbound (game/autoplay.py)."""
+        return bool(self.flags.get("led")) and not self.flags.get("woke")
+
+    def skip_to_dawn(self):
+        """T: waiting with her for the light - the clock on to just before it."""
+        day = int(self.sky.clock // 1440) + (1 if self.sky.clock % 1440 >= _S.DUSK else 0)
+        self.sky.clock = day * 1440 + _S.DAWN - 0.5
 
     def end(self, name):
         """How it ends: its scene begins - for the ones she's there for, her before him."""
@@ -321,6 +336,7 @@ class Night:
         for e in self.cocoons.examine(self, spot):
             self.events.append(e)
             if e[3]:                                            # (the burst)
+                self.acts.found += 1                            # (her guests looked at: she calls him to supper sooner)
                 self.brood.pour_out(spot["pos"], spot["floor"], 34)
                 for _ in range(2):
                     self.crawlers.scurry(0.08)                  # (and some onto his face)
