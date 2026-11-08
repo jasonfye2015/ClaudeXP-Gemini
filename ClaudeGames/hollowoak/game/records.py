@@ -13,7 +13,8 @@ from pathlib import Path
 ENDINGS = 7                     # (how many there are: their names are found, not told)
 OPTIONS = {"volume": 80, "look": 50, "heart": True, "heartbeat": True, "orbs": True,
            "voice": "",                # (her words: a model's name, or "none"; "" - not chosen yet: the best there is)
-           "aloud": True}              # (her voice, heard: Kathleen, rasping - where the Timeline's voice runtime is)
+           "aloud": True,              # (her voice, heard: Kathleen, rasping - where the Timeline's voice runtime is)
+           "her_size": 100, "his_size": 100}   # (the size of her words and his, in percent)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
 
 

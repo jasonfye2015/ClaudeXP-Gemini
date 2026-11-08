@@ -4,10 +4,11 @@ or chooses (the script). The night waits while it's open. Esc, or Done, closes i
 import queue
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QColor, QFont, QPainter
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
-SERIF = "Georgia"
+from . import fonts
+
 STYLE = """
 QWidget#talk { background: transparent; }
 QLabel { background: transparent; }
@@ -65,13 +66,12 @@ class Talk(QWidget):
     def _add(self, who, text):
         lab = QLabel(text)
         lab.setWordWrap(True)
+        rec = self.shell.records
         if who == "her":
-            f = QFont(SERIF, 19)
-            f.setItalic(True)
-            lab.setFont(f)
-            lab.setStyleSheet("color: #E9D2C4; padding: 6px 0;")
+            lab.setFont(fonts.her(rec, 30))                   # (her hand: Italianno, larger)
+            lab.setStyleSheet("color: #E9D2C4; padding: 4px 0;")
         else:
-            lab.setFont(QFont(SERIF, 13))
+            lab.setFont(fonts.his(rec, 13))
             lab.setStyleSheet("color: #A9B8C4; padding: 2px 0 8px 40px;")
         self.lines.addWidget(lab)
         QTimer.singleShot(30, lambda: self.scroll.verticalScrollBar().setValue(self.scroll.verticalScrollBar().maximum()))

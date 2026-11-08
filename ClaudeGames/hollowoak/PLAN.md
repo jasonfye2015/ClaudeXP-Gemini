@@ -193,6 +193,10 @@ conversation - twenty-odd lines of hers, his choices each moving her moods, some
 nights. In the night: her murmurs, now and then, low on the screen and aloud; F4 opens a plain stand-in to talk with
 her (the audience) until her scenes have their own window (3d).
 
+Her hand (done): the user picked Italianno from ten free calligraphy fonts - fancy, elegant, readable
+(assets/fonts, SIL OFL). ui/fonts.py: her words in it, larger; his in a plain serif; both sized in Options (60-160%).
+Used now for her murmurs and the F4 stand-in; her scene window (3d) next.
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).

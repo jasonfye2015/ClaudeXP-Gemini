@@ -10,6 +10,7 @@ from PySide6.QtGui import (QBrush, QColor, QDesktopServices, QFont, QGuiApplicat
 from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButton, QRadioButton,
                                QScrollArea, QSlider, QStackedWidget, QVBoxLayout, QWidget)
 
+from . import fonts
 from ..game import voice as V
 from ..game.records import ENDINGS
 
@@ -370,6 +371,31 @@ class NightMenu(QWidget):
             lay.addSpacing(10)
         slider("Volume", "volume")
         slider("Looking about (mouse speed)", "look")
+
+        def size(label, key, sample, font):
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label))
+            row.addStretch(1)
+            show = QLabel(sample)
+
+            def look(show=show, font=font):                    # (the page's style would override a plain setFont)
+                f = font()
+                show.setStyleSheet(f"color: #E9D2C4; font-family: '{f.family()}'; font-size: {f.pointSize()}pt;")
+            look()
+            row.addWidget(show)
+            lay.addLayout(row)
+            s = QSlider(Qt.Horizontal)
+            s.setRange(60, 160)
+            s.setValue(int(o.get(key, 100)))
+
+            def moved(v, key=key, look=look):
+                self._set(key, v)
+                look()
+            s.valueChanged.connect(moved)
+            lay.addWidget(s)
+            lay.addSpacing(10)
+        size("Her words, their size", "her_size", "little wizard", lambda: fonts.her(self.rec, 26))
+        size("Your words, their size", "his_size", "I came", lambda: fonts.his(self.rec, 13))
         for label, key in (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"),
                            ("The orbs", "orbs")):
             c = QCheckBox(label)

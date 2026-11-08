@@ -15,6 +15,9 @@ spider, much larger.
 
 The sound: made as it plays (engine/sound.py) - no recordings.
 
+Her words, written: the Italianno font (The Italianno Project Authors, SIL Open Font License 1.1 -
+assets/fonts/Italianno-OFL.txt), https://github.com/googlefonts/italianno.
+
 Her voice, aloud: Piper (rhasspy, MIT) with the Kathleen voice (en_US-kathleen-low; its dataset CC0,
 https://github.com/rhasspy/dataset-voice-kathleen) - both already in the Timeline's voice runtime, not shipped with the
 game - made hers in the game (engine/rasp.py: pitched down, creaking, whispering under itself, echoing).
