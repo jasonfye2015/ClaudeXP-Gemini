@@ -28,6 +28,7 @@ class Brood:
     def __init__(self, tree, web, rng, count=COUNT):
         self.tree, self.web, self.rng = tree, web, rng
         self.spiders = []
+        self.pouring = []                         # (out of a split cocoon: for a few seconds, everywhere)
         sx, sz, _f = tree.start
         start = (sx * 0.4, 0.62, sz * 0.4)
         for _ in range(count):
@@ -109,9 +110,38 @@ class Brood:
         return _norm(tuple(b - a for a, b in zip(here, there)))
 
     # ---- a step -------------------------------------------------------------------------------------------------
+    def pour_out(self, pos, floor, count=30):
+        """A wrapped guest split open: her small ones pouring out of him, every way, across the floor - and gone."""
+        rng = self.rng
+        for _ in range(count):
+            a = rng.uniform(0, math.tau)
+            self.pouring.append({"x": pos[0] + math.cos(a) * 0.12, "z": pos[2] + math.sin(a) * 0.12, "y": floor,
+                                 "drop": max(0.0, pos[1] - floor - 0.1) * rng.uniform(0.2, 1.0), "head": a,
+                                 "speed": rng.uniform(1.4, 3.2), "life": rng.uniform(1.8, 4.2),
+                                 "size": rng.uniform(0.06, 0.13), "anim": rng.uniform(0, 3)})
+
+    def _pour(self, dt):
+        keep = []
+        for s in self.pouring:
+            s["life"] -= dt
+            if s["life"] <= 0:
+                continue
+            s["head"] += self.rng.gauss(0, 2.2) * dt
+            x = s["x"] + math.cos(s["head"]) * s["speed"] * dt
+            z = s["z"] + math.sin(s["head"]) * s["speed"] * dt
+            if math.hypot(x, z) < self.tree.base_r(math.atan2(z, x), s["y"] + 0.3) - 0.25:
+                s["x"], s["z"] = x, z
+            else:
+                s["head"] += math.pi
+            s["drop"] = max(0.0, s["drop"] - dt * 4.0)          # (dropping from him to the floor first)
+            s["anim"] += dt * s["speed"] / s["size"] * 0.7
+            keep.append(s)
+        self.pouring = keep
+
     def step(self, dt, eye, hurry=False, reach=0.0):
         rng = self.rng
         events = []
+        self._pour(dt)
         scare = 3.4 if hurry else 2.2
         for sp in self.spiders:
             p = self.pos(sp)
@@ -192,6 +222,11 @@ class Brood:
 
     def near(self, eye, limit=18.0):
         out = []
+        for s in self.pouring:
+            y = self.tree.floor_at(s["x"], s["z"], s["y"] + 0.3) + 0.004 + s["drop"]
+            if math.dist((s["x"], y, s["z"]), eye) <= limit:
+                out.append(((s["x"], y, s["z"]), (math.cos(s["head"]), 0.0, math.sin(s["head"])), (0.0, 1.0, 0.0),
+                            s["size"], "walk", s["anim"]))
         for sp in self.spiders:
             p = self.pos(sp)
             if math.dist(p, eye) > limit:

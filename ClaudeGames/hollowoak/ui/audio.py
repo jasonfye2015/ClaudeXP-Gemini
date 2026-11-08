@@ -125,6 +125,10 @@ class DenAudio:
                 s.play("thud", 0.9)
             elif kind == "her" and e[1] == "glimpse":
                 s.play("creak", 1.6)                                   # (the web shifting under her weight)
+            elif kind == "cocoon" and e[3]:
+                s.play("slip", 1.0)                                # (the silk tearing)
+                s.play("skitter", 1.0)
+                s.play("skitter", 0.8)
             elif kind == "thunder":
                 s.play("thunder", 0.5 + 0.5 * e[1])
             elif kind == "swipe":
