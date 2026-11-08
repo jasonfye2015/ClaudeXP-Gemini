@@ -63,6 +63,7 @@ def test_he_walks_in_and_up():
     assert n.where() == "hollow" and "The roots" in [e[1] for e in n.events if e[0] == "place"]
     # up the ledge, following it round: aim along the spiral each step
     t = n.tree
+    n.lamp.next_out = 1e9                                                    # (a steady light: this is about the climb)
     s = 0.25                                                                 # (the ledge's foot)
     a = t.theta_of(s)
     r = t.base_r(a, 0.5) - T.LEDGE_W / 2

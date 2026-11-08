@@ -11,6 +11,7 @@ def _in_hollow():
     n = N.Night(seed=12)
     n.x, n.z = 1.5, 1.0
     n.y = n.floor_at(1.5, 1.0, 0.0)
+    n.lamp.next_out = 1e9                                                    # (a steady light: this is about them)
     return n
 
 

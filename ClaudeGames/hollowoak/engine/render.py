@@ -412,7 +412,7 @@ class Renderer:
         eye = night.eye
         proj = gl.perspective(70.0, w / max(1, h), 0.05, 160.0)
         view = gl.view_matrix(eye, night.yaw, night.pitch)
-        roll = getattr(night, "sway", 0.0) * 0.2                # (his lean, on a strand)
+        roll = getattr(night, "sway", 0.0) * 0.2 + getattr(night, "roll", 0.0)   # (his lean on a strand; how he lies)
         if roll:
             c, s = math.cos(roll), math.sin(roll)
             view = np.array(((c, s, 0, 0), (-s, c, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)), np.float32) @ view
@@ -487,6 +487,9 @@ class Renderer:
         """The small ones running across his eyes: drawn flat on the view, over everything, seen from above."""
         crawlers = getattr(night, "crawlers", None)
         runs = crawlers.active() if crawlers is not None and getattr(night, "show_lantern", True) else []
+        dying = getattr(night, "dying", None)
+        if dying is not None:
+            runs = runs + dying.cover()
         if not runs:
             return
         aspect = w / max(1, h)
@@ -494,7 +497,7 @@ class Renderer:
         GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
         self.crawler_prog.use()
         self.crawler_prog.mat4("uPV", ortho)
-        self.crawler_prog.float("uLamp", min(1.0, night.lamp.level) if night.lantern else 0.0)
+        self.crawler_prog.float("uLamp", 0.35 if dying is not None else min(1.0, night.lamp.level) if night.lantern else 0.0)
         first, frames, fps = self.spider_clips["walk"]
         for u, v, du, dv, size, t in runs:
             x, y = (u * 2 - 1) * aspect, v * 2 - 1
@@ -686,6 +689,11 @@ class Renderer:
             reach, k = night.lantern_reach()
             fx, fy, fz = self.flame_at(night)
             out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
+        dying = getattr(night, "dying", None)
+        if dying is not None and dying.flame() > 0:
+            k = dying.flame()
+            x, y, z = dying.lamp_at
+            out.append(((x, y + 0.08, z, 3.0), (0.6 * k, 0.36 * k, 0.18 * k, 1)))
         near = sorted(self.fungus_lights, key=lambda l: (l[0] - ex) ** 2 + (l[1] - ey) ** 2 + (l[2] - ez) ** 2)
         for l in near[:MAX_LIGHTS - len(out) - 3]:
             k = treemesh.glow_level(now, l[7], l[8]) * 0.8
@@ -779,6 +787,12 @@ class Renderer:
                 p = np.array(pos, np.float32) + right * ox + up * oy
                 bill(p, 0.045 if row == 0 else 0.033, (1.0, 0.25, 0.12), alpha * (1.4 if row == 0 else 0.9))
             bill(np.array(pos, np.float32), 0.22, (0.5, 0.08, 0.04), alpha * 0.18)      # (a faint red haze about them)
+        dying = getattr(night, "dying", None)
+        if dying is not None and dying.flame() > 0:              # (the lantern, broken on the ground: its flame dying)
+            k = dying.flame()
+            x, y, z = dying.lamp_at
+            bill((x, y + 0.05, z), 0.16, (1.0, 0.55, 0.2), 0.9 * k)
+            bill((x, y + 0.04, z), 0.05, (1.0, 0.85, 0.6), 1.4 * k)
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
