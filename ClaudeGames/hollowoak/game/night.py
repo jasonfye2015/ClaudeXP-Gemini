@@ -16,6 +16,7 @@ import random
 
 from . import tree as T
 from .den import Den
+from .babies import Danglers, Swarm
 from .brood import Brood
 from .crawlers import Crawlers
 from .lantern import Lantern
@@ -95,6 +96,8 @@ class Night:
         self.inp_hurry = False
         self.brood = Brood(self.tree, self.web, random.Random(self.rng.random()))
         self.crawlers = Crawlers(random.Random(self.rng.random()))     # (the small ones that cross his eyes)
+        self.danglers = Danglers(random.Random(self.rng.random()))     # (and drop before his face)
+        self.swarm = Swarm(random.Random(self.rng.random()))           # (and come for the lantern, in the dark)
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
@@ -161,12 +164,15 @@ class Night:
                 self.seen.add(p)
                 name, line = PLACES[p]
                 self.events.append(("place", name, line))
-        for e in self.lamp.step(dt):
+        lamp_events = self.lamp.step(dt)
+        for e in lamp_events:
             self.events.append(("lantern", e))
         self._watch(dt)
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         self.events.extend(self.crawlers.step(dt))
+        self.events.extend(self.danglers.step(dt, self))
+        self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
 
     # ---- on her silk -------------------------------------------------------------------------------------------
     def _balance(self, dt, inp, turn):

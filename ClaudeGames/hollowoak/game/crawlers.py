@@ -60,6 +60,19 @@ class Crawlers:
         return {"from": p, "ctrl": (mx + nx * bend, my + ny * bend), "to": q, "born": self.t,
                 "time": rng.uniform(*TIME), "size": size, "wiggle": rng.uniform(0, 6.28)}
 
+    def scurry(self, size):
+        """One that was on his face (he walked into it): from near the middle of his view, off by a random way."""
+        rng = self.rng
+        p = (0.5 + rng.uniform(-0.12, 0.12), 0.48 + rng.uniform(-0.1, 0.1))
+        edge = rng.randrange(4)
+        s = rng.uniform(0.085, 0.12) * (0.8 + size * 4)            # (close: bigger than the ones that cross)
+        q = _edge_point(rng, edge)
+        out = ((-1, 0), (1, 0), (0, -1), (0, 1))[edge]
+        q = (q[0] + out[0] * s * 0.8, q[1] + out[1] * s * 0.8)
+        ctrl = ((p[0] + q[0]) / 2 + rng.uniform(-0.12, 0.12), (p[1] + q[1]) / 2 + rng.uniform(-0.12, 0.12))
+        self.runs.append({"from": p, "ctrl": ctrl, "to": q, "born": self.t, "time": rng.uniform(0.45, 0.75),
+                          "size": s, "wiggle": rng.uniform(0, 6.28)})
+
     def active(self):
         out = []
         for r in self.runs:
