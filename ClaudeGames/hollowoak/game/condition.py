@@ -13,7 +13,10 @@ He collapses when poison reaches his health, or stupor his sanity (or either run
 
     body = Condition(rng)
     body.step(dt, night, events)  -> events: ("bitten", where), ("hurt", amount)
-    body.critical()               -> the names of those in danger now (for the edge of the view)
+    body.critical()               -> the orbs in danger now: "health" and/or "sanity" (for the edge of the view)
+
+For now (only her babies about) it barely touches him: a careful player hardly sees the orbs move. Left standing in the
+dark - doing nothing, never shaking the lantern - his mind goes at last, in ten or twelve minutes: Supper.
     body.spent()                  -> what did for him ("health", "poison", "sanity", "stupor"), or None
 """
 import math
@@ -34,7 +37,7 @@ class Condition:
         for life, rising in (("health", "poison"), ("sanity", "stupor")):
             lv, rv = getattr(self, life), getattr(self, rising)
             if lv - rv < MARGIN:
-                out.append(rising if rv >= lv * 0.5 else life)        # (whichever is doing it)
+                out.append(life)
         return out
 
     def spent(self):
@@ -65,29 +68,29 @@ class Condition:
                     if dmg > 20:
                         self.stupor += dmg * 0.5                        # (a knock to the head)
             elif kind == "dangler" and e[1] == "face":
-                self.sanity -= 6
+                self.sanity -= 2
                 calm = False
-                if rng.random() < 0.4:
-                    self._bite(out, "face", 12.0)
-            elif kind == "crawler":
-                self.sanity -= 3 * e[1]
-                calm = False
-                if rng.random() < 0.12:
+                if rng.random() < 0.2:
                     self._bite(out, "face", 5.0, 1.0)
+            elif kind == "crawler":
+                self.sanity -= 1 * e[1]
+                calm = False
+                if rng.random() < 0.1:
+                    self._bite(out, "face", 2.0, 0.5)
             elif kind == "silk" and e[1] == "slip":
-                self.sanity -= 4
+                self.sanity -= 1.5
             elif kind == "silk" and e[1] == "caught":
-                self.sanity -= 6
+                self.sanity -= 2
         on_lantern = len(night.swarm.crawling()) if night.lantern else 0
         for _ in range(on_lantern):                                    # (on his hand, in the dark)
-            if rng.random() < 0.03 * dt:
-                self._bite(out, "hand", 4.0, 1.0)
+            if rng.random() < 0.01 * dt:
+                self._bite(out, "hand", 2.0, 0.5)
         dark = night.lamp.state == "out" or not night.lantern
         if dark:
-            self.sanity -= (0.7 + 0.12 * on_lantern) * dt
+            self.sanity -= (0.045 + 0.006 * on_lantern) * dt
             calm = False
         watched = night.eye_alpha if night.eyes() else 0.0
-        self.sanity -= 0.05 * watched * dt                             # (being watched: a slow creep)
+        self.sanity -= 0.01 * watched * dt                             # (being watched: the slowest creep)
         if calm and not dark and night.lamp.level > 0.4 and watched < 0.3:
             self.sanity += 0.3 * dt
         # the poison: eating at him a little, wearing off slowly
@@ -95,7 +98,7 @@ class Condition:
         self.poison = max(0.0, self.poison - 0.2 * dt)
         if self.poison < 5:
             self.health += 0.1 * dt
-        rise = max(0.0, self.poison - 40) * 0.025 + (0.3 if self.sanity < 30 else 0.0)
+        rise = max(0.0, self.poison - 40) * 0.025 + (0.2 if self.sanity < 30 else 0.0)
         if rise > 0:
             self.stupor += rise * dt
         elif self.poison < 40:

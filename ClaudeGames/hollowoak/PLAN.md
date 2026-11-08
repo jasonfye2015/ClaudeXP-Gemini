@@ -105,6 +105,9 @@ her eyes, a slow creep; steady light restores it. Stupor (yellow): heavy poison,
 when those ease. ui/orbs.py: Diablo-style glass orbs, health and poison bottom left, sanity and stupor bottom right,
 values beneath in their colours; the edge of the view beats red, blue or green as the green nears the other (within
 20), in the colour of whichever is doing it. Her own moods keep no meter - the design's rule still holds for her.
+Tuned for now (only her babies about) to barely touch him; the edge beats red and green in turn for the health orb,
+blue and yellow for the sanity orb. Doing nothing at all - standing in the dark, never shaking the lantern - ends it in
+about ten minutes: Supper, the first way to finish the game. (What moves the four, and how much, comes later.)
 game/death.py: when the green reaches the other (or health or sanity runs dry) -
 Supper: he collapses, the lantern breaks (its flame dies on the ground), they cover his face and lay silk across his
 eyes, he's dragged in pulls to the middle of the floor, turned, hoisted by the feet half way up the trunk, swinging;
