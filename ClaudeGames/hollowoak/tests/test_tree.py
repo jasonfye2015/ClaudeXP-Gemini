@@ -98,8 +98,8 @@ def test_the_clock_and_her_eyes():
     assert n.clock_words() == "7:02 pm"                                      # (the night is long: ~2.75 real hours)
     assert abs((N.DAWN - N.DUSK) / N.CLOCK_RATE / 3600 - 2.74) < 0.1
     assert n.eyes() and n.eye_alpha > 0.5                                     # (something up there, watching)
-    px, py, pz = n.perches[n.perch]
-    assert py > n.eye[1] + 1.5
+    px, py, pz = n.eyes()[0]["pos"]
+    assert py > n.eye[1] + 1.0
 
 
 def test_the_lantern_is_close_in_the_roots():

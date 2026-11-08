@@ -269,7 +269,7 @@ void main() { vec4 p = uModel * vec4(aPos, 1.0); vPos = p.xyz; vNrm = normalize(
 
 SPIDER_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec3 vCol;
-uniform float uRim;
+uniform float uRim; uniform float uShade;
 out vec4 frag;
 """ + LIGHTING + """
 void main() {
@@ -283,10 +283,11 @@ void main() {
         float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0);
         col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0) * 1.1;
     }
-    if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is)
+    col *= uShade;
+    if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is - deep red)
         float shine = 0.0;
         for (int i = 0; i < uLightCount; i++) shine += clamp(1.0 - distance(uLightPos[i].xyz, vPos) / uLightPos[i].w, 0.0, 1.0);
-        col += vec3(0.9, 0.12, 0.05) * (0.03 + shine * 1.2 + uRim * 0.6);
+        col = vCol * 0.3 + vec3(0.8, 0.07, 0.03) * (0.06 + min(0.75, shine * 0.9) + uRim * 0.6);
     }
     frag = outColour(fogged(vPos, col));
 }"""
@@ -519,6 +520,7 @@ class Renderer:
         if brood is None:
             return
         self.spider_prog.use()
+        self.spider_prog.float("uShade", 1.0)
         self.spider_prog.float("uRim", 0.0)
         eye = np.array(night.eye)
         look = np.array((math.sin(night.yaw), 0.0, -math.cos(night.yaw)))
@@ -528,6 +530,13 @@ class Renderer:
             if float(np.dot(to, look)) < -0.5 and float(np.linalg.norm(to)) > 1.0:
                 continue
             self._spider(p, fwd, up, size, clip, t)
+        her = getattr(night, "her", None)
+        if her is not None:                                  # (Ysmeine, on the wall: barely there but where a light falls)
+            p, f, up, size, clip, t, _lean = her.pose()
+            self.spider_prog.float("uRim", 0.0)
+            self.spider_prog.float("uShade", 0.55)
+            self._spider(np.array(p), f, up, size, clip, t)
+            self.spider_prog.float("uShade", 1.0)
         self.spider_prog.float("uRim", 0.3)
         for x, y, z, top, size, ph in night.danglers.active():  # (hanging before him: its back to him, turning a little)
             to = eye - np.array((x, y, z))
@@ -649,6 +658,7 @@ class Renderer:
         def on_lantern(phi, hh):
             return ring + la[0] * math.cos(phi) * 0.05 + la[1] * hh + la[2] * math.sin(phi) * 0.05
         self.spider_prog.use()
+        self.spider_prog.float("uShade", 1.0)
         self.spider_prog.float("uRim", 0.4)
         threads = []
         for b in swarm.babies:
@@ -800,13 +810,14 @@ class Renderer:
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
-        # her eyes, high in the dark: eight small lights that watch, and are gone when he comes close
+        # her eyes: eight red lights in the dark, as wide as her head (she's four and a half units across)
         for e in night.eyes():
             for k in range(8):
-                ox = (k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)
-                oy = (0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02
+                ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 2.6
+                oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 2.6
                 p = np.array(e["pos"], np.float32) + right * ox + up * oy
-                bill(p, 0.05 if k in (1, 2) else 0.035, (1.0, 0.35, 0.18), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
+                bill(p, 0.13 if k in (1, 2) else 0.09, (1.0, 0.3, 0.15), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
+            bill(np.array(e["pos"], np.float32), 0.8, (0.5, 0.06, 0.03), e["alpha"] * 0.12)     # (a red haze about them)
         if not verts:
             return
         self.glow_mesh.upload(np.array(verts, np.float32))

@@ -117,13 +117,12 @@ def test_the_silk_threads_for_drawing():
 
 
 def test_she_feels_it():
-    """Gentle steps read as respect; scrambling as prey - and when the silk shakes hard, her eyes come sooner."""
+    """Gentle steps read as respect; scrambling as prey - and when the silk shakes hard, she comes."""
     n = N.Night(seed=9)
     n.silk.update(gentle=10.0)
     assert n.manner() == 1.0
     n.silk.update(hurried=3.0, slips=2)
     assert -1.0 < n.manner() < 0.0
-    n.eye_gone_until = n.time + 30
     n.tremor = 5.0
     n.step(0.05, N.Input())
-    assert n.eye_gone_until < n.time + 2
+    assert n.her.state == "near" and ("her", "turn") in n.events            # (she felt that: she turns, and comes)
