@@ -229,6 +229,12 @@ class GameView(QOpenGLWidget):
             for e in n.events:
                 if e[0] == "death" and e[1] == "line" and self.audio is not None:
                     self.audio.say(e[2])
+            from ..game.death import FADE_END
+            d = n.dying
+            if d.her_side and not d.side_said and d.t >= FADE_END + 0.6:   # (her side of it: aloud, too)
+                d.side_said = True
+                if self.audio is not None:
+                    self.audio.say(" ".join(d.her_side))
             if n.dying.done:
                 self.release()
                 if self.tally is not None and not self.tally["done"]:
@@ -713,6 +719,8 @@ class GameView(QOpenGLWidget):
         d.asked = True
         talk = getattr(self, "talk", None)
         d.her_line = last_words(n, self.shell.records.reputation, talk.lies if talk else 0)
+        from ..game.death import her_side
+        d.her_side = her_side(n, self.shell.records.reputation, talk.lies if talk else 0)
         if talk is not None and talk.mode == "model":
             from ..game import persona
 
@@ -989,7 +997,8 @@ class GameView(QOpenGLWidget):
                 self.shell.show_title()                          # (it's over: back to the start)
             return
         if self.playing and self.night is not None and self.night.dying is not None:
-            if self.night.dying.done and self.night.dying.t > 26.0:
+            from ..game.death import FADE_END, HER_SIDE
+            if self.night.dying.done and self.night.dying.t > FADE_END + HER_SIDE + 2.0:
                 self.shell.show_title()                          # (it's over: back to the start)
             return
         if self.playing and self.journal.open:                   # (his notebook's pages)

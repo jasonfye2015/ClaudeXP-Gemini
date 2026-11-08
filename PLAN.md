@@ -429,3 +429,8 @@ camera looks a little lower, so her mouth is in the frame.
 him), the music falls away, and most of the wind - fast going, slow coming back - and what's left is his breathing and
 his heart, loud (engine/sound.py duck; ui/audio.py).
 
+9g - Supper, from her side (done). After the dark comes down on him, three lines in her hand on the black, a line at
+a time (and in her voice), before the card: what she did with him and what she thinks of it, by what she made of him
+- held dear (hung highest, by the moon; not eaten for a long time), lied to (kept low by the roots), met before, his
+careful steps, or plain (game/death.py her_side).
+

@@ -50,6 +50,34 @@ def last_words(night, reputation=None, lies=0):
     return "Hush. It's only the dark - and the dark is my house, and you are in it."
 
 
+HER_SIDE = 11.5                 # (after the dark: her side of it, a line at a time - then the card)
+SIDE_AT = (0.8, 4.2, 7.6)
+
+
+def her_side(night, reputation=None, lies=0):
+    """Supper, told from her side, after the dark: three quiet lines - where she hung him, and what she thinks of it."""
+    m = night.moods
+    if m.regard >= 55:
+        return ("He was warm, at the end. They always are.",
+                "I hung him highest, near the crown, where the moon comes in.",
+                "I will not eat him for a long time. Tonight I sit with him, and listen to the oak.")
+    if lies:
+        return ("He lied to me, and then he was quiet.",
+                "I keep the liars low, by the roots, where the damp gets in.",
+                "I am not angry. I am only hungry, and he is here.")
+    if (reputation or {}).get("met", 0) >= 1:
+        return ("He came back again. They don't, usually.",
+                "I hung him beside the last of him. There is room.",
+                "Perhaps next time he will think of something new to tell me.")
+    if night.manner() > 0.5:
+        return ("He walked my silk so gently. I felt every careful step.",
+                "I hung him by the larder, where the honey is, so he would not be alone.",
+                "In a while I will be hungry again. Not yet.")
+    return ("He was small, and warm, and very frightened, at the end.",
+            "I hung him with the others, and smoothed the silk over his face.",
+            "The oak is quiet again. It always is, after.")
+
+
 def _ease(k):
     k = max(0.0, min(1.0, k))
     return k * k * (3 - 2 * k)
@@ -74,6 +102,8 @@ class Death:
         self._ropes = []
         self.top = T.TOP * 0.5
         self.her_line = None            # (her last words to him: set by whoever knows what she made of him)
+        self.her_side = None            # (and after the dark, her side of it: three lines)
+        self.side_said = False
         self.asked = False
         self.spoke = False
         self.show_line = None
