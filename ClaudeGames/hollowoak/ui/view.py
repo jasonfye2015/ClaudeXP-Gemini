@@ -7,6 +7,7 @@ lantern when it gutters out. On a strand, A and D lean against its sway.
 
 The sound (ui/audio.py) hears what the night does, and follows the computer's mute."""
 import math
+import queue
 import time
 
 from PySide6.QtCore import QPoint, QRectF, Qt, QTimer
@@ -100,6 +101,16 @@ class GameView(QOpenGLWidget):
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
         self.inp.strafe = self.inp.forward = 0.0
         self.ensure_audio()
+        from ..game.dialogue import Conversation
+        from ..game.voice import Voice
+        rec = self.shell.records
+        voice = Voice(rec.options.get("voice") or "none")
+        self.talk = Conversation(night, voice, dict(rec.reputation))
+        if self.talk.mode == "model":
+            voice.warm()                                          # (her words: the model loaded while he walks in)
+        self.her_lines = queue.Queue()
+        self.her_line = None                                      # (her words on screen: (text, when))
+        self.last_murmur = -99.0
         self.fade = time.perf_counter()
         self.cards = []
         self.setFocus()
@@ -147,6 +158,7 @@ class GameView(QOpenGLWidget):
             if self.audio is not None:
                 self.audio.hear(n, n.events)
             self._count(n.events)
+            self._murmurs(n)
             for e in n.events:
                 if e[0] == "place":
                     self.cards.append((e[1], e[2], now))
@@ -200,13 +212,41 @@ class GameView(QOpenGLWidget):
             elif e[0] == "lantern" and e[1] == "shake":
                 t["shakes"] += 1
 
+    MURMUR = {"glimpse": "glimpse", "near": "dark", "turn": "turn", "hunt": "hunt", "withdraw": "withdraw"}
+
+    def _murmurs(self, n):
+        """Her words, unasked, now and then: when she leans out to him, comes close in the dark, turns to his
+        scrambling, hunts, draws back. Shown low on the screen, and heard."""
+        talk = getattr(self, "talk", None)
+        if talk is None:
+            return
+        for e in n.events:
+            if e[0] == "her" and e[1] in self.MURMUR and n.time - self.last_murmur > 25.0:
+                self.last_murmur = n.time
+                talk.murmur(self.MURMUR[e[1]], self.her_lines.put)
+                break
+        try:
+            line = self.her_lines.get_nowait()
+        except queue.Empty:
+            return
+        if line:
+            self.her_line = (line, time.perf_counter())
+            if self.audio is not None:
+                self.audio.say(line)
+
     def night_done(self):
         """The night over (an ending, or left part-way): its tallies into the records, once."""
         t, n = self.tally, self.night
         if t is None or t["done"] or n is None or not self.playing:
             return
         t["done"] = True
-        self.shell.records.night_over(dict(t, seconds=n.time))
+        talk = getattr(self, "talk", None)
+        ending = None
+        if n.dying is not None:
+            ending = "your larder" if n.dying.cause == "bite" else "your silk, wrapped and hung"
+        self.shell.records.night_over(dict(t, seconds=n.time, ending=ending, manner=n.manner(),
+                                           lies=talk.lies if talk else 0,
+                                           kept=talk.memory[-1] if talk and talk.memory else ""))
 
     # ---- what's drawn over it ----------------------------------------------------------------------------------
     def hud(self, p, now):
@@ -258,6 +298,17 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "A   D   -   lean against the sway")
+        if getattr(self, "her_line", None) and t - self.her_line[1] < 7.0:     # (her words: hers, low and large)
+            age = t - self.her_line[1]
+            a = min(1.0, age / 0.6, (7.0 - age) / 1.2)
+            f = QFont(SERIF, 17)
+            f.setItalic(True)
+            p.setFont(f)
+            p.setPen(QColor(0, 0, 0, int(200 * a)))
+            box = QRectF(W * 0.15, H * 0.53, W * 0.7, 60)
+            p.drawText(box.translated(1, 1), Qt.AlignHCenter | Qt.TextWordWrap, self.her_line[0])
+            p.setPen(QColor(236, 214, 200, int(235 * a)))
+            p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, self.her_line[0])
         if self.whisper and t - self.whisper[1] < self.whisper[2]:
             p.setPen(QColor(210, 190, 170, int(220 * min(1.0, 1.6 * max(0.0, 1 - (t - self.whisper[1]) / self.whisper[2])))))
             f = QFont(SERIF, 13)
@@ -329,6 +380,12 @@ class GameView(QOpenGLWidget):
         if not self.playing:
             return
         self.keys.add(k)
+        if k == Qt.Key_F4 and getattr(self, "talk", None) is not None and self.night.dying is None:
+            from .talk import Talk                                # (for building the game: talk with her, plainly)
+            self.release()
+            self.keys.clear()
+            self.shell.set_panel(Talk(self.shell, self.talk))
+            return
         if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
             self.debug = not getattr(self, "debug", False)
         if k == Qt.Key_Space and self.night is not None:

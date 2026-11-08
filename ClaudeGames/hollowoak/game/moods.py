@@ -22,7 +22,7 @@ her fascination, dims and cools with suspicion; the hum of her silk rises in pit
     moods.heard(kind)                   what he said or did to her, in conversation (phase 3c): "honest", "lie",
                                         "flattery", "small_talk", "repeat", "answer", "evasion", "demand", "interrupt",
                                         "gift", "food", "magic", "memory", "promise_kept", "promise_broken",
-                                        "deep", "light", "harm_small"
+                                        "deep", "light", "harm_small", "lewd"
     moods.bit()                         she has bitten him: her hunger eased, for a while
 Plain Python: the tests read it; the player never does (F3 shows it, for building the game)."""
 import math
@@ -38,7 +38,7 @@ HEARD = {
     "evasion": (-2, -8, 0, 5, -2), "demand": (-2, -10, 2, 3, -3), "interrupt": (-3, -9, 0, 1, -2),
     "gift": (8, 3, 0, -2, 4), "food": (2, 4, -25, 0, 2), "magic": (12, 2, 0, 0, 3), "memory": (10, 4, -4, -15, 6),
     "promise_kept": (2, 4, 0, -10, 6), "promise_broken": (0, -8, 0, 20, -15), "deep": (6, 6, -8, -2, 4),
-    "light": (0, -6, 0, 8, -2), "harm_small": (-4, -10, 4, 15, -8),
+    "light": (0, -6, 0, 8, -2), "harm_small": (-4, -10, 4, 15, -8), "lewd": (-6, -10, 3, 8, -6),
 }
 NAMES = ("fascination", "patience", "hunger", "suspicion", "regard")
 

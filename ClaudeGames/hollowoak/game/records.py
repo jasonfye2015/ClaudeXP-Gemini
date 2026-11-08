@@ -23,12 +23,14 @@ class Records:
         self.found = {}                     # {ending: when first found}
         self.totals = {k: 0 for k in TALLIES}
         self.unlocks = []
+        self.reputation = {"met": 0, "summary": ""}  # (what she remembers of him, from other nights)
         self.options = dict(OPTIONS)
         try:
             d = json.loads(self.path.read_text(encoding="utf-8"))
             self.found = dict(d.get("found", {}))
             self.totals.update({k: v for k, v in d.get("totals", {}).items() if k in self.totals})
             self.unlocks = list(d.get("unlocks", []))
+            self.reputation.update(d.get("reputation", {}))
             self.options.update({k: v for k, v in d.get("options", {}).items() if k in OPTIONS})
         except (OSError, ValueError):
             pass
@@ -38,7 +40,7 @@ class Records:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps({"found": self.found, "totals": self.totals, "unlocks": self.unlocks,
-                                       "options": self.options}, indent=1), encoding="utf-8")
+                                       "reputation": self.reputation, "options": self.options}, indent=1), encoding="utf-8")
             tmp.replace(self.path)
         except OSError:
             pass
@@ -59,4 +61,23 @@ class Records:
         self.totals["longest"] = max(self.totals["longest"], secs)
         for k in ("bites", "slips", "falls", "swipes", "shakes"):
             self.totals[k] += int(stats.get(k, 0))
+        self.remembered(stats)
         self.save()
+
+    def remembered(self, stats):
+        """What she keeps of him from a night, for the next: how it ended, how he went, whether he lied."""
+        r = self.reputation
+        r["met"] = int(r.get("met", 0)) + 1
+        bits = []
+        end = stats.get("ending")
+        bits.append(f"Last time, it ended in {end}." if end else "Last time, he left before the night was out.")
+        if stats.get("lies"):
+            bits.append(f"He lied to you {stats['lies']} time{'s' if stats['lies'] != 1 else ''}.")
+        manner = stats.get("manner", 0.0)
+        if manner > 0.5:
+            bits.append("He walked your silk with care.")
+        elif manner < -0.3:
+            bits.append("He scrambled on your silk like prey.")
+        if stats.get("kept"):
+            bits.append("You kept this of him: " + stats["kept"])
+        r["summary"] = " ".join(bits)
