@@ -12,8 +12,9 @@ from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainterPath, QPen, QR
 from ..game.condition import pulse
 
 SERIF = "Georgia"
-EDGE = {"health": QColor(210, 25, 20), "poison": QColor(70, 220, 60), "sanity": QColor(40, 90, 240),
-        "stupor": QColor(235, 205, 40)}
+EDGE = {"health": (QColor(210, 25, 20), QColor(70, 220, 60)),          # (red, then green, beat by beat)
+        "sanity": (QColor(40, 90, 240), QColor(235, 205, 40))}        # (blue, then yellow)
+BEAT = 1.1
 
 
 def _fluid(p, cx, cy, r, level, deep, bright, t, seed, alpha=255):
@@ -115,10 +116,11 @@ def draw_danger(p, W, H, body, t):
         return
     d = min(W, H) * 0.11
     for k, name in enumerate(crit):
-        a = int(150 * pulse(t + k * 0.37))
+        tk = t + k * BEAT * 0.5                                    # (two at once: beating between each other)
+        a = int(150 * pulse(tk - BEAT * 0.25, BEAT))
         if a < 3:
             continue
-        c = EDGE[name]
+        c = EDGE[name][int(tk / BEAT) % 2]                         # (each beat the other colour)
         on, off = QColor(c.red(), c.green(), c.blue(), a), QColor(c.red(), c.green(), c.blue(), 0)
         for x0, y0, x1, y1, rect in ((0, 0, 0, d, QRectF(0, 0, W, d)), (0, H, 0, H - d, QRectF(0, H - d, W, d)),
                                      (0, 0, d, 0, QRectF(0, 0, d, H)), (W, 0, W - d, 0, QRectF(W - d, 0, d, H))):

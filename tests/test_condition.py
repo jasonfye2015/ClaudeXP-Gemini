@@ -25,20 +25,32 @@ def test_steady_light_keeps_him_whole():
     assert not n.body.critical() and n.dying is None
 
 
-def test_the_dark_and_the_poison_wear_at_him():
-    n = _night()
-    b = n.body
-    n.lamp.next_out = 0.0                                                     # (out, and never shaken)
-    for _ in range(int(30 / 0.05)):
-        n.step(0.05, N.Input())
-    assert 60 < b.sanity < 95
-    c = Condition(random.Random(1))                                            # (bitten: it eats at health, then him)
-    c.poison = 90.0
+def test_doing_nothing_at_all_is_one_way_to_end_it():
+    """Stand still from the start and never shake the lantern: barely touched for minutes, then, at last, Supper."""
+    n = N.Night(seed=21)
+    inp = N.Input()
+    inp.yaw = n.yaw
+    at = {}
+    while n.dying is None and n.time < 25 * 60:
+        n.step(0.05, inp)
+        n.events.clear()
+        for mark in (120, 300):
+            if mark not in at and n.time >= mark:
+                at[mark] = dict(n.body.values())
+    assert at[120]["sanity"] > 85 and at[120]["health"] > 95                # (two minutes in: hardly a mark on him)
+    assert at[300]["sanity"] > 55
+    assert n.dying is not None and n.dying.cause in ("stupor", "sanity")
+    assert 8 * 60 < n.time < 16 * 60, n.time / 60                            # (ten or twelve minutes of nothing)
+
+
+def test_poison_and_a_fall():
     m = _night()
     m.lamp.next_out = 1e9
+    c = Condition(random.Random(1))                                            # (bitten badly: it climbs toward him)
+    c.poison = 90.0
     for _ in range(int(20 / 0.05)):
         c.step(0.05, m, [])
-    assert c.health < 95 and c.stupor > 5 and "poison" in c.critical()
+    assert c.health < 95 and c.stupor > 5 and "health" in c.critical()
     hurt = Condition(random.Random(2))                                         # (a long fall onto the wood)
     hurt.step(0.05, m, [("fall", 18.0)])
     assert hurt.health < 40 and hurt.stupor > 30 and not hurt.critical()     # (hurt, dazed: not yet in danger)
@@ -80,7 +92,7 @@ def test_the_green_reaching_the_other_is_the_end():
         assert c.spent() == gone, (life, lv, rising, rv)
     c = Condition(random.Random(4))
     c.health, c.poison = 50, 36                                                 # (close: the edge beats green)
-    assert c.critical() == ["poison"]
+    assert c.critical() == ["health"]
     c.health, c.poison = 15, 0                                                  # (low, nothing rising: red)
     assert c.critical() == ["health"]
     m.body.health, m.body.poison = 50.0, 49.9
