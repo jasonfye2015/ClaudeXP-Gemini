@@ -78,6 +78,8 @@ def _situation(ctx):
         bits.append("He has scrambled and fallen on your silk like prey.")
     if ctx.get("dark"):
         bits.append("His lantern is out; he is in the dark, and you see him perfectly.")
+    if ctx.get("holding"):
+        bits.append(f"He is holding {ctx['holding']} in his hand.")
     if ctx.get("bitten"):
         bits.append("You have bitten him tonight; your venom is in him, and his words come out slurred.")
     elif ctx.get("cured"):

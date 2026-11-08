@@ -91,6 +91,8 @@ class Night:
         self.cocoons = Cocoons(self.tree)                                   # (her guests, wrapped)
         self.finds = Finds(self.tree)                                       # (things lying in her house: offerings)
         self.pack, self.taken, self.given = [], set(), []                   # (what he carries; took; gave her)
+        self.items, self.items_left, self.held = {}, {}, None              # (how each is; as put down; in his hand)
+        self.learned = []                                                   # (what she made of a gift: for his notes)
         self.moods = Moods()                                                # (how she regards him: hidden)
         self.venom = Venom(random.Random(None if seed is None else f"venom{seed}"))
         self.camera = None                                             # (through her eyes, a while: game/venom.py)
@@ -235,6 +237,11 @@ class Night:
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         self.spells.step(dt)
+        from . import satchel
+        for e in satchel.step(self, dt):                                   # (what he carries doesn't keep)
+            self.events.append(e)
+            if e == ("satchel", "honey") and not self.quiet and self.rng.random() < 0.6:
+                self.crawlers.scurry(0.05)                                  # (they've found it on his fingers)
         if not self.quiet and not self.spells.illusion:                     # (Illusion: her small ones lose him)
             self.events.extend(self.crawlers.step(dt))
             self.events.extend(self.danglers.step(dt, self))
@@ -274,10 +281,29 @@ class Night:
             self.her.unstage()
 
     def take(self, item):
-        if item not in self.taken:
-            self.taken.add(item)
-            self.pack.append(item)
-            self.events.append(("take", item))
+        """Into his satchel (game/satchel.py) - if there's room."""
+        from . import satchel
+        dropped = item in self.finds.dropped
+        if item in self.pack or (item in self.taken and not dropped):
+            return False
+        if not satchel.take(self, item):
+            self.events.append(("satchel", "full"))
+            return False
+        if dropped:
+            del self.finds.dropped[item]
+            self.items[item].update(self.items_left.pop(item, {}))
+        self.taken.add(item)
+        self.pack.append(item)
+        self.events.append(("take", item))
+        return True
+
+    def put_down(self):
+        """G: what's in his hand, down at his feet."""
+        from . import satchel
+        item = satchel.put_down(self)
+        if item is not None:
+            self.events.append(("put_down", item))
+        return item
 
     def examine(self):
         """F: a closer look at the wrapped thing before him (if it's whole, it splits - and they pour out of it); or,
@@ -324,7 +350,8 @@ class Night:
         """Q: the antidote, from his pack - her venom out of him. If she sees him do it, she knows where he got it."""
         if "antidote" not in self.pack or not self.venom.active or self.dying is not None:
             return False
-        self.pack.remove("antidote")
+        from . import satchel
+        satchel.gone(self, "antidote")
         self.venom.cure("drunk")
         self._unsee()
         self.body.poison = max(0.0, self.body.poison - 25.0)

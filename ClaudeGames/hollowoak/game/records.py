@@ -29,6 +29,7 @@ class Records:
         self.unlocks = []
         self.reputation = {"met": 0, "summary": ""}  # (what she remembers of him, from other nights)
         self.notes = {}                     # (his notebook: page -> when first written; kept across deaths)
+        self.learned = {}                   # (what she made of each gift: item -> [lines]; kept across nights)
         self.options = dict(OPTIONS)
         try:
             d = json.loads(self.path.read_text(encoding="utf-8"))
@@ -37,6 +38,7 @@ class Records:
             self.unlocks = list(d.get("unlocks", []))
             self.reputation.update(d.get("reputation", {}))
             self.notes = dict(d.get("notes", {}))
+            self.learned = {k: list(v) for k, v in d.get("learned", {}).items()}
             self.options.update({k: v for k, v in d.get("options", {}).items() if k in OPTIONS})
         except (OSError, ValueError):
             pass
@@ -46,7 +48,7 @@ class Records:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(json.dumps({"found": self.found, "totals": self.totals, "unlocks": self.unlocks,
-                                       "reputation": self.reputation, "notes": self.notes,
+                                       "reputation": self.reputation, "notes": self.notes, "learned": self.learned,
                                        "options": self.options}, indent=1), encoding="utf-8")
             tmp.replace(self.path)
         except OSError:
@@ -57,6 +59,15 @@ class Records:
         if page in self.notes:
             return False
         self.notes[page] = time.strftime("%Y-%m-%d")
+        self.save()
+        return True
+
+    def learn(self, item, line):
+        """Written beside a thing in his satchel: what she made of it (once). -> True the first time."""
+        have = self.learned.setdefault(item, [])
+        if line in have:
+            return False
+        have.append(line)
         self.save()
         return True
 
