@@ -95,6 +95,8 @@ class Night:
         self.items, self.items_left, self.held = {}, {}, None              # (how each is; as put down; in his hand)
         self.learned = []                                                   # (what she made of a gift: for his notes)
         self.moods = Moods()                                                # (how she regards him: hidden)
+        from .afflictions import Afflictions
+        self.afflict = Afflictions(random.Random(None if seed is None else f"afflict{seed}"))   # (game/afflictions.py)
         self.venom = Venom(random.Random(None if seed is None else f"venom{seed}"))
         self.camera = None                                             # (through her eyes, a while: game/venom.py)
         self.spells = Spells(random.Random(None if seed is None else f"spells{seed}"))      # (his four)
@@ -213,6 +215,7 @@ class Night:
             inp = still
         elif self.camera is not None and not self.quiet:
             self.camera = None
+        inp = self.afflict.filter(inp, self)                          # (as his body lets him)
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         before = self.moved
@@ -250,11 +253,24 @@ class Night:
         self.events.extend(self.body.step(dt, self, self.events[first:]))
         if self.charmed() or self.flags.get("first"):                  # (led, or learning: kept from the worst)
             b = self.body
-            b.health = max(b.health, b.poison + 25.0, 40.0)
-            b.sanity = max(b.sanity, b.stupor + 25.0, 40.0)
+            b.health = max(b.health, b.poison + 25.0, 30.0)            # (above thirty: never the worst of it)
+            b.sanity = max(b.sanity, b.stupor + 25.0, 30.0)
             self.moods.hunger = min(self.moods.hunger, 70.0)           # (she doesn't hunt the spellbound)
         if self.venom.active:
             self.body.poison = max(self.body.poison, VENOM_FLOOR)      # (it doesn't wear off: not before dawn)
+        for e in self.afflict.step(dt, self):                          # (what the night's doing to him: afflictions)
+            self.events.append(e)
+            if e == ("afflict", "eye_taken"):
+                self._pocket("eye")
+        af = self.afflict
+        self.eye_h = EYE - (EYE - 0.1) * af.posture                    # (down on his hands; or on the wood)
+        self.roll = af.roll + (1.15 * af._fall_k() if af.act and af.act[0] == "fall" else 0.0)
+        if af.posture > 0.3 and isinstance(self.on, Bridge):           # (crawling on her silk: like wounded prey)
+            self.moods.hunger = min(100.0, self.moods.hunger + 0.025 * dt)
+            self.moods.fascination = min(100.0, self.moods.fascination + 0.012 * dt)
+            if not self.flags.get("prey"):
+                self.flags["prey"] = True
+                self.events.append(("afflict", "prey"))
         gone = self.body.spent()
         if gone is not None:
             self.collapse(gone)
@@ -270,6 +286,27 @@ class Night:
         if self.flags.get("ablaze"):
             self.end("Fire")
         return out
+
+    def shake(self):
+        """E: the lantern shaken - and some of what's on it flung off."""
+        self.afflict.shaken()
+        return self.lamp.shake()
+
+    def _pocket(self, item):
+        """Into his satchel whatever happens (room made, the least of what's there set down)."""
+        from . import satchel
+        from .offerings import worth
+        if len(self.pack) >= satchel.SLOTS:
+            rank = {"delight": 0, "plain": 1, "insult": 2}
+            cand = [i for i in self.pack if i != "antidote"]
+            if cand:
+                self.held = max(cand, key=lambda i: rank[worth(i, self)[0]])
+                self.put_down()
+        if satchel.take(self, item):
+            self.taken.add(item)
+            self.pack.append(item)
+            self.held = item
+            self.events.append(("take", item))
 
     def charmed(self):
         """Led by her letter, all night, and not woken from it: Spellbound (game/autoplay.py)."""
@@ -403,6 +440,8 @@ class Night:
             return
         moving = abs(inp.forward) > 0.01
         agit = 0.35 + (0.7 if moving else 0.0) + (3.2 if moving and inp.hurry else 0.0) + min(1.5, abs(turn) * 0.35)
+        if self.afflict.posture > 0.3:                                 # (crawling: low, and steadier on it)
+            agit *= 0.5
         agit += min(1.0, self.tremor * 0.15)
         self.push += (self.rng.gauss(0.0, 1.0) * 5.0 - self.push * 2.5) * dt          # (the bounce: wandering)
         force = self.push * agit - SWAY_SPRING * self.sway - SWAY_DAMP * self.sway_v + inp.strafe * SWAY_LEAN
@@ -481,7 +520,7 @@ class Night:
         n = math.hypot(fwd, side)
         if n > 1:
             fwd, side = fwd / n, side / n
-        speed = HURRY if inp.hurry else WALK
+        speed = (HURRY if inp.hurry else WALK) * self.afflict.pace       # (crawling: slower)
         sy, cy = math.sin(self.yaw), math.cos(self.yaw)
         dx = (sy * fwd + cy * side) * speed * dt
         dz = (-cy * fwd + sy * side) * speed * dt

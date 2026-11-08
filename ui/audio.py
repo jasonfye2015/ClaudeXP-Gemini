@@ -85,6 +85,17 @@ class DenAudio:
     def hear(self, night, events):
         """What the night just did, as sound; and the steady parts as they stand now."""
         s = self.synth
+        af = getattr(night, "afflict", None)
+        if af is not None:
+            s.muffle = af.haze * 0.8
+            if af.tier("poison") >= 2 and random.random() < 0.002:      # (a cough, now and then)
+                s.play("cough")
+            if af.tier("health") >= 1 and not night.quiet:
+                s.set(breath=0.7 + 0.3 * (af.tier("health") >= 2))     # (panting)
+            elif not night.quiet:
+                s.set(breath=0.0)
+            if af.posture > 0.4 and night.moved_now > 0 and random.random() < 0.08:
+                s.play("scrape", 0.5)
         on = night.on is not None
         d = night.dying
         if d is not None and d.t < 20.0 and random.random() < 0.09:  # (all over him: the sound of them never stops)
@@ -155,6 +166,10 @@ class DenAudio:
                 s.play("thunder", 0.5 + 0.5 * e[1])
             elif kind == "swipe":
                 s.play("whoosh")
+            elif kind == "afflict":                                    # (what the night's doing to him)
+                {"vomit": lambda: s.play("retch"), "refuse": lambda: s.play("no"),
+                 "fall": lambda: (s.play("thud", 0.7), s.play("scrape")), "eye": lambda: s.play("scream"),
+                 "crawl": lambda: s.play("scrape", 0.8), "stand": lambda: s.play("scrape", 0.5)}.get(e[1], lambda: None)()
             elif kind == "spell" and e[2] == "cast":
                 s.play("whoosh", 0.8)
             elif kind == "smoulder":

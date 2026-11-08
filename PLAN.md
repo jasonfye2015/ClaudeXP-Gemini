@@ -369,3 +369,26 @@ guests, the notebook, a strand, Warmth, saving, supper, her venom (one bite, saf
 in his own hand, then his to do (watched for: he walks, shakes, casts, takes, opens...); the letter leads him between
 them. Gentler: kept from giving out, not hunted; she calls him to supper once the lessons before it are done.
 
+## Phase 8 - what the night does to him (done)
+
+game/afflictions.py: each of the four at 75, 50 and 25 (health and sanity falling to them; poison and stupor rising),
+each starting at its line and ending five past it. Health: panting, his heart's rest up 14, she hears him; a red tint
+and blood from his eyes at the sides of his sight, beating with his heart; at 25, blood down the wand onto the lantern
+(the light red), drops behind him, her hunger quickened by the smell. Poison: sick at once and every five to ten
+minutes - a puddle (five at most), poison eased by six; a green tint, foam and drips at the bottom, a cough, his heart
+skipping beats; at 75, oftener and green over the wand and lantern (the light green; E flings a third of it off; it
+wears off in minutes). Sanity: his sight breathing, swimming, doubled a little (a post-process pass in
+engine/render.py), false eyes in the fungus; at 50, down on his hands and knees for ten to fifteen minutes, up for five
+to seven (slower, no jumping; on her silk the sway halved, and she reads him as wounded prey - hunger and
+fascination); at 25, once a night, his left eye - the hand to it, the dark down that side of his sight, the hand away
+red, and looking down, it in his palm, looking up at him (his own eye: into the satchel, room made; offered her, it
+delights her fascinated, insults her otherwise). Stupor: a heat shimmer, sounds dulled; at 50, bouts of "No" (his head
+shaking, nothing obeyed); at 75, falls (down, a while, dragging himself up) and moments lost (dark, the clock on six
+minutes). Nothing that takes him from himself starts on a strand or in her scenes. Each writes a page in "What the
+night does to me"; she remarks on the panting, the blood, the crawling, the sickness, the eye (once each a night).
+Sounds: retching, coughing, a hummed "No," a stifled scream, scraping, his hearing dulled. Options: all of it, each of
+the four, blood and vomit, the eye, the swaying sight, what takes him from himself - before the night and in his
+notebook. Retuned: poison lingers (0.06 a second) and eats at health a little less. The letter keeps him above thirty
+(never the worst); the first night is never the worst either, and has a lesson on it. The letter waits out what's
+done to him, shakes the lantern clean, and steadies his mind with Light (her far off) or Memory.
+

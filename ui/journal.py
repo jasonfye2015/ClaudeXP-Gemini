@@ -21,7 +21,8 @@ from .pages import BACK, FRONT
 SERIF = "Georgia"
 INK, FADED, RULE = QColor(52, 36, 26), QColor(120, 98, 76), QColor(150, 130, 100, 60)
 CONTENTS = (("go", "Go on"), ("notes", "Notes on her"), ("letter", "Her letter"), ("unlocks", "What's been found"),
-            ("options", "Options"), ("save", "Save here"), ("leave", "Back to the title"))
+            ("options", "Options"), ("body", "What the night does"), ("save", "Save here"),
+            ("leave", "Back to the title"))
 SLIDERS = (("Volume", "volume"), ("Music", "music"), ("Looking about", "look"), ("Her words, how fast", "text_speed"),
            ("Her words, their size", "her_size"), ("Your words, their size", "his_size"))
 RANGE = {"her_size": (60, 160), "his_size": (60, 160)}            # (the rest: 0 to 100)
@@ -344,6 +345,36 @@ class Journal:
         p.setPen(FADED)
         p.drawText(QRectF(pr.left() + 24, pr.bottom() - 40, pr.width() - 48, 30), Qt.AlignLeft | Qt.TextWordWrap,
                    "What speaks for her is chosen before the night.")
+
+    BODY = (("All of it", "fx_all"), ("His body (health)", "fx_health"), ("The poison in him", "fx_poison"),
+            ("His mind (sanity)", "fx_sanity"), ("The stupor", "fx_stupor"), ("Blood and vomit", "fx_gore"),
+            ("His eye", "fx_eye"), ("His sight swaying, swimming", "fx_distort"),
+            ("Crawling, refusing, falling", "fx_control"))
+
+    def _page_body(self, p, pr):
+        o = self.view.shell.records.options
+        y = self._head(p, pr, "What the night does to him")
+        f = QFont(SERIF, 10)
+        f.setItalic(True)
+        p.setFont(f)
+        p.setPen(FADED)
+        p.drawText(QRectF(pr.left() + 24, y - 6, pr.width() - 48, 40), Qt.AlignLeft | Qt.TextWordWrap,
+                   "At three quarters, half, and a quarter, each of the four shows on him. Tick what you'd see.")
+        y += 34
+        for label, key in self.BODY:
+            box = QRectF(pr.left() + 28, y + 3, 13, 13)
+            p.setPen(QPen(QColor(80, 58, 40), 1.5))
+            p.setBrush(Qt.NoBrush)
+            p.drawRect(box)
+            if o.get(key, True):
+                p.setPen(QPen(INK, 2))
+                p.drawLine(QPointF(box.left() + 2, box.center().y()), QPointF(box.center().x(), box.bottom() - 2))
+                p.drawLine(QPointF(box.center().x(), box.bottom() - 2), QPointF(box.right() + 2, box.top() - 2))
+            p.setFont(QFont(SERIF, 11, QFont.Bold if key == "fx_all" else QFont.Normal))
+            p.setPen(INK)
+            p.drawText(QRectF(box.right() + 10, y, pr.width() - 90, 20), Qt.AlignLeft | Qt.AlignVCenter, label)
+            self.hits.append((QRectF(pr.left() + 24, y, pr.width() - 48, 20), ("toggle", key)))
+            y += 28
 
     def _page_save(self, p, pr):
         y = self._head(p, pr, "Saved")

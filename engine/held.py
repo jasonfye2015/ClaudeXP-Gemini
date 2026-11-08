@@ -229,6 +229,39 @@ def arm_parts():
     return out
 
 
+def eye_hand(night, k):
+    """His left hand to his left eye, k seconds in: up from below (0-1.2), there (to 2.0), and away again (to 3.6).
+    -> (wrist, axes), as swipe()."""
+    yaw, pitch = night.yaw, night.pitch
+    F = np.array((math.sin(yaw) * math.cos(pitch), math.sin(pitch), -math.cos(yaw) * math.cos(pitch)))
+    R = np.array((math.cos(yaw), 0.0, math.sin(yaw)))
+    U = np.cross(R, F)
+    eye = np.array(night.eye)
+
+    def cam(x, y, z):
+        return eye + R * x + U * y + F * z
+    low, at, away = np.array((-0.2, -0.46, 0.22)), np.array((-0.05, -0.015, 0.11)), np.array((-0.2, -0.28, 0.3))
+    if k < 1.2:
+        e = k / 1.2
+        e = e * e * (3 - 2 * e)
+        p = low * (1 - e) + at * e
+    elif k < 2.0:
+        p = at + np.array((0.004 * math.sin(k * 40), 0.003 * math.sin(k * 33), 0.0))     # (there: and it shakes)
+    else:
+        e = min(1.0, (k - 2.0) / 1.2)
+        e = e * e * (3 - 2 * e)
+        p = at * (1 - e) + away * e
+    shoulder = np.array((-0.18, -0.55, 0.0))
+    d = p - shoulder
+    d /= np.linalg.norm(d)
+    x = d
+    y = np.array((0.0, 0.0, 1.0)) - x * x[2]
+    y /= np.linalg.norm(y)
+    wrist = p - x * 0.05
+    xw, yw = (R * v[0] + U * v[1] + F * v[2] for v in (x, y))
+    return cam(*wrist), (xw, yw, np.cross(xw, yw))
+
+
 def swipe(night, s):
     """His left hand across his face, s from 0 to 1: up from below on the left, across before his eyes, away to the
     right - palm to his face, fingers spread. -> (wrist, axes) for both the sleeve and the hand."""

@@ -15,6 +15,30 @@ from OpenGL import GL
 from PIL import Image
 
 from . import fogfx, gl, held, silkmesh, treemesh
+
+POST_VS = """#version 330 core
+layout(location = 0) in vec2 aPos;
+out vec2 vUv;
+void main() { vUv = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }
+"""
+POST_FS = """#version 330 core
+in vec2 vUv;
+out vec4 frag;
+uniform sampler2D uTex;
+uniform float uTime, uWarp, uHaze;
+void main() {
+    vec2 uv = vUv;
+    vec2 c = uv - 0.5;
+    uv = 0.5 + c * (1.0 + uWarp * 0.014 * sin(uTime * 0.9));                 // (the walls breathing)
+    uv += uWarp * 0.006 * vec2(sin(uv.y * 9.0 + uTime * 1.3), sin(uv.x * 7.0 + uTime * 1.1));   // (his sight swimming)
+    uv.x += uHaze * 0.0035 * sin(uv.y * 90.0 - uTime * 6.0) * (0.6 + 0.4 * sin(uv.y * 7.0 + uTime));   // (heat, rising)
+    uv.y += uHaze * 0.002 * sin(uv.x * 60.0 + uTime * 4.0);
+    vec3 col = texture(uTex, clamp(uv, 0.001, 0.999)).rgb;
+    vec3 twice = texture(uTex, clamp(uv + uWarp * vec2(0.007 * sin(uTime * 0.5), 0.004), 0.001, 0.999)).rgb;
+    frag = vec4(mix(col, twice, uWarp * 0.35), 1.0);                        // (and a little doubled)
+}
+"""
+
 from ..game import tree as T
 from ..game import web as W
 
@@ -426,6 +450,58 @@ class Renderer:
 
     # ---- a frame ---------------------------------------------------------------------------------------------
     def draw(self, night, w, h, now):
+        """The den - through his sight as it is (game/afflictions.py): swimming, breathing, wavering like heat."""
+        af = getattr(night, "afflict", None)
+        warp, haze = (af.warp, af.haze) if af is not None else (0.0, 0.0)
+        if (warp < 0.02 and haze < 0.02) or getattr(night, "dying", None) is not None:
+            return self._draw(night, w, h, now)
+        out = GL.glGetIntegerv(GL.GL_FRAMEBUFFER_BINDING)
+        self._post_target(w, h)
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, self._post[0])
+        self._draw(night, w, h, now)
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, int(out))
+        GL.glViewport(0, 0, w, h)
+        GL.glDisable(GL.GL_DEPTH_TEST)
+        GL.glDisable(GL.GL_BLEND)
+        self.post_prog.use()
+        GL.glActiveTexture(GL.GL_TEXTURE0)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, self._post[1])
+        self.post_prog.int("uTex", 0)
+        self.post_prog.float("uTime", now)
+        self.post_prog.float("uWarp", warp)
+        self.post_prog.float("uHaze", haze)
+        self.post_quad.draw()
+        GL.glEnable(GL.GL_DEPTH_TEST)
+
+    def _post_target(self, w, h):
+        """Somewhere to draw the den first, to be looked at through his sight."""
+        if getattr(self, "_post", None) is not None and self._post[3] == (w, h):
+            return
+        if getattr(self, "_post", None) is not None:
+            fbo, tex, rb, _size = self._post
+            GL.glDeleteFramebuffers(1, [fbo])
+            GL.glDeleteTextures([tex])
+            GL.glDeleteRenderbuffers(1, [rb])
+        if not hasattr(self, "post_prog"):
+            self.post_prog = gl.Program(POST_VS, POST_FS)
+            self.post_quad = gl.Mesh([(0, 2)], np.array([-1, -1, 1, -1, 1, 1, -1, -1, 1, 1, -1, 1], np.float32))
+        tex = GL.glGenTextures(1)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, tex)
+        GL.glTexImage2D(GL.GL_TEXTURE_2D, 0, GL.GL_RGBA8, w, h, 0, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, None)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE)
+        GL.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE)
+        rb = GL.glGenRenderbuffers(1)
+        GL.glBindRenderbuffer(GL.GL_RENDERBUFFER, rb)
+        GL.glRenderbufferStorage(GL.GL_RENDERBUFFER, GL.GL_DEPTH24_STENCIL8, w, h)
+        fbo = GL.glGenFramebuffers(1)
+        GL.glBindFramebuffer(GL.GL_FRAMEBUFFER, fbo)
+        GL.glFramebufferTexture2D(GL.GL_FRAMEBUFFER, GL.GL_COLOR_ATTACHMENT0, GL.GL_TEXTURE_2D, tex, 0)
+        GL.glFramebufferRenderbuffer(GL.GL_FRAMEBUFFER, GL.GL_DEPTH_STENCIL_ATTACHMENT, GL.GL_RENDERBUFFER, rb)
+        self._post = (fbo, tex, rb, (w, h))
+
+    def _draw(self, night, w, h, now):
         GL.glViewport(0, 0, w, h)
         GL.glClearColor(*FOG, 1.0)
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
@@ -525,8 +601,35 @@ class Renderer:
             self._lantern(night, now)
         if night is not None and getattr(night, "show_lantern", True) and cam is None:
             self._carried(night, now)
+            self._eye_hand(night, now)
         self._crawlers(night, w, h)
         self._hand(night)
+
+    def _eye_hand(self, night, now):
+        """His left eye (game/afflictions.py): the hand up to it, and away red - and what's in it, when he looks down."""
+        af = getattr(night, "afflict", None)
+        ph = af.phase() if af is not None else None
+        if ph is None or ph[0] != "eye":
+            return
+        k = ph[1]
+        from . import itemmesh
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.dress_prog.use()
+        if k < 3.6:
+            wrist, axes = held.eye_hand(night, k)
+            arr = held.place(self.hand_parts, wrist, axes)
+            red = min(1.0, max(0.0, (k - 1.9) / 0.5))
+            if red > 0:                                       # (it comes away red)
+                arr[:, 6:9] = arr[:, 6:9] * (1 - 0.75 * red) + np.array((0.42, 0.02, 0.02), np.float32) * 0.75 * red
+            self.hand_mesh.upload(arr)
+            self.hand_mesh.draw()
+            return
+        (wrist, axes), (palm, iaxes) = itemmesh.held_at(night, now, centred=0.26, lift=0.12)   # (up, into the eye he has left)
+        arr = held.place(self.cup_parts, wrist, axes)
+        arr[:, 6:9] = arr[:, 6:9] * 0.4 + np.array((0.4, 0.02, 0.02), np.float32) * 0.6
+        out = itemmesh.build("eye", palm, iaxes, now, None, scale=1.25)
+        self.cup_mesh.upload(np.concatenate([arr, np.array(out, np.float32)]))
+        self.cup_mesh.draw()
 
     def _carried(self, night, now):
         """What's in his left hand (the mouse wheel chose it): held low on the left, cupped - over everything."""
@@ -534,6 +637,9 @@ class Renderer:
         crawlers = getattr(night, "crawlers", None)
         if item is None or getattr(night, "dying", None) is not None or getattr(night, "ending", None) is not None:
             return
+        af = getattr(night, "afflict", None)
+        if af is not None and af.busy and af.act[0] == "eye":
+            return                                                    # (that hand's at his eye)
         if crawlers is not None and crawlers.swipe_phase() is not None:
             return                                                    # (that hand's busy, swiping)
         from . import itemmesh
@@ -752,6 +858,15 @@ class Renderer:
                            (side, up, n_in), (0.05, 0.035, 0.025))
                 C._box(out, np.array((mx, my - 0.14, mz)), (0.28, 0.006, 0.006), (side, up, n_in),
                        (0.05, 0.035, 0.025))
+        af = getattr(night, "afflict", None)
+        if af is not None:                                      # (what he's left on the wood: sick, and blood)
+            flat = (np.array((1.0, 0.0, 0.0)), np.array((0.0, 1.0, 0.0)), np.array((0.0, 0.0, 1.0)))
+            for k, (px, py, pz, green, _born) in enumerate(af.puddles):
+                col = (0.22, 0.34, 0.06) if green else (0.26, 0.22, 0.08)
+                C._blob(out, (px, py, pz), (0.17 + 0.03 * (k % 2), 0.006, 0.13), flat, col, seg=8)
+                C._blob(out, (px + 0.09, py + 0.003, pz - 0.06), (0.06, 0.005, 0.05), flat, col, seg=6)
+            for dx, dy, dz, _born in af.drops:
+                C._blob(out, (dx, dy, dz), (0.035, 0.004, 0.028), flat, (0.28, 0.01, 0.01), seg=5)
         if finds.dropped:                                       # (what he's put down again)
             from . import itemmesh
             for item, pos in finds.dropped.items():
@@ -815,14 +930,40 @@ class Renderer:
             self._held_at = (now, held.hold(night, now))
         return tuple(held.flame(*self._held_at[1][1]))
 
+    @staticmethod
+    def _lamp_tint(night, col):
+        """The lantern's light through what's on its glass: blood (red), her venom come back up (green)."""
+        af = getattr(night, "afflict", None)
+        if af is None:
+            return col
+        r, g, b = col
+        if af.bloodied > 0:
+            k = 0.65 * af.bloodied
+            r, g, b = r * (1 - k) + 0.95 * k * max(r, 0.4), g * (1 - k) + 0.12 * k * g, b * (1 - k) + 0.08 * k * b
+        if af.coat > 0:
+            k = 0.7 * min(1.0, af.coat)
+            r, g, b = r * (1 - k) + 0.35 * k * r, g * (1 - k) + 1.1 * k * max(g, 0.35), b * (1 - k) + 0.3 * k * b
+        return (r, g, b)
+
     def _lantern(self, night, now):
         """The lantern in his hand, drawn over everything (it's never inside a wall), and its flame."""
         if not night.lantern:
             return
         (grip, waxes), (origin, axes) = self._held_at[1] if self._held_at[1] is not None else held.hold(night, now)
         GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
-        self.wand_mesh.upload(held.place(self.wand_parts, grip, waxes))
-        self.held_mesh.upload(held.place(self.held_parts, origin, axes))
+        wand = held.place(self.wand_parts, grip, waxes)
+        lamp = held.place(self.held_parts, origin, axes)
+        af = getattr(night, "afflict", None)
+        if af is not None:
+            for arr in (wand, lamp):
+                if af.bloodied > 0:
+                    b = 0.7 * af.bloodied
+                    arr[:, 6:9] = arr[:, 6:9] * (1 - b) + np.array((0.32, 0.015, 0.015), np.float32) * b
+                if af.coat > 0:
+                    c = 0.75 * min(1.0, af.coat)
+                    arr[:, 6:9] = arr[:, 6:9] * (1 - c) + np.array((0.2, 0.36, 0.05), np.float32) * c
+        self.wand_mesh.upload(wand)
+        self.held_mesh.upload(lamp)
         self.dress_prog.use()
         self.wand_mesh.draw()
         self.held_mesh.draw()
@@ -833,6 +974,7 @@ class Renderer:
         right, up = self._view[0, :3], self._view[1, :3]
         for size, col, a in ((0.012 + 0.008 * lvl, (1.0, 0.92, 0.7), 1.6 * lvl), (0.03, (1.0, 0.6, 0.25), 1.1 * lvl),
                              (0.1, (1.0, 0.5, 0.2), 0.35 * lvl), (0.006, (1.0, 0.25, 0.08), 0.9)):
+            col = self._lamp_tint(night, col)
             r, u = right * size, up * size * (1.4 if size < 0.04 else 1.0)
             corners = (f - r - u, f + r - u, f + r + u, f - r + u)
             for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
@@ -911,7 +1053,8 @@ class Renderer:
                 self._steady = getattr(self, "_steady", k) + (k - getattr(self, "_steady", k)) * 0.05
                 k = self._steady
             fx, fy, fz = self.flame_at(night)
-            out.append(((fx, fy, fz, max(0.6, reach)), (0.6 * k, 0.39 * k, 0.22 * k, 1)))
+            lr, lg, lb = self._lamp_tint(night, (0.6, 0.39, 0.22))
+            out.append(((fx, fy, fz, max(0.6, reach)), (lr * k, lg * k, lb * k, 1)))
         sp = getattr(night, "spells", None)
         if sp is not None:                                    # (his spells: Light hung above him, Warmth in his palm)
             for kind, pos, _w, _l in sp.lit:
@@ -1089,8 +1232,12 @@ class Renderer:
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
-        # her eyes: eight red lights in the dark, as wide as her head (she's five units across)
-        for e in night.eyes():
+        # her eyes: eight red lights in the dark, as wide as her head (she's five units across) - and, his mind going,
+        # eyes that aren't hers
+        af = getattr(night, "afflict", None)
+        false = [{"pos": g[0], "alpha": 0.8 * math.sin(math.pi * min(1.0, (af.t - g[1]) / 1.8))}
+                 for g in (af.glimpses if af is not None else [])]
+        for e in list(night.eyes()) + false:
             for k in range(8):
                 ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 2.9
                 oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 2.9

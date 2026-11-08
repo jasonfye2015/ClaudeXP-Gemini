@@ -292,11 +292,24 @@ class Director:
             return out
         if n.lamp.state == "out" and self.t - self.shake_t > 1.6:         # (his lantern, shaken back to life)
             self.shake_t = self.t
-            n.lamp.shake()
+            n.shake()
         if n.venom.active and "antidote" in n.pack and not self.guide:      # (her venom out of him)
             n.drink()
         if n.quiet:                                                         # (her scene: he's hers to talk to)
             return out
+        af = n.afflict
+        if af.busy:                                                         # (it's being done to him: he waits it out)
+            self.best_t = self.t
+            return out
+        if af.coat > 0.4 and self.t - self.shake_t > 2.5:                   # (sick over the lantern: shaken off)
+            self.shake_t = self.t
+            n.shake()
+        if n.body.sanity < 45 and not self.guide:                           # (his mind going: what steadies it)
+            her_far = math.dist(n.her.at(), n.eye) > 10.0
+            if her_far and n.spells.ready("light"):
+                n.cast("light")
+            elif n.spells.ready("memory"):
+                n.cast("memory")
         if self.t < self.hold_until or n.venom.vision is not None:
             return out
         if self.guide:                                                      # (the first night: only where it's sent)
@@ -432,7 +445,7 @@ class Director:
             return
         if d < self.best_d - 0.05:
             self.best_d, self.best_t = d, self.t
-        elif self.t - self.best_t > STUCK:                                  # (caught on something: on, past it)
+        elif self.t - self.best_t > STUCK / max(0.3, n.afflict.pace):      # (caught on something: on, past it)
             y = n.floor_at(px, pz, n.y + 1.0)
             n.x, n.z, n.y, n.vy = px, pz, y, 0.0
             self.path.pop(0)

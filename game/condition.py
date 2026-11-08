@@ -36,6 +36,7 @@ class Condition:
         self.bpm, self.startle, self.t = 66.0, 0.0, 0.0
         self._phase, self._sample = 0.0, 0.0
         self.beats, self.history = [], []
+        self.skips = 0.0                    # (how often a beat doesn't come: poison past half - game/afflictions.py)
 
     def values(self):
         return {"health": self.health, "poison": self.poison, "sanity": self.sanity, "stupor": self.stupor}
@@ -65,7 +66,8 @@ class Condition:
         self._phase += self.bpm / 60.0 * dt
         if self._phase >= 1.0:
             self._phase -= math.floor(self._phase)
-            self.beats.append(self.t)
+            if not (self.skips and self.rng.random() < self.skips):
+                self.beats.append(self.t)
         while self.beats and self.t - self.beats[0] > 10.0:
             self.beats.pop(0)
         self._sample += dt
@@ -133,8 +135,8 @@ class Condition:
         if calm and not dark and night.lamp.level > 0.4 and watched < 0.3:
             self.sanity += 0.3 * dt
         # the poison: eating at him a little, wearing off slowly
-        self.health -= self.poison * 0.006 * dt
-        self.poison = max(0.0, self.poison - 0.2 * dt)
+        self.health -= self.poison * 0.003 * dt
+        self.poison = max(0.0, self.poison - 0.06 * dt)           # (it lingers: minutes, not moments)
         if self.poison < 5:
             self.health += 0.1 * dt
         rise = max(0.0, self.poison - 40) * 0.025 + (0.2 if self.sanity < 30 else 0.0)
@@ -162,6 +164,7 @@ class Condition:
                 self.startle += 12.0
         self.startle *= math.exp(-dt / 7.0)
         target = 66.0 + (100.0 - self.sanity) * 0.35 + self.poison * 0.25 - self.stupor * 0.2
+        target += 14.0 if self.health <= 75 else 0.0                  # (hurt: panting, his heart's rest raised)
         target += (9.0 if dark else 0.0) + (12.0 if night.inp_hurry and night.moved_now > 0 else 0.0)
         target += min(80.0, self.startle)
         self._heart(dt, max(40.0, min(185.0, target)))

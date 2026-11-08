@@ -22,6 +22,7 @@ ITEMS = {
     "journal": ("Maudren's journal", "He offers you Maudren Hale's journal, every page filled with your words.",
                 "maudren"),
     "honey": ("a comb of honey", "He offers you a comb of honey - your own, from your larder wall.", "larder"),
+    "eye": ("his own eye", "He holds out his own eye to you, in his palm. It is still warm.", "self"),
     "antidote": ("a stoppered phial", "He holds out your own phial - the antidote, from your larder.", "larder"),
 }
 KEPT = ("antidote",)            # (his to drink, not to give: never offered)
@@ -60,6 +61,10 @@ def worth(item, night):
         return "insult", ["harm_small"], {"suspicion": 10}                  # (a thief, like Wick)
     if item == "journal":
         return ("delight" if not _late(night) else "plain"), ["gift", "deep"], {"suspicion": -5, "regard": 3}
+    if item == "eye":
+        if m.fascination > 45:
+            return "delight", ["gift", "deep"], {"fascination": 10, "regard": 4}        # (what he saw her with)
+        return "insult", ["harm_small"], {"suspicion": 8}                               # (madness, offered)
     if item == "honey":
         if m.fascination > 50:
             return "delight", ["food", "gift"], {"fascination": 5, "hunger": -20}  # (her own honey: she's amused)
@@ -84,6 +89,8 @@ ANSWERS = {
     "still": {"plain": "Dead. I like them kicking - but I am hungry, so.",
               "insult": "Dead. You let it die in your fist, and you bring me that?"},
     "few": {"plain": "Two moths. Three. The rest got away from you, I see."},
+    "eye": {"delight": "You give me what you saw me with. I will keep it where it can still see you.",
+            "insult": "Put that away. I do not take what's given in madness."},
     "honey": {"delight": "My own honey, from my own wall, given back to me. You are either very bold or very foolish. "
                          "I like it.",
               "insult": "That is mine. You took it from my larder, and you offer it to me as a gift?"},

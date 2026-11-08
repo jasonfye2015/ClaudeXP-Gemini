@@ -21,6 +21,7 @@ FIELDS = {
     "": ("x", "y", "z", "yaw", "pitch", "time", "seen", "place", "moved", "pack", "taken", "given", "silk", "flags",
          "lies", "met", "items", "items_left", "held"),
     "finds": ("dropped",),
+    "afflict": ("eye_lost", "bloodied", "coat", "down", "cycle_until", "said", "puddles", "t"),
     "moods": ("fascination", "patience", "hunger", "suspicion", "regard", "bites"),
     "body": ("health", "poison", "sanity", "stupor"),
     "acts": ("act", "request", "calling", "next_call", "t", "found", "outcomes"),
@@ -29,7 +30,7 @@ FIELDS = {
     "spells": ("shown", "marks_seen"),
     "cocoons": ("burst", "burst_at"),
 }
-SETS = {("", "seen"), ("", "taken"), ("spells", "shown"), ("spells", "marks_seen"), ("cocoons", "burst")}
+SETS = {("afflict", "said"), ("", "seen"), ("", "taken"), ("spells", "shown"), ("spells", "marks_seen"), ("cocoons", "burst")}
 TUPLES = {("sky", "target")}
 ACT_WORDS = {"threshold": "The way in", "audience": "Her loom", "gallery": "Her guests", "supper": "Supper",
              "crown": "The crown"}
