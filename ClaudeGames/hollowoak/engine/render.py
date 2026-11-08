@@ -287,7 +287,13 @@ void main() {
     if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is - deep red)
         float shine = 0.0;
         for (int i = 0; i < uLightCount; i++) shine += clamp(1.0 - distance(uLightPos[i].xyz, vPos) / uLightPos[i].w, 0.0, 1.0);
-        col = vCol * 0.3 + vec3(0.8, 0.07, 0.03) * (0.06 + min(0.75, shine * 0.9) + uRim * 0.6);
+        vec3 V = normalize(uEye - vPos);                       // (deep, glossy red - a glint of whatever light there is)
+        float glint = 0.0;
+        for (int i = 0; i < uLightCount; i++) {
+            vec3 d = normalize(uLightPos[i].xyz - vPos);
+            glint += pow(max(dot(N, normalize(d + V)), 0.0), 60.0) * clamp(1.0 - distance(uLightPos[i].xyz, vPos) / uLightPos[i].w, 0.0, 1.0);
+        }
+        col = vCol * 0.5 + vec3(0.55, 0.04, 0.02) * (0.05 + min(0.4, shine * 0.5) + uRim * 0.5) + vec3(1.0, 0.85, 0.75) * glint * 0.9;
     }
     frag = outColour(fogged(vPos, col));
 }"""
@@ -411,9 +417,14 @@ class Renderer:
         GL.glColorMask(GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE, GL.GL_TRUE)
         GL.glDisable(GL.GL_CULL_FACE)
         eye = night.eye
-        proj = gl.perspective(70.0, w / max(1, h), 0.05, 160.0)
-        view = gl.view_matrix(eye, night.yaw, night.pitch)
+        yaw, pitch = night.yaw, night.pitch
         roll = getattr(night, "sway", 0.0) * 0.2 + getattr(night, "roll", 0.0)   # (his lean on a strand; how he lies)
+        cam = getattr(night, "camera", None)
+        if cam is not None:                                   # (her scenes: a composed camera, not his eye)
+            eye, yaw, pitch = cam
+            roll = 0.0
+        proj = gl.perspective(70.0 if cam is None else 55.0, w / max(1, h), 0.05, 160.0)
+        view = gl.view_matrix(eye, yaw, pitch)
         if roll:
             c, s = math.cos(roll), math.sin(roll)
             view = np.array(((c, s, 0, 0), (-s, c, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1)), np.float32) @ view
@@ -468,7 +479,7 @@ class Renderer:
         self._glows(night, view, now)
         if self.fog_on:
             self._fog(night, view, now, lights)
-        if night is not None and getattr(night, "show_lantern", True):
+        if night is not None and getattr(night, "show_lantern", True) and cam is None:
             self._lantern(night, now)
         self._crawlers(night, w, h)
         self._hand(night)
@@ -538,6 +549,9 @@ class Renderer:
             self.spider_prog.float("uShade", 0.55)
             self._spider(np.array(p), f, up, size, clip, t)
             self.spider_prog.float("uShade", 1.0)
+        for pos, fwd, up, size, clip, t in getattr(night, "riders", ()):      # (her small ones, on her back)
+            self.spider_prog.float("uRim", 0.25)
+            self._spider(np.array(pos), fwd, up, size, clip, t)
         self.spider_prog.float("uRim", 0.3)
         for x, y, z, top, size, ph in night.danglers.active():  # (hanging before him: its back to him, turning a little)
             to = eye - np.array((x, y, z))

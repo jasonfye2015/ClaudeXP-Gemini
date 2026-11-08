@@ -197,6 +197,17 @@ Her hand (done): the user picked Italianno from ten free calligraphy fonts - fan
 (assets/fonts, SIL OFL). ui/fonts.py: her words in it, larger; his in a plain serif; both sized in Options (60-160%).
 Used now for her murmurs and the F4 stand-in; her scene window (3d) next.
 
+Phase 3d - her scenes (done). game/scene.py + ui/scene.py: the first time he steps onto her loom, the audience
+(F4 starts it any time, for building the game). The frame letterboxes; the view goes dark a moment while she's set
+down before him on the loom, facing him; then a composed camera - low, to the hollow's side of him, looking up at her,
+drifting - holds on her. The night goes on (her hunger too), but nothing small drops onto him; between her lines her
+breathing, a leg shifting, her small ones crossing her back, and his breathing in the sound. Her window: low across
+the frame, growing to fit, dark, dressed with old branches and oak leaves along its top, a cobweb in its corner,
+glowing mushrooms at its feet; "Ysmeine" in gold at its head; her words in Italianno, written out as she speaks them
+(a click shows them whole); his last words above in his own hand; below, his answer - typed (a model) or chosen (the
+script) - and "Go on" at the end. Then the dark again, she's gone to the wall, the frame opens; night.met records how
+it ended. Her eyes, close: deep glossy red, with a glint of whatever light there is. (The F4 stand-in is gone.)
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
