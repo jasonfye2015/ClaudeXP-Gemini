@@ -391,6 +391,8 @@ class Renderer:
         self.crawler_prog = gl.Program(SPIDER_VS, CRAWLER_FS)
         self.loose = gl.Mesh([(0, 3), (1, 3), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)], dynamic=True)
         _w, self.wand_tip = held.wand_parts()
+        self.hand_parts = held.arm_parts() + held.hand_parts()
+        self.hand_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
         self.moon = np.array((0.35, 1.0, -0.25), np.float32)
         self.moon /= np.linalg.norm(self.moon)
 
@@ -467,6 +469,19 @@ class Renderer:
         if night is not None and getattr(night, "show_lantern", True):
             self._lantern(night, now)
         self._crawlers(night, w, h)
+        self._hand(night)
+
+    def _hand(self, night):
+        """His left hand, swiping them off his face: over everything, them too."""
+        crawlers = getattr(night, "crawlers", None)
+        s = crawlers.swipe_phase() if crawlers is not None and getattr(night, "show_lantern", True) else None
+        if s is None:
+            return
+        wrist, axes = held.swipe(night, s)
+        GL.glClear(GL.GL_DEPTH_BUFFER_BIT)
+        self.hand_mesh.upload(held.place(self.hand_parts, wrist, axes))
+        self.dress_prog.use()
+        self.hand_mesh.draw()
 
     def _crawlers(self, night, w, h):
         """The small ones running across his eyes: drawn flat on the view, over everything, seen from above."""

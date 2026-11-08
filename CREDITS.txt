@@ -6,6 +6,9 @@ ScatteredLeaves001 (the dry leaves); colour and normal maps, resized to 512, tin
 Claude's wand (assets/wand.npz, wand.png): Kay Lousberg's KayKit Adventurers pack (CC0), https://kaylousberg.com -
 its shape and colours copied out once by tools/export_wand.py.
 
+His left sleeve and cuff (assets/arm.npz): the left arm of KayKit's Mage (Kay Lousberg, the Adventurers pack, CC0),
+copied out once by tools/export_arm.py; the hand at its end (fingers and all) is made in the game (engine/held.py).
+
 Her small ones (assets/spider.npz): Quaternius's animated Spider (the Easy Enemy pack, CC0), https://quaternius.com -
 its walk and its stillness baked into frames once by tools/export_spider.py. Ysmeine herself (phase 3) will be the same
 spider, much larger.

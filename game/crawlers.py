@@ -5,6 +5,10 @@ in from one edge and out at another - every twenty to thirty seconds, sometimes 
     crawlers.step(dt)        -> events: ("crawler", how many) when they set off
     crawlers.active()        -> [(u, v, du, dv, size, t)] - where each is on the screen (0..1 across, 0..1 up), which way
                                 it's going, its size (a share of the screen's height) and its legs' time
+    crawlers.swipe_phase()   -> None, or 0..1 through his left hand's swipe across his face
+
+Two on his face at once is too much: a moment later his free hand comes up and swipes across, and as it passes they're
+flung off to the side. (Not more often than every few seconds: one alone he lets run.)
 
 Plain Python: the view draws them, the tests time them."""
 import random
@@ -13,6 +17,10 @@ EVERY = (20.0, 30.0)
 TWO = 0.3                       # (how often two come at once)
 SIZE = (0.03, 0.085)
 TIME = (0.55, 1.0)
+SWIPE = 0.45                    # (his hand across his face: up, over, gone)
+REACT = 0.12                    # (how long before it comes)
+SWIPE_REST = 6.0
+FLING = 0.45                    # (where in the swipe his hand is over the middle of his eyes)
 
 
 def _edge_point(rng, edge):
@@ -26,18 +34,48 @@ class Crawlers:
         self.t = 0.0
         self.next = self.rng.uniform(*EVERY)
         self.runs = []                  # {from, ctrl, to, born, time, size}
+        self.swipe_at = None
+        self.last_swipe = -99.0
+        self.flung = False
 
     def step(self, dt):
         self.t += dt
         self.runs = [r for r in self.runs if self.t - r["born"] < r["time"]]
+        events = self._swipe()
         if self.t < self.next:
-            return []
+            return events
         self.next = self.t + self.rng.uniform(*EVERY)
         count = 2 if self.rng.random() < TWO else 1
         used = []
         for _ in range(count):
             self.runs.append(self._run(used))
-        return [("crawler", count)]
+        return events + [("crawler", count)]
+
+    def _swipe(self):
+        events = []
+        crossing = [r for r in self.runs if not r.get("flung")]
+        if self.swipe_at is None and len(crossing) >= 2 and self.t - self.last_swipe > SWIPE_REST:
+            self.swipe_at, self.flung = self.t + REACT, False
+        s = self.swipe_phase()
+        if s is None:
+            return events
+        if s >= FLING and not self.flung:                     # (his hand over them: off they go, to the side)
+            self.flung = True
+            here = {id(r): a for r, a in zip(self.runs, self.active())}
+            for r in self.runs:
+                u, v = here[id(r)][:2]
+                to = (1.0 + r["size"] + self.rng.uniform(0.05, 0.2), v + self.rng.uniform(0.15, 0.45))
+                r.update({"from": (u, v), "ctrl": ((u + to[0]) / 2, (v + to[1]) / 2 + 0.05), "to": to,
+                          "born": self.t, "time": self.rng.uniform(0.16, 0.26), "flung": True})
+            events.append(("swipe", len(self.runs)))
+        if self.t >= self.swipe_at + SWIPE:
+            self.swipe_at, self.last_swipe = None, self.t
+        return events
+
+    def swipe_phase(self):
+        if self.swipe_at is None or self.t < self.swipe_at:
+            return None
+        return min(1.0, (self.t - self.swipe_at) / SWIPE)
 
     def _run(self, used):
         rng = self.rng

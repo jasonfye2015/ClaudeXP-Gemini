@@ -99,6 +99,8 @@ def test_now_and_then_one_runs_across_his_eyes():
     starts, counts, seen = [], [], []
     for _ in range(int(600 / 0.05)):
         for e in c.step(0.05):
+            if e[0] != "crawler":
+                continue
             starts.append(c.t)
             counts.append(e[1])
             runs = c.runs[-e[1]:]
@@ -115,3 +117,35 @@ def test_now_and_then_one_runs_across_his_eyes():
     assert 18 <= len(starts) <= 31 and all(19.9 < g < 30.1 for g in gaps)
     assert 2 in counts and 1 in counts and max(seen) <= 2
     assert sum(1 for k in seen if k) * 0.05 < len(starts) * 2.0 * 1.0 + 1     # (each gone within a second)
+
+
+def test_two_on_his_face_and_he_swipes_them_off():
+    import random
+
+    from hollowoak.engine import held
+    from hollowoak.game import crawlers as C
+    c = C.Crawlers(random.Random(2))
+    c.next = 1e9
+    c.runs = [c._run([]), c._run([])]
+    seen, events = [], []
+    for _ in range(int(1.0 / 0.02)):
+        events += c.step(0.02)
+        seen.append(c.swipe_phase())
+    phases = [s for s in seen if s is not None]
+    assert phases and phases[0] < 0.1 and phases[-1] > 0.9                   # (up, across, away - once)
+    assert sum(1 for e in events if e[0] == "swipe") == 1 and c.swipe_phase() is None
+    assert all(r.get("flung") for r in c.runs) or not c.runs                  # (and off they went)
+    c.runs = [c._run([])]                                                     # (one alone: he lets it run)
+    for _ in range(50):
+        c.step(0.02)
+        assert c.swipe_phase() is None
+    n = N.Night(seed=1)                                                       # (his hand: before his eyes at its middle)
+    wrist, axes = held.swipe(n, 0.5)
+    eye = np.array(n.eye)
+    look = np.array((math.sin(n.yaw) * math.cos(n.pitch), math.sin(n.pitch), -math.cos(n.yaw) * math.cos(n.pitch)))
+    right = np.array((math.cos(n.yaw), 0.0, math.sin(n.yaw)))
+    assert 0.1 < float(np.dot(wrist - eye, look)) < 0.3                        # (close before his eyes)
+    assert axes[0][1] > 0.5 and float(np.dot(axes[1], look)) > 0.5          # (fingers up; palm to his face)
+    assert float(np.dot(axes[2], right)) < 0                                  # (a left hand: the thumb to his left)
+    parts = held.arm_parts() + held.hand_parts()
+    assert len(parts) > 800 and all(len(p) == 3 for p in parts[:5])

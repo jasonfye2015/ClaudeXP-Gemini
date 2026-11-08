@@ -90,6 +90,12 @@ back up. The swarm: with the lantern out, one comes up the wand and onto the lan
 every 10-20, to 5-7 in all, crawling all over it; a shake that lights it and they all let go, each hanging from it on
 a thread of white silk, swinging, for 1.5-4 seconds before falling away; a shake that fails throws one or two off.
 
+Phase 2d - his free hand (done): when two are on his face at once (two crossing together, or one he walked into and
+another), a moment later his left hand comes up from below - KayKit's Mage sleeve (tools/export_arm.py ->
+assets/arm.npz) with a hand made in engine/held.py, palm to his face, fingers spread - sweeps across before his eyes
+and away to the right in under half a second; as it passes the middle of his view, they're flung off to the side.
+Not more often than every six seconds; one alone he lets run. A whoosh as it goes.
+
 ## Phase 3 - Ysmeine
 
 Her figure (Quaternius's Spider, scaled), her moods, the language model's voice with its guardrails and memory, the

@@ -7,6 +7,7 @@
   skittering    many small legs, going away fast
   the lantern   its rattle when shaken; a soft puff when it gutters out
   a thud        a fall to the wood
+  a whoosh      his hand across his face
 
     synth = Synth()
     synth.set(hum=0..1, height=0..1)     the steady parts
@@ -100,6 +101,13 @@ def _thud(rng, rate=RATE):
     return y / (np.abs(y).max() or 1.0)
 
 
+def _whoosh(rng, rate=RATE):
+    n = int(0.4 * rate)
+    t = np.arange(n) / rate
+    y = _shaped_noise(rng, n, 250, 3500, 0.6, rate) * np.sin(np.pi * t / 0.4) ** 2
+    return y / (np.abs(y).max() or 1.0)
+
+
 def _puff(rng, rate=RATE):
     n = int(0.35 * rate)
     y = _shaped_noise(rng, n, 150, 1800, 0.8, rate) * _env(n, 0.03, 0.3, rate)
@@ -117,8 +125,9 @@ class Synth:
                        "slip": [_creak(r, 0.75, rate)],
                        "skitter": [_skitter(rng, d, rate) for d in (0.45, 0.6, 0.75)],
                        "rattle": [_rattle(r, rate), _rattle(r, rate)],
-                       "catch": [_catch(r, rate)], "thud": [_thud(rng, rate)], "puff": [_puff(rng, rate)]}
-        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25}
+                       "catch": [_catch(r, rate)], "thud": [_thud(rng, rate)], "puff": [_puff(rng, rate)],
+                       "whoosh": [_whoosh(rng, rate)]}
+        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35}
         self.voices = []                    # [samples, position, gain]
         self.n = 0                          # (samples played so far)
         self.hum, self._hum = 0.0, 0.0
