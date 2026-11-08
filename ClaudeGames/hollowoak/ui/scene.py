@@ -135,7 +135,12 @@ class SceneView(QWidget):
     def _shown(self):
         return int((self.t - self.line_t) * REVEAL)
 
-    def _her(self, text, choices):
+    def _her(self, text, choices, again=False):
+        if again:                                              # (back to where they were: no word said again)
+            self._clear()
+            self._choices_for(choices)
+            self._lay()
+            return
         from ..game import notes
         view = self.shell.view
         view.note(notes.for_line(text))
@@ -148,11 +153,17 @@ class SceneView(QWidget):
         if audio is not None:
             audio.say(text)
         self._clear()
+        self._choices_for(choices)
+        self._lay()
+
+    def _choices_for(self, choices):
+        self.choices = choices
         if choices is None:
             self._button("Go on", self._go_on)
         elif choices:
             for i, c in enumerate(choices):
                 self._button(c, lambda _x=False, i=i, c=c: self._chose(i, c))
+            self._offer_button()
         else:
             e = QLineEdit(self)
             e.setPlaceholderText("Answer her...")
@@ -161,7 +172,28 @@ class SceneView(QWidget):
             self.widgets.append(e)
             e.show()
             e.setFocus()
+            self._offer_button()
+
+    def _offer_button(self):
+        """If he carries anything: something to give her."""
+        if self.shell.view.night.pack:
+            self._button("✦  Offer her something...", self._open_pack)
+
+    def _open_pack(self):
+        from ..game.offerings import ITEMS
+        self._clear()
+        for item in list(self.shell.view.night.pack):
+            self._button("✦  " + ITEMS[item][0][:1].upper() + ITEMS[item][0][1:],
+                         lambda _x=False, item=item: self._offered(item))
+        self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
         self._lay()
+
+    def _offered(self, item):
+        from ..game.offerings import ITEMS
+        self.his_text = "(You offer her " + ITEMS[item][0] + ".)"
+        self._clear()
+        self.waiting = True
+        self.talk.offer(item, lambda t, ch: self.replies.put((t, ch)))
 
     def _button(self, text, fn):
         b = QPushButton(text, self)

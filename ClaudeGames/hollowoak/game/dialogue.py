@@ -154,6 +154,32 @@ class Conversation:
         line, choices = self._at(nxt)
         done(line, choices)
 
+    FEEL = {"delight": "It delights you", "plain": "It is a small thing to you, but kindly meant",
+            "insult": "It insults you"}
+
+    def offer(self, item, done):
+        """He offers her something from his pack: her moods move as its worth decides; she answers - from the script
+        (and the talk goes on where it was), or the model, told how it lands. done(text, choices)."""
+        from . import offerings
+        tier, scripted = offerings.give(item, self.night)
+        name, said, _where = offerings.ITEMS[item]
+        self.history.append(("him", f"(offers {name})"))
+        if self.mode != "model":
+            self.history.append(("her", scripted))
+            node = script.SCENES[self.scene]["nodes"].get(self.node, {})
+            done(scripted, [c[0] for c in node.get("choices", [])] if self.ended is None else None)
+            return
+        msgs = [{"role": "system", "content": persona.system(self.context())}]
+        for who, t in self.history[-14:-1]:
+            msgs.append({"role": "assistant" if who == "her" else "user", "content": t})
+        msgs.append({"role": "user", "content": f"({said} {self.FEEL[tier]}. Answer him - one to three sentences.)"})
+
+        def back(reply):
+            line = persona.clean(reply) or scripted
+            self.history.append(("her", line))
+            done(line, [])
+        self.voice.ask(msgs, back)
+
     def supper(self):
         """Guest, or meal: her hunger against what she's come to think of him."""
         m = self.night.moods

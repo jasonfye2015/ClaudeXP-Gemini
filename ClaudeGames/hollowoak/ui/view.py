@@ -256,6 +256,17 @@ class GameView(QOpenGLWidget):
         self.scene = self.scene_ui = None
         self.setFocus()
 
+    def _prompt(self, n):
+        from ..game.offerings import ITEMS
+        spot = n.cocoons.near(n)
+        if spot is not None:
+            keep = n.KEEPSAKES.get(spot["id"])
+            if spot["id"] in n.cocoons.burst and keep and keep not in n.taken:
+                return "take " + ITEMS[keep][0]
+            return "look closer"
+        item = n.finds.near(n)
+        return ("take " + ITEMS[item][0]) if item else None
+
     def wait_for_dawn(self):
         """Waiting with her for the light: the dark a moment, and then it's coming."""
         from ..game import sky as S
@@ -303,6 +314,11 @@ class GameView(QOpenGLWidget):
         from ..game import notes
         for e in n.events:
             self.note(notes.unlock_for(e, n))
+            if e[0] == "take":                                # (into his pack - for her)
+                from ..game.offerings import ITEMS
+                self.whisper = ("You take " + ITEMS[e[1]][0] + ".", time.perf_counter(), 2.5)
+                if e[1] == "journal":
+                    self.note(["journal"])
             if e[0] == "cocoon":                              # (her guest: who he was, now in his notes)
                 self.note([e[1]])
                 title = notes.PAGES[e[1]][1]
@@ -408,10 +424,19 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, a))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "E   -   shake the lantern")
-        if n.cocoons.near(n) is not None and n.dying is None:      # (something wrapped, close: look closer)
+        prompt = self._prompt(n)
+        if prompt and n.dying is None:                            # (something to look at, or take)
             p.setPen(QColor(220, 200, 170, 200))
             p.setFont(QFont(SERIF, 13))
-            p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   look closer")
+            p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   " + prompt)
+        if n.pack:                                                # (what he carries: offerings, for her)
+            from ..game.offerings import ITEMS
+            f = QFont(SERIF, 10)
+            f.setItalic(True)
+            p.setFont(f)
+            p.setPen(QColor(210, 190, 160, 190))
+            p.drawText(QRectF(14, H - 200, W * 0.4, 40), Qt.AlignLeft | Qt.TextWordWrap,
+                       "Carrying: " + ", ".join(ITEMS[i][0] for i in n.pack))
         if n.teetering and self.teeters <= 3:                    # (swaying on a strand: what to do, the first few times)
             p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
             p.setFont(QFont(SERIF, 13))

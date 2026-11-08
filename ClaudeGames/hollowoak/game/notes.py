@@ -31,6 +31,9 @@ PAGES = {
     "wants": ("Her", "What she wants",
               "To be surprised. To be interesting to someone, and to find someone interesting. She has outlived every "
               "conversation she ever had."),
+    "journal": ("Her", "Maudren's journal",
+                "Half of it is Ysmeine's words, copied down. On the last page, in a shaking hand: Not her name. She "
+                "took it the night the oak went hollow. The one she will not speak of knew her before."),
     "fire": ("Her", "What she fears",
              "Fire. Everything that lives in silk fears it, she said - and that it is not a thing she tells."),
     # ---- her ways
