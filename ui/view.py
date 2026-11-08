@@ -109,6 +109,8 @@ class GameView(QOpenGLWidget):
         rec = self.shell.records
         voice = Voice(rec.options.get("voice") or "none")
         self.talk = Conversation(night, voice, dict(rec.reputation))
+        from ..game import hidden
+        self.talk.knows_her = hidden.knows(rec.notes)
         if talk_state:
             self.talk.memory = list(talk_state.get("memory", []))
             self.talk.lies = int(talk_state.get("lies", 0))
@@ -159,6 +161,9 @@ class GameView(QOpenGLWidget):
             self.audio.aloud = bool(o["aloud"])
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
+            if self.audio is not None:
+                fire = n.ending.name == "Fire" and not n.ending.done
+                self.audio.synth.set(rain=min(1.0, n.ending.t / 2.0) if fire else 0.0)   # (the roar of it)
             for e in n.events:
                 if e[0] == "ending" and e[1] == "line":
                     if self.audio is not None:
@@ -230,6 +235,8 @@ class GameView(QOpenGLWidget):
                     self.whisper = (self.SPELL_WORDS.get((e[1], e[2]), ""), now, 3.0)
                 elif e == ("her", "hurt"):
                     self.whisper = ("Somewhere above, something hisses and pulls back from the light.", now, 4.0)
+                elif e[0] == "ablaze":
+                    self.whisper = ("It catches.", now, 4.0)
                 elif e[0] == "smoulder":
                     self.whisper = ("The silk blackens under your hand, and smokes. The whole oak shudders.", now, 5.0)
                 elif e[0] == "mark":
@@ -263,6 +270,13 @@ class GameView(QOpenGLWidget):
         sc = self.scene
         self.inp.yaw, self.inp.pitch = n.yaw, n.pitch
         n.step(dt, self.inp)
+        if n.ending is not None:                                 # (fire: no more talk - it's how it ends)
+            self.scene_ui.hide()
+            self.scene_ui.deleteLater()
+            self.scene = self.scene_ui = None
+            n.riders = ()
+            self.setFocus()
+            return
         sc.step(dt)
         self.inp.yaw = n.yaw                                     # (he faces her)
         n.camera = sc.camera() if sc.placed and n.her.staged is not None else None
@@ -445,6 +459,10 @@ class GameView(QOpenGLWidget):
                 self.whisper = (title + ("." if e[3] else " - still, now. Empty of them."), time.perf_counter(), 3.5)
         if int(n.time * 2) != int((n.time - 0.05) * 2):          # (twice a second: has he seen her moods in the light?)
             self.note(notes.for_moods(n.moods))
+            from ..game import hidden
+            self.note(hidden.unlock(self.shell.records.notes))
+            if getattr(self, "talk", None) is not None:
+                self.talk.knows_her = hidden.knows(self.shell.records.notes)
 
     def _murmurs(self, n):
         """Her words, unasked, now and then: when she leans out to him, comes close in the dark, turns to his
@@ -487,7 +505,8 @@ class GameView(QOpenGLWidget):
         elif n.ending is not None:
             ending = {"Dawn": "dawn, and you let him go", "Cast out": "dawn, and you cast him out",
                       "Bound": "him staying, wrapped, at his own asking",
-                      "The gift": "dawn, and your gift to him"}.get(n.ending.name, "dawn")
+                      "The gift": "dawn, and your gift to him",
+                      "The hidden": "dawn, and he knew your name", "Fire": "fire, in your silk"}.get(n.ending.name, "dawn")
         self.shell.records.night_over(dict(t, seconds=n.time - t.get("from", 0.0), ending=ending, manner=n.manner(),
                                            lies=talk.lies if talk else 0,
                                            kept=talk.memory[-1] if talk and talk.memory else ""))
@@ -524,7 +543,7 @@ class GameView(QOpenGLWidget):
                 p.drawText(12, 20 + i * 14, line)
         o = self.shell.records.options
         if n.ending is not None:
-            orbs.draw_ending(p, W, H, n.ending, self.shell.records, self.first_ending)
+            orbs.draw_ending(p, W, H, n.ending, self.shell.records, self.first_ending, n.ending_scene)
             return
         if n.dying is not None:
             if o["orbs"]:

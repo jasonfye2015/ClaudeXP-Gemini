@@ -19,7 +19,17 @@ LINES = {
     "The gift": ("Here: my venom, and a secret. Death is a door, little wizard - and some of us learn to walk back "
                  "through it.",
                  "You left at dawn with her venom in your blood, and the first word of something older than death."),
+    "The hidden": ("Ilsabet. Say it once more, little wizard, so I know I did not dream it.",
+                   "At first light she told you everything she had been. You left knowing the oldest name in the forest "
+                   "- and she, for the first time in three hundred years, was known."),
+    "Fire": ("Not the silk - not the silk - go. Go, little wizard - the roots - now!",
+             "The Hollow Oak burned until morning. You came out through the roots with your sleeves alight. Of her, "
+             "nothing was found - not a leg, not a thread."),
 }
+# each ending's own scene: the light it comes in (r, g, b), whether she's before him for it, and what else is drawn
+LOOK = {"Dawn": ((150, 118, 86), True, None), "Cast out": ((70, 82, 100), False, "cold"),
+        "Bound": ((130, 126, 130), True, "silk"), "The gift": ((96, 140, 92), True, "venom"),
+        "The hidden": ((170, 128, 60), True, "name"), "Fire": ((220, 96, 30), False, "fire")}
 LIGHT, SPEAK, QUIET, CARD = 3.0, 2.6, 9.5, 11.5
 
 
@@ -35,6 +45,7 @@ class Ending:
     def __init__(self, name):
         self.name = name
         self.her, self.after = LINES[name]
+        self.light, self.staged, self.fx = LOOK[name]
         self.t = 0.0
         self.glow = 0.0
         self.black = 0.0

@@ -104,6 +104,9 @@ class Spells:
                 night.flags["smouldered"] = night.flags.get("smouldered", 0) + 1
                 self.lit.append(("ember", (ex + fx * 0.4, night.y + 0.03, ez + fz * 0.4), self.t, 5.0))
                 out.append(("smoulder", getattr(night.on, "name", "silk")))
+                if night.flags["smouldered"] >= 2:                 # (twice: and this time it catches)
+                    night.flags["ablaze"] = True
+                    out.append(("ablaze",))
             elif her_d > 6.0:
                 night.moods.fascination = min(100.0, night.moods.fascination + 3.0)
             elif her_d < 4.0:
@@ -146,6 +149,10 @@ class Spells:
                 m.suspicion = min(100.0, m.suspicion + 15.0)
                 m.patience = max(0.0, m.patience - 20.0)
                 night.flags["smouldered"] = night.flags.get("smouldered", 0) + 1
+                if night.flags["smouldered"] >= 2:
+                    night.flags["ablaze"] = True
+                    return "insult", "No - no, it's caught - what have you done -", \
+                        "Fire on your silk again, and this time it catches. The web is burning. You scream"
                 return "insult", "Fire. On my silk. Close your hand. Close it now, or I will close it for you.", \
                     "He opens his hand and there is fire in it - on your silk. You are terrified, and furious"
             m.fascination = min(100.0, m.fascination + 2.0)

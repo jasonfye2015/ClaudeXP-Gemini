@@ -245,7 +245,7 @@ leaves and mushrooms, like Before the night).
 ## Phase 4 - the night
 
 Sub-phases: 4a the acts (done) - 4b offerings (done) - 4c spells (done) (Warmth: the road to Fire) - 4d venom (and the antidote) (done) -
-4e saving (done) - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
+4e saving (done) - 4f the rest of the endings (The hidden, Fire) and each ending's own scene (done). Phase 4 done.
 
 Phase 4a - the acts (done). game/acts.py: threshold (in, to her loom) -> audience (her loom) -> gallery (her guests;
 sent up to look at them) -> supper (her larder; she calls him down at midnight, or sooner once he's looked at three of
@@ -300,6 +300,13 @@ opened, what he's chosen, her venom and the visions seen, the memories given her
 remembers of him tonight (and his lies). The den's live things - her small ones, the lantern, she herself - start
 fresh about him. The title: "Go on from a save" lists them (newest first). Begin clears them (a new night); an ending
 leaves them, to go on from. A night gone on with is the same night: its time counts, not as another night or meeting.
+
+Phase 4f - the rest of the endings (done). Fire: Warmth on her silk a second time, in the den or before her, and it
+catches - no more night: flames up from below, sparks, the den lit orange, the roar of it, her last words, the dark.
+The hidden: a secret for the player to find - how it's reached is in game/hidden.py and nowhere else, on purpose. And
+each ending its own scene (game/ending.py LOOK): she's before him, framed, for Dawn, Bound, The gift and The hidden
+(game/scene.py's placing and camera); Dawn in warm light, Cast out grey and alone, Bound with the silk closing over his
+sight, The gift with her venom glowing green about him, The hidden in gold, Fire in fire.
 
 ## Phase 5 - music, sound, polish
 

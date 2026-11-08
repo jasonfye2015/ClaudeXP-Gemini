@@ -131,19 +131,29 @@ def draw_danger(p, W, H, body, t):
             p.fillRect(rect, g)
 
 
-def draw_ending(p, W, H, ending, records, first=False):
-    """Dawn's ending: the light coming down, her last words, the dark, and the line that says which it was."""
+def draw_ending(p, W, H, ending, records, first=False, scene=None):
+    """How it ends: its own light coming into the den, her last words, the dark, and the line that says which it was -
+    and for each, its own scene: her before him, the cold, the silk closing, her venom, her name, the fire."""
     from . import fonts
     from ..game.ending import CARD, card
     if ending.glow > 0:
-        g = QRadialGradient(QPointF(W / 2, -H * 0.2), H * 1.4)        # (light added to the den: brightening it)
-        g.setColorAt(0, QColor(int(150 * ending.glow), int(118 * ending.glow), int(86 * ending.glow)))
-        g.setColorAt(0.6, QColor(int(90 * ending.glow), int(58 * ending.glow), int(40 * ending.glow)))
+        r, g0, b = ending.light
+        k = ending.glow
+        g = QRadialGradient(QPointF(W / 2, -H * 0.2 if ending.fx != "fire" else H * 1.2), H * 1.4)
+        g.setColorAt(0, QColor(int(r * k), int(g0 * k), int(b * k)))
+        g.setColorAt(0.6, QColor(int(r * 0.6 * k), int(g0 * 0.5 * k), int(b * 0.46 * k)))
         g.setColorAt(1, QColor(30, 18, 14))
         p.save()
         p.setCompositionMode(QPainter.CompositionMode_Plus)
         p.fillRect(QRectF(0, 0, W, H), g)
         p.restore()
+    _ending_fx(p, W, H, ending)
+    if scene is not None and scene.box > 0:                         # (her scene's frame, for her ending)
+        bar = H * 0.11 * scene.box
+        p.fillRect(QRectF(0, 0, W, bar), QColor(0, 0, 0))
+        p.fillRect(QRectF(0, H - bar, W, bar), QColor(0, 0, 0))
+    if scene is not None and scene.dim > 0:
+        p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * scene.dim)))
     if ending.show_line:
         a = min(1.0, (ending.t - 2.6) / 0.8)
         p.setFont(fonts.her(records, 34))
@@ -170,6 +180,69 @@ def draw_ending(p, W, H, ending, records, first=False):
             p.drawText(QRectF(0, H * 0.42 + 90, W, 20), Qt.AlignHCenter, "(found for the first time)")
         p.setPen(QColor(150, 140, 130, int(150 * max(0.0, min(1.0, (age - 4.0) / 2.0)))))
         p.drawText(QRectF(0, H * 0.88, W, 20), Qt.AlignHCenter, "Click to go back to the title")
+
+
+def _ending_fx(p, W, H, ending):
+    """What each ending has of its own, over the den."""
+    t, fx = ending.t, ending.fx
+    k = max(0.0, 1.0 - ending.black)
+    if fx == "fire":                                                 # (her silk alight: flames up from below, sparks)
+        rise = min(1.0, t / 3.0)
+        p.save()
+        p.setCompositionMode(QPainter.CompositionMode_Plus)
+        for layer, count, width, tall, alpha in ((0, 9, 0.11, 0.62, 110), (1, 16, 0.06, 0.4, 170)):
+            for i in range(count):                                    # (tongues: broad and dim behind, bright before)
+                ph = i * 2.9 + layer * 1.3
+                x = W * (i + 0.5) / count + math.sin(t * 1.9 + ph) * W * 0.025
+                h = H * rise * tall * (0.55 + 0.3 * (0.5 + 0.5 * math.sin(t * 6.3 + ph)) + 0.15 * math.sin(ph * 1.7) ** 2)
+                w = W * width
+                tip = QPointF(x + math.sin(t * 4.7 + ph) * w * 0.35, H - h)
+                path = QPainterPath(QPointF(x - w, H))
+                path.cubicTo(QPointF(x - w * 1.1, H - h * 0.45), QPointF(x - w * 0.15, H - h * 0.6), tip)
+                path.cubicTo(QPointF(x + w * 0.25, H - h * 0.62), QPointF(x + w * 1.1, H - h * 0.4), QPointF(x + w, H))
+                g = QLinearGradient(QPointF(0, H), QPointF(0, H - h))
+                g.setColorAt(0, QColor(255, 190, 80, int(alpha * k)))
+                g.setColorAt(0.5, QColor(240, 100, 25, int(alpha * 0.6 * k)))
+                g.setColorAt(1, QColor(120, 20, 0, 0))
+                p.fillPath(path, g)
+        p.setPen(Qt.NoPen)
+        for i in range(70):                                         # (sparks, rising)
+            u = (t * (0.18 + 0.1 * ((i * 37) % 7) / 7) + i * 0.137) % 1.0
+            x = W * ((i * 0.6180339) % 1.0) + math.sin(t * 3 + i) * 12
+            p.setBrush(QColor(255, 190, 90, int(220 * k * (1 - u) * rise)))
+            p.drawEllipse(QPointF(x, H * (1 - u)), 2.2, 2.2)
+        p.restore()
+        p.fillRect(QRectF(0, 0, W, H), QColor(40, 18, 6, int(90 * rise * k)))   # (smoke)
+    elif fx == "cold":                                              # (cast out: the forest's grey morning)
+        p.fillRect(QRectF(0, 0, W, H), QColor(120, 130, 140, int(70 * min(1.0, t / 3.0) * k)))
+    elif fx == "silk":                                              # (bound: the silk closing over his sight)
+        n = int(min(40, max(0.0, t - 3.0) * 6))
+        pen = QPen(QColor(235, 235, 240, int(120 * k)))
+        pen.setWidthF(1.4)
+        p.setPen(pen)
+        for i in range(n):
+            a = i * 2.39996
+            y0, y1 = H * (0.5 + 0.55 * math.sin(a)), H * (0.5 + 0.55 * math.cos(a * 1.3))
+            path = QPainterPath(QPointF(-10, y0))
+            path.quadTo(QPointF(W / 2, H / 2 + math.sin(a * 2) * H * 0.2), QPointF(W + 10, y1))
+            p.drawPath(path)
+        if n:
+            p.fillRect(QRectF(0, 0, W, H), QColor(220, 220, 225, int(min(110, n * 3) * k)))
+    elif fx == "venom":                                             # (the gift: her venom in him, glowing green)
+        p.setPen(Qt.NoPen)
+        for i in range(40):
+            u = (t * 0.12 + i * 0.173) % 1.0
+            x = W * ((i * 0.381966) % 1.0) + math.sin(t + i) * 20
+            p.setBrush(QColor(140, 255, 140, int(120 * k * math.sin(math.pi * u) * min(1.0, t / 3.0))))
+            p.drawEllipse(QPointF(x, H * (1 - u)), 3.0, 3.0)
+    elif fx == "name":                                              # (the hidden: her name, in the light)
+        from ..game.hidden import NAME
+        a = max(0.0, min(1.0, (t - 4.0) / 3.0)) * k
+        f = QFont(SERIF, 54)
+        f.setLetterSpacing(QFont.AbsoluteSpacing, 22)
+        p.setFont(f)
+        p.setPen(QColor(255, 214, 140, int(70 * a)))
+        p.drawText(QRectF(0, H * 0.16, W, 90), Qt.AlignHCenter, NAME.upper())
 
 
 def draw_death(p, W, H, death, t, first=False):

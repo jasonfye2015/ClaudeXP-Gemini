@@ -117,6 +117,7 @@ class Night:
         self.body = Condition(random.Random(self.rng.random()))        # (how he's holding up: the orbs)
         self.dying = None                                              # (a Death, once something gives out)
         self.ending = None                                             # (an Ending, when dawn comes)
+        self.ending_scene = None                                       # (her, before him, for it: game/scene.py)
         self.acts = Acts()                                             # (the night's shape: game/acts.py)
         self.flags = {}                                                # (what he's chosen tonight: to stay...)
         self.lies = 0
@@ -185,14 +186,20 @@ class Night:
         if self.ending is not None:                                    # (dawn: how it ends)
             self.sky.step(dt)
             self.events.extend(self.ending.step(dt))
+            sc = self.ending_scene
+            if sc is not None:
+                sc.step(dt)
+                self.camera = sc.camera() if sc.placed and self.her.staged is not None else None
+            return
+        if self.flags.get("ablaze"):                                   # (her silk, alight: there's no more night)
+            self.end("Fire")
             return
         first = len(self.events)                                       # (what happens this step, from here)
         self.events.extend(self.sky.step(dt))
         for e in self.acts.step(dt, self):
             self.events.append(e)
             if e == ("act", "dawn"):                                   # (the light: how it ends, decided by all of it)
-                self.ending = Ending(self.acts.decide(self))
-                self._unsee()
+                self.end(self.acts.decide(self))
                 return
         for e in self.venom.step(dt, self):                            # (her venom: through her eyes, a while)
             self.events.append(e)
@@ -247,7 +254,24 @@ class Night:
             return []
         out = self.spells.cast(name, self)
         self.events.extend(out)
+        if self.flags.get("ablaze"):
+            self.end("Fire")
         return out
+
+    def end(self, name):
+        """How it ends: its scene begins - for the ones she's there for, her before him."""
+        from .scene import Scene
+        self.ending = Ending(name)
+        self._unsee()
+        self.on, self.sway, self.vy = None, 0.0, 0.0
+        self.crawlers.runs.clear()
+        self.danglers.hanging.clear()
+        self.swarm.babies.clear()
+        if self.ending.staged:
+            self.ending_scene = Scene(self, "ending", random.Random(self.rng.random()))
+            self.ending_scene.phase, self.ending_scene.t = "in", 0.0
+        elif self.her.staged is not None:
+            self.her.unstage()
 
     def take(self, item):
         if item not in self.taken:
