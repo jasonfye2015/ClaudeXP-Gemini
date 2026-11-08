@@ -61,7 +61,8 @@ class Conversation:
     def context(self):
         n = self.night
         return {"place": PLACES.get(n.where(), "the Hollow"), "time": n.clock_words(), "moods": n.moods.values(),
-                "manner": n.manner(), "dark": (not n.lantern) or n.lamp.state == "out", "bitten": n.moods.bites > 0,
+                "manner": n.manner(), "dark": (not n.lantern) or n.lamp.state == "out", "bitten": n.venom.active,
+                "cured": n.venom.cured,
                 "memory": self.memory, "reputation": self.reputation}
 
     def _keep(self, fact):
@@ -187,6 +188,42 @@ class Conversation:
         if memory is not None and name == "memory":
             from .spells import MEMORIES
             self.memory.append(MEMORIES[memory][1].replace("shows", "showed"))  # (she keeps what she sees)
+        if self.mode != "model":
+            self.history.append(("her", scripted))
+            node = script.SCENES[self.scene]["nodes"].get(self.node, {})
+            done(scripted, [c[0] for c in node.get("choices", [])] if self.ended is None else None)
+            return
+        msgs = [{"role": "system", "content": persona.system(self.context())}]
+        for who, t in self.history[-14:-1]:
+            msgs.append({"role": "assistant" if who == "her" else "user", "content": t})
+        msgs.append({"role": "user", "content": f"({said}. Answer him - one to three sentences.)"})
+
+        def back(reply):
+            line = persona.clean(reply) or scripted
+            self.history.append(("her", line))
+            done(line, [])
+        self.voice.ask(msgs, back)
+
+    def ask_cure(self, done):
+        """He asks her to take her venom out of him. She gives him the phial if she thinks well enough of him (and
+        doesn't doubt him too much); else he wears her bite till dawn. Once a night. done(text, choices)."""
+        n, m = self.night, self.night.moods
+        self.flags["asked_cure"] = True
+        give = m.regard >= 50 and m.suspicion < 60
+        self.history.append(("him", "(asks you to take your venom out of him)"))
+        if give:
+            n.venom.cure("given")
+            n._unsee()
+            n.body.poison = max(0.0, n.body.poison - 25.0)
+            m.regard = min(100.0, m.regard + 3.0)
+            n.flags["given_antidote"] = True
+            n.events.append(("antidote", "given"))
+            scripted = "Hold still. Drink. There - it is out of you. Do not make me regret it, little wizard."
+            said = "He asks you to take your venom out of him, and you choose to: you give him your antidote to drink"
+        else:
+            m.patience = max(0.0, m.patience - 5.0)
+            scripted = "No. You will carry my bite until dawn. Wear it, and remember who gave it to you."
+            said = "He asks you to take your venom out of him. You refuse"
         if self.mode != "model":
             self.history.append(("her", scripted))
             node = script.SCENES[self.scene]["nodes"].get(self.node, {})

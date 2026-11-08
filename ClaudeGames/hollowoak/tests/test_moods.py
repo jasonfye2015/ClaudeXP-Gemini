@@ -71,6 +71,7 @@ def test_a_careless_runner_is_prey():
 def test_a_second_bite_is_supper():
     n = _ledge_night()
     n.moods.bites = 1
+    n.venom.start()                                                          # (her first bite still in him)
     her = n.her
     her.state, her.strike_t = "strike", her.t - 0.3                          # (mid-strike, and he's within reach)
     hx, hy, hz = n.eye

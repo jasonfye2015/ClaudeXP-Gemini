@@ -79,7 +79,10 @@ def _situation(ctx):
     if ctx.get("dark"):
         bits.append("His lantern is out; he is in the dark, and you see him perfectly.")
     if ctx.get("bitten"):
-        bits.append("You have bitten him once tonight; your venom is in him.")
+        bits.append("You have bitten him tonight; your venom is in him, and his words come out slurred.")
+    elif ctx.get("cured"):
+        bits.append("You bit him tonight, but your venom is out of him now" +
+                    (" - you gave him your antidote." if ctx["cured"] == "given" else "."))
     return " ".join(bits)
 
 

@@ -176,8 +176,12 @@ class SceneView(QWidget):
 
     def _offer_button(self):
         """If he carries anything: something to give her. And his spells, as gestures."""
-        if self.shell.view.night.pack:
+        from ..game.offerings import KEPT
+        n = self.shell.view.night
+        if any(i not in KEPT for i in n.pack):
             self._button("✦  Offer her something...", self._open_pack)
+        if n.venom.active and not self.talk.flags.get("asked_cure"):
+            self._button("✦  Ask her to take her venom out of you", self._ask_cure)
         sp = self.shell.view.night.spells
         if any(sp.ready(k) for k in ("light", "warmth", "illusion")) or sp.unshown():
             self._button("✧  Cast a spell...", self._open_spells)
@@ -204,6 +208,12 @@ class SceneView(QWidget):
         self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
         self._lay()
 
+    def _ask_cure(self):
+        self.his_text = "(You ask her to take her venom out of you.)"
+        self._clear()
+        self.waiting = True
+        self.talk.ask_cure(lambda t, ch: self.replies.put((t, ch)))
+
     def _cast(self, name, memory=None):
         self.his_text = {"light": "(You raise a hard white light.)", "warmth": "(You open your hand: a small flame.)",
                          "illusion": "(You wrap yourself in an illusion - a cloak of stars.)"}.get(name) or \
@@ -220,7 +230,8 @@ class SceneView(QWidget):
     def _open_pack(self):
         from ..game.offerings import ITEMS
         self._clear()
-        for item in list(self.shell.view.night.pack):
+        from ..game.offerings import KEPT
+        for item in [i for i in self.shell.view.night.pack if i not in KEPT]:
             self._button("✦  " + ITEMS[item][0][:1].upper() + ITEMS[item][0][1:],
                          lambda _x=False, item=item: self._offered(item))
         self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
@@ -274,6 +285,10 @@ class SceneView(QWidget):
         if not text.strip():
             return
         speaking = self._shown() < len(self.her_text)
+        n = self.shell.view.night
+        if n.venom.active:                                         # (her venom: it comes out wrong)
+            from ..game.venom import slur
+            text = slur(text.strip(), n.venom.rng)
         self.his_text = text.strip()
         self._clear()
         self.waiting = True

@@ -476,7 +476,10 @@ class Renderer:
             prog.vec("uEye", eye)
             dim = 0.3 + 0.7 * min(1.0, night.lamp.level) if night.lantern else 1.0     # (the lamp's own bounce)
             fl = lit["flash"]
-            prog.vec("uAmbient", (0.022 * dim + 0.3 * fl, 0.02 * dim + 0.32 * fl, 0.026 * dim + 0.42 * fl))
+            ven = getattr(night, "venom", None)
+            sees = 1.0 if ven is not None and ven.vision is not None else 0.0     # (through her eyes: the dark is clear)
+            prog.vec("uAmbient", (0.022 * dim + 0.3 * fl + 0.10 * sees, 0.02 * dim + 0.32 * fl + 0.16 * sees,
+                                  0.026 * dim + 0.42 * fl + 0.07 * sees))
             up = lit["sun_up"]                                  # (by day the sun from above; by night the moon)
             sun = np.array(lit["sun"], np.float32)
             prog.vec("uMoonDir", -(self.moon * (1 - up) + sun * up))
@@ -706,6 +709,13 @@ class Renderer:
                 for j in range(-1, 2):
                     c = np.array((hx, hy, hz)) + side * (i * 0.05 + (0.025 if j % 2 else 0)) + np.array((0, j * 0.045, 0))
                     C._box(out, c, (0.022, 0.02, 0.02), (side, up, n_in), (0.72, 0.42, 0.08))
+        from ..game.offerings import hidden_shown
+        if "antidote" not in night.taken and "antidote" in finds.spots and hidden_shown(night):
+            ax, ay, az = finds.spots["antidote"]                # (the phial: green glass, a stopper)
+            f = np.array((1.0, 0.0, 0.0))
+            r = np.array((0.0, 0.0, 1.0))
+            C._blob(out, (ax, ay + 0.055, az), (0.035, 0.055, 0.035), (f, np.array(up), r), (0.25, 0.75, 0.3), seg=6)
+            C._box(out, (ax, ay + 0.13, az), (0.012, 0.025, 0.012), (f, np.array(up), r), (0.4, 0.28, 0.18))
         sp = getattr(night, "spells", None)
         if sp is not None and sp.shining("light") > 0:          # (the old marks: only this light shows them)
             from ..game import spells as S
@@ -878,7 +888,7 @@ class Renderer:
                     out.append(((*pos, 14.0), (1.1 * k, 1.15 * k, 1.3 * k, 1)))
                 elif k > 0 and kind == "warmth":
                     out.append(((*pos, 3.5), (0.75 * k, 0.4 * k, 0.15 * k, 1)))
-                elif k > 0 and kind == "ember":
+                elif k > 0 and kind == "ember":  # (silk, smouldering)
                     flick = 0.75 + 0.25 * math.sin(now * 23) * math.sin(now * 7.1)
                     out.append(((*pos, 2.2), (0.8 * k * flick, 0.25 * k * flick, 0.05 * k, 1)))
         dying = getattr(night, "dying", None)

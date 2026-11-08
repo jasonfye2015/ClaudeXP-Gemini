@@ -197,6 +197,12 @@ class GameView(QOpenGLWidget):
                     self.whisper = ("Bitten." if e[1] == "face" else "Something bit your hand.", now, 2.5)
                 elif e[0] == "hurt" and e[1] > 20:
                     self.whisper = ("You hit the wood hard.", now, 2.5)
+                elif e == ("venom", "in"):
+                    self.whisper = ("Her venom is in you. It will not wear off before dawn.", now, 5.0)
+                elif e[0] == "vision_end":
+                    self.whisper = ("You are yourself again.", now, 2.5)
+                elif e[0] == "take" and e[1] == "antidote":
+                    self.whisper = ("Q  -  drink it", now, 6.0)
                 elif e[0] == "spell":
                     self.whisper = (self.SPELL_WORDS.get((e[1], e[2]), ""), now, 3.0)
                 elif e == ("her", "hurt"):
@@ -275,6 +281,40 @@ class GameView(QOpenGLWidget):
         item = n.finds.near(n)
         return ("take " + ITEMS[item][0]) if item else None
 
+    def _venom(self, p, W, H, n):
+        """Her venom in him: the edges of his sight darkening, pulsing; and, now and then, her eyes instead of his."""
+        v = n.venom
+        if v.active and v.vision is None:
+            fx = self.shell.records.options.get("venom_fx", True)
+            pulse = 0.5 + 0.5 * math.sin(time.perf_counter() * 2.2) if fx else 0.5
+            g = QRadialGradient(QPointF(W / 2, H / 2), max(W, H) * 0.72)
+            g.setColorAt(0.45 if fx else 0.55, QColor(10, 18, 6, 0))
+            g.setColorAt(1, QColor(10, 18, 6, int(150 + 80 * pulse) if fx else 150))
+            p.fillRect(QRectF(0, 0, W, H), g)
+        if v.vision is None:
+            return
+        from ..game.venom import VISIONS, VISION_FOR
+        vid, age = v.vision
+        a = max(0.0, min(1.0, age / 0.8, (VISION_FOR - age) / 0.8))
+        p.fillRect(QRectF(0, 0, W, H), QColor(60, 110, 30, int(45 * a)))         # (her sight: green, and strange)
+        g = QRadialGradient(QPointF(W / 2, H / 2), max(W, H) * 0.62)
+        g.setColorAt(0.5, QColor(0, 0, 0, 0))
+        g.setColorAt(1, QColor(4, 10, 2, int(235 * a)))
+        p.fillRect(QRectF(0, 0, W, H), g)
+        p.setBrush(Qt.NoBrush)
+        for i in range(8):                                                       # (eight eyes: eight rounds of seeing)
+            ang = i / 8 * math.tau + 0.3
+            cx, cy = W / 2 + math.cos(ang) * W * 0.32, H / 2 + math.sin(ang) * H * 0.34
+            rr = min(W, H) * (0.16 if i % 2 else 0.11)
+            p.setPen(QColor(150, 200, 120, int(40 * a)))
+            p.drawEllipse(QPointF(cx, cy), rr, rr)
+        p.setFont(fonts.her(self.shell.records, 26))
+        box = QRectF(W * 0.12, H * 0.06, W * 0.76, H * 0.2)
+        p.setPen(QColor(0, 0, 0, int(170 * a)))
+        p.drawText(box.translated(2, 2), Qt.AlignHCenter | Qt.TextWordWrap, VISIONS[vid][0])
+        p.setPen(QColor(220, 240, 200, int(235 * a)))
+        p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, VISIONS[vid][0])
+
     def _spell_glow(self, p, W, H, n):
         """His spells, shining: Light hung above him, Warmth in his palm, an ember on the silk; and which are ready."""
         sp = n.spells
@@ -350,6 +390,10 @@ class GameView(QOpenGLWidget):
                    ("warmth", "cast"): "Warmth: a small flame in your palm.",
                    ("illusion", "cast"): "Illusion: for a while, her small ones cannot find you.",
                    ("memory", "cast"): "You remember something true, and it steadies you.",
+                   ("light", "missed"): "Your hands shake; the light comes apart in them.",
+                   ("warmth", "missed"): "Your hands shake; the flame gutters and is gone.",
+                   ("illusion", "missed"): "Your hands shake; the illusion tears like wet paper.",
+                   ("memory", "missed"): "You reach for it, and her venom muddies it.",
                    ("light", "resting"): "Not yet - the light needs a moment.",
                    ("warmth", "resting"): "Not yet.", ("illusion", "resting"): "Not yet.",
                    ("memory", "resting"): "Not yet."}
@@ -483,6 +527,7 @@ class GameView(QOpenGLWidget):
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   " + prompt)
         self._spell_glow(p, W, H, n)
+        self._venom(p, W, H, n)
         if n.pack:                                                # (what he carries: offerings, for her)
             from ..game.offerings import ITEMS
             f = QFont(SERIF, 10)
@@ -603,6 +648,11 @@ class GameView(QOpenGLWidget):
         spell = {Qt.Key_1: "light", Qt.Key_2: "warmth", Qt.Key_3: "illusion", Qt.Key_4: "memory"}.get(k)
         if spell and self.night is not None and getattr(self, "scene", None) is None:
             self.night.cast(spell)
+            return
+        if k == Qt.Key_Q and self.night is not None and getattr(self, "scene", None) is None:   # (the antidote)
+            if self.night.drink():
+                self.whisper = ("You drink. It is bitter, and cold - and her venom goes out of you.",
+                                time.perf_counter(), 5.0)
             return
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
             self.night.lamp.shake()

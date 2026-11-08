@@ -2,6 +2,7 @@
 computer's mute. If there's no sound device, there's simply no sound."""
 import math
 import random
+import time
 
 from PySide6.QtCore import QIODevice
 
@@ -77,7 +78,10 @@ class DenAudio:
             s.set(rain=sky.strength if sky.weather in ("rain", "storm") else 0.0)
         moods = getattr(night, "moods", None)
         if moods is not None:
-            s.set(pitch=moods.hum_pitch())
+            v = getattr(night, "venom", None)
+            waver = 1.0 + (0.05 * math.sin(time.perf_counter() * 1.7) + 0.02 * math.sin(time.perf_counter() * 4.3)
+                           if v is not None and v.active else 0.0)
+            s.set(pitch=moods.hum_pitch() * waver)
         her = getattr(night, "her", None)
         if her is not None and d is None:
             near = max(0.0, 1.0 - math.dist(her.at(), night.eye) / 14.0)
