@@ -1,6 +1,7 @@
-"""Her voice: which language model speaks for her, if any - and asking it, in a thread, so the night never waits.
+"""Her words: which language model writes what she says (text, on screen), if any - and asking it, in a thread, so
+the night never waits.
 
-Three choices (Before the night > Options > Her voice):
+Three choices (Before the night > Options > Her words):
     nemomix-unleashed-12b   NemoMix Unleashed 12B - the best of them at playing a part; large (about 7.5 GB)
     gemma3-4b               Gemma 3 4B - lighter (about 2.5 GB), quicker, a little plainer
     none                    no model: she speaks from a script, and he answers by choosing from lines offered
