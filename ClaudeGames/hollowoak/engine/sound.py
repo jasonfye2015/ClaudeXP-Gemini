@@ -147,6 +147,7 @@ class Synth:
         self.height, self._height = 0.0, 0.0
         self.her, self._her = 0.0, 0.0
         self.pitch, self._pitch, self._hph = 1.0, 1.0, 0.0
+        self.speech = None                  # (her voice, a line at a time: [samples, position, gain])
         self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
 
@@ -168,6 +169,14 @@ class Synth:
         self.voices.append([bank[self._pick % len(bank)], 0, gain * self.levels[name]])
         if len(self.voices) > 12:
             self.voices.pop(0)
+
+    def speak(self, samples, gain=1.0):
+        """A line in her voice (already at the synth's rate): it plays over the den, which quiets a little for it."""
+        if samples is not None and len(samples):
+            self.speech = [np.asarray(samples, np.float64), 0, gain]
+
+    def speaking(self):
+        return self.speech is not None
 
     def render(self, n):
         rate = self.rate
@@ -194,6 +203,15 @@ class Synth:
             i = (self.n + np.arange(n)) % len(self.rustle_loop)
             legs = 0.45 + 0.55 * np.abs(np.sin(math.tau * 2.3 * t)) ** 6 + 0.3 * np.abs(np.sin(math.tau * 3.1 * t + 1)) ** 8
             out += self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
+        # her voice, over it all - and the den hushed a little while she speaks
+        if self.speech is not None:
+            out *= 0.6
+            buf, pos, g = self.speech
+            m = min(n, len(buf) - pos)
+            out[:m] += buf[pos:pos + m] * g * 0.9
+            self.speech[1] = pos + m
+            if self.speech[1] >= len(buf):
+                self.speech = None
         # the one-offs
         keep = []
         for v in self.voices:

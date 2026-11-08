@@ -168,6 +168,13 @@ Local Storage/LLM Models/models/<name>/. LLM Help: a window saying where to down
 file names), where to put them, NemoMix's info.json (ChatML) with a copy button, the engine, and a button that opens
 the models folder; Check again rescans. Voice.ask() asks in a thread (for 3c proper: her persona, guardrails, memory).
 
+Her voice, aloud (done): the user picked "Kathleen - rasp" from sixteen auditions (four Piper voices, each plain,
+ancient, rasp, many mouths). engine/herspeech.py keeps a Piper worker open in the Timeline's voice runtime
+(engine/piper_worker.py - each sentence spoken alone and joined: Piper's own joining turned to noise) and
+engine/rasp.py makes it hers: five semitones down, vocal fry, driven rough, an octave-down whisper 40 ms behind, a
+scratch on top, the hollow's echo. Played over the den (which hushes a little for her). Options: "Her voice, aloud"
+(on), with Hear her; readied in the background when Before the night opens, so a line comes in about a second.
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).

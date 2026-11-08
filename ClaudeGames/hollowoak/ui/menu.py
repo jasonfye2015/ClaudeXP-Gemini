@@ -409,7 +409,32 @@ class NightMenu(QWidget):
             d.setContentsMargins(26, 0, 0, 4)
             lay.addWidget(d)
         self._voice_check()
+        lay.addSpacing(8)
+        aloud = QHBoxLayout()
+        c = QCheckBox("Her voice, aloud")
+        c.setChecked(bool(o["aloud"]))
+        c.toggled.connect(lambda v: self._set("aloud", bool(v)))
+        aloud.addWidget(c)
+        from ..engine.herspeech import HerSpeech
+        have = HerSpeech().available()
+        st = QLabel("Kathleen, rasping" if have else "no voice runtime here")
+        st.setStyleSheet(f"color: {'#8FC48A' if have else '#B07A6A'}; font-size: 12px;")
+        aloud.addStretch(1)
+        aloud.addWidget(st)
+        lay.addLayout(aloud)
+        d = QLabel("Her lines spoken as well as written: a voice already on this computer (the Timeline's Piper), "
+                   "pitched down, creaking, whispering under itself.")
+        d.setObjectName("note")
+        d.setWordWrap(True)
+        d.setContentsMargins(26, 0, 0, 4)
+        lay.addWidget(d)
         row = QHBoxLayout()
+        hear = QPushButton("Hear her")
+        hear.setObjectName("small")
+        hear.setCursor(Qt.PointingHandCursor)
+        hear.setEnabled(have)
+        hear.clicked.connect(self._hear_her)
+        row.addWidget(hear)
         helpb = QPushButton("LLM Help")
         helpb.setObjectName("small")
         helpb.setCursor(Qt.PointingHandCursor)
@@ -442,6 +467,12 @@ class NightMenu(QWidget):
                 text, col = "always", "#8FC48A"
             lab.setText(text)
             lab.setStyleSheet(f"color: {col}; font-size: 12px;")
+
+    def _hear_her(self):
+        audio = self.shell.view.ensure_audio()
+        audio.aloud = True
+        audio.say("You came. They always come, when the silk asks. Sit, little wizard. Tell me something I have "
+                  "not heard.")
 
     def _llm_help(self):
         LLMHelp(self).exec()

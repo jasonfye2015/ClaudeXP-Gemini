@@ -22,3 +22,42 @@ def test_what_is_ready():
     got = []
     V.Voice("none").ask([{"role": "user", "content": "hello"}], got.append)
     assert got == [None]                                                     # (no model: the script speaks)
+
+
+def test_her_rasp():
+    import numpy as np
+
+    from hollowoak.engine import rasp
+    sr = 16000
+    t = np.arange(int(sr * 1.5)) / sr                                            # (a stand-in for Kathleen: a voiced
+    x = np.sin(2 * np.pi * 200 * t) * np.sin(np.pi * t / 1.5) ** 2               #  sound at her pitch, rising and falling)
+    y = rasp.rasp(x, sr)
+    assert y.dtype == np.float32 and np.isfinite(y).all() and np.abs(y).max() <= 0.951
+    assert len(y) >= 1.5 * rasp.OUT_RATE                                          # (and the hollow's echo after it)
+    spec = np.abs(np.fft.rfft(y[: int(rasp.OUT_RATE * 1.2)]))
+    f = np.fft.rfftfreq(int(rasp.OUT_RATE * 1.2), 1 / rasp.OUT_RATE)
+    peak = f[np.argmax(spec[(f > 60) & (f < 400)]) + np.searchsorted(f, 60)]
+    assert 135 < peak < 165                                                       # (five semitones down: 200 -> ~150)
+
+
+def test_her_voice_heard_or_quietly_not():
+    import numpy as np
+
+    from hollowoak.engine import herspeech, sound
+    s = sound.Synth()
+    s.speak(np.ones(2205, np.float32) * 0.2)
+    assert s.speaking()
+    for _ in range(3):
+        s.render(1102)
+    assert not s.speaking()                                                       # (said, and done)
+    old = herspeech.runtime
+    herspeech.runtime = lambda: (None, None)                                      # (no voice runtime here)
+    try:
+        h = herspeech.HerSpeech()
+        got = []
+        assert not h.available()
+        h.say("Closer.", got.append)
+        h.warm()
+        assert got == [None] and h.thread is None
+    finally:
+        herspeech.runtime = old

@@ -35,7 +35,9 @@ class DenAudio:
         self.muted = muted
         self.volume = 0.8
         self.heartbeat = True
+        self.aloud = True
         self._beat = None
+        self.her = None                                  # (her voice: started the first time she speaks)
         self.synth = Synth(RATE)
         self.sink = None
         self._fade = 0.0
@@ -129,7 +131,31 @@ class DenAudio:
             elif kind == "lantern" and e[1] == "out":
                 s.play("puff")
 
+    def warm(self):
+        """Her voice, readied in the background (so the first line isn't late)."""
+        if not self.aloud:
+            return
+        if self.her is None:
+            from ..engine.herspeech import HerSpeech
+            self.her = HerSpeech()
+        self.her.warm()
+
+    def say(self, text):
+        """Her line, aloud - if her voice is on, and there to be had."""
+        if not self.aloud:
+            return False
+        if self.her is None:
+            from ..engine.herspeech import HerSpeech
+            self.her = HerSpeech()
+        if not self.her.available():
+            return False
+        self.her.say(text, self.synth.speak)
+        return True
+
     def stop(self):
+        if self.her is not None:
+            self.her.stop()
+            self.her = None
         if self.sink is not None:
             self.sink.stop()
             self.sink = None

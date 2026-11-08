@@ -15,5 +15,9 @@ spider, much larger.
 
 The sound: made as it plays (engine/sound.py) - no recordings.
 
+Her voice, aloud: Piper (rhasspy, MIT) with the Kathleen voice (en_US-kathleen-low; its dataset CC0,
+https://github.com/rhasspy/dataset-voice-kathleen) - both already in the Timeline's voice runtime, not shipped with the
+game - made hers in the game (engine/rasp.py: pitched down, creaking, whispering under itself, echoing).
+
 The code, the tree, its light and its words: written for this game. The small OpenGL layer (engine/gl.py) is the one the
 Timeline's other first-person games use, copied here so the game stands on its own.

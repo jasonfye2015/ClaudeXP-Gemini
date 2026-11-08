@@ -99,9 +99,7 @@ class GameView(QOpenGLWidget):
         self.first_ending = False
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
         self.inp.strafe = self.inp.forward = 0.0
-        if self.audio is None:
-            from .audio import DenAudio
-            self.audio = DenAudio(self.shell.muted)
+        self.ensure_audio()
         self.fade = time.perf_counter()
         self.cards = []
         self.setFocus()
@@ -125,6 +123,7 @@ class GameView(QOpenGLWidget):
             o = self.shell.records.options
             self.audio.volume = o["volume"] / 100.0
             self.audio.heartbeat = bool(o["heartbeat"])
+            self.audio.aloud = bool(o["aloud"])
         if self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
             n.step(dt, self.inp)
             if self.audio is not None:
@@ -174,6 +173,16 @@ class GameView(QOpenGLWidget):
             n.pitch = 0.62 + 0.08 * math.sin((now - self.t0) * 0.1)
             n.her.step(dt, n)                            # (and her, up there, watching the title)
         self.update()
+
+    def ensure_audio(self):
+        if self.audio is None:
+            from .audio import DenAudio
+            self.audio = DenAudio(self.shell.muted)
+        o = self.shell.records.options
+        self.audio.volume = o["volume"] / 100.0
+        self.audio.aloud = bool(o["aloud"])
+        self.audio.warm()                                        # (her voice, readied in the background)
+        return self.audio
 
     def _count(self, events):
         t = self.tally
