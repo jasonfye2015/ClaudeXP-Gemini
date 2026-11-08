@@ -202,6 +202,7 @@ class GameView(QOpenGLWidget):
         n.her.voice += (level - n.her.voice) * 0.5
         n.shadows = bool(self.shell.records.options.get("shadows", True))
         n.difficulty = self.shell.records.options.get("difficulty", "normal")
+        n.fov = 55.0 + 45.0 * self.shell.records.options.get("fov", 33) / 100.0
         n.brightness = self.shell.records.options.get("brightness", 50)
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
@@ -251,10 +252,11 @@ class GameView(QOpenGLWidget):
             k = self.keys
             drive = self._drive()
             if drive is None:
-                self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - \
-                    (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
-                self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
-                self.inp.hurry = Qt.Key_Shift in k
+                kb = self.kb
+                self.inp.forward = (1 if kb["forward"] in k or Qt.Key_Up in k else 0) - \
+                    (1 if kb["back"] in k or Qt.Key_Down in k else 0)
+                self.inp.strafe = (1 if kb["right"] in k else 0) - (1 if kb["left"] in k else 0)
+                self.inp.hurry = kb["run"] in k
                 if self.satchel.open or self.journal.open:        # (his hands full: he stands still)
                     self.inp.forward = self.inp.strafe = 0.0
                     self.inp.jump = False
@@ -598,6 +600,12 @@ class GameView(QOpenGLWidget):
             p.fillRect(QRectF(0, 0, W * 0.48, H), g)
         if af.blackout > 0:
             p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * af.blackout)))
+
+    @property
+    def kb(self):
+        """His keys, as the player's set them (ui/keys.py)."""
+        from .keys import bound
+        return bound(self.shell.records.options)
 
     def _drive(self):
         """Who walks him now: the letter (Spellbound, F9), its guiding between lessons, or him."""
@@ -1051,7 +1059,8 @@ class GameView(QOpenGLWidget):
         dx, dy = gp.x() - c.x(), gp.y() - c.y()
         sens = SENS * (0.35 + 1.3 * self.shell.records.options["look"] / 100.0)
         self.inp.yaw += dx * sens
-        self.inp.pitch = max(-1.45, min(1.45, self.inp.pitch - dy * sens))
+        flip = -1.0 if self.shell.records.options.get("invert") else 1.0      # (looking up and down: as he likes)
+        self.inp.pitch = max(-1.45, min(1.45, self.inp.pitch - dy * sens * flip))
         self._centre()
 
     def keyPressEvent(self, e):
@@ -1071,13 +1080,15 @@ class GameView(QOpenGLWidget):
                 self.ui_did["notebook"] = True
                 self.capture()
             return
-        if k == Qt.Key_Escape or k == Qt.Key_P:                  # (the true pause: "The night waits")
+        kb = self.kb
+        if k == Qt.Key_Escape or k == kb["pause"]:               # (the true pause: "The night waits")
             self.release()
             self.shell.pause()
             return
         if not self.playing:
             return
-        if self.director is not None and k in (Qt.Key_W, Qt.Key_A, Qt.Key_S, Qt.Key_D, Qt.Key_Up, Qt.Key_Down, Qt.Key_Space):
+        if self.director is not None and k in (kb["forward"], kb["back"], kb["left"], kb["right"], kb["jump"],
+                                               Qt.Key_Up, Qt.Key_Down):
             self.wake()                                          # (a key of his own: the letter lets go)
         if k == Qt.Key_F9 and n is not None and n.dying is None and n.ending is None:
             if self.director is not None:
@@ -1104,21 +1115,21 @@ class GameView(QOpenGLWidget):
             return
         if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
             self.debug = not getattr(self, "debug", False)
-        if k == Qt.Key_T and self.night is not None and self.night.ending is None and \
+        if k == kb["wait"] and self.night is not None and self.night.ending is None and \
                 self.night.acts.act == "crown" and "crown" in self.night.acts.outcomes:
             self.wait_for_dawn()
             return
-        if k == Qt.Key_F and self.night is not None and self.night.dying is None:     # (a closer look)
+        if k == kb["look"] and self.night is not None and self.night.dying is None:   # (a closer look)
             self.night.examine()
-        if k == Qt.Key_Space and self.night is not None:
+        if k == kb["jump"] and self.night is not None:
             self.inp.jump = True
-        spell = {Qt.Key_1: "light", Qt.Key_2: "warmth", Qt.Key_3: "illusion", Qt.Key_4: "memory"}.get(k)
+        spell = {kb["light"]: "light", kb["warmth"]: "warmth", kb["illusion"]: "illusion", kb["memory"]: "memory"}.get(k)
         if spell and self.night is not None and getattr(self, "scene", None) is None:
             self.night.cast(spell)
             return
         n = self.night
         free = n is not None and getattr(self, "scene", None) is None and n.dying is None and n.ending is None
-        if k == Qt.Key_Tab and free:                             # (his satchel: open, or shut)
+        if k == kb["satchel"] and free:                          # (his satchel: open, or shut)
             self.satchel.toggle()
             if self.satchel.open:
                 self.release()
@@ -1126,19 +1137,19 @@ class GameView(QOpenGLWidget):
                 self.ui_did["satchel"] = True                    # (opened, and shut: for the first night)
                 self.capture()
             return
-        if k == Qt.Key_G and free:                               # (what's in his hand, put down)
+        if k == kb["put_down"] and free:                         # (what's in his hand, put down)
             n.put_down()
             return
-        if k == Qt.Key_F5:                                       # (a quick save)
+        if k == kb["save"]:                                      # (a quick save)
             why = self.quick_save()
             self.whisper = (why or "Saved.", time.perf_counter(), 2.5)
             return
-        if k == Qt.Key_Q and self.night is not None and getattr(self, "scene", None) is None:   # (the antidote)
+        if k == kb["drink"] and self.night is not None and getattr(self, "scene", None) is None:   # (the antidote)
             if self.night.drink():
                 self.whisper = ("You drink. It is bitter, and cold - and her venom goes out of you.",
                                 time.perf_counter(), 5.0)
             return
-        if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
+        if k in (kb["lantern"], Qt.Key_L) and self.night:        # (a shake of the lantern)
             self.night.shake()
 
     def keyReleaseEvent(self, e):

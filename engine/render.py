@@ -563,7 +563,7 @@ class Renderer:
         if cam is not None:                                   # (her scenes: a composed camera, not his eye)
             eye, yaw, pitch = cam
             roll = 0.0
-        proj = gl.perspective(70.0 if cam is None else 55.0, w / max(1, h), 0.05, 160.0)
+        proj = gl.perspective(getattr(night, "fov", 70.0) if cam is None else 55.0, w / max(1, h), 0.05, 160.0)
         view = gl.view_matrix(eye, yaw, pitch)
         if roll:
             c, s = math.cos(roll), math.sin(roll)
