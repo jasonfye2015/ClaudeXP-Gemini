@@ -66,3 +66,13 @@ def test_her_last_words_and_her_lean():
         n.events.clear()
     assert ("death", "line", d.her_line) in seen
     assert d.her_at is not None and n.her.staged is not None                  # (she came down to him)
+
+
+def test_supper_from_her_side():
+    n = N.Night(seed=32)
+    plain = Dh.her_side(n)
+    assert len(plain) == 3 and all(plain)
+    n.moods.regard = 70
+    assert Dh.her_side(n) != plain and "crown" in " ".join(Dh.her_side(n))      # (held dear: highest, by the moon)
+    n.moods.regard = 0
+    assert "liars" in " ".join(Dh.her_side(n, lies=2))

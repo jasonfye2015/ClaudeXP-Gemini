@@ -326,9 +326,22 @@ def draw_death(p, W, H, death, t, first=False, records=None):
         p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, death.show_line)
     if death.black > 0:
         p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * death.black)))
+    from ..game.death import FADE_END, HER_SIDE, SIDE_AT
+    side = getattr(death, "her_side", None)
+    if death.done and side and death.t < FADE_END + HER_SIDE:          # (her side of it, in her hand, on the dark)
+        from . import fonts
+        k = death.t - FADE_END
+        p.setFont(fonts.her(records, 30) if records is not None else QFont(SERIF, 20))
+        y = H * 0.32
+        for line, at in zip(side, SIDE_AT):
+            a = max(0.0, min(1.0, (k - at) / 1.2, (HER_SIDE - k) / 1.0))
+            p.setPen(QColor(232, 214, 196, int(230 * a)))
+            p.drawText(QRectF(W * 0.12, y, W * 0.76, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
+            y += H * 0.11
+        return
     if death.done:
         from ..game.death import ENDING
-        age = death.t - 24.4
+        age = death.t - (FADE_END + (HER_SIDE if side else 0.0))
         a = max(0.0, min(1.0, age / 2.0))
         f = QFont(SERIF, 15)
         f.setItalic(True)
