@@ -1,5 +1,7 @@
 """The den's sound's way out: engine/sound.py's synth, pulled a block at a time by a QAudioSink, following the
 computer's mute. If there's no sound device, there's simply no sound."""
+import random
+
 from PySide6.QtCore import QIODevice
 
 from ..engine.sound import RATE, Synth
@@ -59,8 +61,11 @@ class DenAudio:
         """What the night just did, as sound; and the steady parts as they stand now."""
         s = self.synth
         on = night.on is not None
+        d = night.dying
+        if d is not None and d.t < 17.0 and random.random() < 0.09:  # (all over him: the sound of them never stops)
+            s.play("skitter", 0.4 + 0.5 * random.random())
         s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
-              height=night.y / 26.0)
+              height=night.y / 26.0 if d is None or not d.done else 0.0)
         for e in events:
             kind = e[0]
             if kind == "silk" and e[1] == "step":
@@ -77,6 +82,16 @@ class DenAudio:
                 s.play("skitter", 0.9)
             elif kind == "swarm" and e[1] == "up":
                 s.play("skitter", 0.25)
+            elif kind == "lantern" and e[1] == "break":
+                s.play("rattle", 1.3)
+                s.play("thud", 0.4)
+                s.play("puff", 1.2)
+            elif kind == "collapse":
+                s.play("thud", 0.8)
+            elif kind == "death" and e[1] == "drag":
+                s.play("slip", 1.2)
+            elif kind == "death" and e[1] == "lift":
+                s.play("catch", 1.2)
             elif kind == "swipe":
                 s.play("whoosh")
             elif kind == "skitter":

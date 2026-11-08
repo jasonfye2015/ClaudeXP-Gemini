@@ -96,6 +96,18 @@ assets/arm.npz) with a hand made in engine/held.py, palm to his face, fingers sp
 and away to the right in under half a second; as it passes the middle of his view, they're flung off to the side.
 Not more often than every six seconds; one alone he lets run. A whoosh as it goes.
 
+Phase 2e - how he holds up, and Supper (done). game/condition.py: health (falls onto wood; far less into silk;
+poison eats at it), poison (bites - a dangler walked into, one over his face, the babies on the lantern in the dark;
+wears off slowly), sanity (the dark, worse with them on the lantern; spiders on his face; slips and falls into the web;
+her eyes, a slow creep; steady light brings it back), consciousness (heavy poison, a mind giving way, a hard knock).
+ui/orbs.py: Diablo-style glass orbs - health red with poison as a green ring round its rim (bottom left), sanity blue
+with consciousness as a green ring (bottom right), the numbers under them in their colours; the edge of the view beats
+in the colour of anything critical (health or sanity or consciousness under 25, poison over 70). Her own moods keep no
+meter - the design's rule still holds for her. game/death.py: when health, sanity or consciousness gives out -
+Supper: he collapses, the lantern breaks (its flame dies on the ground), they cover his face and lay silk across his
+eyes, he's dragged in pulls to the middle of the floor, turned, hoisted by the feet half way up the trunk, swinging;
+black; "Wrapped, and hung, and kept for later." / "Ending 1 of 6: Supper"; a click goes back to the title.
+
 ## Phase 3 - Ysmeine
 
 Her figure (Quaternius's Spider, scaled), her moods, the language model's voice with its guardrails and memory, the

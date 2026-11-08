@@ -29,6 +29,10 @@ Playing (phases 1 and 2: the tree, and her silk)
   then one runs right across your eyes (two at once, and he swipes them off), or drops on a thread to hang before your face. And when the lantern's out,
   they come up the wand for it.
 
+  How you hold up shows in two orbs: health (red, with poison round its rim) at the bottom left, sanity (blue, with
+  consciousness round its rim) at the bottom right; the edge of the view beats in a colour when one is in danger. Hard
+  falls hurt, bites poison, the dark wears at your mind. If health, sanity or consciousness gives out - she has you.
+
   Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
   rattle. It follows the computer's mute.
 

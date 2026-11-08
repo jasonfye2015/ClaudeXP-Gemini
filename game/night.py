@@ -18,7 +18,9 @@ from . import tree as T
 from .den import Den
 from .babies import Danglers, Swarm
 from .brood import Brood
+from .condition import Condition
 from .crawlers import Crawlers
+from .death import Death
 from .lantern import Lantern
 from .web import BRIDGE_HALF, Bridge, Web
 
@@ -98,11 +100,15 @@ class Night:
         self.crawlers = Crawlers(random.Random(self.rng.random()))     # (the small ones that cross his eyes)
         self.danglers = Danglers(random.Random(self.rng.random()))     # (and drop before his face)
         self.swarm = Swarm(random.Random(self.rng.random()))           # (and come for the lantern, in the dark)
+        self.body = Condition(random.Random(self.rng.random()))        # (how he's holding up: the orbs)
+        self.dying = None                                              # (a Death, once something gives out)
+        self.eye_h = EYE
+        self.roll = 0.0
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
     def eye(self):
-        return (self.x, self.y + EYE, self.z)
+        return (self.x, self.y + self.eye_h, self.z)
 
     def floor_at(self, x, z, feet):
         """The highest thing he can stand on under (x, z): the tree, or her silk."""
@@ -149,6 +155,11 @@ class Night:
     def step(self, dt, inp):
         dt = min(dt, 0.05)
         self.time += dt
+        if self.dying is not None:                                     # (it's over: what happens to him now)
+            self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
+            self.events.extend(self.dying.step(dt, self))
+            return
+        first = len(self.events)                                       # (what happens this step, from here)
         self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
@@ -173,6 +184,20 @@ class Night:
         self.events.extend(self.crawlers.step(dt))
         self.events.extend(self.danglers.step(dt, self))
         self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
+        self.events.extend(self.body.step(dt, self, self.events[first:]))
+        gone = self.body.spent()
+        if gone is not None:
+            self.collapse(gone)
+
+    def collapse(self, cause):
+        """Something gave out: down he goes, and they come."""
+        self.dying = Death(self, cause, random.Random(self.rng.random()))
+        self.crawlers.runs.clear()
+        self.crawlers.swipe_at = None
+        self.danglers.hanging.clear()
+        self.swarm.babies.clear()
+        self.on, self.sway = None, 0.0
+        self.events.append(("collapse", cause))
 
     # ---- on her silk -------------------------------------------------------------------------------------------
     def _balance(self, dt, inp, turn):

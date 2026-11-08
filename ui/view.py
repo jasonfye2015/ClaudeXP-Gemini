@@ -1,6 +1,6 @@
 """The view: the night drawn in first person, and over it as little as possible - a place's name when he first comes
-into it, the fade in from black, and a word about the mouse. No bars, no meters: what she thinks of him will show in
-the den itself.
+into it, the fade in from black, a word about the mouse, and his own state in two orbs (ui/orbs.py): health and
+poison, sanity and consciousness. What she thinks of him has no meter: that will show in the den itself.
 
 Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
 lantern when it gutters out. On a strand, A and D lean against its sway.
@@ -14,6 +14,7 @@ from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
+from . import orbs
 
 SENS = 0.0022
 SERIF = "Georgia"
@@ -115,7 +116,14 @@ class GameView(QOpenGLWidget):
         n = self.night
         if n is None:
             return
-        if self.playing and not self.shell.panel_open():
+        if self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
+            n.step(dt, self.inp)
+            if self.audio is not None:
+                self.audio.hear(n, n.events)
+            if n.dying.done:
+                self.release()
+            n.events.clear()
+        elif self.playing and not self.shell.panel_open():
             k = self.keys
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
@@ -140,6 +148,10 @@ class GameView(QOpenGLWidget):
                     self.teeters += 1
                 elif e[0] == "silk" and e[1] == "caught":
                     self.whisper = ("Caught in her silk. Everything in the oak felt that.", now, 4.0)
+                elif e[0] == "bitten":
+                    self.whisper = ("Bitten." if e[1] == "face" else "Something bit your hand.", now, 2.5)
+                elif e[0] == "hurt" and e[1] > 20:
+                    self.whisper = ("You hit the wood hard.", now, 2.5)
             n.events.clear()
         elif not self.playing:
             n.time += dt
@@ -168,6 +180,12 @@ class GameView(QOpenGLWidget):
             p.setFont(f)
             p.drawText(QRectF(W * 0.2, H * 0.70 + 48, W * 0.6, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
         n = self.night
+        if n.dying is not None:
+            orbs.draw_orbs(p, W, H, n.body, t, max(0.0, 1.0 - n.dying.t / 1.2))
+            orbs.draw_death(p, W, H, n.dying, t)
+            return
+        orbs.draw_danger(p, W, H, n.body, t)
+        orbs.draw_orbs(p, W, H, n.body, t)
         if n.lamp.state == "out" and self.outs <= 3:             # (the lantern out: what to do, the first few times)
             a = int(150 + 60 * math.sin(t * 2.4))
             p.setPen(QColor(220, 200, 170, a))
@@ -217,6 +235,10 @@ class GameView(QOpenGLWidget):
         QCursor.setPos(c)
 
     def mousePressEvent(self, e):
+        if self.playing and self.night is not None and self.night.dying is not None:
+            if self.night.dying.done and self.night.dying.t > 23.0:
+                self.shell.show_title()                          # (it's over: back to the start)
+            return
         if self.playing and not self.captured:
             self.capture()
 
