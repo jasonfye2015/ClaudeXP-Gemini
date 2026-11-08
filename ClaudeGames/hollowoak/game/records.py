@@ -14,8 +14,8 @@ ENDINGS = 7                     # (how many there are: their names are found, no
 OPTIONS = {"volume": 80, "look": 50, "heart": True, "heartbeat": True, "orbs": True,
            "voice": "",                # (her words: a model's name, or "none"; "" - not chosen yet: the best there is)
            "aloud": True,              # (her voice, heard: Kathleen, rasping - where the Timeline's voice runtime is)
-           "her_size": 100, "his_size": 100,
-           "venom_fx": True}            # (her venom: the edges of his sight darkening and pulsing)   # (the size of her words and his, in percent)
+           "her_size": 100, "his_size": 100,     # (the size of her words and his, in percent)
+           "venom_fx": True}            # (her venom: the edges of his sight darkening and pulsing)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
 
 
@@ -67,8 +67,10 @@ class Records:
         return first
 
     def night_over(self, stats):
-        """A night done (an ending, or left): its tallies into the totals."""
-        self.totals["nights"] += 1
+        """A night done (an ending, or left): its tallies into the totals. A night gone on with from a save is the same
+        night: its time and its tallies count, but not as another night, nor another meeting."""
+        if not stats.get("resumed"):
+            self.totals["nights"] += 1
         secs = int(stats.get("seconds", 0))
         self.totals["seconds"] += secs
         self.totals["longest"] = max(self.totals["longest"], secs)
@@ -80,7 +82,8 @@ class Records:
     def remembered(self, stats):
         """What she keeps of him from a night, for the next: how it ended, how he went, whether he lied."""
         r = self.reputation
-        r["met"] = int(r.get("met", 0)) + 1
+        if not stats.get("resumed"):
+            r["met"] = int(r.get("met", 0)) + 1
         bits = []
         end = stats.get("ending")
         bits.append(f"Last time, it ended in {end}." if end else "Last time, he left before the night was out.")

@@ -245,7 +245,7 @@ leaves and mushrooms, like Before the night).
 ## Phase 4 - the night
 
 Sub-phases: 4a the acts (done) - 4b offerings (done) - 4c spells (done) (Warmth: the road to Fire) - 4d venom (and the antidote) (done) -
-4e saving - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
+4e saving (done) - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
 
 Phase 4a - the acts (done). game/acts.py: threshold (in, to her loom) -> audience (her loom) -> gallery (her guests;
 sent up to look at them) -> supper (her larder; she calls him down at midnight, or sooner once he's looked at three of
@@ -291,6 +291,15 @@ The phial, Through her eyes, Before it was hollow). The antidote: a stoppered ph
 vision shows it (or by Light); F takes it, Q drinks it - if she sees, she knows it was stolen. Or, in her scenes,
 "Ask her to take her venom out of you" (once a night): she gives it if she thinks well enough of him and doesn't
 doubt him too much; else he wears her bite till dawn. A model is told he's envenomed, or cured, and how.
+
+Phase 4e - saving (done). game/saving.py: the night saves as each act begins (night_act.json, in the saves folder),
+and a quick save (night_quick.json) with F5 or "Save here" in the pause - not while she's talking to him, not through
+her eyes, not falling or swaying, not with her coming for him. Kept: where he is, the clock and the weather, her
+moods (and her bites), how he's holding up, the act and its outcomes, what he's found, carries and given, her guests
+opened, what he's chosen, her venom and the visions seen, the memories given her, the places seen, and what she
+remembers of him tonight (and his lies). The den's live things - her small ones, the lantern, she herself - start
+fresh about him. The title: "Go on from a save" lists them (newest first). Begin clears them (a new night); an ending
+leaves them, to go on from. A night gone on with is the same night: its time counts, not as another night or meeting.
 
 ## Phase 5 - music, sound, polish
 

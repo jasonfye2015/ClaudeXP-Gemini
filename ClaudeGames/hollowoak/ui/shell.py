@@ -20,7 +20,7 @@ QPushButton:hover { background: rgba(60, 36, 26, 210); border-color: #A07A54; co
 class Panel(QWidget):
     """A layer over the view: dark at the edges, words painted in the middle, a column of buttons below them."""
 
-    def __init__(self, shell, title, line, buttons, small=False):
+    def __init__(self, shell, title, line, buttons, small=False, wide=False):
         super().__init__(shell)
         self.shell, self.title, self.line, self.small = shell, title, line, small
         self.setStyleSheet(BUTTONS)
@@ -30,7 +30,7 @@ class Panel(QWidget):
             b = QPushButton(text)
             b.setCursor(Qt.PointingHandCursor)
             b.clicked.connect(fn)
-            b.setFixedWidth(240)
+            b.setFixedWidth(420 if wide else 240)
             lay.addWidget(b, 0, Qt.AlignHCenter)
         lay.addStretch(1)
 
@@ -63,6 +63,8 @@ class Shell(QWidget):
         self.saves_dir = saves_dir
         self.muted = muted
         self.records = Records(saves_dir)
+        from ..game.saving import Saves
+        self.saves = Saves(saves_dir)
         self.view = GameView(self)
         self.panel = None
         self.frame = None
@@ -97,8 +99,25 @@ class Shell(QWidget):
             self.view.scene = self.view.scene_ui = None
         self.view.night_done()                                  # (a night left part-way: its tallies kept)
         self.view.backdrop(Night())
-        self.set_panel(Panel(self, "The Hollow Oak", "One night. One host. Get to dawn.",
-                             [("Begin", self.show_menu), ("Leave", self.leave)]))
+        buttons = [("Begin", self.show_menu)]
+        if self.saves.list():
+            buttons.append(("Go on from a save", self.show_saves))
+        self.set_panel(Panel(self, "The Hollow Oak", "One night. One host. Get to dawn.", buttons + [("Leave", self.leave)]))
+
+    def show_saves(self):
+        """The night's saves: the act last begun, and his quick save - go on from either."""
+        rows = [(label, lambda _x=False, kind=kind: self.load_save(kind)) for kind, label in self.saves.list()]
+        self.set_panel(Panel(self, "Go on", "Back into the oak, where you were.", rows + [("Back", self.show_title)],
+                             wide=True))
+
+    def load_save(self, kind):
+        got = self.saves.load(kind)
+        if got is None:
+            self.set_panel(Panel(self, "Go on", "That save can't be read.", [("Back", self.show_title)]))
+            return
+        night, talk = got
+        self.set_panel(None)
+        self.view.begin(night, talk)
 
     def show_menu(self):
         from .menu import NightMenu
@@ -115,6 +134,7 @@ class Shell(QWidget):
 
     def begin(self):
         self.set_panel(None)
+        self.saves.clear()                                      # (a new night: the last one's saves gone)
         self.view.begin(Night())
 
     def pause(self):
@@ -125,11 +145,16 @@ class Shell(QWidget):
             return
         self.pause_menu()
 
-    def pause_menu(self):
-        self.set_panel(Panel(self, "The night waits", f"It is {self.view.night.clock_words()}.   "
-                                                      f"{self.view.night.acts.request}",
-                             [("Go on", self.resume), ("View letter", self.view_letter), ("Notes", self.show_notes),
-                              ("Unlocks", self.show_unlocks), ("Back to the title", self.show_title)], small=True))
+    def pause_menu(self, said=None):
+        line = said or f"It is {self.view.night.clock_words()}.   {self.view.night.acts.request}"
+        self.set_panel(Panel(self, "The night waits", line,
+                             [("Go on", self.resume), ("Save here", self.save_here), ("View letter", self.view_letter),
+                              ("Notes", self.show_notes), ("Unlocks", self.show_unlocks),
+                              ("Back to the title", self.show_title)], small=True))
+
+    def save_here(self):
+        why = self.view.quick_save()
+        self.pause_menu("Saved." if why is None else why)
 
     def view_letter(self):
         from .pages import Letter
