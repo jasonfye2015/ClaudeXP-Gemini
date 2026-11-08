@@ -25,7 +25,8 @@ Playing (phases 1 and 2: the tree, and her silk)
   test of nerve - her loom, a great web across the hollow low down, and a web across the crown under the moon. On a
   strand you sway, more the faster you go; A and D lean against it. Lean too far and you're off. Every step on silk
   hums through the whole web, and she feels it: careful steps, or hurried ones, slips and falls. Her small ones are
-  everywhere - on the wall, among the roots, out on the silk - and gone in a scurry when you come near.
+  everywhere - on the wall, among the roots, out on the silk - and gone in a scurry when you come near. And now and
+  then one runs right across your eyes.
 
   Sound: the wind in the trunk, the silk humming and creaking under you, small legs skittering away, the lantern's
   rattle. It follows the computer's mute.

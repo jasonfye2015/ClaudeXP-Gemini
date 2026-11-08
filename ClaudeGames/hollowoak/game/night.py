@@ -17,6 +17,7 @@ import random
 from . import tree as T
 from .den import Den
 from .brood import Brood
+from .crawlers import Crawlers
 from .lantern import Lantern
 from .web import BRIDGE_HALF, Bridge, Web
 
@@ -93,6 +94,7 @@ class Night:
         self._fall_from = self.y
         self.inp_hurry = False
         self.brood = Brood(self.tree, self.web, random.Random(self.rng.random()))
+        self.crawlers = Crawlers(random.Random(self.rng.random()))     # (the small ones that cross his eyes)
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
@@ -164,6 +166,7 @@ class Night:
         self._watch(dt)
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
+        self.events.extend(self.crawlers.step(dt))
 
     # ---- on her silk -------------------------------------------------------------------------------------------
     def _balance(self, dt, inp, turn):

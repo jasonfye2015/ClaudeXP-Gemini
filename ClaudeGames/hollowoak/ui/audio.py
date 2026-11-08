@@ -71,6 +71,8 @@ class DenAudio:
                 s.play("catch")
             elif kind == "fall" and not on:
                 s.play("thud", min(1.0, e[1] / 14.0))
+            elif kind == "crawler":                               # (right across his eyes: close, quick)
+                s.play("skitter", 0.55 * e[1])
             elif kind == "skitter":
                 s.play("skitter", max(0.0, 1.0 - e[2] / 7.0))
             elif kind == "lantern" and e[1] == "shake":
