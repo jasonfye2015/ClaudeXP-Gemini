@@ -4,11 +4,13 @@ them, webs strung between - and now and then one of her babies runs across it al
 import math
 import random
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient
-from PySide6.QtWidgets import (QCheckBox, QHBoxLayout, QLabel, QPushButton, QSlider, QStackedWidget, QVBoxLayout,
-                               QWidget)
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, QUrl
+from PySide6.QtGui import (QBrush, QColor, QDesktopServices, QFont, QGuiApplication, QLinearGradient, QPainter,
+                           QPainterPath, QPen, QRadialGradient)
+from PySide6.QtWidgets import (QButtonGroup, QCheckBox, QDialog, QHBoxLayout, QLabel, QPushButton, QRadioButton,
+                               QScrollArea, QSlider, QStackedWidget, QVBoxLayout, QWidget)
 
+from ..game import voice as V
 from ..game.records import ENDINGS
 
 SERIF = "Georgia"
@@ -26,6 +28,15 @@ QCheckBox { color: #D8CAB4; font-family: Georgia; font-size: 14px; spacing: 10px
 QSlider::groove:horizontal { height: 4px; background: #3A2A20; border-radius: 2px; }
 QSlider::handle:horizontal { width: 14px; margin: -6px 0; border-radius: 7px; background: #B08860; }
 QSlider::sub-page:horizontal { background: #7A4A30; border-radius: 2px; }
+QRadioButton { color: #E2D3BC; font-family: Georgia; font-size: 14px; spacing: 10px; background: transparent; }
+QRadioButton::indicator { width: 12px; height: 12px; border-radius: 7px; border: 1px solid #A07A54; background: #1A1210; }
+QRadioButton::indicator:checked { background: qradialgradient(cx:0.5, cy:0.5, radius:0.5, fx:0.5, fy:0.5,
+    stop:0 #F0C890, stop:0.55 #C08A50, stop:0.6 #1A1210, stop:1 #1A1210); }
+QPushButton#small { color: #E6D8C2; background: rgba(40, 26, 20, 200); border: 1px solid #6A4E36; border-radius: 4px;
+    padding: 6px 16px; font-family: Georgia; font-size: 13px; }
+QPushButton#small:hover { background: rgba(80, 46, 30, 220); border-color: #A07A54; }
+QLabel#note { color: #9C8C78; font-size: 12px; }
+QScrollArea { background: transparent; border: none; }
 """
 
 
@@ -113,6 +124,102 @@ class _Runners(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         for r in self.runs:
             spider(p, r["p"][0], r["p"][1], r.get("head", 0.0), r["size"], r["phase"])
+        p.end()
+
+
+def web(p, cx, cy, r, turn, t=0.0, alpha=60):
+    """An orb web: torn a little, uneven, stirring."""
+    p.setBrush(Qt.NoBrush)
+    spokes = 13
+    jag = [0.7 + 0.3 * abs(math.sin(turn * 5 + i * 1.7)) for i in range(spokes)]
+    p.setPen(QPen(QColor(220, 225, 235, alpha), 1.0))
+    for i in range(spokes):
+        a = turn + i / spokes * math.tau
+        p.drawLine(QPointF(cx, cy), QPointF(cx + math.cos(a) * r * jag[i], cy + math.sin(a) * r * jag[i]))
+    path = QPainterPath()
+    for i in range(spokes * 7):
+        a = turn + i / spokes * math.tau
+        f = (0.12 + 0.86 * i / (spokes * 7)) * jag[i % spokes]
+        pt = QPointF(cx + math.cos(a) * r * f, cy + math.sin(a) * r * f + 1.5 * math.sin(t * 0.8 + i * 0.05))
+        path.lineTo(pt) if i else path.moveTo(pt)
+    p.setPen(QPen(QColor(220, 225, 235, int(alpha * 0.75)), 0.9))
+    p.drawPath(path)
+
+
+class LLMHelp(QDialog):
+    """How to give her a voice: where the two models come from, and where they go."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("LLM Help - her voice")
+        self.setModal(True)
+        self.setMinimumSize(640, 600)
+        self.setStyleSheet(STYLE + "QDialog { background: #0C0809; }")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(34, 30, 34, 24)
+        folder = V.models_folder()
+        where = str(folder) if folder is not None else "Local Storage\\LLM Models\\models (in the Timeline)"
+        engine = "is installed" if V.engine_ok() else "<b style='color:#D08A70'>isn't installed yet</b>"
+        rows = []
+        for cid, name, _w in V.CHOICES[:2]:
+            h = V.HELP[cid]
+            have = cid in V.installed_ids()
+            mark = "<span style='color:#8FC48A'>installed</span>" if have else "<span style='color:#B07A6A'>not found</span>"
+            js = (h["info"] or "").replace("<", "&lt;").replace(">", "&gt;").replace(chr(10), "<br>").replace("  ", "&nbsp;&nbsp;")
+            info = ("<br>3. Beside it, a file named <b>info.json</b> holding these words (they tell the engine how this "
+                    "model expects to be spoken to - the button below copies them):<br><span style='font-family:Consolas;"
+                    f" color:#C9B89C'>{js}</span>" if h["info"] else "")
+            rows.append(f"<p><b style='color:#EADCC4; font-size:15px'>{name}</b> &nbsp; {mark}<br>"
+                        f"1. Download <b>{h['file']}</b> ({h['size']}) from <a style='color:#D9A877' href='{h['page']}'>"
+                        f"{h['page']}</a> (the <i>Files and versions</i> tab).<br>"
+                        f"2. Make a folder named <b>{cid}</b> in the models folder, and put the file in it.{info}</p>")
+        html = (f"<p>Her voice comes from a language model running on this computer, through the Timeline's own engine "
+                f"(llama.cpp). Nothing is sent anywhere. Pick one - you only need one:</p>"
+                f"<p style='color:#B8A890'><b>NemoMix Unleashed 12B</b> plays her best. <b>Gemma 3 4B</b> is smaller "
+                f"and quicker, for a smaller graphics card.</p>{''.join(rows)}"
+                f"<p><b style='color:#EADCC4'>The models folder:</b><br><span style='color:#C9B89C'>{where}</span></p>"
+                f"<p><b style='color:#EADCC4'>The engine</b> {engine}. In the Timeline it's set up from ClaudeXP's "
+                f"Control Panel &gt; AI Models (which can also add models). By hand: the Windows build (Vulkan) of "
+                f"llama.cpp from <a style='color:#D9A877' href='{V.ENGINE_PAGE}'>{V.ENGINE_PAGE}</a>, unpacked into "
+                f"<i>LLM Models\\llama.cpp\\vulkan</i>.</p>"
+                f"<p style='color:#9C8C78'><i>Then press Check again on the Options page. With no model, choose None: "
+                f"she speaks from a script, and you answer from the lines offered.</i></p>")
+        text = QLabel(html)
+        text.setWordWrap(True)
+        text.setTextFormat(Qt.RichText)
+        text.setOpenExternalLinks(True)
+        text.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        lay.addWidget(text)
+        row = QHBoxLayout()
+        for label, fn in (("Open the models folder", self._open), ("Copy NemoMix's info.json", self._copy),
+                          ("Close", self.accept)):
+            b = QPushButton(label)
+            b.setObjectName("small")
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(fn)
+            row.addWidget(b)
+        lay.addStretch(1)
+        lay.addLayout(row)
+
+    def _open(self):
+        folder = V.models_folder()
+        if folder is not None:
+            folder.mkdir(parents=True, exist_ok=True)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+
+    def _copy(self):
+        QGuiApplication.clipboard().setText(V.HELP["nemomix-unleashed-12b"]["info"])
+
+    def paintEvent(self, _e):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+        p.fillRect(self.rect(), QColor(12, 8, 9))
+        p.setPen(QPen(QColor(74, 54, 38), 1.5))
+        p.setBrush(Qt.NoBrush)
+        p.drawRect(QRectF(6, 6, W - 12, H - 12))
+        web(p, W - 10, 10, 120, 2.2, alpha=45)
+        web(p, 12, H - 12, 90, 5.1, alpha=40)
         p.end()
 
 
@@ -268,8 +375,75 @@ class NightMenu(QWidget):
             c.setChecked(bool(o[key]))
             c.toggled.connect(lambda v, key=key: self._set(key, bool(v)))
             lay.addWidget(c)
+        lay.addSpacing(16)
+        head = QLabel("Her voice")
+        head.setObjectName("head")
+        head.setStyleSheet("font-size: 18px;")
+        lay.addWidget(head)
+        note = QLabel("A language model on this computer can speak for her, and you answer her in your own words.")
+        note.setObjectName("note")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        installed = V.installed_ids()
+        if not o.get("voice"):
+            self._set("voice", V.best_choice(installed))
+        self.voice_group = QButtonGroup(self)
+        self.voice_status = {}
+        for cid, name, what in V.CHOICES:
+            row = QHBoxLayout()
+            rb = QRadioButton(name)
+            rb.setChecked(o["voice"] == cid)
+            rb.toggled.connect(lambda on, cid=cid: on and self._set("voice", cid))
+            self.voice_group.addButton(rb)
+            row.addWidget(rb)
+            st = QLabel("")
+            self.voice_status[cid] = st
+            row.addStretch(1)
+            row.addWidget(st)
+            lay.addLayout(row)
+            d = QLabel(what)
+            d.setObjectName("note")
+            d.setWordWrap(True)
+            d.setContentsMargins(26, 0, 0, 4)
+            lay.addWidget(d)
+        self._voice_check()
+        row = QHBoxLayout()
+        helpb = QPushButton("LLM Help")
+        helpb.setObjectName("small")
+        helpb.setCursor(Qt.PointingHandCursor)
+        helpb.clicked.connect(self._llm_help)
+        again = QPushButton("Check again")
+        again.setObjectName("small")
+        again.setCursor(Qt.PointingHandCursor)
+        again.clicked.connect(self._voice_check)
+        row.addWidget(helpb)
+        row.addWidget(again)
+        row.addStretch(1)
+        lay.addLayout(row)
         lay.addStretch(1)
-        return w
+        scroll = QScrollArea()
+        scroll.setWidget(w)
+        scroll.setWidgetResizable(True)
+        scroll.setFixedHeight(470)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.viewport().setStyleSheet("background: transparent;")
+        return scroll
+
+    def _voice_check(self):
+        """Whether each voice is on this computer, beside its name."""
+        installed, engine = V.installed_ids(), V.engine_ok()
+        for cid, lab in self.voice_status.items():
+            st = V.Voice(cid).status(cid, installed if V.models_folder() is not None else None, engine)
+            text, col = {"ready": ("installed", "#8FC48A"), "missing": ("not found", "#B07A6A"),
+                         "no engine": ("no engine", "#B07A6A"), "no timeline": ("not here", "#8E7E6C")}[st]
+            if cid == "none":
+                text, col = "always", "#8FC48A"
+            lab.setText(text)
+            lab.setStyleSheet(f"color: {col}; font-size: 12px;")
+
+    def _llm_help(self):
+        LLMHelp(self).exec()
+        self._voice_check()
 
     def _set(self, key, value):
         self.rec.options[key] = value
@@ -310,7 +484,7 @@ class NightMenu(QWidget):
             self._leaf(p, x, y, turn + 0.15 * math.sin(self.t * 0.9 + turn * 3), 22 * sc, QColor(*col))
         for cx, cy, r, turn in ((0.3 * W, 0.06 * H, 0.15 * H, 0.3), (0.75 * W, 0.1 * H, 0.17 * H, 1.1),
                                 (0.2 * W, 0.86 * H, 0.12 * H, 2.0), (0.86 * W, 0.86 * H, 0.13 * H, 0.7)):
-            self._web(p, cx, cy, r, turn)
+            web(p, cx, cy, r, turn, self.t)
         f = QFont(SERIF, 34)
         f.setLetterSpacing(QFont.PercentageSpacing, 110)
         p.setFont(f)
@@ -351,20 +525,3 @@ class NightMenu(QWidget):
         p.setPen(QPen(col.lighter(135), 0.9))
         p.drawLine(QPointF(-size * 0.12, 0), QPointF(size * 0.95, 0))
         p.restore()
-
-    def _web(self, p, cx, cy, r, turn):
-        p.setBrush(Qt.NoBrush)
-        spokes = 13
-        jag = [0.7 + 0.3 * abs(math.sin(turn * 5 + i * 1.7)) for i in range(spokes)]
-        p.setPen(QPen(QColor(220, 225, 235, 60), 1.0))
-        for i in range(spokes):
-            a = turn + i / spokes * math.tau
-            p.drawLine(QPointF(cx, cy), QPointF(cx + math.cos(a) * r * jag[i], cy + math.sin(a) * r * jag[i]))
-        path = QPainterPath()
-        for i in range(spokes * 7):
-            a = turn + i / spokes * math.tau
-            f = (0.12 + 0.86 * i / (spokes * 7)) * jag[i % spokes]
-            pt = QPointF(cx + math.cos(a) * r * f, cy + math.sin(a) * r * f + 1.5 * math.sin(self.t * 0.8 + i * 0.05))
-            path.lineTo(pt) if i else path.moveTo(pt)
-        p.setPen(QPen(QColor(220, 225, 235, 45), 0.9))
-        p.drawPath(path)
