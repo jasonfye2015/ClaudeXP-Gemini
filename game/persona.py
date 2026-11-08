@@ -102,6 +102,9 @@ MURMURS = {
     "hunt": "Your hunger has the better of you. You are coming for him.",
     "withdraw": "He came straight at you, and you drew back into the dark.",
     "relit": "His lantern has caught again, and the light finds you.",
+    "call_threshold": "He has not yet come out onto your loom, in the middle of the great hollow. Call him to it.",
+    "call_supper": "It is late, and you are hungry. Call him down to your larder, the chamber off the ledge.",
+    "call_crown": "You have gone up to the crown of the oak, to your web under the moon. Call him up to you.",
 }
 
 
@@ -112,13 +115,13 @@ def murmur_prompt(kind, ctx):
 
 
 KINDS = ("honest", "lie", "flattery", "small_talk", "answer", "evasion", "demand", "gift", "food", "magic", "memory",
-         "promise_kept", "promise_broken", "deep", "light", "harm_small", "lewd")
+         "promise_kept", "promise_broken", "deep", "light", "harm_small", "lewd", "stay")
 
 JUDGE = """You read a conversation between Ysmeine, an ancient spider, and her guest Claude, a young wizard. Judge only Claude's last line. Answer with exactly two lines and nothing else:
-TAGS: one or more of: honest, lie, flattery, small_talk, answer, evasion, demand, gift, food, magic, memory, promise_kept, promise_broken, deep, light, harm_small, lewd, none
+TAGS: one or more of: honest, lie, flattery, small_talk, answer, evasion, demand, gift, food, magic, memory, promise_kept, promise_broken, deep, light, harm_small, lewd, stay, none
 REMEMBER: one short fact about Claude worth remembering from his line (a promise, a claim, a name, a gift, a feeling), written as "He ...", or none
 
-What the tags mean: honest - sincere and personal. lie - contradicts what is known, or is plainly false. flattery - empty praise. small_talk - idle chatter. answer - answers what she asked. evasion - dodges what she asked. demand - orders her, or demands. gift - offers her something. food - offers her food. magic - casts or shows real magic. memory - tells a true memory of his own. promise_kept / promise_broken - against a promise he made before. deep - searching, thoughtful: life, death, knowing, loneliness. light - brings bright light at her. harm_small - harms her small ones. lewd - presses toward the indecent."""
+What the tags mean: honest - sincere and personal. lie - contradicts what is known, or is plainly false. flattery - empty praise. small_talk - idle chatter. answer - answers what she asked. evasion - dodges what she asked. demand - orders her, or demands. gift - offers her something. food - offers her food. magic - casts or shows real magic. memory - tells a true memory of his own. promise_kept / promise_broken - against a promise he made before. deep - searching, thoughtful: life, death, knowing, loneliness. light - brings bright light at her. harm_small - harms her small ones. lewd - presses toward the indecent. stay - says he will stay with her, for good."""
 
 
 EXAMPLES = (

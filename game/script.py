@@ -31,6 +31,15 @@ MURMURS = {
     "withdraw": ("Not so fast. I come to you, little wizard. Not you to me.",
                  "Mind your manners in my house.",
                  "Hurry at me again and see what it gets you."),
+    "call_threshold": ("Up, little wizard. My loom is in the middle of the hollow. Come to it.",
+                       "I am waiting on my loom. Do not make me come down for you.",
+                       "The silk in the middle of my house. Walk out onto it. I want to see you."),
+    "call_supper": ("Come down to my larder. It is time we ate.",
+                    "Down, little wizard. My larder, by the ledge. I am hungry, and it is late.",
+                    "I have been patient all night. Come to my larder."),
+    "call_crown": ("Come up. All the way up, to the top of my tree. The moon is out.",
+                   "I am at the crown, on my web under the sky. Climb to me.",
+                   "Up, to the crown. I want to talk with you where I can see the stars."),
     "relit": ("Your little sun again. Must you.",
               "There. You can see me, a little. Is that better or worse?"),
 }
@@ -132,6 +141,65 @@ SCENES = {
                             "last the night.", "end": "cold"},
             "gallery": {"her": "Go up, then. The gallery is above us, where my guests are kept. Look at them, all of "
                                "them. Then come back and tell me whether you still wish to stay.", "end": "done"},
+        },
+    },
+    "supper": {
+        "start": "larder",
+        "outcomes": {"guest": "Then you will be my guest at this table, and not on it. Eat nothing here. Go up, when I "
+                              "call you.",
+                     "meal": "No. I am sorry, little wizard. I am so very hungry."},
+        "nodes": {
+            "larder": {"her": "Sit. This is my larder. Everything in it was as warm as you, once. I am hungry, little "
+                              "wizard, and I have been patient all night. Tell me why I should not begin with you.",
+                       "choices": [("Because I'm worth more to you talking than eaten.", ["deep", "honest"], "worth"),
+                                   ("I'll bring you honey from Thornwick. I promise.", ["gift", "food"], "promise",
+                                    "He promised to bring you honey from Thornwick."),
+                                   ("Please. I'll do anything.", ["honest"], "plead"),
+                                   ("You're too beautiful to be cruel.", ["flattery"], "flatter")]},
+            "worth": {"her": "Am I. Prove it. Tell me something you have never told anyone.",
+                      "choices": [("I'm afraid I'll die alone, and no one in Thornwick will notice I'm gone.",
+                                   ["memory", "honest", "deep"], "kept", "He fears dying alone, unmissed."),
+                                  ("I don't have anything like that.", ["honest"], "empty"),
+                                  ("I once spoke with a dragon, and it bowed to me.", ["lie"], "dragon",
+                                   "He told you a dragon bowed to him. It did not.")]},
+            "promise": {"her": "Honey. You would walk out of my house, and come back into it, with honey. I will "
+                               "remember that you said so.", "next": "table"},
+            "plead": {"her": "Anything. They all say anything, here, at the end.", "next": "table"},
+            "flatter": {"her": "Beauty is not a reason. It is a garnish.", "next": "table"},
+            "kept": {"her": "There. That is worth more to me than your arm. I will keep it.", "next": "table"},
+            "empty": {"her": "Then you are honest, and empty. Honest I can eat, or not.", "next": "table"},
+            "dragon": {"her": "You did not. I can hear your heart through the silk, and it says you did not.",
+                       "next": "table"},
+            "table": {"her": "Very well. I will decide.", "end": "judge"},
+        },
+    },
+    "crown": {
+        "start": "moon",
+        "nodes": {
+            "moon": {"her": "Here. Under the moon. I come up here when I want to remember that there is a sky. You have "
+                            "seen my house, my guests, my larder. Now: what do you want of me, little wizard?",
+                     "choices": [("To know what you know. All of it.", ["deep", "honest"], "knowing"),
+                                 ("To stay. Here, with you.", ["honest"], "stay", "He said he wants to stay with you.",
+                                  "stay"),
+                                 ("Your true name.", ["deep"], "name"),
+                                 ("To go home alive.", ["honest"], "home")]},
+            "knowing": {"her": "All of it would unmake you. Some of it might remake you. There is a way to carry what "
+                               "I know, little wizard, and it is in my bite.",
+                        "choices": [("Then give it to me.", ["deep", "honest"], "gift",
+                                     "He asked for your venom, and what it carries.", "asked_gift"),
+                                    ("No. Not like that.", ["honest"], "close")]},
+            "stay": {"her": "Stay. Do you know what that means, in a house like mine? Silk, and quiet, and forever.",
+                     "choices": [("I know. I want it.", ["honest", "deep"], "staying", None, "stay"),
+                                 ("Then no. Not yet.", ["honest"], "close", None, "unstay")]},
+            "name": {"her": "My name. You have climbed a long way up my tree to ask me that. Not tonight. Perhaps not "
+                            "ever. Find it yourself, if you can.", "next": "close"},
+            "home": {"her": "Home. To Thornwick, and your cold little room, and masters who will not teach you. Yes. "
+                            "That is honest.", "next": "close"},
+            "gift": {"her": "Then wait with me for the light, and we will see whether you are still worth it when the "
+                            "sun comes.", "end": "done"},
+            "staying": {"her": "Then wait with me for the light. When it comes I will ask you again, and if you say "
+                               "the same, I will believe you.", "end": "done"},
+            "close": {"her": "Wait with me, then, until the light. It is not long now.", "end": "done"},
         },
     },
 }

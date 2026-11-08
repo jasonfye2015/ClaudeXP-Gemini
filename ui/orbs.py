@@ -8,7 +8,7 @@ import math
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
-from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainterPath, QPen, QRadialGradient
+from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient
 
 from ..game.condition import pulse
 
@@ -129,6 +129,47 @@ def draw_danger(p, W, H, body, t):
             g.setColorAt(0, on)
             g.setColorAt(1, off)
             p.fillRect(rect, g)
+
+
+def draw_ending(p, W, H, ending, records, first=False):
+    """Dawn's ending: the light coming down, her last words, the dark, and the line that says which it was."""
+    from . import fonts
+    from ..game.ending import CARD, card
+    if ending.glow > 0:
+        g = QRadialGradient(QPointF(W / 2, -H * 0.2), H * 1.4)        # (light added to the den: brightening it)
+        g.setColorAt(0, QColor(int(150 * ending.glow), int(118 * ending.glow), int(86 * ending.glow)))
+        g.setColorAt(0.6, QColor(int(90 * ending.glow), int(58 * ending.glow), int(40 * ending.glow)))
+        g.setColorAt(1, QColor(30, 18, 14))
+        p.save()
+        p.setCompositionMode(QPainter.CompositionMode_Plus)
+        p.fillRect(QRectF(0, 0, W, H), g)
+        p.restore()
+    if ending.show_line:
+        a = min(1.0, (ending.t - 2.6) / 0.8)
+        p.setFont(fonts.her(records, 34))
+        box = QRectF(W * 0.14, H * 0.38, W * 0.72, H * 0.3)
+        p.setPen(QColor(0, 0, 0, int(160 * a)))
+        p.drawText(box.translated(2, 2), Qt.AlignHCenter | Qt.TextWordWrap, ending.show_line)
+        p.setPen(QColor(250, 232, 214, int(240 * a)))
+        p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, ending.show_line)
+    if ending.black > 0:
+        p.fillRect(QRectF(0, 0, W, H), QColor(0, 0, 0, int(255 * ending.black)))
+    if ending.done:
+        age = ending.t - CARD
+        a = max(0.0, min(1.0, age / 2.0))
+        f = QFont(SERIF, 15)
+        f.setItalic(True)
+        p.setFont(f)
+        p.setPen(QColor(205, 190, 175, int(220 * a)))
+        p.drawText(QRectF(W * 0.15, H * 0.42, W * 0.7, 60), Qt.AlignHCenter | Qt.TextWordWrap, ending.after)
+        p.setFont(QFont(SERIF, 10))
+        p.setPen(QColor(170, 160, 150, int(200 * max(0.0, min(1.0, (age - 1.5) / 2.0)))))
+        p.drawText(QRectF(0, H * 0.42 + 70, W, 20), Qt.AlignHCenter, card(ending.name))
+        if first:
+            p.setPen(QColor(200, 170, 120, int(180 * max(0.0, min(1.0, (age - 2.5) / 2.0)))))
+            p.drawText(QRectF(0, H * 0.42 + 90, W, 20), Qt.AlignHCenter, "(found for the first time)")
+        p.setPen(QColor(150, 140, 130, int(150 * max(0.0, min(1.0, (age - 4.0) / 2.0)))))
+        p.drawText(QRectF(0, H * 0.88, W, 20), Qt.AlignHCenter, "Click to go back to the title")
 
 
 def draw_death(p, W, H, death, t, first=False):

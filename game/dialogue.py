@@ -17,6 +17,23 @@ import random
 from . import persona, script
 
 MODERN = (" ai", "a.i", "system prompt", "prompt", "instruction", "model", "computer", "game", "chatbot", "robot")
+OPENINGS = {
+    "audience": "(He has come down to you, on your loom in the great hollow, for the first time. You see him plainly now, "
+                "and he sees you. Greet him - something like: {line})",
+    "supper": "(He has come down into your larder, where your stores hang wrapped. It is late, and your hunger is at its "
+              "height. Ask him why you should not begin with him - something like: {line})",
+    "crown": "(He has climbed to the crown of your oak, onto your web under the moon and the open sky. This is the "
+             "deepest of your talks. Ask him what he wants of you - something like: {line})",
+}
+CLOSINGS = {
+    "audience": "(It is time to send him on: up to the gallery, to see your guests. Answer him, and send him, in two "
+                "sentences.)",
+    "supper:guest": "(You have decided: he will be your guest at this table, not your meal - tonight. Tell him so, in one "
+                    "or two sentences, and send him up to wait until you call.)",
+    "supper:meal": "(You have decided: you will bite him. Tell him so, in one or two sentences - sorry, and very "
+                   "hungry.)",
+    "crown": "(Ask him to wait with you for the light, in one or two sentences.)",
+}
 QUIET = ("Hm.", "Go on.", "Say that again. Slowly.", "I am listening.")
 TURNS = 9                        # (a scene's length, typed: then she sends him on)
 PLACES = {"tunnel": "the roots", "hollow": "the great hollow", "gallery": "the gallery", "larder": "the larder",
@@ -38,6 +55,7 @@ class Conversation:
         self.lies = 0
         self.ended = None
         self.visited = []                         # (the script's lines she's said, in order: for his notes)
+        self.flags = night.flags if hasattr(night, "flags") else {}     # (what he's chosen: to stay; to ask...)
 
     # ---- what she knows, now -------------------------------------------------------------------------------------
     def context(self):
@@ -87,9 +105,7 @@ class Conversation:
             return
         opening = sc["nodes"][sc["start"]]["her"]                     # (her first words are hers to choose; the
         msgs = [{"role": "system", "content": persona.system(self.context())},   # script's are a guide)
-                {"role": "user", "content": "(He has come down to you, on your loom in the great hollow, for the first "
-                                            "time. You see him plainly now, and he sees you. Greet him - something "
-                                            f"like: {opening})"}]
+                {"role": "user", "content": OPENINGS[scene].format(line=opening)}]
 
         def back(text):
             line = persona.clean(text) or opening
@@ -110,6 +126,11 @@ class Conversation:
             node_id = node["next"]
             node = nodes[node_id]
         text = " ".join(parts)
+        if node.get("end") == "judge":                                # (her larder: guest, or meal - her moods decide)
+            self.ended = self.supper()
+            text += " " + script.SCENES[self.scene]["outcomes"][self.ended]
+            self.history.append(("her", text))
+            return text, None
         self.history.append(("her", text))
         if "end" in node:
             self.ended = node["end"]
@@ -125,8 +146,19 @@ class Conversation:
         self._heard(kinds)
         if len(choice) > 3:
             self._keep(choice[3])
+        if len(choice) > 4 and choice[4]:
+            if choice[4].startswith("un"):
+                self.flags.pop(choice[4][2:], None)
+            else:
+                self.flags[choice[4]] = True
         line, choices = self._at(nxt)
         done(line, choices)
+
+    def supper(self):
+        """Guest, or meal: her hunger against what she's come to think of him."""
+        m = self.night.moods
+        score = m.hunger - 0.5 * m.fascination - 0.8 * m.regard + (25.0 if m.suspicion > 60 else 0.0)
+        return "meal" if score > 25.0 else "guest"
 
     # ---- typed ---------------------------------------------------------------------------------------------------
     def _repeats(self, text):
@@ -151,10 +183,15 @@ class Conversation:
             msgs = [{"role": "system", "content": persona.system(self.context())}]
             for who, t in self.history[-14:]:
                 msgs.append({"role": "assistant" if who == "her" else "user", "content": t})
+            if "stay" in kinds:
+                self.flags["stay"] = True
             if self.turns >= TURNS:
-                msgs.append({"role": "user", "content": "(It is time to send him on: up to the gallery, to see your "
-                                                        "guests. Answer him, and send him, in two sentences.)"})
-                self.ended = "done"
+                if self.scene == "supper":
+                    self.ended = self.supper()
+                    msgs.append({"role": "user", "content": CLOSINGS["supper:" + self.ended]})
+                else:
+                    msgs.append({"role": "user", "content": CLOSINGS[self.scene]})
+                    self.ended = "done"
 
             def back(reply):
                 line = persona.clean(reply) or self.rng.choice(QUIET)   # (no answer from the model: she lets it lie)
