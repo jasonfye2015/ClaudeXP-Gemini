@@ -56,6 +56,7 @@ class Conversation:
         self.ended = None
         self.visited = []                         # (the script's lines she's said, in order: for his notes)
         self.flags = night.flags if hasattr(night, "flags") else {}     # (what he's chosen: to stay; to ask...)
+        self.knows_her = False                    # (her true name and what she was, in his notes: game/hidden.py)
 
     # ---- what she knows, now -------------------------------------------------------------------------------------
     def context(self):
@@ -204,6 +205,32 @@ class Conversation:
             done(line, [])
         self.voice.ask(msgs, back)
 
+    def speak_name(self, done, said=None):
+        """He speaks her true name to her (game/hidden.py). done(text, choices)."""
+        from . import hidden
+        m = self.night.moods
+        self.flags["named"] = True
+        m.regard = min(100.0, m.regard + 12.0)
+        m.fascination = min(100.0, m.fascination + 12.0)
+        m.suspicion = max(0.0, m.suspicion - 20.0)
+        self.history.append(("him", said or hidden.SPEAK))
+        self._keep("He found your true name, and what you were, and spoke it to you.")
+        if self.mode != "model":
+            self.history.append(("her", hidden.ANSWER))
+            node = script.SCENES[self.scene]["nodes"].get(self.node, {})
+            done(hidden.ANSWER, [c[0] for c in node.get("choices", [])] if self.ended is None else None)
+            return
+        msgs = [{"role": "system", "content": persona.system(self.context())}]
+        for who, t in self.history[-14:-1]:
+            msgs.append({"role": "assistant" if who == "her" else "user", "content": t})
+        msgs.append({"role": "user", "content": f"({hidden.SAID_TO_MODEL}.)"})
+
+        def back(reply):
+            line = persona.clean(reply) or hidden.ANSWER
+            self.history.append(("her", line))
+            done(line, [])
+        self.voice.ask(msgs, back)
+
     def ask_cure(self, done):
         """He asks her to take her venom out of him. She gives him the phial if she thinks well enough of him (and
         doesn't doubt him too much); else he wears her bite till dawn. Once a night. done(text, choices)."""
@@ -253,6 +280,10 @@ class Conversation:
 
     def say(self, text, done, interrupting=False):
         text = text.strip()[:400]
+        from . import hidden
+        if self.knows_her and not self.flags.get("named") and hidden.spoken(text):
+            self.speak_name(done, text)                          # (he says it: nothing else matters to her now)
+            return
         her_last = next((t for who, t in reversed(self.history) if who == "her"), "")
         local = []
         if self._repeats(text):

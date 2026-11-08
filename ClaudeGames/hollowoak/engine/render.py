@@ -891,6 +891,14 @@ class Renderer:
                 elif k > 0 and kind == "ember":  # (silk, smouldering)
                     flick = 0.75 + 0.25 * math.sin(now * 23) * math.sin(now * 7.1)
                     out.append(((*pos, 2.2), (0.8 * k * flick, 0.25 * k * flick, 0.05 * k, 1)))
+        ending = getattr(night, "ending", None)
+        if ending is not None and ending.name == "Fire":            # (her silk alight all about him)
+            k = min(1.0, ending.t / 2.5) * (1.0 - ending.black)
+            for i in range(4):
+                a = i * math.tau / 4 + 0.4
+                fl = 0.7 + 0.3 * math.sin(now * (9 + i * 3.1)) * math.sin(now * (4.3 + i))
+                out.append(((ex + math.cos(a) * 2.2, ey - 0.6 + i * 0.7, ez + math.sin(a) * 2.2, 7.0),
+                            (1.5 * k * fl, 0.55 * k * fl, 0.12 * k * fl, 1)))
         dying = getattr(night, "dying", None)
         if dying is not None and dying.flame() > 0:
             k = dying.flame()

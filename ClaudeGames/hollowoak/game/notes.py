@@ -106,9 +106,11 @@ PAGES = {
                       "Through her eyes, long ago: the oak whole and green inside, and someone with hands cutting a "
                       "word into its heart. She remembers it. She remembers it as her own."),
     "mark_crown": ("Old marks", "A word, burnt in",
-                   "Under the crown, burnt into the wood - burnt, in a tree full of silk - a single word, and a handprint "
-                   "beside it. Not hers. She has no hands."),
+                   "Under the crown, burnt into the wood - burnt, in a tree full of silk - a single word, in letters "
+                   "older than any I was taught, and a handprint beside it. Not hers. She has no hands."),
 }
+from .hidden import PAGES as _HIDDEN  # noqa: E402  (what she hides: game/hidden.py)
+PAGES.update(_HIDDEN)
 SUITORS = ("orrin", "aldric", "wick", "maudren", "fennick", "isolde", "unnamed")
 
 

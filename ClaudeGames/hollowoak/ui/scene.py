@@ -180,6 +180,8 @@ class SceneView(QWidget):
         n = self.shell.view.night
         if any(i not in KEPT for i in n.pack):
             self._button("✦  Offer her something...", self._open_pack)
+        if self.talk.knows_her and not self.talk.flags.get("named"):
+            self._button("✦  Speak her true name", self._speak_name)
         if n.venom.active and not self.talk.flags.get("asked_cure"):
             self._button("✦  Ask her to take her venom out of you", self._ask_cure)
         sp = self.shell.view.night.spells
@@ -207,6 +209,13 @@ class SceneView(QWidget):
             self._button("✧  " + MEMORIES[k][0], lambda _x=False, k=k: self._cast("memory", k))
         self._button("Never mind", lambda: self._her(self.her_text, self.choices, again=True))
         self._lay()
+
+    def _speak_name(self):
+        from ..game.hidden import SPEAK
+        self.his_text = SPEAK
+        self._clear()
+        self.waiting = True
+        self.talk.speak_name(lambda t, ch: self.replies.put((t, ch)))
 
     def _ask_cure(self):
         self.his_text = "(You ask her to take her venom out of you.)"
