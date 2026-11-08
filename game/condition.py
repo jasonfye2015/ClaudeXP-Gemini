@@ -7,7 +7,7 @@ other, he's done - so the poison in him is a ceiling coming down on his health, 
                 lantern in the dark; it wears off, slowly
     sanity      blue. The dark (the lantern out - and worse with them all over it), spiders on his face, her eyes on him,
                 slipping, falling into her web; steady light brings it back
-    stupor      green, rising in the sanity orb: heavy poison, a mind giving way, a hard knock; it clears when those ease
+    stupor      yellow, rising in the sanity orb: heavy poison, a mind giving way, a hard knock; it clears when those ease
 
 He collapses when poison reaches his health, or stupor his sanity (or either runs dry). Plain Python: the tests run it.
 

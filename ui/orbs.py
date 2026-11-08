@@ -1,5 +1,5 @@
 """Claude's own state, drawn over the view: two glass orbs at the bottom corners, each holding two fluids - health
-(red) on the left with poison (green) rising under it from the bottom, sanity (blue) on the right with stupor (green)
+(red) on the left with poison (green) rising under it from the bottom, sanity (blue) on the right with stupor (yellow)
 rising under it - and their numbers under them in their colours. When the green comes near the other, the edge of the
 view beats; when it reaches it, he's done.
 
@@ -13,7 +13,7 @@ from ..game.condition import pulse
 
 SERIF = "Georgia"
 EDGE = {"health": QColor(210, 25, 20), "poison": QColor(70, 220, 60), "sanity": QColor(40, 90, 240),
-        "stupor": QColor(130, 235, 160)}
+        "stupor": QColor(235, 205, 40)}
 
 
 def _fluid(p, cx, cy, r, level, deep, bright, t, seed, alpha=255):
@@ -94,11 +94,11 @@ def draw_orbs(p, W, H, body, t, alpha=1.0):
     _orb(p, left, cy, r, v["health"] / 100, QColor(70, 4, 6), QColor(215, 30, 26), v["poison"] / 100,
          QColor(14, 70, 10), QColor(90, 225, 55), t, 0.0)
     _orb(p, right, cy, r, v["sanity"] / 100, QColor(6, 14, 70), QColor(45, 100, 235), v["stupor"] / 100,
-         QColor(20, 75, 40), QColor(120, 225, 140), t, 2.0)
+         QColor(90, 70, 6), QColor(240, 205, 50), t, 2.0)
     f = QFont(SERIF, 11)
     p.setFont(f)
     for x, lines in ((left, (("Health", v["health"], QColor(225, 70, 60)), ("Poison", v["poison"], QColor(110, 220, 90)))),
-                     (right, (("Sanity", v["sanity"], QColor(95, 140, 245)), ("Stupor", v["stupor"], QColor(130, 225, 155))))):
+                     (right, (("Sanity", v["sanity"], QColor(95, 140, 245)), ("Stupor", v["stupor"], QColor(235, 205, 70))))):
         for k, (name, val, col) in enumerate(lines):
             p.setPen(QColor(0, 0, 0, 200))
             box = QRectF(x - 90, cy + r + 12 + k * 17, 180, 18)
