@@ -89,14 +89,17 @@ class GameView(QOpenGLWidget):
             p.end()
 
     # ---- the loop ----------------------------------------------------------------------------------------------
-    def begin(self, night):
+    def begin(self, night, talk_state=None):
+        """A night: new (saved at once, as its first act begins), or gone on with from a save (talk_state: what was
+        said and kept)."""
         self.night = night
         self.playing = True
         night.show_lantern = True
         self.outs = 0
         self.teeters = 0
         self.whisper = None
-        self.tally = {"bites": 0, "slips": 0, "falls": 0, "swipes": 0, "shakes": 0, "done": False}
+        self.tally = {"bites": 0, "slips": 0, "falls": 0, "swipes": 0, "shakes": 0, "done": False,
+                      "from": night.time, "resumed": talk_state is not None}
         self.first_ending = False
         self.inp.yaw, self.inp.pitch = night.yaw, night.pitch
         self.inp.strafe = self.inp.forward = 0.0
@@ -106,6 +109,9 @@ class GameView(QOpenGLWidget):
         rec = self.shell.records
         voice = Voice(rec.options.get("voice") or "none")
         self.talk = Conversation(night, voice, dict(rec.reputation))
+        if talk_state:
+            self.talk.memory = list(talk_state.get("memory", []))
+            self.talk.lies = int(talk_state.get("lies", 0))
         if self.talk.mode == "model":
             voice.warm()                                          # (her words: the model loaded while he walks in)
         self.scene = self.scene_ui = None
@@ -115,6 +121,21 @@ class GameView(QOpenGLWidget):
         self.fade = time.perf_counter()
         self.cards = []
         self.setFocus()
+        if talk_state is None:
+            self.shell.saves.save("act", night, self.talk)       # (the first act, begun)
+        else:
+            self.whisper = ("You go on, where you were.", time.perf_counter(), 3.0)
+
+    def quick_save(self):
+        """F5, or "Save here": -> None if saved, or why it couldn't be."""
+        from ..game.saving import why_not
+        n = self.night
+        if n is None or not self.playing:
+            return "Not now."
+        why = why_not(n, scene=getattr(self, "scene", None) is not None)
+        if why is None and not self.shell.saves.save("quick", n, self.talk):
+            why = "It couldn't be saved."
+        return why
 
     def backdrop(self, night):
         """The title's backdrop: standing at the foot of the hollow, turning slowly, looking up into the dark."""
@@ -179,6 +200,8 @@ class GameView(QOpenGLWidget):
             self._notes_from(n)
             self._murmurs(n)
             for e in n.events:
+                if e[0] == "act" and e[1] != "dawn":                 # (an act begun: the night saved)
+                    self.shell.saves.save("act", n, self.talk)
                 if e[0] == "place":
                     self.cards.append((e[1], e[2], now))
                 elif e[0] == "lantern" and e[1] == "out":
@@ -465,7 +488,7 @@ class GameView(QOpenGLWidget):
             ending = {"Dawn": "dawn, and you let him go", "Cast out": "dawn, and you cast him out",
                       "Bound": "him staying, wrapped, at his own asking",
                       "The gift": "dawn, and your gift to him"}.get(n.ending.name, "dawn")
-        self.shell.records.night_over(dict(t, seconds=n.time, ending=ending, manner=n.manner(),
+        self.shell.records.night_over(dict(t, seconds=n.time - t.get("from", 0.0), ending=ending, manner=n.manner(),
                                            lies=talk.lies if talk else 0,
                                            kept=talk.memory[-1] if talk and talk.memory else ""))
 
@@ -648,6 +671,10 @@ class GameView(QOpenGLWidget):
         spell = {Qt.Key_1: "light", Qt.Key_2: "warmth", Qt.Key_3: "illusion", Qt.Key_4: "memory"}.get(k)
         if spell and self.night is not None and getattr(self, "scene", None) is None:
             self.night.cast(spell)
+            return
+        if k == Qt.Key_F5:                                       # (a quick save)
+            why = self.quick_save()
+            self.whisper = (why or "Saved.", time.perf_counter(), 2.5)
             return
         if k == Qt.Key_Q and self.night is not None and getattr(self, "scene", None) is None:   # (the antidote)
             if self.night.drink():
