@@ -40,6 +40,7 @@ class DenAudio:
         self._beat = None
         self.her = None                                  # (her voice: started the first time she speaks)
         self.synth = Synth(RATE)
+        self.synth.music.ready()                             # (the waltz's notes, made ahead)
         self.sink = None
         self._fade = 0.0
         try:
@@ -63,6 +64,23 @@ class DenAudio:
         want = 0.0 if self.muted() else 1.1 * self.volume
         self._fade += (want - self._fade) * 0.15                 # (a block's worth of fade, so it never clicks)
         return self._fade
+
+    def score(self, night, scene=None, playing=True):
+        """The music, following the night: the drips, the waltz, the crown, a coda, or silence - and her moods."""
+        mode = "explore"
+        if playing and night is not None:
+            if night.dying is not None:
+                mode = "silence"                                        # (Supper ends in silence)
+            elif night.ending is not None:
+                mode = "coda:" + night.ending.name
+            elif scene is not None:
+                mode = "crown" if getattr(scene, "name", "") == "crown" else "scene"
+        mood = {}
+        if playing and night is not None:
+            mood = dict(night.moods.values())
+            mood["venom"] = night.venom.active
+        self.synth.music.set(mode, **{k: v for k, v in mood.items()
+                                      if k in ("hunger", "patience", "suspicion", "fascination", "venom")})
 
     def hear(self, night, events):
         """What the night just did, as sound; and the steady parts as they stand now."""

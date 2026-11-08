@@ -348,8 +348,25 @@ class NightMenu(QWidget):
         return self._page("Records", html)[0]
 
     def _saved(self):
-        return self._page("Saved nights", "<p>No saved nights.</p><p style='color:#8E7E6C'><i>For now a night is played"
-                                          " through in one sitting. Saving part-way will come.</i></p>")[0]
+        """The night's saves: go on from either (game/saving.py)."""
+        saves = self.shell.saves.list()
+        note = ("<p style='color:#8E7E6C'><i>The night saves itself as each act begins; F5 (or Save here, in the pause) "
+                "saves it wherever you stand. Beginning a new night clears them.</i></p>")
+        if not saves:
+            return self._page("Saved nights", "<p>No saved nights.</p>" + note)[0]
+        w, lay = self._page("Saved nights")
+        for kind, label in saves:
+            b = QPushButton(label)
+            b.setCursor(Qt.PointingHandCursor)
+            b.clicked.connect(lambda _x=False, kind=kind: self.shell.load_save(kind))
+            lay.addWidget(b)
+        lab = QLabel(note)
+        lab.setWordWrap(True)
+        lab.setTextFormat(Qt.RichText)
+        lay.addSpacing(10)
+        lay.addWidget(lab)
+        lay.addStretch(1)
+        return w
 
     def _unlocks(self):
         have = self.rec.unlocks
@@ -370,7 +387,9 @@ class NightMenu(QWidget):
             lay.addWidget(s)
             lay.addSpacing(10)
         slider("Volume", "volume")
+        slider("Music", "music")
         slider("Looking about (mouse speed)", "look")
+        slider("Her words, how fast they come", "text_speed")
 
         def size(label, key, sample, font):
             row = QHBoxLayout()
@@ -397,7 +416,8 @@ class NightMenu(QWidget):
         size("Her words, their size", "her_size", "little wizard", lambda: fonts.her(self.rec, 26))
         size("Your words, their size", "his_size", "I came", lambda: fonts.his(self.rec, 13))
         for label, key in (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"),
-                           ("The orbs", "orbs"), ("Her venom, pulsing at the edges", "venom_fx")):
+                           ("The orbs", "orbs"), ("Her venom, pulsing at the edges", "venom_fx"),
+                           ("Steadier light (less flicker and flashing)", "steady")):
             c = QCheckBox(label)
             c.setChecked(bool(o[key]))
             c.toggled.connect(lambda v, key=key: self._set(key, bool(v)))

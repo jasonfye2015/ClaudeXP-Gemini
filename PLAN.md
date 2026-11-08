@@ -308,7 +308,18 @@ each ending its own scene (game/ending.py LOOK): she's before him, framed, for D
 (game/scene.py's placing and camera); Dawn in warm light, Cast out grey and alone, Bound with the silk closing over his
 sight, The gift with her venom glowing green about him, The hidden in gold, Fire in fire.
 
-## Phase 5 - music, sound, polish
+## Phase 5 - music, sound, polish (done)
 
-A new style on the ClaudeRPG-style sound engine; the den's sounds; text only for her voice (unless a fitting local
-text-to-speech turns up).
+The score (engine/music.py: the game's own, made as it plays, mixed into the den's sound under her voice): exploring - a
+low drone (D and A), harp and bell plucks falling like drips down D minor, long silences; her scenes - a slow waltz in
+three (an original eight-bar tune over Dm-Bb-Gm-A), each beat a little out of true; the crown - the waltz opened out,
+strings over the drone, the melody on bells; each ending its own short coda (Supper: silence). Her moods move it:
+hunger past 45 brings a heartbeat under the drone, quickening; patience under 55 drops melody notes; suspicion over 55
+adds a second voice a semitone wrong and a moment late; fascination warms and slows the bells and steadies the waltz;
+venom bends and wavers the pitch. Notes are made once and kept; the waltz's made ahead (no stall at the crown). Options:
+a Music level.
+Supper's last moments: as he's hung she comes down to him, close, and he looks at her - and she speaks (in her hand,
+aloud): one quiet line, without cruelty, from what she made of him - held dear; lied to; met before; walked her silk
+with care; bitten - or, with a model speaking for her, its own words if they come in time.
+Polish: Options for how fast her words come and for steadier light (the lantern's flicker smoothed, the lightning only
+a glow); the Saved nights page lists the night's saves to go on from; the README tells the whole night.

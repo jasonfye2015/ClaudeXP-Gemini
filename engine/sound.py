@@ -166,6 +166,9 @@ class Synth:
         self.breath_loop = _shaped_noise(rng, rate * 2, 250, 2600, 0.5, rate)
         self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
+        from .music import Music
+        self.music = Music(rate)                 # (the score: engine/music.py)
+        self.music_gain = 0.7
 
     def set(self, hum=None, height=None, her=None, pitch=None, breath=None, rain=None):
         if rain is not None:
@@ -235,6 +238,9 @@ class Synth:
             ph = (t % 4.6) / 4.6
             shape = np.where(ph < 0.42, np.sin(np.pi * ph / 0.42) ** 2, 0.7 * np.sin(np.pi * (ph - 0.42) / 0.5) ** 2 * (ph < 0.92))
             out += self.breath_loop[i] * shape * np.linspace(b0, self._breath, n) * 0.07
+        # the score
+        if self.music_gain > 0.001:
+            out += self.music.render(n) * self.music_gain
         # her voice, over it all - and the den hushed a little while she speaks
         if self.speech is not None:
             out *= 0.6
