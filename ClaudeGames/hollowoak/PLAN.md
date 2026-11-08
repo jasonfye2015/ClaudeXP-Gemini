@@ -443,3 +443,10 @@ there the dusk sky lights everything (the shared lighting's outsideK) and the mi
 sky itself deepens to dusk while he's under it. Into the roots, he folds the letter away. Nothing small drops on him
 under the sky. The letter leads from out there, too (Nav: outside -> the mouth -> the tunnel).
 
+9i - how hard the night is (done). Four levels (game/condition.py LEVELS; Options, before the night and in his
+notebook; saved with the night): Easy - as it was made; Normal (the new default) - hurts 2.2x, bites 2.6x, the mind's
+losses 2x and its mending 0.6x, poison wearing off at 0.45x and eating at health 2x, health mending 0.5x, stupor in 2x
+and out 0.5x, her hunger 1.25x; Hard and Nightmare further still (Nightmare: hurts 5x, bites 6x, the mind 4.5x,
+poison wearing off at a fifth). Her own bite a little more. Led by the letter, still kept above thirty.
+And in her scenes his orbs and his heart are no longer hidden: they sit just above her words.
+

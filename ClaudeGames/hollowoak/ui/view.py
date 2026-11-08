@@ -201,6 +201,7 @@ class GameView(QOpenGLWidget):
             level = 0.45 + 0.4 * abs(math.sin(now * 13.0))
         n.her.voice += (level - n.her.voice) * 0.5
         n.shadows = bool(self.shell.records.options.get("shadows", True))
+        n.difficulty = self.shell.records.options.get("difficulty", "normal")
         n.brightness = self.shell.records.options.get("brightness", 50)
         if self.playing and n.ending is not None and not self.shell.panel_open():     # (dawn: how it ends)
             n.step(dt, self.inp)
@@ -864,8 +865,17 @@ class GameView(QOpenGLWidget):
         W, H = self.width(), self.height()
         t = time.perf_counter()
         p.setRenderHint(QPainter.Antialiasing)
-        if getattr(self, "scene", None) is not None:
-            return                                                # (her scene: its own frame, nothing else)
+        if getattr(self, "scene", None) is not None:             # (her scene: his orbs and heart, above her words)
+            ui = getattr(self, "scene_ui", None)
+            o = self.shell.records.options
+            if ui is not None and self.night is not None:
+                top = ui.box().top() - 24                           # (clear of the branch along its top)
+                n = self.night
+                if o.get("orbs", True):
+                    orbs.draw_orbs(p, W, H, n.body, t, 0.9, bottom=top, r=max(26.0, H * 0.05), inset=W * 0.12)
+                if o.get("heart", True):
+                    orbs.draw_heart(p, W, H, n.body, 0.9, bottom=top)
+            return
         # a place's name, the first time he comes into it: it rises out of the dark and goes again
         self.cards = [c for c in self.cards if t - c[2] < 8.0]
         if self.cards:

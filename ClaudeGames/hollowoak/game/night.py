@@ -135,6 +135,7 @@ class Night:
         self.eye_h = EYE
         self.roll = 0.0
         self.letter_in_hand = False                                    # (walking to the oak: her letter, held)
+        self.difficulty = "easy"                                       # (how hard the night is on him: condition.py)
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
@@ -406,9 +407,11 @@ class Night:
     def bitten(self):
         """Her bite: venom, and her hunger eased a while. A second, while the first is still in him, is Supper.
         -> True if that was the end of him."""
+        from .condition import level
+        lv = level(self)
         self.moods.bit()
-        self.body.poison = min(100.0, self.body.poison + 30.0)
-        self.body.health = max(0.0, self.body.health - 8.0)
+        self.body.poison = min(100.0, self.body.poison + 30.0 * min(1.6, lv.venom ** 0.35))
+        self.body.health = max(0.0, self.body.health - 8.0 * min(1.6, lv.hurt ** 0.35))
         self.body.startle += 40.0
         self.tremor += 3.0
         if self.venom.active:

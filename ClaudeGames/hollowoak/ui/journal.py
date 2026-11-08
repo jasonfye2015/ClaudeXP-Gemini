@@ -131,6 +131,9 @@ class Journal:
         elif kind == "slider":
             self.dragging = (arg[0], arg[1])
             self.move(pos)
+        elif kind == "level":
+            rec.options["difficulty"] = arg
+            rec.save()
         elif kind == "toggle":
             rec.options[arg] = not rec.options.get(arg, True)
             rec.save()
@@ -309,6 +312,21 @@ class Journal:
     def _page_options(self, p, pr):
         o = self.view.shell.records.options
         y = self._head(p, pr, "Options")
+        from ..game.condition import LEVEL_NAMES
+        p.setFont(QFont(SERIF, 10))
+        p.setPen(INK)
+        p.drawText(QRectF(pr.left() + 24, y - 4, 120, 18), Qt.AlignLeft, "How hard:")
+        x = pr.left() + 100
+        for key, name in LEVEL_NAMES:                                  # (the four: the chosen one underlined)
+            f = QFont(SERIF, 10, QFont.Bold if o.get("difficulty", "normal") == key else QFont.Normal)
+            f.setUnderline(o.get("difficulty", "normal") == key)
+            p.setFont(f)
+            wd = QFontMetrics(f).horizontalAdvance(name) + 12
+            r = QRectF(x, y - 4, wd, 18)
+            p.drawText(r, Qt.AlignLeft, name)
+            self.hits.append((r, ("level", key)))
+            x += wd + 6
+        y += 22
         for label, key in SLIDERS:
             p.setFont(QFont(SERIF, 10))
             p.setPen(INK)
