@@ -338,3 +338,10 @@ her - written there once he's seen it (records.learned, kept across nights). In 
 held out first; the rest are offered as cards with what he's learned. Picked up, a thing flies into its place on the
 strip low on the left. A model is told what he's holding. Saved with the night: the satchel, his hand, what's put down.
 
+Phase 6b - the notebook in his hands (done). ui/journal.py: Esc - the view tilts down and his notebook lifts into it, the
+night going on around him (he stands still while he reads; a small one on his face, a dangler, a bite, her strike:
+it's knocked from his hands). The left page its contents; the right what he's turned to, a page turning between:
+Notes on her (written first, three to a page, back and on), Her letter (in her hand), What's been found, Options
+(drawn in ink: sliders to drag, boxes to tick), Save here, Back to the title (Leave / Stay). The true pause is P, or
+the window losing the computer's attention - "The night waits"; in her scenes Esc still pauses.
+

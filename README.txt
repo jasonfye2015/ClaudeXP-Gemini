@@ -11,7 +11,8 @@ Timeline's other games.
 The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/artifact/JtQZ3J468Lqh9E8QqoVXfS
 
 Playing
-  Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
+  Click to take the mouse. Esc: he looks down and lifts his notebook - his notes, her letter, what's been found,
+  options, save - and the night doesn't stop while he reads (something on his face knocks it from his hands). P pauses. W A S D walk - slowly; Shift runs; Space jumps; F looks closer; T, at the end, waits for the light.
   Tab opens his satchel (the night doesn't wait while he rummages); the mouse wheel puts one thing in his left hand;
   G puts it down. Q drinks the antidote, if he has it. F5 saves (the night saves itself, too, as each act begins).
   1 2 3 4 cast his spells: Light, Warmth, Illusion, Memory (in her scenes: "Cast a spell...").
