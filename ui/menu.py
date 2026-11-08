@@ -151,7 +151,7 @@ class LLMHelp(QDialog):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle("LLM Help - her voice")
+        self.setWindowTitle("LLM Help - her words")
         self.setModal(True)
         self.setMinimumSize(640, 600)
         self.setStyleSheet(STYLE + "QDialog { background: #0C0809; }")
@@ -173,7 +173,8 @@ class LLMHelp(QDialog):
                         f"1. Download <b>{h['file']}</b> ({h['size']}) from <a style='color:#D9A877' href='{h['page']}'>"
                         f"{h['page']}</a> (the <i>Files and versions</i> tab).<br>"
                         f"2. Make a folder named <b>{cid}</b> in the models folder, and put the file in it.{info}</p>")
-        html = (f"<p>Her voice comes from a language model running on this computer, through the Timeline's own engine "
+        html = (f"<p>Her words (what she says, as text) come from a language model running on this computer, through "
+                f"the Timeline's own engine "
                 f"(llama.cpp). Nothing is sent anywhere. Pick one - you only need one:</p>"
                 f"<p style='color:#B8A890'><b>NemoMix Unleashed 12B</b> plays her best. <b>Gemma 3 4B</b> is smaller "
                 f"and quicker, for a smaller graphics card.</p>{''.join(rows)}"
@@ -376,11 +377,12 @@ class NightMenu(QWidget):
             c.toggled.connect(lambda v, key=key: self._set(key, bool(v)))
             lay.addWidget(c)
         lay.addSpacing(16)
-        head = QLabel("Her voice")
+        head = QLabel("Her words")
         head.setObjectName("head")
         head.setStyleSheet("font-size: 18px;")
         lay.addWidget(head)
-        note = QLabel("A language model on this computer can speak for her, and you answer her in your own words.")
+        note = QLabel("Who writes what she says (on screen, as text): a language model on this computer - and you "
+                      "answer in your own words - or a script.")
         note.setObjectName("note")
         note.setWordWrap(True)
         lay.addWidget(note)

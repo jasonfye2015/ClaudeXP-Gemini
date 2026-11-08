@@ -159,7 +159,7 @@ cools with suspicion; her silk's hum rises in pitch with hunger. F3 shows the nu
 A calm watcher: in 10 minutes fascination 30 -> 61, patience 88, regard rising. A careless runner: hunted and bitten
 in about 8. (Still to come: she can't reach him in the middle of the floor - a drop on a thread from above, later.)
 
-Phase 3c begun - her voice, chosen (done). game/voice.py: three choices in Before the night > Options > Her voice -
+Phase 3c begun - her words, chosen (done). game/voice.py: three choices in Before the night > Options > Her words -
 NemoMix Unleashed 12B (the user's pick: the best at roleplay; about 7.5 GB), Gemma 3 4B (the lighter alternative,
 about 2.5 GB), or None (no model, no typing: she speaks from a script and he answers from a fixed set of lines that
 lead to the different outcomes). Each shows whether it's on this computer; nothing chosen yet means the best that's
