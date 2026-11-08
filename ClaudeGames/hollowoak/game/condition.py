@@ -41,9 +41,9 @@ class Level:
 
 LEVELS = {                     # (Easy: as it was made. The others: what the night really costs)
     "easy": Level(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
-    "normal": Level(2.2, 2.6, 2.0, 0.6, 0.45, 0.5, 2.0, 0.5, 2.0, 1.25),
-    "hard": Level(3.5, 4.0, 3.0, 0.4, 0.3, 0.3, 3.0, 0.35, 3.0, 1.55),
-    "nightmare": Level(5.0, 6.0, 4.5, 0.25, 0.2, 0.15, 4.5, 0.2, 4.0, 1.9),
+    "normal": Level(2.2, 2.6, 2.0, 0.6, 0.25, 0.2, 2.0, 0.5, 2.0, 1.25),
+    "hard": Level(3.5, 4.0, 3.0, 0.4, 0.15, 0.1, 3.0, 0.35, 3.0, 1.55),
+    "nightmare": Level(5.0, 6.0, 4.5, 0.25, 0.1, 0.04, 4.5, 0.2, 4.0, 1.9),
 }
 LEVEL_NAMES = (("easy", "Easy"), ("normal", "Normal"), ("hard", "Hard"), ("nightmare", "Nightmare"))
 
@@ -137,12 +137,12 @@ class Condition:
                 self.sanity -= 2 * lv.mind
                 calm = False
                 if rng.random() < 0.2:
-                    self._bite(out, "face", 5.0, 1.0)
+                    self._bite(out, "face", 15.0, 1.5)              # (her small ones: their venom is strong)
             elif kind == "crawler":
                 self.sanity -= 1 * e[1] * lv.mind
                 calm = False
                 if rng.random() < 0.1:
-                    self._bite(out, "face", 2.0, 0.5)
+                    self._bite(out, "face", 6.0, 0.8)
             elif kind == "silk" and e[1] == "slip":
                 self.sanity -= 1.5 * lv.mind
             elif kind == "silk" and e[1] == "caught":
@@ -150,7 +150,7 @@ class Condition:
         on_lantern = len(night.swarm.crawling()) if night.lantern else 0
         for _ in range(on_lantern):                                    # (on his hand, in the dark)
             if rng.random() < 0.01 * dt:
-                self._bite(out, "hand", 2.0, 0.5)
+                self._bite(out, "hand", 6.0, 0.8)
         dark = night.lamp.state == "out" or not night.lantern
         if dark:
             self.sanity -= (0.045 + 0.006 * on_lantern) * dt * lv.mind

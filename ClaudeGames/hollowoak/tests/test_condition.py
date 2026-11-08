@@ -26,7 +26,8 @@ def test_steady_light_keeps_him_whole():
 
 
 def test_doing_nothing_at_all_is_one_way_to_end_it():
-    """Stand still from the start and never shake the lantern: barely touched for minutes, then, at last, Supper."""
+    """Stand still from the start and never shake the lantern: in the dark her small ones come up the wand for it, and
+    their venom is strong - a few minutes, and Supper (sooner, the harder the night)."""
     n = N.Night(seed=21)
     inp = N.Input()
     inp.yaw = n.yaw
@@ -34,13 +35,12 @@ def test_doing_nothing_at_all_is_one_way_to_end_it():
     while n.dying is None and n.time < 25 * 60:
         n.step(0.05, inp)
         n.events.clear()
-        for mark in (120, 300):
+        for mark in (60,):
             if mark not in at and n.time >= mark:
                 at[mark] = dict(n.body.values())
-    assert at[120]["sanity"] > 85 and at[120]["health"] > 95                # (two minutes in: hardly a mark on him)
-    assert at[300]["sanity"] > 55
-    assert n.dying is not None and n.dying.cause in ("stupor", "sanity")
-    assert 8 * 60 < n.time < 16 * 60, n.time / 60                            # (ten or twelve minutes of nothing)
+    assert at[60]["health"] > 90                                              # (a minute in: hardly a mark on him)
+    assert n.dying is not None
+    assert 3 * 60 < n.time < 8 * 60, n.time / 60                             # (a few minutes of nothing, on Easy)
 
 
 def test_poison_and_a_fall():
