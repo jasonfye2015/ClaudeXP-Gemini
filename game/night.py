@@ -23,6 +23,7 @@ from .crawlers import Crawlers
 from .death import Death
 from .lantern import Lantern
 from .moods import Moods
+from .cocoons import Cocoons
 from .mother import Mother
 from .sky import Sky
 from .web import BRIDGE_HALF, Bridge, Web
@@ -82,6 +83,7 @@ class Night:
         self.place = None
         self.moved = 0.0
         self.her = Mother(self.tree, random.Random(self.rng.random()))     # (Ysmeine: on the wall, in the dark)
+        self.cocoons = Cocoons(self.tree)                                   # (her guests, wrapped)
         self.moods = Moods()                                                # (how she regards him: hidden)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
@@ -207,6 +209,24 @@ class Night:
         gone = self.body.spent()
         if gone is not None:
             self.collapse(gone)
+
+    def examine(self):
+        """F: a closer look at the wrapped thing before him. If it's whole, it splits - and they pour out of it."""
+        spot = self.cocoons.near(self)
+        if spot is None:
+            return None
+        for e in self.cocoons.examine(self, spot):
+            self.events.append(e)
+            if e[3]:                                            # (the burst)
+                self.brood.pour_out(spot["pos"], spot["floor"], 34)
+                for _ in range(2):
+                    self.crawlers.scurry(0.08)                  # (and some onto his face)
+                self.body.sanity = max(0.0, self.body.sanity - 4.0)
+                self.body.startle += 30.0
+                self.moods.suspicion = min(100.0, self.moods.suspicion + (8.0 if spot["id"] == "unnamed" else 2.0))
+                self.moods.fascination = min(100.0, self.moods.fascination + 1.0)
+                self.tremor += 2.5                              # (she felt her guest disturbed)
+        return spot
 
     def collapse(self, cause):
         """Something gave out: down he goes, and they come."""

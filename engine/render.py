@@ -413,6 +413,12 @@ class Renderer:
         _w, self.wand_tip = held.wand_parts()
         self.hand_parts = held.arm_parts() + held.hand_parts()
         self.hand_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], dynamic=True)
+        from ..game.cocoons import Cocoons
+        from . import cocoonmesh
+        self.cocoons = Cocoons(self.tree)
+        cv, cthreads = cocoonmesh.build(self.cocoons)
+        self.cocoon_mesh = gl.Mesh([(0, 3), (1, 3), (2, 3)], cv)               # (her guests, wrapped)
+        self.cocoon_silk = gl.Mesh([(0, 3), (1, 3), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)], silkmesh.ribbons(cthreads))
         self.moon = np.array((0.35, 1.0, -0.25), np.float32)
         self.moon /= np.linalg.norm(self.moon)
 
@@ -499,6 +505,7 @@ class Renderer:
         self.mesh.draw()
         self.dress_prog.use()
         self.dress.draw()
+        self.cocoon_mesh.draw()
         self.fung.use()
         self.fung.float("uTime", now)
         self.fung.vec("uTint", self._tint(night))
@@ -636,6 +643,7 @@ class Renderer:
         GL.glBlendFunc(GL.GL_ONE, GL.GL_ONE)
         GL.glDepthMask(GL.GL_FALSE)
         self.silk.draw()
+        self.cocoon_silk.draw()
         threads = []
         for x, y, z, top, size, ph in night.danglers.active():
             p = self._dangle(x, y, z, ph)
@@ -927,6 +935,17 @@ class Renderer:
         sky = getattr(night, "sky", None)
         if sky is not None and sky.weather in ("rain", "storm", "snow") and sky.strength > 0.02:
             self._falling(sky, now, eye, right, verts)
+        cocoons = getattr(night, "cocoons", None)             # (a guest split open: silk torn loose, drifting)
+        for sid, t0 in (cocoons.burst_at.items() if cocoons is not None else ()):
+            age = night.time - t0
+            if 0 <= age < 2.5:
+                spot = next(s for s in cocoons.spots if s["id"] == sid)
+                cx, cy, cz = spot["pos"]
+                for k in range(26):
+                    a, b = k * 2.399, (k * 0.618) % 1.0
+                    r = 0.15 + age * (0.4 + b * 0.5)
+                    p = (cx + math.cos(a) * r, cy + (b - 0.3) * 0.6 + age * 0.15 - age * age * 0.12, cz + math.sin(a) * r)
+                    bill(p, 0.03 + b * 0.03, (0.75, 0.74, 0.7), 0.5 * (1 - age / 2.5))
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)

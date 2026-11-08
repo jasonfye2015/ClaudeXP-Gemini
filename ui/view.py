@@ -274,6 +274,10 @@ class GameView(QOpenGLWidget):
         from ..game import notes
         for e in n.events:
             self.note(notes.unlock_for(e, n))
+            if e[0] == "cocoon":                              # (her guest: who he was, now in his notes)
+                self.note([e[1]])
+                title = notes.PAGES[e[1]][1]
+                self.whisper = (title + ("." if e[3] else " - still, now. Empty of them."), time.perf_counter(), 3.5)
         if int(n.time * 2) != int((n.time - 0.05) * 2):          # (twice a second: has he seen her moods in the light?)
             self.note(notes.for_moods(n.moods))
 
@@ -362,6 +366,10 @@ class GameView(QOpenGLWidget):
             p.setPen(QColor(220, 200, 170, a))
             p.setFont(QFont(SERIF, 13))
             p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "E   -   shake the lantern")
+        if n.cocoons.near(n) is not None and n.dying is None:      # (something wrapped, close: look closer)
+            p.setPen(QColor(220, 200, 170, 200))
+            p.setFont(QFont(SERIF, 13))
+            p.drawText(QRectF(0, H * 0.6, W, 30), Qt.AlignHCenter, "F   -   look closer")
         if n.teetering and self.teeters <= 3:                    # (swaying on a strand: what to do, the first few times)
             p.setPen(QColor(220, 200, 170, int(150 + 60 * math.sin(t * 3.0))))
             p.setFont(QFont(SERIF, 13))
@@ -459,6 +467,8 @@ class GameView(QOpenGLWidget):
             return
         if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
             self.debug = not getattr(self, "debug", False)
+        if k == Qt.Key_F and self.night is not None and self.night.dying is None:     # (a closer look)
+            self.night.examine()
         if k == Qt.Key_Space and self.night is not None:
             self.inp.jump = True
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)

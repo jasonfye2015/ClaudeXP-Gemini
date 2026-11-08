@@ -230,6 +230,14 @@ she shines wet in the rain. The rain hisses down the trunk. ui/dial.py: the cloc
 theirs - the sky of the hour with the sun or moon on its arc, the moon's face, the time and part of the day, the date,
 the weather and its strength. (Weather may open other endings, later.)
 
+Her guests (done): game/cocoons.py + engine/cocoonmesh.py - seven suitors wrapped in silk where she hung them: four
+against the wall of the hollow's floor (Orrin Vale and his broken lute, Ser Aldric and his sword, Wick and his picks,
+Isolde of the Marr and her fire-tipped arrows), two in the gallery's chamber (Maudren Hale and her book, Brother
+Fennick and his beads), and one high by the crown with nothing beneath it. Close, and looking: "F - look closer". The
+silk splits - torn strands drifting - and her small ones pour out of him every way across the floor (and some onto
+his face); his sanity and heart take it; she feels it (suspicion, and much more for the one by the crown). He learns
+who it was: a page of his notes.
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
