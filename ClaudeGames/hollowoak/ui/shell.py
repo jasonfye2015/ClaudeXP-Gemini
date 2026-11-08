@@ -67,6 +67,10 @@ class Shell(QWidget):
         self.saves = Saves(saves_dir)
         self.view = GameView(self)
         self.panel = None
+        from PySide6.QtGui import QGuiApplication
+        app = QGuiApplication.instance()
+        if app is not None:                                     # (the window left: the night waits for him)
+            app.applicationStateChanged.connect(self._app_state)
         self.frame = None
         self.show_title()
 
@@ -93,6 +97,8 @@ class Shell(QWidget):
 
     def show_title(self):
         self.view.release()
+        self.view.journal.open = False                          # (his hands empty again)
+        self.view.satchel.open = False
         if getattr(self.view, "scene_ui", None) is not None:
             self.view.scene_ui.hide()
             self.view.scene_ui.deleteLater()
@@ -137,6 +143,13 @@ class Shell(QWidget):
         self.saves.clear()                                      # (a new night: the last one's saves gone)
         self.view.begin(Night())
 
+    def _app_state(self, state):
+        if state != Qt.ApplicationActive and self.view.playing and not self.panel_open():
+            n = self.view.night
+            if n is not None and n.dying is None and n.ending is None:
+                self.view.release()
+                self.pause_menu()
+
     def pause(self):
         if not self.view.playing:
             return
@@ -151,6 +164,7 @@ class Shell(QWidget):
                              [("Go on", self.resume), ("Save here", self.save_here), ("View letter", self.view_letter),
                               ("Notes", self.show_notes), ("Unlocks", self.show_unlocks),
                               ("Back to the title", self.show_title)], small=True))
+        self.view.journal.close()
 
     def save_here(self):
         why = self.view.quick_save()

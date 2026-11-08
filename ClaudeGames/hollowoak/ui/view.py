@@ -53,6 +53,9 @@ class GameView(QOpenGLWidget):
         from .satchel import Satchel
         self.satchel = Satchel()                 # (his satchel, opened: Tab - the night going on behind it)
         self.flying = None                       # (a thing just picked up, on its way into the satchel: (item, when))
+        from .journal import Journal
+        self.journal = Journal(self)             # (his notebook, in his hands: Esc - the night going on around it)
+        self.glance = 0.0                        # (how far he's looking down, into it)
         self.last = time.perf_counter()
         self.t0 = self.last
         self.timer = QTimer(self)
@@ -205,14 +208,22 @@ class GameView(QOpenGLWidget):
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
             self.inp.hurry = Qt.Key_Shift in k
-            if self.satchel.open:                                 # (his hands in his satchel: he stands still)
+            if self.satchel.open or self.journal.open:            # (his hands full: he stands still)
                 self.inp.forward = self.inp.strafe = 0.0
                 self.inp.jump = False
             if Qt.Key_Left in k:
                 self.inp.yaw -= 1.8 * dt
             if Qt.Key_Right in k:
                 self.inp.yaw += 1.8 * dt
+            want = 0.5 if self.journal.open else 0.0              # (he looks down into it)
+            self.glance += (want - self.glance) * min(1.0, dt * 6.0)
+            mine = self.inp.pitch
+            self.inp.pitch = max(-1.45, mine - self.glance)
             n.step(dt, self.inp)
+            self.inp.pitch = mine
+            if self.journal.open and any(e[0] in ("crawler", "bitten", "collapse") or e == ("dangler", "face") or
+                                         e in (("her", "strike"), ("her", "bite")) for e in n.events):
+                self.journal.close(knocked=True)                  # (knocked from his hands)
             if self.audio is not None:
                 self.audio.hear(n, n.events)
             self._count(n.events)
@@ -273,6 +284,9 @@ class GameView(QOpenGLWidget):
             return                                                # (not in the root tunnel: no room for her)
         from ..game.scene import Scene
         from .scene import SceneView
+        self.journal.close()                                     # (she's here: the notebook down)
+        if self.satchel.open:
+            self.satchel.toggle()
         self.release()
         self.keys.clear()
         self.inp.forward = self.inp.strafe = 0.0
@@ -665,10 +679,12 @@ class GameView(QOpenGLWidget):
             else:
                 p.fillRect(self.rect(), QColor(0, 0, 0, int(255 * max(0.0, 1 - age / 3.0))))
         self.satchel.draw(p, W, H, n, self.shell.records)
-        if not self.captured and not self.shell.panel_open() and not self.satchel.open:
+        self.journal.draw(p, W, H)
+        if not self.captured and not self.shell.panel_open() and not self.satchel.open and not self.journal.open:
             p.setPen(QColor(220, 208, 190, 170))
             p.setFont(QFont(SERIF, 12))
-            p.drawText(QRectF(0, H * 0.5 + 40, W, 30), Qt.AlignHCenter, "Click to take the mouse   (Esc gives it back)")
+            p.drawText(QRectF(0, H * 0.5 + 40, W, 30), Qt.AlignHCenter,
+                       "Click to take the mouse   (Esc: your notebook  -  P pauses)")
 
     # ---- input -------------------------------------------------------------------------------------------------
     def capture(self):
@@ -701,6 +717,9 @@ class GameView(QOpenGLWidget):
             if self.night.dying.done and self.night.dying.t > 26.0:
                 self.shell.show_title()                          # (it's over: back to the start)
             return
+        if self.playing and self.journal.open:                   # (his notebook's pages)
+            self.journal.press(e.position())
+            return
         if self.playing and self.satchel.open and self.night is not None:      # (a thing chosen, into his hand)
             item = self.satchel.click(e.position())
             if item is not None:
@@ -720,7 +739,13 @@ class GameView(QOpenGLWidget):
         from ..game import satchel
         satchel.choose(n, -1 if e.angleDelta().y() > 0 else 1)
 
+    def mouseReleaseEvent(self, e):
+        if self.journal.open:
+            self.journal.release()
+
     def mouseMoveEvent(self, e):
+        if self.journal.open:
+            self.journal.move(e.position())
         if not self.captured:
             return
         c = getattr(self, "_centre_at", None)
@@ -737,11 +762,25 @@ class GameView(QOpenGLWidget):
         if e.isAutoRepeat():
             return
         k = e.key()
-        if k == Qt.Key_Escape:
+        n = self.night
+        reading = self.playing and n is not None and getattr(self, "scene", None) is None and n.dying is None \
+            and n.ending is None
+        if k == Qt.Key_Escape and reading and not self.shell.panel_open():
+            if self.satchel.open:
+                self.satchel.toggle()
+            self.journal.toggle()                                # (he looks down, and lifts his notebook - or shuts it)
+            if self.journal.open:
+                self.release()
+            else:
+                self.capture()
+            return
+        if k == Qt.Key_Escape or k == Qt.Key_P:                  # (the true pause: "The night waits")
             self.release()
             self.shell.pause()
             return
         if not self.playing:
+            return
+        if self.journal.open:                                    # (his hands are full of it)
             return
         self.keys.add(k)
         if k == Qt.Key_F4:                                       # (for building the game: her audience, now)
