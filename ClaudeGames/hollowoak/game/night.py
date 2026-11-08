@@ -24,6 +24,7 @@ from .death import Death
 from .lantern import Lantern
 from .moods import Moods
 from .mother import Mother
+from .sky import Sky
 from .web import BRIDGE_HALF, Bridge, Web
 
 EYE = 0.52                     # (a little smaller than the Timeline's other first-person games: she is very large)
@@ -33,9 +34,6 @@ WALK = 1.35                    # (unhurried: she feels every step)
 HURRY = 3.45                   # (a run: Shift)
 JUMP = 3.9                     # (Space: about half his height)
 GRAVITY = 16.0
-DUSK = 19 * 60.0               # (the clock: minutes from midnight)
-DAWN = 30 * 60.0 + 30.0        # (half past six in the morning)
-CLOCK_RATE = 0.07              # (minutes of the night a real second: dusk to dawn in about two and three-quarter hours)
 # his balance on a strand: a lean that springs back, pushed about by the strand's bounce - the more, the faster he goes
 SWAY_SPRING = 2.4
 SWAY_DAMP = 1.5
@@ -76,7 +74,7 @@ class Night:
         self.pitch = 0.0
         self.vy = 0.0
         self.time = 0.0
-        self.clock = DUSK
+        self.sky = Sky(random.Random(self.rng.random()))                 # (the clock and the weather: game/sky.py)
         self.lantern = True                  # (he carries it: whether it gives any light is the lamp's affair)
         self.lamp = Lantern(self.rng)
         self.events = []
@@ -152,22 +150,24 @@ class Night:
         reach = (6.0 - 4.2 * k) * (0.35 + 0.65 * min(1.0, lvl))
         return reach, (1.0 - 0.72 * k) * lvl
 
+    @property
+    def clock(self):
+        return self.sky.clock
+
     def clock_words(self):
-        m = int(self.clock + 1e-6) % (24 * 60)
-        h = m // 60
-        return f"{(h - 1) % 12 + 1}:{m % 60:02d} {'pm' if 12 <= h < 24 else 'am'}"
+        return self.sky.hour_words()
 
     # ---- a step ------------------------------------------------------------------------------------------------
     def step(self, dt, inp):
         dt = min(dt, 0.05)
         self.time += dt
         if self.dying is not None:                                     # (it's over: what happens to him now)
-            self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
+            self.sky.step(dt)
             self.events.extend(self.dying.step(dt, self))
             self.body.dying_heart(dt, self.dying.t)
             return
         first = len(self.events)                                       # (what happens this step, from here)
-        self.clock = min(DAWN, self.clock + dt * CLOCK_RATE)
+        self.events.extend(self.sky.step(dt))
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         before = self.moved

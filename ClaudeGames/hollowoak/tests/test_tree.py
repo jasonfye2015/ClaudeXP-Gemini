@@ -95,8 +95,9 @@ def test_the_clock_and_her_eyes():
     inp.yaw = n.yaw
     for _ in range(int(30 / 0.05)):
         n.step(0.05, inp)
-    assert n.clock_words() == "7:02 pm"                                      # (the night is long: ~2.75 real hours)
-    assert abs((N.DAWN - N.DUSK) / N.CLOCK_RATE / 3600 - 2.74) < 0.1
+    assert n.clock_words() == "7:07 pm"                                      # (dusk: half an hour in two minutes)
+    from hollowoak.game import sky as S
+    assert S.SECONDS == {"dusk": 120.0, "night": 3600.0, "dawn": 120.0, "day": 600.0}     # (an hour of night; ten minutes of day)
     assert n.eyes() and n.eye_alpha > 0.5                                     # (something up there, watching)
     px, py, pz = n.eyes()[0]["pos"]
     assert py > n.eye[1] + 1.0

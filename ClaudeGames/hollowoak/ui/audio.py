@@ -72,6 +72,9 @@ class DenAudio:
             s.play("skitter", 0.4 + 0.5 * random.random())
         s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
               height=night.y / 26.0 if d is None or not d.done else 0.0)
+        sky = getattr(night, "sky", None)
+        if sky is not None:
+            s.set(rain=sky.strength if sky.weather in ("rain", "storm") else 0.0)
         moods = getattr(night, "moods", None)
         if moods is not None:
             s.set(pitch=moods.hum_pitch())
@@ -122,6 +125,8 @@ class DenAudio:
                 s.play("thud", 0.9)
             elif kind == "her" and e[1] == "glimpse":
                 s.play("creak", 1.6)                                   # (the web shifting under her weight)
+            elif kind == "thunder":
+                s.play("thunder", 0.5 + 0.5 * e[1])
             elif kind == "swipe":
                 s.play("whoosh")
             elif kind == "skitter":

@@ -9,6 +9,7 @@
   a thud        a fall to the wood
   a whoosh      his hand across his face
   her           a dry rustle of many legs as she moves - louder the nearer she is
+  the weather   rain hissing down the trunk; thunder, a crack and a long roll
   his heart     lub-dub, when it races (and at the end, slowing, until it stops)
 
     synth = Synth()
@@ -121,6 +122,16 @@ def _whoosh(rng, rate=RATE):
     return y / (np.abs(y).max() or 1.0)
 
 
+def _thunder(rng, rate=RATE):
+    """A crack, and a long roll after it."""
+    n = int(4.2 * rate)
+    t = np.arange(n) / rate
+    roll = _shaped_noise(rng, n, 25, 260, 1.1, rate) * np.exp(-t / 1.4) * (0.6 + 0.4 * np.sin(np.pi * t * 1.3) ** 2)
+    crack = _shaped_noise(rng, n, 200, 3000, 0.6, rate) * np.exp(-t / 0.12)
+    y = roll + crack * 0.5
+    return y / (np.abs(y).max() or 1.0)
+
+
 def _puff(rng, rate=RATE):
     n = int(0.35 * rate)
     y = _shaped_noise(rng, n, 150, 1800, 0.8, rate) * _env(n, 0.03, 0.3, rate)
@@ -139,8 +150,9 @@ class Synth:
                        "skitter": [_skitter(rng, d, rate) for d in (0.45, 0.6, 0.75)],
                        "rattle": [_rattle(r, rate), _rattle(r, rate)],
                        "catch": [_catch(r, rate)], "thud": [_thud(rng, rate)], "puff": [_puff(rng, rate)],
-                       "whoosh": [_whoosh(rng, rate)], "beat": [_beat(rng, rate)]}
-        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35, "beat": 0.6}
+                       "whoosh": [_whoosh(rng, rate)], "beat": [_beat(rng, rate)],
+                       "thunder": [_thunder(rng, rate), _thunder(rng, rate)]}
+        self.levels = {"creak": 0.32, "slip": 0.55, "skitter": 0.22, "rattle": 0.3, "catch": 0.7, "thud": 0.6, "puff": 0.25, "whoosh": 0.35, "beat": 0.6, "thunder": 0.85}
         self.voices = []                    # [samples, position, gain]
         self.n = 0                          # (samples played so far)
         self.hum, self._hum = 0.0, 0.0
@@ -149,11 +161,15 @@ class Synth:
         self.pitch, self._pitch, self._hph = 1.0, 1.0, 0.0
         self.speech = None                  # (her voice, a line at a time: [samples, position, gain])
         self.breath, self._breath = 0.0, 0.0     # (his breathing: heard in her scenes)
+        self.rain, self._rain = 0.0, 0.0         # (rain, coming down through the crown)
+        self.rain_loop = _shaped_noise(rng, rate * 3, 700, 7000, 0.4, rate)
         self.breath_loop = _shaped_noise(rng, rate * 2, 250, 2600, 0.5, rate)
         self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
 
-    def set(self, hum=None, height=None, her=None, pitch=None, breath=None):
+    def set(self, hum=None, height=None, her=None, pitch=None, breath=None, rain=None):
+        if rain is not None:
+            self.rain = rain
         if breath is not None:
             self.breath = breath
         if pitch is not None:
@@ -207,6 +223,11 @@ class Synth:
             i = (self.n + np.arange(n)) % len(self.rustle_loop)
             legs = 0.45 + 0.55 * np.abs(np.sin(math.tau * 2.3 * t)) ** 6 + 0.3 * np.abs(np.sin(math.tau * 3.1 * t + 1)) ** 8
             out += self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
+        # rain: a hiss down the trunk, and drops ticking
+        r0, self._rain = self._rain, self._rain + (self.rain - self._rain) * 0.05
+        if r0 > 1e-4 or self._rain > 1e-4:
+            i = (self.n + np.arange(n)) % len(self.rain_loop)
+            out += self.rain_loop[i] * np.linspace(r0, self._rain, n) * 0.09
         # his breathing, close: in, and out, slowly - in her scenes
         b0, self._breath = self._breath, self._breath + (self.breath - self._breath) * 0.1
         if b0 > 1e-4 or self._breath > 1e-4:

@@ -60,6 +60,7 @@ WORLD_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec2 vUV; flat in float vLayer; in float vShade;
 uniform sampler2DArray uTex; uniform sampler2DArray uNrmTex; uniform vec3 uTint[3];
 uniform int uDripCount; uniform vec3 uDrips[24];         // (x, z, the floor's height where each drip lands)
+uniform float uWetness; uniform float uSnow;               // (what the weather has left in the den)
 out vec4 frag;
 """ + LIGHTING + """
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -101,7 +102,8 @@ void main() {
                 wet = max(wet, 1.0 - smoothstep(0.35, 1.35, d));
             }
         }
-        puddle = smoothstep(0.8, 0.9, wet + (fbm(vPos.xz * 1.3 + 7.0) - 0.5) * 0.25);
+        wet = max(wet, uWetness * smoothstep(0.25, 0.55, fbm(vPos.xz * 0.35 + 21.0)));      // (rain through the crown)
+        puddle = smoothstep(0.8 - 0.25 * uWetness, 0.9 - 0.25 * uWetness, wet + (fbm(vPos.xz * 1.3 + 7.0) - 0.5) * 0.25);
         if (vPos.y < 0.2) puddle = max(puddle, smoothstep(0.72, 0.8, fbm(vPos.xz * 0.3 + 11.0)) * 0.9);   // (pools in the bowl)
         base *= mix(1.0, 0.5, wet);
         base = mix(base, base * 0.22 + vec3(0.004, 0.005, 0.007), puddle);
@@ -109,6 +111,12 @@ void main() {
     } else if (abs(N.y) < 0.5 && vPos.y < 1.4) {       // (the wall damp at its foot, darker the lower)
         wet = (1.0 - smoothstep(0.0, 1.4, vPos.y)) * smoothstep(0.35, 0.6, fbm(vec2(atan(vPos.z, vPos.x) * 9.0, vPos.y * 1.5)));
         base *= mix(1.0, 0.6, wet);
+    }
+    if (N.y > 0.8 && uSnow > 0.01 && length(vPos.xz) > 0.0) {          // (snow, settled where it fell)
+        float lie = uSnow * smoothstep(0.2, 0.7, fbm(vPos.xz * 0.6 + 3.3) + uSnow * 0.5);
+        base = mix(base, vec3(0.62, 0.64, 0.7), clamp(lie, 0.0, 0.92));
+        n = normalize(mix(n, N, lie));
+        puddle *= 1.0 - lie;
     }
     vec3 col = lit(vPos, n, base, vShade);
     col += sheen(vPos, n, 30.0) * wet * 0.12 + sheen(vPos, N, 160.0) * puddle * 0.9;
@@ -269,7 +277,7 @@ void main() { vec4 p = uModel * vec4(aPos, 1.0); vPos = p.xyz; vNrm = normalize(
 
 SPIDER_FS = """#version 330 core
 in vec3 vPos; in vec3 vNrm; in vec3 vCol;
-uniform float uRim; uniform float uShade;
+uniform float uRim; uniform float uShade; uniform float uWet;
 out vec4 frag;
 """ + LIGHTING + """
 void main() {
@@ -281,7 +289,7 @@ void main() {
     for (int i = 0; i < uLightCount; i++) {                    // (a hard shine on the chitin)
         vec3 d = uLightPos[i].xyz - vPos; float dist = length(d);
         float att = clamp(1.0 - dist / uLightPos[i].w, 0.0, 1.0);
-        col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0) * 1.1;
+        col += uLightCol[i].rgb * att * att * pow(max(dot(N, normalize(d / max(dist, 1e-3) + V)), 0.0), 30.0 + 60.0 * uWet) * (1.1 + 2.2 * uWet);
     }
     col *= uShade;
     if (vCol.r > 0.15 && vCol.g < 0.06) {                      // (the eyes: they catch any light there is - deep red)
@@ -318,6 +326,8 @@ SKY_VS = """#version 330 core
 layout(location=0) in vec2 aP; out vec2 vP; void main() { vP = aP; gl_Position = vec4(aP, 0.9999, 1.0); }"""
 SKY_FS = """#version 330 core
 in vec2 vP; uniform mat4 uInvPV; uniform vec3 uMoon; uniform float uTime; out vec4 frag;
+uniform vec3 uSkyTop; uniform vec3 uSkyLow; uniform float uStars; uniform float uAurora; uniform vec3 uSun;
+uniform float uSunUp; uniform float uFlash;
 float hash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
 vec3 aurora(vec3 d, float t) {
     // curtains of light strung across the sky: each a wavering line on the sky's plane, drawn as several layers one
@@ -345,13 +355,16 @@ vec3 aurora(vec3 d, float t) {
 void main() {
     vec4 a = uInvPV * vec4(vP, -1.0, 1.0), b = uInvPV * vec4(vP, 1.0, 1.0);
     vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
-    vec3 col = mix(vec3(0.0015, 0.002, 0.004), vec3(0.003, 0.0045, 0.01), smoothstep(0.0, 1.0, d.y));
+    vec3 col = mix(uSkyLow, uSkyTop, smoothstep(0.0, 1.0, d.y));
     vec3 q = floor(d * 380.0); float s = hash(q);
     col += vec3(0.55, 0.6, 0.75) * step(0.9975, s) * smoothstep(0.1, 0.5, d.y) * (0.4 + 0.6 * hash(q + 3.0))
-         * (0.75 + 0.25 * sin(uTime * (1.0 + 3.0 * hash(q + 7.0)) + hash(q) * 30.0));      // (the stars, twinkling)
-    col += aurora(d, uTime);
+         * (0.75 + 0.25 * sin(uTime * (1.0 + 3.0 * hash(q + 7.0)) + hash(q) * 30.0)) * uStars;   // (the stars)
+    col += aurora(d, uTime) * uAurora;                                  // (only on a clear night)
     float m = dot(d, normalize(uMoon));
-    col += vec3(0.75, 0.78, 0.9) * smoothstep(0.9994, 0.9997, m) + vec3(0.08, 0.09, 0.14) * pow(max(m, 0.0), 260.0);
+    col += (vec3(0.75, 0.78, 0.9) * smoothstep(0.9994, 0.9997, m) + vec3(0.08, 0.09, 0.14) * pow(max(m, 0.0), 260.0)) * uStars;
+    float sn = dot(d, normalize(uSun));
+    col += (vec3(1.0, 0.95, 0.8) * smoothstep(0.9990, 0.9994, sn) + vec3(0.6, 0.45, 0.25) * pow(max(sn, 0.0), 30.0) * 0.4) * uSunUp;
+    col += vec3(0.7, 0.75, 0.95) * uFlash * 0.8;                         // (lightning)
     frag = vec4(pow(col, vec3(1.0 / 2.2)), 1.0);
 }"""
 
@@ -439,17 +452,33 @@ class Renderer:
         self.sky.mat4("uInvPV", np.linalg.inv(pv))
         self.sky.vec("uMoon", self.moon)
         self.sky.float("uTime", now)
+        lit = self._sky_light(night)
+        self.sky.vec("uSkyTop", lit["sky_top"])
+        self.sky.vec("uSkyLow", lit["sky_low"])
+        self.sky.float("uStars", lit["stars"])
+        self.sky.float("uAurora", lit["aurora"])
+        self.sky.vec("uSun", lit["sun"])
+        self.sky.float("uSunUp", lit["sun_up"])
+        self.sky.float("uFlash", lit["flash"])
         self.sky_mesh.draw()
         GL.glDepthMask(GL.GL_TRUE)
         lights = self._lights(night, now)
+        lit = self._sky_light(night)
         for prog in (self.world, self.fung, self.dress_prog, self.spider_prog, self.silk_prog):
             prog.use()
             prog.mat4("uPV", pv)
             prog.vec("uEye", eye)
             dim = 0.3 + 0.7 * min(1.0, night.lamp.level) if night.lantern else 1.0     # (the lamp's own bounce)
-            prog.vec("uAmbient", (0.022 * dim, 0.02 * dim, 0.026 * dim))
-            prog.vec("uMoonDir", -self.moon)
-            prog.vec("uMoonCol", (0.11, 0.13, 0.2))
+            fl = lit["flash"]
+            prog.vec("uAmbient", (0.022 * dim + 0.3 * fl, 0.02 * dim + 0.32 * fl, 0.026 * dim + 0.42 * fl))
+            up = lit["sun_up"]                                  # (by day the sun from above; by night the moon)
+            sun = np.array(lit["sun"], np.float32)
+            prog.vec("uMoonDir", -(self.moon * (1 - up) + sun * up))
+            bk = lit["beam_k"]
+            prog.vec("uMoonCol", tuple(m * (1 - up) + b * 0.28 * bk * up
+                                       for m, b in zip((0.11, 0.13, 0.2), lit["beam"])))
+            prog.float("uWetness", getattr(getattr(night, "sky", None), "puddles", 0.0))
+            prog.float("uSnow", getattr(getattr(night, "sky", None), "snow", 0.0))
             prog.vec("uFog", [c ** 2.2 for c in FOG])
             prog.float("uFogDensity", 0.045)
             prog.int("uLightCount", len(lights))
@@ -533,6 +562,7 @@ class Renderer:
             return
         self.spider_prog.use()
         self.spider_prog.float("uShade", 1.0)
+        self.spider_prog.float("uWet", 0.0)
         self.spider_prog.float("uRim", 0.0)
         eye = np.array(night.eye)
         look = np.array((math.sin(night.yaw), 0.0, -math.cos(night.yaw)))
@@ -546,9 +576,12 @@ class Renderer:
         if her is not None:                                  # (Ysmeine, on the wall: barely there but where a light falls)
             p, f, up, size, clip, t, _lean = her.pose()
             self.spider_prog.float("uRim", 0.0)
+            sky = getattr(night, "sky", None)
+            self.spider_prog.float("uWet", min(1.0, sky.puddles * 1.5) if sky is not None else 0.0)   # (rain on her)
             self.spider_prog.float("uShade", 0.55)
             self._spider(np.array(p), f, up, size, clip, t)
             self.spider_prog.float("uShade", 1.0)
+            self.spider_prog.float("uWet", 0.0)
         for pos, fwd, up, size, clip, t in getattr(night, "riders", ()):      # (her small ones, on her back)
             self.spider_prog.float("uRim", 0.25)
             self._spider(np.array(pos), fwd, up, size, clip, t)
@@ -625,6 +658,48 @@ class Renderer:
         cur = getattr(self, "_tint_now", want)
         self._tint_now = cur + (want - cur) * 0.02                # (slowly: never a switch)
         return self._tint_now
+
+    def _falling(self, sky, now, eye, right, verts):
+        """Rain (streaks) or snow (flakes), falling through the hollow about him - in through the broken crown."""
+        snow = sky.weather == "snow"
+        count = int((160 if snow else 260) * sky.strength)
+        tree = self.tree
+        if tree.in_tunnel(eye[0], eye[2]) and tree.in_tunnel(eye[0], eye[2])[0] > 0.3:
+            return                                              # (in the roots: under cover)
+        speed = 0.9 if snow else 9.0
+        span = 9.0
+        for i in range(count):
+            h1, h2, h3 = (math.sin(i * 12.9898) * 43758.5453) % 1.0, (math.sin(i * 78.233) * 12543.11) % 1.0, \
+                (math.sin(i * 39.425) * 9137.7) % 1.0
+            r, a = 0.6 + h1 * 6.5, h2 * math.tau
+            x, z = eye[0] + math.cos(a) * r, eye[2] + math.sin(a) * r
+            if math.hypot(x, z) > tree.base_r(math.atan2(z, x), eye[1]) - 0.3:
+                continue
+            y = eye[1] + span * 0.5 - ((now * speed + h3 * span * 7.0) % span)
+            if snow:
+                x += 0.25 * math.sin(now * 0.9 + i)
+                z += 0.25 * math.cos(now * 0.7 + i * 1.3)
+                p = np.array((x, y, z), np.float32)
+                s = 0.018 + 0.018 * h3
+                for k, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                    corner = ((-1, -1), (1, -1), (1, 1), (-1, 1))[k]
+                    q = p + right * corner[0] * s + np.array((0.0, corner[1] * s, 0.0), np.float32)
+                    verts.append((*q, *uv, 0.8, 0.83, 0.9, 0.85, 0.0))
+            else:
+                top = np.array((x, y + 0.3, z), np.float32)
+                bot = np.array((x, y, z), np.float32)
+                w = right * 0.006
+                quad = (top - w, top + w, bot + w, bot - w)
+                for k, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                    verts.append((*quad[k], *uv, 0.55, 0.62, 0.75, 0.55, 1.0))
+
+    def _sky_light(self, night):
+        sky = getattr(night, "sky", None)
+        if sky is None:
+            return {"sky_top": (0.0015, 0.002, 0.004), "sky_low": (0.003, 0.0045, 0.01), "stars": 1.0, "aurora": 1.0,
+                    "sun": (0.0, 1.0, 0.0), "sun_up": 0.0, "flash": 0.0, "beam": (0, 0, 0), "beam_k": 0.0,
+                    "phase": "night"}
+        return sky.light()
 
     def flame_at(self, night):
         now = getattr(self, "now", 0.0)
@@ -784,7 +859,23 @@ class Renderer:
             for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
                 verts.append((*corners[i], *uv, *c, a, 0.0))
         eye = np.array(night.eye, np.float32)
-        # the moonbeams: soft columns turned to face him
+        lit = self._sky_light(night)
+        sun_k, bk = lit["sun_up"], lit["beam_k"]
+        moon_col = (0.5, 0.58, 0.8)
+        beam_col = tuple(m * (1 - sun_k) + b * sun_k for m, b in zip(moon_col, lit["beam"]))
+        beam_a = 0.55 * (1 - sun_k) + (0.35 + 0.9 * bk) * sun_k + lit["flash"] * 0.6
+        if sun_k > 0.05 and bk > 0.02:                           # (down from the crown: the sun's light, in shafts)
+            sun = np.array(lit["sun"], np.float32)
+            for k, (ox, oz, wd) in enumerate(((0.0, 0.0, 1.6), (1.6, -1.0, 0.9), (-1.4, 1.2, 1.1), (0.6, 1.9, 0.7))):
+                top = np.array((ox, T.TOP + 1.0, oz), np.float32)
+                end = top - sun * (T.TOP * 0.9)
+                axis = end - top
+                side = np.cross(axis, top - eye)
+                side = side / (float(np.linalg.norm(side)) or 1.0) * wd
+                quad = (top - side, top + side, end + side * 1.8, end - side * 1.8)
+                for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
+                    verts.append((*quad[i], *uv, *lit["beam"], 0.32 * bk * sun_k * (1.0 - 0.25 * k), 1.0))
+        # the moonbeams (by day, sunbeams): soft columns turned to face him
         for start, end, width in self.beams:
             axis = end - start
             side = np.cross(axis, start - eye)
@@ -792,7 +883,7 @@ class Renderer:
             side = side / n * width
             quad = (end - side * 1.6, end + side * 1.6, start + side * 0.6, start - side * 0.6)
             for i, uv in zip((0, 1, 2, 0, 2, 3), ((0, 0), (1, 0), (1, 1), (0, 0), (1, 1), (0, 1))):
-                verts.append((*quad[i], *uv, 0.5, 0.58, 0.8, 0.55, 1.0))
+                verts.append((*quad[i], *uv, *beam_col, beam_a, 1.0))
             for m in range(6):                                # (dust turning in the beam)
                 ph = (now * 0.04 + m * 0.17 + float(start[1]) * 0.1) % 1.0
                 p = start + axis * ph + side * 0.6 * math.sin(now * 0.3 + m * 2.0)
@@ -833,6 +924,9 @@ class Renderer:
             x, y, z = dying.lamp_at
             bill((x, y + 0.05, z), 0.16, (1.0, 0.55, 0.2), 0.9 * k)
             bill((x, y + 0.04, z), 0.05, (1.0, 0.85, 0.6), 1.4 * k)
+        sky = getattr(night, "sky", None)
+        if sky is not None and sky.weather in ("rain", "storm", "snow") and sky.strength > 0.02:
+            self._falling(sky, now, eye, right, verts)
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
