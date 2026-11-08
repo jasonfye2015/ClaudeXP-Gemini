@@ -15,7 +15,7 @@ from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
-from . import fonts, orbs
+from . import dial, fonts, orbs
 from ..game.death import ENDING
 
 SENS = 0.0022
@@ -356,6 +356,7 @@ class GameView(QOpenGLWidget):
             orbs.draw_orbs(p, W, H, n.body, t)
         if o["heart"]:
             orbs.draw_heart(p, W, H, n.body)
+        dial.draw(p, W, H, getattr(n, "sky", None))                # (the clock, top right)
         if n.lamp.state == "out" and self.outs <= 3:             # (the lantern out: what to do, the first few times)
             a = int(150 + 60 * math.sin(t * 2.4))
             p.setPen(QColor(220, 200, 170, a))

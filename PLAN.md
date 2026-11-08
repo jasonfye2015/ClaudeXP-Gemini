@@ -220,6 +220,16 @@ Brother Fennick, Isolde of the Marr, and the one she won't speak of) - each page
 words, the script's lines, what she does, her moods seen in the light), with a word low on the screen. Unlocks: endings,
 guests found, pages written by section, anything else.
 
+Time and weather (done; the user's next round). game/sky.py: a magical forest - in real time the night lasts an hour,
+the day ten minutes, dusk and dawn two minutes each (a night begins at dusk, 7 pm, Saturday the 31st of October). The
+den is no brighter by day, but light comes down from the crown and through the knot-holes in shafts - golden by day,
+orange at dusk, rose at dawn, moonlight by night. The weather: clear (by night the aurora - and only then), overcast
+(grey; no stars), rain, thunderstorms (lightning lights the den, thunder rolls), snow; it turns every 7-20 minutes.
+Rain and snow fall through the hollow; puddles grow on the floor and ledges, snow settles white, and dry or melt after;
+she shines wet in the rain. The rain hisses down the trunk. ui/dial.py: the clock, top right, as the other games show
+theirs - the sky of the hour with the sun or moon on its arc, the moon's face, the time and part of the day, the date,
+the weather and its strength. (Weather may open other endings, later.)
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
