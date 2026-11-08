@@ -27,7 +27,7 @@ def test_its_own_rules():
 
 
 def test_the_window():
-    """Opens on the title, begins the night in the roots, walks in, pauses, goes back to the title, closes"""
+    """Opens on the title, begins the night out in the glade at dusk, walks toward the oak, pauses, goes back to the title, closes"""
     O.SAVES = support.scratch("hollowoak saves")
     caught = support.catch_errors()
     desktop = S.Desktop()
@@ -40,11 +40,11 @@ def test_the_window():
     support.pump(0.3)
     view = shell.view
     n = view.night
-    assert view.playing and not shell.panel_open() and n.where() == "tunnel"
+    assert view.playing and not shell.panel_open() and n.where() == "outside"           # (the walk to the oak)
     view.inp.yaw, view.inp.forward = n.yaw, 1.0
     for _ in range(20):
         n.step(0.05, view.inp)
-    assert n.where() in ("tunnel", "hollow")
+    assert n.where() in ("outside", "tunnel")
     shell.pause()
     support.pump(0.2)
     assert shell.panel_open()
