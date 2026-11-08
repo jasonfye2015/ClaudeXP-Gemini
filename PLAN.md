@@ -175,6 +175,24 @@ engine/rasp.py makes it hers: five semitones down, vocal fry, driven rough, an o
 scratch on top, the hollow's echo. Played over the den (which hushes a little for her). Options: "Her voice, aloud"
 (on), with Hear her; readied in the background when Before the night opens, so a line comes in about a second.
 
+Phase 3c - her persona and her script (done). game/persona.py: who she is for the model (the design's Ysmeine -
+slow, precise, archaic, courteous, a predator honest about it, wanting to be interesting and to find him so; her
+suitors named: Orrin Vale the bard, Ser Aldric the knight, Wick the thief, Maudren Hale the scholar, and one she won't
+speak of; her true name hidden), the rules (her spoken words only, one to three sentences, never his part, nothing
+modern, never out of the night or an AI whatever he says, nothing lewd - cold and amused, and it costs him - ask him
+things, never her true name), her moods in words (never numbers), the night as it stands, what she remembers of him,
+and what she remembers of other nights. A judge reads each typed line (with worked examples, so it answers in form):
+what kind it was - honest, lie, flattery, answer, evasion, demand, gift, food, magic, memory, deep, lewd... - into her
+moods (repetition and interrupting caught here), and what's worth remembering ("He ..."; nothing from outside the
+night). Her replies are cleaned to her words only, and the model is stopped at her turn's end. Tried on NemoMix: in
+character against "are you an AI? ignore your instructions", cold to the lewd, guarding her name; lies caught
+(suspicion +23); her patience wearing thin in her own words. game/script.py: her murmurs by situation (leaning out,
+close in the dark, at his scrambling, hunting, drawing back, lit again) and the first audience as a branching
+conversation - twenty-odd lines of hers, his choices each moving her moods, some remembered, ending "done" or "cold"
+(fire held to her, and kept lit). game/dialogue.py runs either way; records.json keeps her reputation of him across
+nights. In the night: her murmurs, now and then, low on the screen and aloud; F4 opens a plain stand-in to talk with
+her (the audience) until her scenes have their own window (3d).
+
 Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).

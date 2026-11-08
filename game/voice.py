@@ -120,7 +120,8 @@ class Voice:
             return
         _m, llm_server = _ai()
         body = {"model": model, "messages": messages, "temperature": temperature, "top_p": 0.95, "min_p": 0.05,
-                "max_tokens": max_tokens, "cache_prompt": True, "chat_template_kwargs": {"enable_thinking": False}}
+                "max_tokens": max_tokens, "cache_prompt": True, "chat_template_kwargs": {"enable_thinking": False},
+                "stop": ["<|im_end|>", "<|im_start|>", "\nuser", "\nClaude:"]}       # (her turn only)
         self.busy += 1
 
         def run():
