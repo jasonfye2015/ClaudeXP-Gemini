@@ -70,6 +70,9 @@ class DenAudio:
             s.play("skitter", 0.4 + 0.5 * random.random())
         s.set(hum=min(1.0, 0.12 + night.tremor * 0.35) if on else min(0.3, night.tremor * 0.1),
               height=night.y / 26.0 if d is None or not d.done else 0.0)
+        moods = getattr(night, "moods", None)
+        if moods is not None:
+            s.set(pitch=moods.hum_pitch())
         her = getattr(night, "her", None)
         if her is not None and d is None:
             near = max(0.0, 1.0 - math.dist(her.at(), night.eye) / 14.0)
@@ -110,6 +113,11 @@ class DenAudio:
                 s.play("slip", 1.2)
             elif kind == "death" and e[1] == "lift":
                 s.play("catch", 1.2)
+            elif kind == "her" and e[1] == "strike":
+                s.play("slip", 1.4)
+                s.play("skitter", 1.0)
+            elif kind == "her" and e[1] == "bite":
+                s.play("thud", 0.9)
             elif kind == "her" and e[1] == "glimpse":
                 s.play("creak", 1.6)                                   # (the web shifting under her weight)
             elif kind == "swipe":

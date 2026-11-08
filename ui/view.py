@@ -161,6 +161,8 @@ class GameView(QOpenGLWidget):
                     self.teeters += 1
                 elif e[0] == "silk" and e[1] == "caught":
                     self.whisper = ("Caught in her silk. Everything in the oak felt that.", now, 4.0)
+                elif e == ("her", "bite"):
+                    self.whisper = ("She bit you.", now, 3.0)
                 elif e[0] == "bitten":
                     self.whisper = ("Bitten." if e[1] == "face" else "Something bit your hand.", now, 2.5)
                 elif e[0] == "hurt" and e[1] > 20:
@@ -217,6 +219,14 @@ class GameView(QOpenGLWidget):
             p.setFont(f)
             p.drawText(QRectF(W * 0.2, H * 0.70 + 48, W * 0.6, 60), Qt.AlignHCenter | Qt.TextWordWrap, line)
         n = self.night
+        if getattr(self, "debug", False):
+            p.setFont(QFont("Consolas", 9))
+            p.setPen(QColor(200, 200, 190, 220))
+            m = n.moods.values()
+            lines = [f"{k:<12}{v:6.1f}" for k, v in m.items()] + [f"her         {n.her.state}", f"bites       {n.moods.bites}",
+                                                                   f"hunting     {n.moods.hunting}"]
+            for i, line in enumerate(lines):
+                p.drawText(12, 20 + i * 14, line)
         o = self.shell.records.options
         if n.dying is not None:
             if o["orbs"]:
@@ -310,6 +320,8 @@ class GameView(QOpenGLWidget):
         if not self.playing:
             return
         self.keys.add(k)
+        if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
+            self.debug = not getattr(self, "debug", False)
         if k == Qt.Key_Space and self.night is not None:
             self.inp.jump = True
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)

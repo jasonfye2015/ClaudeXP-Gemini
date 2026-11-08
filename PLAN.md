@@ -138,14 +138,28 @@ the edge of his light and leans out toward him, legs reaching (the spider's atta
 (the web creaks under her). In the dark she comes close and stays. When he comes at her, she withdraws, fast. When the
 silk shakes hard she turns to him and comes. Drawn dark (only her eyes catch the light: a deep red), heard as a dry
 rustle of many legs, louder the nearer she is. Her eyes are the ones that watch him now (the perches are gone).
-Then larger: a leg-span of 6.75 (half again), and she starts half way up the hollow and watches from there unless
+Then (6.75 was much too big: she clipped through everything) a leg-span of 5, and she starts half way up the hollow and watches from there unless
 he climbs higher; Claude a little smaller (eye 0.52, radius 0.21). Shift runs (3.45 a second, half again as fast);
 Space jumps (about half his height; on her silk it's a scramble she feels, and it throws his balance on a strand).
 
 A seventh ending, Fire (proposed): the whole oak set alight, somehow - very likely with him in it. The design's Warmth
 spell is the natural way in ("fire in a web; one slip and the night may end"). The count is now "of 7".
 
-Still to come in phase 3: her moods (3b), her voice (3c - the local model, a persona, guardrails, memory; a scripted
+Phase 3b - her moods (done). game/moods.py: fascination, patience, hunger, suspicion, regard (0-100, hidden). Moved
+now by how he goes - hunger with the clock, with running and scrambling on her silk (a scramble is prey), with running
+at her; patience lost to running, jumping, coming at her, and back with calm; fascination and regard won by standing
+still and watching her when she comes; suspicion by flinging her small ones off his face - and, ready for 3c, by what
+he says (Moods.heard: honest, lie, flattery, small talk, repeat, answer, evasion, demand, interrupt, gift, food,
+magic, memory, promise kept or broken, deep, light, harm to her small ones). Suspicion over 75 turns kindness into a
+trick. They steer her: fascination closer and longer, suspicion further off, hunger more often and - when high - round
+and round the hollow, restless. Patience gone or hunger past 100: she hunts - straight for him, light or none - and
+strikes; within her reach, she bites (venom +30, health -8; her hunger eased); a second bite is Supper. They show in
+the den, never in numbers: the fungus-light warms toward amber with her hunger, brightens with fascination, dims and
+cools with suspicion; her silk's hum rises in pitch with hunger. F3 shows the numbers, for building the game.
+A calm watcher: in 10 minutes fascination 30 -> 61, patience 88, regard rising. A careless runner: hunted and bitten
+in about 8. (Still to come: she can't reach him in the middle of the floor - a drop on a thread from above, later.)
+
+Still to come in phase 3: her voice (3c - the local model, a persona, guardrails, memory; a scripted
 fallback), the scenes (3d - letterbox, her own font, larger than his; a text window dressed with webs, branches,
 leaves and mushrooms, like Before the night).
 

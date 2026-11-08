@@ -22,6 +22,7 @@ from .condition import Condition
 from .crawlers import Crawlers
 from .death import Death
 from .lantern import Lantern
+from .moods import Moods
 from .mother import Mother
 from .web import BRIDGE_HALF, Bridge, Web
 
@@ -83,6 +84,7 @@ class Night:
         self.place = None
         self.moved = 0.0
         self.her = Mother(self.tree, random.Random(self.rng.random()))     # (Ysmeine: on the wall, in the dark)
+        self.moods = Moods()                                                # (how she regards him: hidden)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
         self.rng.shuffle(spots)
@@ -181,7 +183,18 @@ class Night:
         lamp_events = self.lamp.step(dt)
         for e in lamp_events:
             self.events.append(("lantern", e))
-        self.events.extend(self.her.step(dt, self))
+        self.events.extend(self.moods.step(dt, self, self.events[first:]))
+        for e in self.her.step(dt, self):
+            self.events.append(e)
+            if e == ("her", "bite"):                                    # (her bite: venom, and she's eased a while)
+                self.moods.bit()
+                self.body.poison = min(100.0, self.body.poison + 30.0)
+                self.body.health = max(0.0, self.body.health - 8.0)
+                self.body.startle += 40.0
+                self.tremor += 3.0
+                if self.moods.bites >= 2:                               # (a second bite: Supper)
+                    self.collapse("bite")
+                    return
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
         self.events.extend(self.crawlers.step(dt))

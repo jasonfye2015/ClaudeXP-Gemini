@@ -146,10 +146,13 @@ class Synth:
         self.hum, self._hum = 0.0, 0.0
         self.height, self._height = 0.0, 0.0
         self.her, self._her = 0.0, 0.0
+        self.pitch, self._pitch, self._hph = 1.0, 1.0, 0.0
         self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
 
-    def set(self, hum=None, height=None, her=None):
+    def set(self, hum=None, height=None, her=None, pitch=None):
+        if pitch is not None:
+            self.pitch = pitch
         if her is not None:
             self.her = max(0.0, min(1.0, her))
         if hum is not None:
@@ -179,8 +182,11 @@ class Synth:
         a0, self._hum = self._hum, self._hum + (self.hum - self._hum) * 0.25
         if a0 > 1e-4 or self._hum > 1e-4:
             amp = np.linspace(a0, self._hum, n) * 0.2
-            hum = (np.sin(math.tau * 55.0 * t) + 0.8 * np.sin(math.tau * 55.6 * t) + 0.5 * np.sin(math.tau * 82.4 * t)
-                   + 0.3 * np.sin(math.tau * 110.7 * t) + 0.12 * np.sin(math.tau * 220.0 * t + np.sin(math.tau * 3 * t)))
+            p0, self._pitch = self._pitch, self._pitch + (self.pitch - self._pitch) * 0.05
+            ph = self._hph + np.cumsum(math.tau * 55.0 * np.linspace(p0, self._pitch, n) / rate)   # (her hunger: higher)
+            self._hph = float(ph[-1]) % (math.tau * 1000)
+            hum = (np.sin(ph) + 0.8 * np.sin(ph * 1.0109) + 0.5 * np.sin(ph * 1.498)
+                   + 0.3 * np.sin(ph * 2.013) + 0.12 * np.sin(ph * 4.0 + np.sin(math.tau * 3 * t)))
             out += hum / 2.7 * amp * (0.75 + 0.25 * np.sin(math.tau * 6.3 * t))
         # her: many legs, slow, felt more than heard - a dry rustle, ticking
         h0, self._her = self._her, self._her + (self.her - self._her) * 0.2
