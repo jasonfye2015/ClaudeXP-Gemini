@@ -11,7 +11,7 @@ Timeline's other games.
 The design: "The Hollow Oak - Design Document" (Claude Docs), https://claude.ai/artifact/JtQZ3J468Lqh9E8QqoVXfS
 
 Playing (phases 1 and 2: the tree, and her silk)
-  Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift hurries (never a run, in here).
+  Click to take the mouse (Esc gives it back, and pauses). W A S D walk - slowly; Shift runs; Space jumps.
   E (or L) shakes the lantern, hung from the crook of his wand. It's old and low on oil: it flickers, it sputters, and now and then it gutters out -
   a shake usually brings it back. Usually.
 

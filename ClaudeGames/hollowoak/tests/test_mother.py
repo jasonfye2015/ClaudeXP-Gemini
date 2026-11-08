@@ -35,7 +35,7 @@ def test_she_watches_from_across_the_hollow_and_comes_to_the_edge_of_the_light()
     assert watching and sum(watching) / len(watching) > 7.0                   # (mostly across the hollow)
     assert glimpses >= 2 and leaned > 0.9                                      # (and now and then, close, leaning out)
     assert min(d for _s, d in seen) < 5.5
-    assert n.eyes() and abs(SIZE - 4.5) < 1e-9
+    assert n.eyes() and abs(SIZE - 6.75) < 1e-9
 
 
 def test_in_the_dark_she_comes_close_and_when_he_comes_at_her_she_goes():

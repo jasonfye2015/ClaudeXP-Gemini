@@ -810,14 +810,14 @@ class Renderer:
         # the way out, behind him: night air through the roots
         tx, tz = self.tree.tunnel_point(T.TUNNEL_LEN - 0.05, 0.0)
         bill((tx, self.tree.tunnel_floor(T.TUNNEL_LEN) + 0.8, tz), 0.9, (0.35, 0.45, 0.7), 0.5)
-        # her eyes: eight red lights in the dark, as wide as her head (she's four and a half units across)
+        # her eyes: eight red lights in the dark, as wide as her head (she's near seven units across)
         for e in night.eyes():
             for k in range(8):
-                ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 2.6
-                oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 2.6
+                ox = ((k % 4 - 1.5) * 0.09 + (0.03 if k >= 4 else 0)) * 3.9
+                oy = ((0.06 if k < 4 else -0.04) - abs(k % 4 - 1.5) * 0.02) * 3.9
                 p = np.array(e["pos"], np.float32) + right * ox + up * oy
-                bill(p, 0.13 if k in (1, 2) else 0.09, (1.0, 0.3, 0.15), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
-            bill(np.array(e["pos"], np.float32), 0.8, (0.5, 0.06, 0.03), e["alpha"] * 0.12)     # (a red haze about them)
+                bill(p, 0.19 if k in (1, 2) else 0.13, (1.0, 0.3, 0.15), e["alpha"] * (0.9 if k in (1, 2) else 0.6))
+            bill(np.array(e["pos"], np.float32), 1.2, (0.5, 0.06, 0.03), e["alpha"] * 0.12)     # (a red haze about them)
         if not verts:
             return
         self.glow_mesh.upload(np.array(verts, np.float32))

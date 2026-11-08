@@ -110,3 +110,31 @@ def test_the_lantern_is_close_in_the_roots():
     n.x, n.z = x, z
     open_, k_open = n.lantern_reach()
     assert deep < 2.0 and k_deep < 0.3 and open_ >= 5.9 and k_open == n.lamp.level == 1.0
+
+
+def test_he_runs_and_jumps():
+    n = N.Night(seed=4)
+    n.x, n.z = 1.0, 0.5
+    n.y = n.floor_at(1.0, 0.5, 0.0)
+    inp = N.Input()
+    inp.yaw = 0.3
+    inp.forward, inp.hurry = 1.0, True
+    x0, z0 = n.x, n.z
+    for _ in range(20):
+        n.step(0.05, inp)
+    assert abs(math.hypot(n.x - x0, n.z - z0) - N.HURRY * 1.0) < 0.1          # (Shift: a run, 3.45 a second)
+    inp.forward, inp.hurry = 0.0, False
+    ground = n.y
+    inp.jump = True
+    top = ground
+    for _ in range(30):
+        n.step(0.05, inp)
+        top = max(top, n.y)
+    assert ("jump",) in n.events and 0.35 < top - ground < 0.6 and abs(n.y - ground) < 0.05 and not inp.jump
+    n.events.clear()
+    inp.jump = True                                                          # (in the air, no second jump)
+    n.step(0.05, inp)
+    n.step(0.05, inp)
+    inp.jump = True
+    n.step(0.05, inp)
+    assert sum(1 for e in n.events if e == ("jump",)) == 1

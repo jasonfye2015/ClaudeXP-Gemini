@@ -2,7 +2,7 @@
 into it, the fade in from black, a word about the mouse, and his own state in two orbs (ui/orbs.py): health and
 poison, sanity and stupor. What she thinks of him has no meter: that will show in the den itself.
 
-Keys: W A S D walk, Shift hurry, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
+Keys: W A S D walk, Shift run, Space jump, the mouse looks (click to take it, Esc gives it back and pauses), E (or L) shake the
 lantern when it gutters out. On a strand, A and D lean against its sway.
 
 The sound (ui/audio.py) hears what the night does, and follows the computer's mute."""
@@ -310,6 +310,8 @@ class GameView(QOpenGLWidget):
         if not self.playing:
             return
         self.keys.add(k)
+        if k == Qt.Key_Space and self.night is not None:
+            self.inp.jump = True
         if k in (Qt.Key_E, Qt.Key_L) and self.night:             # (a shake of the lantern)
             self.night.lamp.shake()
 
