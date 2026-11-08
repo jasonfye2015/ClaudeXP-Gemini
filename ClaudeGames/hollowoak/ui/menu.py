@@ -408,6 +408,7 @@ class NightMenu(QWidget):
         slider("Volume", "volume")
         slider("Music", "music")
         slider("Looking about (mouse speed)", "look")
+        slider("How wide he sees (field of view)", "fov")
         slider("Her words, how fast they come", "text_speed")
 
         def size(label, key, sample, font):
@@ -438,6 +439,7 @@ class NightMenu(QWidget):
                            ("The orbs", "orbs"), ("Her venom, pulsing at the edges", "venom_fx"),
                            ("Steadier light (less flicker and flashing)", "steady"),
                            ("The lantern's shadows (off for a slower computer)", "shadows"),
+                           ("Invert looking up and down", "invert"),
                            ("What the night does to him (all of it)", "fx_all"), ("  ...to his body (health)", "fx_health"),
                            ("  ...the poison in him", "fx_poison"), ("  ...his mind (sanity)", "fx_sanity"),
                            ("  ...the stupor", "fx_stupor"), ("  Blood and vomit", "fx_gore"), ("  His eye", "fx_eye"),
@@ -447,6 +449,8 @@ class NightMenu(QWidget):
             c.setChecked(bool(o[key]))
             c.toggled.connect(lambda v, key=key: self._set(key, bool(v)))
             lay.addWidget(c)
+        lay.addSpacing(16)
+        self._keys(lay)
         lay.addSpacing(16)
         head = QLabel("Her words")
         head.setObjectName("head")
@@ -549,6 +553,46 @@ class NightMenu(QWidget):
         LLMHelp(self).exec()
         self._voice_check()
 
+    def _keys(self, lay):
+        """His keys: click one, then press the key you'd have it on (Esc leaves it as it was)."""
+        from .keys import ACTIONS, bound, name
+        head = QLabel("His keys")
+        head.setObjectName("head")
+        head.setStyleSheet("font-size: 18px;")
+        lay.addWidget(head)
+        keys = bound(self.rec.options)
+        self.key_buttons = {}
+        for aid, label, _default in ACTIONS:
+            row = QHBoxLayout()
+            row.addWidget(QLabel(label))
+            row.addStretch(1)
+            b = KeyButton(name(keys[aid]), self, aid)
+            b.setFixedWidth(110)
+            self.key_buttons[aid] = b
+            row.addWidget(b)
+            lay.addLayout(row)
+        reset = QPushButton("Every key as it was made")
+        reset.clicked.connect(self._reset_keys)
+        lay.addWidget(reset)
+
+    def bind_key(self, aid, key):
+        from .keys import ACTIONS, bound, name
+        mine = dict(self.rec.options.get("keys") or {})
+        for other, k in bound(self.rec.options).items():          # (a key does one thing: the other gives it up)
+            if other != aid and k == key:
+                default = next(d for a, _l, d in ACTIONS if a == aid)
+                mine[other] = bound(self.rec.options)[aid] if bound(self.rec.options)[aid] != key else default
+        mine[aid] = int(key)
+        self._set("keys", mine)
+        for a2, b in self.key_buttons.items():
+            b.setText(name(bound(self.rec.options)[a2]))
+
+    def _reset_keys(self):
+        from .keys import bound, name
+        self._set("keys", {})
+        for a2, b in self.key_buttons.items():
+            b.setText(name(bound(self.rec.options)[a2]))
+
     def _set(self, key, value):
         self.rec.options[key] = value
         self.rec.save()
@@ -629,3 +673,34 @@ class NightMenu(QWidget):
         p.setPen(QPen(col.lighter(135), 0.9))
         p.drawLine(QPointF(-size * 0.12, 0), QPointF(size * 0.95, 0))
         p.restore()
+
+
+class KeyButton(QPushButton):
+    """A key, shown; clicked, it waits for the next key pressed, and takes it."""
+
+    def __init__(self, text, menu, aid):
+        super().__init__(text)
+        self.menu, self.aid, self.armed, self.was = menu, aid, False, text
+        self.setCursor(Qt.PointingHandCursor)
+        self.clicked.connect(self._arm)
+
+    def _arm(self):
+        self.armed, self.was = True, self.text()
+        self.setText("Press a key...")
+        self.setFocus()
+
+    def keyPressEvent(self, e):
+        if not self.armed:
+            return super().keyPressEvent(e)
+        self.armed = False
+        if e.key() == Qt.Key_Escape:
+            self.setText(self.was)
+            return
+        self.menu.bind_key(self.aid, e.key())
+
+    def focusOutEvent(self, e):
+        if self.armed:
+            self.armed = False
+            self.setText(self.was)
+        super().focusOutEvent(e)
+

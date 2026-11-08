@@ -21,6 +21,7 @@ OPTIONS = {"volume": 80, "music": 70, "look": 50, "heart": True, "heartbeat": Tr
            "shadows": True,             # (the lantern's shadows: off, for a slower computer)
            "brightness": 50, "calibrated": False,   # (set before the first night: ui/pages.py Brightness)
            "difficulty": "normal",      # (how hard the night is on him: easy, normal, hard, nightmare)
+           "fov": 33, "invert": False, "keys": {},     # (how wide he sees: 55 + 45 x this/100; looking; his keys)
            "fx_all": True, "fx_health": True, "fx_poison": True, "fx_sanity": True, "fx_stupor": True,
            "fx_gore": True, "fx_eye": True, "fx_distort": True, "fx_control": True}   # (game/afflictions.py)            # (her venom: the edges of his sight darkening and pulsing)
 TALLIES = ("nights", "endings", "seconds", "longest", "bites", "slips", "falls", "swipes", "shakes")
@@ -45,6 +46,7 @@ class Records:
             self.notes = dict(d.get("notes", {}))
             self.learned = {k: list(v) for k, v in d.get("learned", {}).items()}
             self.options.update({k: v for k, v in d.get("options", {}).items() if k in OPTIONS})
+            self.options["keys"] = dict(self.options.get("keys") or {})
         except (OSError, ValueError):
             pass
 

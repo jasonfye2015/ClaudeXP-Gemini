@@ -24,11 +24,12 @@ CONTENTS = (("go", "Go on"), ("notes", "Notes on her"), ("letter", "Her letter")
             ("options", "Options"), ("body", "What the night does"), ("save", "Save here"),
             ("leave", "Back to the title"))
 SLIDERS = (("Brightness", "brightness"), ("Volume", "volume"), ("Music", "music"), ("Looking about", "look"), ("Her words, how fast", "text_speed"),
-           ("Her words, their size", "her_size"), ("Your words, their size", "his_size"))
+           ("Her words, their size", "her_size"), ("Your words, their size", "his_size"),
+           ("How wide he sees", "fov"))
 RANGE = {"her_size": (60, 160), "his_size": (60, 160)}            # (the rest: 0 to 100)
 TOGGLES = (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"), ("The orbs", "orbs"),
            ("Her voice, aloud", "aloud"), ("Her venom's pulse", "venom_fx"), ("Steadier light", "steady"),
-           ("The lantern's shadows", "shadows"))
+           ("The lantern's shadows", "shadows"), ("Invert looking up and down", "invert"))
 PER_PAGE = 3
 FLIP = 0.42
 
