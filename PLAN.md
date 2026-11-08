@@ -454,3 +454,8 @@ And in her scenes his orbs and his heart are no longer hidden: they sit just abo
 hand, on the dark (ui/pages.py LastLetter) - and a last page in his notes, "The last letter". (What it says, and how it's
 signed, is for the player to find.)
 
+9k - his keys (done). ui/keys.py: every action on a key the player can change (Options: "His keys" - click one, press
+the key; a key taken from another action swaps; "Every key as it was made"). Also: how wide he sees (field of view,
+55 to 100 degrees; 70 as made) and inverted looking up and down, before the night and in his notebook. Esc, the
+arrows, F3/F4, F9/F10 and Enter stay where they are.
+
