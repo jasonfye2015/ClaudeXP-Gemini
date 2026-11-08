@@ -72,6 +72,9 @@ class Spells:
         if not self.ready(name):
             return [("spell", name, "resting")]
         self.rest[name] = self.t + REST[name]
+        venom = getattr(night, "venom", None)
+        if venom is not None and venom.misses():                    # (his hands shaking: it comes apart)
+            return [("spell", name, "missed")]
         ex, ey, ez = night.eye
         fx, fz = math.sin(night.yaw), -math.cos(night.yaw)            # (before him, and a little to his right)
         rx, rz = math.cos(night.yaw), math.sin(night.yaw)
@@ -129,6 +132,10 @@ class Spells:
         m = night.moods
         if name != "memory":
             self.rest[name] = self.t + REST[name]
+        venom = getattr(night, "venom", None)
+        if venom is not None and venom.misses():
+            return "plain", "Your hands are shaking. Whatever that was meant to be, it fell apart in them.", \
+                "He tries a spell, but his hands shake with your venom and it comes to nothing"
         if name == "light":
             m.heard("light")
             m.heard("light")

@@ -244,7 +244,7 @@ leaves and mushrooms, like Before the night).
 
 ## Phase 4 - the night
 
-Sub-phases: 4a the acts (done) - 4b offerings (done) - 4c spells (done) (Warmth: the road to Fire) - 4d venom (and the antidote) -
+Sub-phases: 4a the acts (done) - 4b offerings (done) - 4c spells (done) (Warmth: the road to Fire) - 4d venom (and the antidote) (done) -
 4e saving - 4f the rest of the endings (The hidden, Fire) and each ending's own scene.
 
 Phase 4a - the acts (done). game/acts.py: threshold (in, to her loom) -> audience (her loom) -> gallery (her guests;
@@ -279,6 +279,18 @@ scenes "Cast a spell..." makes them gestures: Light insults her; Warmth from off
 enrages her; Illusion dazzles her or she sees through it (more likely the more she doubts him: suspicion jumps);
 Memory - one of three true memories of his own (his mother's hands, his first candle, the night Thornwick threw him
 out), each once a night - his most intimate gift: she keeps what she sees (into her memory of him), and answers it.
+
+Phase 4d - venom (done). game/venom.py: her first bite leaves her venom in him for the rest of the night (his poison
+never wears below 20): the edges of his sight darken and pulse (Options can still it); his hands shake - a spell
+comes apart three times in ten, in the den or before her; what he types to her comes out slurred (a letter lost, a
+sound dragged out, a word stumbled on, two swapped); her silk's hum bends and wavers. A second bite while it's in him
+is Supper (once it's out of him, a bite is the first again). Now and then (40 s after the bite, then every two or
+three minutes) he sees through her eyes for seven seconds, standing still: her larder and the phial hidden behind her
+stores; himself, far below, watched; the oak long ago, and someone with hands cutting a word into its heart (notes:
+The phial, Through her eyes, Before it was hollow). The antidote: a stoppered phial on her larder floor, seen once the
+vision shows it (or by Light); F takes it, Q drinks it - if she sees, she knows it was stolen. Or, in her scenes,
+"Ask her to take her venom out of you" (once a night): she gives it if she thinks well enough of him and doesn't
+doubt him too much; else he wears her bite till dawn. A model is told he's envenomed, or cured, and how.
 
 ## Phase 5 - music, sound, polish
 

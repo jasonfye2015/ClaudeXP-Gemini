@@ -30,6 +30,7 @@ from .ending import Ending
 from .mother import Mother
 from .sky import Sky
 from .spells import Spells
+from .venom import FLOOR as VENOM_FLOOR, Venom
 from .web import BRIDGE_HALF, Bridge, Web
 
 EYE = 0.52                     # (a little smaller than the Timeline's other first-person games: she is very large)
@@ -91,6 +92,8 @@ class Night:
         self.finds = Finds(self.tree)                                       # (things lying in her house: offerings)
         self.pack, self.taken, self.given = [], set(), []                   # (what he carries; took; gave her)
         self.moods = Moods()                                                # (how she regards him: hidden)
+        self.venom = Venom(random.Random(None if seed is None else f"venom{seed}"))
+        self.camera = None                                             # (through her eyes, a while: game/venom.py)
         self.spells = Spells(random.Random(None if seed is None else f"spells{seed}"))      # (his four)
         # the small ones' eyes, low in the dark: six at a time, each in one of the den's dark places
         spots = list(range(len(self.den.lurks)))
@@ -189,7 +192,17 @@ class Night:
             self.events.append(e)
             if e == ("act", "dawn"):                                   # (the light: how it ends, decided by all of it)
                 self.ending = Ending(self.acts.decide(self))
+                self._unsee()
                 return
+        for e in self.venom.step(dt, self):                            # (her venom: through her eyes, a while)
+            self.events.append(e)
+        if self.venom.vision is not None:
+            self.camera = self.venom.camera(self)
+            still = Input()                                            # (he stands where he is, seeing what she sees)
+            still.yaw, still.pitch = inp.yaw, inp.pitch
+            inp = still
+        elif self.camera is not None and not self.quiet:
+            self.camera = None
         turn = (inp.yaw - self.yaw) / dt if dt > 0 else 0.0
         self.yaw, self.pitch = inp.yaw, max(-1.45, min(1.45, inp.pitch))
         before = self.moved
@@ -220,6 +233,8 @@ class Night:
             self.events.extend(self.danglers.step(dt, self))
             self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
         self.events.extend(self.body.step(dt, self, self.events[first:]))
+        if self.venom.active:
+            self.body.poison = max(self.body.poison, VENOM_FLOOR)      # (it doesn't wear off: not before dawn)
         gone = self.body.spent()
         if gone is not None:
             self.collapse(gone)
@@ -267,20 +282,42 @@ class Night:
         return spot
 
     def bitten(self):
-        """Her bite: venom, and her hunger eased a while. A second is Supper. -> True if that was the end of him."""
+        """Her bite: venom, and her hunger eased a while. A second, while the first is still in him, is Supper.
+        -> True if that was the end of him."""
         self.moods.bit()
         self.body.poison = min(100.0, self.body.poison + 30.0)
         self.body.health = max(0.0, self.body.health - 8.0)
         self.body.startle += 40.0
         self.tremor += 3.0
-        if self.moods.bites >= 2:
+        if self.venom.active:
             self.collapse("bite")
             return True
+        self.venom.start()
+        self.events.append(("venom", "in"))
         return False
+
+    def drink(self):
+        """Q: the antidote, from his pack - her venom out of him. If she sees him do it, she knows where he got it."""
+        if "antidote" not in self.pack or not self.venom.active or self.dying is not None:
+            return False
+        self.pack.remove("antidote")
+        self.venom.cure("drunk")
+        self._unsee()
+        self.body.poison = max(0.0, self.body.poison - 25.0)
+        if math.dist(self.her.at(), self.eye) < 10.0:
+            self.moods.suspicion = min(100.0, self.moods.suspicion + 10.0)
+            self.flags["stole_antidote"] = True
+        self.events.append(("antidote", "drunk"))
+        return True
+
+    def _unsee(self):
+        self.venom.vision = None
+        self.camera = None
 
     def collapse(self, cause):
         """Something gave out: down he goes, and they come."""
         self.dying = Death(self, cause, random.Random(self.rng.random()))
+        self._unsee()
         self.crawlers.runs.clear()
         self.crawlers.swipe_at = None
         self.danglers.hanging.clear()

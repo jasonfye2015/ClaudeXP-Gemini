@@ -397,7 +397,7 @@ class NightMenu(QWidget):
         size("Her words, their size", "her_size", "little wizard", lambda: fonts.her(self.rec, 26))
         size("Your words, their size", "his_size", "I came", lambda: fonts.his(self.rec, 13))
         for label, key in (("The heart monitor", "heart"), ("The heartbeat, heard", "heartbeat"),
-                           ("The orbs", "orbs")):
+                           ("The orbs", "orbs"), ("Her venom, pulsing at the edges", "venom_fx")):
             c = QCheckBox(label)
             c.setChecked(bool(o[key]))
             c.toggled.connect(lambda v, key=key: self._set(key, bool(v)))

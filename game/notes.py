@@ -34,6 +34,9 @@ PAGES = {
     "journal": ("Her", "Maudren's journal",
                 "Half of it is Ysmeine's words, copied down. On the last page, in a shaking hand: Not her name. She "
                 "took it the night the oak went hollow. The one she will not speak of knew her before."),
+    "her_eyes": ("Her", "Through her eyes",
+                 "Her venom let me see through her eyes, and what she was looking at was me. She has watched me all "
+                 "night. She does not look away."),
     "fire": ("Her", "What she fears",
              "Fire. Everything that lives in silk fears it, she said - and that it is not a thing she tells."),
     # ---- her ways
@@ -64,6 +67,12 @@ PAGES = {
     "smoulder": ("Her ways", "Fire, on her silk",
                  "I let a flame touch her silk, and it blackened and smoked, and the whole oak shook. She was afraid. "
                  "I have never seen her afraid."),
+    "venom": ("Her ways", "Her venom",
+              "It does not wear off. The edges of everything darken and pulse; my hands shake; my words come out "
+              "wrong. And sometimes I see what she sees."),
+    "antidote": ("Her ways", "The phial",
+                 "A small stoppered phial in her larder, behind her stores, green as the fungus-light. It takes her "
+                 "venom out. She keeps it for the ones she means to keep."),
     "hunt": ("Her ways", "When she hunts",
              "When her patience is gone, or her hunger too much, she stops talking and comes straight for me, light or "
              "no light. The middle of the floor is the only place she cannot reach."),
@@ -93,6 +102,9 @@ PAGES = {
     "mark_tally": ("Old marks", "Names, behind her guests",
                    "Scratched into the gallery wall behind the wrapped ones: names. Orrin's is the newest. The oldest I "
                    "cannot read - the letters are older than any I was taught."),
+    "vision_before": ("Old marks", "Before it was hollow",
+                      "Through her eyes, long ago: the oak whole and green inside, and someone with hands cutting a "
+                      "word into its heart. She remembers it. She remembers it as her own."),
     "mark_crown": ("Old marks", "A word, burnt in",
                    "Under the crown, burnt into the wood - burnt, in a tree full of silk - a single word, and a handprint "
                    "beside it. Not hers. She has no hands."),
@@ -110,6 +122,13 @@ def unlock_for(event, night=None):
         return ["small_ones"]
     if kind == "smoulder":
         return ["smoulder"]
+    if kind == "venom":
+        return ["venom"]
+    if kind == "vision":
+        from .venom import VISIONS
+        return [VISIONS[event[1]][1]]
+    if kind == "antidote":
+        return ["antidote"]
     if kind == "mark":
         return [event[1]]
     return []

@@ -22,7 +22,9 @@ ITEMS = {
     "journal": ("Maudren's journal", "He offers you Maudren Hale's journal, every page filled with your words.",
                 "maudren"),
     "honey": ("a comb of honey", "He offers you a comb of honey - your own, from your larder wall.", "larder"),
+    "antidote": ("a stoppered phial", "He holds out your own phial - the antidote, from your larder.", "larder"),
 }
+KEPT = ("antidote",)            # (his to drink, not to give: never offered)
 ORDER = ("ring", "mouse", "moths", "string", "journal", "honey")
 REACH = 1.5
 
@@ -94,6 +96,12 @@ def give(item, night):
     return tier, answers.get(tier) or answers.get("plain") or answers["delight"]
 
 
+def hidden_shown(night):
+    """The antidote: seen only once a vision through her eyes has shown him where - or while his Light is up."""
+    venom, spells = getattr(night, "venom", None), getattr(night, "spells", None)
+    return (venom is not None and venom.revealed) or (spells is not None and spells.shining("light") > 0)
+
+
 class Finds:
     """The loose things in her house, where they lie (the keepsakes are under her guests)."""
 
@@ -113,6 +121,10 @@ class Finds:
             "moths": (math.cos(fa) * fr, fh + 0.4, math.sin(fa) * fr),
             "honey": (math.cos(la) * lr, lh + 1.2, math.sin(la) * lr),
         }
+        aa = tree.theta_of(start + run / 2) - 0.2                         # (behind her stores, low in the dark)
+        ar = tree.wall_r(aa, lh + 0.3) - 0.3
+        ax, az = math.cos(aa) * ar, math.sin(aa) * ar
+        self.spots["antidote"] = (ax, tree.floor_at(ax, az, lh + 0.5), az)
 
     def where(self, item, night):
         """Where it is now (the mouse wanders a little)."""
@@ -133,7 +145,7 @@ class Finds:
                 -math.cos(night.yaw) * math.cos(night.pitch))
         best = None
         for item in self.spots:
-            if item in night.taken:
+            if item in night.taken or (item == "antidote" and not hidden_shown(night)):
                 continue
             p = self.where(item, night)
             d = math.dist(p, (ex, ey, ez))
