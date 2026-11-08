@@ -56,6 +56,15 @@ class GameView(QOpenGLWidget):
         from .journal import Journal
         self.journal = Journal(self)             # (his notebook, in his hands: Esc - the night going on around it)
         self.glance = 0.0                        # (how far he's looking down, into it)
+        self.director = None                     # (Spellbound, or F9: the letter leading him - game/autoplay.py)
+        self.tutorial = None                     # (the first night: game/tutorial.py)
+        self.guide = None                        # (and the letter leading him between its lessons)
+        self.speed = 1                           # (F10: how fast the letter leads, between words to read)
+        self.read_seen = set()
+        self.reading_until = 0.0
+        self.ui_did = {}
+        self.auto_journal_until = None
+        self.tut_travel = None
         self.last = time.perf_counter()
         self.t0 = self.last
         self.timer = QTimer(self)
@@ -129,6 +138,18 @@ class GameView(QOpenGLWidget):
         self.fade = time.perf_counter()
         self.cards = []
         self.setFocus()
+        from ..game.autoplay import Director
+        from ..game.tutorial import Tutorial
+        self.director = Director(night) if night.charmed() else None
+        self.tutorial, self.guide, self.tut_travel = None, None, None
+        if night.flags.get("first"):
+            self.tutorial = Tutorial(night)
+            self.guide = Director(night, guide=True)
+            order = ("threshold", "audience", "gallery", "supper", "crown", "dawn")
+            while self.tutorial.lesson and order.index(self.tutorial.lesson[1]) < order.index(night.acts.act):
+                self.tutorial.skip()                             # (gone on with from a save: what's past, past)
+        self.speed, self.read_seen, self.reading_until, self.ui_did = 1, set(), 0.0, {}
+        self.auto_journal_until = None
         if talk_state is None:
             self.shell.saves.save("act", night, self.talk)       # (the first act, begun)
         else:
@@ -143,6 +164,8 @@ class GameView(QOpenGLWidget):
         why = why_not(n, scene=getattr(self, "scene", None) is not None)
         if why is None and not self.shell.saves.save("quick", n, self.talk):
             why = "It couldn't be saved."
+        if why is None:
+            self.ui_did["saved"] = True
         return why
 
     def backdrop(self, night):
@@ -182,6 +205,9 @@ class GameView(QOpenGLWidget):
                 if self.tally is not None and not self.tally["done"]:
                     self.first_ending = self.shell.records.ending(n.ending.name)
                     self.night_done()
+                if self.director is not None and n.ending.t > 20.0:
+                    self.shell.show_title()                       # (led: it ends, and he wakes at the title)
+                    return
             n.events.clear()
         elif self.playing and n.dying is not None and not self.shell.panel_open():      # (the end of him: no hands on it)
             if not n.dying.asked:                                 # (her last words to him: what she made of him)
@@ -205,22 +231,35 @@ class GameView(QOpenGLWidget):
             if scene is not None and scene not in n.met:
                 self.start_scene(scene)                           # (where he is, in the night's act: she comes to him)
             k = self.keys
-            self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
-            self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
-            self.inp.hurry = Qt.Key_Shift in k
-            if self.satchel.open or self.journal.open:            # (his hands full: he stands still)
-                self.inp.forward = self.inp.strafe = 0.0
-                self.inp.jump = False
-            if Qt.Key_Left in k:
-                self.inp.yaw -= 1.8 * dt
-            if Qt.Key_Right in k:
-                self.inp.yaw += 1.8 * dt
-            want = 0.5 if self.journal.open else 0.0              # (he looks down into it)
-            self.glance += (want - self.glance) * min(1.0, dt * 6.0)
-            mine = self.inp.pitch
-            self.inp.pitch = max(-1.45, mine - self.glance)
-            n.step(dt, self.inp)
-            self.inp.pitch = mine
+            drive = self._drive()
+            if drive is None:
+                self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - \
+                    (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
+                self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
+                self.inp.hurry = Qt.Key_Shift in k
+                if self.satchel.open or self.journal.open:        # (his hands full: he stands still)
+                    self.inp.forward = self.inp.strafe = 0.0
+                    self.inp.jump = False
+                if Qt.Key_Left in k:
+                    self.inp.yaw -= 1.8 * dt
+                if Qt.Key_Right in k:
+                    self.inp.yaw += 1.8 * dt
+            steps = 1
+            if drive is self.director and drive is not None and now >= self.reading_until and not self.journal.open:
+                steps = self.speed * (2 if drive.idle else 1)     # (F10; and faster still with nothing to do)
+            for _ in range(min(16, steps)):
+                if drive is not None:
+                    self._requests(drive.step(dt, n, self.inp), n)
+                want = 0.5 if self.journal.open else 0.0          # (he looks down into it)
+                self.glance += (want - self.glance) * min(1.0, dt * 6.0)
+                mine = self.inp.pitch
+                self.inp.pitch = max(-1.45, mine - self.glance)
+                n.step(dt, self.inp)
+                self.inp.pitch = mine
+                if n.ending is not None or n.dying is not None or n.acts.scene_for(n):
+                    break
+            self._lessons(n, dt)
+            self._watch_text(now)
             if self.journal.open and any(e[0] in ("crawler", "bitten", "collapse") or e == ("dangler", "face") or
                                          e in (("her", "strike"), ("her", "bite")) for e in n.events):
                 self.journal.close(knocked=True)                  # (knocked from his hands)
@@ -444,6 +483,122 @@ class GameView(QOpenGLWidget):
                 self.note_toast = ("Beside " + ITEMS[item][0] + ": " + line, time.perf_counter())
         n.learned.clear()
 
+    # ---- led by her letter, and the first night --------------------------------------------------------------------
+    def _drive(self):
+        """Who walks him now: the letter (Spellbound, F9), its guiding between lessons, or him."""
+        if self.director is not None:
+            return self.director
+        t = self.tutorial
+        if t is not None and not t.done and not t.his_turn and self.guide is not None:
+            return self.guide
+        return None
+
+    def _requests(self, reqs, n):
+        for r in reqs:
+            if r == ("dawn",):
+                self.wait_for_dawn()
+            elif r[0] == "done" and self.tutorial is not None:
+                self.tutorial.arrived()
+
+    def _lessons(self, n, dt):
+        """The first night: its lessons, on - and where the letter leads between them."""
+        t = self.tutorial
+        if t is None or t.done:
+            return
+        at = t.at
+        for r in t.step(dt, n, list(n.events), self.ui_did):
+            if r[0] == "travel" and self.tut_travel != (t.at, r[1]):
+                from ..game.tutorial import travel_task
+                self.tut_travel = (t.at, r[1])
+                task = travel_task(r[1], n, self.guide.nav)
+                self.guide.tasks = [task] if task else []
+                self.guide.path, self.guide.goal = [], None
+                if task is None:
+                    t.arrived()
+            elif r == ("call", "supper") and n.acts.act == "gallery":
+                n.acts._go("supper", n.events)                 # (she calls him down)
+        if t.at != at:
+            self.ui_did = {}
+            if t.done:
+                self.whisper = ("That's all of it. The rest of the night is yours.", time.perf_counter(), 5.0)
+
+    def _watch_text(self, now):
+        """Words on the screen, new: while the letter leads, time to read them (a second, and a third of one a word)."""
+        if self._drive() is None:
+            return
+        n = self.night
+        seen = []
+        if self.whisper:
+            seen.append((self.whisper[0], self.whisper[1]))
+        if self.cards:
+            seen.append((self.cards[-1][0] + " " + self.cards[-1][1], self.cards[-1][2]))
+        if getattr(self, "note_toast", None):
+            seen.append(self.note_toast)
+        if getattr(self, "her_line", None):
+            seen.append((self.her_line[0], "her"))
+        if n.venom.vision is not None:
+            from ..game.venom import VISIONS
+            seen.append((VISIONS[n.venom.vision[0]][0], "vision"))
+        if self.tutorial is not None and self.tutorial.note:
+            seen.append((self.tutorial.note, self.tutorial.at))
+        for text, when in seen:
+            if not text or (text, when) in self.read_seen:
+                continue
+            self.read_seen.add((text, when))
+            hold = 1.0 + 0.3 * len(str(text).split())
+            self.reading_until = max(self.reading_until, now + hold)
+            d = self._drive()
+            if d is not None:
+                d.hold(hold)
+        if self.auto_journal_until is not None and now > self.auto_journal_until:
+            self.auto_journal_until = None
+            self.journal.close()
+
+    def wake(self):
+        """A key of his own: the letter lets go. The night is his now (and no longer Spellbound)."""
+        n = self.night
+        if self.director is None or n is None:
+            return
+        n.flags["woke"] = True
+        self.director = None
+        self.whisper = ("You wake, standing in her house. The night is yours now.", time.perf_counter(), 5.0)
+        if self.journal.open:
+            self.journal.close()
+        self.capture()
+
+    def draw_lesson(self, p, W, H):
+        """The first night's margin note: in his hand, on a scrap of his notebook's paper."""
+        t = self.tutorial
+        if t is None or t.done or not t.note:
+            return
+        from . import fonts
+        from ..game.tutorial import LESSONS
+        box = QRectF(W * 0.24, H * 0.13, W * 0.52, 10)
+        f = fonts.his(self.shell.records, 13)
+        f.setItalic(True)
+        from PySide6.QtGui import QFontMetrics
+        h = QFontMetrics(f).boundingRect(0, 0, int(box.width() - 40), 400, Qt.TextWordWrap, t.note).height()
+        box.setHeight(h + (58 if t.prompt else 30))
+        p.save()
+        p.setPen(QColor(120, 96, 70))
+        p.setBrush(QColor(222, 208, 178, 235))
+        p.drawRoundedRect(box, 4, 4)
+        p.setFont(f)
+        p.setPen(QColor(52, 36, 26))
+        p.drawText(box.adjusted(20, 14, -20, -14), Qt.AlignLeft | Qt.TextWordWrap, t.note)
+        if t.prompt:
+            g = QFont(SERIF, 11, QFont.Bold)
+            p.setFont(g)
+            p.setPen(QColor(110, 60, 30))
+            p.drawText(QRectF(box.left() + 20, box.bottom() - 28, box.width() - 40, 20), Qt.AlignLeft,
+                       ("-  " + t.prompt) if t.prompt != "Yes." else "-  Yes.")
+        p.setFont(QFont(SERIF, 9))
+        p.setPen(QColor(120, 96, 70))
+        p.drawText(QRectF(box.left(), box.bottom() + 4, box.width(), 16), Qt.AlignHCenter,
+                   f"The first night  -  {t.at + 1} of {len(LESSONS)}"
+                   "   (Enter skips  -  F9: let the letter lead you through the rest)")
+        p.restore()
+
     def _last_words(self, n):
         """Supper: what she says to him as he's hung - from what she made of him tonight, and on other nights; in a
         model's words, if one is speaking for her and answers in time."""
@@ -515,6 +670,10 @@ class GameView(QOpenGLWidget):
             if self.shell.records.note(nid):
                 from ..game.notes import PAGES
                 self.note_toast = (PAGES[nid][1], time.perf_counter())
+                if self.director is not None and getattr(self, "scene", None) is None and self.night.dying is None:
+                    self.journal.open_to(nid)                    # (led: he lifts his notebook to what he's learned)
+                    words = len(PAGES[nid][2].split())
+                    self.auto_journal_until = time.perf_counter() + 2.5 + 0.3 * words
 
     def _notes_from(self, n):
         from ..game import notes
@@ -578,7 +737,8 @@ class GameView(QOpenGLWidget):
             ending = {"Dawn": "dawn, and you let him go", "Cast out": "dawn, and you cast him out",
                       "Bound": "him staying, wrapped, at his own asking",
                       "The gift": "dawn, and your gift to him",
-                      "The hidden": "dawn, and he knew your name", "Fire": "fire, in your silk"}.get(n.ending.name, "dawn")
+                      "The hidden": "dawn, and he knew your name", "Fire": "fire, in your silk",
+                      "Spellbound": "dawn, and you carried him home asleep"}.get(n.ending.name, "dawn")
         self.shell.records.night_over(dict(t, seconds=n.time - t.get("from", 0.0), ending=ending, manner=n.manner(),
                                            lies=talk.lies if talk else 0,
                                            kept=talk.memory[-1] if talk and talk.memory else ""))
@@ -680,7 +840,15 @@ class GameView(QOpenGLWidget):
                 p.fillRect(self.rect(), QColor(0, 0, 0, int(255 * max(0.0, 1 - age / 3.0))))
         self.satchel.draw(p, W, H, n, self.shell.records)
         self.journal.draw(p, W, H)
-        if not self.captured and not self.shell.panel_open() and not self.satchel.open and not self.journal.open:
+        self.draw_lesson(p, W, H)
+        if self._drive() is not None:                             # (the letter leading him: how to wake)
+            p.setFont(QFont(SERIF, 10))
+            p.setPen(QColor(200, 186, 220, 170))
+            line = (f"Led by her letter   -   F10: x{self.speed}   -   any move key wakes you"
+                    if self.director is not None else "The letter leads you on to the next")
+            p.drawText(QRectF(0, 10, W, 18), Qt.AlignHCenter, line)
+        if not self.captured and not self.shell.panel_open() and not self.satchel.open and not self.journal.open \
+                and self._drive() is None:
             p.setPen(QColor(220, 208, 190, 170))
             p.setFont(QFont(SERIF, 12))
             p.drawText(QRectF(0, H * 0.5 + 40, W, 30), Qt.AlignHCenter,
@@ -772,6 +940,7 @@ class GameView(QOpenGLWidget):
             if self.journal.open:
                 self.release()
             else:
+                self.ui_did["notebook"] = True
                 self.capture()
             return
         if k == Qt.Key_Escape or k == Qt.Key_P:                  # (the true pause: "The night waits")
@@ -779,6 +948,25 @@ class GameView(QOpenGLWidget):
             self.shell.pause()
             return
         if not self.playing:
+            return
+        if self.director is not None and k in (Qt.Key_W, Qt.Key_A, Qt.Key_S, Qt.Key_D, Qt.Key_Up, Qt.Key_Down, Qt.Key_Space):
+            self.wake()                                          # (a key of his own: the letter lets go)
+        if k == Qt.Key_F9 and n is not None and n.dying is None and n.ending is None:
+            if self.director is not None:
+                self.wake()
+            else:
+                from ..game.autoplay import Director
+                if self.tutorial is not None:
+                    self.tutorial.done = True
+                self.director = Director(n)
+                self.whisper = ("You let the letter lead you.", time.perf_counter(), 3.0)
+                self.release()
+            return
+        if k == Qt.Key_F10:
+            self.speed = {1: 2, 2: 4, 4: 8, 8: 1}[self.speed]
+            return
+        if k in (Qt.Key_Return, Qt.Key_Enter) and self.tutorial is not None and not self.tutorial.done:
+            self.tutorial.skip()
             return
         if self.journal.open:                                    # (his hands are full of it)
             return
@@ -807,6 +995,7 @@ class GameView(QOpenGLWidget):
             if self.satchel.open:
                 self.release()
             else:
+                self.ui_did["satchel"] = True                    # (opened, and shut: for the first night)
                 self.capture()
             return
         if k == Qt.Key_G and free:                               # (what's in his hand, put down)

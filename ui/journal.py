@@ -54,6 +54,15 @@ class Journal:
             self.open, self.at = True, time.perf_counter()
             self.said = None
 
+    def open_to(self, nid):
+        """Lifted, open at the page where nid is written (the letter leading him: what he's just learned)."""
+        for k, page in enumerate(self._note_pages()):
+            if nid in page:
+                self.notes_at = k
+        self.shown, self.next_shown = "notes", None
+        if not self.open:
+            self.open, self.at = True, time.perf_counter()
+
     def close(self, knocked=False):
         if not self.open:
             return

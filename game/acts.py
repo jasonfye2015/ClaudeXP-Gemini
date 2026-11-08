@@ -98,6 +98,8 @@ class Acts:
         m = night.moods
         talk_lies = getattr(night, "lies", 0)
         stay = night.flags.get("stay", False)
+        if night.flags.get("led") and not night.flags.get("woke"):   # (led by her letter, all night: game/autoplay.py)
+            return "Spellbound"
         if night.flags.get("named"):                       # (her true name, found and spoken: game/hidden.py)
             return "The hidden"
         if m.bites >= 1 and m.regard < 30:

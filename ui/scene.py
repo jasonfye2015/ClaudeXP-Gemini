@@ -111,11 +111,23 @@ class SceneView(QWidget):
     def box(self):
         """Low across the frame, as tall as her line and his answers need (growing upward)."""
         W, H = self.width(), self.height()
-        h = max(H * 0.24, min(H * 0.62, getattr(self, "need", 0.0)))
+        h = max(H * 0.24, min(H * 0.82, getattr(self, "need", 0.0)))
         return QRectF(W * 0.13, H * 0.965 - h, W * 0.74, h)
 
     def _tick(self):
         self.t += 0.033
+        typing = getattr(self, "_typing", None)
+        if typing is not None:                                     # (the letter's hand, typing for him)
+            edit, line, t0 = typing
+            k = int((self.t - t0) * 28)
+            try:
+                edit.setText(line[:k])
+            except RuntimeError:
+                self._typing = None
+            else:
+                if k >= len(line) + 12:
+                    self._typing = None
+                    self._typed(line)
         if self.scene.ready and not self.opened:
             self.opened = True
             self.talk.open(self.scene.name, lambda text, ch: self.replies.put((text, ch)))
@@ -125,12 +137,85 @@ class SceneView(QWidget):
             text = None
         if text is not None:
             self._her(text, choices)
+        if self.shell.view.director is not None:
+            if getattr(self, "ghost", None) is None:
+                from .ghost import Ghost
+                self.ghost = Ghost(self)
+            if not self.ghost.busy:
+                self._auto()
         if self.scene.done and not self.closing:
             self.closing = True
             self.timer.stop()
             self.on_done()
             return
         self.update()
+
+    def _auto(self):
+        """Led by her letter: when her line's all there, and there's been time to read it - his answer."""
+        if self.waiting or not self.widgets:
+            self._full_at = None
+            return
+        if self._shown() < len(self.her_text):
+            return
+        if getattr(self, "_full_at", None) is None:
+            self._full_at = self.t
+            return
+        if self.t - self._full_at < 1.4 + 0.3 * len(self.her_text.split()):
+            return
+        self._full_at = None
+        from ..game import script
+        from ..game.autoplay import best_gift, choose_line
+        n, talk = self.shell.view.night, self.talk
+        if self.choices is None:
+            self._press("Go on", self._go_on)
+            return
+        gift = best_gift(n)
+        if gift and not getattr(self, "_gave", False):
+            self._gave = True
+            self._press("Hold out" if n.held == gift else "Offer", lambda: self._offered(gift))
+            return
+        if self.scene.name == "crown" and n.spells.unshown() and not getattr(self, "_shown_memory", False):
+            self._shown_memory = True
+            mem = n.spells.unshown()[0]
+            self._press("Cast a spell", lambda: self._cast("memory", mem))
+            return
+        node = script.SCENES[talk.scene]["nodes"].get(talk.node, {}).get("choices", []) if talk.node else []
+        if self.choices and node:
+            i = choose_line([(c[0], c[1], c[4] if len(c) > 4 else None) for c in node])
+            self._press(node[i][0], lambda: self._chose(i, node[i][0]))
+            return
+        pool = getattr(self, "_pool", None)                        # (a model speaks for her: his lines, typed)
+        if pool is None:
+            lines = [c for nd in script.SCENES[talk.scene]["nodes"].values() for c in nd.get("choices", [])]
+            from ..game.autoplay import score_kinds
+            lines.sort(key=lambda c: -score_kinds(c[1]))
+            self._pool = pool = [c[0] for c in lines if "lie" not in c[1] and not (len(c) > 4 and c[4] == "stay")]
+        if pool:
+            line = pool.pop(0)
+            edit = next((w for w in self.widgets if isinstance(w, QLineEdit)), None)
+            if edit is not None:                                   # (typed into her window, a letter at a time)
+                self._type_into(edit, line)
+            else:
+                self._typed(line)
+        else:
+            self._press("Go on", self._go_on)
+
+    def _press(self, label, then):
+        """The ghost of a hand: to the button that reads `label` (or begins with it), a moment there, and pressed."""
+        w = next((b for b in self.widgets if isinstance(b, QPushButton) and
+                  (b.text() == label or b.text().lstrip("✦✧ ").startswith(label))), None)
+        if w is None:
+            then()
+            return
+        c = w.geometry().center()
+        self.ghost.go(QPointF(c.x() - w.width() * 0.3, c.y() + 2), lambda: (w.setDown(True), then()))
+
+    def _type_into(self, edit, line):
+        c = edit.geometry().center()
+
+        def typing():
+            self._typing = (edit, line, self.t)
+        self.ghost.go(QPointF(c.x() - edit.width() * 0.3, c.y()), typing)
 
     def _shown(self):
         speed = REVEAL * (0.4 + 1.2 * self.shell.records.options.get("text_speed", 50) / 100.0)
@@ -181,17 +266,18 @@ class SceneView(QWidget):
         n = self.shell.view.night
         if n.held and n.held not in KEPT:                       # (what's in his hand: held out to her)
             from ..game.offerings import ITEMS
-            self._button("✦  Hold out " + ITEMS[n.held][0] + ", in your hand", lambda: self._offered(n.held))
+            self._button("✦  Hold out " + ITEMS[n.held][0].split(" ", 1)[-1], lambda: self._offered(n.held),
+                         small=True)
         if any(i not in KEPT and i != n.held for i in n.pack):
-            self._button("✦  Offer her something" + (" else" if n.held and n.held not in KEPT else "") + "...",
-                         self._open_pack)
+            self._button("✦  Offer" + (" something else" if n.held and n.held not in KEPT else " her something") + "...",
+                         self._open_pack, small=True)
         if self.talk.knows_her and not self.talk.flags.get("named"):
-            self._button("✦  Speak her true name", self._speak_name)
+            self._button("✦  Speak her true name", self._speak_name, small=True)
         if n.venom.active and not self.talk.flags.get("asked_cure"):
-            self._button("✦  Ask her to take her venom out of you", self._ask_cure)
+            self._button("✦  Ask her for the antidote", self._ask_cure, small=True)
         sp = self.shell.view.night.spells
         if any(sp.ready(k) for k in ("light", "warmth", "illusion")) or sp.unshown():
-            self._button("✧  Cast a spell...", self._open_spells)
+            self._button("✧  Cast a spell...", self._open_spells, small=True)
 
     SPELLS = (("light", "Light  -  a hard white light"), ("warmth", "Warmth  -  a small flame in his palm"),
               ("illusion", "Illusion  -  seem grander than he is"))
@@ -262,9 +348,10 @@ class SceneView(QWidget):
         self.waiting = True
         self.talk.offer(item, lambda t, ch: self.replies.put((t, ch)))
 
-    def _button(self, text, fn):
+    def _button(self, text, fn, small=False):
         b = QPushButton(text, self)
-        b.setFont(fonts.his(self.shell.records, 12))
+        b.small = small
+        b.setFont(fonts.his(self.shell.records, 10 if small else 12))
         b.setCursor(Qt.PointingHandCursor)
         b.clicked.connect(fn)
         self.widgets.append(b)
@@ -280,14 +367,37 @@ class SceneView(QWidget):
         W = self.width()
         fm = QFontMetrics(fonts.her(self.shell.records, 30))
         text_h = fm.boundingRect(QRect(0, 0, int(W * 0.74 - 80), 4000), Qt.TextWordWrap, self.her_text or "...").height()
-        buttons = sum(w.sizeHint().height() + 6 for w in self.widgets)
+        big = [w for w in self.widgets if not getattr(w, "small", False)]
+        small = [w for w in self.widgets if getattr(w, "small", False)]
+        rows, row, room = [], [], W * 0.74 - 80                  # (the small ones: in a row - or two - under his lines)
+        for w in small:
+            need = w.sizeHint().width() + 16
+            if row and sum(x.sizeHint().width() + 16 for x in row) + need > room:
+                rows.append(row)
+                row = []
+            row.append(w)
+        if row:
+            rows.append(row)
+        sh = sum(max(x.sizeHint().height() for x in r_) + 6 for r_ in rows)
+        buttons = sum(w.sizeHint().height() + 6 for w in big) + sh
         self.need = 44 + (24 if self.his_text else 0) + text_h + 14 + buttons + 22
         r = self.box()
         y = r.bottom() - 18
-        for w in reversed(self.widgets):
+        for r_ in reversed(rows):
+            h = max(x.sizeHint().height() for x in r_)
+            y -= h + 6
+            x = r.left() + 40
+            for w in r_:
+                ww = w.sizeHint().width() + 16
+                w.setGeometry(int(x), int(y), int(ww), h)
+                x += ww + 8
+        for w in reversed(big):
             h = w.sizeHint().height()
             y -= h + 6
             w.setGeometry(int(r.left() + 40), int(y), int(r.width() - 80), h)
+        if getattr(self, "ghost", None) is not None:
+            self.ghost.setGeometry(self.rect())
+            self.ghost.raise_()
 
     def resizeEvent(self, e):
         self._lay()
@@ -348,6 +458,7 @@ class SceneView(QWidget):
             p.setFont(f)
             p.setPen(QColor(220, 196, 150, int(220 * min(1.0, age / 0.4, (4.5 - age) / 0.8))))
             p.drawText(QRectF(0, H * 0.115 * sc.box + 8, W, 22), Qt.AlignHCenter, f"Written in your notes:  {toast[0]}")
+        self.shell.view.draw_lesson(p, W, H)                         # (the first night's margin note, even here)
         p.end()
 
     def _window(self, p):

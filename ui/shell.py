@@ -130,21 +130,40 @@ class Shell(QWidget):
         self.set_panel(NightMenu(self))
         self.view.ensure_audio()                             # (and her voice, readied while the player reads)
 
-    def show_letter(self):
-        """Before the night: her letter, and what it means to him. Go to the oak - or not tonight."""
+    def begin_clicked(self):
+        """Begin the night: the very first time, the first night is offered."""
+        if self.records.totals.get("nights", 0) == 0 and not self.records.found and not getattr(self, "offered", False):
+            self.offered = True
+            self.set_panel(Panel(self, "Your first night?", "The oak can be learned - or gone into alone.",
+                                 [("Learn the oak", lambda: self.show_letter("first")),
+                                  ("Go in alone", lambda: self.show_letter("alone")),
+                                  ("Let the letter lead you", lambda: self.show_letter("led")),
+                                  ("Back", self.show_menu)]))
+            return
+        self.show_letter("alone")
+
+    def show_letter(self, mode="alone"):
+        """Before the night: her letter, and what it means to him. Go to the oak - or not tonight. (mode: "alone";
+        "led" - Spellbound, the letter leading him all night; "first" - the first night, the oak learned)"""
         from .pages import Letter
         for page in ("letter", "silk"):
             self.records.note(page)
-        self.set_panel(Letter(self, "begin", on_go=self.begin, on_back=self.show_menu))
+        self.set_panel(Letter(self, "begin", on_go=lambda: self.begin(mode), on_back=self.show_menu,
+                              lead=mode if mode != "alone" else None))
         self.panel.setFocus()
 
-    def begin(self):
+    def begin(self, mode="alone"):
         self.set_panel(None)
         self.saves.clear()                                      # (a new night: the last one's saves gone)
-        self.view.begin(Night())
+        night = Night()
+        if mode == "led":
+            night.flags["led"] = True                           # (Spellbound: game/autoplay.py)
+        elif mode == "first":
+            night.flags["first"] = True                         # (the first night: game/tutorial.py)
+        self.view.begin(night)
 
     def _app_state(self, state):
-        if state != Qt.ApplicationActive and self.view.playing and not self.panel_open():
+        if state != Qt.ApplicationActive and self.view.playing and not self.panel_open() and                 self.view.director is None:                    # (led by her letter: it goes on, to be watched)
             n = self.view.night
             if n is not None and n.dying is None and n.ending is None:
                 self.view.release()
