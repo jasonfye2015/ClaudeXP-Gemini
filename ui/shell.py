@@ -97,6 +97,7 @@ class Shell(QWidget):
     def show_menu(self):
         from .menu import NightMenu
         self.set_panel(NightMenu(self))
+        self.view.ensure_audio()                             # (and her voice, readied while the player reads)
 
     def begin(self):
         self.set_panel(None)
