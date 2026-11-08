@@ -66,8 +66,8 @@ SCENES = {
                           "choices": [("Who was he?", ["deep"], "orrin"),
                                       ("I meant it.", ["flattery"], "meantit"),
                                       ("Then I'll choose better words.", ["honest"], "sit")]},
-            "named": {"her": "Claude. You say it as though you are not sure it fits yet. Keep it a while longer. Sit on "
-                             "the silk with me.", "next": "sit"},
+            "named": {"her": "Claude. You say it as though you are not sure it fits yet. Keep it a while longer.",
+                      "next": "sit"},
             "hoard": {"her": "Keep it, then. I know it already, and now I know you hoard things. That is worth knowing "
                              "too.", "next": "sit"},
             "hername": {"her": "Ysmeine. It is what I am called. It is not what I am. Do not ask the difference yet.",

@@ -15,7 +15,7 @@ from PySide6.QtGui import QColor, QCursor, QFont, QPainter, QSurfaceFormat
 from PySide6.QtOpenGLWidgets import QOpenGLWidget
 
 from ..game.night import Input
-from . import orbs
+from . import fonts, orbs
 from ..game.death import ENDING
 
 SENS = 0.0022
@@ -301,11 +301,9 @@ class GameView(QOpenGLWidget):
         if getattr(self, "her_line", None) and t - self.her_line[1] < 7.0:     # (her words: hers, low and large)
             age = t - self.her_line[1]
             a = min(1.0, age / 0.6, (7.0 - age) / 1.2)
-            f = QFont(SERIF, 17)
-            f.setItalic(True)
-            p.setFont(f)
+            p.setFont(fonts.her(self.shell.records, 30))          # (her hand: Italianno)
             p.setPen(QColor(0, 0, 0, int(200 * a)))
-            box = QRectF(W * 0.15, H * 0.53, W * 0.7, 60)
+            box = QRectF(W * 0.12, H * 0.36, W * 0.76, 90)              # (above the middle, in the dark)
             p.drawText(box.translated(1, 1), Qt.AlignHCenter | Qt.TextWordWrap, self.her_line[0])
             p.setPen(QColor(236, 214, 200, int(235 * a)))
             p.drawText(box, Qt.AlignHCenter | Qt.TextWordWrap, self.her_line[0])
