@@ -49,6 +49,8 @@ SWAY_TEETER = 0.65
 STEP_SILK = 0.55               # (a step, on silk: the creak she hears, the tremor she feels)
 
 PLACES = {
+    "outside": ("The Hollow Oak", "Dusk. The path ends at the roots of the oak; nothing grows near it. Behind you, "
+                "the forest has gone quiet."),
     "tunnel": ("The roots", "A way in through the roots of the Hollow Oak. Dry leaves, and something that isn't wind."),
     "hollow": ("The Hollow", "The inside of the tree, going up and up into the dark. A ledge winds up the wall."),
     "gallery": ("The gallery", "A chamber in the wood. The walls here are hung with something wrapped in silk."),
@@ -132,6 +134,7 @@ class Night:
         self.met = {}                                                  # (her scenes so far: name -> how it ended)
         self.eye_h = EYE
         self.roll = 0.0
+        self.letter_in_hand = False                                    # (walking to the oak: her letter, held)
 
     # ---- where he is --------------------------------------------------------------------------------------------
     @property
@@ -160,6 +163,8 @@ class Night:
 
     def where(self):
         t = self.tree
+        if t.outside(self.x, self.z):
+            return "outside"
         if t.in_tunnel(self.x, self.z) and t.in_tunnel(self.x, self.z)[0] > 0.2:
             return "tunnel"
         return t.landing_at(self.x, self.z, self.y) or "hollow"
@@ -249,7 +254,10 @@ class Night:
             self.events.append(e)
             if e == ("satchel", "honey") and not self.quiet and self.rng.random() < 0.6:
                 self.crawlers.scurry(0.05)                                  # (they've found it on his fingers)
-        if not self.quiet and not self.spells.illusion:                     # (Illusion: her small ones lose him)
+        if self.letter_in_hand and self.where() == "tunnel":
+            self.letter_in_hand = False                                # (into the roots: folded away)
+            self.events.append(("letter", "away"))
+        if not self.quiet and not self.spells.illusion and self.where() != "outside":   # (Illusion: they lose him)
             self.events.extend(self.crawlers.step(dt))
             self.events.extend(self.danglers.step(dt, self))
             self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
@@ -310,6 +318,14 @@ class Night:
             self.pack.append(item)
             self.held = item
             self.events.append(("take", item))
+
+    def begin_outside(self):
+        """A new night: out in the glade at dusk, the oak ahead, her letter in his hand."""
+        sx, sz, facing = self.tree.start_outside
+        self.x, self.z = sx, sz
+        self.y = self.tree.floor_at(sx, sz, 1.0)
+        self.yaw = math.atan2(math.cos(facing), -math.sin(facing))
+        self.letter_in_hand = True
 
     def charmed(self):
         """Led by her letter, all night, and not woken from it: Spellbound (game/autoplay.py)."""

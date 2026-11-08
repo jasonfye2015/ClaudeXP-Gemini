@@ -434,3 +434,12 @@ a time (and in her voice), before the card: what she did with him and what she t
 - held dear (hung highest, by the moon; not eaten for a long time), lied to (kept low by the roots), met before, his
 careful steps, or plain (game/death.py her_side).
 
+9h - the walk to the oak (done). A new night begins out in a glade at dusk, twenty-one strides from the roots, her
+letter in his left hand (game/tree.py outside: the glade beyond the tunnel's far end, now open - its floor, its
+trees to walk round; game/night.py begin_outside). engine/treemesh.py _outside: the leaf-litter floor; the mound of
+roots arched over the tunnel, and its mouth; the oak's own trunk going up into the sky (its broken top capped to the
+crown's rim), a gap at its foot where the roots run in; a dozen trees in the glade and a wall of them round it. Out
+there the dusk sky lights everything (the shared lighting's outsideK) and the mist between the trees is thicker; the
+sky itself deepens to dusk while he's under it. Into the roots, he folds the letter away. Nothing small drops on him
+under the sky. The letter leads from out there, too (Nav: outside -> the mouth -> the tunnel).
+

@@ -40,6 +40,7 @@ def world(tree, den=None):
     _ledge(tree, out)
     _tunnel(tree, out)
     _crown(tree, out)
+    _outside(tree, out)
     if den is not None:
         _roots(den, out)
     return np.array(out, np.float32).reshape(-1, 10)
@@ -238,11 +239,114 @@ def _tunnel(tree, out):
             ca, cb = (c0, c1) if first else (c1, c0)
             _quad(out, (xa, fa, za), (xa, ca, za), (xb, cb, zb), (xb, fb, zb), BARK,
                   ((u0, 0), (u0, 0.85), (u1, 0.85), (u1, 0)), (0.3, 0.36, 0.36, 0.3))
-    # its far end: earth and roots, the night beyond showing through a gap (drawn as a glow)
-    (xa, za), (xb, zb) = tree.tunnel_point(L, -W), tree.tunnel_point(L, W)
+    # its far end: open - the roots' mouth, and the glade beyond (game/tree.py's outside)
+
+
+def _outside(tree, out):
+    """Outside the oak, at dusk: the glade's floor, the mound of roots over the tunnel and its mouth, the oak's own
+    trunk going up into the sky (a gap at its foot where the roots run in), and the forest standing round."""
+    L, W, C = T.TUNNEL_LEN, T.TUNNEL_HALF, T.TUNNEL_CEIL
+    tp = tree.tunnel_point
+    # the glade's floor
+    step = 1.0
+    a = -0.05
+    while a < T.OUT_LEN:
+        c = -T.OUT_HALF
+        while c < T.OUT_HALF:
+            pts = [(a, c), (a + step, c), (a + step, c + step), (a, c + step)]
+            ps = []
+            for pa, pc in pts:
+                x, z = tp(L + pa, pc)
+                ps.append((x, tree.out_ground(max(0.0, pa), pc), z))
+            _quad(out, ps[0], ps[3], ps[2], ps[1], LEAVES,
+                  [(p[0] * UV * 1.4, p[2] * UV * 1.4) for p in (ps[0], ps[3], ps[2], ps[1])],
+                  (0.8, 0.8, 0.8, 0.8))
+            c += step
+        a += step
+    # the mound of roots over the tunnel: from the trunk out to the mouth, arched
+    top = C + 0.6
+    span = W + 2.6
+    n_a, n_c = 14, 10
+    a0 = 2.2
+    for i in range(n_a):
+        u0, u1 = a0 + (L - a0) * i / n_a, a0 + (L - a0) * (i + 1) / n_a
+        for j in range(n_c):
+            c0, c1 = -span + 2 * span * j / n_c, -span + 2 * span * (j + 1) / n_c
+
+            def h(u, cc):
+                return tree.tunnel_floor(u) - 0.1 + (top + 0.25 * math.sin(u * 1.7 + cc)) * max(0.0, 1 - (cc / span) ** 2)
+            ps = [(*tp(u, cc), h(u, cc)) for u, cc in ((u0, c0), (u1, c0), (u1, c1), (u0, c1))]
+            ps = [(x, y, z) for x, z, y in ps]
+            _quad(out, ps[0], ps[1], ps[2], ps[3], BARK, ((u0 * UV, c0 * UV), (u1 * UV, c0 * UV), (u1 * UV, c1 * UV),
+                                                         (u0 * UV, c1 * UV)),
+                  (0.55, 0.55, 0.55, 0.55))
+    # its face at the mouth: wood all round the opening
     f = tree.tunnel_floor(L)
-    _quad(out, (xa, f, za), (xb, f, zb), (xb, f + T.TUNNEL_CEIL, zb), (xa, f + T.TUNNEL_CEIL, za), BARK,
-          ((0, 0), (0.8, 0), (0.8, 0.85), (0, 0.85)), (0.35, 0.35, 0.35, 0.35))
+    for j in range(n_c):
+        c0, c1 = -span + 2 * span * j / n_c, -span + 2 * span * (j + 1) / n_c
+        for cc0, cc1 in ((c0, c1),):
+            y0 = f + top * max(0.0, 1 - (cc0 / span) ** 2)
+            y1 = f + top * max(0.0, 1 - (cc1 / span) ** 2)
+            low0 = f + C if abs(cc0) < W and abs(cc1) < W else f - 0.1
+            low1 = low0
+            (xa, za), (xb, zb) = tp(L, cc0), tp(L, cc1)
+            if y0 > low0 or y1 > low1:
+                _quad(out, (xa, low0, za), (xb, low1, zb), (xb, max(y1, low1), zb), (xa, max(y0, low0), za), BARK,
+                      ((0, 0), (0.6, 0), (0.6, 0.8), (0, 0.8)), (0.4, 0.4, 0.4, 0.4))
+    # the oak's trunk, outside: up into the sky, a gap at its foot where the roots run in
+    N = 96
+    for i in range(N):
+        b0, b1 = i / N * math.tau, (i + 1) / N * math.tau
+        hole = min(abs(_wrapa(b0 - T.THETA_IN)), abs(_wrapa(b1 - T.THETA_IN))) < 0.16
+        y = -0.4
+        while y < T.TOP - 0.6:
+            y1 = min(T.TOP - 0.6, y + 2.0)
+            if not (hole and y < C + 0.8):
+                r00, r01 = tree.base_r(b0, y) + 2.8, tree.base_r(b0, y1) + 2.8
+                r10, r11 = tree.base_r(b1, y) + 2.8, tree.base_r(b1, y1) + 2.8
+                p00 = (math.cos(b0) * r00, y, math.sin(b0) * r00)
+                p01 = (math.cos(b0) * r01, y1, math.sin(b0) * r01)
+                p10 = (math.cos(b1) * r10, y, math.sin(b1) * r10)
+                p11 = (math.cos(b1) * r11, y1, math.sin(b1) * r11)
+                u0, u1 = b0 * 9.0 * UV, b1 * 9.0 * UV
+                _quad(out, p00, p10, p11, p01, BARK, ((u0, y * UV), (u1, y * UV), (u1, y1 * UV), (u0, y1 * UV)),
+                      (0.7, 0.7, 0.7, 0.7))
+            y = y1
+        # its broken top: wood from the crown's rim out to the bark
+        t0 = T.TOP + 1.2 * math.sin(3 * b0 + 0.4) + 0.7 * math.sin(7 * b0)
+        t1 = T.TOP + 1.2 * math.sin(3 * b1 + 0.4) + 0.7 * math.sin(7 * b1)
+        ri0, ri1 = tree.wall_r(b0, t0) + 1.4, tree.wall_r(b1, t1) + 1.4
+        ro0, ro1 = tree.base_r(b0, T.TOP - 0.6) + 2.8, tree.base_r(b1, T.TOP - 0.6) + 2.8
+        _quad(out, (math.cos(b0) * ri0, t0 - 0.3, math.sin(b0) * ri0), (math.cos(b0) * ro0, T.TOP - 0.6, math.sin(b0) * ro0),
+              (math.cos(b1) * ro1, T.TOP - 0.6, math.sin(b1) * ro1), (math.cos(b1) * ri1, t1 - 0.3, math.sin(b1) * ri1),
+              BARK, ((0, 0), (0, 0.6), (0.4, 0.6), (0.4, 0)), (0.8, 0.8, 0.8, 0.8))
+    # the forest, standing round: the glade's trees, and a wall of them at its edge
+    trunks = list(T.OUT_TREES)
+    k = 0
+    a = 1.0
+    while a < T.OUT_LEN + 2:
+        for side in (-1, 1):
+            trunks.append((a, side * (T.OUT_HALF + 0.8 + 0.6 * math.sin(a * 1.3 + side)), 0.6 + 0.3 * abs(math.sin(a * 2.1))))
+        a += 2.3
+        k += 1
+    for c in range(-int(T.OUT_HALF), int(T.OUT_HALF) + 1, 2):
+        trunks.append((T.OUT_LEN + 0.9 + 0.5 * math.sin(c), c + 0.5, 0.7))
+    for pa, pc, r in trunks:
+        cx, cz = tp(L + pa, pc)
+        g = tree.out_ground(max(0.0, min(T.OUT_LEN, pa)), max(-T.OUT_HALF, min(T.OUT_HALF, pc))) - 0.2
+        for s in range(8):
+            q0, q1 = s / 8 * math.tau, (s + 1) / 8 * math.tau
+            lean = 0.04 * math.sin(pa + pc)
+            b0 = (cx + math.cos(q0) * r, g, cz + math.sin(q0) * r)
+            b1 = (cx + math.cos(q1) * r, g, cz + math.sin(q1) * r)
+            t0 = (cx + math.cos(q0) * r * 0.75 + lean * 22, g + 22, cz + math.sin(q0) * r * 0.75)
+            t1 = (cx + math.cos(q1) * r * 0.75 + lean * 22, g + 22, cz + math.sin(q1) * r * 0.75)
+            _quad(out, b0, b1, t1, t0, BARK, ((s * 0.3, 0), ((s + 1) * 0.3, 0), ((s + 1) * 0.3, 8), (s * 0.3, 8)),
+                  (0.6, 0.6, 0.6, 0.6))
+
+
+def _wrapa(a):
+    return (a + math.pi) % math.tau - math.pi
 
 
 def _crown(tree, out):

@@ -67,6 +67,9 @@ class Nav:
     # ---- where he is --------------------------------------------------------------------------------------------
     def where(self, night):
         t = self.tree
+        out = t.outside(night.x, night.z)
+        if out:
+            return ("outside", out[0])
         tun = t.in_tunnel(night.x, night.z)
         if tun and tun[0] > 0.2:
             return ("tunnel", tun[0])
@@ -121,9 +124,13 @@ class Nav:
         k = 1.0 - 1.4 / max(1.0, math.hypot(x, z))
         return (x * k, z * k)
 
-    def route(self, night, goal):
-        here = self.where(night)
+    def route(self, night, goal, here=None):
+        here = here or self.where(night)
         kind = goal[0]
+        if here[0] == "outside":                                   # (to the roots' mouth, and in)
+            mouth = [(*self.tree.tunnel_point(T.TUNNEL_LEN + 0.6, 0.0), 0.0),
+                     (*self.tree.tunnel_point(T.TUNNEL_LEN - 0.8, 0.0), 0.0)]
+            return mouth + self.route(night, goal, ("tunnel", T.TUNNEL_LEN - 0.8))
         # the same place already: straight there
         if kind == "tunnel" and here[0] == "tunnel":
             return [(*self.tree.tunnel_point(goal[1], goal[2]), 0.0)]

@@ -120,3 +120,23 @@ def test_the_first_night_is_kept():
     for _ in range(40):
         n.step(0.05, inp)
     assert n.dying is None and n.body.health >= n.body.poison + 20
+
+
+def test_from_the_glade_in_through_the_roots():
+    n = N.Night(seed=9)
+    n.begin_outside()
+    n.lamp.next_out = 1e9
+    n.danglers.next = n.crawlers.next = 1e9
+    assert n.where() == "outside" and n.letter_in_hand
+    d = Director(n, guide=True)
+    d.tasks = [TU.travel_task("ring_spot", n, d.nav)]
+    inp = N.Input()
+    inp.yaw, inp.pitch = n.yaw, n.pitch
+    seen = []
+    for _ in range(int(120 / 0.05)):
+        if ("done", "go") in d.step(0.05, n, inp):
+            break
+        n.step(0.05, inp)
+        seen += n.events
+        n.events.clear()
+    assert n.where() == "tunnel" and not n.letter_in_hand and ("letter", "away") in seen
