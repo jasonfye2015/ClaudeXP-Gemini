@@ -34,6 +34,9 @@ Playing (phases 1 and 2: the tree, and her silk)
   of the view beats when it comes close. Hard falls hurt, bites poison, the dark wears at your mind. Between the
   orbs, a monitor shows your heart.
 
+  On her loom, she comes to you. Her scenes are framed, and slow: she speaks (in her own hand, and aloud), and you
+  answer - in your own words, if a language model writes hers; from lines offered, if not.
+
   Before the night (after the title): begin, the endings you've found, your records, the options - among them what
   writes her words (a language model on this computer, or a script) and whether you hear her voice aloud.
 

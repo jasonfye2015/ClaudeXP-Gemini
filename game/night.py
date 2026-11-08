@@ -106,6 +106,8 @@ class Night:
         self.swarm = Swarm(random.Random(self.rng.random()))           # (and come for the lantern, in the dark)
         self.body = Condition(random.Random(self.rng.random()))        # (how he's holding up: the orbs)
         self.dying = None                                              # (a Death, once something gives out)
+        self.quiet = False                                             # (in her scenes: nothing small onto him)
+        self.met = {}                                                  # (her scenes so far: name -> how it ended)
         self.eye_h = EYE
         self.roll = 0.0
 
@@ -197,9 +199,10 @@ class Night:
                     return
         self._lurk(dt)
         self.events.extend(self.brood.step(dt, self.eye, self.inp_hurry, self.lantern_reach()[0] if self.lantern else 0.0))
-        self.events.extend(self.crawlers.step(dt))
-        self.events.extend(self.danglers.step(dt, self))
-        self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
+        if not self.quiet:
+            self.events.extend(self.crawlers.step(dt))
+            self.events.extend(self.danglers.step(dt, self))
+            self.events.extend(self.swarm.step(dt, self.lamp.state, lamp_events))
         self.events.extend(self.body.step(dt, self, self.events[first:]))
         gone = self.body.spent()
         if gone is not None:

@@ -148,10 +148,14 @@ class Synth:
         self.her, self._her = 0.0, 0.0
         self.pitch, self._pitch, self._hph = 1.0, 1.0, 0.0
         self.speech = None                  # (her voice, a line at a time: [samples, position, gain])
+        self.breath, self._breath = 0.0, 0.0     # (his breathing: heard in her scenes)
+        self.breath_loop = _shaped_noise(rng, rate * 2, 250, 2600, 0.5, rate)
         self.rustle_loop = _shaped_noise(rng, rate * 4, 90, 1400, 0.7, rate)
         self._pick = 0
 
-    def set(self, hum=None, height=None, her=None, pitch=None):
+    def set(self, hum=None, height=None, her=None, pitch=None, breath=None):
+        if breath is not None:
+            self.breath = breath
         if pitch is not None:
             self.pitch = pitch
         if her is not None:
@@ -203,6 +207,13 @@ class Synth:
             i = (self.n + np.arange(n)) % len(self.rustle_loop)
             legs = 0.45 + 0.55 * np.abs(np.sin(math.tau * 2.3 * t)) ** 6 + 0.3 * np.abs(np.sin(math.tau * 3.1 * t + 1)) ** 8
             out += self.rustle_loop[i] * legs * np.linspace(h0, self._her, n) * 0.22
+        # his breathing, close: in, and out, slowly - in her scenes
+        b0, self._breath = self._breath, self._breath + (self.breath - self._breath) * 0.1
+        if b0 > 1e-4 or self._breath > 1e-4:
+            i = (self.n + np.arange(n)) % len(self.breath_loop)
+            ph = (t % 4.6) / 4.6
+            shape = np.where(ph < 0.42, np.sin(np.pi * ph / 0.42) ** 2, 0.7 * np.sin(np.pi * (ph - 0.42) / 0.5) ** 2 * (ph < 0.92))
+            out += self.breath_loop[i] * shape * np.linspace(b0, self._breath, n) * 0.07
         # her voice, over it all - and the den hushed a little while she speaks
         if self.speech is not None:
             out *= 0.6

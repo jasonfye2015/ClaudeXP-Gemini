@@ -70,6 +70,8 @@ class Shell(QWidget):
 
     def resizeEvent(self, e):
         self.view.setGeometry(self.rect())
+        if getattr(self.view, "scene_ui", None) is not None:
+            self.view.scene_ui.setGeometry(self.rect())
         if self.panel:
             self.panel.setGeometry(self.rect())
         super().resizeEvent(e)
@@ -89,6 +91,10 @@ class Shell(QWidget):
 
     def show_title(self):
         self.view.release()
+        if getattr(self.view, "scene_ui", None) is not None:
+            self.view.scene_ui.hide()
+            self.view.scene_ui.deleteLater()
+            self.view.scene = self.view.scene_ui = None
         self.view.night_done()                                  # (a night left part-way: its tallies kept)
         self.view.backdrop(Night())
         self.set_panel(Panel(self, "The Hollow Oak", "One night. One host. Get to dawn.",
@@ -114,6 +120,10 @@ class Shell(QWidget):
 
     def resume(self):
         self.set_panel(None)
+        if getattr(self.view, "scene_ui", None) is not None:      # (back to her: she's waiting)
+            self.view.scene_ui.raise_()
+            self.view.scene_ui.setFocus()
+            return
         self.view.setFocus()
         self.view.capture()
 

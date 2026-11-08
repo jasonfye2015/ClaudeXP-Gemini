@@ -108,6 +108,7 @@ class GameView(QOpenGLWidget):
         self.talk = Conversation(night, voice, dict(rec.reputation))
         if self.talk.mode == "model":
             voice.warm()                                          # (her words: the model loaded while he walks in)
+        self.scene = self.scene_ui = None
         self.her_lines = queue.Queue()
         self.her_line = None                                      # (her words on screen: (text, when))
         self.last_murmur = -99.0
@@ -145,7 +146,11 @@ class GameView(QOpenGLWidget):
                     self.first_ending = self.shell.records.ending(ENDING[0].split(": ")[1])
                     self.night_done()
             n.events.clear()
+        elif self.playing and getattr(self, "scene", None) is not None and not self.shell.panel_open():
+            self._scene_tick(n, dt)                               # (her scene: his hands off; the night goes on)
         elif self.playing and not self.shell.panel_open():
+            if n.on is n.web.loom and "audience" not in n.met and n.dying is None:
+                self.start_scene("audience")                      # (onto her loom: she comes to him)
             k = self.keys
             self.inp.forward = (1 if Qt.Key_W in k or Qt.Key_Up in k else 0) - (1 if Qt.Key_S in k or Qt.Key_Down in k else 0)
             self.inp.strafe = (1 if Qt.Key_D in k else 0) - (1 if Qt.Key_A in k else 0)
@@ -185,6 +190,49 @@ class GameView(QOpenGLWidget):
             n.pitch = 0.62 + 0.08 * math.sin((now - self.t0) * 0.1)
             n.her.step(dt, n)                            # (and her, up there, watching the title)
         self.update()
+
+    # ---- her scenes -----------------------------------------------------------------------------------------------
+    def start_scene(self, name):
+        n = self.night
+        if getattr(self, "scene", None) is not None or n is None or n.dying is not None or getattr(self, "talk", None) is None:
+            return
+        if n.tree.in_tunnel(n.x, n.z) and n.tree.in_tunnel(n.x, n.z)[0] > 0.2:
+            return                                                # (not in the root tunnel: no room for her)
+        from ..game.scene import Scene
+        from .scene import SceneView
+        self.release()
+        self.keys.clear()
+        self.inp.forward = self.inp.strafe = 0.0
+        self.inp.hurry = self.inp.jump = False
+        self.scene = Scene(n, name)
+        self.scene_ui = SceneView(self.shell, self.scene, self.talk, self._scene_over)
+        n.met.setdefault(name, None)
+
+    def _scene_tick(self, n, dt):
+        sc = self.scene
+        self.inp.yaw, self.inp.pitch = n.yaw, n.pitch
+        n.step(dt, self.inp)
+        sc.step(dt)
+        self.inp.yaw = n.yaw                                     # (he faces her)
+        n.camera = sc.camera() if sc.placed and n.her.staged is not None else None
+        n.riders = sc.rider_poses()
+        if self.audio is not None:
+            self.audio.synth.set(breath=1.0 if sc.placed else 0.0)
+            self.audio.hear(n, n.events)
+        n.events.clear()
+
+    def _scene_over(self):
+        n = self.night
+        name = self.scene.name
+        n.met[name] = self.talk.ended or "done"
+        n.camera, n.riders = None, ()
+        self.inp.yaw, self.inp.pitch = n.yaw, 0.0
+        if self.audio is not None:
+            self.audio.synth.set(breath=0.0)
+        self.scene_ui.hide()
+        self.scene_ui.deleteLater()
+        self.scene = self.scene_ui = None
+        self.setFocus()
 
     def ensure_audio(self):
         if self.audio is None:
@@ -253,6 +301,8 @@ class GameView(QOpenGLWidget):
         W, H = self.width(), self.height()
         t = time.perf_counter()
         p.setRenderHint(QPainter.Antialiasing)
+        if getattr(self, "scene", None) is not None:
+            return                                                # (her scene: its own frame, nothing else)
         # a place's name, the first time he comes into it: it rises out of the dark and goes again
         self.cards = [c for c in self.cards if t - c[2] < 8.0]
         if self.cards:
@@ -351,7 +401,7 @@ class GameView(QOpenGLWidget):
             if self.night.dying.done and self.night.dying.t > 26.0:
                 self.shell.show_title()                          # (it's over: back to the start)
             return
-        if self.playing and not self.captured:
+        if self.playing and not self.captured and getattr(self, "scene", None) is None:
             self.capture()
 
     def mouseMoveEvent(self, e):
@@ -378,11 +428,8 @@ class GameView(QOpenGLWidget):
         if not self.playing:
             return
         self.keys.add(k)
-        if k == Qt.Key_F4 and getattr(self, "talk", None) is not None and self.night.dying is None:
-            from .talk import Talk                                # (for building the game: talk with her, plainly)
-            self.release()
-            self.keys.clear()
-            self.shell.set_panel(Talk(self.shell, self.talk))
+        if k == Qt.Key_F4:                                       # (for building the game: her audience, now)
+            self.start_scene("audience")
             return
         if k == Qt.Key_F3:                                       # (for building the game: her moods, in numbers)
             self.debug = not getattr(self, "debug", False)

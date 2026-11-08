@@ -53,9 +53,23 @@ class Mother:
         self.alpha = 0.0                     # (her eyes: how much they show)
         self.leaned = self.announced = False
         self.strike_t = -1.0
+        self.staged = None                   # (in a scene: (position, facing) - held there, off the wall)
+        self.shift = 0.0                     # (a leg shifting, in a scene)
 
     # ---- where she is --------------------------------------------------------------------------------------------
+    def stage(self, pos, face):
+        """Taken off the wall for a scene: set down at pos, facing `face`."""
+        self.staged = (tuple(pos), tuple(face))
+        self.lean, self.state = 0.0, "watch"
+
+    def unstage(self):
+        """Back to the wall - and away, into the dark."""
+        self.staged = None
+        self.state, self.until = "withdraw", self.t + 6.0
+
     def at(self, th=None, y=None):
+        if self.staged is not None and th is None and y is None:
+            return self.staged[0]
         th = self.th if th is None else th
         y = self.y if y is None else y
         r = self.tree.base_r(th, y) - REST
@@ -70,6 +84,9 @@ class Mother:
         return tuple(math.cos(head) * a + math.sin(head) * b for a, b in zip(e, (0.0, 1.0, 0.0)))
 
     def pose(self):
+        if self.staged is not None:
+            pos, face = self.staged
+            return pos, face, (0.0, 1.0, 0.0), SIZE, self.clip, self.anim, 0.0
         up = self._normal()
         lean = self.lean
         x, y, z = self.at()
@@ -117,6 +134,17 @@ class Mother:
         self.t += dt
         rng = self.rng
         out = []
+        if self.staged is not None:                     # (in a scene: still, breathing; now and then a leg moves)
+            if self.shift > 0:
+                self.shift -= dt
+                self.clip = "walk"
+                self.anim += dt * 0.35
+            else:
+                self.clip = "idle"
+                self.anim += dt
+            self.alpha += (1.0 - self.alpha) * min(1.0, dt * 2)
+            self.moving = 0.0
+            return out
         ex, ey, ez = night.eye
         me = self.at()
         d = math.dist(me, night.eye)
