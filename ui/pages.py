@@ -330,3 +330,74 @@ class Unlocks(_Screen):
             p.drawText(QRectF(W * 0.5, y + 2, W * 0.38, 40), Qt.AlignLeft | Qt.TextWordWrap, detail)
             y += 44
         p.end()
+
+
+class Brightness(_Screen):
+    """Before the first night (and from Options): three marks on the dark, set until the middle one is barely there -
+    the den's light as the player's own screen shows it."""
+
+    def __init__(self, shell, on_done):
+        super().__init__(shell, [("That's right", on_done)])
+        from PySide6.QtWidgets import QSlider
+        self.rec = shell.records
+        self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setRange(0, 100)
+        self.slider.setValue(int(self.rec.options.get("brightness", 50)))
+        self.slider.valueChanged.connect(self._set)
+        self.slider.setStyleSheet("QSlider::groove:horizontal { height: 4px; background: #4A3626; }"
+                                  "QSlider::handle:horizontal { width: 16px; margin: -6px 0; border-radius: 8px;"
+                                  " background: #C9A574; }")
+
+    def _set(self, v):
+        self.rec.options["brightness"] = int(v)
+        self.rec.save()
+        self.update()
+
+    def resizeEvent(self, e):
+        W, H = self.width(), self.height()
+        self.slider.setGeometry(int(W * 0.3), int(H * 0.74), int(W * 0.4), 24)
+        super().resizeEvent(e)
+
+    def paintEvent(self, _e):
+        from ..engine.render import exposure
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+        p.fillRect(self.rect(), QColor(0, 0, 0))
+        p.setFont(QFont(SERIF, 24))
+        p.setPen(QColor(222, 208, 188))
+        p.drawText(QRectF(0, H * 0.1, W, 40), Qt.AlignHCenter, "Before the dark")
+        p.setFont(QFont(SERIF, 13))
+        p.setPen(QColor(190, 176, 156))
+        p.drawText(QRectF(W * 0.15, H * 0.17, W * 0.7, 60), Qt.AlignHCenter | Qt.TextWordWrap,
+                   "The oak is very dark. Move the slider until the middle mark is barely there - the left one not "
+                   "at all, the right one plainly.")
+        k = exposure(self.slider.value() if hasattr(self, "slider") else 50)
+        for i, lin in enumerate((0.00011, 0.00063, 0.0037)):     # (about 4, 9 and 20 of 255, as made)             # (the den's own darks, as it draws them)
+            v = int(255 * min(1.0, (lin * k) ** (1 / 2.2)))
+            cx, cy = W * (0.3 + 0.2 * i), H * 0.48
+            p.setPen(Qt.NoPen)
+            p.setBrush(QColor(v, int(v * 0.92), int(v * 0.88)))
+            self._mark(p, cx, cy, min(W, H) * 0.07)
+        p.setFont(QFont(SERIF, 10))
+        p.setPen(QColor(150, 136, 120))
+        p.drawText(QRectF(0, H * 0.74 + 30, W, 20), Qt.AlignHCenter,
+                   f"Brightness {self.slider.value() if hasattr(self, 'slider') else 50}   (also in Options)")
+        p.end()
+
+    @staticmethod
+    def _mark(p, cx, cy, s):
+        """A small spider: a body, a head, eight legs."""
+        col = QColor(p.brush().color())
+        p.setPen(QPen(col, max(2.0, s * 0.07), Qt.SolidLine, Qt.FlatCap))
+        for side in (-1, 1):
+            for k in range(4):
+                a = (k - 1.5) * 0.45
+                x0, y0 = cx + side * s * 0.3, cy - s * 0.2 + k * s * 0.18
+                x1, y1 = x0 + side * s * 0.75, y0 - s * 0.35 + k * s * 0.22 + a * s * 0.1
+                p.drawLine(QPointF(x0, y0), QPointF(x1, y1))
+                p.drawLine(QPointF(x1, y1), QPointF(x1 + side * s * 0.25, y1 + s * 0.4))
+        p.setPen(Qt.NoPen)
+        p.setBrush(col)
+        p.drawEllipse(QPointF(cx, cy + s * 0.15), s * 0.42, s * 0.55)
+        p.drawEllipse(QPointF(cx, cy - s * 0.55), s * 0.25, s * 0.22)
