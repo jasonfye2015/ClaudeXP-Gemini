@@ -108,6 +108,9 @@ class Shell(QWidget):
         buttons = [("Begin", self.show_menu)]
         if self.saves.list():
             buttons.append(("Go on from a save", self.show_saves))
+        from ..game.records import ENDINGS
+        if len(self.records.found) >= ENDINGS:                  # (all eight: something waiting on his doorstep)
+            buttons.append(("Her last letter", self.show_last_letter))
         self.set_panel(Panel(self, "The Hollow Oak", "One night. One host. Get to dawn.", buttons + [("Leave", self.leave)]))
 
     def show_saves(self):
@@ -124,6 +127,12 @@ class Shell(QWidget):
         night, talk = got
         self.set_panel(None)
         self.view.begin(night, talk)
+
+    def show_last_letter(self):
+        from .pages import LastLetter
+        self.records.note("last_letter")
+        self.set_panel(LastLetter(self, self.show_title))
+        self.panel.setFocus()
 
     def show_menu(self):
         from .menu import NightMenu

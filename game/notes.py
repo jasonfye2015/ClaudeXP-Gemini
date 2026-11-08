@@ -17,6 +17,9 @@ PAGES = {
     "silk": ("The invitation", "What the silk is soaked in",
              "My fingertips have been numb since I first touched it. It smells sweet, and faintly bitter. Venom, I "
              "think - and something else beneath it, something that keeps turning my thoughts to the oak."),
+    "last_letter": ("The invitation", "The last letter",
+                    "Another square of silk on my doorstep, after the eighth night. The same hand. Signed, this time, "
+                    "with her own name."),
     # ---- her
     "name": ("Her", "Her name",
              "She calls herself Ysmeine. The Weaver Below."),

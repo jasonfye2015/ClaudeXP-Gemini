@@ -401,3 +401,46 @@ class Brightness(_Screen):
         p.setBrush(col)
         p.drawEllipse(QPointF(cx, cy + s * 0.15), s * 0.42, s * 0.55)
         p.drawEllipse(QPointF(cx, cy - s * 0.55), s * 0.25, s * 0.22)
+
+
+LAST_LETTER = ("Little wizard -", "",
+               "Eight times you have come into my house,", "and eight ways you have left it.", "",
+               "I have eaten you, and sent you home, and kept you,", "and lost you to the fire.",
+               "I have carried you home asleep, and given you what I am,", "and heard my own name in your mouth.", "",
+               "No one has ever come back so often.", "No one has ever been so worth the waiting.", "",
+               "The oak is quiet tonight. Come anyway.", "", "- Ilsabet.")
+
+
+class LastLetter(_Screen):
+    """All eight found: another square of silk on his doorstep - and signed, this time, with her own name."""
+
+    def __init__(self, shell, on_back):
+        super().__init__(shell, [("Fold it away", on_back)])
+        self.rec = shell.records
+
+    def paintEvent(self, _e):
+        from . import fonts
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        self.backdrop(p)
+        W, H = self.width(), self.height()
+        r = QRectF(W * 0.27, H * 0.06, W * 0.46, H * 0.8)              # (silk, pale, a little crooked)
+        p.save()
+        p.translate(r.center())
+        p.rotate(-1.5)
+        p.translate(-r.center())
+        g = QLinearGradient(r.topLeft(), r.bottomRight())
+        g.setColorAt(0, QColor(214, 204, 186))
+        g.setColorAt(1, QColor(182, 170, 150))
+        p.setPen(Qt.NoPen)
+        p.setBrush(g)
+        p.drawRoundedRect(r, 6, 6)
+        p.setFont(fonts.her(self.rec, 24))
+        p.setPen(QColor(70, 34, 26))
+        y = r.top() + 30
+        for line in LAST_LETTER:
+            if line:
+                p.drawText(QRectF(r.left() + 34, y, r.width() - 68, 32), Qt.AlignLeft, line)
+            y += 28 if line else 14
+        p.restore()
+        p.end()

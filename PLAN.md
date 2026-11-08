@@ -450,3 +450,7 @@ and out 0.5x, her hunger 1.25x; Hard and Nightmare further still (Nightmare: hur
 poison wearing off at a fifth). Her own bite a little more. Led by the letter, still kept above thirty.
 And in her scenes his orbs and his heart are no longer hidden: they sit just above her words.
 
+9j - all eight (done). Once every ending is found, the title offers "Her last letter": one more square of silk in her
+hand, on the dark (ui/pages.py LastLetter) - and a last page in his notes, "The last letter". (What it says, and how it's
+signed, is for the player to find.)
+
